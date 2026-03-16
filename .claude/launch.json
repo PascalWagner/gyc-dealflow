@@ -1,0 +1,40 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "GYC Income Fund",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8766", "-d", "/Users/pascalwagner/AI"],
+      "port": 8766,
+      "autoPort": true
+    },
+    {
+      "name": "P$ Daily Dashboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8767", "-d", "/Users/pascalwagner/AI/daily-briefing"],
+      "port": 8767,
+      "autoPort": true
+    },
+    {
+      "name": "GYC Marketing",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8768", "-d", "/Users/pascalwagner/AI/content-dashboard"],
+      "port": 8768,
+      "autoPort": true
+    },
+    {
+      "name": "CLC Dashboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8769", "-d", "/Users/pascalwagner/AI/l10-dashboard"],
+      "port": 8769,
+      "autoPort": true
+    },
+    {
+      "name": "Deal Dashboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8771", "-d", "/Users/pascalwagner/AI"],
+      "port": 8771,
+      "autoPort": true
+    }
+  ]
+}

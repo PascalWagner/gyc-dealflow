@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GYC Deals - Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --mint-bg: #E7F5F0;
+  --off-white: #FAF9F5;
+  --charcoal: #141413;
+  --slate: #607179;
+  --border: #DDE5E8;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--off-white);
+  color: var(--charcoal);
+  min-height: 100vh;
+  display: flex;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Left panel */
+.login-hero {
+  width: 480px;
+  min-height: 100vh;
+  background: linear-gradient(165deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
+  padding: 60px 48px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.login-hero::after {
+  content: '';
+  position: absolute;
+  top: -30%; right: -40%;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(81,190,123,0.08) 0%, transparent 60%);
+  border-radius: 50%;
+}
+
+.hero-logo {
+  font-family: var(--font-headline);
+  font-size: 28px;
+  color: #fff;
+  margin-bottom: 8px;
+  position: relative;
+}
+.hero-kicker {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent-green);
+  margin-bottom: 48px;
+  position: relative;
+}
+
+.hero-title {
+  font-family: var(--font-headline);
+  font-size: 36px;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 20px;
+  position: relative;
+}
+.hero-desc {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.7;
+  margin-bottom: 48px;
+  position: relative;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 32px;
+  position: relative;
+  margin-top: auto;
+}
+.hero-stat-number {
+  font-family: var(--font-ui);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent-green);
+  margin-bottom: 4px;
+}
+.hero-stat-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.4;
+}
+
+/* Right panel */
+.login-form-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-card-title {
+  font-family: var(--font-headline);
+  font-size: 28px;
+  color: var(--charcoal);
+  margin-bottom: 8px;
+}
+.login-card-desc {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--slate);
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+/* Tabs */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 28px;
+}
+.auth-tab {
+  padding: 10px 20px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+.auth-tab:hover { color: var(--charcoal); }
+.auth-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.auth-panel { display: none; }
+.auth-panel.active { display: block; }
+
+/* Form fields */
+.field { margin-bottom: 18px; }
+.field-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: block;
+}
+.field-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--charcoal);
+  background: #fff;
+  transition: border-color 0.2s;
+}
+.field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(81,190,123,0.1); }
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn-submit {
+  width: 100%;
+  padding: 14px 24px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+.btn-submit-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-submit-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
+
+.btn-magic {
+  width: 100%;
+  padding: 14px 24px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--charcoal);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.btn-magic:hover { border-color: var(--primary); color: var(--primary); }
+.btn-magic svg { width: 18px; height: 18px; }
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.forgot-link {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.forgot-link:hover { text-decoration: underline; }
+
+.login-footer {
+  margin-top: 28px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--slate);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* Success states */
+.magic-sent {
+  text-align: center;
+  padding: 32px 0;
+  display: none;
+}
+.magic-sent.show { display: block; }
+.magic-sent-icon {
+  width: 64px; height: 64px;
+  background: var(--mint-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.magic-sent-icon svg { width: 28px; height: 28px; color: var(--primary); }
+.magic-sent-title { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--charcoal); margin-bottom: 8px; }
+.magic-sent-desc { font-family: var(--font-body); font-size: 14px; color: var(--slate); line-height: 1.6; }
+
+/* Loading state */
+.btn-loading { pointer-events: none; opacity: 0.7; }
+
+/* Error state */
+.field-error { border-color: #D04040 !important; }
+.error-msg { font-family: var(--font-ui); font-size: 12px; color: #D04040; margin-top: 4px; display: none; }
+.error-msg.show { display: block; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  body { flex-direction: column; }
+  .login-hero { width: 100%; min-height: auto; padding: 40px 28px; }
+  .hero-title { font-size: 28px; }
+  .hero-stats { gap: 24px; margin-top: 32px; }
+  .login-form-area { padding: 32px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-hero">
+  <div class="hero-logo">Grow Your Cashflow</div>
+  <div class="hero-kicker">Deal Database</div>
+  <div class="hero-title">Evaluate private deals with clarity, not guesswork.</div>
+  <div class="hero-desc">Access curated deal flow, build your investment buy box, and get 1:1 guidance from someone who's deployed $3.3M of his own capital across 23+ LP deals.</div>
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-number">25+</div>
+      <div class="hero-stat-label">Live deals<br>reviewed</div>
+    </div>
+    <div>
+      <div class="hero-stat-number">$3.3M</div>
+      <div class="hero-stat-label">Personally<br>invested</div>
+    </div>
+    <div>
+      <div class="hero-stat-number">23</div>
+      <div class="hero-stat-label">LP deals<br>since 2019</div>
+    </div>
+  </div>
+</div>
+
+<div class="login-form-area">
+  <div class="login-card">
+    <div class="login-card-title">Welcome back</div>
+    <div class="login-card-desc">Sign in to access your deal dashboard and investment buy box.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('signin', this)">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('signup', this)">Create Account</button>
+    </div>
+
+    <!-- SIGN IN -->
+    <div class="auth-panel active" id="panel-signin">
+      <div id="signinForm">
+        <button class="btn-magic" onclick="sendMagicLink()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Send me a magic link
+        </button>
+        <div class="divider">or sign in with password</div>
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input type="email" class="field-input" id="signinEmail" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <input type="password" class="field-input" id="signinPassword" placeholder="Enter your password">
+          <div style="text-align:right;margin-top:6px"><a class="forgot-link" onclick="showForgotPassword()">Forgot password?</a></div>
+        </div>
+        <div class="error-msg" id="signinError">Invalid email or password. Please try again.</div>
+        <button class="btn-submit btn-submit-primary" onclick="handleSignIn()">Sign In</button>
+      </div>
+
+      <div class="magic-sent" id="magicSent">
+        <div class="magic-sent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="magic-sent-title">Check your inbox</div>
+        <div class="magic-sent-desc">We sent a magic link to <strong id="magicEmail"></strong>. Click the link in the email to sign in — no password needed.</div>
+      </div>
+
+      <div class="magic-sent" id="forgotSent">
+        <div class="magic-sent-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="magic-sent-title">Password reset sent</div>
+        <div class="magic-sent-desc">Check your inbox for a link to reset your password. If you don't see it, check your spam folder.</div>
+      </div>
+    </div>
+
+    <!-- SIGN UP -->
+    <div class="auth-panel" id="panel-signup">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">First Name</label>
+          <input type="text" class="field-input" id="signupFirst" placeholder="First name">
+        </div>
+        <div class="field">
+          <label class="field-label">Last Name</label>
+          <input type="text" class="field-input" id="signupLast" placeholder="Last name">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Email</label>
+        <input type="email" class="field-input" id="signupEmail" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label class="field-label">Password</label>
+        <input type="password" class="field-input" id="signupPassword" placeholder="Create a password (8+ characters)">
+      </div>
+      <div class="field">
+        <label class="field-label">How did you hear about us?</label>
+        <select class="field-input" id="signupSource" style="cursor:pointer">
+          <option value="">Select one...</option>
+          <option value="podcast">Best Ever CRE Podcast</option>
+          <option value="email">Email list</option>
+          <option value="social">Social media</option>
+          <option value="referral">Friend or colleague</option>
+          <option value="search">Google search</option>
+          <option value="academy">Cashflow Academy</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="error-msg" id="signupError">Please fill in all required fields.</div>
+      <button class="btn-submit btn-submit-primary" onclick="handleSignUp()">Create Account</button>
+      <div class="login-footer">
+        By creating an account, you agree to our Terms of Service.<br>
+        Already have an account? <a class="forgot-link" onclick="switchAuthTab('signin', document.querySelector('.auth-tab'))">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== CONFIG ==========
+// Replace these with your actual Make.com webhook URLs
+const WEBHOOKS = {
+  magicLink: 'https://hook.us2.make.com/YOUR_MAGIC_LINK_WEBHOOK',
+  signUp:    'https://hook.us2.make.com/YOUR_SIGNUP_WEBHOOK',
+  signIn:    'https://hook.us2.make.com/YOUR_SIGNIN_WEBHOOK',
+  forgot:    'https://hook.us2.make.com/YOUR_FORGOT_WEBHOOK'
+};
+
+// ========== TAB SWITCHING ==========
+function switchAuthTab(tab, el) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+  if (tab === 'signin') {
+    document.querySelector('.auth-tab:first-child').classList.add('active');
+    document.getElementById('panel-signin').classList.add('active');
+    document.querySelector('.login-card-title').textContent = 'Welcome back';
+    document.querySelector('.login-card-desc').textContent = 'Sign in to access your deal dashboard and investment buy box.';
+  } else {
+    document.querySelector('.auth-tab:last-child').classList.add('active');
+    document.getElementById('panel-signup').classList.add('active');
+    document.querySelector('.login-card-title').textContent = 'Create your account';
+    document.querySelector('.login-card-desc').textContent = 'Get free access to curated deal flow and build your investment buy box.';
+  }
+  // Reset states
+  document.getElementById('signinForm').style.display = '';
+  document.getElementById('magicSent').classList.remove('show');
+  document.getElementById('forgotSent').classList.remove('show');
+  document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show'));
+}
+
+// ========== MAGIC LINK ==========
+async function sendMagicLink() {
+  const email = document.getElementById('signinEmail').value.trim();
+  if (!email || !email.includes('@')) {
+    document.getElementById('signinEmail').focus();
+    document.getElementById('signinEmail').classList.add('field-error');
+    return;
+  }
+  document.getElementById('signinEmail').classList.remove('field-error');
+
+  // Send to Make.com → GHL magic link
+  try {
+    await fetch(WEBHOOKS.magicLink, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, action: 'magic_link', timestamp: new Date().toISOString() })
+    }).catch(() => {}); // Silently fail for MVP
+  } catch(e) {}
+
+  document.getElementById('magicEmail').textContent = email;
+  document.getElementById('signinForm').style.display = 'none';
+  document.getElementById('magicSent').classList.add('show');
+}
+
+// ========== SIGN IN ==========
+async function handleSignIn() {
+  const email = document.getElementById('signinEmail').value.trim();
+  const password = document.getElementById('signinPassword').value;
+
+  if (!email || !password) {
+    document.getElementById('signinError').textContent = 'Please enter your email and password.';
+    document.getElementById('signinError').classList.add('show');
+    return;
+  }
+
+  const btn = document.querySelector('#signinForm .btn-submit');
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Signing in...';
+
+  try {
+    const resp = await fetch(WEBHOOKS.signIn, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, action: 'sign_in', timestamp: new Date().toISOString() })
+    }).catch(() => null);
+
+    if (resp && resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      // Store session
+      localStorage.setItem('gycUser', JSON.stringify({
+        email,
+        name: data.name || email.split('@')[0],
+        id: data.contactId || null,
+        token: data.token || 'local-session',
+        tier: data.tier || 'explorer',
+        loggedInAt: new Date().toISOString()
+      }));
+      window.location.href = 'deal-dashboard.html';
+    } else {
+      // For MVP: allow login with any credentials and store locally
+      localStorage.setItem('gycUser', JSON.stringify({
+        email,
+        name: email.split('@')[0],
+        id: null,
+        token: 'local-session',
+        tier: 'explorer',
+        loggedInAt: new Date().toISOString()
+      }));
+      window.location.href = 'deal-dashboard.html';
+    }
+  } catch(e) {
+    // Fallback: local login for MVP
+    localStorage.setItem('gycUser', JSON.stringify({
+      email,
+      name: email.split('@')[0],
+      id: null,
+      token: 'local-session',
+      tier: 'explorer',
+      loggedInAt: new Date().toISOString()
+    }));
+    window.location.href = 'deal-dashboard.html';
+  }
+}
+
+// ========== SIGN UP ==========
+async function handleSignUp() {
+  const first = document.getElementById('signupFirst').value.trim();
+  const last = document.getElementById('signupLast').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const source = document.getElementById('signupSource').value;
+
+  if (!first || !last || !email || !password) {
+    document.getElementById('signupError').textContent = 'Please fill in all required fields.';
+    document.getElementById('signupError').classList.add('show');
+    return;
+  }
+  if (password.length < 8) {
+    document.getElementById('signupError').textContent = 'Password must be at least 8 characters.';
+    document.getElementById('signupError').classList.add('show');
+    return;
+  }
+  document.getElementById('signupError').classList.remove('show');
+
+  const btn = document.querySelector('#panel-signup .btn-submit');
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Creating account...';
+
+  const userData = {
+    firstName: first,
+    lastName: last,
+    email,
+    password,
+    source,
+    action: 'sign_up',
+    timestamp: new Date().toISOString()
+  };
+
+  // Send to Make.com → creates GHL contact + membership
+  try {
+    await fetch(WEBHOOKS.signUp, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData)
+    }).catch(() => {});
+  } catch(e) {}
+
+  // Store session locally
+  localStorage.setItem('gycUser', JSON.stringify({
+    email,
+    name: first + ' ' + last,
+    firstName: first,
+    lastName: last,
+    id: null,
+    token: 'local-session',
+    tier: 'explorer',
+    source,
+    loggedInAt: new Date().toISOString(),
+    isNewUser: true
+  }));
+
+  // New users go to the buy box wizard
+  window.location.href = 'deal-dashboard.html#onboarding';
+}
+
+// ========== FORGOT PASSWORD ==========
+function showForgotPassword() {
+  const email = document.getElementById('signinEmail').value.trim();
+  if (email) {
+    try {
+      fetch(WEBHOOKS.forgot, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, action: 'forgot_password', timestamp: new Date().toISOString() })
+      }).catch(() => {});
+    } catch(e) {}
+  }
+  document.getElementById('signinForm').style.display = 'none';
+  document.getElementById('forgotSent').classList.add('show');
+}
+
+// ========== REDIRECT IF LOGGED IN ==========
+const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+if (user && user.token) {
+  window.location.href = 'deal-dashboard.html';
+}
+</script>
+</body>
+</html>
