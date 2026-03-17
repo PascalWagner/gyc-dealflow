@@ -2742,6 +2742,15 @@ function getUser() {
   return JSON.parse(localStorage.getItem('gycUser') || 'null');
 }
 
+// ========== AUTH GATE ==========
+(function enforceAuth() {
+  const user = getUser();
+  if (!user || !user.token || user.token === 'local-session') {
+    localStorage.removeItem('gycUser');
+    window.location.href = 'deal-login.html';
+  }
+})();
+
 function initAuth() {
   const user = getUser();
   const userEl = document.getElementById('sidebarUser');

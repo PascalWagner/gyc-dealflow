@@ -424,8 +424,8 @@ body {
 // Replace these with your actual Make.com webhook URLs
 const WEBHOOKS = {
   magicLink: 'https://hook.us2.make.com/YOUR_MAGIC_LINK_WEBHOOK',
-  signUp:    'https://hook.us2.make.com/YOUR_SIGNUP_WEBHOOK',
-  signIn:    'https://hook.us2.make.com/YOUR_SIGNIN_WEBHOOK',
+  signUp:    'https://hook.us2.make.com/i3nlsj9uq3p7sdvqf0viq0ggilvudwhx',
+  signIn:    'https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv',
   forgot:    'https://hook.us2.make.com/YOUR_FORGOT_WEBHOOK'
 };
 
@@ -499,39 +499,33 @@ async function handleSignIn() {
 
     if (resp && resp.ok) {
       const data = await resp.json().catch(() => ({}));
-      // Store session
-      localStorage.setItem('gycUser', JSON.stringify({
-        email,
-        name: data.name || email.split('@')[0],
-        id: data.contactId || null,
-        token: data.token || 'local-session',
-        tier: data.tier || 'explorer',
-        loggedInAt: new Date().toISOString()
-      }));
-      window.location.href = 'deal-dashboard.html';
+      if (data.success) {
+        localStorage.setItem('gycUser', JSON.stringify({
+          email,
+          name: data.name || email.split('@')[0],
+          id: data.contactId || null,
+          token: data.token || null,
+          tier: data.tier || 'explorer',
+          loggedInAt: new Date().toISOString()
+        }));
+        window.location.href = 'deal-dashboard.html';
+      } else {
+        document.getElementById('signinError').textContent = data.error || 'Invalid email or password.';
+        document.getElementById('signinError').classList.add('show');
+        btn.classList.remove('btn-loading');
+        btn.textContent = 'Sign In';
+      }
     } else {
-      // For MVP: allow login with any credentials and store locally
-      localStorage.setItem('gycUser', JSON.stringify({
-        email,
-        name: email.split('@')[0],
-        id: null,
-        token: 'local-session',
-        tier: 'explorer',
-        loggedInAt: new Date().toISOString()
-      }));
-      window.location.href = 'deal-dashboard.html';
+      document.getElementById('signinError').textContent = 'Unable to connect. Please try again.';
+      document.getElementById('signinError').classList.add('show');
+      btn.classList.remove('btn-loading');
+      btn.textContent = 'Sign In';
     }
   } catch(e) {
-    // Fallback: local login for MVP
-    localStorage.setItem('gycUser', JSON.stringify({
-      email,
-      name: email.split('@')[0],
-      id: null,
-      token: 'local-session',
-      tier: 'explorer',
-      loggedInAt: new Date().toISOString()
-    }));
-    window.location.href = 'deal-dashboard.html';
+    document.getElementById('signinError').textContent = 'Connection error. Please try again.';
+    document.getElementById('signinError').classList.add('show');
+    btn.classList.remove('btn-loading');
+    btn.textContent = 'Sign In';
   }
 }
 
@@ -569,31 +563,47 @@ async function handleSignUp() {
     timestamp: new Date().toISOString()
   };
 
-  // Send to Make.com → creates GHL contact + membership
   try {
-    await fetch(WEBHOOKS.signUp, {
+    const resp = await fetch(WEBHOOKS.signUp, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData)
-    }).catch(() => {});
-  } catch(e) {}
+    }).catch(() => null);
 
-  // Store session locally
-  localStorage.setItem('gycUser', JSON.stringify({
-    email,
-    name: first + ' ' + last,
-    firstName: first,
-    lastName: last,
-    id: null,
-    token: 'local-session',
-    tier: 'explorer',
-    source,
-    loggedInAt: new Date().toISOString(),
-    isNewUser: true
-  }));
-
-  // New users go to the buy box wizard
-  window.location.href = 'deal-dashboard.html#onboarding';
+    if (resp && resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      if (data.success) {
+        localStorage.setItem('gycUser', JSON.stringify({
+          email,
+          name: data.name || (first + ' ' + last),
+          firstName: first,
+          lastName: last,
+          id: data.contactId || null,
+          token: data.token || null,
+          tier: data.tier || 'explorer',
+          source,
+          loggedInAt: new Date().toISOString(),
+          isNewUser: true
+        }));
+        window.location.href = 'deal-dashboard.html#onboarding';
+      } else {
+        document.getElementById('signupError').textContent = data.error || 'Sign up failed. Please try again.';
+        document.getElementById('signupError').classList.add('show');
+        btn.classList.remove('btn-loading');
+        btn.textContent = 'Create Account';
+      }
+    } else {
+      document.getElementById('signupError').textContent = 'Unable to connect. Please try again.';
+      document.getElementById('signupError').classList.add('show');
+      btn.classList.remove('btn-loading');
+      btn.textContent = 'Create Account';
+    }
+  } catch(e) {
+    document.getElementById('signupError').textContent = 'Connection error. Please try again.';
+    document.getElementById('signupError').classList.add('show');
+    btn.classList.remove('btn-loading');
+    btn.textContent = 'Create Account';
+  }
 }
 
 // ========== FORGOT PASSWORD ==========
