@@ -5742,136 +5742,127 @@ async function fetchBuyBoxFromGHL() {
 // ========== MAGAZINE-STYLE BUY BOX REPORT ==========
 function renderReport() {
   const d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-  if (!d.firstName && !d.goal) {
-    // No data yet - show empty state
-    return;
-  }
+  if (!d.firstName && !d.goal) return;
 
   const name = (d.firstName || 'Investor') + ' ' + (d.lastName || '');
-  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-  // Count matching deals
   const matchCount = getMatchingDealCount(d);
+  const branch = d._branch || (d.goal && d.goal.includes('Cash') ? 'cashflow' : d.goal && d.goal.includes('Equity') ? 'growth' : d.goal && d.goal.includes('Tax') ? 'tax' : 'cashflow');
+
+  // Branch-specific config
+  const branchConfig = {
+    cashflow: { label: 'Cash Flow', color: 'var(--green)', icon: '&#128176;', bg: 'rgba(81,190,123,0.08)' },
+    growth: { label: 'Equity Growth', color: 'var(--blue)', icon: '&#128200;', bg: 'rgba(37,99,235,0.08)' },
+    tax: { label: 'Tax Optimization', color: 'var(--orange)', icon: '&#128737;', bg: 'rgba(207,122,48,0.08)' }
+  };
+  const bc = branchConfig[branch] || branchConfig.cashflow;
+
+  // Build metric cards based on what data exists
+  function metricCard(value, label, highlight) {
+    if (!value) return '';
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${highlight ? bc.color : 'var(--text-dark)'};line-height:1;">${value}</div>
+      <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">${label}</div>
+    </div>`;
+  }
+
+  // Build preference pills
+  function prefPills(items, emptyText) {
+    if (!items || (Array.isArray(items) && items.length === 0)) return `<span style="color:var(--text-muted);font-size:13px;">${emptyText || 'Not set'}</span>`;
+    const arr = Array.isArray(items) ? items : [items];
+    return arr.map(i => `<span style="display:inline-block;padding:5px 14px;background:var(--bg-cream);border:1px solid var(--border);border-radius:100px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);margin:3px 4px 3px 0;">${i}</span>`).join('');
+  }
+
+  // Build detail row (only if value exists)
+  function detailRow(label, value) {
+    if (!value || value === '---') return '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-light);">
+      <span style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">${label}</span>
+      <span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">${value}</span>
+    </div>`;
+  }
 
   const container = document.getElementById('reportContent');
   container.innerHTML = `
-    <div class="report-container">
-      <div class="report-hero">
-        <div class="report-hero-eyebrow">LP Investing Buy Box</div>
-        <div class="report-hero-name">${name.trim()}</div>
-        <div class="report-hero-subtitle">Personalized Investment Profile</div>
-        <div class="report-hero-date">Generated ${today} &middot; Grow Your Cashflow</div>
-      </div>
+    <div style="max-width:800px;margin:0 auto;padding:24px;">
 
-      <div class="report-body">
-        <!-- Key Metrics -->
-        <div class="report-section">
-          <div class="report-section-title">Investment Snapshot</div>
-          <div class="report-metric-row">
-            <div class="report-metric-card">
-              <div class="report-metric-number">${d.checkSize || '---'}</div>
-              <div class="report-metric-label">Max Check Size</div>
-            </div>
-            <div class="report-metric-card">
-              <div class="report-metric-number">${d.minIRR || '---'}</div>
-              <div class="report-metric-label">Min Target IRR</div>
-            </div>
-            <div class="report-metric-card">
-              <div class="report-metric-number">${matchCount}</div>
-              <div class="report-metric-label">Matching Deals</div>
-            </div>
+      <!-- Hero Card -->
+      <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:32px;margin-bottom:24px;color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-bottom:6px;">My Investment Profile</div>
+            <div style="font-family:var(--font-headline);font-size:28px;color:#fff;">${name.trim()}'s Buy Box</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:${bc.bg};border-radius:100px;">
+            <span style="font-size:18px;">${bc.icon}</span>
+            <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:${bc.color};">${bc.label} Investor</span>
           </div>
         </div>
-
-        <!-- Investor Profile -->
-        <div class="report-section">
-          <div class="report-section-title">Investor Profile</div>
-          <div class="report-grid">
-            ${reportItem('Date of Birth', d.dob)}
-            ${reportItem('Net Worth', d.networth)}
-            ${reportItem('Primary Income', d.incomeSource)}
-            ${reportItem('LP Investments', d.lpCount)}
-            ${reportItem('Accreditation', d.accreditation)}
-            ${reportItem('Investment Entity', d.entity)}
-          </div>
-        </div>
-
-        <!-- Objectives & Constraints -->
-        <div class="report-section">
-          <div class="report-section-title">Objectives &amp; Constraints</div>
-          <div class="report-grid">
-            ${reportItem('Investment Trigger', d.trigger)}
-            ${reportItem('Primary Objective', d.goal)}
-            ${reportItem('Max Check Size', d.checkSize)}
-            ${reportItem('Capital Availability', d.capitalReady)}
-            ${reportItem('Deployment Urgency', d.urgency)}
-            ${reportItem('Source of Funds', safeJoin(d.fundSource))}
-          </div>
-        </div>
-
-        <!-- Deal Type Preferences -->
-        <div class="report-section">
-          <div class="report-section-title">Deal Type Preferences</div>
-          <div style="margin-bottom:16px">
-            <div class="report-item-label">Asset Classes of Interest</div>
-            <div class="report-tags" style="margin-top:8px">
-              ${(d.assetClasses || []).map(a => `<span class="report-tag">${a}</span>`).join('') || '<span style="color:var(--text-muted)">Not specified</span>'}
-            </div>
-          </div>
-          <div class="report-grid">
-            ${reportItem('Deal Structure', safeJoin(d.dealStructure))}
-            ${reportItem('Investing Strategies', safeJoin(d.strategies))}
-            ${reportItem('Investing Instrument', safeJoin(d.instruments))}
-          </div>
-        </div>
-
-        <!-- Risk & Liquidity -->
-        <div class="report-section">
-          <div class="report-section-title">Risk &amp; Liquidity</div>
-          <div class="report-grid">
-            ${reportItem('Lockup Tolerance', d.lockup)}
-            ${reportItem('Redemption Flexibility', safeJoin(d.redemption))}
-          </div>
-        </div>
-
-        <!-- Underwriting Guardrails -->
-        <div class="report-section">
-          <div class="report-section-title">Underwriting Guardrails</div>
-          <div class="report-grid">
-            ${reportItem('Min Target IRR', d.minIRR)}
-            ${reportItem('Min Year-1 Cash Yield', d.minCashYield)}
-            ${reportItem('Distribution Cadence', safeJoin(d.distributions))}
-            ${reportItem('Audit Requirement', d.auditPref)}
-          </div>
-        </div>
-
-        <!-- Operator & Governance -->
-        <div class="report-section">
-          <div class="report-section-title">Operator &amp; Governance</div>
-          <div class="report-grid">
-            ${reportItem('Firm Size Preference', safeJoin(d.firmSize))}
-            ${reportItem('Firm Focus', d.firmFocus)}
-          </div>
-        </div>
-
-        <!-- CTA -->
-        <div class="report-callout">
-          <div class="report-callout-title">Ready to Deploy?</div>
-          <div class="report-callout-desc">Join our office hours every Thursday 12-1pm ET and get 1:1 guidance from Pascal on your next investment.</div>
-          <button class="report-callout-btn" onclick="window.open('https://growyourcashflow.com/office-hours','_blank')">Join Office Hours</button>
+        <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
+          <button onclick="openBuyBoxWizard()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">Edit Preferences</button>
+          <button onclick="navigateTo('deals')" style="padding:10px 24px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">Browse ${matchCount} Matching Deals &rarr;</button>
         </div>
       </div>
 
-      <div class="report-footer">
-        <div class="report-footer-logo">Grow Your Cashflow</div>
-        <div class="report-footer-url">growyourcashflow.com</div>
+      <!-- Key Metrics Row -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+        ${metricCard(d.checkSize, 'Check Size', false)}
+        ${metricCard(d.minIRR || (d.riskTolerance ? d.riskTolerance.match(/\\d+/)?.[0] + '%' : ''), 'Min IRR Target', true)}
+        ${metricCard(matchCount, 'Matching Deals', true)}
+        ${metricCard(d.lockup || '', 'Lockup Tolerance', false)}
+        ${branch === 'cashflow' ? metricCard(d.targetCashFlow, 'CF Target', true) : ''}
+        ${branch === 'cashflow' ? metricCard(d.currentCashFlow, 'Current CF', false) : ''}
+        ${branch === 'tax' ? metricCard(d.taxOffset, 'Tax Offset Goal', true) : ''}
+        ${branch === 'tax' ? metricCard(d.taxableIncome, 'Taxable Income', false) : ''}
       </div>
-    </div>
 
-    <div class="report-actions">
-      <button class="btn-cta btn-cta-primary" style="width:auto;padding:14px 32px" onclick="window.print()">Print / Save as PDF</button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:14px 32px" onclick="openBuyBoxWizard()">Edit My Buy Box</button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:14px 32px" onclick="navigateTo('deals')">View Matching Deals</button>
+      <!-- Preferences Cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+
+        <!-- Asset Classes -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:14px;">Asset Classes</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0;">${prefPills(d.assetClasses, 'All asset classes')}</div>
+        </div>
+
+        <!-- Strategies -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:14px;">Strategies & Instruments</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0;">
+            ${prefPills(d.strategies, '')}
+            ${prefPills(d.instruments, '')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Details Card -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;">
+        <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Profile Details</div>
+        ${detailRow('Primary Goal', d.goal)}
+        ${detailRow('Accreditation', d.accreditation)}
+        ${detailRow('Annual Income', d.annualIncome)}
+        ${detailRow('Check Size', d.checkSize)}
+        ${detailRow('Risk Tolerance', d.riskTolerance)}
+        ${detailRow('Lockup Tolerance', d.lockup)}
+        ${detailRow('Distribution Preference', safeJoin(d.distributions))}
+        ${detailRow('Investment Entity', d.entity)}
+        ${detailRow('Tax Timeline', d.taxTimeline)}
+        ${detailRow('Min Target IRR', d.minIRR)}
+        ${detailRow('Min Year-1 Cash Yield', d.minCashYield)}
+        ${detailRow('Capital Availability', d.capitalReady)}
+        ${detailRow('Deployment Urgency', d.urgency)}
+        ${detailRow('Audit Requirement', d.auditPref)}
+        ${detailRow('Firm Size Preference', safeJoin(d.firmSize))}
+      </div>
+
+      <!-- Office Hours CTA -->
+      <div style="background:var(--mint-bg);border:1px solid rgba(81,190,123,0.2);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Ready to deploy capital?</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Join office hours every Thursday 12-1pm ET for 1:1 guidance from Pascal.</div>
+        </div>
+        <button onclick="navigateTo('officehours')" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Book Office Hours</button>
+      </div>
+
     </div>
   `;
 }
