@@ -3957,12 +3957,12 @@ function renderFeedCard(deal) {
         </div>
       </div>
       <div style="display:flex;border-top:1px solid var(--border);align-items:stretch;">
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isPassed ? 'var(--border-light)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isPassed ? 'var(--text-muted)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='${isPassed ? 'var(--border-light)' : 'transparent'}'">
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isPassed ? 'rgba(208,64,64,0.08)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${isPassed ? 'var(--red)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(208,64,64,0.08)';this.style.color='var(--red)'" onmouseout="this.style.background='${isPassed ? 'rgba(208,64,64,0.08)' : 'transparent'}';this.style.color='${isPassed ? 'var(--red)' : 'var(--text-muted)'}'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Pass
         </button>
         <div style="width:1px;background:var(--border);"></div>
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isInterested ? 'var(--green)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='${isInterested ? 'rgba(81,190,123,0.15)' : 'var(--border-light)'}'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}'">
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${isInterested ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(81,190,123,0.1)';this.style.color='var(--green)'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}';this.style.color='${isInterested ? 'var(--green)' : 'var(--text-muted)'}'">
           <svg viewBox="0 0 24 24" fill="${isInterested ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           Interested
         </button>
@@ -4017,9 +4017,16 @@ function renderCard(deal) {
           <div class="metric-value">${deal.dealType || '---'}</div>
         </div>
       </div>
-      <div class="card-footer">
-        <a class="btn btn-outline" href="sponsor.html?company=\${encodeURIComponent(deal.managementCompany)}" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center;">View GP</a>
-        <button class="btn btn-primary" onclick="event.stopPropagation(); openPanel('${deal.id}')">View Deal &rarr;</button>
+      <div class="card-footer" style="display:flex;gap:0;padding:0;border-top:1px solid var(--border);">
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 8px;border:none;background:${getDealStage(deal.id)==='passed' ? 'rgba(208,64,64,0.08)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${getDealStage(deal.id)==='passed' ? 'var(--red)' : 'var(--text-muted)'};transition:all 0.15s;border-radius:0 0 0 var(--radius);" onmouseover="this.style.background='rgba(208,64,64,0.08)';this.style.color='var(--red)'" onmouseout="this.style.background='${getDealStage(deal.id)==='passed' ? 'rgba(208,64,64,0.08)' : 'transparent'}';this.style.color='${getDealStage(deal.id)==='passed' ? 'var(--red)' : 'var(--text-muted)'}'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Pass
+        </button>
+        <div style="width:1px;background:var(--border);"></div>
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 8px;border:none;background:${getDealStage(deal.id)==='interested' ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${getDealStage(deal.id)==='interested' ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;border-radius:0 0 var(--radius) 0;" onmouseover="this.style.background='rgba(81,190,123,0.1)';this.style.color='var(--green)'" onmouseout="this.style.background='${getDealStage(deal.id)==='interested' ? 'rgba(81,190,123,0.1)' : 'transparent'}';this.style.color='${getDealStage(deal.id)==='interested' ? 'var(--green)' : 'var(--text-muted)'}'">
+          <svg viewBox="0 0 24 24" fill="${getDealStage(deal.id)==='interested' ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Interested
+        </button>
       </div>
     </div>
   `;
@@ -8213,7 +8220,7 @@ function renderDashboard() {
       return { ...d, _fitReasons: reasons, _fitScore: score };
     }).filter(d => d._fitScore >= 2 && d._fitReasons.length >= 2)
       .sort((a, b) => b._fitScore - a._fitScore)
-      .slice(0, 4);
+      .slice(0, 3);
 
     if (scoredDeals.length > 0) {
       let goalDealCards = '';
