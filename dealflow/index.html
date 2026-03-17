@@ -2226,6 +2226,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Investment Managers
     </a>
+    <a class="nav-item" href="#" data-page="assets" onclick="navigateTo('assets'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Assets
+    </a>
     <div class="nav-section-label">My Investments</div>
     <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
@@ -2235,7 +2239,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Tax Prep
     </a>
-    <div class="nav-section-label">Education</div>
+    <div class="nav-section-label">Support</div>
     <a class="nav-item" href="#" data-page="officehours" onclick="navigateTo('officehours'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
       Office Hours
@@ -3443,6 +3447,9 @@ html.dark .card-match-badge.red { background: #2E1515; }
             <option value="10">10%+</option>
           </select>
         </div>
+        <button onclick="clearDebtFilters()" style="align-self:center;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Filters
+        </button>
       </div>
 
       <!-- Stat Cards -->
@@ -3489,6 +3496,37 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </thead>
           <tbody id="debtFundTableBody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Assets -->
+  <div class="page" id="page-assets">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Assets</div>
+      <div class="topbar-spacer"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="assetsSearchInput" placeholder="Search by name or location..." oninput="renderAssetsPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;width:220px;color:var(--text-dark);background:var(--bg-card);">
+        <select id="assetsClassFilter" onchange="renderAssetsPage()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);">
+          <option value="">All Asset Classes</option>
+        </select>
+        <select id="assetsStateFilter" onchange="renderAssetsPage()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);">
+          <option value="">All Locations</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:0;">
+      <!-- Map -->
+      <div id="assetsMapContainer" style="height:340px;background:var(--border-light);position:relative;"></div>
+      <!-- Asset list -->
+      <div style="padding:20px 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);"><span id="assetsCount">0</span> assets</div>
+        </div>
+        <div id="assetsListContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
     </div>
   </div>
@@ -4884,6 +4922,7 @@ function navigateTo(page) {
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
+  if (page === 'assets') renderAssetsPage();
   if (page === 'dashboard') renderDashboard();
   if (page === 'goals') renderGoals();
   if (page === 'portfolio') renderPortfolio();
@@ -5432,22 +5471,27 @@ function renderWizardStep() {
       html += '<div class="wizard-deal-grid">';
       toShow.forEach(deal => {
         const stage = typeof getDealStage === 'function' ? getDealStage(deal.id) : 'new';
-        const passClass = stage === 'passed' ? 'actioned' : '';
-        const intClass = stage === 'interested' ? 'actioned' : '';
-        html += `<div class="wizard-deal-card" id="wdeal-${deal.id}">
-          <div class="wizard-deal-body">
-            <div class="wizard-deal-name">${deal.investmentName || deal.name || 'Unnamed Deal'}</div>
-            <div class="wizard-deal-sponsor">${deal.managementCompany || ''} &middot; ${deal.assetClass || ''}</div>
-            <div class="wizard-deal-metrics">
-              ${deal.targetIRR ? `<div class="wizard-deal-metric">Target IRR<strong>${deal.targetIRR}</strong></div>` : ''}
-              ${deal.preferredReturn ? `<div class="wizard-deal-metric">Pref Return<strong>${deal.preferredReturn}</strong></div>` : ''}
-              ${deal.investmentMinimum ? `<div class="wizard-deal-metric">Minimum<strong>${deal.investmentMinimum}</strong></div>` : ''}
-              ${deal.holdPeriod ? `<div class="wizard-deal-metric">Hold<strong>${deal.holdPeriod}</strong></div>` : ''}
+        const isPassed = stage === 'passed';
+        const isInt = stage === 'interested';
+        const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+        html += `<div class="wizard-deal-card" id="wdeal-${deal.id}" style="${isPassed ? 'opacity:0.4;' : ''}${isInt ? 'border-color:var(--green);' : ''}">
+          <div style="display:flex;align-items:stretch;">
+            <div style="width:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px 0 0 12px;"><span style="font-size:28px;opacity:0.4;">${ph.icon}</span></div>
+            <div class="wizard-deal-body" style="flex:1;padding:14px 16px;">
+              <div class="wizard-deal-name">${deal.investmentName || 'Unnamed Deal'}</div>
+              <div class="wizard-deal-sponsor">${deal.managementCompany || ''} &middot; ${deal.assetClass || ''}</div>
+              <div class="wizard-deal-metrics">
+                ${deal.targetIRR ? `<div class="wizard-deal-metric">IRR<strong style="color:var(--green);">${fmt(deal.targetIRR, 'pct')}</strong></div>` : ''}
+                ${deal.preferredReturn ? `<div class="wizard-deal-metric">Pref<strong>${fmt(deal.preferredReturn, 'pct')}</strong></div>` : ''}
+                ${deal.investmentMinimum ? `<div class="wizard-deal-metric">Min<strong>${fmt(deal.investmentMinimum, 'money')}</strong></div>` : ''}
+                ${deal.holdPeriod ? `<div class="wizard-deal-metric">Hold<strong>${deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs'}</strong></div>` : ''}
+              </div>
             </div>
-          </div>
-          <div class="wizard-deal-actions">
-            <button class="${passClass}" onclick="onboardingDealAction('${deal.id}','passed',this)">&#10005; Pass</button>
-            <button class="${intClass}" onclick="onboardingDealAction('${deal.id}','interested',this)">&#10003; Interested</button>
+            <div style="display:flex;flex-direction:column;border-left:1px solid var(--border);min-width:80px;">
+              <button class="${isPassed ? 'actioned' : ''}" onclick="onboardingDealAction('${deal.id}','passed',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border:none;background:${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:700;color:${isPassed ? 'var(--red)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(208,64,64,0.06)'" onmouseout="this.style.background='${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>
+              <div style="height:1px;background:var(--border);"></div>
+              <button class="${isInt ? 'actioned' : ''}" onclick="onboardingDealAction('${deal.id}','interested',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border:none;background:${isInt ? 'rgba(81,190,123,0.08)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:700;color:${isInt ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(81,190,123,0.08)'" onmouseout="this.style.background='${isInt ? 'rgba(81,190,123,0.08)' : 'transparent'}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>Yes</button>
+            </div>
           </div>
         </div>`;
       });
@@ -6417,6 +6461,19 @@ let dealsBuyBoxApplied = false;
 let debtBuyBoxApplied = false;
 let buyBoxProgrammaticChange = false;
 
+function clearDebtFilters() {
+  ['debtFinancialsFilter','debtAUMFilter','debtPositionFilter','debtDistributionFilter','debtMinimumFilter','debtYieldFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 'all';
+  });
+  debtBuyBoxApplied = false;
+  const toggle = document.getElementById('debtBuyBoxToggle');
+  if (toggle) toggle.classList.remove('active');
+  const updateBtn = document.getElementById('debtBuyBoxUpdate');
+  if (updateBtn) updateBtn.classList.remove('visible');
+  syncDebtFilters();
+}
+
 function syncDebtFilters() {
   // Read all filter values directly from DOM to stay in sync
   debtFilterFinancials = (document.getElementById('debtFinancialsFilter') || {}).value || 'all';
@@ -6969,6 +7026,179 @@ let portfolioChartInstance = null;
 function savePortfolio() {
   localStorage.setItem('gycPortfolio', JSON.stringify(portfolioInvestments));
   portfolioInvestments.forEach(item => syncPortfolioItem(item));
+}
+
+// ========== ASSETS PAGE ==========
+let assetsMap = null;
+let assetsMarkers = [];
+let assetsHighlightedId = null;
+
+function renderAssetsPage() {
+  const deals = typeof DEALS !== 'undefined' ? DEALS : [];
+  const searchVal = (document.getElementById('assetsSearchInput')?.value || '').toLowerCase().trim();
+  const classFilter = document.getElementById('assetsClassFilter')?.value || '';
+  const stateFilter = document.getElementById('assetsStateFilter')?.value || '';
+
+  // Populate filter dropdowns on first render
+  const classSelect = document.getElementById('assetsClassFilter');
+  if (classSelect && classSelect.options.length <= 1) {
+    const classes = [...new Set(deals.map(d => d.assetClass).filter(Boolean))].sort();
+    classes.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; classSelect.appendChild(o); });
+  }
+  const stateSelect = document.getElementById('assetsStateFilter');
+  if (stateSelect && stateSelect.options.length <= 1) {
+    const locs = [...new Set(deals.map(d => d.location || d.investingGeography || '').filter(Boolean))].sort();
+    locs.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; stateSelect.appendChild(o); });
+  }
+
+  // Filter deals into assets
+  const assets = deals.filter(d => {
+    if (classFilter && d.assetClass !== classFilter) return false;
+    const loc = (d.location || d.investingGeography || '').toLowerCase();
+    if (stateFilter && loc !== stateFilter.toLowerCase()) return false;
+    if (searchVal) {
+      const haystack = ((d.investmentName || '') + ' ' + (d.managementCompany || '') + ' ' + loc + ' ' + (d.assetClass || '')).toLowerCase();
+      if (!haystack.includes(searchVal)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('assetsCount').textContent = assets.length;
+
+  // Render asset rows
+  const container = document.getElementById('assetsListContainer');
+  if (assets.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);"><div style="font-size:36px;opacity:0.3;margin-bottom:12px;">&#127968;</div><div style="font-size:15px;font-weight:600;">No assets match your search</div></div>';
+  } else {
+    container.innerHTML = assets.map(d => {
+      const loc = d.location || d.investingGeography || 'Unknown';
+      const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(d.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+      const isHL = assetsHighlightedId === d.id;
+      return `<div class="asset-row" data-asset-id="${d.id}" onclick="highlightAsset('${d.id}')" style="display:flex;align-items:center;gap:16px;padding:14px 18px;background:${isHL ? 'var(--mint-bg)' : 'var(--bg-card)'};border:1px solid ${isHL ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;" onmouseover="if(!${isHL})this.style.borderColor='var(--primary)'" onmouseout="if(!${isHL})this.style.borderColor='var(--border)'">
+        <div style="width:44px;height:44px;border-radius:10px;background:${ph.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:20px;opacity:0.5;">${ph.icon}</span></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.investmentName}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${d.managementCompany || ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+          <span style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:100px;background:rgba(81,190,123,0.08);color:var(--green);">${d.assetClass || ''}</span>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Location</div>
+            <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">${loc}</div>
+          </div>
+          ${d.targetIRR ? `<div style="text-align:right;">
+            <div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">IRR</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:var(--green);">${fmt(d.targetIRR, 'pct')}</div>
+          </div>` : ''}
+          <a href="asset.html?id=${d.id}" onclick="event.stopPropagation()" style="padding:6px 14px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">View &rarr;</a>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render map
+  renderAssetsMap(assets);
+}
+
+function renderAssetsMap(assets) {
+  const mapEl = document.getElementById('assetsMapContainer');
+  if (!mapEl) return;
+
+  if (!assetsMap) {
+    assetsMap = L.map(mapEl, { scrollWheelZoom: true }).setView([39.5, -98.5], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 18
+    }).addTo(assetsMap);
+  }
+
+  // Clear old markers
+  assetsMarkers.forEach(m => assetsMap.removeLayer(m));
+  assetsMarkers = [];
+
+  assets.forEach(d => {
+    const coords = getAssetCoords(d);
+    if (!coords) return;
+    const isHL = assetsHighlightedId === d.id;
+    const marker = L.circleMarker(coords, {
+      radius: isHL ? 10 : 6,
+      fillColor: isHL ? '#51BE7B' : '#1F5159',
+      color: isHL ? '#51BE7B' : '#0A1E21',
+      weight: isHL ? 3 : 1.5,
+      fillOpacity: isHL ? 0.9 : 0.7
+    }).addTo(assetsMap);
+
+    marker.bindPopup(`<div style="font-family:var(--font-ui);min-width:180px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;">${d.investmentName}</div>
+      <div style="font-size:11px;color:#607179;margin-bottom:6px;">${d.managementCompany || ''} &middot; ${d.assetClass || ''}</div>
+      ${d.targetIRR ? `<div style="font-size:11px;"><strong>IRR:</strong> ${fmt(d.targetIRR, 'pct')}</div>` : ''}
+      <a href="asset.html?id=${d.id}" style="display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#51BE7B;">View Asset &rarr;</a>
+    </div>`);
+
+    marker.on('click', () => {
+      assetsHighlightedId = d.id;
+      renderAssetsPage();
+      const row = document.querySelector(`.asset-row[data-asset-id="${d.id}"]`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    marker._dealId = d.id;
+    assetsMarkers.push(marker);
+  });
+
+  setTimeout(() => assetsMap.invalidateSize(), 100);
+}
+
+function getAssetCoords(deal) {
+  // Reuse existing geocoding from the deals map
+  const loc = (deal.location || '').toLowerCase().trim();
+  const geo = (deal.investingGeography || '').toLowerCase().trim();
+
+  // Check city coords first
+  if (typeof CITY_COORDS !== 'undefined') {
+    if (CITY_COORDS[loc]) return CITY_COORDS[loc];
+    if (CITY_COORDS[geo]) return CITY_COORDS[geo];
+    // Partial match
+    for (const [city, coords] of Object.entries(CITY_COORDS)) {
+      if (loc.includes(city) || geo.includes(city)) return coords;
+    }
+  }
+
+  // Check state coords
+  if (typeof STATE_COORDS !== 'undefined') {
+    // Extract state abbreviation
+    const stateMatch = (loc + ' ' + geo).match(/\b([A-Z]{2})\b/i) || (loc + ' ' + geo).match(/(texas|colorado|florida|arizona|california|georgia|tennessee|utah|ohio|michigan|virginia|nevada|oregon)/i);
+    if (stateMatch) {
+      const stateMap = { texas: 'TX', colorado: 'CO', florida: 'FL', arizona: 'AZ', california: 'CA', georgia: 'GA', tennessee: 'TN', utah: 'UT', ohio: 'OH', michigan: 'MI', virginia: 'VA', nevada: 'NV', oregon: 'OR' };
+      const abbr = stateMap[stateMatch[1].toLowerCase()] || stateMatch[1].toUpperCase();
+      if (STATE_COORDS[abbr]) return STATE_COORDS[abbr];
+    }
+  }
+
+  // Scatter fallback - use deterministic position based on deal name
+  if (typeof SCATTER_CITIES !== 'undefined' && SCATTER_CITIES.length > 0) {
+    let hash = 0;
+    const name = deal.investmentName || deal.id || '';
+    for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    const idx = Math.abs(hash) % SCATTER_CITIES.length;
+    const base = SCATTER_CITIES[idx];
+    return [base[0] + (Math.random() - 0.5) * 2, base[1] + (Math.random() - 0.5) * 2];
+  }
+
+  return null;
+}
+
+function highlightAsset(id) {
+  assetsHighlightedId = assetsHighlightedId === id ? null : id;
+  renderAssetsPage();
+  // Pan map to the highlighted asset
+  if (assetsHighlightedId) {
+    const marker = assetsMarkers.find(m => m._dealId === id);
+    if (marker) {
+      assetsMap.setView(marker.getLatLng(), 8, { animate: true });
+      marker.openPopup();
+    }
+  }
 }
 
 function renderPortfolioInDeals(container, portfolioDeals) {
