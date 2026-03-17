@@ -3137,48 +3137,66 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
 
       <!-- Debt Fund Filters -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-        <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+        <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
           <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
           Apply My Buy Box
         </button>
         <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
-        <div style="width:1px;height:24px;background:var(--border);"></div>
-        <select id="debtFinancialsFilter" onchange="debtFilterFinancials=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-          <option value="all">All Financials</option>
-          <option value="Audited">Audited</option>
-          <option value="Unaudited">Unaudited</option>
-        </select>
-        <select id="debtAUMFilter" onchange="debtFilterAUM=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-          <option value="all">All AUM Sizes</option>
-          <option value="small">Small (&lt;$100M)</option>
-          <option value="mid">Mid ($100M-$1B)</option>
-          <option value="institutional">Institutional ($1B+)</option>
-        </select>
-        <select id="debtPositionFilter" onchange="debtFilterPosition=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-          <option value="all">All Positions</option>
-          <option value="1st">1st Position</option>
-          <option value="2nd">2nd Position</option>
-          <option value="Mezzanine">Mezzanine</option>
-        </select>
-        <select id="debtDistributionFilter" onchange="debtFilterDistribution=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-          <option value="all">All Distributions</option>
-          <option value="Monthly">Monthly</option>
-          <option value="Quarterly">Quarterly</option>
-        </select>
-        <select id="debtMinimumFilter" onchange="debtFilterMinimum=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-          <option value="all">All Minimums</option>
-          <option value="25000">Under $25K</option>
-          <option value="50000">Under $50K</option>
-          <option value="100000">Under $100K</option>
-          <option value="250000">Under $250K</option>
-        </select>
-        <select id="debtYieldFilter" onchange="debtFilterYield=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-          <option value="all">All Yields</option>
-          <option value="8">8%+</option>
-          <option value="9">9%+</option>
-          <option value="10">10%+</option>
-        </select>
+        <div style="width:1px;height:36px;background:var(--border);align-self:center;"></div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Financials</label>
+          <select id="debtFinancialsFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All</option>
+            <option value="Audited">Audited</option>
+            <option value="Unaudited">Unaudited</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">AUM Size</label>
+          <select id="debtAUMFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All</option>
+            <option value="small">Small (&lt;$100M)</option>
+            <option value="mid">Mid ($100M-$1B)</option>
+            <option value="institutional">Institutional ($1B+)</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Debt Position</label>
+          <select id="debtPositionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All</option>
+            <option value="1st">1st Position</option>
+            <option value="2nd">2nd Position</option>
+            <option value="Mezzanine">Mezzanine</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</label>
+          <select id="debtDistributionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Quarterly">Quarterly</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Min Investment</label>
+          <select id="debtMinimumFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All</option>
+            <option value="25000">Under $25K</option>
+            <option value="50000">Under $50K</option>
+            <option value="100000">Under $100K</option>
+            <option value="250000">Under $250K</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target Yield</label>
+          <select id="debtYieldFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All</option>
+            <option value="8">8%+</option>
+            <option value="9">9%+</option>
+            <option value="10">10%+</option>
+          </select>
+        </div>
       </div>
 
       <!-- Stat Cards -->
@@ -5899,6 +5917,17 @@ let debtFilterYield = 'all';
 let dealsBuyBoxApplied = false;
 let debtBuyBoxApplied = false;
 let buyBoxProgrammaticChange = false;
+
+function syncDebtFilters() {
+  // Read all filter values directly from DOM to stay in sync
+  debtFilterFinancials = (document.getElementById('debtFinancialsFilter') || {}).value || 'all';
+  debtFilterAUM = (document.getElementById('debtAUMFilter') || {}).value || 'all';
+  debtFilterPosition = (document.getElementById('debtPositionFilter') || {}).value || 'all';
+  debtFilterDistribution = (document.getElementById('debtDistributionFilter') || {}).value || 'all';
+  debtFilterMinimum = (document.getElementById('debtMinimumFilter') || {}).value || 'all';
+  debtFilterYield = (document.getElementById('debtYieldFilter') || {}).value || 'all';
+  onDebtFilterChange();
+}
 
 function onDebtFilterChange() {
   // If buy box was applied, un-toggle and show update button
