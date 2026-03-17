@@ -1827,26 +1827,163 @@ function renderMap(lat, lng, name) {
   }
 }
 
+// ========== RENTCAST ENRICHMENT ==========
+async function enrichWithRentCast(address) {
+  if (!address) return null;
+  try {
+    const resp = await fetch('/api/property?address=' + encodeURIComponent(address));
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data.success && data.properties && data.properties.length > 0) {
+      return data.properties[0];
+    }
+  } catch (e) {
+    console.log('RentCast enrichment failed:', e);
+  }
+  return null;
+}
+
+function renderRentCastData(rc) {
+  if (!rc) return;
+
+  // Update hero with real coordinates if available
+  const heroEl = document.getElementById('assetHero');
+  if (heroEl && rc.yearBuilt) {
+    const existingContent = heroEl.innerHTML;
+    heroEl.innerHTML = existingContent +
+      '<div style="position:absolute;top:16px;right:20px;display:flex;gap:8px;">' +
+      (rc.yearBuilt ? '<span style="padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:700;backdrop-filter:blur(8px);">Built ' + rc.yearBuilt + '</span>' : '') +
+      (rc.squareFootage ? '<span style="padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:700;backdrop-filter:blur(8px);">' + rc.squareFootage.toLocaleString() + ' sqft</span>' : '') +
+      (rc.unitCount ? '<span style="padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:700;backdrop-filter:blur(8px);">' + rc.unitCount + ' units</span>' : '') +
+      '</div>';
+  }
+
+  // Add RentCast data card after stats
+  const statsEl = document.getElementById('statsStrip');
+  if (!statsEl) return;
+
+  // Build tax assessment rows
+  let taxRows = '';
+  if (rc.taxAssessments) {
+    const years = Object.keys(rc.taxAssessments).sort().reverse().slice(0, 5);
+    taxRows = years.map(yr => {
+      const a = rc.taxAssessments[yr];
+      const tax = rc.propertyTaxes && rc.propertyTaxes[yr] ? rc.propertyTaxes[yr].total : null;
+      return '<tr>' +
+        '<td style="padding:8px 12px;font-weight:600;">' + yr + '</td>' +
+        '<td style="padding:8px 12px;">$' + (a.value || 0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 12px;">$' + (a.land || 0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 12px;">$' + ((a.improvements || a.value - a.land) || 0).toLocaleString() + '</td>' +
+        '<td style="padding:8px 12px;">' + (tax ? '$' + tax.toLocaleString() : '—') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  // Owner info
+  let ownerHtml = '';
+  if (rc.owner && rc.owner.names && rc.owner.names.length > 0) {
+    ownerHtml = '<div style="margin-top:16px;padding:16px;background:var(--bg-cream);border-radius:var(--radius-sm);">' +
+      '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Owner of Record</div>' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + escHtml(rc.owner.names.join(', ')) + '</div>' +
+      (rc.owner.type ? '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + rc.owner.type + '</div>' : '') +
+      '</div>';
+  }
+
+  // Build property details card
+  const detailItems = [];
+  if (rc.propertyType) detailItems.push({ l: 'Property Type', v: rc.propertyType });
+  if (rc.unitCount) detailItems.push({ l: 'Units', v: rc.unitCount });
+  if (rc.squareFootage) detailItems.push({ l: 'Square Footage', v: rc.squareFootage.toLocaleString() + ' sqft' });
+  if (rc.lotSize) detailItems.push({ l: 'Lot Size', v: rc.lotSize.toLocaleString() + ' sqft' });
+  if (rc.yearBuilt) detailItems.push({ l: 'Year Built', v: rc.yearBuilt });
+  if (rc.floorCount) detailItems.push({ l: 'Floors', v: rc.floorCount });
+  if (rc.lastSaleDate) detailItems.push({ l: 'Last Sale Date', v: new Date(rc.lastSaleDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+  if (rc.lastSalePrice) detailItems.push({ l: 'Last Sale Price', v: '$' + rc.lastSalePrice.toLocaleString() });
+  if (rc.zoning) detailItems.push({ l: 'Zoning', v: rc.zoning });
+  if (rc.assessorID) detailItems.push({ l: 'Assessor ID', v: rc.assessorID });
+
+  const rcCard = document.createElement('div');
+  rcCard.className = 'section-card';
+  rcCard.style.marginTop = '20px';
+  rcCard.innerHTML = `
+    <div class="section-header" style="display:flex;align-items:center;gap:8px;">
+      <div class="section-title">Public Records</div>
+      <span style="font-family:var(--font-ui);font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(37,99,235,0.08);color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;">via RentCast</span>
+    </div>
+    <div class="section-body">
+      ${detailItems.length > 0 ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px;">' +
+        detailItems.map(d => '<div style="padding:12px 16px;background:var(--bg-cream);border-radius:var(--radius-sm);"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">' + d.l + '</div><div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">' + d.v + '</div></div>').join('') +
+        '</div>' : ''}
+      ${taxRows ? '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;margin-top:16px;">Tax Assessment History</div>' +
+        '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">' +
+        '<thead><tr style="border-bottom:2px solid var(--border);">' +
+        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Year</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Total Value</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Land</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Improvements</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Tax</th>' +
+        '</tr></thead><tbody>' + taxRows + '</tbody></table></div>' : ''}
+      ${ownerHtml}
+    </div>
+  `;
+
+  // Insert after the Deal History section
+  const dealHistoryCard = document.getElementById('dealsGrid')?.closest('.section-card');
+  if (dealHistoryCard && dealHistoryCard.nextSibling) {
+    dealHistoryCard.parentNode.insertBefore(rcCard, dealHistoryCard.nextSibling);
+  } else {
+    statsEl.parentElement.appendChild(rcCard);
+  }
+
+  // Update map with real coordinates
+  if (rc.latitude && rc.longitude && typeof L !== 'undefined') {
+    try {
+      const mapEl = document.getElementById('propertyMap');
+      if (mapEl && mapEl._leaflet_id) {
+        // Map already initialized, update view
+      } else if (mapEl) {
+        const map = L.map(mapEl).setView([rc.latitude, rc.longitude], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap', maxZoom: 18
+        }).addTo(map);
+        L.marker([rc.latitude, rc.longitude]).addTo(map)
+          .bindPopup('<strong>' + escHtml(rc.address || 'Property') + '</strong>').openPopup();
+      }
+    } catch (e) { console.log('Map update failed:', e); }
+  }
+}
+
 // ========== INIT ==========
 async function init() {
   initAuth();
 
-  // Get address from URL param
+  // Get params from URL
   const params = new URLSearchParams(window.location.search);
   const address = params.get('address') || '';
+  const dealId = params.get('id') || '';
 
-  // Load property data
-  const data = getPropertyData(address);
+  // Load base property data (sample/hardcoded for now)
+  const data = getPropertyData(address || dealId);
 
   // Brief delay to show loading skeleton
   await new Promise(r => setTimeout(r, 300));
 
-  // Render
+  // Render with base data
   renderProperty(data);
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';
   document.getElementById('loadedContent').style.display = 'block';
+
+  // Enrich with RentCast if we have a real address
+  const lookupAddress = data.address || address;
+  if (lookupAddress && lookupAddress.length > 5) {
+    const rc = await enrichWithRentCast(lookupAddress);
+    if (rc) {
+      renderRentCastData(rc);
+      console.log('RentCast enrichment successful:', rc);
+    }
+  }
 }
 
 init();
