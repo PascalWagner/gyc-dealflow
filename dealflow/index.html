@@ -1618,7 +1618,37 @@ html.dark .card-match-badge.red { background: #2E1515; }
   .report-metric-row { grid-template-columns: 1fr; }
   .office-hours-banner { padding: 12px 16px; flex-wrap: wrap; }
 }
+/* Map View */
+#mapView {
+  width: 100%;
+  min-height: 500px;
+  height: calc(100vh - var(--topbar-height) - 200px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+.map-disclaimer {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: rgba(255, 243, 230, 0.95);
+  border: 1px solid var(--orange);
+  color: #6b4a1f;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  max-width: 90%;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 <body>
 
@@ -1740,6 +1770,9 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <button class="view-btn" data-view="list" onclick="switchView(this)" title="List view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
+        <button class="view-btn" data-view="map" onclick="switchView(this)" title="Map view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </button>
       </div>
     </div>
     <div class="office-hours-banner">
@@ -1794,6 +1827,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <thead id="tableHead"></thead>
         <tbody id="tableBody"></tbody>
       </table>
+      <div id="mapView" style="display:none"></div>
     </div>
   </div>
 
@@ -2584,9 +2618,12 @@ function renderAll() {
   const grid = document.getElementById('cardGrid');
   const table = document.getElementById('tableView');
 
+  const mapContainer = document.getElementById('mapView');
+
   if (currentView === 'grid') {
     grid.style.display = '';
     table.style.display = 'none';
+    mapContainer.style.display = 'none';
     if (deals.length === 0) {
       grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
       return;
@@ -2595,9 +2632,15 @@ function renderAll() {
     grid.querySelectorAll('.deal-card').forEach(card => {
       card.addEventListener('click', () => openPanel(card.dataset.id));
     });
+  } else if (currentView === 'map') {
+    grid.style.display = 'none';
+    table.style.display = 'none';
+    mapContainer.style.display = 'block';
+    renderMapView();
   } else {
     grid.style.display = 'none';
     table.style.display = 'table';
+    mapContainer.style.display = 'none';
     renderTableHead();
     if (deals.length === 0) {
       document.getElementById('tableBody').innerHTML = '<tr><td colspan="' + TABLE_COLS.length + '" style="text-align:center;padding:60px;color:var(--text-muted);font-size:15px;">No deals found. Try adjusting your filters.</td></tr>';
@@ -2631,6 +2674,66 @@ function switchView(el) {
   el.classList.add('active');
   currentView = el.dataset.view;
   renderAll();
+}
+
+// --- Map View ---
+let dealMap = null;
+let mapMarkers = [];
+const LOCATION_COORDS = {
+  "Clearwater, FL": [27.9659, -82.8001],
+  "Georgia": [33.7490, -84.3880],
+  "Chattanooga, TN": [35.0456, -85.3097]
+};
+
+function renderMapView() {
+  const container = document.getElementById('mapView');
+  const mapDeals = DEALS.filter(d => d.dealType === "Syndication" && d.location && LOCATION_COORDS[d.location]);
+  const sixMonthsAgo = new Date("2026-03-17");
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+  if (!dealMap) {
+    container.innerHTML = '<div class="map-disclaimer">\u26a0\ufe0f Note: Property locations shown are approximate and may not be accurate. We\'re working on verifying exact addresses.</div><div id="leafletMap" style="width:100%;height:100%;"></div>';
+    dealMap = L.map('leafletMap').setView([37.5, -96], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18
+    }).addTo(dealMap);
+  }
+
+  // Clear existing markers
+  mapMarkers.forEach(m => dealMap.removeLayer(m));
+  mapMarkers = [];
+
+  mapDeals.forEach(deal => {
+    const coords = LOCATION_COORDS[deal.location];
+    const dealDate = new Date(deal.addedDate);
+    const isActive = dealDate >= sixMonthsAgo;
+    const color = isActive ? '#51BE7B' : '#8A9AA0';
+
+    const marker = L.circleMarker(coords, {
+      radius: 10,
+      fillColor: color,
+      color: '#fff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.85
+    }).addTo(dealMap);
+
+    const irr = deal.targetIRR ? (deal.targetIRR * 100).toFixed(1) + '%' : 'N/A';
+    marker.bindPopup(
+      '<div style="font-family:var(--font-ui);min-width:180px;">' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:6px;">' + deal.investmentName + '</div>' +
+      '<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Sponsor:</strong> ' + (deal.managementCompany || 'N/A') + '</div>' +
+      '<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Target IRR:</strong> ' + irr + '</div>' +
+      '<div style="font-size:12px;color:#607179;"><strong>Asset Class:</strong> ' + (deal.assetClass || 'N/A') + '</div>' +
+      '</div>'
+    );
+
+    mapMarkers.push(marker);
+  });
+
+  // Invalidate size after display
+  setTimeout(() => { if (dealMap) dealMap.invalidateSize(); }, 100);
 }
 
 function toggleSave(id) {
