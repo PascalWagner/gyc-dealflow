@@ -1127,11 +1127,17 @@ html.dark .card-match-badge.red { background: #2E1515; }
 /* ====== BUY BOX WIZARD ====== */
 .wizard-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 200px;
   background: var(--bg-cream);
   z-index: 500;
   display: none;
   flex-direction: column;
+}
+@media (max-width: 900px) {
+  .wizard-overlay { left: 0; }
 }
 .wizard-overlay.active { display: flex; }
 
@@ -1209,6 +1215,13 @@ html.dark .card-match-badge.red { background: #2E1515; }
   color: var(--text-secondary);
   line-height: 1.7;
   margin-bottom: 32px;
+}
+.wizard-inline-nav {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 40px;
+  padding-top: 24px;
 }
 
 .wizard-field { margin-bottom: 20px; }
@@ -1342,12 +1355,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
 .wizard-guide-item strong { color: var(--text-dark); }
 
 .wizard-footer {
-  padding: 20px 32px;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-card);
+  display: none;
 }
 .wizard-btn {
   padding: 14px 36px;
@@ -3399,6 +3407,15 @@ function renderWizardStep() {
     html += step.guide.items.map(i => `<div class="wizard-guide-item">&bull; ${i}</div>`).join('');
     html += `</div>`;
   }
+
+  // Add inline nav buttons
+  const total = WIZARD_STEPS.length;
+  html += '<div class="wizard-inline-nav">';
+  if (wizardStep > 0) {
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+  }
+  html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (wizardStep === total - 1 ? 'Finish' : 'Next') + '</button>';
+  html += '</div>';
 
   document.getElementById('wizardContent').innerHTML = html;
 }
