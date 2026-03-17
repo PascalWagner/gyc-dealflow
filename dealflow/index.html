@@ -164,6 +164,17 @@ body {
 
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
 .nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+.nav-item-promo {
+  background: linear-gradient(135deg, rgba(81,190,123,0.15), rgba(81,190,123,0.05)) !important;
+  border: 1px solid rgba(81,190,123,0.3);
+  border-radius: 8px !important;
+  margin: 0 8px 8px 8px;
+  color: #51BE7B !important;
+  font-weight: 700 !important;
+}
+.nav-item-promo svg { opacity: 1 !important; stroke: #51BE7B !important; }
+.nav-item-promo:hover { background: linear-gradient(135deg, rgba(81,190,123,0.25), rgba(81,190,123,0.1)) !important; color: #fff !important; }
+.nav-item-promo:hover svg { stroke: #fff !important; }
 
 .nav-badge {
   margin-left: auto;
@@ -1742,6 +1753,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <div class="sidebar-logo-text">Grow Your Cashflow</div>
   </div>
   <nav class="sidebar-nav">
+    <a class="nav-item nav-item-promo" href="#" data-page="incomefund" onclick="navigateTo('incomefund'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      GYC Income Fund
+    </a>
     <a class="nav-item" href="#" data-page="buybox" onclick="navigateTo('buybox'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       My Buy Box
@@ -2280,6 +2295,90 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
 
+
+  <!-- PAGE: GYC Income Fund -->
+  <div class="page" id="page-incomefund">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">GYC Income Fund</div>
+    </div>
+    <div class="sub-page" style="max-width:1000px">
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg, #0a1e21 0%, #1a3a3f 50%, #0d2b1f 100%);border-radius:var(--radius);padding:48px 40px;margin-bottom:32px;color:#fff;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.08);"></div>
+        <div style="position:absolute;bottom:-50px;left:-50px;width:250px;height:250px;border-radius:50%;background:rgba(81,190,123,0.05);"></div>
+        <div style="position:relative;z-index:1;">
+          <div style="display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(81,190,123,0.2);color:#51BE7B;font-family:var(--font-ui);font-size:11px;font-weight:700;margin-bottom:16px;letter-spacing:0.5px;">NOW ACCEPTING INVESTORS</div>
+          <h1 style="font-family:var(--font-ui);font-size:32px;font-weight:800;margin:0 0 12px 0;">GYC Income Fund</h1>
+          <p style="font-family:var(--font-body);font-size:16px;opacity:0.85;margin:0 0 24px 0;max-width:600px;">A diversified private credit fund focused on generating consistent monthly income through first-lien real estate lending positions.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="https://growyourcashflow.com/income-fund" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:14px 32px;">Request Investment Details</a>
+            <a href="https://growyourcashflow.com/income-fund/deck" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:14px 32px;border-color:rgba(255,255,255,0.3);color:#fff;">Download Deck</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:4px;">Target Yield</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--green);">10-12%</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);">Annual Net Return</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:4px;">Distributions</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--primary);">Monthly</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);">Paid on the 15th</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:4px;">Minimum Investment</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">$50K</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);">Accredited Investors</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:4px;">Fund Structure</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--blue);">Evergreen</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);">Quarterly Liquidity</div>
+        </div>
+      </div>
+
+      <!-- Fund Highlights -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0 0 16px 0;">Investment Strategy</h3>
+          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.8;padding-left:20px;margin:0;">
+            <li>First-lien position on all loans</li>
+            <li>Conservative underwriting (max 65% LTV)</li>
+            <li>Diversified across residential & commercial RE</li>
+            <li>Short-duration loans (6-24 months)</li>
+            <li>Geographic diversification across US markets</li>
+          </ul>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0 0 16px 0;">Why GYC Income Fund?</h3>
+          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.8;padding-left:20px;margin:0;">
+            <li>Managed by the Grow Your Cashflow team</li>
+            <li>Full transparency — track your portfolio here</li>
+            <li>Monthly income distributions</li>
+            <li>GP co-invests alongside LPs</li>
+            <li>Quarterly investor calls and reporting</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;">
+        <h3 style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin:0 0 8px 0;">Ready to Start Earning Monthly Income?</h3>
+        <p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin:0 0 20px 0;">Schedule a call with Pascal to learn more about the GYC Income Fund and see if it's the right fit for your portfolio.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="https://growyourcashflow.com/income-fund" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:14px 32px;">Schedule a Call</a>
+          <a href="https://growyourcashflow.com/income-fund/deck" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:14px 32px;">Download Investment Summary</a>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- PAGE: Office Hours -->
   <div class="page" id="page-officehours">
