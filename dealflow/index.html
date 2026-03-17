@@ -2163,6 +2163,9 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <button class="view-btn" data-view="list" onclick="switchView(this)" title="List view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         </button>
+        <button class="view-btn" data-view="feed" onclick="switchView(this)" title="Feed view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>
+        </button>
         <button class="view-btn" data-view="map" onclick="switchView(this)" title="Map view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         </button>
@@ -4126,10 +4129,18 @@ function renderAll() {
     return;
   }
 
-  if (currentView === 'grid') {
+  if (currentView === 'grid' || currentView === 'feed') {
     grid.style.display = '';
     table.style.display = 'none';
     mapContainer.style.display = 'none';
+    // Toggle between 3-column grid and single-column feed
+    if (currentView === 'feed') {
+      grid.style.gridTemplateColumns = '1fr';
+      grid.style.maxWidth = '720px';
+    } else {
+      grid.style.gridTemplateColumns = '';
+      grid.style.maxWidth = '';
+    }
     if (deals.length === 0) {
       grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
       return;
