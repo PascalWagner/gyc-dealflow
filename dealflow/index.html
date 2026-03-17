@@ -3673,7 +3673,10 @@ function navigateTo(page) {
   if (page === 'managers') renderManagersPage();
   if (page === 'analytics') refreshAnalyticsDashboard();
   if (page === 'buybox') {
+    // Try to render from localStorage first
     renderReport();
+    // Also trigger a fresh GHL fetch in case data hasn't loaded yet
+    fetchBuyBoxFromGHL();
     const bbActions = document.getElementById('buyboxTopbarActions');
     if (bbActions) {
       if (!localStorage.getItem('gycBuyBoxComplete')) {
@@ -4462,6 +4465,9 @@ async function fetchBuyBoxFromGHL() {
         syncWizardToBuyBox();
         // Re-render the report if we're on the buy box page
         renderReport();
+        // Enable Print/Edit buttons
+        const bbActions = document.getElementById('buyboxTopbarActions');
+        if (bbActions) { bbActions.style.opacity = '1'; bbActions.style.pointerEvents = 'auto'; }
         console.log('Buy box synced from GHL:', Object.keys(ghl).length, 'fields');
       }
     }
@@ -4536,7 +4542,7 @@ function renderReport() {
             ${reportItem('Max Check Size', d.checkSize)}
             ${reportItem('Capital Availability', d.capitalReady)}
             ${reportItem('Deployment Urgency', d.urgency)}
-            ${reportItem('Source of Funds', (d.fundSource || []).join(', '))}
+            ${reportItem('Source of Funds', safeJoin(d.fundSource))}
           </div>
         </div>
 
@@ -4550,9 +4556,9 @@ function renderReport() {
             </div>
           </div>
           <div class="report-grid">
-            ${reportItem('Deal Structure', (d.dealStructure || []).join(', '))}
-            ${reportItem('Investing Strategies', (d.strategies || []).join(', '))}
-            ${reportItem('Investing Instrument', (d.instruments || []).join(', '))}
+            ${reportItem('Deal Structure', safeJoin(d.dealStructure))}
+            ${reportItem('Investing Strategies', safeJoin(d.strategies))}
+            ${reportItem('Investing Instrument', safeJoin(d.instruments))}
           </div>
         </div>
 
@@ -4561,7 +4567,7 @@ function renderReport() {
           <div class="report-section-title">Risk &amp; Liquidity</div>
           <div class="report-grid">
             ${reportItem('Lockup Tolerance', d.lockup)}
-            ${reportItem('Redemption Flexibility', (d.redemption || []).join(', '))}
+            ${reportItem('Redemption Flexibility', safeJoin(d.redemption))}
           </div>
         </div>
 
@@ -4571,7 +4577,7 @@ function renderReport() {
           <div class="report-grid">
             ${reportItem('Min Target IRR', d.minIRR)}
             ${reportItem('Min Year-1 Cash Yield', d.minCashYield)}
-            ${reportItem('Distribution Cadence', (d.distributions || []).join(', '))}
+            ${reportItem('Distribution Cadence', safeJoin(d.distributions))}
             ${reportItem('Audit Requirement', d.auditPref)}
           </div>
         </div>
@@ -4580,7 +4586,7 @@ function renderReport() {
         <div class="report-section">
           <div class="report-section-title">Operator &amp; Governance</div>
           <div class="report-grid">
-            ${reportItem('Firm Size Preference', (d.firmSize || []).join(', '))}
+            ${reportItem('Firm Size Preference', safeJoin(d.firmSize))}
             ${reportItem('Firm Focus', d.firmFocus)}
           </div>
         </div>
@@ -4605,6 +4611,12 @@ function renderReport() {
       <button class="btn-cta btn-cta-secondary" style="width:auto;padding:14px 32px" onclick="navigateTo('deals')">View Matching Deals</button>
     </div>
   `;
+}
+
+function safeJoin(val) {
+  if (Array.isArray(val)) return val.join(', ');
+  if (val && typeof val === 'string') return val;
+  return '';
 }
 
 function reportItem(label, value) {
