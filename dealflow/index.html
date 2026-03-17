@@ -3189,7 +3189,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target Yield</label>
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">2025 Return</label>
           <select id="debtYieldFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
             <option value="all">All</option>
             <option value="8">8%+</option>
@@ -5960,7 +5960,7 @@ function getFilteredDebtFunds() {
     }
     if (debtFilterYield !== 'all') {
       const minYield = parseInt(debtFilterYield) / 100;
-      if ((f.targetIRR || 0) < minYield) return false;
+      if ((f._return2025 || 0) < minYield) return false;
     }
     return true;
   });
