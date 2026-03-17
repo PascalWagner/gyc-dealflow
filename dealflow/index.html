@@ -6406,7 +6406,7 @@ let debtFundData = [];
 let debtChartMetric = 'yield';
 let debtSortCol = 'investmentName';
 let debtSortAsc = true;
-let highlightedDebtFund = null;
+let highlightedDebtFunds = new Set();
 let debtFilterFinancials = 'all';
 let debtFilterAUM = 'all';
 let debtFilterPosition = 'all';
@@ -6601,13 +6601,20 @@ function renderDebtChart() {
   const isSimulated = debtChartMetric === 'delinquency' || debtChartMetric === 'leverage' || debtChartMetric === 'ltv';
   if (overlay) overlay.style.display = isSimulated ? 'flex' : 'none';
 
-  const datasets = filteredFunds.map(f => {
-    const isHighlighted = highlightedDebtFund === f.id;
-    const isAnyHighlighted = highlightedDebtFund !== null;
+  // Sort: selected funds first
+  const sortedFunds = [...filteredFunds].sort((a, b) => {
+    const aH = highlightedDebtFunds.has(a.id) ? 0 : 1;
+    const bH = highlightedDebtFunds.has(b.id) ? 0 : 1;
+    return aH - bH;
+  });
+
+  const datasets = sortedFunds.map(f => {
+    const isHighlighted = highlightedDebtFunds.has(f.id);
+    const isAnyHighlighted = highlightedDebtFunds.size > 0;
     return {
       label: f.investmentName,
       data: f[metricKey],
-      borderColor: isAnyHighlighted ? (isHighlighted ? f._color : 'rgba(200,200,200,0.3)') : f._color,
+      borderColor: isAnyHighlighted ? (isHighlighted ? f._color : 'rgba(200,200,200,0.25)') : f._color,
       backgroundColor: 'transparent',
       borderWidth: isAnyHighlighted ? (isHighlighted ? 3 : 1) : 2,
       pointRadius: isAnyHighlighted ? (isHighlighted ? 4 : 0) : 2,
@@ -6628,9 +6635,10 @@ function renderDebtChart() {
       onClick: function(event, elements) {
         if (elements.length > 0) {
           const idx = elements[0].datasetIndex;
-          const fund = filteredFunds[idx];
+          const fund = sortedFunds[idx];
           if (fund) {
-            highlightedDebtFund = highlightedDebtFund === fund.id ? null : fund.id;
+            if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id);
+            else highlightedDebtFunds.add(fund.id);
             renderDebtChart();
             renderDebtTable();
           }
@@ -6645,10 +6653,9 @@ function renderDebtChart() {
           padding: 12,
           cornerRadius: 8,
           filter: function(tooltipItem) {
-            // Only show tooltip for highlighted fund, or nearest if none highlighted
-            if (highlightedDebtFund !== null) {
-              const fund = filteredFunds[tooltipItem.datasetIndex];
-              return fund && fund.id === highlightedDebtFund;
+            if (highlightedDebtFunds.size > 0) {
+              const fund = sortedFunds[tooltipItem.datasetIndex];
+              return fund && highlightedDebtFunds.has(fund.id);
             }
             return true;
           },
@@ -6666,7 +6673,7 @@ function renderDebtChart() {
         },
         y: {
           min: debtChartMetric === 'yield' ? 0 : undefined,
-          max: debtChartMetric === 'yield' ? 15 : undefined,
+          max: debtChartMetric === 'yield' ? 40 : undefined,
           title: { display: true, text: metricLabel, font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
           grid: { color: 'rgba(0,0,0,0.05)' },
           ticks: {
@@ -6678,17 +6685,23 @@ function renderDebtChart() {
     }
   });
 
-  // Render custom side legend
+  // Render custom side legend (selected funds first)
   const legendEl = document.getElementById('debtChartLegend');
   if (legendEl) {
-    legendEl.innerHTML = filteredFunds.map(f => {
-      const isActive = highlightedDebtFund === f.id;
-      const isAnyActive = highlightedDebtFund !== null;
+    const legendFunds = [...filteredFunds].sort((a, b) => {
+      const aH = highlightedDebtFunds.has(a.id) ? 0 : 1;
+      const bH = highlightedDebtFunds.has(b.id) ? 0 : 1;
+      return aH - bH;
+    });
+    legendEl.innerHTML = legendFunds.map(f => {
+      const isActive = highlightedDebtFunds.has(f.id);
+      const isAnyActive = highlightedDebtFunds.size > 0;
       const dotColor = isAnyActive ? (isActive ? f._color : '#ccc') : f._color;
       const textColor = isAnyActive && !isActive ? 'var(--text-muted)' : 'var(--text-dark)';
       const fontWeight = isActive ? '700' : '500';
       const bg = isActive ? 'var(--mint-bg)' : 'transparent';
-      return '<div onclick="toggleDebtFundHighlight(\'' + f.id + '\')" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;background:' + bg + ';transition:all 0.15s ease;" onmouseover="this.style.background=\'' + (isActive ? 'var(--mint-bg)' : 'var(--border-light)') + '\';" onmouseout="this.style.background=\'' + bg + '\';">'
+      const border = isActive ? 'border:1px solid rgba(81,190,123,0.3);' : 'border:1px solid transparent;';
+      return '<div onclick="toggleDebtFundHighlight(\'' + f.id + '\')" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;background:' + bg + ';' + border + 'transition:all 0.15s ease;" onmouseover="this.style.background=\'' + (isActive ? 'var(--mint-bg)' : 'var(--border-light)') + '\';" onmouseout="this.style.background=\'' + bg + '\';">'
         + '<span style="width:10px;height:10px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;"></span>'
         + '<span style="color:' + textColor + ';font-weight:' + fontWeight + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (f.investmentName || '') + '">' + (f.investmentName || 'Unknown') + '</span>'
         + '</div>';
@@ -6697,15 +6710,14 @@ function renderDebtChart() {
 }
 
 function toggleDebtFundHighlight(id) {
-  highlightedDebtFund = highlightedDebtFund === id ? null : id;
+  if (highlightedDebtFunds.has(id)) highlightedDebtFunds.delete(id);
+  else highlightedDebtFunds.add(id);
   renderDebtChart();
   renderDebtTable();
-  // Scroll highlighted row into view
-  if (highlightedDebtFund) {
-    const row = document.querySelector('#debtFundTableBody tr[data-fund-id="' + highlightedDebtFund + '"]');
-    if (row) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+  // Scroll first highlighted row into view
+  if (highlightedDebtFunds.size > 0) {
+    const row = document.querySelector('#debtFundTableBody tr[data-fund-id="' + id + '"]');
+    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
@@ -6732,6 +6744,10 @@ function switchDebtMetric(metric, btn) {
 function renderDebtTable() {
   const filtered = getFilteredDebtFunds();
   const sorted = [...filtered].sort((a, b) => {
+    // Selected funds always come first
+    const aH = highlightedDebtFunds.has(a.id) ? 0 : 1;
+    const bH = highlightedDebtFunds.has(b.id) ? 0 : 1;
+    if (aH !== bH) return aH - bH;
     let va = a[debtSortCol], vb = b[debtSortCol];
     if (va == null) va = '';
     if (vb == null) vb = '';
@@ -6762,8 +6778,8 @@ function renderDebtTable() {
     const aumStr = f.fundAUM ? (f.fundAUM >= 1e9 ? '$' + (f.fundAUM / 1e9).toFixed(1) + 'B' : f.fundAUM >= 1e6 ? '$' + (f.fundAUM / 1e6).toFixed(0) + 'M' : '$' + f.fundAUM.toLocaleString()) : '—';
     const financialsStr = f.financials || '—';
     const financialsBadge = financialsStr === 'Audited' ? 'background:var(--green-bg);color:var(--green)' : financialsStr === 'Unaudited' ? 'background:var(--orange-bg);color:var(--orange)' : 'background:var(--border-light);color:var(--text-muted)';
-    const isHL = highlightedDebtFund === f.id;
-    return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to highlight on chart">
+    const isHL = highlightedDebtFunds.has(f.id);
+    return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to select/deselect">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
       <td>${f.debtPosition || '—'}</td>
       <td>${aumStr}</td>
