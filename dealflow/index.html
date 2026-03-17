@@ -766,8 +766,6 @@ html.dark .card-match-badge.red { background: #2E1515; }
 .panel-status-pill.evergreen { background: rgba(37,99,235,0.3); color: #93C5FD; }
 
 .panel-body {
-  flex: 1;
-  overflow-y: auto;
   padding: 0;
 }
 
@@ -1790,7 +1788,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
       Cash Flow Academy
     </a>
     <div class="nav-section-label">Opportunities</div>
-    <a class="nav-item nav-item-promo" href="#" data-page="incomefund" onclick="navigateTo('incomefund'); return false">
+    <a class="nav-item nav-item-promo" href="https://growyourcashflow.io/income-fund" target="_blank">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       GYC Income Fund
     </a>
@@ -1842,7 +1840,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
   <button class="panel-close" onclick="closePanel()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
-  <div id="panelContent" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;"></div>
+  <div id="panelContent" style="flex:1;overflow-y:auto;"></div>
 </div>
 
 <!-- Main Content -->
@@ -3162,7 +3160,7 @@ function renderPanel(deal) {
       </div>
       <div class="panel-actions">
         <a href="deal.html?id=${deal.id}" class="btn-cta btn-cta-primary" style="text-decoration:none;text-align:center;">View Deal Page</a>
-        <button class="btn-cta btn-cta-secondary">Deck Review</button>
+        ${deal.deckUrl ? `<a href="${deal.deckUrl}" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;text-align:center;">View Deal Deck</a>` : `<button class="btn-cta btn-cta-secondary" style="opacity:0.4;cursor:default;" disabled>No Deck Available</button>`}
       </div>
       <div class="panel-added-date">Added on ${deal.addedDate}</div>
     </div>
@@ -3649,7 +3647,6 @@ function navigateTo(page) {
       if (!localStorage.getItem('gycBuyBoxComplete')) {
         bbActions.style.opacity = '0.4';
         bbActions.style.pointerEvents = 'none';
-        openBuyBoxWizard();
       } else {
         bbActions.style.opacity = '1';
         bbActions.style.pointerEvents = 'auto';
@@ -5050,37 +5047,56 @@ function sortDebtTable(col) {
 // ========== INVESTMENT MANAGERS PAGE ==========
 function renderManagersPage() {
   const deals = window.DEALS || [];
+  const apiCompanies = window.GYC_COMPANIES || [];
   const filterSelect = document.getElementById('managersAssetFilter');
   const tbody = document.getElementById('managersTableBody');
   if (!tbody) return;
 
-  // Build management company map from deals
-  const companyMap = {};
+  // Build deal counts per company name
+  const dealsByCompany = {};
   deals.forEach(d => {
     const name = d.managementCompany;
     if (!name) return;
+    if (!dealsByCompany[name]) dealsByCompany[name] = { deals: [], assetClasses: new Set(), dealTypes: new Set() };
+    dealsByCompany[name].deals.push(d);
+    if (d.assetClass) dealsByCompany[name].assetClasses.add(d.assetClass);
+    if (d.dealType) dealsByCompany[name].dealTypes.add(d.dealType);
+  });
+
+  // Primary source: GYC_COMPANIES from API (Airtable Management Companies table)
+  const companyMap = {};
+  apiCompanies.forEach(c => {
+    const name = c.name;
+    if (!name) return;
+    const dealInfo = dealsByCompany[name] || { deals: [], assetClasses: new Set(), dealTypes: new Set() };
+    const assetClasses = new Set([...(c.assetClasses || []), ...dealInfo.assetClasses]);
+    companyMap[name] = {
+      name: name,
+      ceo: c.ceo || '',
+      assetClasses: assetClasses,
+      dealTypes: dealInfo.dealTypes,
+      dealCount: dealInfo.deals.length,
+      website: c.website || '',
+      type: c.type || '',
+      foundingYear: c.foundingYear || null,
+      totalInvestors: c.totalInvestors || null
+    };
+  });
+
+  // Also add companies from deals that aren't in the API list
+  Object.entries(dealsByCompany).forEach(([name, info]) => {
     if (!companyMap[name]) {
       companyMap[name] = {
         name: name,
-        ceo: d.ceo || '',
-        assetClasses: new Set(),
-        dealTypes: new Set(),
-        deals: [],
-        website: ''
+        ceo: info.deals[0]?.ceo || '',
+        assetClasses: info.assetClasses,
+        dealTypes: info.dealTypes,
+        dealCount: info.deals.length,
+        website: '',
+        type: '',
+        foundingYear: null,
+        totalInvestors: null
       };
-    }
-    companyMap[name].deals.push(d);
-    if (d.assetClass) companyMap[name].assetClasses.add(d.assetClass);
-    if (d.dealType) companyMap[name].dealTypes.add(d.dealType);
-  });
-
-  // Enrich from GYC_COMPANIES if available
-  const apiCompanies = window.GYC_COMPANIES || [];
-  apiCompanies.forEach(c => {
-    const name = c.name || c.companyName;
-    if (name && companyMap[name]) {
-      if (c.website) companyMap[name].website = c.website;
-      if (c.ceo) companyMap[name].ceo = c.ceo;
     }
   });
 
@@ -5088,7 +5104,7 @@ function renderManagersPage() {
 
   // Populate asset class filter options
   const allAssetClasses = new Set();
-  companies.forEach(c => c.assetClasses.forEach(ac => allAssetClasses.add(ac)));
+  companies.forEach(c => c.assetClasses.forEach(ac => { if (ac) allAssetClasses.add(ac); }));
   const currentFilter = filterSelect.value;
   const existingOptions = filterSelect.querySelectorAll('option:not(:first-child)');
   if (existingOptions.length === 0) {
@@ -5106,21 +5122,20 @@ function renderManagersPage() {
     ? companies.filter(c => c.assetClasses.has(currentFilter))
     : companies;
 
-  // Sort by # deals descending
-  filtered.sort((a, b) => b.deals.length - a.deals.length);
+  // Sort by # deals descending, then name
+  filtered.sort((a, b) => b.dealCount - a.dealCount || a.name.localeCompare(b.name));
 
   tbody.innerHTML = filtered.map(c => {
-    const assetStr = [...c.assetClasses].sort().join(', ');
-    const typeStr = [...c.dealTypes].sort().join(', ');
+    const assetStr = [...c.assetClasses].filter(Boolean).sort().join(', ');
     const websiteLink = c.website
       ? '<a href="' + (c.website.startsWith('http') ? c.website : 'https://' + c.website) + '" target="_blank" style="color:var(--primary);text-decoration:none;" onclick="event.stopPropagation()">' + c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') + '</a>'
       : '<span style="color:var(--text-muted)">—</span>';
-    return '<tr style="cursor:pointer" onclick="navigateTo(\'deals\'); setTimeout(function(){ var s=document.getElementById(\'searchInput\'); if(s){s.value=\'' + c.name.replace(/'/g, "\\'") + '\'; s.dispatchEvent(new Event(\'input\'));} },100)">' +
+    return '<tr style="cursor:pointer" onclick="navigateTo(\'deals\'); setTimeout(function(){ var s=document.getElementById(\'filterSearch\'); if(s){s.value=\'' + c.name.replace(/'/g, "\\'") + '\'; s.dispatchEvent(new Event(\'input\'));} },100)">' +
       '<td class="name-cell" style="font-weight:600;color:var(--text-dark);">' + c.name + '</td>' +
       '<td>' + (c.ceo || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
-      '<td>' + assetStr + '</td>' +
-      '<td style="text-align:center;font-weight:600;">' + c.deals.length + '</td>' +
-      '<td>' + typeStr + '</td>' +
+      '<td>' + (assetStr || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
+      '<td style="text-align:center;font-weight:600;">' + c.dealCount + '</td>' +
+      '<td>' + (c.type || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
       '<td>' + websiteLink + '</td>' +
     '</tr>';
   }).join('');
