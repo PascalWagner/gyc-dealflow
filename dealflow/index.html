@@ -2899,7 +2899,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <!-- Main Content -->
       <div style="flex:1;min-width:0;">
         <div id="managersStats" style="margin-bottom:20px;"></div>
-        <div id="managersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+        <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;max-width:680px;"></div>
       </div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
@@ -3980,7 +3980,7 @@ function renderFeedCard(deal) {
   const heroBg = heroImg ? `url(${heroImg}) center/cover no-repeat` : ph.bg;
 
   return `
-    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid ${isInterested ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius);overflow:hidden;transition:all 0.2s ease;${isPassed ? 'opacity:0.45;' : ''}max-width:680px;margin:0 auto;box-shadow:var(--shadow-card);">
+    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid ${isInterested ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius);overflow:hidden;transition:all 0.2s ease;${isPassed ? 'opacity:0.45;' : ''}box-shadow:var(--shadow-card);width:100%;">
       <!-- Hero Image / Placeholder -->
       <div onclick="openPanel('${deal.id}')" style="height:140px;background:${heroBg};position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;">
         ${!heroImg ? `<span style="font-size:48px;opacity:0.3;">${ph.icon}</span>` : ''}
@@ -4470,10 +4470,12 @@ function renderAll() {
     // Toggle between 3-column grid and single-column feed
     if (currentView === 'feed') {
       grid.style.gridTemplateColumns = '1fr';
-      grid.style.maxWidth = '720px';
+      grid.style.maxWidth = '680px';
+      grid.style.margin = '0 auto';
     } else {
       grid.style.gridTemplateColumns = '';
       grid.style.maxWidth = '';
+      grid.style.margin = '';
     }
     if (deals.length === 0) {
       grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
@@ -7480,7 +7482,7 @@ function deleteInvestment(id) {
 }
 
 function closeModal() {
-  const m = document.getElementById('investmentModal') || document.getElementById('taxDocModal');
+  const m = document.getElementById('investmentModal') || document.getElementById('taxDocModal') || document.getElementById('addDealModal') || document.querySelector('.modal-overlay');
   if (m) m.remove();
 }
 
