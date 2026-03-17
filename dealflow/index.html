@@ -2387,6 +2387,16 @@ async function fetchDealsFromAirtable() {
     clearTimeout(timeout);
     if (!resp.ok) throw new Error('API returned ' + resp.status);
     const data = await resp.json();
+    // New format: { deals, managementCompanies, people, meta }
+    if (data && data.deals && Array.isArray(data.deals)) {
+      // Store management companies and people globally
+      window.GYC_COMPANIES = data.managementCompanies || [];
+      window.GYC_PEOPLE = data.people || [];
+      window.GYC_META = data.meta || {};
+      console.log(`API: ${data.meta?.totalOpportunities} opportunities, ${data.meta?.totalCompanies} companies, ${data.meta?.totalPeople} people`);
+      return data.deals;
+    }
+    // Legacy format: plain array
     if (Array.isArray(data) && data.length > 0) {
       const first = data[0];
       if (first.investmentName) {

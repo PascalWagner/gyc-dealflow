@@ -1011,7 +1011,8 @@ async function renderDeal() {
       container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
       const resp = await fetch('/api/deals');
       if (resp.ok) {
-        const allDeals = await resp.json();
+        const apiData = await resp.json();
+        const allDeals = (apiData && apiData.deals) ? apiData.deals : (Array.isArray(apiData) ? apiData : []);
         deal = allDeals.find(d => d.id === id);
       }
     } catch (e) { console.warn('API fetch failed:', e.message); }
