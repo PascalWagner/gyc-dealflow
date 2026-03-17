@@ -34,28 +34,48 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Search GHL contacts by name or email
+    // Try GHL v1 contacts search by query (searches name, email, phone)
     const searchUrl = `https://rest.gohighlevel.com/v1/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(q)}&limit=20`;
     const resp = await fetch(searchUrl, {
       headers: { Authorization: `Bearer ${GHL_API_KEY}` }
     });
 
-    if (!resp.ok) {
-      throw new Error('GHL search failed: ' + resp.status);
+    let contacts = [];
+
+    if (resp.ok) {
+      const data = await resp.json();
+      contacts = (data.contacts || []).map(c => ({
+        id: c.id,
+        name: ((c.firstName || '') + ' ' + (c.lastName || '')).trim() || c.email || 'Unknown',
+        email: c.email || '',
+        phone: c.phone || '',
+        tags: c.tags || [],
+        tier: c.tags?.includes('academy-member') ? 'academy' : c.tags?.includes('investor-member') ? 'investor' : 'explorer'
+      })).filter(c => c.email); // Only return contacts with emails
+    } else {
+      // Fallback: try lookup by email if the query looks like an email
+      if (q.includes('@')) {
+        const lookupUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(q)}`;
+        const lookupResp = await fetch(lookupUrl, {
+          headers: { Authorization: `Bearer ${GHL_API_KEY}` }
+        });
+        if (lookupResp.ok) {
+          const lookupData = await lookupResp.json();
+          contacts = (lookupData.contacts || []).map(c => ({
+            id: c.id,
+            name: ((c.firstName || '') + ' ' + (c.lastName || '')).trim() || c.email,
+            email: c.email || '',
+            phone: c.phone || '',
+            tags: c.tags || [],
+            tier: c.tags?.includes('academy-member') ? 'academy' : c.tags?.includes('investor-member') ? 'investor' : 'explorer'
+          }));
+        }
+      }
     }
 
-    const data = await resp.json();
-    const contacts = (data.contacts || []).map(c => ({
-      id: c.id,
-      name: ((c.firstName || '') + ' ' + (c.lastName || '')).trim() || c.email,
-      email: c.email,
-      tags: c.tags || [],
-      tier: c.tags?.includes('academy-member') ? 'academy' : c.tags?.includes('investor-member') ? 'investor' : 'explorer'
-    }));
-
-    return res.status(200).json({ success: true, contacts });
+    return res.status(200).json({ success: true, contacts, debug: { url: searchUrl, status: resp.status } });
   } catch (error) {
     console.error('User search error:', error);
-    return res.status(500).json({ error: 'Failed to search users' });
+    return res.status(500).json({ error: 'Failed to search users: ' + error.message });
   }
 }

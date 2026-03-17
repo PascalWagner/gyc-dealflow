@@ -1966,6 +1966,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <div class="sidebar-logo-text">Grow Your Cashflow</div>
   </div>
   <nav class="sidebar-nav">
+    <a class="nav-item" href="#" data-page="dashboard" onclick="navigateTo('dashboard'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      Dashboard
+    </a>
     <a class="nav-item" href="#" data-page="goals" onclick="navigateTo('goals'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
       My Goals
@@ -1986,6 +1990,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <a class="nav-item" href="#" data-page="managers" onclick="navigateTo('managers'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Investment Managers
+    </a>
+    <a class="nav-item" href="#" data-page="dealflow" onclick="navigateTo('dealflow'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Deal Flow
     </a>
     <div class="nav-section-label">My Investments</div>
     <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
@@ -2028,6 +2036,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <a class="nav-item" href="#" data-page="devnotes" onclick="navigateTo('devnotes'); return false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l2-2-2-2"/><path d="M8 18l-2-2 2-2"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><polyline points="4 8 4 2 20 2 20 8"/><polyline points="4 16 4 22 20 22 20 16"/><rect x="2" y="8" width="20" height="8" rx="1"/></svg>
         Dev Notes
+      </a>
+      <a class="nav-item" href="#" data-page="schema" onclick="navigateTo('schema'); return false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Database Schema
       </a>
     </div>
   </nav>
@@ -2379,6 +2391,20 @@ html.dark .card-match-badge.red { background: #2E1515; }
   </div>
 
   <!-- PAGE: Buy Box Report -->
+
+  <!-- PAGE: Dashboard -->
+  <div class="page" id="page-dashboard">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Dashboard</div>
+    </div>
+    <div class="content-area" style="padding:24px;max-width:1200px;" id="dashboardContent">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
   <!-- PAGE: My Goals -->
   <div class="page" id="page-goals">
     <div class="topbar">
@@ -2989,6 +3015,30 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
 
+  <!-- PAGE: Deal Flow Analytics -->
+  <div class="page" id="page-dealflow">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Deal Flow</div>
+    </div>
+    <div class="content-area" id="dealflowContent"></div>
+  </div>
+
+  <!-- PAGE: Database Schema (Admin Only) -->
+  <div class="page" id="page-schema">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Database Schema</div>
+    </div>
+    <div class="sub-page" style="max-width:1100px" id="schemaContent">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
   <!-- PAGE: Debt Fund Explorer -->
   <div class="page" id="page-debtfunds">
     <div class="topbar">
@@ -3347,10 +3397,83 @@ function updateDealCount() {
   if (badge) badge.textContent = DEALS.length;
 }
 
+// ========== AIRTABLE SYNC LAYER ==========
+const SYNC_API = '/api/userdata';
+function getUserEmail() {
+  try { return JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e) { return ''; }
+}
+// Fire-and-forget sync to Airtable backend
+function syncToBackend(type, data) {
+  const email = getUserEmail();
+  if (!email) return;
+  fetch(SYNC_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, email, data })
+  }).catch(err => console.warn('Sync failed for ' + type + ':', err.message));
+}
+// Sync all deal stages (bulk — sends each stage as separate record)
+function syncDealStages(stages) {
+  const email = getUserEmail();
+  if (!email) return;
+  Object.entries(stages).forEach(([dealId, stage]) => {
+    syncToBackend('stages', { 'Deal ID': dealId, 'Stage': stage });
+  });
+}
+// Sync goals (single record per user)
+function syncGoals(goals) {
+  if (!goals) return;
+  syncToBackend('goals', {
+    'Goal Type': goals.goalType || 'passive-income',
+    'Current Income': goals.currentIncome || 0,
+    'Target Income': goals.targetIncome || 0,
+    'Capital Available': goals.capitalAvailable || 0,
+    'Timeline': goals.timeline || '5',
+    'Tax Reduction': goals.taxReduction || 0
+  });
+}
+// Sync a single portfolio investment
+function syncPortfolioItem(item) {
+  syncToBackend('portfolio', {
+    'Deal ID': item.dealId || '',
+    'Investment Name': item.investmentName || item.name || '',
+    'Sponsor': item.sponsor || '',
+    'Asset Class': item.assetClass || '',
+    'Amount Invested': item.amountInvested || 0,
+    'Date Invested': item.dateInvested || '',
+    'Status': item.status || 'active',
+    'Target IRR': item.targetIRR || '',
+    'Distributions Received': item.distributionsReceived || 0,
+    'Hold Period': item.holdPeriod || '',
+    'Investing Entity': item.investingEntity || '',
+    'Entity Invested Into': item.entityInvestedInto || '',
+    'Notes': item.notes || '',
+    _recordId: item._airtableId || undefined
+  });
+}
+// Sync a single tax doc
+function syncTaxDoc(doc) {
+  syncToBackend('taxdocs', {
+    'Tax Year': doc.taxYear || '',
+    'Investment Name': doc.investmentName || '',
+    'Investing Entity': doc.investingEntity || '',
+    'Entity Invested Into': doc.entityInvestedInto || '',
+    'Form Type': doc.formType || '',
+    'Upload Status': doc.status || 'pending',
+    'Date Received': doc.dateReceived || '',
+    'Portal URL': doc.portalUrl || '',
+    'Contact': doc.contact || '',
+    'Contact Email': doc.contactEmail || '',
+    'Contact Phone': doc.contactPhone || '',
+    'Notes': doc.notes || '',
+    _recordId: doc._airtableId || undefined
+  });
+}
+
 // Deal vetting workflow stages
 // Stages: 'new' (default/no stage), 'interested', 'duediligence', 'portfolio'
 let dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-function saveDealStages() { localStorage.setItem('gycDealStages', JSON.stringify(dealStages)); }
+function saveDealStages() { localStorage.setItem('gycDealStages', JSON.stringify(dealStages)); syncDealStages(dealStages); }
 function getDealStage(id) { return dealStages[id] || 'new'; }
 function setDealStage(id, stage) {
   if (stage === 'new') { delete dealStages[id]; }
@@ -4272,10 +4395,13 @@ function navigateTo(page) {
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
+  if (page === 'dashboard') renderDashboard();
   if (page === 'goals') renderGoals();
   if (page === 'portfolio') renderPortfolio();
   if (page === 'taxprep') renderTaxPrep();
   if (page === 'analytics') refreshAnalyticsDashboard();
+  if (page === 'dealflow') renderDealFlowPage();
+  if (page === 'schema') renderSchemaPage();
   if (page === 'buybox') {
     // Try to render from localStorage first
     renderReport();
@@ -5338,7 +5464,7 @@ async function handleSubscribe(tier, price) {
 // ========== MY GOALS ==========
 let investorGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
 
-function saveGoals() { localStorage.setItem('gycGoals', JSON.stringify(investorGoals)); }
+function saveGoals() { localStorage.setItem('gycGoals', JSON.stringify(investorGoals)); syncGoals(investorGoals); }
 
 function renderGoals() {
   if (!investorGoals) {
@@ -6187,6 +6313,7 @@ let portfolioChartInstance = null;
 
 function savePortfolio() {
   localStorage.setItem('gycPortfolio', JSON.stringify(portfolioInvestments));
+  portfolioInvestments.forEach(item => syncPortfolioItem(item));
 }
 
 function renderPortfolioInDeals(container, portfolioDeals) {
@@ -6791,6 +6918,7 @@ let taxSortAsc = false;
 
 function saveTaxDocs() {
   localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocuments));
+  taxDocuments.forEach(doc => syncTaxDoc(doc));
 }
 
 function renderTaxPrep() {
@@ -7387,6 +7515,686 @@ function clearAnalyticsData() {
     sessionStorage.removeItem(ANALYTICS_PAGEVIEWS_KEY);
     refreshAnalyticsDashboard();
   }
+}
+
+// ========== DASHBOARD ==========
+function renderDashboard() {
+  const container = document.getElementById('dashboardContent');
+  if (!container) return;
+
+  const user = getUser();
+  const userName = user?.name?.split(' ')[0] || 'Investor';
+  const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  const deals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+
+  // Compute metrics
+  const totalInvested = portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  const totalDistributions = portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
+  const activeInvestments = portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length;
+
+  // Goal progress
+  const hasGoals = goals && goals.targetIncome > 0;
+  const goalProgress = hasGoals ? Math.min(100, Math.round(((goals.currentIncome || 0) / goals.targetIncome) * 100)) : 0;
+  const goalGap = hasGoals ? goals.targetIncome - (goals.currentIncome || 0) : 0;
+
+  // Stage counts
+  const stageCounts = { interested: 0, duediligence: 0, portfolio: 0, passed: 0 };
+  Object.values(stages).forEach(s => { if (stageCounts[s] !== undefined) stageCounts[s]++; });
+
+  // Buy box matches
+  const bbMatches = deals.filter(d => {
+    if (stages[d.id]) return false; // Already triaged
+    if (!buyBox || !Object.keys(buyBox).length) return true;
+    if (buyBox.assetClasses?.length && !buyBox.assetClasses.includes(d.assetClass)) return false;
+    return true;
+  }).slice(0, 5);
+
+  // New deals needing review (no stage set)
+  const newDealsCount = deals.filter(d => !stages[d.id]).length;
+
+  // Asset class breakdown for portfolio pie
+  const assetBreakdown = {};
+  portfolio.forEach(p => {
+    const cls = p.assetClass || 'Other';
+    assetBreakdown[cls] = (assetBreakdown[cls] || 0) + (parseFloat(p.amountInvested) || 0);
+  });
+
+  // Action items
+  const actions = [];
+  if (!hasGoals) actions.push({ icon: '🎯', text: 'Set your investment goals', action: "navigateTo('goals')", priority: 'high' });
+  if (!buyBox || !Object.keys(buyBox).length) actions.push({ icon: '📋', text: 'Complete your Buy Box preferences', action: "navigateTo('buybox')", priority: 'high' });
+  if (newDealsCount > 0) actions.push({ icon: '📬', text: newDealsCount + ' new deal' + (newDealsCount !== 1 ? 's' : '') + ' to review', action: "navigateTo('deals')", priority: 'medium' });
+  if (stageCounts.interested > 0) actions.push({ icon: '🔍', text: stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' marked Interested — ready for due diligence?', action: "navigateTo('deals');setTimeout(()=>switchTab(document.querySelector('[data-tab=\"interested\"]')),100)", priority: 'medium' });
+  if (stageCounts.duediligence > 0) actions.push({ icon: '📑', text: stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' in Due Diligence — time to decide?', action: "navigateTo('deals');setTimeout(()=>switchTab(document.querySelector('[data-tab=\"duediligence\"]')),100)", priority: 'medium' });
+  if (portfolio.length === 0) actions.push({ icon: '💼', text: 'Add your first investment to track your portfolio', action: "navigateTo('portfolio')", priority: 'low' });
+
+  const priorityColors = { high: '#e74c3c', medium: '#f59e0b', low: 'var(--primary)' };
+
+  container.innerHTML = `
+    <!-- Greeting + Goal Hero -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+      <div style="background:linear-gradient(135deg,#2C3E2D,#3a5a3d);border-radius:var(--radius);padding:32px;color:#fff;">
+        <div style="font-size:14px;opacity:0.8;margin-bottom:4px;">Welcome back,</div>
+        <div style="font-family:var(--font-headline);font-size:28px;font-weight:400;margin-bottom:20px;">${userName}</div>
+        ${hasGoals ? `
+          <div style="font-size:12px;opacity:0.7;margin-bottom:8px;">Your Goal: $${goals.targetIncome.toLocaleString()}/yr passive income in ${goals.timeline} years</div>
+          <div style="height:12px;background:rgba(255,255,255,0.15);border-radius:6px;overflow:hidden;margin-bottom:8px;">
+            <div style="height:100%;width:${goalProgress}%;background:#51BE7B;border-radius:6px;transition:width 0.6s;min-width:${goalProgress > 0 ? '4px' : '0'};"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;opacity:0.7;">
+            <span>$${(goals.currentIncome || 0).toLocaleString()}/yr current</span>
+            <span>${goalProgress}% there</span>
+            <span>$${goalGap.toLocaleString()}/yr to go</span>
+          </div>
+        ` : `
+          <div style="font-size:13px;opacity:0.8;margin-bottom:12px;">You haven't set your investment goals yet.</div>
+          <button onclick="navigateTo('goals')" style="padding:8px 16px;background:#51BE7B;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Set My Goals &rarr;</button>
+        `}
+      </div>
+
+      <!-- Action Items -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+        <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Next Steps</div>
+        ${actions.length > 0 ? actions.map(a => `
+          <div onclick="${a.action}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);margin-bottom:4px;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background=''">
+            <div style="width:4px;height:28px;border-radius:2px;background:${priorityColors[a.priority]};flex-shrink:0;"></div>
+            <div style="font-size:13px;color:var(--text-dark);line-height:1.4;">${a.text}</div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;margin-left:auto;"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        `).join('') : '<div style="text-align:center;padding:20px;font-size:13px;color:var(--text-muted);">You\'re all caught up!</div>'}
+      </div>
+    </div>
+
+    <!-- Portfolio Summary Row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">$${totalInvested.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active Investments</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${activeInvestments}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
+        <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Deals in Pipeline</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${stageCounts.interested + stageCounts.duediligence}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Passed On</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${stageCounts.passed}</div>
+      </div>
+    </div>
+
+    <!-- Portfolio Chart + Investments Table -->
+    <div style="display:grid;grid-template-columns:${portfolio.length > 0 ? '320px 1fr' : '1fr'};gap:24px;margin-bottom:24px;">
+      ${portfolio.length > 0 ? `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Asset Allocation</div>
+          <canvas id="dashboardPieChart" style="max-width:240px;margin:0 auto;display:block;"></canvas>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;overflow:hidden;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">My Investments</div>
+            <button onclick="navigateTo('portfolio')" style="padding:4px 12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:10px;cursor:pointer;color:var(--text-secondary);">View Full Portfolio &rarr;</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;">
+              <thead><tr style="border-bottom:2px solid var(--border);">
+                <th style="text-align:left;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Investment</th>
+                <th style="text-align:right;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Invested</th>
+                <th style="text-align:right;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Distributions</th>
+                <th style="text-align:center;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Status</th>
+              </tr></thead>
+              <tbody>
+                ${portfolio.map(p => {
+                  const statusColor = p.status === 'Active' ? 'var(--primary)' : p.status === 'Distributing' ? '#3b82f6' : p.status === 'Exited' ? '#6b7280' : '#f59e0b';
+                  return '<tr style="border-bottom:1px solid var(--border);">'
+                    + '<td style="padding:10px 8px;"><div style="font-weight:700;color:var(--text-dark);">' + p.investmentName + '</div><div style="font-size:11px;color:var(--text-muted);">' + (p.sponsor || '') + ' · ' + (p.assetClass || '') + '</div></td>'
+                    + '<td style="padding:10px 8px;text-align:right;font-weight:600;">$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
+                    + '<td style="padding:10px 8px;text-align:right;color:var(--primary);font-weight:600;">$' + (parseFloat(p.distributionsReceived) || 0).toLocaleString() + '</td>'
+                    + '<td style="padding:10px 8px;text-align:center;"><span style="padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'Active') + '</span></td>'
+                    + '</tr>';
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">No investments yet</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Add investments to see your portfolio breakdown here.</div>
+          <button onclick="navigateTo('portfolio')" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
+        </div>
+      `}
+    </div>
+
+    <!-- Deals Matching Buy Box -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deals to Review</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${newDealsCount} new deals matching your criteria</div>
+        </div>
+        <button onclick="navigateTo('deals')" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">View All Deals &rarr;</button>
+      </div>
+      ${bbMatches.length > 0 ? `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+          ${bbMatches.map(d => `
+            <div onclick="navigateTo('deals');setTimeout(()=>openPanel('${d.id}'),200)" style="padding:14px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+              <div style="font-weight:700;font-size:12px;color:var(--text-dark);margin-bottom:3px;">${d.investmentName}</div>
+              <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">${d.managementCompany} · ${d.assetClass}</div>
+              <div style="display:flex;gap:12px;font-size:10px;">
+                ${d.targetIRR ? '<span style="font-weight:700;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '% <span style="color:var(--text-muted);font-weight:400;">IRR</span></span>' : ''}
+                ${d.investmentMinimum ? '<span style="font-weight:700;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum) + ' <span style="color:var(--text-muted);font-weight:400;">min</span></span>' : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : '<div style="text-align:center;padding:20px;font-size:13px;color:var(--text-muted);">No untriaged deals right now.</div>'}
+    </div>
+  `;
+
+  // Render pie chart if portfolio exists
+  if (portfolio.length > 0 && Object.keys(assetBreakdown).length > 0) {
+    try {
+      const ctx = document.getElementById('dashboardPieChart')?.getContext('2d');
+      if (ctx) {
+        const labels = Object.keys(assetBreakdown);
+        const data = Object.values(assetBreakdown);
+        const colors = ['#51BE7B', '#3b82f6', '#f59e0b', '#e74c3c', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
+        new Chart(ctx, {
+          type: 'doughnut',
+          data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }] },
+          options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } }, cutout: '60%' }
+        });
+      }
+    } catch (e) { console.log('Dashboard chart error:', e); }
+  }
+}
+
+// ========== DEAL FLOW ANALYTICS PAGE ==========
+let dealFlowCharts = {};
+
+function renderDealFlowPage() {
+  const container = document.getElementById('dealflowContent');
+  if (!container) return;
+
+  // Compute analytics from DEALS array
+  const now = new Date();
+  const twelveMonthsAgo = new Date(now);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+  // Parse deal dates
+  const dealsWithDates = DEALS.map(d => {
+    const dateStr = d.addedDate || d.createdTime || '';
+    const date = dateStr ? new Date(dateStr) : null;
+    return { ...d, parsedDate: date };
+  }).filter(d => d.parsedDate && !isNaN(d.parsedDate));
+
+  // Weekly volume for last 12 months
+  const weeklyData = {};
+  const weekLabels = [];
+  const weekStart = new Date(twelveMonthsAgo);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start on Sunday
+  for (let d = new Date(weekStart); d <= now; d.setDate(d.getDate() + 7)) {
+    const key = d.toISOString().split('T')[0];
+    weekLabels.push(key);
+    weeklyData[key] = 0;
+  }
+  dealsWithDates.forEach(d => {
+    if (d.parsedDate >= twelveMonthsAgo) {
+      const weekOf = new Date(d.parsedDate);
+      weekOf.setDate(weekOf.getDate() - weekOf.getDay());
+      const key = weekOf.toISOString().split('T')[0];
+      if (weeklyData[key] !== undefined) weeklyData[key]++;
+    }
+  });
+
+  // Monthly aggregation for cleaner labels
+  const monthlyData = {};
+  dealsWithDates.forEach(d => {
+    if (d.parsedDate >= twelveMonthsAgo) {
+      const key = d.parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      monthlyData[key] = (monthlyData[key] || 0) + 1;
+    }
+  });
+  const monthLabels = Object.keys(monthlyData);
+  const monthValues = Object.values(monthlyData);
+
+  // Source distribution (clean up known sources)
+  const knownSources = {
+    '506 Investors Group': 0,
+    'Capital Raiser Email List': 0,
+    'Turbine Capital': 0,
+    'GoBundance': 0,
+    'User Submission': 0,
+    'Direct / Other': 0
+  };
+  dealsWithDates.forEach(d => {
+    let sources = d.dealSource || [];
+    if (typeof sources === 'string') sources = [sources];
+    if (!Array.isArray(sources)) sources = [];
+    if (sources.length === 0) {
+      knownSources['Direct / Other']++;
+    } else {
+      let matched = false;
+      sources.forEach(s => {
+        if (knownSources[s] !== undefined) {
+          knownSources[s]++;
+          matched = true;
+        }
+      });
+      if (!matched) knownSources['Direct / Other']++;
+    }
+  });
+  // If Submittor exists and isn't the admin, count as user submission
+  dealsWithDates.forEach(d => {
+    if (d.submittor && !['Raven Ryan Abaño Camins', ''].includes(d.submittor)) {
+      knownSources['User Submission']++;
+    }
+  });
+
+  // Asset class distribution
+  const assetClasses = {};
+  dealsWithDates.forEach(d => {
+    let classes = d.assetClass || [];
+    if (typeof classes === 'string') classes = [classes];
+    if (!Array.isArray(classes)) classes = [];
+    classes.forEach(c => { assetClasses[c] = (assetClasses[c] || 0) + 1; });
+  });
+  const topAssetClasses = Object.entries(assetClasses).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  // Deal type distribution
+  const dealTypes = {};
+  dealsWithDates.forEach(d => {
+    const t = d.dealType || 'Unknown';
+    dealTypes[t] = (dealTypes[t] || 0) + 1;
+  });
+
+  // Recent deals (last 30 days)
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentDeals = dealsWithDates.filter(d => d.parsedDate >= thirtyDaysAgo);
+  const recentCount = recentDeals.length;
+
+  // Total and averages
+  const totalDeals = DEALS.length;
+  const last12 = dealsWithDates.filter(d => d.parsedDate >= twelveMonthsAgo).length;
+  const avgPerMonth = monthLabels.length > 0 ? Math.round(last12 / monthLabels.length * 10) / 10 : 0;
+  const avgPerWeek = Math.round(last12 / 52 * 10) / 10;
+
+  // Calculate streak (consecutive weeks with new deals)
+  const weekVals = Object.values(weeklyData);
+  let streak = 0;
+  for (let i = weekVals.length - 1; i >= 0; i--) {
+    if (weekVals[i] > 0) streak++;
+    else break;
+  }
+
+  const sourceLabels = Object.keys(knownSources).filter(k => knownSources[k] > 0);
+  const sourceValues = sourceLabels.map(k => knownSources[k]);
+  const sourceColors = ['#2C6E49', '#4C956C', '#FEFEE3', '#D68C45', '#3D405B', '#8B5E3C'];
+
+  container.innerHTML = '<div class="sub-page" style="max-width:1100px;">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:4px;">Deal Flow</h2>' +
+    '<p style="color:var(--text-muted);font-size:13px;margin-bottom:24px;">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>' +
+
+    // Summary cards
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;">' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Total Deals</div>' +
+        '<div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + totalDeals + '</div>' +
+      '</div>' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Last 30 Days</div>' +
+        '<div style="font-size:28px;font-weight:800;color:#2C6E49;">' + recentCount + '</div>' +
+      '</div>' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Avg / Month</div>' +
+        '<div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + avgPerMonth + '</div>' +
+      '</div>' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Week Streak</div>' +
+        '<div style="font-size:28px;font-weight:800;color:#D68C45;">' + streak + '</div>' +
+        '<div style="font-size:10px;color:var(--text-muted);">consecutive weeks</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Monthly volume bar chart
+    '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px;">' +
+      '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">New Deals Added Per Month</h3>' +
+      '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Last 12 months of deal sourcing activity</p>' +
+      '<div style="height:280px;"><canvas id="dealFlowBarChart"></canvas></div>' +
+    '</div>' +
+
+    // Two-column: Source pie + Asset Class pie
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
+        '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Deal Sources</h3>' +
+        '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Where deals are found</p>' +
+        '<div style="height:240px;"><canvas id="dealSourcePieChart"></canvas></div>' +
+      '</div>' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
+        '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Asset Classes</h3>' +
+        '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Investment categories in the database</p>' +
+        '<div style="height:240px;"><canvas id="dealAssetPieChart"></canvas></div>' +
+      '</div>' +
+    '</div>' +
+
+    // Deal type + Recent deals table
+    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px;">' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
+        '<h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Deal Types</h3>' +
+        Object.entries(dealTypes).map(function(e) {
+          var pct = Math.round(e[1] / totalDeals * 100);
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<span style="font-size:13px;font-weight:600;">' + e[0] + '</span>' +
+            '<span style="font-size:13px;color:var(--text-muted);">' + e[1] + ' (' + pct + '%)</span>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
+        '<h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Recently Added Deals</h3>' +
+        '<div style="max-height:300px;overflow-y:auto;">' +
+          '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
+            '<thead><tr style="border-bottom:2px solid var(--border);">' +
+              '<th style="text-align:left;padding:6px 8px;font-weight:700;">Deal</th>' +
+              '<th style="text-align:left;padding:6px 8px;font-weight:700;">Type</th>' +
+              '<th style="text-align:left;padding:6px 8px;font-weight:700;">Asset Class</th>' +
+              '<th style="text-align:right;padding:6px 8px;font-weight:700;">Added</th>' +
+            '</tr></thead>' +
+            '<tbody>' +
+              recentDeals.sort(function(a, b) { return b.parsedDate - a.parsedDate; }).slice(0, 15).map(function(d) {
+                return '<tr style="border-bottom:1px solid var(--border);">' +
+                  '<td style="padding:6px 8px;font-weight:600;">' + (d.name || d.investmentName || '—') + '</td>' +
+                  '<td style="padding:6px 8px;">' + (d.dealType || '—') + '</td>' +
+                  '<td style="padding:6px 8px;">' + (Array.isArray(d.assetClass) ? (d.assetClass[0] || '—') : (d.assetClass || '—')) + '</td>' +
+                  '<td style="padding:6px 8px;text-align:right;color:var(--text-muted);">' + d.parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</td>' +
+                '</tr>';
+              }).join('') +
+            '</tbody>' +
+          '</table>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Value prop footer
+    '<div style="background:linear-gradient(135deg,#2C3E2D,#3D5A3E);border-radius:10px;padding:24px;color:#fff;text-align:center;margin-bottom:20px;">' +
+      '<div style="font-size:18px;font-weight:800;margin-bottom:8px;">This database can\'t be rebuilt overnight.</div>' +
+      '<div style="font-size:13px;opacity:0.85;">With ' + totalDeals + ' deals tracked, ' + Object.keys(assetClasses).length + ' asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>' +
+    '</div>' +
+  '</div>';
+
+  // Render charts
+  setTimeout(function() {
+    // Monthly bar chart
+    try {
+      if (dealFlowCharts.bar) dealFlowCharts.bar.destroy();
+      const barCtx = document.getElementById('dealFlowBarChart');
+      if (barCtx) {
+        dealFlowCharts.bar = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: monthLabels,
+            datasets: [{
+              label: 'New Deals',
+              data: monthValues,
+              backgroundColor: '#2C6E49',
+              borderRadius: 4,
+              barThickness: 'flex'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    } catch(e) { console.warn('Bar chart error:', e); }
+
+    // Source pie chart
+    try {
+      if (dealFlowCharts.source) dealFlowCharts.source.destroy();
+      const pieCtx = document.getElementById('dealSourcePieChart');
+      if (pieCtx) {
+        dealFlowCharts.source = new Chart(pieCtx, {
+          type: 'doughnut',
+          data: {
+            labels: sourceLabels,
+            datasets: [{
+              data: sourceValues,
+              backgroundColor: sourceColors.slice(0, sourceLabels.length),
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 8 } }
+            }
+          }
+        });
+      }
+    } catch(e) { console.warn('Source pie error:', e); }
+
+    // Asset class pie chart
+    try {
+      if (dealFlowCharts.asset) dealFlowCharts.asset.destroy();
+      const assetCtx = document.getElementById('dealAssetPieChart');
+      if (assetCtx) {
+        const acColors = ['#2C6E49','#4C956C','#D68C45','#3D405B','#8B5E3C','#6B8F71','#E8B960','#5B7065'];
+        dealFlowCharts.asset = new Chart(assetCtx, {
+          type: 'doughnut',
+          data: {
+            labels: topAssetClasses.map(function(e) { return e[0]; }),
+            datasets: [{
+              data: topAssetClasses.map(function(e) { return e[1]; }),
+              backgroundColor: acColors.slice(0, topAssetClasses.length),
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 8 } }
+            }
+          }
+        });
+      }
+    } catch(e) { console.warn('Asset pie error:', e); }
+  }, 100);
+}
+
+// ========== DATABASE SCHEMA PAGE ==========
+function renderSchemaPage() {
+  const container = document.getElementById('schemaContent');
+  if (!container) return;
+
+  // Gather live stats
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  const taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+  const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+  const analytics = JSON.parse(localStorage.getItem('gycAnalytics') || '[]');
+  const user = getUser();
+  const wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+
+  function badge(type) {
+    const colors = { persistent: '#51BE7B', localStorage: '#f59e0b', missing: '#e74c3c' };
+    const labels = { persistent: 'Synced to Backend', localStorage: 'localStorage Only', missing: 'Not Tracked' };
+    return '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:' + colors[type] + '22;color:' + colors[type] + ';">' + labels[type] + '</span>';
+  }
+
+  function tableCard(title, badgeType, location, fields, recordCount) {
+    let rows = fields.map(f => {
+      return '<tr style="border-bottom:1px solid var(--border);">'
+        + '<td style="padding:6px 10px;font-weight:600;font-size:12px;color:var(--text-dark);white-space:nowrap;">' + f.name + '</td>'
+        + '<td style="padding:6px 10px;font-size:11px;color:var(--text-muted);">' + f.type + '</td>'
+        + '<td style="padding:6px 10px;font-size:11px;color:var(--text-secondary);">' + (f.example || '—') + '</td>'
+        + '</tr>';
+    }).join('');
+
+    return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;">'
+      + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+      + '<div style="display:flex;align-items:center;gap:10px;"><div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">' + title + '</div>' + badge(badgeType) + '</div>'
+      + '<div style="font-size:11px;color:var(--text-muted);">' + location + ' · <strong>' + recordCount + ' records</strong></div>'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:2px solid var(--border);">'
+      + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Field</th>'
+      + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Type</th>'
+      + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Sample / Current</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  const dealsCount = (typeof DEALS !== 'undefined' ? DEALS : []).length;
+  const stageCount = Object.keys(stages).length;
+
+  container.innerHTML = `
+    <div style="margin-bottom:24px;">
+      <div style="font-family:var(--font-headline);font-size:24px;font-weight:400;color:var(--text-dark);margin-bottom:4px;">Database Schema</div>
+      <div style="font-size:13px;color:var(--text-secondary);">Complete inventory of all data tables, where they're stored, and current record counts.</div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Data Sources</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">3</div>
+        <div style="font-size:10px;color:var(--text-muted);">Airtable, GHL, localStorage</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Tables</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">10</div>
+        <div style="font-size:10px;color:var(--text-muted);">3 backend, 7 local</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">Persistent</div>
+        <div style="font-size:24px;font-weight:800;color:#51BE7B);">3</div>
+        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies, Auth</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:4px;">localStorage Only</div>
+        <div style="font-size:24px;font-weight:800;color:#f59e0b;">7</div>
+        <div style="font-size:10px;color:var(--text-muted);">Will be lost on cache clear</div>
+      </div>
+    </div>
+
+    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;padding-left:4px;">Persistent Backend (Airtable + GHL)</div>
+
+    ${tableCard('Opportunities (Deals)', 'persistent', 'Airtable · tblXFNpOvL0Ub5tVt', [
+      { name: 'Deal #', type: 'number', example: dealsCount + ' deals loaded' },
+      { name: 'Investment Name', type: 'text', example: 'The Heritage Fund' },
+      { name: 'Asset Class', type: 'text', example: 'Multi Family, Lending, Self Storage...' },
+      { name: 'Deal Type', type: 'text', example: 'Fund / Syndication' },
+      { name: 'Target IRR', type: 'percent', example: '8-25%' },
+      { name: 'Investment Minimum', type: 'currency', example: '$0 - $250K' },
+      { name: 'Management Company', type: 'linked', example: 'Linked to Companies table' },
+      { name: 'Status', type: 'text', example: 'Open to invest / Evergreen' },
+      { name: '+ 30 more fields', type: '...', example: 'Strategy, distributions, financials, etc.' }
+    ], dealsCount)}
+
+    ${tableCard('Management Companies', 'persistent', 'Airtable · tblRczR8Eok31ZhJj', [
+      { name: 'Operator Name', type: 'text', example: 'Cedar, Hornet Capital, etc.' },
+      { name: 'CEO', type: 'text', example: 'AJ Osborne' },
+      { name: 'Website', type: 'url', example: 'https://...' },
+      { name: 'Type', type: 'text', example: 'Operator / Fund Manager' },
+      { name: 'Deal IDs', type: 'linked', example: 'Linked to Opportunities' },
+      { name: 'Total Investors @ Firm', type: 'number', example: '—' }
+    ], '25+')}
+
+    ${tableCard('User Auth & Buy Box', 'persistent', 'GoHighLevel Contacts · 21 custom fields', [
+      { name: 'Email', type: 'text', example: user?.email || '—' },
+      { name: 'Name', type: 'text', example: user?.name || '—' },
+      { name: 'Password Hash', type: 'text (SHA-256)', example: 'Stored in dealflow_password_hash field' },
+      { name: 'Tier', type: 'tag-based', example: user?.tier || 'explorer' },
+      { name: 'Asset Classes', type: 'text', example: (buyBox?.assetClasses || []).join(', ') || '—' },
+      { name: 'Min IRR', type: 'text', example: buyBox?.irrMin || '—' },
+      { name: 'Strategies', type: 'text', example: (buyBox?.strategies || []).join(', ') || '—' },
+      { name: '+ 18 more fields', type: '...', example: 'Check size, lockup, instruments, etc.' }
+    ], 'Per contact')}
+
+    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:12px;margin-top:32px;padding-left:4px;">localStorage Only (Not Yet Synced)</div>
+
+    ${tableCard('Deal Vetting Stages', 'localStorage', 'localStorage · gycDealStages', [
+      { name: 'Deal ID', type: 'text (key)', example: Object.keys(stages)[0] || '—' },
+      { name: 'Stage', type: 'enum', example: 'new / interested / duediligence / portfolio / passed' },
+      { name: 'Deals Staged', type: 'count', example: stageCount + ' deals have stages set' }
+    ], stageCount)}
+
+    ${tableCard('User Portfolio', 'localStorage', 'localStorage · gycPortfolio', [
+      { name: 'Investment Name', type: 'text', example: portfolio[0]?.investmentName || '—' },
+      { name: 'Sponsor', type: 'text', example: portfolio[0]?.sponsor || '—' },
+      { name: 'Amount Invested', type: 'currency', example: portfolio[0]?.amountInvested ? '$' + parseFloat(portfolio[0].amountInvested).toLocaleString() : '—' },
+      { name: 'Date Invested', type: 'date', example: portfolio[0]?.dateInvested || '—' },
+      { name: 'Status', type: 'enum', example: 'Active / Exited / Pending / Distributing' },
+      { name: 'Distributions Received', type: 'currency', example: '—' },
+      { name: '+ 5 more fields', type: '...', example: 'Entity, target IRR, notes, etc.' }
+    ], portfolio.length)}
+
+    ${tableCard('Investment Goals', 'localStorage', 'localStorage · gycGoals', [
+      { name: 'Goal Type', type: 'enum', example: goals?.type || '—' },
+      { name: 'Current Income', type: 'currency', example: goals ? '$' + (goals.currentIncome || 0).toLocaleString() : '—' },
+      { name: 'Target Income', type: 'currency', example: goals ? '$' + goals.targetIncome.toLocaleString() : '—' },
+      { name: 'Capital Available', type: 'currency', example: goals ? '$' + goals.capital.toLocaleString() : '—' },
+      { name: 'Timeline', type: 'number (years)', example: goals?.timeline || '—' },
+      { name: 'Tax Reduction', type: 'currency', example: goals ? '$' + (goals.taxReduction || 0).toLocaleString() : '—' }
+    ], goals ? 1 : 0)}
+
+    ${tableCard('Tax Documents', 'localStorage', 'localStorage · gycTaxDocs', [
+      { name: 'Tax Year', type: 'number', example: taxDocs[0]?.taxYear || '—' },
+      { name: 'Investment Name', type: 'text', example: taxDocs[0]?.investmentName || '—' },
+      { name: 'Form Type', type: 'enum', example: 'K-1 / 1099-INT' },
+      { name: 'Upload Status', type: 'enum', example: 'Pending / Received' },
+      { name: '+ 9 more fields', type: '...', example: 'Entity, portal URL, contact info, etc.' }
+    ], taxDocs.length)}
+
+    ${tableCard('User Submitted Deals', 'localStorage', 'localStorage · gycUserDeals', [
+      { name: 'Investment Name', type: 'text', example: userDeals[0]?.investmentName || '—' },
+      { name: 'Sponsor', type: 'text', example: userDeals[0]?.managementCompany || '—' },
+      { name: 'Asset Class', type: 'text', example: '—' },
+      { name: 'Target IRR', type: 'percent', example: '—' }
+    ], userDeals.length)}
+
+    ${tableCard('Analytics Events', 'localStorage', 'localStorage · gycAnalytics (max 10K)', [
+      { name: 'Action', type: 'text', example: 'page_view, view_deal, save_deal' },
+      { name: 'User ID', type: 'email', example: user?.email || 'anonymous' },
+      { name: 'Timestamp', type: 'ISO date', example: analytics[analytics.length - 1]?.timestamp || '—' },
+      { name: 'Page', type: 'text', example: 'deals, portfolio, goals...' }
+    ], analytics.length)}
+
+    ${tableCard('Buy Box Wizard Data', 'localStorage', 'localStorage · gycBuyBoxWizard', [
+      { name: 'First Name', type: 'text', example: wizardData?.firstName || '—' },
+      { name: 'Accreditation', type: 'text', example: wizardData?.accreditation || '—' },
+      { name: 'Check Size', type: 'text', example: wizardData?.checkSize || '—' },
+      { name: 'Asset Classes', type: 'array', example: (wizardData?.assetClasses || []).join(', ') || '—' },
+      { name: '+ 20 more fields', type: '...', example: 'Synced to GHL on save' }
+    ], Object.keys(wizardData).length > 0 ? 1 : 0)}
+
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:20px;margin-top:16px;">
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#dc2626;margin-bottom:8px;">Migration Status</div>
+      <div style="font-size:13px;color:#991b1b;line-height:1.8;">
+        <strong>7 tables</strong> are stored in localStorage only and will be lost if the user clears their browser cache or switches devices.<br>
+        <strong>Action needed:</strong> Create Airtable tables for User Deal Stages, User Portfolio, User Goals, User Tax Docs, and User Submitted Deals, then build sync endpoints to persist this data.
+      </div>
+    </div>
+  `;
 }
 
 // ========== ADMIN: VIEW AS USER ==========
