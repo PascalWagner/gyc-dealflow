@@ -138,14 +138,47 @@ export default async function handler(req, res) {
       // Get full contact with custom fields
       const full = await getContactFull(contact.id);
       const contactData = full.contact || full;
-      const buyBox = ghlToAppBuyBox(contactData.customFields || []);
+
+      // v1 API returns customField as object {key: value} AND/OR customFields as array [{id, value}]
+      // Try both formats
+      let buyBox = {};
+      let rawFields = [];
+
+      // Try customFields array first (some v1 responses include this)
+      if (Array.isArray(contactData.customFields) && contactData.customFields.length > 0) {
+        rawFields = contactData.customFields;
+        buyBox = ghlToAppBuyBox(contactData.customFields);
+      }
+
+      // Also check customField object (v1 typical format: { "contact.field_key": "value" })
+      if (contactData.customField && typeof contactData.customField === 'object' && !Array.isArray(contactData.customField)) {
+        const cfObj = contactData.customField;
+        for (const [ghlKey, val] of Object.entries(cfObj)) {
+          const appKey = REVERSE_MAP[ghlKey] || REVERSE_MAP['contact.' + ghlKey];
+          if (appKey && val !== undefined && val !== null && val !== '') {
+            buyBox[appKey] = val;
+          }
+          rawFields.push({ key: ghlKey, value: val });
+        }
+      }
+
+      // Debug: include what keys exist on the contact for troubleshooting
+      const contactKeys = Object.keys(contactData).filter(k => k.toLowerCase().includes('custom') || k.toLowerCase().includes('field'));
 
       return res.status(200).json({
         success: true,
         contactId: contact.id,
         name: [contactData.firstName, contactData.lastName].filter(Boolean).join(' '),
         buyBox,
-        rawFields: contactData.customFields || []
+        rawFields,
+        _debug: {
+          contactKeys,
+          hasCustomFields: Array.isArray(contactData.customFields),
+          customFieldsLength: Array.isArray(contactData.customFields) ? contactData.customFields.length : 0,
+          hasCustomField: !!contactData.customField,
+          customFieldType: typeof contactData.customField,
+          allKeys: Object.keys(contactData)
+        }
       });
     } catch (e) {
       console.error('Buy box fetch error:', e);
