@@ -1657,6 +1657,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -1695,6 +1696,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <a class="nav-item" href="#" data-page="findgp" onclick="navigateTo('findgp'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       Find a GP
+    </a>
+    <a class="nav-item" href="#" data-page="debtfunds" onclick="navigateTo('debtfunds'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
+      Debt Fund Explorer
     </a>
     <div class="nav-section-label">My Investing</div>
     <a class="nav-item" href="#" data-page="buybox" onclick="openBuyBoxWizard(); return false">
@@ -2213,6 +2218,59 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </ul>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PAGE: Debt Fund Explorer -->
+  <div class="page" id="page-debtfunds">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Debt Fund Explorer</div>
+    </div>
+    <div class="sub-page" style="max-width:1200px">
+      <div class="settings-page-title">Debt Fund Explorer</div>
+      <div class="settings-page-desc">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
+
+      <!-- Stat Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;" id="debtFundStats"></div>
+
+      <!-- Chart Section -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
+          <div style="display:flex;gap:8px;" id="debtChartToggles">
+            <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
+            <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
+            <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Leverage (LTV)</button>
+          </div>
+        </div>
+        <div style="position:relative;height:360px;">
+          <canvas id="debtFundChart"></canvas>
+        </div>
+        <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;">Historical data is simulated. Actual fund metrics coming soon.</p>
+      </div>
+
+      <!-- Debt Funds Table -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <table class="table-view" id="debtFundTable" style="display:table;">
+          <thead>
+            <tr>
+              <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('ceo')">Sponsor / CEO <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('targetIRR')">Yield <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('avgLoanLTV')">LTV <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('investmentMinimum')">Min Investment <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('status')">Status <span class="sort-arrow">&#9650;</span></th>
+            </tr>
+          </thead>
+          <tbody id="debtFundTableBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -2912,6 +2970,7 @@ function navigateTo(page) {
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
   if (page === 'settings') initBuyBox();
+  if (page === 'debtfunds') renderDebtFunds();
   // Close mobile sidebar
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -3918,6 +3977,213 @@ toggleSave = function(id) {
   const deal = DEALS.find(d => d.id === id);
   if (deal) trackActivity(wasSaved ? 'unsave_deal' : 'save_deal', { dealId: id, dealName: deal.investmentName });
 };
+
+
+// ========== DEBT FUND EXPLORER ==========
+let debtFundChart = null;
+let debtFundData = [];
+let debtChartMetric = 'yield';
+let debtSortCol = 'investmentName';
+let debtSortAsc = true;
+let highlightedDebtFund = null;
+
+function getDebtFunds() {
+  return DEALS.filter(d =>
+    d.instrument === 'Debt' ||
+    d.strategy === 'Lending' ||
+    (d.dealType === 'Fund' && d.assetClass === 'Lending')
+  );
+}
+
+function generateMonthlyData(baseValue, months, variance) {
+  const data = [];
+  let val = baseValue;
+  for (let i = 0; i < months; i++) {
+    val += (Math.random() - 0.5) * variance;
+    val = Math.max(0, val);
+    data.push(parseFloat(val.toFixed(4)));
+  }
+  return data;
+}
+
+const MONTH_LABELS = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+
+const CHART_COLORS = [
+  '#51BE7B','#2563EB','#CF7A30','#D04040','#8B5CF6',
+  '#EC4899','#14B8A6','#F59E0B','#6366F1','#10B981',
+  '#EF4444','#3B82F6','#A855F7','#F97316','#06B6D4',
+  '#84CC16','#E11D48','#7C3AED','#0EA5E9','#22C55E'
+];
+
+function renderDebtFunds() {
+  const funds = getDebtFunds();
+  debtFundData = funds.map((f, i) => ({
+    ...f,
+    _yieldData: generateMonthlyData((f.targetIRR || 0.09) * 100, 12, 0.3),
+    _delinquencyData: generateMonthlyData(Math.random() * 3 + 0.5, 12, 0.4),
+    _ltvData: generateMonthlyData((f.avgLoanLTV || 0.65) * 100, 12, 2),
+    _color: CHART_COLORS[i % CHART_COLORS.length]
+  }));
+
+  renderDebtStats(funds);
+  renderDebtChart();
+  renderDebtTable();
+}
+
+function renderDebtStats(funds) {
+  const totalFunds = funds.length;
+  const yields = funds.filter(f => f.targetIRR).map(f => f.targetIRR);
+  const avgYield = yields.length ? (yields.reduce((a, b) => a + b, 0) / yields.length * 100).toFixed(1) : '—';
+  const ltvs = funds.filter(f => f.avgLoanLTV).map(f => f.avgLoanLTV);
+  const avgLTV = ltvs.length ? (ltvs.reduce((a, b) => a + b, 0) / ltvs.length * 100).toFixed(0) : '—';
+  const aums = funds.filter(f => f.fundAUM).map(f => f.fundAUM);
+  const totalAUM = aums.reduce((a, b) => a + b, 0);
+  const fmtAUM = totalAUM >= 1e9 ? '$' + (totalAUM / 1e9).toFixed(1) + 'B' : totalAUM >= 1e6 ? '$' + (totalAUM / 1e6).toFixed(0) + 'M' : '$' + totalAUM.toLocaleString();
+
+  document.getElementById('debtFundStats').innerHTML = [
+    { label: 'Total Debt Funds', value: totalFunds, color: 'var(--primary)' },
+    { label: 'Average Yield', value: avgYield + '%', color: 'var(--green)' },
+    { label: 'Average Loan-to-Value', value: avgLTV + '%', color: 'var(--orange)' },
+    { label: 'Total AUM', value: fmtAUM, color: 'var(--blue)' }
+  ].map(s => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+      <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
+      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}</div>
+    </div>
+  `).join('');
+}
+
+function renderDebtChart() {
+  const ctx = document.getElementById('debtFundChart');
+  if (!ctx) return;
+  if (debtFundChart) debtFundChart.destroy();
+
+  const metricKey = debtChartMetric === 'yield' ? '_yieldData' : debtChartMetric === 'delinquency' ? '_delinquencyData' : '_ltvData';
+  const metricLabel = debtChartMetric === 'yield' ? 'Yield (%)' : debtChartMetric === 'delinquency' ? 'Delinquency Rate (%)' : 'LTV (%)';
+
+  const datasets = debtFundData.map(f => {
+    const isHighlighted = highlightedDebtFund === f.id;
+    const isAnyHighlighted = highlightedDebtFund !== null;
+    return {
+      label: f.investmentName,
+      data: f[metricKey],
+      borderColor: isAnyHighlighted ? (isHighlighted ? '#51BE7B' : 'rgba(150,150,150,0.25)') : f._color,
+      backgroundColor: 'transparent',
+      borderWidth: isAnyHighlighted ? (isHighlighted ? 3 : 1) : 2,
+      pointRadius: isAnyHighlighted ? (isHighlighted ? 4 : 0) : 2,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      order: isHighlighted ? 0 : 1
+    };
+  });
+
+  debtFundChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: MONTH_LABELS, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { family: 'Plus Jakarta Sans', size: 11 },
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 16,
+            boxWidth: 8
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(10,30,33,0.95)',
+          titleFont: { family: 'Plus Jakarta Sans', weight: '600' },
+          bodyFont: { family: 'Source Sans 3' },
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Source Sans 3', size: 12 } }
+        },
+        y: {
+          title: { display: true, text: metricLabel, font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: {
+            font: { family: 'Source Sans 3', size: 12 },
+            callback: function(v) { return v.toFixed(1) + '%'; }
+          }
+        }
+      }
+    }
+  });
+}
+
+function switchDebtMetric(metric, btn) {
+  debtChartMetric = metric;
+  document.querySelectorAll('#debtChartToggles .topbar-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderDebtChart();
+}
+
+function renderDebtTable() {
+  const sorted = [...debtFundData].sort((a, b) => {
+    let va = a[debtSortCol], vb = b[debtSortCol];
+    if (va == null) va = '';
+    if (vb == null) vb = '';
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va < vb) return debtSortAsc ? -1 : 1;
+    if (va > vb) return debtSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  const tbody = document.getElementById('debtFundTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = sorted.map(f => {
+    const yieldStr = f.targetIRR ? (f.targetIRR * 100).toFixed(1) + '%' : '—';
+    const ltvStr = f.avgLoanLTV ? (f.avgLoanLTV * 100).toFixed(0) + '%' : '—';
+    const aumStr = f.fundAUM ? (f.fundAUM >= 1e9 ? '$' + (f.fundAUM / 1e9).toFixed(1) + 'B' : f.fundAUM >= 1e6 ? '$' + (f.fundAUM / 1e6).toFixed(0) + 'M' : '$' + f.fundAUM.toLocaleString()) : '—';
+    const minStr = f.investmentMinimum ? '$' + f.investmentMinimum.toLocaleString() : '—';
+    const isHL = highlightedDebtFund === f.id;
+    return `<tr onclick="highlightDebtFund('${f.id}')" style="${isHL ? 'background:var(--green-bg);' : ''}" title="Click to highlight on chart">
+      <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
+      <td><a href="sponsor.html?company=${encodeURIComponent(f.managementCompany || '')}" style="color:var(--text-secondary);text-decoration:none;" onclick="event.stopPropagation()">${f.ceo || '—'}</a></td>
+      <td class="irr-cell">${yieldStr}</td>
+      <td>${ltvStr}</td>
+      <td>${aumStr}</td>
+      <td>${minStr}</td>
+      <td>${f.debtPosition || '—'}</td>
+      <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${f.status === 'Evergreen' ? 'var(--green-bg);color:var(--green)' : f.status === 'Open to invest' ? 'var(--blue-bg);color:var(--blue)' : 'var(--orange-bg);color:var(--orange)'};">${f.status || '—'}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Update sort indicators
+  document.querySelectorAll('#debtFundTable th').forEach(th => th.classList.remove('sorted'));
+}
+
+function sortDebtTable(col) {
+  if (debtSortCol === col) {
+    debtSortAsc = !debtSortAsc;
+  } else {
+    debtSortCol = col;
+    debtSortAsc = true;
+  }
+  renderDebtTable();
+}
+
+function highlightDebtFund(id) {
+  highlightedDebtFund = highlightedDebtFund === id ? null : id;
+  renderDebtChart();
+  renderDebtTable();
+}
 
 // ========== INIT ==========
 initAuth();
