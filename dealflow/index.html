@@ -1724,6 +1724,15 @@ html.dark .card-match-badge.red { background: #2E1515; }
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<!-- Google Analytics 4 — Replace G-XXXXXXXXXX with your actual GA4 Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
 </head>
 <body>
 
@@ -1792,10 +1801,17 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings
     </a>
-    <a class="nav-item" href="#" data-page="devnotes" onclick="navigateTo('devnotes'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l2-2-2-2"/><path d="M8 18l-2-2 2-2"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><polyline points="4 8 4 2 20 2 20 8"/><polyline points="4 16 4 22 20 22 20 16"/><rect x="2" y="8" width="20" height="8" rx="1"/></svg>
-      Dev Notes
-    </a>
+    <div id="adminNav" style="display:none;">
+      <div class="nav-section-label">Admin</div>
+      <a class="nav-item" href="#" data-page="analytics" onclick="navigateTo('analytics'); return false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        Analytics
+      </a>
+      <a class="nav-item" href="#" data-page="devnotes" onclick="navigateTo('devnotes'); return false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l2-2-2-2"/><path d="M8 18l-2-2 2-2"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><polyline points="4 8 4 2 20 2 20 8"/><polyline points="4 16 4 22 20 22 20 16"/><rect x="2" y="8" width="20" height="8" rx="1"/></svg>
+        Dev Notes
+      </a>
+    </div>
   </nav>
   <div class="sidebar-user" id="sidebarUser" style="display:none">
     <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
@@ -2612,6 +2628,89 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
 
+  <!-- PAGE: Analytics (Admin Only) -->
+  <div class="page" id="page-analytics">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Analytics Dashboard</div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="topbar-tab" onclick="refreshAnalyticsDashboard()">Refresh</button>
+        <button class="topbar-tab" onclick="clearAnalyticsData()" style="color:var(--red);">Clear Data</button>
+      </div>
+    </div>
+    <div class="sub-page" style="max-width:1200px">
+      <!-- Summary Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;" id="analyticsSummaryCards">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Pageviews</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsPageviews">0</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsPageviewsToday">0</span></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Unique Users</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsUsers">0</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsUsersToday">0</span></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Avg Session Time</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsAvgSession">--</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Based on page enter/leave</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Viewed Page</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsMostViewed">--</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;" id="analyticsMostViewedCount"></div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Page Popularity</h3>
+          <div style="height:300px;"><canvas id="analyticsPageChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Deal Engagement</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Viewed Deals</h4>
+              <div id="analyticsTopViewedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
+            </div>
+            <div>
+              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Saved Deals</h4>
+              <div id="analyticsTopSavedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Sessions Table -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">User Sessions</h3>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border);">
+                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">User</th>
+                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Last Active</th>
+                <th style="text-align:right;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Total Events</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsUserSessions"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Activity Feed <span style="font-weight:400;font-size:13px;color:var(--text-muted);">(last 100 events)</span></h3>
+        <div id="analyticsActivityFeed" style="max-height:500px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE: Debt Fund Explorer -->
   <div class="page" id="page-debtfunds">
     <div class="topbar">
@@ -3272,6 +3371,14 @@ function applyFilters() {
     if (updateBtn) updateBtn.classList.add('visible');
   }
   buyBoxProgrammaticChange = false;
+  // Track filter change
+  trackActivity('filter_change', {
+    assetClass: document.getElementById('filterAssetClass')?.value || '',
+    dealType: document.getElementById('filterDealType')?.value || '',
+    strategy: document.getElementById('filterStrategy')?.value || '',
+    status: document.getElementById('filterStatus')?.value || '',
+    sort: document.getElementById('filterSort')?.value || ''
+  });
   renderAll();
 }
 
@@ -3484,17 +3591,24 @@ document.addEventListener('keydown', e => {
 
 // ========== PAGE NAVIGATION ==========
 function navigateTo(page) {
+  // Track page leave for time-on-page analytics
+  analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
   const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (navEl) navEl.classList.add('active');
+  // Track page enter for analytics
+  analyticsPageEnter(page);
+  // Fire GA4 event
+  if (typeof gtag === 'function') gtag('event', 'page_view', { page_title: page });
   // Render page-specific content
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
+  if (page === 'analytics') refreshAnalyticsDashboard();
   if (page === 'buybox') { renderReport(); if (!localStorage.getItem('gycBuyBoxComplete')) openBuyBoxWizard(); }
   // Close mobile sidebar
   document.getElementById('sidebar').classList.remove('open');
@@ -4164,6 +4278,8 @@ function wizardNext() {
     localStorage.setItem('gycBuyBoxComplete', 'true');
     syncWizardToBuyBox();
     document.getElementById('wizardOverlay').classList.remove('active');
+    // Track buy box completion
+    trackActivity('buybox_complete', { wizardData: JSON.stringify(wizardData).substring(0, 200) });
     // Sync to GHL
     syncBuyBoxToGHL();
     // Navigate to report
@@ -4476,6 +4592,13 @@ async function handleSubscribe(tier, price) {
 function trackActivity(action, data) {
   const user = getUser();
   if (!user) return;
+  // Store locally for analytics dashboard
+  storeAnalyticsEvent(action, data);
+  // Fire GA4 event
+  if (typeof gtag === 'function') {
+    gtag('event', action, data || {});
+  }
+  // Send to webhook
   try {
     fetch(WEBHOOKS.activity, {
       method: 'POST',
@@ -4963,10 +5086,265 @@ function filterAcademyCourses(level) {
   });
 }
 
+// ========== ADMIN & ANALYTICS ==========
+const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com'];
+
+function isAdmin() {
+  const user = getUser();
+  return user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
+function showAdminNav() {
+  const adminNav = document.getElementById('adminNav');
+  if (adminNav) adminNav.style.display = isAdmin() ? 'block' : 'none';
+}
+
+// --- Local Analytics Storage ---
+const ANALYTICS_MAX_EVENTS = 10000;
+const ANALYTICS_KEY = 'gycAnalytics';
+const ANALYTICS_PAGEVIEWS_KEY = 'gycPageViews';
+
+function getAnalyticsEvents() {
+  try { return JSON.parse(localStorage.getItem(ANALYTICS_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function storeAnalyticsEvent(action, data) {
+  const user = getUser();
+  const evt = {
+    action: action,
+    data: data || {},
+    timestamp: new Date().toISOString(),
+    page: _analyticsCurrentPage || 'unknown',
+    userId: user ? user.email : 'anonymous'
+  };
+  const events = getAnalyticsEvents();
+  events.push(evt);
+  // Cap at max events, trim oldest
+  while (events.length > ANALYTICS_MAX_EVENTS) events.shift();
+  try { localStorage.setItem(ANALYTICS_KEY, JSON.stringify(events)); } catch(e) {}
+  return evt;
+}
+
+function getPageViewCounts() {
+  try { return JSON.parse(sessionStorage.getItem(ANALYTICS_PAGEVIEWS_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function incrementPageView(page) {
+  const counts = getPageViewCounts();
+  counts[page] = (counts[page] || 0) + 1;
+  try { sessionStorage.setItem(ANALYTICS_PAGEVIEWS_KEY, JSON.stringify(counts)); } catch(e) {}
+}
+
+// Track current page and time-on-page
+let _analyticsCurrentPage = 'deals';
+let _analyticsPageEnterTime = Date.now();
+
+function analyticsPageEnter(page) {
+  _analyticsCurrentPage = page;
+  _analyticsPageEnterTime = Date.now();
+  incrementPageView(page);
+  storeAnalyticsEvent('page_view', { page: page });
+}
+
+function analyticsPageLeave() {
+  if (_analyticsCurrentPage && _analyticsPageEnterTime) {
+    const duration = Math.round((Date.now() - _analyticsPageEnterTime) / 1000);
+    storeAnalyticsEvent('page_leave', { page: _analyticsCurrentPage, durationSeconds: duration });
+  }
+}
+
+// Track page unload
+window.addEventListener('beforeunload', analyticsPageLeave);
+
+// --- Analytics Dashboard Rendering ---
+let analyticsPageChart = null;
+
+function refreshAnalyticsDashboard() {
+  const events = getAnalyticsEvents();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Summary cards
+  const pageViews = events.filter(e => e.action === 'page_view');
+  const pageViewsToday = pageViews.filter(e => e.timestamp.slice(0, 10) === today);
+  document.getElementById('analyticsPageviews').textContent = pageViews.length;
+  document.getElementById('analyticsPageviewsToday').textContent = pageViewsToday.length;
+
+  const allUsers = [...new Set(events.map(e => e.userId).filter(u => u !== 'anonymous'))];
+  const todayUsers = [...new Set(events.filter(e => e.timestamp.slice(0, 10) === today).map(e => e.userId).filter(u => u !== 'anonymous'))];
+  document.getElementById('analyticsUsers').textContent = allUsers.length;
+  document.getElementById('analyticsUsersToday').textContent = todayUsers.length;
+
+  // Avg session time from page_leave events
+  const leaveEvents = events.filter(e => e.action === 'page_leave' && e.data && e.data.durationSeconds);
+  if (leaveEvents.length > 0) {
+    const totalSec = leaveEvents.reduce((s, e) => s + e.data.durationSeconds, 0);
+    const avgSec = Math.round(totalSec / leaveEvents.length);
+    const mins = Math.floor(avgSec / 60);
+    const secs = avgSec % 60;
+    document.getElementById('analyticsAvgSession').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  } else {
+    document.getElementById('analyticsAvgSession').textContent = '--';
+  }
+
+  // Most viewed page
+  const pageCounts = {};
+  pageViews.forEach(e => {
+    const pg = (e.data && e.data.page) || 'unknown';
+    pageCounts[pg] = (pageCounts[pg] || 0) + 1;
+  });
+  const sortedPages = Object.entries(pageCounts).sort((a, b) => b[1] - a[1]);
+  if (sortedPages.length > 0) {
+    document.getElementById('analyticsMostViewed').textContent = sortedPages[0][0];
+    document.getElementById('analyticsMostViewedCount').textContent = sortedPages[0][1] + ' views';
+  } else {
+    document.getElementById('analyticsMostViewed').textContent = '--';
+    document.getElementById('analyticsMostViewedCount').textContent = '';
+  }
+
+  // Page popularity chart
+  renderAnalyticsPageChart(sortedPages);
+
+  // Deal engagement
+  renderDealEngagement(events);
+
+  // User sessions
+  renderUserSessions(events);
+
+  // Activity feed
+  renderActivityFeed(events);
+}
+
+function renderAnalyticsPageChart(sortedPages) {
+  const ctx = document.getElementById('analyticsPageChart');
+  if (!ctx) return;
+  if (analyticsPageChart) analyticsPageChart.destroy();
+
+  const labels = sortedPages.map(p => p[0]);
+  const data = sortedPages.map(p => p[1]);
+
+  analyticsPageChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Page Views',
+        data: data,
+        backgroundColor: '#51BE7B',
+        borderRadius: 6,
+        maxBarThickness: 40
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderDealEngagement(events) {
+  // Top viewed deals
+  const viewEvents = events.filter(e => e.action === 'view_deal' && e.data && e.data.dealName);
+  const viewCounts = {};
+  viewEvents.forEach(e => { viewCounts[e.data.dealName] = (viewCounts[e.data.dealName] || 0) + 1; });
+  const topViewed = Object.entries(viewCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  const viewEl = document.getElementById('analyticsTopViewedDeals');
+  if (viewEl) {
+    viewEl.innerHTML = topViewed.length === 0 ? '<div style="color:var(--text-muted);">No data yet</div>' :
+      topViewed.map((d, i) => `<div style="padding:4px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;">
+        <span>${i + 1}. ${d[0].substring(0, 30)}</span><span style="color:var(--text-muted);">${d[1]}</span></div>`).join('');
+  }
+
+  // Top saved deals
+  const saveEvents = events.filter(e => e.action === 'save_deal' && e.data && e.data.dealName);
+  const saveCounts = {};
+  saveEvents.forEach(e => { saveCounts[e.data.dealName] = (saveCounts[e.data.dealName] || 0) + 1; });
+  const topSaved = Object.entries(saveCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  const saveEl = document.getElementById('analyticsTopSavedDeals');
+  if (saveEl) {
+    saveEl.innerHTML = topSaved.length === 0 ? '<div style="color:var(--text-muted);">No data yet</div>' :
+      topSaved.map((d, i) => `<div style="padding:4px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;">
+        <span>${i + 1}. ${d[0].substring(0, 30)}</span><span style="color:var(--text-muted);">${d[1]}</span></div>`).join('');
+  }
+}
+
+function renderUserSessions(events) {
+  const userMap = {};
+  events.forEach(e => {
+    if (e.userId === 'anonymous') return;
+    if (!userMap[e.userId]) userMap[e.userId] = { lastActive: e.timestamp, count: 0 };
+    userMap[e.userId].count++;
+    if (e.timestamp > userMap[e.userId].lastActive) userMap[e.userId].lastActive = e.timestamp;
+  });
+
+  const sorted = Object.entries(userMap).sort((a, b) => b[1].lastActive.localeCompare(a[1].lastActive));
+  const tbody = document.getElementById('analyticsUserSessions');
+  if (!tbody) return;
+
+  tbody.innerHTML = sorted.length === 0 ? '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;">No user data yet</td></tr>' :
+    sorted.map(([email, info]) => {
+      const d = new Date(info.lastActive);
+      const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return `<tr style="border-bottom:1px solid var(--border-light);">
+        <td style="padding:8px 12px;">${email}</td>
+        <td style="padding:8px 12px;color:var(--text-secondary);">${timeStr}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:600;">${info.count}</td>
+      </tr>`;
+    }).join('');
+}
+
+function renderActivityFeed(events) {
+  const recent = events.slice(-100).reverse();
+  const feedEl = document.getElementById('analyticsActivityFeed');
+  if (!feedEl) return;
+
+  if (recent.length === 0) {
+    feedEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-body);">No events recorded yet</div>';
+    return;
+  }
+
+  feedEl.innerHTML = recent.map(e => {
+    const d = new Date(e.timestamp);
+    const timeStr = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const dateStr = d.toLocaleDateString();
+    const details = e.data ? Object.entries(e.data).map(([k,v]) => `${k}: ${v}`).join(', ') : '';
+    const actionColors = {
+      page_view: '#2563EB', page_leave: '#8A9AA0', view_deal: '#51BE7B',
+      save_deal: '#CF7A30', unsave_deal: '#D04040', filter_change: '#7C3AED',
+      buybox_complete: '#EC4899'
+    };
+    const color = actionColors[e.action] || '#607179';
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--border-light);display:flex;gap:12px;align-items:flex-start;font-family:var(--font-body);font-size:13px;">
+      <div style="min-width:130px;color:var(--text-muted);font-size:11px;">${dateStr} ${timeStr}</div>
+      <div style="min-width:140px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.userId || 'anonymous'}</div>
+      <div style="min-width:100px;"><span style="background:${color}15;color:${color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${e.action}</span></div>
+      <div style="color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${details}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearAnalyticsData() {
+  if (confirm('Clear all local analytics data? This cannot be undone.')) {
+    localStorage.removeItem(ANALYTICS_KEY);
+    sessionStorage.removeItem(ANALYTICS_PAGEVIEWS_KEY);
+    refreshAnalyticsDashboard();
+  }
+}
+
 // ========== INIT ==========
+showAdminNav();
 initAuth();
 loadDeals(); // Fetches from Airtable, falls back to hardcoded
 initSubscription();
+
+// Track initial page load
+analyticsPageEnter('deals');
 
 // Handle #onboarding hash from signup
 if (window.location.hash === '#onboarding') {
