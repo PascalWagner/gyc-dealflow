@@ -3694,6 +3694,49 @@ function renderStageBtn(dealId) {
   return `<button class="deal-stage-btn ${stageBtnClass(stage)}" onclick="event.stopPropagation(); toggleStageDropdown('${dealId}', this)">${stageLabel(stage)} ${chevron}</button>`;
 }
 
+function renderFeedCard(deal) {
+  const badge = matchBadgeInfo(deal);
+  const stage = getDealStage(deal.id);
+  const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const isPassed = stage === 'passed';
+  return `
+    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow 0.15s ease;">
+      <div style="padding:20px 24px 16px;cursor:pointer;" onclick="openPanel('${deal.id}')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="card-match-badge ${badge.cls}" style="font-size:10px;padding:3px 8px;">${badge.text}</span>
+            ${deal.status ? `<span class="card-status-pill ${statusPillClass(deal.status)}" style="font-size:10px;padding:3px 8px;">${deal.status}</span>` : ''}
+          </div>
+          <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${deal.dealType || ''} &middot; ${deal.assetClass || ''}</span>
+        </div>
+        <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">${deal.investmentName}</div>
+        <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:16px;">${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--green);">${deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</div></div>
+          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Min Invest</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">${fmt(deal.investmentMinimum, 'money')}</div></div>
+          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Pref Return</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">${deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</div></div>
+          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Hold</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">${deal.holdPeriod ? (deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs') : '---'}</div></div>
+        </div>
+      </div>
+      <div style="display:flex;border-top:1px solid var(--border);align-items:stretch;">
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isPassed ? 'var(--border-light)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isPassed ? 'var(--text-muted)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='${isPassed ? 'var(--border-light)' : 'transparent'}'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Pass
+        </button>
+        <div style="width:1px;background:var(--border);"></div>
+        <button onclick="event.stopPropagation(); openPanel('${deal.id}');" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          View Deal
+        </button>
+        <div style="width:1px;background:var(--border);"></div>
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isInterested ? 'var(--green)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='${isInterested ? 'rgba(81,190,123,0.15)' : 'var(--border-light)'}'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}'">
+          <svg viewBox="0 0 24 24" fill="${isInterested ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Interested
+        </button>
+      </div>
+    </div>`;
+}
+
 function renderCard(deal) {
   const badge = matchBadgeInfo(deal);
   const statusCls = statusPillClass(deal.status);
@@ -4146,7 +4189,8 @@ function renderAll() {
       grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
       return;
     }
-    grid.innerHTML = deals.map(renderCard).join('');
+    const cardRenderer = currentView === 'feed' ? renderFeedCard : renderCard;
+    grid.innerHTML = deals.map(cardRenderer).join('');
     grid.querySelectorAll('.deal-card').forEach(card => {
       card.addEventListener('click', () => openPanel(card.dataset.id));
     });
