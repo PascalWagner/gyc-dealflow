@@ -37,26 +37,23 @@ for (const [appKey, ghlKey] of Object.entries(FIELD_MAP)) {
 }
 
 async function findContact(email) {
-  const searchUrl = `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}&limit=1`;
+  const searchUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`;
   const resp = await fetch(searchUrl, {
     headers: {
-      'Authorization': `Bearer ${GHL_API_KEY}`,
-      'Version': '2021-07-28',
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${GHL_API_KEY}`
     }
   });
   if (!resp.ok) throw new Error('GHL search failed: ' + resp.status);
   const data = await resp.json();
+  // v1 lookup returns { contacts: [...] }
   const contacts = data.contacts || [];
-  return contacts.find(c => c.email?.toLowerCase() === email.toLowerCase()) || null;
+  return contacts[0] || null;
 }
 
 async function getContactFull(contactId) {
-  const resp = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}`, {
+  const resp = await fetch(`https://rest.gohighlevel.com/v1/contacts/${contactId}`, {
     headers: {
-      'Authorization': `Bearer ${GHL_API_KEY}`,
-      'Version': '2021-07-28',
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${GHL_API_KEY}`
     }
   });
   if (!resp.ok) throw new Error('GHL contact fetch failed: ' + resp.status);
@@ -64,14 +61,18 @@ async function getContactFull(contactId) {
 }
 
 async function updateContact(contactId, customFields) {
-  const resp = await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}`, {
+  // v1 API expects customField object { key: value } not array
+  const customFieldObj = {};
+  for (const cf of customFields) {
+    customFieldObj[cf.key] = Array.isArray(cf.field_value) ? cf.field_value.join(', ') : cf.field_value;
+  }
+  const resp = await fetch(`https://rest.gohighlevel.com/v1/contacts/${contactId}`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${GHL_API_KEY}`,
-      'Version': '2021-07-28',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ customFields })
+    body: JSON.stringify({ customField: customFieldObj })
   });
   if (!resp.ok) {
     const errText = await resp.text();

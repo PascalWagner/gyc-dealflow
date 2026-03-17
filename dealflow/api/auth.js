@@ -30,12 +30,10 @@ export default async function handler(req, res) {
     // Try to look up the contact in GHL
     try {
       if (GHL_API_KEY && GHL_LOCATION_ID) {
-        const searchUrl = `https://services.leadconnectorhq.com/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(email)}&limit=1`;
+        const searchUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`;
         const ghlResp = await fetch(searchUrl, {
           headers: {
-            'Authorization': `Bearer ${GHL_API_KEY}`,
-            'Version': '2021-07-28',
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${GHL_API_KEY}`
           }
         });
 
@@ -69,15 +67,14 @@ export default async function handler(req, res) {
               const newHash = await hashPassword(password);
               // Store hash in GHL (best effort)
               try {
-                await fetch(`https://services.leadconnectorhq.com/contacts/${contact.id}`, {
+                await fetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`, {
                   method: 'PUT',
                   headers: {
                     'Authorization': `Bearer ${GHL_API_KEY}`,
-                    'Version': '2021-07-28',
                     'Content-Type': 'application/json'
                   },
                   body: JSON.stringify({
-                    customFields: [{ key: 'dealflow_password_hash', field_value: newHash }]
+                    customField: { 'dealflow_password_hash': newHash }
                   })
                 });
               } catch (e) { /* best effort */ }
@@ -128,20 +125,18 @@ export default async function handler(req, res) {
 
     try {
       if (GHL_API_KEY && GHL_LOCATION_ID) {
-        const createResp = await fetch('https://services.leadconnectorhq.com/contacts/', {
+        const createResp = await fetch('https://rest.gohighlevel.com/v1/contacts/', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${GHL_API_KEY}`,
-            'Version': '2021-07-28',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            locationId: GHL_LOCATION_ID,
             firstName,
             lastName,
             email,
             tags: ['dealflow-user'],
-            customFields: [{ key: 'dealflow_password_hash', field_value: passwordHash }]
+            customField: { 'dealflow_password_hash': passwordHash }
           })
         });
 
