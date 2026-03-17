@@ -1655,6 +1655,244 @@ html.dark .card-match-badge.red { background: #2E1515; }
 .wizard-btn-next:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
 .wizard-btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
+/* Onboarding: Welcome hero screens */
+.wizard-welcome {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.wizard-welcome .wizard-card-title {
+  font-size: 38px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+.wizard-welcome .wizard-card-desc {
+  color: rgba(255,255,255,0.75);
+  font-size: 18px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.wizard-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(81,190,123,0.15);
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+.wizard-welcome-cta {
+  display: inline-block;
+  padding: 16px 48px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.wizard-welcome-cta:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(81,190,123,0.4); }
+.wizard-body.welcome-bg {
+  background: linear-gradient(135deg, #1F5159, #0A1E21);
+}
+
+/* Onboarding: Goal selection cards */
+.wizard-goal-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+.wizard-goal-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: var(--bg-card);
+}
+.wizard-goal-card:hover { border-color: var(--primary); background: var(--mint-bg); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.wizard-goal-card.selected { border-color: var(--primary); background: var(--mint-bg); }
+.wizard-goal-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+}
+.wizard-goal-icon.cf { background: rgba(81,190,123,0.12); color: #51BE7B; }
+.wizard-goal-icon.eq { background: rgba(37,99,235,0.1); color: #2563EB; }
+.wizard-goal-icon.tax { background: rgba(207,122,48,0.1); color: #CF7A30; }
+.wizard-goal-info { flex: 1; }
+.wizard-goal-title {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.wizard-goal-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Onboarding: Deal picker */
+.wizard-deal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.wizard-deal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.wizard-deal-card:hover { border-color: var(--primary); }
+.wizard-deal-body {
+  padding: 16px 20px;
+}
+.wizard-deal-name {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.wizard-deal-sponsor {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.wizard-deal-metrics {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wizard-deal-metric {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.wizard-deal-metric strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text-dark);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.wizard-deal-actions {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+.wizard-deal-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.wizard-deal-actions button:first-child { color: var(--text-muted); border-right: 1px solid var(--border); }
+.wizard-deal-actions button:first-child:hover { background: #FFF3E6; color: var(--orange); }
+.wizard-deal-actions button:last-child { color: var(--primary); }
+.wizard-deal-actions button:last-child:hover { background: var(--mint-bg); }
+.wizard-deal-actions button.actioned { opacity: 0.4; pointer-events: none; }
+.wizard-deal-counter {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+.wizard-deal-counter strong { color: var(--primary); }
+.wizard-skip-link {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.wizard-skip-link:hover { color: var(--text-dark); }
+
+/* Onboarding: Completion features */
+.wizard-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin: 32px 0;
+}
+@media (max-width: 600px) { .wizard-features { grid-template-columns: 1fr; } }
+.wizard-feature {
+  background: rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+}
+.wizard-feature-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+.wizard-feature-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.wizard-feature-desc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.4;
+}
+/* Section label in wizard */
+.wizard-section-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
 /* ====== BUY BOX REPORT (Magazine Style) ====== */
 .report-page { padding: 32px; }
 .report-container {
@@ -4814,342 +5052,373 @@ function logout() {
   window.location.href = 'deal-login.html';
 }
 
-// ========== BUY BOX WIZARD ENGINE ==========
+// ========== ONBOARDING WIZARD ENGINE (Branching) ==========
 let wizardStep = 0;
+let wizardStepIndex = 0; // index into current step sequence
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
+// Step sequence branches based on goal selection
+const ONBOARDING_FLOW = {
+  common_start: [0, 1, 2],
+  cashflow: [3, 4],
+  growth: [5, 6],
+  tax: [7, 8],
+  common_end: [9, 10]
+};
+
+function getStepSequence() {
+  const branch = wizardData._branch || 'cashflow';
+  return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
+}
+
+const PHASE_LABELS = ['Welcome', 'About You', 'Your Goal', 'Your Targets', 'Preferences', 'Browse Deals', 'All Set'];
+
+function getPhaseLabel() {
+  const seq = getStepSequence();
+  const step = seq[wizardStepIndex];
+  if (step <= 2) return PHASE_LABELS[step];
+  if (step === 9) return PHASE_LABELS[5];
+  if (step === 10) return PHASE_LABELS[6];
+  return PHASE_LABELS[3 + (wizardStepIndex - 3)];
+}
+
 const WIZARD_STEPS = [
-  // 0: Welcome
+  // 0: Welcome (all paths)
   {
-    title: 'Welcome to the Passive Investing Buy Box Builder',
-    desc: 'This tool helps you get crystal clear on what you\'re looking for in your next LP investment. We\'ll walk you through your goals, risk tolerance, and preferences so we can match you with the right deals.',
-    type: 'info'
+    title: 'Welcome to Grow Your Cashflow',
+    desc: 'We\'re going to help you organize your investments, analyze your portfolio, and give you dialed-in coaching in our office hours.<br><br>Let\'s build your investment profile so we can match you with the right deals.',
+    type: 'welcome'
   },
-  // 1: Basic Info
+  // 1: About You (all paths)
   {
-    title: 'Let\'s start with the basics',
-    desc: 'We\'ll use this to personalize your buy box report.',
-    type: 'fields',
-    fields: [
-      { key: 'firstName', label: 'First Name', placeholder: 'First name', inputType: 'text' },
-      { key: 'lastName', label: 'Last Name', placeholder: 'Last name', inputType: 'text' },
-      { key: 'dob', label: 'Date of Birth', placeholder: 'MM/DD/YYYY', inputType: 'text' }
-    ]
-  },
-  // 2: Investor Profile & Accreditation
-  {
-    title: 'Investor Profile & Accreditation',
-    desc: 'This helps us understand where you\'re coming from as an investor.',
+    title: 'Tell us about yourself',
+    desc: 'We\'ll use this to personalize your experience and match you with the right opportunities.',
     type: 'mixed',
     fields: [
-      { key: 'incomeSource', label: 'Primary Source of Income', inputType: 'select', options: ['W2 - Consistent Salary', 'W2 - Sales Commissions', 'Business Distributions/Profits', 'Passive Investments', 'N/A (Student or Other)'] },
-      { key: 'lpCount', label: 'How many LP investments have you made so far?', placeholder: 'e.g. 4', inputType: 'text' }
+      { key: 'firstName', label: 'First Name', placeholder: 'First name', inputType: 'text' },
+      { key: 'lastName', label: 'Last Name', placeholder: 'Last name', inputType: 'text' }
     ],
-    radio: { key: 'accreditation', label: 'Accreditation Type', options: [
+    radio: { key: 'accreditation', label: 'Accreditation Status', options: [
       'I\'m not an accredited investor',
       'I qualify based on net worth (over $1M, excluding primary residence)',
       'I qualify based on income ($200K+ individually or $300K+ with spouse)',
       'I qualify in another way (licenses, entities, etc.)'
     ]}
   },
-  // 3: Investment Trigger
+  // 2: Goal Selection (BRANCHING POINT)
   {
-    title: 'What prompted you to start looking at new investments right now?',
-    desc: 'Choose the one that most applies.',
-    type: 'radio',
-    key: 'trigger',
-    options: [
-      'Recent liquidity event (business sale, bonus, inheritance)',
-      'Sold existing property/investment; need to redeploy',
-      'Dissatisfied with current investment performance',
-      'Shifting focus from growth to consistent income',
-      'Looking to reduce taxes this year',
-      'Diversifying out of the stock market',
-      'Planning transition away from active W-2 work',
-      'Other'
-    ]
+    title: 'What\'s the primary goal for your next investment?',
+    desc: 'This determines which opportunities we\'ll surface for you. Each path leads to different questions tailored to your strategy.',
+    type: 'goalSelect'
   },
-  // 4: Investment Goal
+  // 3: Cash Flow - Targets
   {
-    title: 'What\'s the primary goal for this next investment?',
-    desc: 'This helps determine which types of opportunities align with your objectives.',
-    type: 'radio',
-    key: 'goal',
-    options: [
-      'Cash Flow (income now)',
-      'Equity Growth (wealth later)',
-      'Tax Optimization (tax shield now)'
-    ],
-    guide: {
-      items: [
-        '<strong>Cash Flow</strong> &rarr; Lending, stabilized assets, NNN leases. Predictable income from day one.',
-        '<strong>Equity Growth</strong> &rarr; Value-add, development. Higher upside, less immediate income.',
-        '<strong>Tax Optimization</strong> &rarr; Cost segregation, bonus depreciation, oil &amp; gas. Shelter current income.'
-      ]
-    }
-  },
-  // 5: Investment Sizing
-  {
-    title: 'Let\'s size the investment properly',
-    desc: 'Understanding your capital helps us recommend deals in the right range.',
-    type: 'fields',
-    fields: [
-      { key: 'checkSize', label: 'Maximum Check Size', placeholder: '$50,000', inputType: 'text' },
-      { key: 'networth', label: 'Approximate Current Net Worth', placeholder: '$1,500,000', inputType: 'text' }
-    ]
-  },
-  // 6: Investment Structure
-  {
-    title: 'How will you be making this investment?',
-    desc: 'This affects deal eligibility and tax treatment.',
+    title: 'Let\'s dial in your cash flow needs',
+    desc: 'Understanding your current income and targets helps us recommend the right deals.',
     type: 'mixed',
-    radio: { key: 'entity', label: 'Investment Entity', options: ['Personal Name', 'LLC', 'Trust', 'Self Directed Retirement Account (SD-IRA/401K)'] },
-    checks: { key: 'fundSource', label: 'Where Is The Money Coming From?', options: ['Bank Account (Cash)', 'Investment Account (Need to Sell Stocks/Real Estate)', 'Other'] }
-  },
-  // 7: Capital Availability
-  {
-    title: 'When will your capital be available to invest?',
-    desc: 'This helps operators know if you\'re ready to move or need time.',
-    type: 'radio',
-    key: 'capitalReady',
-    options: [
-      'Ready now',
-      'Needs to be moved (already available but in another account)',
-      '1-6 months (waiting for a liquidity event)'
-    ]
-  },
-  // 8: Deployment Timeline
-  {
-    title: 'How soon would you like to invest once capital is ready?',
-    desc: 'This sets expectations with operators about your timeline.',
-    type: 'radio',
-    key: 'urgency',
-    options: [
-      'Actively looking (ASAP)',
-      'Before year-end (tax planning)',
-      'Only when the right deal appears'
-    ]
-  },
-  // 9: Asset Classes
-  {
-    title: 'Which asset classes are you interested in?',
-    desc: 'Different asset classes come with different risk/return profiles. Select all that interest you.',
-    type: 'checks',
-    key: 'assetClasses',
-    options: [
-      'Business / Other', 'Hotels / Hospitality', 'Industrial', 'Land',
-      'Multi-Family', 'NNN (Triple Net Lease)', 'Oil & Gas', 'Private Debt / Credit',
-      'RV / Mobile Home Parks', 'Self Storage', 'Senior Assisted Living',
-      'Short-Term Rentals', 'Single Family Homes', 'Retail Shopping Centres'
-    ],
-    grid: true
-  },
-  // 10: Investment Strategies
-  {
-    title: 'Which investment strategies fit your preferences?',
-    desc: 'Your strategy preference shapes the risk/return profile of your portfolio.',
-    type: 'checks',
-    key: 'strategies',
-    options: ['Lending / Credit', 'Value-Add', 'Development'],
-    guide: {
-      items: [
-        '<strong>Lending/Credit</strong> &rarr; Predictable income, lower volatility, senior-secured. Think of it like being the bank.',
-        '<strong>Value-Add</strong> &rarr; Medium risk, upside from improvements, income ramps over time.',
-        '<strong>Development</strong> &rarr; Higher risk, typically no cash flow during build, large upside at exit.'
-      ]
-    }
-  },
-  // 11: Deal Structures
-  {
-    title: 'Which deal structures would you consider?',
-    desc: 'This clarifies how diversified or focused you want your allocation to be.',
-    type: 'checks',
-    key: 'dealStructure',
-    options: ['Single Strategy Operators', 'Multi Strategy Operators'],
-    guide: {
-      items: [
-        '<strong>Single Strategy</strong> &rarr; Concentrated bet on one thesis. Easier to underwrite, higher conviction.',
-        '<strong>Multi Strategy</strong> &rarr; Diversified across strategies within one fund. More exposure, requires trust in the team.'
-      ]
-    }
-  },
-  // 12: Investment Types
-  {
-    title: 'What types of investments are you open to?',
-    desc: 'Each type offers a different cash flow, risk, and return profile.',
-    type: 'checks',
-    key: 'instruments',
-    options: ['Debt (1st Position)', 'Equity (2nd Position)'],
-    guide: {
-      items: [
-        '<strong>Debt (1st Position)</strong> &rarr; You are the lender. Predictable income, senior security, lower upside.',
-        '<strong>Equity (2nd Position)</strong> &rarr; You are an owner. Higher upside, more risk, and potential for large gains at exit.'
-      ]
-    }
-  },
-  // 13: Minimum Total Return
-  {
-    title: 'What\'s the minimum total return (IRR) that would interest you?',
-    desc: 'This is the overall annualized return over the full hold period, including both cash flow and equity gain at exit.',
-    type: 'fields',
     fields: [
-      { key: 'minIRR', label: 'Minimum Target IRR', placeholder: '7%', inputType: 'text' }
+      { key: 'currentCashFlow', label: 'What is your current annual passive income / cash flow?', placeholder: '$24,000', inputType: 'text' },
+      { key: 'targetCashFlow', label: 'What annual cash flow are you trying to get to?', placeholder: '$120,000', inputType: 'text' },
+      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$50,000', inputType: 'text' }
     ],
     guide: {
       items: [
-        '<strong>Credit/Lending:</strong> 6-20% typical range',
-        '<strong>Value-Add/Core:</strong> 10-20% typical range',
-        '<strong>Development/Opportunistic:</strong> 10-30%+ typical range'
+        '<strong>Example:</strong> $100K invested at 8% cash-on-cash = $8K/year in distributions',
+        '<strong>Tip:</strong> To reach $120K/year at 8% yield, you\'d need approximately $1.5M deployed'
       ]
     }
   },
-  // 14: Year-1 Cash Flow
+  // 4: Cash Flow - Preferences
   {
-    title: 'What\'s the minimum Year-1 cash flow you\'d need?',
-    desc: 'Focus on Year 1 income - your cash distribution requirement. Example: $100K invested with 8% cash-on-cash = $8K in Year 1.',
-    type: 'fields',
+    title: 'How do you want your income structured?',
+    desc: 'These preferences help us filter for deals that match your cash flow needs.',
+    type: 'mixed',
+    radio: { key: 'distributions', label: 'How often do you want distributions?', options: ['Monthly', 'Quarterly', 'Annually'] },
+    checks: { key: 'assetClasses', label: 'What types of cash flow investments interest you?', options: [
+      'Private Debt / Credit', 'Multi-Family', 'NNN (Triple Net Lease)', 'Self Storage', 'RV / Mobile Home Parks', 'Hotels / Hospitality'
+    ]},
+    guide: {
+      items: [
+        '<strong>Private Debt/Lending</strong> &rarr; 6-12% yields, predictable monthly/quarterly income, senior-secured',
+        '<strong>Stabilized Multi-Family</strong> &rarr; 5-9% cash yields, long-term hold, inflation protection',
+        '<strong>NNN Leases</strong> &rarr; Passive, credit-tenant backed, predictable income with minimal management'
+      ]
+    }
+  },
+  // 5: Equity Growth - Targets
+  {
+    title: 'Let\'s define your growth targets',
+    desc: 'Understanding your return expectations helps us match you with the right opportunities.',
+    type: 'mixed',
     fields: [
-      { key: 'minCashYield', label: 'Minimum Year-1 Cash-on-Cash', placeholder: '6%', inputType: 'text' }
-    ]
-  },
-  // 15: Lockup Period
-  {
-    title: 'How long are you comfortable locking up capital?',
-    desc: 'Longer lockups often provide access to higher-return opportunities but less liquidity.',
-    type: 'radio',
-    key: 'lockup',
-    options: [
-      'Less than 1 Year',
-      'At least 1 year',
-      'At least 3 years',
-      'At least 5 years'
+      { key: 'minIRR', label: 'What\'s the minimum total return (IRR) you\'re targeting?', placeholder: '15%', inputType: 'text' },
+      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$100,000', inputType: 'text' }
     ],
+    radio: { key: 'riskTolerance', label: 'What\'s your risk tolerance?', options: [
+      'Conservative (8-12% IRR target)',
+      'Moderate (12-18% IRR target)',
+      'Aggressive (18%+ IRR target)'
+    ]},
     guide: {
       items: [
-        '<strong>Short lockups</strong> &rarr; More liquidity, typically lower returns. Good for capital you may need.',
-        '<strong>Longer lockups</strong> &rarr; Access to illiquidity premium. Higher returns for patient capital.'
+        '<strong>Conservative</strong> &rarr; Core/stabilized assets with lower risk',
+        '<strong>Moderate</strong> &rarr; Value-add strategies with proven operators',
+        '<strong>Aggressive</strong> &rarr; Development, opportunistic plays with high upside'
       ]
     }
   },
-  // 16: Redemption Frequency
+  // 6: Equity Growth - Preferences
   {
-    title: 'How much flexibility do you prefer after lockup?',
-    desc: 'What redemption frequency are you comfortable with once your lockup period ends?',
-    type: 'checks',
-    key: 'redemption',
-    options: ['Monthly', 'Quarterly', 'Annually', 'End of Term'],
+    title: 'What growth strategies interest you?',
+    desc: 'Select the asset classes and strategies that fit your investment thesis.',
+    type: 'mixed',
+    radio: { key: 'lockup', label: 'How long are you willing to hold?', options: [
+      '2-3 years', '3-5 years', '5-7 years', '7+ years'
+    ]},
+    checks: { key: 'assetClasses', label: 'Which asset classes?', options: [
+      'Multi-Family', 'Industrial', 'Hotels / Hospitality', 'Self Storage', 'Short-Term Rentals', 'Mixed-Use', 'Land'
+    ]},
     guide: {
       items: [
-        '<strong>Monthly</strong> &rarr; Highly liquid, rare in private offerings. Common in open-ended credit funds.',
-        '<strong>Quarterly</strong> &rarr; Most common among evergreen debt funds.',
-        '<strong>Annually</strong> &rarr; Offers managers capital stability. Common in equity funds.',
-        '<strong>End of Term</strong> &rarr; Capital locked until maturity. Highest potential returns.'
+        '<strong>Value-Add</strong> &rarr; Buy underperforming assets, improve them, increase NOI. 12-20% IRR typical.',
+        '<strong>Development</strong> &rarr; Ground-up construction. No cash flow during build, big upside at exit.',
+        '<strong>Opportunistic</strong> &rarr; Distressed, turnaround, or high-growth. Highest risk/reward.'
       ]
     }
   },
-  // 17: Distribution Cadence
+  // 7: Tax Optimization - Situation
   {
-    title: 'What distribution cadence are you willing to accept?',
-    desc: 'Let\'s clarify how flexible you are about receiving cash flow from your investments.',
-    type: 'checks',
-    key: 'distributions',
-    options: ['Monthly', 'Quarterly', 'Annually', 'End of Term'],
-    guide: {
-      items: [
-        '<strong>Monthly</strong> &rarr; Predictable, budgeting-friendly cash flow.',
-        '<strong>Quarterly</strong> &rarr; Common for most private placements.',
-        '<strong>Annually</strong> &rarr; Uncommon for most private placements.',
-        '<strong>End of term</strong> &rarr; Common in development, growth, and turnaround projects where profits are realized at the exit.'
-      ]
-    }
-  },
-  // 18: Firm Size
-  {
-    title: 'What size of investment firm are you comfortable with?',
-    desc: 'Firm size influences experience, systems, and deal flow.',
-    type: 'checks',
-    key: 'firmSize',
-    options: ['Emerging Manager (< $20M)', 'Mid-Sized ($20M-$100M)', 'Institutional ($100M+)'],
-    guide: {
-      items: [
-        '<strong>Emerging Managers (&lt;$20M)</strong> &rarr; Often scrappy and entrepreneurial. May offer more aggressive returns, but also lack experience.',
-        '<strong>Mid-Sized ($20M-$100M)</strong> &rarr; Some track record, usually growing teams and repeatable strategies.',
-        '<strong>Institutional ($100M+)</strong> &rarr; Greater systems, staff, and capital controls. Typically manage multiple funds or strategies.'
-      ]
-    }
-  },
-  // 19: Audited Financials
-  {
-    title: 'How important are audited financials to you?',
-    desc: 'Most smaller funds under $100M don\'t conduct third-party audits. Audited financials help verify the fund\'s accounting follows standard rules.',
-    type: 'radio',
-    key: 'auditPref',
-    options: [
-      'I Require Audited Financials',
-      'Unaudited Financials Are Acceptable'
+    title: 'Let\'s understand your tax situation',
+    desc: 'Real estate investments can provide significant tax benefits through depreciation, cost segregation, and bonus depreciation.',
+    type: 'mixed',
+    fields: [
+      { key: 'taxableIncome', label: 'What\'s your approximate annual taxable income?', placeholder: '$500,000', inputType: 'text' },
+      { key: 'taxOffset', label: 'How much are you looking to offset in taxes this year?', placeholder: '$100,000', inputType: 'text' }
     ],
+    radio: { key: 'entity', label: 'What entity will you invest through?', options: [
+      'Personal Name', 'LLC', 'Trust', 'Self-Directed IRA / 401K'
+    ]},
     guide: {
       items: [
-        '<strong>Unaudited</strong> &rarr; Common for smaller funds, especially under $100M. Trust in the operator is key.',
-        '<strong>Audited</strong> &rarr; Provides external validation. Often required by institutional investors.',
-        '<strong>Note:</strong> Audits typically cost $10K-$40K+ annually, so many small funds skip them to reduce expenses.'
+        '<strong>Cost Segregation</strong> &rarr; Accelerated depreciation on components of a building (roof, HVAC, etc.)',
+        '<strong>Bonus Depreciation</strong> &rarr; Year-1 write-off of certain building improvements (currently phasing down)',
+        '<strong>Oil & Gas</strong> &rarr; Intangible drilling costs provide immediate deductions against ordinary income'
       ]
     }
   },
-  // 20: Firm Focus
+  // 8: Tax Optimization - Preferences
   {
-    title: 'How focused do you prefer the investment firm to be?',
-    desc: 'Some firms specialize in one asset class. Others diversify across multiple strategies. Your comfort here impacts which operators you\'ll want to work with.',
-    type: 'radio',
-    key: 'firmFocus',
-    options: ['Single-Strategy Firms', 'Multi-Strategy Firms'],
+    title: 'Which tax strategies interest you?',
+    desc: 'Select the timing and types of investments that align with your tax planning.',
+    type: 'mixed',
+    fields: [
+      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$75,000', inputType: 'text' }
+    ],
+    radio: { key: 'taxTimeline', label: 'When do you need the tax benefit?', options: [
+      'This tax year (immediate)',
+      'Next 1-2 years',
+      'Flexible / long-term planning'
+    ]},
+    checks: { key: 'assetClasses', label: 'Which asset types offer the tax benefits you need?', options: [
+      'Multi-Family', 'Oil & Gas', 'Land', 'Short-Term Rentals', 'Industrial'
+    ]},
     guide: {
       items: [
-        '<strong>Single-Strategy Firms</strong> &rarr; Usually more specialized and dialed in. Common among operators &lt; $100M.',
-        '<strong>Multi-Strategy Firms</strong> &rarr; More common among larger platforms. May offer better diversification but require more trust in team bandwidth.',
-        '&#x26A0;&#xFE0F; Be cautious of small firms doing too many things &mdash; it can dilute focus and performance.'
+        '<strong>Multi-Family (Cost Seg)</strong> &rarr; Accelerate depreciation on large apartment buildings for year-1 write-offs',
+        '<strong>Oil & Gas</strong> &rarr; Intangible drilling costs provide immediate 60-80% deductions',
+        '<strong>Short-Term Rentals (REPS)</strong> &rarr; Active participation can unlock passive loss deductions against W2 income'
       ]
     }
+  },
+  // 9: Browse Deals (all paths)
+  {
+    title: 'Take a look at what\'s available',
+    desc: 'Here are deals that match your preferences. Mark the ones that interest you \u2014 you can always change your mind later.',
+    type: 'dealPicker'
+  },
+  // 10: All Set (all paths)
+  {
+    title: 'You\'re all set!',
+    desc: 'Your investment profile is locked in. Here\'s what you can do next.',
+    type: 'welcome'
   }
 ];
 
 function openBuyBoxWizard() {
+  wizardStepIndex = 0;
   wizardStep = 0;
   wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
   // Pre-fill from user data
   const user = getUser();
   if (user && !wizardData.firstName) {
-    wizardData.firstName = user.firstName || '';
-    wizardData.lastName = user.lastName || '';
+    wizardData.firstName = user.firstName || (user.name || '').split(' ')[0] || '';
+    wizardData.lastName = user.lastName || (user.name || '').split(' ').slice(1).join(' ') || '';
   }
   document.getElementById('wizardOverlay').classList.add('active');
   renderWizardStep();
 }
 
 function closeWizard() {
+  collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
   document.getElementById('wizardOverlay').classList.remove('active');
+  document.querySelector('.wizard-body').classList.remove('welcome-bg');
   // Update buy box settings from wizard data
   syncWizardToBuyBox();
   if (localStorage.getItem('gycBuyBoxComplete')) {
-    renderReport();
+    if (typeof renderReport === 'function') renderReport();
   }
 }
 
 function renderWizardStep() {
+  const seq = getStepSequence();
+  wizardStep = seq[wizardStepIndex];
   const step = WIZARD_STEPS[wizardStep];
-  const total = WIZARD_STEPS.length;
-  const pct = ((wizardStep + 1) / total * 100).toFixed(0);
+  const total = seq.length;
+  const pct = ((wizardStepIndex + 1) / total * 100).toFixed(0);
   document.getElementById('wizardProgress').style.width = pct + '%';
-  document.getElementById('wizardStepLabel').textContent = `Step ${wizardStep + 1} of ${total}`;
-  document.getElementById('wizardBack').style.display = wizardStep === 0 ? 'none' : '';
-  document.getElementById('wizardNext').textContent = wizardStep === total - 1 ? 'Finish' : 'Next';
+  document.getElementById('wizardStepLabel').textContent = getPhaseLabel();
+  document.getElementById('wizardBack').style.display = wizardStepIndex === 0 ? 'none' : '';
+  document.getElementById('wizardNext').textContent = wizardStepIndex === total - 1 ? 'Finish' : 'Next';
 
-  let html = `<div class="wizard-card-title">${step.title}</div>`;
+  // Toggle welcome background
+  const wizBody = document.querySelector('.wizard-body');
+  if (step.type === 'welcome') {
+    wizBody.classList.add('welcome-bg');
+  } else {
+    wizBody.classList.remove('welcome-bg');
+  }
+
+  let html = '';
+
+  // ===== WELCOME TYPE =====
+  if (step.type === 'welcome') {
+    html += '<div class="wizard-welcome">';
+    if (wizardStep === 0) {
+      // First welcome screen
+      html += `<div class="wizard-card-title" style="font-size:38px;color:#fff;margin-bottom:16px;">${step.title}</div>`;
+      html += `<div class="wizard-card-desc" style="color:rgba(255,255,255,0.75);font-size:18px;margin-bottom:16px;">${step.desc}</div>`;
+      html += '<div class="wizard-time-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> About 5 minutes</div><br>';
+      html += '<button class="wizard-welcome-cta" onclick="wizardNext()">Get Started</button>';
+    } else {
+      // Completion screen
+      const branch = wizardData._branch || 'cashflow';
+      let summaryText = 'Your preferences are saved and we\'re matching you with deals.';
+      if (branch === 'cashflow') summaryText = 'We\'ve matched you with income-focused deals tailored to your cash flow targets.';
+      else if (branch === 'growth') summaryText = 'We\'ve matched you with growth-oriented deals targeting your return objectives.';
+      else if (branch === 'tax') summaryText = 'We\'ve matched you with deals that offer the tax benefits you\'re looking for.';
+      html += '<div style="font-size:48px;margin-bottom:16px;">&#10003;</div>';
+      html += `<div class="wizard-card-title" style="font-size:38px;color:#fff;margin-bottom:12px;">${step.title}</div>`;
+      html += `<div class="wizard-card-desc" style="color:rgba(255,255,255,0.75);font-size:17px;margin-bottom:8px;">${summaryText}</div>`;
+      html += '<div class="wizard-features">';
+      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128200;</div><div class="wizard-feature-title">Browse Live Deals</div><div class="wizard-feature-desc">Matched to your buy box</div></div>';
+      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128218;</div><div class="wizard-feature-title">Book Office Hours</div><div class="wizard-feature-desc">Get personalized coaching</div></div>';
+      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128202;</div><div class="wizard-feature-title">Track Portfolio</div><div class="wizard-feature-desc">Log your investments</div></div>';
+      html += '</div>';
+      html += '<button class="wizard-welcome-cta" onclick="wizardNext()">Go to My Dashboard</button>';
+    }
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== GOAL SELECT TYPE =====
+  if (step.type === 'goalSelect') {
+    html += `<div class="wizard-card-title">${step.title}</div>`;
+    html += `<div class="wizard-card-desc">${step.desc}</div>`;
+    html += '<div class="wizard-goal-cards">';
+    const goals = [
+      { branch: 'cashflow', title: 'Cash Flow', desc: 'I want consistent, predictable income from my investments', icon: '&#128176;', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
+      { branch: 'growth', title: 'Equity Growth', desc: 'I want to grow my wealth and diversify outside public markets', icon: '&#128200;', iconClass: 'eq', goalVal: 'Equity Growth (wealth later)' },
+      { branch: 'tax', title: 'Tax Optimization', desc: 'I want to reduce my taxable income using real estate', icon: '&#128737;', iconClass: 'tax', goalVal: 'Tax Optimization (tax shield now)' }
+    ];
+    goals.forEach(g => {
+      const sel = wizardData._branch === g.branch ? 'selected' : '';
+      html += `<div class="wizard-goal-card ${sel}" onclick="selectGoalBranch('${g.branch}', '${g.goalVal.replace(/'/g, "\\'")}')">
+        <div class="wizard-goal-icon ${g.iconClass}">${g.icon}</div>
+        <div class="wizard-goal-info">
+          <div class="wizard-goal-title">${g.title}</div>
+          <div class="wizard-goal-desc">${g.desc}</div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    // Back button only
+    html += '<div class="wizard-inline-nav">';
+    if (wizardStepIndex > 0) {
+      html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    }
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== DEAL PICKER TYPE =====
+  if (step.type === 'dealPicker') {
+    // Sync wizard data to buy box so we can filter deals
+    collectWizardInputs();
+    syncWizardToBuyBox();
+
+    html += `<div class="wizard-card-title">${step.title}</div>`;
+    html += `<div class="wizard-card-desc">${step.desc}</div>`;
+
+    // Filter deals using buy box
+    const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+    const filtered = allDeals.filter(d => {
+      if (buyBox.assetClasses && buyBox.assetClasses.length > 0) {
+        if (!buyBox.assetClasses.includes(d.assetClass)) return false;
+      }
+      return true;
+    });
+    const toShow = (filtered.length > 0 ? filtered : allDeals).slice(0, 12);
+
+    if (toShow.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">Deals are loading... You can skip this step and browse deals from your dashboard.</div>';
+    } else {
+      html += '<div class="wizard-deal-grid">';
+      toShow.forEach(deal => {
+        const stage = typeof getDealStage === 'function' ? getDealStage(deal.id) : 'new';
+        const passClass = stage === 'passed' ? 'actioned' : '';
+        const intClass = stage === 'interested' ? 'actioned' : '';
+        html += `<div class="wizard-deal-card" id="wdeal-${deal.id}">
+          <div class="wizard-deal-body">
+            <div class="wizard-deal-name">${deal.investmentName || deal.name || 'Unnamed Deal'}</div>
+            <div class="wizard-deal-sponsor">${deal.managementCompany || ''} &middot; ${deal.assetClass || ''}</div>
+            <div class="wizard-deal-metrics">
+              ${deal.targetIRR ? `<div class="wizard-deal-metric">Target IRR<strong>${deal.targetIRR}</strong></div>` : ''}
+              ${deal.preferredReturn ? `<div class="wizard-deal-metric">Pref Return<strong>${deal.preferredReturn}</strong></div>` : ''}
+              ${deal.investmentMinimum ? `<div class="wizard-deal-metric">Minimum<strong>${deal.investmentMinimum}</strong></div>` : ''}
+              ${deal.holdPeriod ? `<div class="wizard-deal-metric">Hold<strong>${deal.holdPeriod}</strong></div>` : ''}
+            </div>
+          </div>
+          <div class="wizard-deal-actions">
+            <button class="${passClass}" onclick="onboardingDealAction('${deal.id}','passed',this)">&#10005; Pass</button>
+            <button class="${intClass}" onclick="onboardingDealAction('${deal.id}','interested',this)">&#10003; Interested</button>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+      const interested = toShow.filter(d => getDealStage(d.id) === 'interested').length;
+      html += `<div class="wizard-deal-counter"><strong>${interested}</strong> deal${interested !== 1 ? 's' : ''} marked interested</div>`;
+    }
+    html += '<div class="wizard-skip-link" onclick="wizardNext()">Skip for now</div>';
+
+    // Nav buttons
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Continue</button>';
+    html += '</div>';
+
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== STANDARD TYPES (fields, radio, checks, mixed) =====
+  html += `<div class="wizard-card-title">${step.title}</div>`;
   if (step.desc) html += `<div class="wizard-card-desc">${step.desc}</div>`;
 
   if (step.type === 'info') {
-    // Just title/desc, nothing else needed
+    // Just title/desc
   } else if (step.type === 'fields') {
     html += step.fields.map(f => {
       const val = wizardData[f.key] || '';
@@ -5182,16 +5451,15 @@ function renderWizardStep() {
     }).join('');
     html += `</div>`;
   } else if (step.type === 'mixed') {
-    // Fields first
     if (step.fields) {
       html += step.fields.map(f => {
         const val = wizardData[f.key] || '';
         if (f.inputType === 'select') {
-          html += `<div class="wizard-field"><label class="wizard-label">${f.label}</label>`;
-          html += `<select class="wizard-select" data-key="${f.key}"><option value="">Select one...</option>`;
-          html += f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
-          html += `</select></div>`;
-          return '';
+          let selectHtml = `<div class="wizard-field"><label class="wizard-label">${f.label}</label>`;
+          selectHtml += `<select class="wizard-select" data-key="${f.key}"><option value="">Select one...</option>`;
+          selectHtml += f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
+          selectHtml += `</select></div>`;
+          return selectHtml;
         }
         return `<div class="wizard-field">
           <label class="wizard-label">${f.label}</label>
@@ -5199,10 +5467,9 @@ function renderWizardStep() {
         </div>`;
       }).join('');
     }
-    // Radio
     if (step.radio) {
       const current = wizardData[step.radio.key] || '';
-      html += `<div class="wizard-field"><label class="wizard-label">${step.radio.label}</label></div>`;
+      html += `<div class="wizard-section-label">${step.radio.label}</div>`;
       html += `<div class="wizard-options">`;
       html += step.radio.options.map(opt => {
         const sel = current === opt ? 'selected' : '';
@@ -5213,10 +5480,9 @@ function renderWizardStep() {
       }).join('');
       html += `</div>`;
     }
-    // Checks
     if (step.checks) {
       const current = wizardData[step.checks.key] || [];
-      html += `<div class="wizard-field" style="margin-top:20px"><label class="wizard-label">${step.checks.label}</label></div>`;
+      html += `<div class="wizard-section-label">${step.checks.label}</div>`;
       html += `<div class="wizard-options">`;
       html += step.checks.options.map(opt => {
         const sel = current.includes(opt) ? 'selected' : '';
@@ -5236,15 +5502,57 @@ function renderWizardStep() {
     html += `</div>`;
   }
 
-  // Add inline nav buttons (reuse total from above)
+  // Inline nav buttons
   html += '<div class="wizard-inline-nav">';
-  if (wizardStep > 0) {
+  if (wizardStepIndex > 0) {
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
   }
-  html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (wizardStep === total - 1 ? 'Finish' : 'Next') + '</button>';
+  html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (wizardStepIndex === total - 1 ? 'Finish' : 'Next') + '</button>';
   html += '</div>';
 
   document.getElementById('wizardContent').innerHTML = html;
+}
+
+// Goal branch selection handler
+function selectGoalBranch(branch, goalValue) {
+  wizardData._branch = branch;
+  wizardData.goal = goalValue;
+  // Auto-set strategies based on branch
+  if (branch === 'cashflow') {
+    wizardData.strategies = wizardData.strategies || ['Lending / Credit'];
+    wizardData.instruments = ['Debt (1st Position)'];
+  } else if (branch === 'growth') {
+    wizardData.strategies = wizardData.strategies || ['Value-Add'];
+    wizardData.instruments = ['Equity (2nd Position)'];
+  } else if (branch === 'tax') {
+    wizardData.strategies = wizardData.strategies || ['Development', 'Value-Add'];
+  }
+  localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  wizardStepIndex++;
+  renderWizardStep();
+  document.querySelector('.wizard-body').scrollTop = 0;
+}
+
+// Deal action handler for onboarding deal picker
+function onboardingDealAction(dealId, stage, btnEl) {
+  if (typeof setDealStage === 'function') setDealStage(dealId, stage);
+  // Update button states visually
+  const card = btnEl.closest('.wizard-deal-card');
+  if (card) {
+    card.querySelectorAll('.wizard-deal-actions button').forEach(b => b.classList.remove('actioned'));
+    btnEl.classList.add('actioned');
+  }
+  // Update counter
+  const counterEl = document.querySelector('.wizard-deal-counter');
+  if (counterEl) {
+    const allCards = document.querySelectorAll('.wizard-deal-card');
+    let interested = 0;
+    allCards.forEach(c => {
+      const id = c.id.replace('wdeal-', '');
+      if (typeof getDealStage === 'function' && getDealStage(id) === 'interested') interested++;
+    });
+    counterEl.innerHTML = `<strong>${interested}</strong> deal${interested !== 1 ? 's' : ''} marked interested`;
+  }
 }
 
 function selectWizardRadio(el, key, value) {
@@ -5280,29 +5588,33 @@ function collectWizardInputs() {
 function wizardNext() {
   collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  const seq = getStepSequence();
 
-  if (wizardStep >= WIZARD_STEPS.length - 1) {
-    // Finish
+  if (wizardStepIndex >= seq.length - 1) {
+    // Finish — onboarding complete
     localStorage.setItem('gycBuyBoxComplete', 'true');
     syncWizardToBuyBox();
     document.getElementById('wizardOverlay').classList.remove('active');
-    // Track buy box completion
-    trackActivity('buybox_complete', { wizardData: JSON.stringify(wizardData).substring(0, 200) });
+    document.querySelector('.wizard-body').classList.remove('welcome-bg');
+    // Track onboarding completion
+    if (typeof trackActivity === 'function') {
+      trackActivity('onboarding_complete', { branch: wizardData._branch, wizardData: JSON.stringify(wizardData).substring(0, 200) });
+    }
     // Sync to GHL
     syncBuyBoxToGHL();
-    // Navigate to report
-    navigateTo('buybox');
+    // Navigate to dashboard (not buy box report)
+    navigateTo('dashboard');
     return;
   }
-  wizardStep++;
+  wizardStepIndex++;
   renderWizardStep();
   document.querySelector('.wizard-body').scrollTop = 0;
 }
 
 function wizardPrev() {
   collectWizardInputs();
-  if (wizardStep > 0) {
-    wizardStep--;
+  if (wizardStepIndex > 0) {
+    wizardStepIndex--;
     renderWizardStep();
     document.querySelector('.wizard-body').scrollTop = 0;
   }
@@ -5329,12 +5641,26 @@ function syncWizardToBuyBox() {
   const mappedStrats = (d.strategies || []).map(s => stratMap[s] || s);
 
   buyBox.assetClasses = [...new Set(mappedAssets)];
-  buyBox.strategies = mappedStrats;
+  buyBox.strategies = mappedStrats.length > 0 ? mappedStrats : buyBox.strategies;
   buyBox.objectives = d.goal ? [d.goal.split(' (')[0]] : buyBox.objectives;
   buyBox.irrMin = d.minIRR || buyBox.irrMin;
   buyBox.minInvest = d.checkSize || buyBox.minInvest;
+
+  // Store branch-specific data for dashboard/reporting
+  if (d.currentCashFlow) buyBox.currentCashFlow = d.currentCashFlow;
+  if (d.targetCashFlow) buyBox.targetCashFlow = d.targetCashFlow;
+  if (d.taxableIncome) buyBox.taxableIncome = d.taxableIncome;
+  if (d.taxOffset) buyBox.taxOffset = d.taxOffset;
+  if (d.riskTolerance) buyBox.riskTolerance = d.riskTolerance;
+  if (d._branch) buyBox._branch = d._branch;
+  if (d.lockup) buyBox.holdMin = d.lockup;
+  if (d.distributions) {
+    // If distributions is a string (from radio), convert to appropriate format
+    if (typeof d.distributions === 'string') buyBox.distributions = d.distributions;
+  }
+
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
-  renderReport();
+  if (typeof renderReport === 'function') renderReport();
 }
 
 async function syncBuyBoxToGHL() {
@@ -6072,10 +6398,8 @@ function renderDebtFunds() {
     _return2022: generateYearReturn(f.targetIRR, 2022)
   }));
 
-  // Auto-apply Buy Box on first load if user has one configured
-  if (!debtBuyBoxApplied && buyBox && Object.keys(buyBox).length > 0) {
-    toggleDebtBuyBox();
-  }
+  // Buy Box is NOT auto-applied — user clicks "Apply My Buy Box" manually
+  // This ensures all funds show by default on first visit
 
   renderDebtStats(getFilteredDebtFunds(), debtFundData);
   renderDebtChart();
