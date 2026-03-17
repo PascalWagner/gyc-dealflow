@@ -8030,14 +8030,11 @@ function renderSchemaPage() {
   const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
   const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
   const taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
-  const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
-  const analytics = JSON.parse(localStorage.getItem('gycAnalytics') || '[]');
   const user = getUser();
-  const wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
   function badge(type) {
-    const colors = { persistent: '#51BE7B', localStorage: '#f59e0b', missing: '#e74c3c' };
-    const labels = { persistent: 'Synced to Backend', localStorage: 'localStorage Only', missing: 'Not Tracked' };
+    const colors = { persistent: '#51BE7B', missing: '#e74c3c' };
+    const labels = { persistent: 'Synced to Backend', missing: 'Not Tracked' };
     return '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:' + colors[type] + '22;color:' + colors[type] + ';">' + labels[type] + '</span>';
   }
 
@@ -8075,23 +8072,23 @@ function renderSchemaPage() {
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px;">
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Data Sources</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">3</div>
-        <div style="font-size:10px;color:var(--text-muted);">Airtable, GHL, localStorage</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">2</div>
+        <div style="font-size:10px;color:var(--text-muted);">Airtable, GoHighLevel</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Tables</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">10</div>
-        <div style="font-size:10px;color:var(--text-muted);">7 backend, 3 local</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">7</div>
+        <div style="font-size:10px;color:var(--text-muted);">All synced to backend</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">Persistent</div>
-        <div style="font-size:24px;font-weight:800;color:#51BE7B;">7</div>
-        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies, Auth + 4 User Tables</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">Airtable</div>
+        <div style="font-size:24px;font-weight:800;color:#51BE7B;">6</div>
+        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies + 4 User Tables</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:4px;">localStorage Only</div>
-        <div style="font-size:24px;font-weight:800;color:#f59e0b;">3</div>
-        <div style="font-size:10px;color:var(--text-muted);">User Deals, Analytics, Wizard</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">GoHighLevel</div>
+        <div style="font-size:24px;font-weight:800;color:#51BE7B;">1</div>
+        <div style="font-size:10px;color:var(--text-muted);">Auth, Buy Box, Wizard Data</div>
       </div>
     </div>
 
@@ -8169,35 +8166,10 @@ function renderSchemaPage() {
       { name: '+ 9 more fields', type: '...', example: 'Portal URL, contact info, notes, etc.' }
     ], taxDocs.length)}
 
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:12px;margin-top:32px;padding-left:4px;">localStorage Only (Not Yet Synced)</div>
-
-    ${tableCard('User Submitted Deals', 'localStorage', 'localStorage · gycUserDeals', [
-      { name: 'Investment Name', type: 'text', example: userDeals[0]?.investmentName || '—' },
-      { name: 'Sponsor', type: 'text', example: userDeals[0]?.managementCompany || '—' },
-      { name: 'Asset Class', type: 'text', example: '—' },
-      { name: 'Target IRR', type: 'percent', example: '—' }
-    ], userDeals.length)}
-
-    ${tableCard('Analytics Events', 'localStorage', 'localStorage · gycAnalytics (max 10K)', [
-      { name: 'Action', type: 'text', example: 'page_view, view_deal, save_deal' },
-      { name: 'User ID', type: 'email', example: user?.email || 'anonymous' },
-      { name: 'Timestamp', type: 'ISO date', example: analytics[analytics.length - 1]?.timestamp || '—' },
-      { name: 'Page', type: 'text', example: 'deals, portfolio, goals...' }
-    ], analytics.length)}
-
-    ${tableCard('Buy Box Wizard Data', 'localStorage', 'localStorage · gycBuyBoxWizard', [
-      { name: 'First Name', type: 'text', example: wizardData?.firstName || '—' },
-      { name: 'Accreditation', type: 'text', example: wizardData?.accreditation || '—' },
-      { name: 'Check Size', type: 'text', example: wizardData?.checkSize || '—' },
-      { name: 'Asset Classes', type: 'array', example: (wizardData?.assetClasses || []).join(', ') || '—' },
-      { name: '+ 20 more fields', type: '...', example: 'Synced to GHL on save' }
-    ], Object.keys(wizardData).length > 0 ? 1 : 0)}
-
     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);padding:20px;margin-top:16px;">
-      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px;">Migration Status</div>
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px;">All Data Persistent</div>
       <div style="font-size:13px;color:#166534;line-height:1.8;">
-        <strong>7 of 10 tables</strong> are now synced to persistent backends (Airtable + GHL). User data persists across devices and browser clears.<br>
-        <strong>3 remaining localStorage tables:</strong> User Submitted Deals, Analytics Events, and Buy Box Wizard Data. These are lower priority — Wizard data already syncs to GHL on save.
+        All 7 tables are synced to persistent backends (Airtable + GHL). User data persists across devices and browser clears. Analytics tracked via Google Analytics.
       </div>
     </div>
   `;
