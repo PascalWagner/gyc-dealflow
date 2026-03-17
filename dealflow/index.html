@@ -2279,7 +2279,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
 
 <script>
 // ========== AIRTABLE INTEGRATION ==========
-const AIRTABLE_DEALS_WEBHOOK = 'https://hook.us2.make.com/mle5lalvak7925ru3nqse1eg45yrrs7p';
+const AIRTABLE_API_URL = '/api/deals';
 
 // Hardcoded fallback deals (used if API is unavailable)
 const FALLBACK_DEALS = [
@@ -2353,37 +2353,29 @@ function transformAirtableRecord(rec) {
   };
 }
 
-// Fetch deals from Airtable via webhook
+// Fetch deals from Airtable via serverless API
 async function fetchDealsFromAirtable() {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
-    const resp = await fetch(AIRTABLE_DEALS_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'getAllDeals' }),
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout for paginated fetch
+    const resp = await fetch(AIRTABLE_API_URL, {
       signal: controller.signal
     });
     clearTimeout(timeout);
-    if (!resp.ok) throw new Error('Webhook returned ' + resp.status);
-    const text = await resp.text();
-    if (!text.startsWith('[') && !text.startsWith('{')) throw new Error('Not JSON: ' + text.slice(0, 50));
-    const data = JSON.parse(text);
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
+    const data = await resp.json();
     if (Array.isArray(data) && data.length > 0) {
-      // Check if data is already in dashboard format or needs transformation
       const first = data[0];
       if (first.investmentName) {
-        // Already transformed
         return data;
       } else if (first['Investment Name / Address'] || first.fields) {
-        // Raw Airtable format — transform
         return data.map(transformAirtableRecord).filter(d => d.investmentName);
       }
     }
     throw new Error('Invalid response format');
   } catch (e) {
     console.warn('Airtable fetch failed, using fallback deals:', e.message);
-    return null; // Will use FALLBACK_DEALS
+    return null;
   }
 }
 
@@ -3596,8 +3588,7 @@ function renderWizardStep() {
     html += `</div>`;
   }
 
-  // Add inline nav buttons
-  const total = WIZARD_STEPS.length;
+  // Add inline nav buttons (reuse total from above)
   html += '<div class="wizard-inline-nav">';
   if (wizardStep > 0) {
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
