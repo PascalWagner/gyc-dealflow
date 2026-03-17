@@ -318,6 +318,61 @@ body {
   background: var(--bg-cream);
 }
 
+.buybox-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 2px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.buybox-toggle:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+.buybox-toggle.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.buybox-toggle .bb-icon {
+  width: 14px; height: 14px;
+}
+.buybox-update-btn {
+  display: none;
+  padding: 4px 10px;
+  border: 1px solid var(--green);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--green);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.buybox-update-btn:hover {
+  background: var(--green);
+  color: #fff;
+}
+.buybox-update-btn.visible {
+  display: inline-flex;
+}
+.debt-row-highlighted {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--green-bg) !important;
+}
+
 .filter-select, .filter-input {
   padding: 8px 14px;
   border: 1px solid var(--border);
@@ -1710,6 +1765,15 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       My Buy Box Report
     </a>
+    <div class="nav-section-label">Education</div>
+    <a class="nav-item" href="#" data-page="officehours" onclick="navigateTo('officehours'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
+      Office Hours
+    </a>
+    <a class="nav-item" href="#" data-page="academy" onclick="navigateTo('academy'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Cash Flow Academy
+    </a>
     <div class="nav-section-label">Account</div>
     <a class="nav-item" href="#" data-page="settings" onclick="navigateTo('settings'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1794,6 +1858,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <button class="office-hours-join" onclick="window.open('https://growyourcashflow.com/office-hours','_blank')">Join This Week</button>
     </div>
     <div class="filter-bar">
+      <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
+        <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+        Apply My Buy Box
+      </button>
+      <button class="buybox-update-btn" id="dealsBuyBoxUpdate" onclick="updateDealsBuyBox()">Update Buy Box?</button>
       <select class="filter-select" id="filterAssetClass" onchange="applyFilters()">
         <option value="">Asset Class</option>
         <option value="Multi Family">Multi Family</option>
@@ -2223,6 +2292,238 @@ html.dark .card-match-badge.red { background: #2E1515; }
   </div>
 
 
+  <!-- PAGE: Office Hours -->
+  <div class="page" id="page-officehours">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Office Hours</div>
+    </div>
+    <div class="sub-page" style="max-width:1000px">
+      <div class="settings-page-desc" style="margin-top:0;">Join Pascal and the GYC community for live Q&A, deal reviews, and market analysis sessions.</div>
+
+      <!-- Upcoming Sessions -->
+      <div style="margin-bottom:32px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Upcoming Sessions</h3>
+        <div style="display:grid;gap:16px;" id="officeHoursUpcoming">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div>
+              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Weekly Deal Review &amp; Q&A</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Live walkthrough of this week's new deals, market updates, and open Q&A</div>
+              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Every Thursday @ 12:00 PM ET</div>
+            </div>
+            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Join Next Session</a>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div>
+              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Debt Fund Deep Dive</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Understanding private credit, yield analysis, and due diligence for lending funds</div>
+              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Monthly — Next: Mar 27, 2026 @ 1:00 PM ET</div>
+            </div>
+            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Register</a>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div>
+              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">GP Spotlight: Live Sponsor Interview</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Meet the operators behind the deals. Ask questions directly to fund managers.</div>
+              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Bi-weekly — Next: Apr 3, 2026 @ 12:00 PM ET</div>
+            </div>
+            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Register</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Past Recordings -->
+      <div>
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Past Recordings</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="officeHoursRecordings">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <div style="padding:16px;">
+              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Review: March 2026</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Mar 13, 2026 — 47 min</div>
+            </div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <div style="padding:16px;">
+              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">How to Evaluate a Debt Fund</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Feb 27, 2026 — 62 min</div>
+            </div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </div>
+            <div style="padding:16px;">
+              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">GP Spotlight: RSN Property Group</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Feb 13, 2026 — 55 min</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Cash Flow Academy -->
+  <div class="page" id="page-academy">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Cash Flow Academy</div>
+    </div>
+    <div class="sub-page" style="max-width:1100px">
+      <div class="settings-page-desc" style="margin-top:0;">Master passive investing with structured courses, frameworks, and resources built for accredited investors.</div>
+
+      <!-- Course Categories -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;" onclick="filterAcademyCourses('all')">
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--primary);">12</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Total Courses</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;" onclick="filterAcademyCourses('beginner')">
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--green);">4</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Beginner</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;" onclick="filterAcademyCourses('intermediate')">
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--blue);">5</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Intermediate</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;" onclick="filterAcademyCourses('advanced')">
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--orange);">3</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Advanced</div>
+        </div>
+      </div>
+
+      <!-- Courses Grid -->
+      <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Courses</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:32px;" id="academyCourses">
+        <div class="academy-course" data-level="beginner" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="background:linear-gradient(135deg, #0a1e21 0%, #1a3a3f 100%);height:140px;display:flex;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#fff;text-align:center;">LP Investing<br>101</div>
+          </div>
+          <div style="padding:20px;">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green);margin-bottom:8px;">BEGINNER</span>
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Introduction to Passive Real Estate Investing</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Learn the fundamentals of LP investing: deal structures, sponsor evaluation, and building your first portfolio.</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">8 lessons — 2.5 hrs</span>
+              <a href="https://growyourcashflow.com/academy" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:8px 16px;font-size:12px;">Start Course</a>
+            </div>
+          </div>
+        </div>
+        <div class="academy-course" data-level="beginner" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="background:linear-gradient(135deg, #1a3520 0%, #2d5a35 100%);height:140px;display:flex;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#fff;text-align:center;">Understanding<br>Deal Structures</div>
+          </div>
+          <div style="padding:20px;">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green);margin-bottom:8px;">BEGINNER</span>
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Syndications vs Funds vs Direct</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Break down every deal structure type, understand waterfalls, preferred returns, and fee structures.</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">6 lessons — 1.5 hrs</span>
+              <a href="https://growyourcashflow.com/academy" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:8px 16px;font-size:12px;">Start Course</a>
+            </div>
+          </div>
+        </div>
+        <div class="academy-course" data-level="intermediate" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="background:linear-gradient(135deg, #1a2040 0%, #2d3a6a 100%);height:140px;display:flex;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#fff;text-align:center;">Debt Fund<br>Mastery</div>
+          </div>
+          <div style="padding:20px;">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--blue-bg, #e8f4f8);color:var(--blue);;margin-bottom:8px;">INTERMEDIATE</span>
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Private Credit & Lending Fund Analysis</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Deep dive into evaluating debt funds: yield analysis, LTV risk, portfolio diversification, and audited financials.</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">10 lessons — 4 hrs</span>
+              <a href="https://growyourcashflow.com/academy" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:8px 16px;font-size:12px;">Start Course</a>
+            </div>
+          </div>
+        </div>
+        <div class="academy-course" data-level="intermediate" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="background:linear-gradient(135deg, #3a1a20 0%, #6a2d35 100%);height:140px;display:flex;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#fff;text-align:center;">Due Diligence<br>Framework</div>
+          </div>
+          <div style="padding:20px;">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--blue-bg, #e8f4f8);color:var(--blue);margin-bottom:8px;">INTERMEDIATE</span>
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">The LP Due Diligence Playbook</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Pascal's step-by-step framework for vetting sponsors, reviewing PPMs, and making informed investment decisions.</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">12 lessons — 5 hrs</span>
+              <a href="https://growyourcashflow.com/academy" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:8px 16px;font-size:12px;">Start Course</a>
+            </div>
+          </div>
+        </div>
+        <div class="academy-course" data-level="advanced" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="background:linear-gradient(135deg, #3a2a10 0%, #6a4a1d 100%);height:140px;display:flex;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#fff;text-align:center;">Portfolio<br>Construction</div>
+          </div>
+          <div style="padding:20px;">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--orange-bg);color:var(--orange);margin-bottom:8px;">ADVANCED</span>
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Building a $1M+ LP Portfolio</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Advanced portfolio allocation across asset classes, tax optimization with cost segregation, and 12-month deployment planning.</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">8 lessons — 3.5 hrs</span>
+              <a href="https://growyourcashflow.com/academy" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:8px 16px;font-size:12px;">Start Course</a>
+            </div>
+          </div>
+        </div>
+        <div class="academy-course" data-level="beginner" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="background:linear-gradient(135deg, #102a3a 0%, #1d4a6a 100%);height:140px;display:flex;align-items:center;justify-content:center;padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#fff;text-align:center;">Tax Benefits<br>of RE Investing</div>
+          </div>
+          <div style="padding:20px;">
+            <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;background:var(--green-bg);color:var(--green);margin-bottom:8px;">BEGINNER</span>
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Depreciation, K-1s & Cost Segregation</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:12px;">Understand how passive real estate generates tax advantages through depreciation, bonus depreciation, and 1031 exchanges.</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">5 lessons — 1.5 hrs</span>
+              <a href="https://growyourcashflow.com/academy" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:8px 16px;font-size:12px;">Start Course</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resources / Downloads -->
+      <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Frameworks & Templates</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;">
+          <div style="width:48px;height:48px;border-radius:10px;background:var(--mint-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">LP Due Diligence Checklist</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">50-point checklist for vetting sponsors and deals</div>
+          </div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;">
+          <div style="width:48px;height:48px;border-radius:10px;background:var(--mint-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="24" height="24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Comparison Spreadsheet</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">Side-by-side deal analysis template</div>
+          </div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;">
+          <div style="width:48px;height:48px;border-radius:10px;background:var(--mint-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="24" height="24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">12-Month Deployment Planner</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">Structured capital deployment timeline</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE: Debt Fund Explorer -->
   <div class="page" id="page-debtfunds">
     <div class="topbar">
@@ -2232,8 +2533,31 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <div class="topbar-title">Debt Fund Explorer</div>
     </div>
     <div class="sub-page" style="max-width:1200px">
-      <div class="settings-page-title">Debt Fund Explorer</div>
-      <div class="settings-page-desc">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
+      <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
+
+      <!-- Debt Fund Filters (moved above stats & chart) -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+        <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()">
+          <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+          Apply My Buy Box
+        </button>
+        <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
+        <div style="width:1px;height:24px;background:var(--border);"></div>
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Filters</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Financials:</span>
+          <button class="topbar-tab active" onclick="toggleDebtFilter('financials','all',this)" data-filter-group="financials">All</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Audited',this)" data-filter-group="financials">Audited</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Unaudited',this)" data-filter-group="financials">Unaudited</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">AUM Size:</span>
+          <button class="topbar-tab active" onclick="toggleDebtFilter('aum','all',this)" data-filter-group="aum">All</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('aum','small',this)" data-filter-group="aum">Small (&lt;$100M)</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('aum','mid',this)" data-filter-group="aum">Mid ($100M-$1B)</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('aum','institutional',this)" data-filter-group="aum">Institutional ($1B+)</button>
+        </div>
+      </div>
 
       <!-- Stat Cards -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;" id="debtFundStats"></div>
@@ -2255,24 +2579,6 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </div>
         </div>
         <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;">Historical data is simulated. Actual fund metrics coming soon.</p>
-      </div>
-
-      <!-- Debt Fund Filters -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
-        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Filters</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Financials:</span>
-          <button class="topbar-tab active" onclick="toggleDebtFilter('financials','all',this)" data-filter-group="financials">All</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Audited',this)" data-filter-group="financials">Audited</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Unaudited',this)" data-filter-group="financials">Unaudited</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">AUM Size:</span>
-          <button class="topbar-tab active" onclick="toggleDebtFilter('aum','all',this)" data-filter-group="aum">All</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('aum','small',this)" data-filter-group="aum">Small (&lt;$100M)</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('aum','mid',this)" data-filter-group="aum">Mid ($100M-$1B)</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('aum','institutional',this)" data-filter-group="aum">Institutional ($1B+)</button>
-        </div>
       </div>
 
       <!-- Debt Funds Table -->
@@ -2868,7 +3174,18 @@ function renderAll() {
   }
 }
 
-function applyFilters() { renderAll(); }
+function applyFilters() {
+  // If buy box was applied and user manually changed a filter, un-toggle
+  if (dealsBuyBoxApplied && !buyBoxProgrammaticChange) {
+    dealsBuyBoxApplied = false;
+    const toggle = document.getElementById('dealsBuyBoxToggle');
+    if (toggle) toggle.classList.remove('active');
+    const updateBtn = document.getElementById('dealsBuyBoxUpdate');
+    if (updateBtn) updateBtn.classList.add('visible');
+  }
+  buyBoxProgrammaticChange = false;
+  renderAll();
+}
 
 function clearFilters() {
   document.getElementById('filterAssetClass').value = '';
@@ -4106,6 +4423,9 @@ let debtSortAsc = true;
 let highlightedDebtFund = null;
 let debtFilterFinancials = 'all';
 let debtFilterAUM = 'all';
+let dealsBuyBoxApplied = false;
+let debtBuyBoxApplied = false;
+let buyBoxProgrammaticChange = false;
 
 function toggleDebtFilter(group, value, btn) {
   if (group === 'financials') debtFilterFinancials = value;
@@ -4114,6 +4434,15 @@ function toggleDebtFilter(group, value, btn) {
   const siblings = btn.parentElement.querySelectorAll('.topbar-tab');
   siblings.forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // If buy box was applied, un-toggle and show update button
+  if (debtBuyBoxApplied) {
+    debtBuyBoxApplied = false;
+    const toggle = document.getElementById('debtBuyBoxToggle');
+    if (toggle) toggle.classList.remove('active');
+    const updateBtn = document.getElementById('debtBuyBoxUpdate');
+    if (updateBtn) updateBtn.classList.add('visible');
+  }
+  renderDebtStats(getFilteredDebtFunds(), debtFundData);
   renderDebtChart();
   renderDebtTable();
 }
@@ -4180,30 +4509,43 @@ function renderDebtFunds() {
     _return2022: generateYearReturn(f.targetIRR, 2022)
   }));
 
-  renderDebtStats(funds);
+  renderDebtStats(getFilteredDebtFunds(), debtFundData);
   renderDebtChart();
   renderDebtTable();
 }
 
-function renderDebtStats(funds) {
-  const totalFunds = funds.length;
-  const yields = funds.filter(f => f.targetIRR).map(f => f.targetIRR);
-  const avgYield = yields.length ? (yields.reduce((a, b) => a + b, 0) / yields.length * 100).toFixed(1) : '—';
-  const ltvs = funds.filter(f => f.avgLoanLTV).map(f => f.avgLoanLTV);
-  const avgLTV = ltvs.length ? (ltvs.reduce((a, b) => a + b, 0) / ltvs.length * 100).toFixed(0) : '—';
-  const aums = funds.filter(f => f.fundAUM).map(f => f.fundAUM);
+function renderDebtStats(filteredFunds, allFunds) {
+  allFunds = allFunds || filteredFunds;
+  const filteredCount = filteredFunds.length;
+  const totalCount = allFunds.length;
+
+  const yields = filteredFunds.filter(f => f.targetIRR).map(f => f.targetIRR * 100);
+  const avgYield = yields.length ? (yields.reduce((a, b) => a + b, 0) / yields.length).toFixed(1) : '—';
+  const minYield = yields.length ? Math.min(...yields).toFixed(1) : '—';
+  const maxYield = yields.length ? Math.max(...yields).toFixed(1) : '—';
+
+  const ltvs = filteredFunds.filter(f => f.avgLoanLTV).map(f => f.avgLoanLTV * 100);
+  const avgLTV = ltvs.length ? (ltvs.reduce((a, b) => a + b, 0) / ltvs.length).toFixed(0) : '—';
+  const minLTV = ltvs.length ? Math.min(...ltvs).toFixed(0) : '—';
+  const maxLTV = ltvs.length ? Math.max(...ltvs).toFixed(0) : '—';
+
+  const aums = filteredFunds.filter(f => f.fundAUM).map(f => f.fundAUM);
   const totalAUM = aums.reduce((a, b) => a + b, 0);
   const fmtAUM = totalAUM >= 1e9 ? '$' + (totalAUM / 1e9).toFixed(1) + 'B' : totalAUM >= 1e6 ? '$' + (totalAUM / 1e6).toFixed(0) + 'M' : '$' + totalAUM.toLocaleString();
+  const minAUM = aums.length ? Math.min(...aums) : 0;
+  const maxAUM = aums.length ? Math.max(...aums) : 0;
+  const fmtMinAUM = minAUM >= 1e9 ? '$' + (minAUM / 1e9).toFixed(1) + 'B' : minAUM >= 1e6 ? '$' + (minAUM / 1e6).toFixed(0) + 'M' : '$' + minAUM.toLocaleString();
+  const fmtMaxAUM = maxAUM >= 1e9 ? '$' + (maxAUM / 1e9).toFixed(1) + 'B' : maxAUM >= 1e6 ? '$' + (maxAUM / 1e6).toFixed(0) + 'M' : '$' + maxAUM.toLocaleString();
 
   document.getElementById('debtFundStats').innerHTML = [
-    { label: 'Total Debt Funds', value: totalFunds, color: 'var(--primary)' },
-    { label: 'Average Yield', value: avgYield + '%', color: 'var(--green)' },
-    { label: 'Average Loan-to-Value', value: avgLTV + '%', color: 'var(--orange)' },
-    { label: 'Total AUM', value: fmtAUM, color: 'var(--blue)' }
+    { label: 'Total Debt Funds', value: filteredCount, sub: '<span style="color:var(--text-muted);font-size:18px;font-weight:500;"> / ' + totalCount + '</span>', color: 'var(--primary)' },
+    { label: 'Average Yield', value: avgYield + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minYield + '% — Max ' + maxYield + '%</span>', color: 'var(--green)' },
+    { label: 'Average Loan-to-Value', value: avgLTV + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minLTV + '% — Max ' + maxLTV + '%</span>', color: 'var(--orange)' },
+    { label: 'Total AUM', value: fmtAUM, sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">' + fmtMinAUM + ' — ' + fmtMaxAUM + '</span>', color: 'var(--blue)' }
   ].map(s => `
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
       <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
-      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}</div>
+      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}${s.sub || ''}</div>
     </div>
   `).join('');
 }
@@ -4314,6 +4656,13 @@ function toggleDebtFundHighlight(id) {
   highlightedDebtFund = highlightedDebtFund === id ? null : id;
   renderDebtChart();
   renderDebtTable();
+  // Scroll highlighted row into view
+  if (highlightedDebtFund) {
+    const row = document.querySelector('#debtFundTableBody tr[data-fund-id="' + highlightedDebtFund + '"]');
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 }
 
 function switchDebtMetric(metric, btn) {
@@ -4352,7 +4701,7 @@ function renderDebtTable() {
     const financialsStr = f.financials || '—';
     const financialsBadge = financialsStr === 'Audited' ? 'background:var(--green-bg);color:var(--green)' : financialsStr === 'Unaudited' ? 'background:var(--orange-bg);color:var(--orange)' : 'background:var(--border-light);color:var(--text-muted)';
     const isHL = highlightedDebtFund === f.id;
-    return `<tr onclick="toggleDebtFundHighlight('${f.id}')" style="${isHL ? 'background:var(--green-bg);' : ''}" title="Click to highlight on chart">
+    return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to highlight on chart">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
       <td class="irr-cell">${yieldStr}</td>
       <td>${fmtReturn(f._return2025)}</td>
@@ -4378,6 +4727,151 @@ function sortDebtTable(col) {
     debtSortAsc = true;
   }
   renderDebtTable();
+}
+
+// ========== BUY BOX TOGGLE (LIVE DEALS) ==========
+function toggleDealsBuyBox() {
+  const toggle = document.getElementById('dealsBuyBoxToggle');
+  const updateBtn = document.getElementById('dealsBuyBoxUpdate');
+  if (dealsBuyBoxApplied) {
+    // Turn off - reset filters
+    dealsBuyBoxApplied = false;
+    toggle.classList.remove('active');
+    if (updateBtn) updateBtn.classList.remove('visible');
+    clearFilters();
+    return;
+  }
+  // Apply buy box filters
+  dealsBuyBoxApplied = true;
+  toggle.classList.add('active');
+  if (updateBtn) updateBtn.classList.remove('visible');
+
+  buyBoxProgrammaticChange = true;
+
+  // Set asset class from first buy box asset class (dropdown is single-select)
+  const acSelect = document.getElementById('filterAssetClass');
+  if (acSelect && buyBox.assetClasses && buyBox.assetClasses.length) {
+    // Find first matching option
+    const match = buyBox.assetClasses.find(ac => [...acSelect.options].some(o => o.value === ac));
+    acSelect.value = match || '';
+  }
+  // Set deal type
+  const dtSelect = document.getElementById('filterDealType');
+  if (dtSelect && buyBox.dealTypes && buyBox.dealTypes.length) {
+    const match = buyBox.dealTypes.find(dt => [...dtSelect.options].some(o => o.value === dt));
+    dtSelect.value = match || '';
+  }
+  // Set strategy
+  const stSelect = document.getElementById('filterStrategy');
+  if (stSelect && buyBox.strategies && buyBox.strategies.length) {
+    const match = buyBox.strategies.find(s => [...stSelect.options].some(o => o.value === s));
+    stSelect.value = match || '';
+  }
+
+  applyFilters();
+}
+
+function updateDealsBuyBox() {
+  // Save current filter state back to buy box
+  const ac = document.getElementById('filterAssetClass').value;
+  const dt = document.getElementById('filterDealType').value;
+  const st = document.getElementById('filterStrategy').value;
+
+  if (ac) buyBox.assetClasses = [ac];
+  if (dt) buyBox.dealTypes = [dt];
+  if (st) buyBox.strategies = [st];
+
+  localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
+  dealsBuyBoxApplied = true;
+  const toggle = document.getElementById('dealsBuyBoxToggle');
+  if (toggle) toggle.classList.add('active');
+  const updateBtn = document.getElementById('dealsBuyBoxUpdate');
+  if (updateBtn) updateBtn.classList.remove('visible');
+}
+
+// ========== BUY BOX TOGGLE (DEBT FUND EXPLORER) ==========
+function toggleDebtBuyBox() {
+  const toggle = document.getElementById('debtBuyBoxToggle');
+  const updateBtn = document.getElementById('debtBuyBoxUpdate');
+  if (debtBuyBoxApplied) {
+    // Turn off - reset debt filters
+    debtBuyBoxApplied = false;
+    toggle.classList.remove('active');
+    if (updateBtn) updateBtn.classList.remove('visible');
+    debtFilterFinancials = 'all';
+    debtFilterAUM = 'all';
+    // Reset button states
+    document.querySelectorAll('[data-filter-group="financials"] .topbar-tab, [data-filter-group="financials"]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('[data-filter-group="aum"] .topbar-tab, [data-filter-group="aum"]').forEach(b => b.classList.remove('active'));
+    // Set "All" buttons active
+    document.querySelectorAll('#page-debtfunds .topbar-tab').forEach(b => {
+      if (b.textContent.trim() === 'All' && (b.getAttribute('data-filter-group') === 'financials' || b.getAttribute('data-filter-group') === 'aum')) {
+        // handled below
+      }
+    });
+    // Simpler: re-click the All buttons
+    const allBtns = document.querySelectorAll('#page-debtfunds [data-filter-group]');
+    allBtns.forEach(btn => {
+      if (btn.onclick && btn.textContent.trim() === 'All') btn.click();
+    });
+    return;
+  }
+  // Apply buy box to debt fund filters
+  debtBuyBoxApplied = true;
+  toggle.classList.add('active');
+  if (updateBtn) updateBtn.classList.remove('visible');
+
+  // Check if buy box has financials preference
+  // For debt funds: if buy box strategies includes "Lending", that's a match
+  // We can set financials filter based on common preferences
+  // Keep financials as 'all' unless user has a specific pref (not in standard buy box)
+  // AUM: use min/max invest as a proxy for fund size preference
+  const maxInvStr = buyBox.maxInvest || '';
+  const maxInvNum = parseInt(maxInvStr.replace(/[^0-9]/g, ''));
+  if (maxInvNum && maxInvNum <= 50000) {
+    // Smaller investor -> likely small funds
+    debtFilterAUM = 'small';
+  } else if (maxInvNum && maxInvNum >= 500000) {
+    debtFilterAUM = 'institutional';
+  } else {
+    debtFilterAUM = 'all';
+  }
+
+  // Update button UI for AUM
+  const aumBtns = document.querySelectorAll('#page-debtfunds [data-filter-group="aum"]');
+  aumBtns.forEach(b => {
+    b.classList.remove('active');
+    const txt = b.textContent.trim();
+    if (debtFilterAUM === 'all' && txt === 'All') b.classList.add('active');
+    if (debtFilterAUM === 'small' && txt.includes('<$100M')) b.classList.add('active');
+    if (debtFilterAUM === 'mid' && txt.includes('$100M')) b.classList.add('active');
+    if (debtFilterAUM === 'institutional' && txt.includes('$1B+')) b.classList.add('active');
+  });
+
+  renderDebtStats(getFilteredDebtFunds(), debtFundData);
+  renderDebtChart();
+  renderDebtTable();
+}
+
+function updateDebtBuyBox() {
+  // Save current debt filter state back to buy box
+  // Ensure Lending is in strategies and asset classes
+  if (!buyBox.strategies.includes('Lending')) buyBox.strategies.push('Lending');
+  if (!buyBox.assetClasses.includes('Lending')) buyBox.assetClasses.push('Lending');
+
+  localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
+  debtBuyBoxApplied = true;
+  const toggle = document.getElementById('debtBuyBoxToggle');
+  if (toggle) toggle.classList.add('active');
+  const updateBtn = document.getElementById('debtBuyBoxUpdate');
+  if (updateBtn) updateBtn.classList.remove('visible');
+}
+
+// ========== ACADEMY ==========
+function filterAcademyCourses(level) {
+  document.querySelectorAll('.academy-course').forEach(c => {
+    c.style.display = (level === 'all' || c.dataset.level === level) ? '' : 'none';
+  });
 }
 
 // ========== INIT ==========
