@@ -8968,11 +8968,48 @@ function searchViewAsUsers(query) {
   }, 400);
 }
 
+// Keys that are per-user and need to be scoped when impersonating
+const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals'];
+
+function saveUserScopedData(email) {
+  // Save current localStorage data under the user's email prefix
+  const bundle = {};
+  USER_SCOPED_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) bundle[k] = v;
+  });
+  sessionStorage.setItem('gycScopedData_' + email, JSON.stringify(bundle));
+}
+
+function loadUserScopedData(email) {
+  // Clear current per-user data
+  USER_SCOPED_KEYS.forEach(k => localStorage.removeItem(k));
+  // Load saved data for this email if it exists
+  const saved = sessionStorage.getItem('gycScopedData_' + email);
+  if (saved) {
+    const bundle = JSON.parse(saved);
+    Object.keys(bundle).forEach(k => localStorage.setItem(k, bundle[k]));
+  }
+  // Refresh in-memory state from localStorage
+  dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || 'null') || { assetClasses: [], strategies: [], dealTypes: [], objectives: [], irrMin: '', irrMax: '', minInvest: '', maxInvest: '', holdMin: '', holdMax: '' };
+  wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+}
+
 function viewAsUser(email, name, contactId, tier) {
   // Save admin's real session
   if (!adminRealUser) {
     adminRealUser = JSON.parse(localStorage.getItem('gycUser'));
     sessionStorage.setItem('gycAdminRealUser', JSON.stringify(adminRealUser));
+    // Save admin's per-user data
+    saveUserScopedData(adminRealUser.email);
+  }
+
+  // Save current impersonated user's data if switching between users
+  const currentUser = getUser();
+  if (currentUser && currentUser.email !== email) {
+    saveUserScopedData(currentUser.email);
   }
 
   // Swap to target user
@@ -8984,6 +9021,9 @@ function viewAsUser(email, name, contactId, tier) {
     token: 'impersonated'
   };
   localStorage.setItem('gycUser', JSON.stringify(impersonatedUser));
+
+  // Load target user's scoped data (clears admin's portfolio, deal stages, etc.)
+  loadUserScopedData(email);
 
   // Close dropdown
   document.getElementById('viewAsDropdown').style.display = 'none';
@@ -9004,16 +9044,23 @@ function viewAsUser(email, name, contactId, tier) {
   // Fetch their buy box from GHL
   fetchBuyBoxForUser(email);
 
-  // Navigate to deals to see their view
-  navigateTo('deals');
+  // Navigate to dashboard to see their full view
+  navigateTo('dashboard');
 }
 
 function exitViewAs() {
   if (!adminRealUser) return;
 
+  // Save the impersonated user's data before switching back
+  const currentUser = getUser();
+  if (currentUser) saveUserScopedData(currentUser.email);
+
   // Restore admin session
   localStorage.setItem('gycUser', JSON.stringify(adminRealUser));
   sessionStorage.removeItem('gycAdminRealUser');
+
+  // Restore admin's per-user data (portfolio, deal stages, buy box, etc.)
+  loadUserScopedData(adminRealUser.email);
 
   // Restore sidebar
   const name = adminRealUser.name || 'Admin';
@@ -9029,9 +9076,8 @@ function exitViewAs() {
 
   adminRealUser = null;
 
-  // Restore admin's buy box
-  const user = getUser();
-  if (user?.email) fetchBuyBoxForUser(user.email);
+  // Navigate to dashboard with restored data
+  navigateTo('dashboard');
 }
 
 async function fetchBuyBoxForUser(email) {
