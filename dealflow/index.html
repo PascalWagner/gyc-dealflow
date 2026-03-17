@@ -1197,7 +1197,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
   top: 0;
   right: 0;
   bottom: 0;
-  left: 200px;
+  left: var(--sidebar-width);
   background: var(--bg-cream);
   z-index: 500;
   display: none;
@@ -1810,15 +1810,13 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </a>
     </div>
   </nav>
-  <div class="sidebar-user" id="sidebarUser" style="display:none">
+  <div class="sidebar-user" id="sidebarUser" style="display:none;cursor:pointer;" onclick="navigateTo('settings')">
     <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
     <div class="sidebar-user-info">
       <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
       <div class="sidebar-user-tier" id="sidebarTier">Explorer</div>
     </div>
-    <button class="sidebar-logout" onclick="logout()" title="Sign out">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </button>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;opacity:0.5;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </div>
   <div class="sidebar-footer">
     <div class="theme-toggle" onclick="toggleTheme()">
@@ -2124,6 +2122,20 @@ html.dark .card-match-badge.red { background: #2E1515; }
 
         <div class="settings-save-bar">
           <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Notifications</button>
+        </div>
+      </div>
+
+      <!-- Logout Section (always visible) -->
+      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Sign Out</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Sign out of your Grow Your Cashflow account on this device.</div>
+          </div>
+          <button class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;color:#D04040;border-color:#D04040;" onclick="logout()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;margin-right:6px;vertical-align:middle;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log Out
+          </button>
         </div>
       </div>
     </div>
