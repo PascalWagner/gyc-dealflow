@@ -406,6 +406,131 @@ body {
   }
 }
 
+/* Portfolio & Tax Prep Styles */
+.risk-insight {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--orange);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-dark);
+}
+.risk-insight-ok {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-dark);
+}
+.tax-status-received {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  background: var(--green-bg);
+  color: var(--green);
+}
+.tax-status-pending {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  background: var(--orange-bg);
+  color: var(--orange);
+}
+.tax-status-na {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 32px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-field {
+  margin-bottom: 16px;
+}
+.modal-field label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.modal-field input,
+.modal-field select,
+.modal-field textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-dark);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.modal-field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+.portfolio-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+}
+.portfolio-stat-card .stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.portfolio-stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--primary);
+  font-family: var(--font-ui);
+}
+
 .filter-select, .filter-input {
   padding: 8px 14px;
   border: 1px solid var(--border);
@@ -1799,6 +1924,15 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Investment Managers
     </a>
+    <div class="nav-section-label">My Investments</div>
+    <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      My Portfolio
+    </a>
+    <a class="nav-item" href="#" data-page="taxprep" onclick="navigateTo('taxprep'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Tax Prep
+    </a>
     <div class="nav-section-label">Education</div>
     <a class="nav-item" href="#" data-page="officehours" onclick="navigateTo('officehours'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
@@ -2780,6 +2914,97 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
 
+  <!-- PAGE: My Portfolio -->
+  <div class="page" id="page-portfolio">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">My Portfolio</div>
+      <div class="topbar-spacer"></div>
+      <button onclick="showAddInvestmentModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
+    </div>
+    <div class="content-area" style="padding:24px;max-width:1200px;">
+      <div id="portfolioSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Asset Class Allocation</div>
+          <div style="max-width:280px;margin:0 auto;"><canvas id="portfolioChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Risk Analysis</div>
+          <div id="portfolioRiskInsights"></div>
+        </div>
+      </div>
+      <div id="portfolioTableContainer">
+        <table class="table-view" id="portfolioTable" style="display:table;width:100%;">
+          <thead>
+            <tr>
+              <th onclick="sortPortfolioTable('investmentName')" style="cursor:pointer">Investment <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('sponsor')" style="cursor:pointer">Sponsor <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('assetClass')" style="cursor:pointer">Asset Class <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('amountInvested')" style="cursor:pointer">Amount <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('dateInvested')" style="cursor:pointer">Date <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('status')" style="cursor:pointer">Status <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('targetIRR')" style="cursor:pointer">Target IRR <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortPortfolioTable('distributionsReceived')" style="cursor:pointer">Distributions <span class="sort-arrow">&#9650;</span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="portfolioTableBody"></tbody>
+        </table>
+      </div>
+      <div id="portfolioEmptyState" style="display:none;text-align:center;padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
+        <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);margin-bottom:20px;">Track your LP investments, distributions, and portfolio allocation all in one place.</div>
+        <button onclick="showAddInvestmentModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Tax Prep -->
+  <div class="page" id="page-taxprep">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Tax Prep</div>
+      <div class="topbar-spacer"></div>
+      <select id="taxYearFilter" class="filter-select" onchange="renderTaxPrep()" style="min-width:120px;font-size:12px;margin-right:10px;">
+        <option value="">All Years</option>
+      </select>
+      <button onclick="showAddTaxDocModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Tax Document</button>
+    </div>
+    <div class="content-area" style="padding:24px;max-width:1200px;">
+      <div id="taxSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
+      <div id="taxPrepTableContainer">
+        <table class="table-view" id="taxPrepTable" style="display:table;width:100%;">
+          <thead>
+            <tr>
+              <th onclick="sortTaxTable('taxYear')" style="cursor:pointer">Tax Year <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortTaxTable('investmentName')" style="cursor:pointer">Investment <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortTaxTable('investingEntity')" style="cursor:pointer">Investing Entity <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortTaxTable('entityInvestedInto')" style="cursor:pointer">Entity Invested Into <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortTaxTable('formType')" style="cursor:pointer">Form Type <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortTaxTable('uploadStatus')" style="cursor:pointer">Status <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortTaxTable('dateReceived')" style="cursor:pointer">Date Received <span class="sort-arrow">&#9650;</span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="taxPrepTableBody"></tbody>
+        </table>
+      </div>
+      <div id="taxPrepEmptyState" style="display:none;text-align:center;padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No tax documents yet</div>
+        <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);margin-bottom:20px;">Track K-1s, 1099s, and other tax forms for all your investments.</div>
+        <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;margin-right:10px;">Auto-Populate from Portfolio</button>
+        <button onclick="showAddTaxDocModal()" style="padding:10px 24px;background:transparent;color:var(--primary);border:2px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Manually</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -3671,6 +3896,8 @@ function navigateTo(page) {
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
+  if (page === 'portfolio') renderPortfolio();
+  if (page === 'taxprep') renderTaxPrep();
   if (page === 'analytics') refreshAnalyticsDashboard();
   if (page === 'buybox') {
     // Try to render from localStorage first
@@ -5187,6 +5414,485 @@ function renderManagersPage() {
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No management companies found.</td></tr>';
   }
+}
+
+// ========== MY PORTFOLIO ==========
+let portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+let portfolioSortCol = 'dateInvested';
+let portfolioSortAsc = false;
+let portfolioChartInstance = null;
+
+function savePortfolio() {
+  localStorage.setItem('gycPortfolio', JSON.stringify(portfolioInvestments));
+}
+
+function renderPortfolio() {
+  portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  const empty = document.getElementById('portfolioEmptyState');
+  const tableC = document.getElementById('portfolioTableContainer');
+  const summaryC = document.getElementById('portfolioSummaryCards');
+  const chartArea = summaryC?.parentElement?.querySelector('[style*="grid-template-columns:1fr 1fr"]') || summaryC?.nextElementSibling;
+  if (portfolioInvestments.length === 0) {
+    empty.style.display = 'block';
+    tableC.style.display = 'none';
+    summaryC.style.display = 'none';
+    if (chartArea) chartArea.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    tableC.style.display = 'block';
+    summaryC.style.display = 'grid';
+    if (chartArea) chartArea.style.display = 'grid';
+    renderPortfolioSummary();
+    renderPortfolioChart();
+    renderPortfolioRisk();
+    renderPortfolioTable();
+  }
+}
+
+function renderPortfolioSummary() {
+  const c = document.getElementById('portfolioSummaryCards');
+  const active = portfolioInvestments.filter(i => i.status === 'Active' || i.status === 'Distributing');
+  const totalInvested = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  const totalDistributions = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
+  const assetClasses = new Set(portfolioInvestments.map(i => i.assetClass).filter(Boolean));
+  const sponsors = new Set(portfolioInvestments.map(i => i.sponsor).filter(Boolean));
+  const avgIRR = portfolioInvestments.filter(i => i.targetIRR).reduce((s, i, _, a) => s + parseFloat(i.targetIRR) / a.length, 0);
+  c.innerHTML = `
+    <div class="portfolio-stat-card"><div class="stat-label">Total Invested</div><div class="stat-value">$${totalInvested.toLocaleString()}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Active Investments</div><div class="stat-value">${active.length}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Total Distributions</div><div class="stat-value">$${totalDistributions.toLocaleString()}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">${avgIRR ? avgIRR.toFixed(1) + '%' : '--'}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Asset Classes</div><div class="stat-value">${assetClasses.size}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Sponsors</div><div class="stat-value">${sponsors.size}</div></div>
+  `;
+}
+
+function renderPortfolioChart() {
+  const canvas = document.getElementById('portfolioChart');
+  if (!canvas) return;
+  if (portfolioChartInstance) portfolioChartInstance.destroy();
+  const alloc = {};
+  portfolioInvestments.forEach(i => {
+    const cls = i.assetClass || 'Other';
+    alloc[cls] = (alloc[cls] || 0) + (parseFloat(i.amountInvested) || 0);
+  });
+  const labels = Object.keys(alloc);
+  const data = Object.values(alloc);
+  const colors = ['#51BE7B','#2563EB','#F09C3E','#D04040','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1','#10B981'];
+  portfolioChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 2,
+        borderColor: 'var(--bg-card)'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: 'Plus Jakarta Sans', size: 11 }, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = ((ctx.raw / total) * 100).toFixed(1);
+              return ctx.label + ': $' + ctx.raw.toLocaleString() + ' (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderPortfolioRisk() {
+  const el = document.getElementById('portfolioRiskInsights');
+  if (!el) return;
+  const insights = [];
+  const totalInvested = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  if (totalInvested === 0) { el.innerHTML = '<div class="risk-insight-ok">Add investments to see risk analysis.</div>'; return; }
+
+  // Asset class concentration
+  const alloc = {};
+  portfolioInvestments.forEach(i => {
+    const cls = i.assetClass || 'Other';
+    alloc[cls] = (alloc[cls] || 0) + (parseFloat(i.amountInvested) || 0);
+  });
+  Object.entries(alloc).forEach(([cls, amt]) => {
+    const pct = (amt / totalInvested) * 100;
+    if (pct > 50) insights.push({ type: 'warn', text: `<strong>High concentration:</strong> ${pct.toFixed(0)}% of portfolio in ${cls}. Consider diversifying across asset classes.` });
+  });
+
+  // Single-sponsor exposure
+  const sponsorAlloc = {};
+  portfolioInvestments.forEach(i => {
+    const sp = i.sponsor || 'Unknown';
+    sponsorAlloc[sp] = (sponsorAlloc[sp] || 0) + (parseFloat(i.amountInvested) || 0);
+  });
+  Object.entries(sponsorAlloc).forEach(([sp, amt]) => {
+    const pct = (amt / totalInvested) * 100;
+    if (pct > 40) insights.push({ type: 'warn', text: `<strong>Sponsor exposure:</strong> ${pct.toFixed(0)}% allocated to ${sp}. Diversifying sponsors reduces counterparty risk.` });
+  });
+
+  // Interest rate risk (lending deals)
+  const lendingAmt = portfolioInvestments.filter(i => (i.assetClass || '').toLowerCase() === 'lending').reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  const lendingPct = (lendingAmt / totalInvested) * 100;
+  if (lendingPct > 40) {
+    insights.push({ type: 'warn', text: `<strong>Interest rate risk:</strong> ${lendingPct.toFixed(0)}% in lending/debt funds. Rate changes can impact yields and borrower performance.` });
+  }
+
+  // Strategy concentration (all same status)
+  const statuses = {};
+  portfolioInvestments.forEach(i => { statuses[i.status || 'Unknown'] = (statuses[i.status || 'Unknown'] || 0) + 1; });
+  const totalCount = portfolioInvestments.length;
+  if (totalCount > 3 && Object.keys(statuses).length === 1) {
+    insights.push({ type: 'warn', text: `<strong>Strategy concentration:</strong> All ${totalCount} investments have the same status. Consider a mix of active, distributing, and growth-stage deals.` });
+  }
+
+  if (insights.length === 0) {
+    el.innerHTML = '<div class="risk-insight-ok"><strong>Portfolio looks well-diversified.</strong> No major concentration risks detected.</div>';
+  } else {
+    el.innerHTML = insights.map(i => `<div class="${i.type === 'warn' ? 'risk-insight' : 'risk-insight-ok'}">${i.text}</div>`).join('');
+  }
+}
+
+function renderPortfolioTable() {
+  const tbody = document.getElementById('portfolioTableBody');
+  if (!tbody) return;
+  const sorted = [...portfolioInvestments].sort((a, b) => {
+    let va = a[portfolioSortCol], vb = b[portfolioSortCol];
+    if (portfolioSortCol === 'amountInvested' || portfolioSortCol === 'distributionsReceived' || portfolioSortCol === 'targetIRR') {
+      va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+    }
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va < vb) return portfolioSortAsc ? -1 : 1;
+    if (va > vb) return portfolioSortAsc ? 1 : -1;
+    return 0;
+  });
+  tbody.innerHTML = sorted.map(inv => {
+    const statusColors = { Active: 'var(--green)', Distributing: 'var(--blue)', Exited: 'var(--text-muted)', Pending: 'var(--orange)' };
+    const statusColor = statusColors[inv.status] || 'var(--text-muted)';
+    return `<tr>
+      <td style="font-weight:600;color:var(--text-dark)">${inv.investmentName || '--'}</td>
+      <td>${inv.sponsor || '--'}</td>
+      <td>${inv.assetClass || '--'}</td>
+      <td>$${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</td>
+      <td>${inv.dateInvested || '--'}</td>
+      <td><span style="color:${statusColor};font-weight:600">${inv.status || '--'}</span></td>
+      <td>${inv.targetIRR ? inv.targetIRR + '%' : '--'}</td>
+      <td>$${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</td>
+      <td>
+        <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:600;margin-right:8px;">Edit</button>
+        <button onclick="deleteInvestment('${inv.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:600;">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function sortPortfolioTable(col) {
+  if (portfolioSortCol === col) { portfolioSortAsc = !portfolioSortAsc; }
+  else { portfolioSortCol = col; portfolioSortAsc = true; }
+  renderPortfolioTable();
+}
+
+function showAddInvestmentModal(editId, prefillDeal) {
+  const existing = editId ? portfolioInvestments.find(i => i.id === editId) : null;
+  const pf = prefillDeal || {};
+  const v = existing || {
+    investmentName: pf.investmentName || '',
+    sponsor: pf.managementCompany || '',
+    assetClass: pf.assetClass || '',
+    amountInvested: '',
+    dateInvested: '',
+    status: 'Active',
+    targetIRR: pf.targetIRR ? (typeof pf.targetIRR === 'number' && pf.targetIRR < 1 ? (pf.targetIRR * 100).toFixed(1) : pf.targetIRR) : '',
+    distributionsReceived: '',
+    holdPeriod: pf.holdPeriod || '',
+    investingEntity: '',
+    entityInvestedInto: '',
+    notes: ''
+  };
+  const assetOptions = ['Multi Family','Self Storage','Industrial','Lending','Short Term Rental','Hotels/Hospitality','Mixed-Use','RV/Mobile Home Parks','Business / Other','Land','Senior Living','Car Wash','ATM','Oil & Gas','Other'];
+  const statusOptions = ['Active','Exited','Pending','Distributing'];
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'investmentModal';
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+  overlay.innerHTML = `<div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">${existing ? 'Edit' : 'Add'} Investment</div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+      <div class="modal-field" style="grid-column:1/-1"><label>Investment Name</label><input id="modalInvestmentName" value="${v.investmentName}"></div>
+      <div class="modal-field"><label>Sponsor / Management Company</label><input id="modalSponsor" value="${v.sponsor}"></div>
+      <div class="modal-field"><label>Asset Class</label><select id="modalAssetClass">${assetOptions.map(o => `<option value="${o}" ${v.assetClass === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="modal-field"><label>Amount Invested ($)</label><input id="modalAmountInvested" type="number" value="${v.amountInvested}"></div>
+      <div class="modal-field"><label>Date Invested</label><input id="modalDateInvested" type="date" value="${v.dateInvested}"></div>
+      <div class="modal-field"><label>Status</label><select id="modalStatus">${statusOptions.map(o => `<option value="${o}" ${v.status === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="modal-field"><label>Target IRR (%)</label><input id="modalTargetIRR" type="number" step="0.1" value="${v.targetIRR}"></div>
+      <div class="modal-field"><label>Distributions Received ($)</label><input id="modalDistributionsReceived" type="number" value="${v.distributionsReceived}"></div>
+      <div class="modal-field"><label>Hold Period (Years)</label><input id="modalHoldPeriod" type="number" step="0.5" value="${v.holdPeriod}"></div>
+      <div class="modal-field"><label>Investing Entity</label><input id="modalInvestingEntity" value="${v.investingEntity || ''}"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Entity Invested Into</label><input id="modalEntityInvestedInto" value="${v.entityInvestedInto || ''}"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="modalNotes">${v.notes || ''}</textarea></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
+      <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
+      <button onclick="saveInvestmentFromModal('${editId || ''}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">${existing ? 'Save Changes' : 'Add Investment'}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveInvestmentFromModal(editId) {
+  const data = {
+    id: editId || 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    investmentName: document.getElementById('modalInvestmentName').value,
+    sponsor: document.getElementById('modalSponsor').value,
+    assetClass: document.getElementById('modalAssetClass').value,
+    amountInvested: document.getElementById('modalAmountInvested').value,
+    dateInvested: document.getElementById('modalDateInvested').value,
+    status: document.getElementById('modalStatus').value,
+    targetIRR: document.getElementById('modalTargetIRR').value,
+    distributionsReceived: document.getElementById('modalDistributionsReceived').value,
+    holdPeriod: document.getElementById('modalHoldPeriod').value,
+    investingEntity: document.getElementById('modalInvestingEntity').value,
+    entityInvestedInto: document.getElementById('modalEntityInvestedInto').value,
+    notes: document.getElementById('modalNotes').value
+  };
+  if (!data.investmentName) { alert('Please enter an investment name.'); return; }
+  if (editId) {
+    const idx = portfolioInvestments.findIndex(i => i.id === editId);
+    if (idx >= 0) portfolioInvestments[idx] = data;
+  } else {
+    portfolioInvestments.push(data);
+  }
+  savePortfolio();
+  closeModal();
+  renderPortfolio();
+}
+
+function deleteInvestment(id) {
+  if (!confirm('Delete this investment from your portfolio?')) return;
+  portfolioInvestments = portfolioInvestments.filter(i => i.id !== id);
+  savePortfolio();
+  renderPortfolio();
+}
+
+function closeModal() {
+  const m = document.getElementById('investmentModal') || document.getElementById('taxDocModal');
+  if (m) m.remove();
+}
+
+// ========== TAX PREP ==========
+let taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+let taxSortCol = 'taxYear';
+let taxSortAsc = false;
+
+function saveTaxDocs() {
+  localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocuments));
+}
+
+function renderTaxPrep() {
+  taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+  // Populate year filter
+  const yearFilter = document.getElementById('taxYearFilter');
+  if (yearFilter) {
+    const years = [...new Set(taxDocuments.map(d => d.taxYear).filter(Boolean))].sort((a, b) => b - a);
+    const currentVal = yearFilter.value;
+    yearFilter.innerHTML = '<option value="">All Years</option>' + years.map(y => `<option value="${y}" ${currentVal == y ? 'selected' : ''}>${y}</option>`).join('');
+  }
+  const filterYear = yearFilter ? yearFilter.value : '';
+  let docs = filterYear ? taxDocuments.filter(d => String(d.taxYear) === filterYear) : taxDocuments;
+
+  const empty = document.getElementById('taxPrepEmptyState');
+  const tableC = document.getElementById('taxPrepTableContainer');
+  const summaryC = document.getElementById('taxSummaryCards');
+  if (taxDocuments.length === 0) {
+    empty.style.display = 'block';
+    tableC.style.display = 'none';
+    summaryC.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    tableC.style.display = 'block';
+    summaryC.style.display = 'grid';
+    renderTaxSummary(docs);
+    renderTaxTable(docs);
+  }
+}
+
+function renderTaxSummary(docs) {
+  const c = document.getElementById('taxSummaryCards');
+  const total = docs.length;
+  const received = docs.filter(d => d.uploadStatus === 'Received').length;
+  const pending = docs.filter(d => d.uploadStatus === 'Pending').length;
+  const na = docs.filter(d => d.uploadStatus === 'N/A').length;
+  const pctDone = total > 0 ? Math.round((received / total) * 100) : 0;
+  c.innerHTML = `
+    <div class="portfolio-stat-card"><div class="stat-label">Total Documents</div><div class="stat-value">${total}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Received</div><div class="stat-value" style="color:var(--green)">${received}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--orange)">${pending}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">N/A</div><div class="stat-value" style="color:var(--text-muted)">${na}</div></div>
+    <div class="portfolio-stat-card"><div class="stat-label">Completion</div><div class="stat-value">${pctDone}%</div></div>
+  `;
+}
+
+function renderTaxTable(docs) {
+  const tbody = document.getElementById('taxPrepTableBody');
+  if (!tbody) return;
+  const sorted = [...docs].sort((a, b) => {
+    let va = a[taxSortCol], vb = b[taxSortCol];
+    if (taxSortCol === 'taxYear') { va = parseInt(va) || 0; vb = parseInt(vb) || 0; }
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va < vb) return taxSortAsc ? -1 : 1;
+    if (va > vb) return taxSortAsc ? 1 : -1;
+    return 0;
+  });
+  tbody.innerHTML = sorted.map(doc => {
+    const statusClass = doc.uploadStatus === 'Received' ? 'tax-status-received' : doc.uploadStatus === 'Pending' ? 'tax-status-pending' : 'tax-status-na';
+    return `<tr>
+      <td style="font-weight:600">${doc.taxYear || '--'}</td>
+      <td>${doc.investmentName || '--'}</td>
+      <td>${doc.investingEntity || '--'}</td>
+      <td>${doc.entityInvestedInto || '--'}</td>
+      <td>${doc.formType || '--'}</td>
+      <td><span class="${statusClass}">${doc.uploadStatus || '--'}</span></td>
+      <td>${doc.dateReceived || '--'}</td>
+      <td>
+        <button onclick="showAddTaxDocModal('${doc.id}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:600;margin-right:8px;">Edit</button>
+        <button onclick="deleteTaxDoc('${doc.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:600;">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function sortTaxTable(col) {
+  if (taxSortCol === col) { taxSortAsc = !taxSortAsc; }
+  else { taxSortCol = col; taxSortAsc = true; }
+  renderTaxPrep();
+}
+
+function showAddTaxDocModal(editId) {
+  const existing = editId ? taxDocuments.find(d => d.id === editId) : null;
+  const v = existing || { taxYear: new Date().getFullYear() - 1, investingEntity: '', investmentName: '', entityInvestedInto: '', formType: 'K-1', uploadStatus: 'Pending', fileUrl: '', dateReceived: '', portalUrl: '', contact: '', email: '', phone: '', notes: '' };
+  const formTypes = ['K-1','1099-DIV','1099-INT','1099-B','1099-MISC','Other'];
+  const statusOptions = ['Received','Pending','N/A'];
+  const portfolioNames = portfolioInvestments.map(i => i.investmentName).filter(Boolean);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'taxDocModal';
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+  overlay.innerHTML = `<div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">${existing ? 'Edit' : 'Add'} Tax Document</div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+      <div class="modal-field"><label>Tax Year</label><input id="modalTaxYear" type="number" value="${v.taxYear}"></div>
+      <div class="modal-field"><label>Form Type</label><select id="modalFormType">${formTypes.map(o => `<option value="${o}" ${v.formType === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="modal-field"><label>Investment Name</label><select id="modalTaxInvestmentName"><option value="">-- Select or type below --</option>${portfolioNames.map(n => `<option value="${n}" ${v.investmentName === n ? 'selected' : ''}>${n}</option>`).join('')}<option value="__custom">Other (type below)</option></select><input id="modalTaxInvestmentNameCustom" placeholder="Custom investment name" value="${v.investmentName && !portfolioNames.includes(v.investmentName) ? v.investmentName : ''}" style="margin-top:6px;${v.investmentName && !portfolioNames.includes(v.investmentName) ? '' : 'display:none'}"></div>
+      <div class="modal-field"><label>Investing Entity</label><input id="modalTaxInvestingEntity" value="${v.investingEntity || ''}"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Entity Invested Into</label><input id="modalTaxEntityInvestedInto" value="${v.entityInvestedInto || ''}"></div>
+      <div class="modal-field"><label>Upload Status</label><select id="modalUploadStatus">${statusOptions.map(o => `<option value="${o}" ${v.uploadStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="modal-field"><label>Date Received</label><input id="modalDateReceived" type="date" value="${v.dateReceived || ''}"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>File URL</label><input id="modalFileUrl" value="${v.fileUrl || ''}" placeholder="Link to uploaded document"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Sponsor Portal URL</label><input id="modalPortalUrl" value="${v.portalUrl || ''}" placeholder="Link to sponsor portal"></div>
+      <div class="modal-field"><label>Contact Name</label><input id="modalTaxContact" value="${v.contact || ''}"></div>
+      <div class="modal-field"><label>Email</label><input id="modalTaxEmail" type="email" value="${v.email || ''}"></div>
+      <div class="modal-field"><label>Phone</label><input id="modalTaxPhone" value="${v.phone || ''}"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="modalTaxNotes">${v.notes || ''}</textarea></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
+      <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
+      <button onclick="saveTaxDocFromModal('${editId || ''}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">${existing ? 'Save Changes' : 'Add Document'}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  // Toggle custom name input
+  const sel = document.getElementById('modalTaxInvestmentName');
+  const customInput = document.getElementById('modalTaxInvestmentNameCustom');
+  if (sel) sel.addEventListener('change', function() {
+    customInput.style.display = this.value === '__custom' ? 'block' : 'none';
+  });
+}
+
+function saveTaxDocFromModal(editId) {
+  const sel = document.getElementById('modalTaxInvestmentName');
+  const customInput = document.getElementById('modalTaxInvestmentNameCustom');
+  let investmentName = sel.value === '__custom' ? customInput.value : sel.value;
+  if (!investmentName && customInput.value) investmentName = customInput.value;
+  const data = {
+    id: editId || 'tax_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    taxYear: document.getElementById('modalTaxYear').value,
+    investmentName: investmentName,
+    investingEntity: document.getElementById('modalTaxInvestingEntity').value,
+    entityInvestedInto: document.getElementById('modalTaxEntityInvestedInto').value,
+    formType: document.getElementById('modalFormType').value,
+    uploadStatus: document.getElementById('modalUploadStatus').value,
+    dateReceived: document.getElementById('modalDateReceived').value,
+    fileUrl: document.getElementById('modalFileUrl').value,
+    portalUrl: document.getElementById('modalPortalUrl').value,
+    contact: document.getElementById('modalTaxContact').value,
+    email: document.getElementById('modalTaxEmail').value,
+    phone: document.getElementById('modalTaxPhone').value,
+    notes: document.getElementById('modalTaxNotes').value
+  };
+  if (editId) {
+    const idx = taxDocuments.findIndex(d => d.id === editId);
+    if (idx >= 0) taxDocuments[idx] = data;
+  } else {
+    taxDocuments.push(data);
+  }
+  saveTaxDocs();
+  closeModal();
+  renderTaxPrep();
+}
+
+function deleteTaxDoc(id) {
+  if (!confirm('Delete this tax document?')) return;
+  taxDocuments = taxDocuments.filter(d => d.id !== id);
+  saveTaxDocs();
+  renderTaxPrep();
+}
+
+function autoPopulateTaxDocs(year) {
+  if (portfolioInvestments.length === 0) {
+    alert('No investments in your portfolio yet. Add investments first, then auto-populate tax docs.');
+    return;
+  }
+  const yr = year || new Date().getFullYear() - 1;
+  const existing = taxDocuments.filter(d => String(d.taxYear) === String(yr)).map(d => d.investmentName);
+  let added = 0;
+  portfolioInvestments.forEach(inv => {
+    if (existing.includes(inv.investmentName)) return;
+    taxDocuments.push({
+      id: 'tax_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      taxYear: yr,
+      investmentName: inv.investmentName,
+      investingEntity: inv.investingEntity || '',
+      entityInvestedInto: inv.entityInvestedInto || '',
+      formType: (inv.assetClass || '').toLowerCase() === 'lending' ? '1099-INT' : 'K-1',
+      uploadStatus: 'Pending',
+      fileUrl: '',
+      dateReceived: '',
+      portalUrl: '',
+      contact: '',
+      email: '',
+      phone: '',
+      notes: 'Auto-populated from portfolio'
+    });
+    added++;
+  });
+  saveTaxDocs();
+  renderTaxPrep();
+  if (added > 0) alert(`Added ${added} tax document${added > 1 ? 's' : ''} for tax year ${yr}.`);
+  else alert(`All portfolio investments already have tax documents for ${yr}.`);
 }
 
 // ========== BUY BOX TOGGLE (LIVE DEALS) ==========
