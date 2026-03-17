@@ -2899,7 +2899,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <!-- Main Content -->
       <div style="flex:1;min-width:0;">
         <div id="managersStats" style="margin-bottom:20px;"></div>
-        <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;max-width:680px;"></div>
+        <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
       </div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
@@ -4470,8 +4470,8 @@ function renderAll() {
     // Toggle between 3-column grid and single-column feed
     if (currentView === 'feed') {
       grid.style.gridTemplateColumns = '1fr';
-      grid.style.maxWidth = '680px';
-      grid.style.margin = '0 auto';
+      grid.style.maxWidth = '';
+      grid.style.margin = '';
     } else {
       grid.style.gridTemplateColumns = '';
       grid.style.maxWidth = '';
