@@ -1045,6 +1045,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
 .deal-stage-btn.stage-interested { background: rgba(59,130,246,0.8); border-color: rgba(59,130,246,0.5); }
 .deal-stage-btn.stage-duediligence { background: rgba(245,158,11,0.8); border-color: rgba(245,158,11,0.5); }
 .deal-stage-btn.stage-portfolio { background: rgba(81,190,123,0.8); border-color: rgba(81,190,123,0.5); }
+.deal-stage-btn.stage-passed { background: rgba(107,114,128,0.8); border-color: rgba(107,114,128,0.5); }
 
 /* Stage dropdown menu */
 .stage-dropdown {
@@ -1084,6 +1085,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
 .stage-dot-interested { background: #3b82f6; }
 .stage-dot-duediligence { background: #f59e0b; }
 .stage-dot-portfolio { background: var(--primary); }
+.stage-dot-passed { background: #6b7280; }
 
 /* Legacy compat */
 .saved-badge { display: none; }
@@ -1961,10 +1963,13 @@ html.dark .card-match-badge.red { background: #2E1515; }
 <!-- Sidebar -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <div class="sidebar-logo-icon">GYC</div>
     <div class="sidebar-logo-text">Grow Your Cashflow</div>
   </div>
   <nav class="sidebar-nav">
+    <a class="nav-item" href="#" data-page="goals" onclick="navigateTo('goals'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      My Goals
+    </a>
     <a class="nav-item" href="#" data-page="buybox" onclick="navigateTo('buybox'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       My Buy Box
@@ -2071,6 +2076,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <button class="topbar-tab" data-tab="interested" onclick="switchTab(this)">Interested</button>
         <button class="topbar-tab" data-tab="duediligence" onclick="switchTab(this)">Due Diligence</button>
         <button class="topbar-tab" data-tab="portfolio" onclick="switchTab(this)">My Portfolio</button>
+        <button class="topbar-tab" data-tab="passed" onclick="switchTab(this)">Passed</button>
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-view-toggle">
@@ -2131,8 +2137,15 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <option value="min_invest">Sort: Lowest Min Investment</option>
         <option value="az">Sort: A-Z Name</option>
       </select>
-      <input type="text" class="filter-input" id="filterSearch" placeholder="Search deals..." oninput="applyFilters()">
+      <div style="position:relative;flex:1;min-width:160px;">
+        <input type="text" class="filter-input" id="filterSearch" placeholder="Search deals..." oninput="applyFilters()" style="width:100%;box-sizing:border-box;">
+        <div id="searchNoResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px;margin-top:4px;">
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Can't find what you're looking for?</div>
+          <button onclick="showAddDealModal()" style="width:100%;padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add a Deal</button>
+        </div>
+      </div>
       <button class="filter-clear" onclick="clearFilters()">Clear Filters</button>
+      <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
       <div class="filter-count"><span id="visibleCount">30</span> deals</div>
     </div>
     <div class="stats-bar" id="statsBar"></div>
@@ -2295,6 +2308,27 @@ html.dark .card-match-badge.red { background: #2E1515; }
   </div>
 
   <!-- PAGE: Buy Box Report -->
+  <!-- PAGE: My Goals -->
+  <div class="page" id="page-goals">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <div class="topbar-title">My Goals</div>
+      <div class="topbar-spacer"></div>
+    </div>
+
+    <!-- Goals Wizard (shown when no goals set) -->
+    <div id="goalsWizardContainer"></div>
+
+    <!-- Goals Dashboard (shown when goals are set) -->
+    <div id="goalsDashboard" style="display:none;padding:0 24px 40px;">
+      <div id="goalsProgressSection"></div>
+      <div id="goalsBreakdownSection" style="margin-top:24px;"></div>
+      <div id="goalsMatchingDeals" style="margin-top:24px;"></div>
+    </div>
+  </div>
+
   <div class="page" id="page-buybox">
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
@@ -3214,6 +3248,7 @@ async function loadDeals() {
     const freshDeals = await fetchDealsFromAirtable();
     if (freshDeals && freshDeals.length > 0) {
       DEALS = freshDeals;
+      mergeUserDeals();
       sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS));
       sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
       // Cache companies too
@@ -3228,6 +3263,15 @@ async function loadDeals() {
     console.warn('Background Airtable fetch failed:', e.message);
   }
 }
+
+// Merge user-submitted deals into DEALS
+function mergeUserDeals() {
+  const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+  userDeals.forEach(ud => {
+    if (!DEALS.find(d => d.id === ud.id)) DEALS.unshift(ud);
+  });
+}
+mergeUserDeals();
 
 function updateDealCount() {
   const badge = document.querySelector('.nav-badge');
@@ -3298,12 +3342,13 @@ function statusPillClass(status) {
 }
 
 function stageLabel(stage) {
-  return { new: 'New', interested: 'Interested', duediligence: 'Due Diligence', portfolio: 'Portfolio' }[stage] || 'New';
+  return { new: 'New', interested: 'Interested', duediligence: 'Due Diligence', portfolio: 'Portfolio', passed: 'Passed' }[stage] || 'New';
 }
 function stageBtnClass(stage) {
   if (stage === 'interested') return 'stage-interested';
   if (stage === 'duediligence') return 'stage-duediligence';
   if (stage === 'portfolio') return 'stage-portfolio';
+  if (stage === 'passed') return 'stage-passed';
   return '';
 }
 function renderStageBtn(dealId) {
@@ -3405,7 +3450,8 @@ function renderPanel(deal) {
     { value: 'new', label: 'New', color: 'var(--text-muted)' },
     { value: 'interested', label: 'Interested', color: '#3b82f6' },
     { value: 'duediligence', label: 'Due Diligence', color: '#f59e0b' },
-    { value: 'portfolio', label: 'My Portfolio', color: 'var(--primary)' }
+    { value: 'portfolio', label: 'My Portfolio', color: 'var(--primary)' },
+    { value: 'passed', label: 'Passed', color: '#6b7280' }
   ];
 
   return `
@@ -3545,7 +3591,6 @@ function getFilteredDeals() {
     }
     // Filter by workflow stage tab
     if (currentTab === 'new') {
-      // "New Deals" shows deals user hasn't categorized yet
       if (dealStages[d.id]) return false;
     } else if (currentTab === 'interested') {
       if (getDealStage(d.id) !== 'interested') return false;
@@ -3553,8 +3598,9 @@ function getFilteredDeals() {
       if (getDealStage(d.id) !== 'duediligence') return false;
     } else if (currentTab === 'portfolio') {
       if (getDealStage(d.id) !== 'portfolio') return false;
+    } else if (currentTab === 'passed') {
+      if (getDealStage(d.id) !== 'passed') return false;
     } else if (currentTab === 'saved') {
-      // Legacy compat
       if (!savedDeals.has(d.id)) return false;
     }
     return true;
@@ -3662,7 +3708,7 @@ function renderTable(deals) {
 
 function updateTabCounts() {
   if (!DEALS || !DEALS.length) return;
-  const counts = { new: 0, interested: 0, duediligence: 0, portfolio: 0 };
+  const counts = { new: 0, interested: 0, duediligence: 0, portfolio: 0, passed: 0 };
   DEALS.forEach(d => {
     const stage = getDealStage(d.id);
     if (stage === 'new' || !stage) counts.new++;
@@ -3691,10 +3737,25 @@ function renderAll() {
   updateStats(deals);
   updateTabCounts();
 
+  // Show/hide search no-results popup
+  const searchVal = document.getElementById('filterSearch').value.trim();
+  const noResultsEl = document.getElementById('searchNoResults');
+  if (noResultsEl) {
+    noResultsEl.style.display = (searchVal && deals.length === 0) ? 'block' : 'none';
+  }
+
   const grid = document.getElementById('cardGrid');
   const table = document.getElementById('tableView');
-
   const mapContainer = document.getElementById('mapView');
+
+  // Portfolio tab: show portfolio summary view instead of deal cards
+  if (currentTab === 'portfolio') {
+    table.style.display = 'none';
+    mapContainer.style.display = 'none';
+    grid.style.display = '';
+    renderPortfolioInDeals(grid, deals);
+    return;
+  }
 
   if (currentView === 'grid') {
     grid.style.display = '';
@@ -3989,7 +4050,7 @@ function toggleStageDropdown(dealId, btn) {
   // Close any existing dropdowns
   document.querySelectorAll('.stage-dropdown').forEach(d => d.remove());
   const card = btn.closest('.deal-card') || btn.closest('.panel-body');
-  const stages = ['new', 'interested', 'duediligence', 'portfolio'];
+  const stages = ['new', 'interested', 'duediligence', 'portfolio', 'passed'];
   const current = getDealStage(dealId);
   const dd = document.createElement('div');
   dd.className = 'stage-dropdown';
@@ -4106,6 +4167,7 @@ function navigateTo(page) {
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
+  if (page === 'goals') renderGoals();
   if (page === 'portfolio') renderPortfolio();
   if (page === 'taxprep') renderTaxPrep();
   if (page === 'analytics') refreshAnalyticsDashboard();
@@ -5166,6 +5228,239 @@ async function handleSubscribe(tier, price) {
   }
 }
 
+// ========== MY GOALS ==========
+let investorGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+
+function saveGoals() { localStorage.setItem('gycGoals', JSON.stringify(investorGoals)); }
+
+function renderGoals() {
+  if (!investorGoals) {
+    renderGoalsWizard();
+  } else {
+    document.getElementById('goalsWizardContainer').style.display = 'none';
+    document.getElementById('goalsDashboard').style.display = 'block';
+    renderGoalsDashboard();
+  }
+}
+
+function renderGoalsWizard() {
+  document.getElementById('goalsWizardContainer').style.display = 'block';
+  document.getElementById('goalsDashboard').style.display = 'none';
+  const c = document.getElementById('goalsWizardContainer');
+  c.innerHTML = `
+    <div style="max-width:600px;margin:40px auto;padding:0 24px;">
+      <div style="text-align:center;margin-bottom:32px;">
+        <div style="font-size:48px;margin-bottom:12px;">&#x1f3af;</div>
+        <div style="font-family:var(--font-headline);font-size:28px;font-weight:400;color:var(--text-dark);margin-bottom:8px;">Set Your Investment Goals</div>
+        <div style="font-size:14px;color:var(--text-secondary);">Let's build a plan to grow your passive income. We'll show you exactly what it takes to get there.</div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;">
+        <div class="modal-field" style="margin-bottom:20px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">What's your primary goal?</label>
+          <select id="goalType" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+            <option value="passive_income">Grow Passive Income</option>
+            <option value="reduce_taxes">Reduce Taxable Income</option>
+            <option value="build_wealth">Build Long-Term Wealth</option>
+          </select>
+        </div>
+
+        <div class="modal-field" style="margin-bottom:20px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Current Annual Passive Income ($)</label>
+          <input id="goalCurrentIncome" type="number" value="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
+
+        <div class="modal-field" style="margin-bottom:20px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Target Annual Passive Income ($)</label>
+          <input id="goalTargetIncome" type="number" value="100000" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
+
+        <div class="modal-field" style="margin-bottom:20px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Capital Available to Invest ($)</label>
+          <input id="goalCapital" type="number" value="500000" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
+
+        <div class="modal-field" style="margin-bottom:20px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Target Timeline (Years)</label>
+          <select id="goalTimeline" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+            <option value="3">3 years</option>
+            <option value="5" selected>5 years</option>
+            <option value="7">7 years</option>
+            <option value="10">10 years</option>
+          </select>
+        </div>
+
+        <div class="modal-field" style="margin-bottom:24px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Annual Taxable Income to Reduce ($, optional)</label>
+          <input id="goalTaxReduction" type="number" value="0" placeholder="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+        </div>
+
+        <button onclick="saveGoalsFromWizard()" style="width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer;">Build My Plan &rarr;</button>
+      </div>
+    </div>
+  `;
+}
+
+function saveGoalsFromWizard() {
+  investorGoals = {
+    type: document.getElementById('goalType').value,
+    currentIncome: parseFloat(document.getElementById('goalCurrentIncome').value) || 0,
+    targetIncome: parseFloat(document.getElementById('goalTargetIncome').value) || 100000,
+    capital: parseFloat(document.getElementById('goalCapital').value) || 0,
+    timeline: parseInt(document.getElementById('goalTimeline').value) || 5,
+    taxReduction: parseFloat(document.getElementById('goalTaxReduction').value) || 0,
+    createdAt: new Date().toISOString()
+  };
+  saveGoals();
+  renderGoals();
+}
+
+function renderGoalsDashboard() {
+  const g = investorGoals;
+  const gap = g.targetIncome - g.currentIncome;
+  const progress = g.targetIncome > 0 ? Math.min(100, Math.round((g.currentIncome / g.targetIncome) * 100)) : 0;
+
+  // Calculate what it takes
+  const avgYield = 0.08; // 8% avg cash yield assumption
+  const capitalNeeded = gap > 0 ? Math.round(gap / avgYield) : 0;
+  const dealsNeeded = capitalNeeded > 0 ? Math.ceil(capitalNeeded / 100000) : 0; // avg $100K per deal
+  const capitalGap = Math.max(0, capitalNeeded - g.capital);
+
+  // Get portfolio data
+  portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  const currentInvested = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  const currentDistributions = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
+
+  const progressSection = document.getElementById('goalsProgressSection');
+  progressSection.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div>
+        <div style="font-family:var(--font-headline);font-size:24px;font-weight:400;color:var(--text-dark);">Your Investment Plan</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:4px;">Target: $${g.targetIncome.toLocaleString()}/yr passive income in ${g.timeline} years</div>
+      </div>
+      <button onclick="investorGoals=null;saveGoals();renderGoals();" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);">Edit Goals</button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Progress to $${g.targetIncome.toLocaleString()}/yr</div>
+        <div style="font-size:28px;font-weight:800;color:var(--primary);">${progress}%</div>
+      </div>
+      <div style="height:16px;background:var(--bg-main);border-radius:8px;overflow:hidden;margin-bottom:16px;">
+        <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:8px;transition:width 0.6s ease;min-width:${progress > 0 ? '4px' : '0'};"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+        <span>Current: $${g.currentIncome.toLocaleString()}/yr</span>
+        <span>Gap: $${gap.toLocaleString()}/yr</span>
+        <span>Target: $${g.targetIncome.toLocaleString()}/yr</span>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Capital Needed</div>
+        <div style="font-size:28px;font-weight:800;color:var(--text-dark);">$${capitalNeeded.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">at ~8% avg cash yield</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Capital Available</div>
+        <div style="font-size:28px;font-weight:800;color:var(--primary);">$${g.capital.toLocaleString()}</div>
+        <div style="font-size:11px;color:${capitalGap > 0 ? '#e74c3c' : 'var(--primary)'};margin-top:4px;">${capitalGap > 0 ? '$' + capitalGap.toLocaleString() + ' gap' : 'Sufficient capital'}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Est. Deals Needed</div>
+        <div style="font-size:28px;font-weight:800;color:var(--text-dark);">${dealsNeeded}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">at ~$100K per deal</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Currently Invested</div>
+        <div style="font-size:28px;font-weight:800;color:var(--text-dark);">$${currentInvested.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${portfolioInvestments.length} investment${portfolioInvestments.length !== 1 ? 's' : ''}</div>
+      </div>
+    </div>
+  `;
+
+  // Breakdown section — how to get there
+  const breakdownSection = document.getElementById('goalsBreakdownSection');
+  const scenarios = [
+    { label: 'Conservative (6% yield)', yield: 0.06, color: '#6b7280' },
+    { label: 'Moderate (8% yield)', yield: 0.08, color: '#3b82f6' },
+    { label: 'Aggressive (10% yield)', yield: 0.10, color: 'var(--primary)' }
+  ];
+
+  breakdownSection.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;">
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">How to Reach $${g.targetIncome.toLocaleString()}/yr in Passive Income</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+        ${scenarios.map(s => {
+          const needed = Math.round(gap / s.yield);
+          const numDeals5 = Math.ceil(needed / 200000); // $200K per deal
+          const numDeals3 = Math.ceil(needed / 100000); // $100K per deal
+          return `
+            <div style="padding:20px;border:1px solid var(--border);border-radius:var(--radius-sm);border-left:4px solid ${s.color};">
+              <div style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:12px;">${s.label}</div>
+              <div style="font-size:11px;color:var(--text-secondary);line-height:1.8;">
+                <div>Capital needed: <strong>$${needed.toLocaleString()}</strong></div>
+                <div>${numDeals5} deals at $200K each</div>
+                <div>or ${numDeals3} deals at $100K each</div>
+                <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--text-muted);">
+                  = <strong>$${Math.round(gap).toLocaleString()}/yr</strong> passive income
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      ${g.taxReduction > 0 ? `
+        <div style="margin-top:16px;padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);border-left:4px solid #f59e0b;">
+          <div style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:6px;">Tax Reduction Goal: $${g.taxReduction.toLocaleString()}</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">
+            Look for deals with <strong>bonus depreciation</strong> or <strong>cost segregation</strong>. Syndications in multifamily and self-storage often provide 50-80% first-year depreciation, meaning a $100K investment could offset $50K-$80K in taxable income.
+            <br>You may need <strong>$${Math.round(g.taxReduction / 0.6).toLocaleString()}</strong> invested in high-depreciation deals.
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  // Matching deals section
+  const matchingDeals = document.getElementById('goalsMatchingDeals');
+  const deals = (typeof DEALS !== 'undefined' ? DEALS : []);
+  const goodDeals = deals.filter(d => {
+    if (!d.cashOnCash && !d.targetIRR) return false;
+    const yield_ = d.cashOnCash || (d.preferredReturn ? d.preferredReturn : null);
+    return yield_ && yield_ >= 0.06;
+  }).slice(0, 6);
+
+  if (goodDeals.length > 0) {
+    matchingDeals.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deals That Could Help You Get There</div>
+          <button onclick="navigateTo('deals')" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);">View All Deals &rarr;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;">
+          ${goodDeals.map(d => `
+            <div onclick="navigateTo('deals');setTimeout(()=>openPanel('${d.id}'),200);" style="padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background=''">
+              <div style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:4px;">${d.investmentName}</div>
+              <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">${d.managementCompany} &middot; ${d.assetClass}</div>
+              <div style="display:flex;gap:16px;font-size:11px;">
+                ${d.targetIRR ? `<span><strong>${(d.targetIRR * 100).toFixed(1)}%</strong> IRR</span>` : ''}
+                ${d.preferredReturn ? `<span><strong>${(d.preferredReturn * 100).toFixed(1)}%</strong> Pref</span>` : ''}
+                ${d.cashOnCash ? `<span><strong>${(d.cashOnCash * 100).toFixed(1)}%</strong> CoC</span>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    matchingDeals.innerHTML = '';
+  }
+}
+
 // ========== ACTIVITY TRACKING (GHL SYNC) ==========
 function trackActivity(action, data) {
   const user = getUser();
@@ -5636,6 +5931,92 @@ function savePortfolio() {
   localStorage.setItem('gycPortfolio', JSON.stringify(portfolioInvestments));
 }
 
+function renderPortfolioInDeals(container, portfolioDeals) {
+  // Reload from storage
+  portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+
+  if (portfolioInvestments.length === 0 && portfolioDeals.length === 0) {
+    container.innerHTML = `<div style="max-width:600px;margin:60px auto;text-align:center;">
+      <div style="font-size:48px;opacity:0.3;margin-bottom:16px;">&#x1f4bc;</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments in your portfolio yet</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Move deals to "My Portfolio" from the vetting workflow, or add investments manually.</div>
+      <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
+    </div>`;
+    return;
+  }
+
+  const active = portfolioInvestments.filter(i => i.status === 'Active' || i.status === 'Distributing');
+  const totalInvested = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  const totalDistributions = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
+  const assetClasses = new Set(portfolioInvestments.map(i => i.assetClass).filter(Boolean));
+  const sponsors = new Set(portfolioInvestments.map(i => i.sponsor).filter(Boolean));
+  const avgIRR = portfolioInvestments.filter(i => i.targetIRR).reduce((s, i, _, a) => s + parseFloat(i.targetIRR) / a.length, 0);
+
+  let tableRows = portfolioInvestments.map(inv => {
+    const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
+    return `<tr>
+      <td style="font-weight:600;">${inv.investmentName}</td>
+      <td>${inv.sponsor || '---'}</td>
+      <td>${inv.assetClass || '---'}</td>
+      <td>$${Number(inv.amountInvested || 0).toLocaleString()}</td>
+      <td><span style="color:${statusColors[inv.status] || 'var(--text-secondary)'};font-weight:600;">${inv.status || '---'}</span></td>
+      <td>${inv.targetIRR ? inv.targetIRR + '%' : '---'}</td>
+      <td>$${Number(inv.distributionsReceived || 0).toLocaleString()}</td>
+      <td>
+        <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;font-size:12px;padding:2px 6px;">Edit</button>
+        <button onclick="if(confirm('Remove from portfolio?')){deleteInvestment('${inv.id}');renderAll();}" style="background:none;border:none;color:#e74c3c;font-weight:600;cursor:pointer;font-size:12px;padding:2px 6px;">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Invested</div>
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Active Investments</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text-dark);">${active.length}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Distributions</div>
+        <div style="font-size:22px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Avg Target IRR</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Asset Classes</div>
+        <div style="font-size:22px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
+      </div>
+    </div>
+    ${portfolioInvestments.length > 0 ? `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Investment</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Sponsor</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Asset Class</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Amount</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Status</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Target IRR</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Distributions</th>
+            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Actions</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;text-align:center;">
+      <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
+      <button onclick="navigateTo('portfolio')" style="padding:10px 24px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);margin-left:8px;">View Full Portfolio &rarr;</button>
+    </div>` : ''}
+  `;
+}
+
 function renderPortfolio() {
   portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
   const empty = document.getElementById('portfolioEmptyState');
@@ -5807,6 +6188,78 @@ function sortPortfolioTable(col) {
   if (portfolioSortCol === col) { portfolioSortAsc = !portfolioSortAsc; }
   else { portfolioSortCol = col; portfolioSortAsc = true; }
   renderPortfolioTable();
+}
+
+function showAddDealModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'addDealModal';
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+  const assetOptions = ['Multi Family','Self Storage','Industrial','Lending','Short Term Rental','Hotels/Hospitality','Mixed-Use','RV/Mobile Home Parks','Business / Other','Senior Living','Land','Car Wash','Oil & Gas','Other'];
+  const dealTypeOptions = ['Syndication','Fund'];
+  overlay.innerHTML = `<div class="modal-card" style="max-width:560px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">Add a Deal</div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">Can't find a deal? Submit it to the community database. Other investors can help enrich it over time.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+      <div class="modal-field" style="grid-column:1/-1"><label>Investment Name *</label><input id="addDealName" placeholder="e.g. Sunrise Apartments Fund III"></div>
+      <div class="modal-field"><label>Sponsor / Management Company *</label><input id="addDealSponsor" placeholder="e.g. Acme Capital"></div>
+      <div class="modal-field"><label>Asset Class</label><select id="addDealAsset"><option value="">Select...</option>${assetOptions.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>
+      <div class="modal-field"><label>Deal Type</label><select id="addDealType"><option value="">Select...</option>${dealTypeOptions.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>
+      <div class="modal-field"><label>Target IRR (%)</label><input id="addDealIRR" type="number" step="0.1" placeholder="e.g. 15"></div>
+      <div class="modal-field"><label>Min Investment ($)</label><input id="addDealMin" type="number" placeholder="e.g. 50000"></div>
+      <div class="modal-field"><label>Location</label><input id="addDealLocation" placeholder="e.g. Tampa, FL"></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Website / Link</label><input id="addDealURL" placeholder="https://..."></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="addDealNotes" rows="2" placeholder="Any additional details..."></textarea></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:12px;">
+      <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
+      <button onclick="submitNewDeal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Submit Deal</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('addDealName').focus();
+}
+
+function submitNewDeal() {
+  const name = document.getElementById('addDealName').value.trim();
+  const sponsor = document.getElementById('addDealSponsor').value.trim();
+  if (!name || !sponsor) { alert('Please enter at least the investment name and sponsor.'); return; }
+
+  // Create a local deal object and add to DEALS
+  const newDeal = {
+    id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    dealNumber: 0,
+    investmentName: name,
+    managementCompany: sponsor,
+    assetClass: document.getElementById('addDealAsset').value || '',
+    dealType: document.getElementById('addDealType').value || '',
+    targetIRR: document.getElementById('addDealIRR').value ? parseFloat(document.getElementById('addDealIRR').value) / 100 : null,
+    investmentMinimum: parseFloat(document.getElementById('addDealMin').value) || 0,
+    location: document.getElementById('addDealLocation').value || '',
+    status: 'Open to invest',
+    addedDate: new Date().toISOString().split('T')[0],
+    equityMultiple: null, preferredReturn: null, holdPeriod: null, offeringType: '', offeringSize: null,
+    investingGeography: '', investmentStrategy: '', distributions: '', financials: '', availableTo: '',
+    investmentObjective: '', sponsorInDeal: null, ceo: '', managementCompanyId: '',
+    mcWebsite: document.getElementById('addDealURL').value || '', mcFoundingYear: null, mcType: '', mcLinkedin: '',
+    mcInvestClearly: '', mcTotalInvestors: null, fees: [], firstYrDepreciation: '', strategy: '',
+    instrument: '', cashOnCash: null, debtPosition: '', fundAUM: null, loanCount: null, avgLoanLTV: null,
+    lpGpSplit: '', userSubmitted: true
+  };
+
+  DEALS.unshift(newDeal);
+  // Persist user-submitted deals
+  const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+  userDeals.push(newDeal);
+  localStorage.setItem('gycUserDeals', JSON.stringify(userDeals));
+
+  closeModal();
+  renderAll();
+  updateDealCount();
+  alert('Deal added! It will appear in your New Deals feed.');
 }
 
 function showDealSearchModal() {
