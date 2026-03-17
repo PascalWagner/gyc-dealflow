@@ -361,9 +361,9 @@ body {
 }
 .buybox-update-btn {
   display: none;
-  padding: 4px 10px;
+  padding: 6px 14px;
   border: 1px solid var(--green);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--green);
   font-family: var(--font-ui);
@@ -372,6 +372,7 @@ body {
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
+  align-self: center;
 }
 .buybox-update-btn:hover {
   background: var(--green);
@@ -6178,6 +6179,8 @@ function renderDebtChart() {
           ticks: { font: { family: 'Source Sans 3', size: 12 } }
         },
         y: {
+          min: debtChartMetric === 'yield' ? 0 : undefined,
+          max: debtChartMetric === 'yield' ? 13 : undefined,
           title: { display: true, text: metricLabel, font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
           grid: { color: 'rgba(0,0,0,0.05)' },
           ticks: {
