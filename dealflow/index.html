@@ -3717,7 +3717,9 @@ function transformAirtableRecord(rec) {
     fundAUM: rec['Fund AUM'] || rec.fields?.['Fund AUM'] || null,
     loanCount: rec['Loan Count'] || rec.fields?.['Loan Count'] || null,
     avgLoanLTV: rec['Avg Loan LTV'] || rec.fields?.['Avg Loan LTV'] || null,
-    location: rec['Location'] || rec.fields?.['Location'] || ''
+    location: rec['Location'] || rec.fields?.['Location'] || '',
+    address: rec['Property Address'] || rec.fields?.['Property Address'] || '',
+    deckUrl: rec['_deckUrl'] || rec.fields?.['_deckUrl'] || ''
   };
 }
 
