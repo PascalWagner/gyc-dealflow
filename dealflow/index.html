@@ -6068,6 +6068,32 @@ function renderDebtChart() {
   if (!ctx) return;
   if (debtFundChart) debtFundChart.destroy();
 
+  // Show/hide empty state for chart
+  const chartWrapper = ctx.closest('.debt-chart-wrapper');
+  let emptyEl = document.getElementById('debtChartEmpty');
+  const filteredFunds = getFilteredDebtFunds();
+  if (filteredFunds.length === 0) {
+    ctx.style.display = 'none';
+    const legend = document.getElementById('debtChartLegend');
+    if (legend) legend.style.display = 'none';
+    if (!emptyEl && chartWrapper) {
+      emptyEl = document.createElement('div');
+      emptyEl.id = 'debtChartEmpty';
+      emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:360px;width:100%;gap:12px;order:1;';
+      emptyEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;opacity:0.5;"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-5"/></svg>'
+        + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);">No funds match your filters</div>'
+        + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);text-align:center;max-width:320px;">Try adjusting your filters or clearing your Buy Box to see all available debt funds.</div>';
+      chartWrapper.appendChild(emptyEl);
+    }
+    if (emptyEl) emptyEl.style.display = 'flex';
+    return;
+  } else {
+    ctx.style.display = '';
+    const legend = document.getElementById('debtChartLegend');
+    if (legend) legend.style.display = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+  }
+
   const metricKeys = { yield: '_yieldData', delinquency: '_delinquencyData', ltv: '_ltvData', leverage: '_leverageData' };
   const metricLabels = { yield: 'Yield (%)', delinquency: 'Delinquency Rate (%)', ltv: 'Loan-to-Value (%)', leverage: 'Leverage Ratio (x)' };
   const metricKey = metricKeys[debtChartMetric] || '_yieldData';
@@ -6077,7 +6103,6 @@ function renderDebtChart() {
   const overlay = document.getElementById('debtChartComingSoon');
   if (overlay) overlay.style.display = debtChartMetric === 'delinquency' ? 'flex' : 'none';
 
-  const filteredFunds = getFilteredDebtFunds();
   const datasets = filteredFunds.map(f => {
     const isHighlighted = highlightedDebtFund === f.id;
     const isAnyHighlighted = highlightedDebtFund !== null;
@@ -6214,6 +6239,11 @@ function renderDebtTable() {
     if (!v) return '<span style="color:var(--text-muted)">—</span>';
     const pct = (v * 100).toFixed(1);
     return '<span style="color:var(--green);font-weight:600;">' + pct + '%</span>';
+  }
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px 20px;color:var(--text-muted);font-family:var(--font-body);font-size:14px;">No funds match your current filters. Try broadening your search criteria.</td></tr>';
+    return;
   }
 
   tbody.innerHTML = sorted.map(f => {
