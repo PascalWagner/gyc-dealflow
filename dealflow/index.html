@@ -2389,6 +2389,11 @@ async function fetchDealsFromAirtable() {
 
 // Load deals on startup
 async function loadDeals() {
+  // Render fallback deals immediately so page is never blank
+  updateDealCount();
+  renderAll();
+
+  // Then try to fetch fresh data from Airtable in background
   const cached = sessionStorage.getItem('gycDealsCache');
   const cacheTime = sessionStorage.getItem('gycDealsCacheTime');
   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -2396,29 +2401,31 @@ async function loadDeals() {
   // Use cache if fresh
   if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
     try {
-      DEALS = JSON.parse(cached);
-      console.log('Loaded ' + DEALS.length + ' deals from cache');
-      updateDealCount();
-      renderAll();
+      const cachedDeals = JSON.parse(cached);
+      if (cachedDeals.length > DEALS.length) {
+        DEALS = cachedDeals;
+        console.log('Updated to ' + DEALS.length + ' deals from cache');
+        updateDealCount();
+        renderAll();
+      }
       return;
     } catch (e) { /* fall through */ }
   }
 
-  // Show loading state
-  const grid = document.getElementById('cardGrid');
-  if (grid) grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deals from database...</div>';
-
-  const freshDeals = await fetchDealsFromAirtable();
-  if (freshDeals && freshDeals.length > 0) {
-    DEALS = freshDeals;
-    sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS));
-    sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
-    console.log('Loaded ' + DEALS.length + ' deals from Airtable');
-  } else {
-    console.log('Using ' + DEALS.length + ' fallback deals');
+  // Fetch from Airtable in background (don't block initial render)
+  try {
+    const freshDeals = await fetchDealsFromAirtable();
+    if (freshDeals && freshDeals.length > 0) {
+      DEALS = freshDeals;
+      sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS));
+      sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
+      console.log('Loaded ' + DEALS.length + ' deals from Airtable');
+      updateDealCount();
+      renderAll();
+    }
+  } catch (e) {
+    console.warn('Background Airtable fetch failed:', e.message);
   }
-  updateDealCount();
-  renderAll();
 }
 
 function updateDealCount() {
