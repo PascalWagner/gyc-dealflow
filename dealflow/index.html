@@ -1680,6 +1680,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Subscription
     </a>
+    <div class="nav-section-label">Admin</div>
+    <a class="nav-item" href="#" data-page="devnotes" onclick="navigateTo('devnotes'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l2-2-2-2"/><path d="M8 18l-2-2 2-2"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><polyline points="4 8 4 2 20 2 20 8"/><polyline points="4 16 4 22 20 22 20 16"/><rect x="2" y="8" width="20" height="8" rx="1"/></svg>
+      Dev Notes
+    </a>
   </nav>
   <div class="sidebar-user" id="sidebarUser" style="display:none">
     <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
@@ -2077,6 +2082,95 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </ul>
           <button class="btn-cta btn-cta-primary plan-btn">Apply Now</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-devnotes">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Dev Notes</div>
+    </div>
+    <div class="sub-page" style="max-width:860px">
+      <div class="settings-page-title">Development Status</div>
+      <div class="settings-page-desc">Internal notes for picking up where we left off. Last updated: March 16, 2026.</div>
+
+      <div style="display:flex;flex-direction:column;gap:24px;">
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#22c55e;margin-bottom:12px;">Working</h3>
+          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
+            <li>&#10003; Sign In via email+password (GHL contact lookup via Make.com webhook)</li>
+            <li>&#10003; Sign Up creates GHL contact with <code>dealflow-user</code> tag (via <code>highlevel:createAContact</code> module)</li>
+            <li>&#10003; Duplicate sign-up returns friendly error</li>
+            <li>&#10003; Auth gate on dashboard (redirects to login if no valid session)</li>
+            <li>&#10003; Logout clears localStorage session</li>
+            <li>&#10003; Live deal data rendered from embedded JSON (~30+ deals)</li>
+            <li>&#10003; Deal filtering, search, grid/list views</li>
+            <li>&#10003; Buy Box builder & scoring</li>
+            <li>&#10003; GP directory with follow/unfollow</li>
+            <li>&#10003; Deployed to <code>dealflow.growyourcashflow.io</code> via Vercel</li>
+            <li>&#10003; Code on GitHub: <code>git@github.com:PascalWagner/gyc-dealflow.git</code></li>
+          </ul>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:12px;">Not Working / Known Issues</h3>
+          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
+            <li>&#10007; Magic link sign-in (webhook not built yet &mdash; needs GHL email integration)</li>
+            <li>&#10007; Forgot password flow (webhook not built)</li>
+            <li>&#10007; No server-side password validation &mdash; sign-in only checks if email exists as a GHL contact, any password works</li>
+            <li>&#10007; Make.com Data Store modules don't work via API (fields resolve empty) &mdash; abandoned in favor of GHL-only approach</li>
+            <li>&#10007; GHL <code>highlevel:universal</code> POST body broken (sends <code>[object Object]</code>) &mdash; use dedicated modules like <code>createAContact</code> instead</li>
+            <li>&#10007; Session token is a timestamp, not cryptographically secure</li>
+          </ul>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#3b82f6;margin-bottom:12px;">Still To Do</h3>
+          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
+            <li>&#9744; Build magic link flow: Make.com webhook &rarr; GHL email send &rarr; token-based login</li>
+            <li>&#9744; Build forgot password flow via GHL</li>
+            <li>&#9744; Add server-side password hashing (store hash in GHL custom field or notes)</li>
+            <li>&#9744; Password reset managed from GHL</li>
+            <li>&#9744; Wire up remaining webhooks (buyBoxSync, subscribe, activity)</li>
+            <li>&#9744; Live deal data from Airtable via Make.com instead of embedded JSON</li>
+            <li>&#9744; Subscription/payment integration (Stripe)</li>
+            <li>&#9744; Deck review request flow</li>
+            <li>&#9744; GP introduction request flow</li>
+            <li>&#9744; Email notifications for new deals matching buy box</li>
+            <li>&#9744; Role-based access (Explorer vs Investor vs Academy tiers)</li>
+          </ul>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Architecture / Key IDs</h3>
+          <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Make.com Org</td><td style="padding:6px 0;">5180916 / Team 1371669</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GHL Connection</td><td style="padding:6px 0;">5330930 (Location OAuth, uid: iSHPUTCApON4k5MPXH7Q)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign In Scenario</td><td style="padding:6px 0;">4423229 &mdash; Webhook 2019643</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign In Webhook</td><td style="padding:6px 0;"><code>https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv</code></td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign Up Scenario</td><td style="padding:6px 0;">4423231 &mdash; Webhook 2019644</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign Up Webhook</td><td style="padding:6px 0;"><code>https://hook.us2.make.com/i3nlsj9uq3p7sdvqf0viq0ggilvudwhx</code></td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GHL Scopes</td><td style="padding:6px 0;">contacts.readonly, contacts.write, opportunities.read/write, users.read/write, locations.readonly, + more</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GitHub</td><td style="padding:6px 0;">git@github.com:PascalWagner/gyc-dealflow.git</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Vercel Domain</td><td style="padding:6px 0;">dealflow.growyourcashflow.io</td></tr>
+          </table>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">Lessons Learned</h3>
+          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:disc;padding-left:20px;">
+            <li>Make.com Data Store modules created via API have a bug &mdash; field interfaces don't resolve, outputs are always empty. Must use the UI to configure data store modules.</li>
+            <li>Make.com <code>highlevel:universal</code> module with <code>body</code> type <code>any</code> serializes objects as <code>[object Object]</code> instead of JSON. Use dedicated GHL modules (<code>createAContact</code>, <code>searchContacts</code>) instead.</li>
+            <li><code>first(array).property</code> doesn't work in Make.com templates. Use <code>get(first(array); "property")</code> instead.</li>
+            <li>Webhook UDT must be set as a data structure integer ID, not an inline array spec.</li>
+            <li>Make.com <code>if()</code> with escaped quotes in JSON strings produces garbled output. Keep response bodies simple.</li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </div>

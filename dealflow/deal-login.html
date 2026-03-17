@@ -341,11 +341,6 @@ body {
     <!-- SIGN IN -->
     <div class="auth-panel active" id="panel-signin">
       <div id="signinForm">
-        <button class="btn-magic" onclick="sendMagicLink()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Send me a magic link
-        </button>
-        <div class="divider">or sign in with password</div>
         <div class="field">
           <label class="field-label">Email</label>
           <input type="email" class="field-input" id="signinEmail" placeholder="you@example.com">
@@ -353,26 +348,9 @@ body {
         <div class="field">
           <label class="field-label">Password</label>
           <input type="password" class="field-input" id="signinPassword" placeholder="Enter your password">
-          <div style="text-align:right;margin-top:6px"><a class="forgot-link" onclick="showForgotPassword()">Forgot password?</a></div>
         </div>
         <div class="error-msg" id="signinError">Invalid email or password. Please try again.</div>
         <button class="btn-submit btn-submit-primary" onclick="handleSignIn()">Sign In</button>
-      </div>
-
-      <div class="magic-sent" id="magicSent">
-        <div class="magic-sent-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        </div>
-        <div class="magic-sent-title">Check your inbox</div>
-        <div class="magic-sent-desc">We sent a magic link to <strong id="magicEmail"></strong>. Click the link in the email to sign in — no password needed.</div>
-      </div>
-
-      <div class="magic-sent" id="forgotSent">
-        <div class="magic-sent-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <div class="magic-sent-title">Password reset sent</div>
-        <div class="magic-sent-desc">Check your inbox for a link to reset your password. If you don't see it, check your spam folder.</div>
       </div>
     </div>
 
@@ -423,10 +401,8 @@ body {
 // ========== CONFIG ==========
 // Replace these with your actual Make.com webhook URLs
 const WEBHOOKS = {
-  magicLink: 'https://hook.us2.make.com/YOUR_MAGIC_LINK_WEBHOOK',
   signUp:    'https://hook.us2.make.com/i3nlsj9uq3p7sdvqf0viq0ggilvudwhx',
-  signIn:    'https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv',
-  forgot:    'https://hook.us2.make.com/YOUR_FORGOT_WEBHOOK'
+  signIn:    'https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv'
 };
 
 // ========== TAB SWITCHING ==========
@@ -446,33 +422,7 @@ function switchAuthTab(tab, el) {
   }
   // Reset states
   document.getElementById('signinForm').style.display = '';
-  document.getElementById('magicSent').classList.remove('show');
-  document.getElementById('forgotSent').classList.remove('show');
   document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show'));
-}
-
-// ========== MAGIC LINK ==========
-async function sendMagicLink() {
-  const email = document.getElementById('signinEmail').value.trim();
-  if (!email || !email.includes('@')) {
-    document.getElementById('signinEmail').focus();
-    document.getElementById('signinEmail').classList.add('field-error');
-    return;
-  }
-  document.getElementById('signinEmail').classList.remove('field-error');
-
-  // Send to Make.com → GHL magic link
-  try {
-    await fetch(WEBHOOKS.magicLink, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, action: 'magic_link', timestamp: new Date().toISOString() })
-    }).catch(() => {}); // Silently fail for MVP
-  } catch(e) {}
-
-  document.getElementById('magicEmail').textContent = email;
-  document.getElementById('signinForm').style.display = 'none';
-  document.getElementById('magicSent').classList.add('show');
 }
 
 // ========== SIGN IN ==========
@@ -604,22 +554,6 @@ async function handleSignUp() {
     btn.classList.remove('btn-loading');
     btn.textContent = 'Create Account';
   }
-}
-
-// ========== FORGOT PASSWORD ==========
-function showForgotPassword() {
-  const email = document.getElementById('signinEmail').value.trim();
-  if (email) {
-    try {
-      fetch(WEBHOOKS.forgot, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, action: 'forgot_password', timestamp: new Date().toISOString() })
-      }).catch(() => {});
-    } catch(e) {}
-  }
-  document.getElementById('signinForm').style.display = 'none';
-  document.getElementById('forgotSent').classList.add('show');
 }
 
 // ========== REDIRECT IF LOGGED IN ==========
