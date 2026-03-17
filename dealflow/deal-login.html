@@ -314,15 +314,22 @@ body {
         <button class="auth-tab" onclick="switchAuthTab('signup', this)">Request Access</button>
       </div>
 
-      <!-- SIGN IN (magic link) -->
+      <!-- SIGN IN -->
       <div class="auth-panel active" id="panel-signin">
         <div id="signinForm">
           <div class="field">
             <label class="field-label">Email</label>
-            <input type="email" class="field-input" id="signinEmail" placeholder="you@example.com" onkeydown="if(event.key==='Enter')handleSignIn()">
+            <input type="email" class="field-input" id="signinEmail" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('signinPassword').focus()">
+          </div>
+          <div class="field" id="passwordField">
+            <label class="field-label">Password</label>
+            <input type="password" class="field-input" id="signinPassword" placeholder="Enter your password" onkeydown="if(event.key==='Enter')handleSignIn()">
           </div>
           <div class="error-msg" id="signinError"></div>
-          <button class="btn-submit btn-submit-primary" onclick="handleSignIn()">Send Magic Link</button>
+          <button class="btn-submit btn-submit-primary" onclick="handleSignIn()">Sign In</button>
+          <div style="text-align:center;margin-top:12px;">
+            <a style="font-family:var(--font-body);font-size:13px;color:var(--primary);cursor:pointer;text-decoration:none;" onclick="handleMagicLinkRequest()">Or sign in with magic link instead</a>
+          </div>
         </div>
         <div class="magic-sent" id="signinSent">
           <div class="magic-sent-icon">&#9993;</div>
@@ -472,11 +479,17 @@ function switchAuthTab(tab) {
   document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show'));
 }
 
-// ========== SIGN IN (request magic link) ==========
+// ========== SIGN IN (password-based with magic link fallback) ==========
 async function handleSignIn() {
   const email = document.getElementById('signinEmail').value.trim();
+  const password = document.getElementById('signinPassword').value;
   if (!email) {
     document.getElementById('signinError').textContent = 'Please enter your email address.';
+    document.getElementById('signinError').classList.add('show');
+    return;
+  }
+  if (!password) {
+    document.getElementById('signinError').textContent = 'Please enter your password.';
     document.getElementById('signinError').classList.add('show');
     return;
   }
@@ -484,7 +497,83 @@ async function handleSignIn() {
 
   const btn = document.querySelector('#signinForm .btn-submit');
   btn.classList.add('btn-loading');
-  btn.textContent = 'Sending...';
+  btn.textContent = 'Signing in...';
+
+  try {
+    // Try password-based login via serverless API
+    const resp = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', email, password })
+    }).catch(() => null);
+
+    if (resp && resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      if (data.success) {
+        localStorage.setItem('gycUser', JSON.stringify({
+          email: data.email || email,
+          name: data.name || email.split('@')[0],
+          id: data.contactId || null,
+          token: data.token || Date.now().toString(36),
+          tier: data.tier || 'explorer',
+          loggedInAt: new Date().toISOString()
+        }));
+        window.location.href = 'index.html';
+        return;
+      } else {
+        document.getElementById('signinError').textContent = data.error || 'Invalid email or password.';
+        document.getElementById('signinError').classList.add('show');
+      }
+    } else {
+      // API not available — fallback: try magic link webhook for contact lookup
+      const fallback = await fetch(WEBHOOKS.magicLink, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, directLogin: true })
+      }).catch(() => null);
+
+      if (fallback && fallback.ok) {
+        const data = await fallback.json().catch(() => ({}));
+        if (data.success && data.directLogin) {
+          localStorage.setItem('gycUser', JSON.stringify({
+            email: data.email || email,
+            name: data.name || email.split('@')[0],
+            id: data.contactId || null,
+            token: Date.now().toString(36),
+            tier: data.tier || 'explorer',
+            loggedInAt: new Date().toISOString()
+          }));
+          window.location.href = 'index.html';
+          return;
+        } else if (data.success) {
+          // Magic link sent as fallback
+          document.getElementById('signinForm').style.display = 'none';
+          document.getElementById('sentEmail').textContent = email;
+          document.getElementById('signinSent').classList.add('show');
+          return;
+        }
+      }
+      document.getElementById('signinError').textContent = 'Unable to sign in. Please check your credentials.';
+      document.getElementById('signinError').classList.add('show');
+    }
+  } catch(e) {
+    document.getElementById('signinError').textContent = 'Connection error. Please try again.';
+    document.getElementById('signinError').classList.add('show');
+  }
+
+  btn.classList.remove('btn-loading');
+  btn.textContent = 'Sign In';
+}
+
+// Magic link fallback
+async function handleMagicLinkRequest() {
+  const email = document.getElementById('signinEmail').value.trim();
+  if (!email) {
+    document.getElementById('signinError').textContent = 'Enter your email first, then click magic link.';
+    document.getElementById('signinError').classList.add('show');
+    return;
+  }
+  document.getElementById('signinError').classList.remove('show');
 
   try {
     const resp = await fetch(WEBHOOKS.magicLink, {
@@ -496,27 +585,17 @@ async function handleSignIn() {
     if (resp && resp.ok) {
       const data = await resp.json().catch(() => ({}));
       if (data.success) {
-        // Show "check your email" state
         document.getElementById('signinForm').style.display = 'none';
         document.getElementById('sentEmail').textContent = email;
         document.getElementById('signinSent').classList.add('show');
-      } else {
-        document.getElementById('signinError').textContent = data.error || 'Unable to send login link.';
-        document.getElementById('signinError').classList.add('show');
-        btn.classList.remove('btn-loading');
-        btn.textContent = 'Send Magic Link';
+        return;
       }
-    } else {
-      document.getElementById('signinError').textContent = 'Unable to connect. Please try again.';
-      document.getElementById('signinError').classList.add('show');
-      btn.classList.remove('btn-loading');
-      btn.textContent = 'Send Magic Link';
     }
-  } catch(e) {
-    document.getElementById('signinError').textContent = 'Connection error. Please try again.';
+    document.getElementById('signinError').textContent = 'Unable to send magic link. Try password login.';
     document.getElementById('signinError').classList.add('show');
-    btn.classList.remove('btn-loading');
-    btn.textContent = 'Send Magic Link';
+  } catch(e) {
+    document.getElementById('signinError').textContent = 'Connection error.';
+    document.getElementById('signinError').classList.add('show');
   }
 }
 
@@ -524,9 +603,10 @@ function resetSignIn() {
   document.getElementById('signinForm').style.display = '';
   document.getElementById('signinSent').classList.remove('show');
   document.getElementById('signinEmail').value = '';
+  document.getElementById('signinPassword').value = '';
   const btn = document.querySelector('#signinForm .btn-submit');
   btn.classList.remove('btn-loading');
-  btn.textContent = 'Send Magic Link';
+  btn.textContent = 'Sign In';
 }
 
 // ========== SIGN UP (request access + send magic link) ==========
