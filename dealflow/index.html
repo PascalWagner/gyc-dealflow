@@ -1862,13 +1862,13 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
     <div class="settings-page">
       <div class="settings-tabs">
-        <button class="settings-tab active" data-stab="buybox" onclick="switchSettingsTab(this)">Buy Box</button>
-        <button class="settings-tab" data-stab="profile" onclick="switchSettingsTab(this)">Profile</button>
+        <button class="settings-tab active" data-stab="profile" onclick="switchSettingsTab(this)">Profile</button>
+        <button class="settings-tab" data-stab="buybox" onclick="switchSettingsTab(this)">Buy Box</button>
         <button class="settings-tab" data-stab="notifications" onclick="switchSettingsTab(this)">Notifications</button>
       </div>
 
       <!-- Buy Box Tab -->
-      <div class="settings-panel active" id="stab-buybox">
+      <div class="settings-panel" id="stab-buybox">
         <div class="settings-page-title">Investment Buy Box</div>
         <div class="settings-page-desc">Define your ideal investment criteria. Deals will be scored against your buy box and tagged with match percentages so you can quickly spot the best fits.</div>
 
@@ -2346,7 +2346,7 @@ function renderCard(deal) {
         </div>
       </div>
       <div class="card-footer">
-        <button class="btn btn-outline" onclick="event.stopPropagation()">View GP</button>
+        <a class="btn btn-outline" href="sponsor.html?company=\${encodeURIComponent(deal.managementCompany)}" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center;">View GP</a>
         <button class="btn btn-primary" onclick="event.stopPropagation(); openPanel('${deal.id}')">View Deal &rarr;</button>
       </div>
     </div>
