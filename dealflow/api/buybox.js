@@ -36,6 +36,31 @@ for (const [appKey, ghlKey] of Object.entries(FIELD_MAP)) {
   REVERSE_MAP[ghlKey] = appKey;
 }
 
+// Cache for GHL custom field ID → key mapping
+let ghlFieldIdToKey = null;
+
+async function loadFieldMapping() {
+  if (ghlFieldIdToKey) return ghlFieldIdToKey;
+  try {
+    const resp = await fetch('https://rest.gohighlevel.com/v1/custom-fields/', {
+      headers: { 'Authorization': `Bearer ${GHL_API_KEY}` }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      const fields = data.customFields || [];
+      ghlFieldIdToKey = {};
+      for (const f of fields) {
+        // Map field ID to the field key (e.g., "contact.investment_amount")
+        ghlFieldIdToKey[f.id] = f.fieldKey || f.key || '';
+      }
+      return ghlFieldIdToKey;
+    }
+  } catch (e) {
+    console.error('Failed to load GHL custom fields:', e.message);
+  }
+  return {};
+}
+
 async function findContact(email) {
   const searchUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`;
   const resp = await fetch(searchUrl, {
@@ -82,12 +107,14 @@ async function updateContact(contactId, customFields) {
 }
 
 // Convert GHL custom fields array to our buy box format
-function ghlToAppBuyBox(customFields) {
+function ghlToAppBuyBox(customFields, fieldIdToKey = {}) {
   const buyBox = {};
   if (!Array.isArray(customFields)) return buyBox;
 
   for (const field of customFields) {
-    const appKey = REVERSE_MAP[field.id] || REVERSE_MAP[field.key];
+    // Try direct key match first, then resolve ID → key via field mapping
+    const resolvedKey = field.key || fieldIdToKey[field.id] || '';
+    const appKey = REVERSE_MAP[field.id] || REVERSE_MAP[field.key] || REVERSE_MAP[resolvedKey];
     if (appKey) {
       buyBox[appKey] = field.value;
     }
@@ -135,45 +162,23 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Contact not found', buyBox: {} });
       }
 
-      // Get full contact with custom fields
-      const full = await getContactFull(contact.id);
+      // Get full contact and field mapping in parallel
+      const [full, fieldIdToKey] = await Promise.all([
+        getContactFull(contact.id),
+        loadFieldMapping()
+      ]);
       const contactData = full.contact || full;
 
-      // v1 API returns customField as object {key: value} AND/OR customFields as array [{id, value}]
-      // Try both formats
-      let buyBox = {};
-      let rawFields = [];
-
-      // Try customFields array first (some v1 responses include this)
-      if (Array.isArray(contactData.customFields) && contactData.customFields.length > 0) {
-        rawFields = contactData.customFields;
-        buyBox = ghlToAppBuyBox(contactData.customFields);
-      }
-
-      // Also check customField object (v1 typical format: { "contact.field_key": "value" })
-      if (contactData.customField && typeof contactData.customField === 'object' && !Array.isArray(contactData.customField)) {
-        const cfObj = contactData.customField;
-        for (const [ghlKey, val] of Object.entries(cfObj)) {
-          const appKey = REVERSE_MAP[ghlKey] || REVERSE_MAP['contact.' + ghlKey];
-          if (appKey && val !== undefined && val !== null && val !== '') {
-            buyBox[appKey] = val;
-          }
-          rawFields.push({ key: ghlKey, value: val });
-        }
-      }
+      // v1 API returns customField as array of {id, value} objects
+      const customFieldArr = Array.isArray(contactData.customField) ? contactData.customField : [];
+      const buyBox = ghlToAppBuyBox(customFieldArr, fieldIdToKey);
 
       return res.status(200).json({
         success: true,
         contactId: contact.id,
         name: [contactData.firstName, contactData.lastName].filter(Boolean).join(' '),
         buyBox,
-        rawFields,
-        _debug: {
-          customFieldRaw: contactData.customField,
-          customFieldsRaw: contactData.customFields,
-          reverseMapKeys: Object.keys(REVERSE_MAP).slice(0, 5),
-          tags: contactData.tags
-        }
+        rawFields: customFieldArr
       });
     } catch (e) {
       console.error('Buy box fetch error:', e);
