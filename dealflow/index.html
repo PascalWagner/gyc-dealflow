@@ -2039,6 +2039,33 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;opacity:0.5;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </div>
+  <!-- Admin: View As User -->
+  <div id="adminViewAs" style="display:none;padding:0 12px;margin-top:4px;">
+    <div id="viewAsImpersonating" style="display:none;background:#f59e0b22;border:1px solid #f59e0b44;border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px;">Viewing as</span>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-dark);" id="viewAsName"></div>
+      <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;" id="viewAsEmail"></div>
+      <button onclick="exitViewAs()" style="width:100%;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to My Account
+      </button>
+    </div>
+    <div id="viewAsSearch" style="position:relative;">
+      <div style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0;" onclick="toggleViewAsDropdown()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">View as another user</span>
+      </div>
+      <div id="viewAsDropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 -8px 24px rgba(0,0,0,0.15);z-index:100;margin-bottom:4px;overflow:hidden;min-width:200px;">
+        <div style="padding:8px;">
+          <input id="viewAsInput" type="text" placeholder="Search by name or email..." oninput="searchViewAsUsers(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);font-family:var(--font-body);font-size:12px;color:var(--text-dark);box-sizing:border-box;" />
+        </div>
+        <div id="viewAsResults" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
   <div class="sidebar-footer">
     <div style="text-align:center;margin-bottom:8px;">
       <a href="#" onclick="event.preventDefault();showFeedbackModal();" style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;opacity:0.7;transition:opacity var(--transition);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
@@ -7362,6 +7389,156 @@ function clearAnalyticsData() {
   }
 }
 
+// ========== ADMIN: VIEW AS USER ==========
+let adminRealUser = null; // stores the admin's real session when impersonating
+let viewAsSearchTimer = null;
+
+function initViewAs() {
+  const el = document.getElementById('adminViewAs');
+  if (!el) return;
+  el.style.display = isAdmin() ? 'block' : 'none';
+
+  // Check if we're already impersonating
+  const stored = sessionStorage.getItem('gycAdminRealUser');
+  if (stored) {
+    adminRealUser = JSON.parse(stored);
+    document.getElementById('viewAsSearch').style.display = 'none';
+    document.getElementById('viewAsImpersonating').style.display = 'block';
+    const currentUser = getUser();
+    document.getElementById('viewAsName').textContent = currentUser?.name || 'Unknown';
+    document.getElementById('viewAsEmail').textContent = currentUser?.email || '';
+  }
+}
+
+function toggleViewAsDropdown() {
+  const dd = document.getElementById('viewAsDropdown');
+  if (dd.style.display === 'none') {
+    dd.style.display = 'block';
+    document.getElementById('viewAsInput').focus();
+    document.getElementById('viewAsResults').innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text-muted);">Type a name or email to search</div>';
+  } else {
+    dd.style.display = 'none';
+  }
+}
+
+function searchViewAsUsers(query) {
+  clearTimeout(viewAsSearchTimer);
+  const results = document.getElementById('viewAsResults');
+
+  if (query.length < 2) {
+    results.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text-muted);">Type at least 2 characters</div>';
+    return;
+  }
+
+  results.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text-muted);">Searching...</div>';
+
+  viewAsSearchTimer = setTimeout(async () => {
+    try {
+      const adminEmail = (adminRealUser || getUser())?.email;
+      const resp = await fetch('/api/users?q=' + encodeURIComponent(query) + '&admin=' + encodeURIComponent(adminEmail));
+      const data = await resp.json();
+
+      if (!data.success || !data.contacts?.length) {
+        results.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text-muted);">No users found</div>';
+        return;
+      }
+
+      results.innerHTML = data.contacts.map(c => {
+        const initials = c.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const tierBadge = c.tier === 'academy' ? '<span style="font-size:8px;font-weight:700;color:var(--primary);text-transform:uppercase;">Academy</span>'
+          : c.tier === 'investor' ? '<span style="font-size:8px;font-weight:700;color:#3b82f6;text-transform:uppercase;">Investor</span>'
+          : '<span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Explorer</span>';
+        return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'explorer') + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
+          + '<div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">' + initials + '</div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:12px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.name + '</div>'
+          + '<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.email + '</span>' + tierBadge + '</div>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    } catch (e) {
+      results.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:#e74c3c;">Search failed. Try again.</div>';
+    }
+  }, 400);
+}
+
+function viewAsUser(email, name, contactId, tier) {
+  // Save admin's real session
+  if (!adminRealUser) {
+    adminRealUser = JSON.parse(localStorage.getItem('gycUser'));
+    sessionStorage.setItem('gycAdminRealUser', JSON.stringify(adminRealUser));
+  }
+
+  // Swap to target user
+  const impersonatedUser = {
+    email: email,
+    name: name,
+    contactId: contactId,
+    tier: tier,
+    token: 'impersonated'
+  };
+  localStorage.setItem('gycUser', JSON.stringify(impersonatedUser));
+
+  // Close dropdown
+  document.getElementById('viewAsDropdown').style.display = 'none';
+
+  // Update sidebar display
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('sidebarName').textContent = name;
+  document.getElementById('sidebarTier').textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+
+  // Show impersonation indicator
+  document.getElementById('viewAsSearch').style.display = 'none';
+  document.getElementById('viewAsImpersonating').style.display = 'block';
+  document.getElementById('viewAsName').textContent = name;
+  document.getElementById('viewAsEmail').textContent = email;
+
+  // Fetch their buy box from GHL
+  fetchBuyBoxForUser(email);
+
+  // Navigate to deals to see their view
+  navigateTo('deals');
+}
+
+function exitViewAs() {
+  if (!adminRealUser) return;
+
+  // Restore admin session
+  localStorage.setItem('gycUser', JSON.stringify(adminRealUser));
+  sessionStorage.removeItem('gycAdminRealUser');
+
+  // Restore sidebar
+  const name = adminRealUser.name || 'Admin';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('sidebarName').textContent = name;
+  document.getElementById('sidebarTier').textContent = (adminRealUser.tier || 'explorer').charAt(0).toUpperCase() + (adminRealUser.tier || 'explorer').slice(1);
+
+  // Hide impersonation indicator, show search
+  document.getElementById('viewAsImpersonating').style.display = 'none';
+  document.getElementById('viewAsSearch').style.display = 'block';
+
+  adminRealUser = null;
+
+  // Restore admin's buy box
+  const user = getUser();
+  if (user?.email) fetchBuyBoxForUser(user.email);
+}
+
+async function fetchBuyBoxForUser(email) {
+  try {
+    const resp = await fetch('/api/buybox?email=' + encodeURIComponent(email));
+    const data = await resp.json();
+    if (data.success && data.buyBox) {
+      buyBox = data.buyBox;
+      localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
+    }
+  } catch (e) {
+    console.log('Could not fetch buy box for', email);
+  }
+}
+
 // ========== FEEDBACK SYSTEM ==========
 let feedbackFileData = null;
 
@@ -7458,6 +7635,7 @@ async function submitFeedback() {
 // ========== INIT ==========
 showAdminNav();
 initAuth();
+initViewAs();
 loadDeals(); // Fetches from Airtable, falls back to hardcoded
 initSubscription();
 
