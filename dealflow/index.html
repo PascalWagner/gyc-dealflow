@@ -6912,84 +6912,84 @@ function renderPortfolioInDeals(container, portfolioDeals) {
   const sponsors = new Set(portfolioInvestments.map(i => i.sponsor).filter(Boolean));
   const avgIRR = portfolioInvestments.filter(i => i.targetIRR).reduce((s, i, _, a) => s + parseFloat(i.targetIRR) / a.length, 0);
 
-  let tableRows = portfolioInvestments.map(inv => {
-    const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
-    return `<tr>
-      <td style="font-weight:600;">${inv.investmentName}</td>
-      <td>${inv.sponsor || '---'}</td>
-      <td>${inv.assetClass || '---'}</td>
-      <td>$${Number(inv.amountInvested || 0).toLocaleString()}</td>
-      <td><span style="color:${statusColors[inv.status] || 'var(--text-secondary)'};font-weight:600;">${inv.status || '---'}</span></td>
-      <td>${inv.targetIRR ? inv.targetIRR + '%' : '---'}</td>
-      <td>$${Number(inv.distributionsReceived || 0).toLocaleString()}</td>
-      <td>
-        <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;font-size:12px;padding:2px 6px;">Edit</button>
-        <button onclick="if(confirm('Remove from portfolio?')){deleteInvestment('${inv.id}');renderAll();}" style="background:none;border:none;color:#e74c3c;font-weight:600;cursor:pointer;font-size:12px;padding:2px 6px;">Delete</button>
-      </td>
-    </tr>`;
-  }).join('');
+  const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
 
-  const thStyle = 'padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);white-space:nowrap;';
-  const tdStyle = 'padding:12px 14px;border-top:1px solid var(--border);';
+  let investmentCards = portfolioInvestments.map(inv => {
+    const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(inv.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+    const statusColor = statusColors[inv.status] || 'var(--text-secondary)';
+    const statusBg = inv.status === 'Active' ? 'rgba(81,190,123,0.08)' : inv.status === 'Distributing' ? 'rgba(59,130,246,0.08)' : inv.status === 'Pending' ? 'rgba(245,158,11,0.08)' : 'rgba(0,0,0,0.04)';
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:stretch;">
+        <!-- Left: Colored accent bar -->
+        <div style="width:6px;background:${statusColor};flex-shrink:0;"></div>
+        <!-- Content -->
+        <div style="flex:1;padding:20px 24px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+            <div>
+              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">${inv.investmentName}</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${inv.sponsor || ''}${inv.assetClass ? ' &middot; ' + inv.assetClass : ''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="padding:4px 12px;border-radius:100px;background:${statusBg};font-family:var(--font-ui);font-size:11px;font-weight:700;color:${statusColor};">${inv.status || 'Unknown'}</span>
+              <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Edit</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Invested</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">$${Number(inv.amountInvested || 0).toLocaleString()}</div></div>
+            ${inv.targetIRR ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--green);">${inv.targetIRR}%</div></div>` : ''}
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:${parseFloat(inv.distributionsReceived || 0) > 0 ? 'var(--green)' : 'var(--text-dark)'};">$${Number(inv.distributionsReceived || 0).toLocaleString()}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 
   container.style.display = 'block';
   container.innerHTML = `
-    <div style="max-width:1100px;margin:0 auto;">
+    <div style="margin:0 auto;">
       <!-- Summary Cards Row -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
-          <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${active.length}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${active.length}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
-          <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg IRR</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg IRR</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
         </div>
       </div>
 
+      <!-- Header Row -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
+          <button onclick="navigateTo('portfolio')" style="padding:8px 18px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);">Full Portfolio &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Investment Cards -->
       ${portfolioInvestments.length > 0 ? `
-      <!-- Investments Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
-          <div style="display:flex;gap:8px;">
-            <button onclick="showDealSearchModal()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
-            <button onclick="navigateTo('portfolio')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);">Full Portfolio &rarr;</button>
-          </div>
-        </div>
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr>
-                <th style="${thStyle}">Investment</th>
-                <th style="${thStyle}">Sponsor</th>
-                <th style="${thStyle}">Asset Class</th>
-                <th style="${thStyle}">Amount</th>
-                <th style="${thStyle}">Status</th>
-                <th style="${thStyle}">Target IRR</th>
-                <th style="${thStyle}">Distributions</th>
-                <th style="${thStyle}">Actions</th>
-              </tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-          </table>
-        </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${investmentCards}
       </div>` : `
-      <div style="text-align:center;padding:40px;">
-        <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
-        <button onclick="navigateTo('portfolio')" style="padding:12px 28px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:14px;cursor:pointer;color:var(--text-secondary);margin-left:8px;">Go to Full Portfolio &rarr;</button>
+      <div style="text-align:center;padding:60px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
+        <div style="font-size:40px;opacity:0.25;margin-bottom:12px;">&#128188;</div>
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Add your first investment to start tracking your portfolio.</div>
+        <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Investment</button>
       </div>`}
     </div>
   `;
