@@ -2220,7 +2220,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
 </div>
 
 <script>
-const DEALS = [
+// ========== AIRTABLE INTEGRATION ==========
+const AIRTABLE_DEALS_WEBHOOK = 'https://hook.us2.make.com/DEALS_EXPORT_WEBHOOK'; // TODO: Replace with real webhook
+
+// Hardcoded fallback deals (used if API is unavailable)
+const FALLBACK_DEALS = [
   {id:"rec012",dealNumber:81,investmentName:"COARE 2023 FUND I",assetClass:"RV/Mobile Home Parks",dealType:"Fund",targetIRR:0.1973,equityMultiple:3.05,preferredReturn:0.08,investmentMinimum:250000,lpGpSplit:"70/30",holdPeriod:5,addedDate:"2023-04-08",status:"Open to invest",offeringType:"Unknown",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire a national portfolio of mobile home communities valued at approximately $65 million, increase its value to around $91 million within 5 years, and create a perpetual cash flow stream for investors.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",sponsorInDeal:0.04,ceo:"Hansel Rodriguez",managementCompany:"COARE Capital",fees:["6% of Gross Revenue Management Fee","1.5% Acquisition Fee"],firstYrDepreciation:"120%",strategy:"Value-Add",instrument:"Equity"},
   {id:"rec0UMH",dealNumber:19,investmentName:"PFD Fund V",assetClass:"Business / Other",dealType:"Fund",targetIRR:0.191,preferredReturn:0.08,investmentMinimum:104000,lpGpSplit:"70/30",holdPeriod:10,addedDate:"2023-02-23",status:"Open to invest",investingGeography:"USA",investmentStrategy:"Accessing attractive real estate locations for ATMs, strategically positioning for next generation revenue opportunities through advertising monetization.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Andy Elfers",managementCompany:"The Prestige Fund",strategy:"Value-Add",instrument:"Equity",firstYrDepreciation:"80%-100%"},
   {id:"rec26jk",dealNumber:126,investmentName:"SubTo Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.14,investmentMinimum:100000,lpGpSplit:"90/10",holdPeriod:7,addedDate:"2023-07-17",status:"Open to invest",offeringSize:12000000,investingGeography:"USA",investmentStrategy:"Acquire class B and C multifamily properties in Arizona and similar growth market states within the Sunbelt region.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Cashflow",ceo:"Pace Morby",managementCompany:"SubTo Fund",strategy:"Value-Add",instrument:"Equity"},
@@ -2247,6 +2251,116 @@ const DEALS = [
   {id:"rec532e",dealNumber:776,investmentName:"The Private Credit Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.09,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Private credit fund focused on real estate-backed lending with quarterly distributions.",distributions:"Quarterly",availableTo:"Accredited",ceo:"Tait Duryea",managementCompany:"Alpine Note",strategy:"Lending",instrument:"Preferred Equity",debtPosition:"2nd"},
   {id:"rec62hE",dealNumber:770,investmentName:"Income Plus Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.09,preferredReturn:0.06,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"60% preferred equity portfolio in Class A multifamily, Sunbelt & Mountain West (Colorado/Utah). Debt & equity blend.",distributions:"Monthly",availableTo:"Accredited",ceo:"David Scherer",managementCompany:"Origin Investments",strategy:"Lending",instrument:"Equity",fundAUM:500000000,investingGeography:"Sunbelt & Mountain West"}
 ];
+
+
+let DEALS = [...FALLBACK_DEALS];
+
+// Transform Airtable record to dashboard deal format
+function transformAirtableRecord(rec) {
+  return {
+    id: rec.id || rec.fields?.id || '',
+    dealNumber: rec['Deal #'] || rec.fields?.['Deal #'] || 0,
+    investmentName: rec['Investment Name / Address'] || rec.fields?.['Investment Name / Address'] || '',
+    assetClass: Array.isArray(rec['Asset Class']) ? rec['Asset Class'][0] : (rec['Asset Class'] || rec.fields?.['Asset Class']?.[0] || ''),
+    dealType: rec['Deal Type'] || rec.fields?.['Deal Type'] || '',
+    targetIRR: rec['Target IRR'] || rec.fields?.['Target IRR'] || null,
+    equityMultiple: rec['Equity Multiple'] || rec.fields?.['Equity Multiple'] || null,
+    preferredReturn: rec['Preferred Return'] || rec['Class A - Pref'] || rec.fields?.['Preferred Return'] || null,
+    investmentMinimum: rec['Investment Minimum'] || rec['Class A - Min Investment'] || rec.fields?.['Investment Minimum'] || 0,
+    lpGpSplit: rec['Class A - LP/GP Split'] || rec.fields?.['Class A - LP/GP Split'] || '',
+    holdPeriod: rec['Min Hold Period (Yrs)'] || rec.fields?.['Min Hold Period (Yrs)'] || null,
+    addedDate: rec['Added Date'] || rec.fields?.['Added Date'] || '',
+    status: rec['Status'] || rec.fields?.['Status'] || '',
+    offeringType: rec['Offering Type'] || rec.fields?.['Offering Type'] || '',
+    offeringSize: rec['Offering Size'] || rec.fields?.['Offering Size'] || null,
+    investingGeography: rec['Investing Geography'] || rec.fields?.['Investing Geography'] || '',
+    investmentStrategy: rec['Investment Strategy'] || rec.fields?.['Investment Strategy'] || '',
+    distributions: Array.isArray(rec['Distributions']) ? rec['Distributions'][0] : (rec['Distributions'] || ''),
+    financials: rec['Financials'] || rec.fields?.['Financials'] || '',
+    availableTo: Array.isArray(rec['Available To']) ? rec['Available To'][0] : (rec['Available To'] || ''),
+    investmentObjective: Array.isArray(rec['Investment Objective']) ? rec['Investment Objective'][0] : (rec['Investment Objective'] || ''),
+    sponsorInDeal: rec['% Sponsor In The Deal'] || rec.fields?.['% Sponsor In The Deal'] || null,
+    ceo: Array.isArray(rec['CEO (from Management Company)']) ? rec['CEO (from Management Company)'][0] : (rec['CEO (from Management Company)'] || ''),
+    managementCompany: rec['_managementCompanyName'] || '', // Resolved by webhook
+    fees: rec['Fees'] || rec.fields?.['Fees'] || [],
+    firstYrDepreciation: rec['1st Yr Depreciation'] || rec.fields?.['1st Yr Depreciation'] || '',
+    strategy: rec['Strategy'] || rec.fields?.['Strategy'] || '',
+    instrument: rec['Instrument'] || rec.fields?.['Instrument'] || '',
+    cashOnCash: rec['Cash on Cash Return'] || rec.fields?.['Cash on Cash Return'] || null,
+    debtPosition: rec['Debt Position'] || rec.fields?.['Debt Position'] || '',
+    fundAUM: rec['Fund AUM'] || rec.fields?.['Fund AUM'] || null,
+    loanCount: rec['Loan Count'] || rec.fields?.['Loan Count'] || null,
+    avgLoanLTV: rec['Avg Loan LTV'] || rec.fields?.['Avg Loan LTV'] || null,
+    location: rec['Location'] || rec.fields?.['Location'] || ''
+  };
+}
+
+// Fetch deals from Airtable via webhook
+async function fetchDealsFromAirtable() {
+  try {
+    const resp = await fetch(AIRTABLE_DEALS_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getAllDeals' })
+    });
+    if (!resp.ok) throw new Error('Webhook returned ' + resp.status);
+    const data = await resp.json();
+    if (Array.isArray(data) && data.length > 0) {
+      // Check if data is already in dashboard format or needs transformation
+      const first = data[0];
+      if (first.investmentName) {
+        // Already transformed
+        return data;
+      } else if (first['Investment Name / Address'] || first.fields) {
+        // Raw Airtable format — transform
+        return data.map(transformAirtableRecord).filter(d => d.investmentName);
+      }
+    }
+    throw new Error('Invalid response format');
+  } catch (e) {
+    console.warn('Airtable fetch failed, using fallback deals:', e.message);
+    return null; // Will use FALLBACK_DEALS
+  }
+}
+
+// Load deals on startup
+async function loadDeals() {
+  const cached = sessionStorage.getItem('gycDealsCache');
+  const cacheTime = sessionStorage.getItem('gycDealsCacheTime');
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  // Use cache if fresh
+  if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
+    try {
+      DEALS = JSON.parse(cached);
+      console.log('Loaded ' + DEALS.length + ' deals from cache');
+      updateDealCount();
+      renderAll();
+      return;
+    } catch (e) { /* fall through */ }
+  }
+
+  // Show loading state
+  const grid = document.getElementById('cardGrid');
+  if (grid) grid.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deals from database...</div>';
+
+  const freshDeals = await fetchDealsFromAirtable();
+  if (freshDeals && freshDeals.length > 0) {
+    DEALS = freshDeals;
+    sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS));
+    sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
+    console.log('Loaded ' + DEALS.length + ' deals from Airtable');
+  } else {
+    console.log('Using ' + DEALS.length + ' fallback deals');
+  }
+  updateDealCount();
+  renderAll();
+}
+
+function updateDealCount() {
+  const badge = document.querySelector('.nav-badge');
+  if (badge) badge.textContent = DEALS.length;
+}
 
 // Load saved deals from localStorage
 let savedDeals = new Set(JSON.parse(localStorage.getItem('gycSavedDeals') || '[]'));
@@ -3801,7 +3915,7 @@ toggleSave = function(id) {
 
 // ========== INIT ==========
 initAuth();
-renderAll();
+loadDeals(); // Fetches from Airtable, falls back to hardcoded
 initSubscription();
 
 // Handle #onboarding hash from signup
