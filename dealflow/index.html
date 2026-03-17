@@ -2962,7 +2962,9 @@ function initAuth() {
   const userEl = document.getElementById('sidebarUser');
   if (user && user.email) {
     userEl.style.display = 'flex';
-    const name = user.name || user.email.split('@')[0];
+    let name = user.name || ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.email.split('@')[0];
+    // Capitalize each word
+    name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     document.getElementById('sidebarAvatar').textContent = initials;
     document.getElementById('sidebarName').textContent = name;
