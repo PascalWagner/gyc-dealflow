@@ -264,9 +264,9 @@ body {
 }
 
 .topbar-tab {
-  padding: 6px 16px;
+  padding: 6px 12px;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
@@ -276,6 +276,7 @@ body {
   background: none;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .topbar-tab:hover { color: var(--text-dark); }
 .topbar-tab.active {
@@ -1016,19 +1017,76 @@ html.dark .card-match-badge.red { background: #2E1515; }
 .empty-state-text { font-size: 16px; font-weight: 600; color: var(--text-muted); }
 .empty-state-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
-/* Saved state */
-.saved-badge {
+/* Deal stage selector on cards */
+.deal-stage-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: color var(--transition);
+  top: 10px;
+  right: 10px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  transition: all var(--transition);
 }
-.saved-badge:hover { color: var(--primary); }
-.saved-badge.saved { color: var(--primary); }
-.saved-badge svg { width: 20px; height: 20px; }
+.deal-stage-btn:hover { background: rgba(0,0,0,0.55); }
+.deal-stage-btn svg { width: 12px; height: 12px; }
+.deal-stage-btn.stage-interested { background: rgba(59,130,246,0.8); border-color: rgba(59,130,246,0.5); }
+.deal-stage-btn.stage-duediligence { background: rgba(245,158,11,0.8); border-color: rgba(245,158,11,0.5); }
+.deal-stage-btn.stage-portfolio { background: rgba(81,190,123,0.8); border-color: rgba(81,190,123,0.5); }
+
+/* Stage dropdown menu */
+.stage-dropdown {
+  position: absolute;
+  top: 38px;
+  right: 10px;
+  z-index: 10;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  min-width: 160px;
+  overflow: hidden;
+}
+.stage-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  transition: background var(--transition);
+}
+.stage-dropdown-item:hover { background: var(--bg-main); }
+.stage-dropdown-item.active { color: var(--primary); font-weight: 700; }
+.stage-dropdown-item .stage-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.stage-dot-new { background: var(--text-muted); }
+.stage-dot-interested { background: #3b82f6; }
+.stage-dot-duediligence { background: #f59e0b; }
+.stage-dot-portfolio { background: var(--primary); }
+
+/* Legacy compat */
+.saved-badge { display: none; }
 
 /* Table View */
 .table-view {
@@ -2008,9 +2066,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Live Deals</div>
-      <div class="topbar-tabs">
-        <button class="topbar-tab active" data-tab="explore" onclick="switchTab(this)">Explore</button>
-        <button class="topbar-tab" data-tab="saved" onclick="switchTab(this)">Saved</button>
+      <div class="topbar-tabs" id="dealWorkflowTabs">
+        <button class="topbar-tab active" data-tab="new" onclick="switchTab(this)">New Deals</button>
+        <button class="topbar-tab" data-tab="interested" onclick="switchTab(this)">Interested</button>
+        <button class="topbar-tab" data-tab="duediligence" onclick="switchTab(this)">Due Diligence</button>
+        <button class="topbar-tab" data-tab="portfolio" onclick="switchTab(this)">My Portfolio</button>
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-view-toggle">
@@ -2922,7 +2982,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </button>
       <div class="topbar-title">My Portfolio</div>
       <div class="topbar-spacer"></div>
-      <button onclick="showAddInvestmentModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
+      <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
     </div>
     <div class="content-area" style="padding:24px;max-width:1200px;">
       <div id="portfolioSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
@@ -2958,7 +3018,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
         <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);margin-bottom:20px;">Track your LP investments, distributions, and portfolio allocation all in one place.</div>
-        <button onclick="showAddInvestmentModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
+        <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
       </div>
     </div>
   </div>
@@ -3174,9 +3234,25 @@ function updateDealCount() {
   if (badge) badge.textContent = DEALS.length;
 }
 
-// Load saved deals from localStorage
-let savedDeals = new Set(JSON.parse(localStorage.getItem('gycSavedDeals') || '[]'));
-let currentTab = 'explore';
+// Deal vetting workflow stages
+// Stages: 'new' (default/no stage), 'interested', 'duediligence', 'portfolio'
+let dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+function saveDealStages() { localStorage.setItem('gycDealStages', JSON.stringify(dealStages)); }
+function getDealStage(id) { return dealStages[id] || 'new'; }
+function setDealStage(id, stage) {
+  if (stage === 'new') { delete dealStages[id]; }
+  else { dealStages[id] = stage; }
+  saveDealStages();
+}
+// Migrate old savedDeals → interested
+const _oldSaved = JSON.parse(localStorage.getItem('gycSavedDeals') || '[]');
+if (_oldSaved.length > 0) {
+  _oldSaved.forEach(id => { if (!dealStages[id]) dealStages[id] = 'interested'; });
+  saveDealStages();
+  localStorage.removeItem('gycSavedDeals');
+}
+let savedDeals = { has(id) { return dealStages[id] && dealStages[id] !== 'new'; }, add(id) { setDealStage(id, 'interested'); }, delete(id) { setDealStage(id, 'new'); } };
+let currentTab = 'new';
 let currentView = 'grid';
 let tableSortCol = null;
 let tableSortAsc = true;
@@ -3221,9 +3297,23 @@ function statusPillClass(status) {
   return '';
 }
 
+function stageLabel(stage) {
+  return { new: 'New', interested: 'Interested', duediligence: 'Due Diligence', portfolio: 'Portfolio' }[stage] || 'New';
+}
+function stageBtnClass(stage) {
+  if (stage === 'interested') return 'stage-interested';
+  if (stage === 'duediligence') return 'stage-duediligence';
+  if (stage === 'portfolio') return 'stage-portfolio';
+  return '';
+}
+function renderStageBtn(dealId) {
+  const stage = getDealStage(dealId);
+  const chevron = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>';
+  return `<button class="deal-stage-btn ${stageBtnClass(stage)}" onclick="event.stopPropagation(); toggleStageDropdown('${dealId}', this)">${stageLabel(stage)} ${chevron}</button>`;
+}
+
 function renderCard(deal) {
   const badge = matchBadgeInfo(deal);
-  const isSaved = savedDeals.has(deal.id);
   const statusCls = statusPillClass(deal.status);
   const checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const warnSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5"/></svg>';
@@ -3231,9 +3321,7 @@ function renderCard(deal) {
   return `
     <div class="deal-card" data-id="${deal.id}">
       <div class="card-header" style="position:relative">
-        <span class="saved-badge ${isSaved ? 'saved' : ''}" onclick="event.stopPropagation(); toggleSave('${deal.id}')">
-          <svg viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        </span>
+        ${renderStageBtn(deal.id)}
         <div class="card-badges">
           <div class="card-match-badge ${badge.cls}">
             ${badge.cls === 'green' ? checkSvg : warnSvg}
@@ -3312,6 +3400,14 @@ function renderPanel(deal) {
     `;
   }
 
+  const panelStage = getDealStage(deal.id);
+  const panelStageOptions = [
+    { value: 'new', label: 'New', color: 'var(--text-muted)' },
+    { value: 'interested', label: 'Interested', color: '#3b82f6' },
+    { value: 'duediligence', label: 'Due Diligence', color: '#f59e0b' },
+    { value: 'portfolio', label: 'My Portfolio', color: 'var(--primary)' }
+  ];
+
   return `
     <div class="panel-banner">
       <div class="panel-company-name"><a href="#" onclick="closePanel();navigateTo('deals');setTimeout(()=>{const s=document.getElementById('filterSearch');if(s){s.value='${(deal.managementCompany||'').replace(/'/g,"\\'")}';s.dispatchEvent(new Event('input'));}},100);return false;" style="color:inherit;text-decoration:underline;cursor:pointer;">${deal.managementCompany}</a></div>
@@ -3321,7 +3417,15 @@ function renderPanel(deal) {
         ${deal.status ? `<span class="panel-status-pill ${statusCls}">${deal.status}</span>` : ''}
       </div>
     </div>
-    <div class="panel-body">
+    <div class="panel-body" data-panel-deal-id="${deal.id}">
+      <div style="margin-bottom:16px;">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Vetting Stage</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${panelStageOptions.map(s => `
+            <button onclick="changeDealStage('${deal.id}', '${s.value}')" style="padding:6px 14px;border-radius:20px;font-family:var(--font-ui);font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid ${panelStage === s.value ? s.color : 'var(--border)'};background:${panelStage === s.value ? s.color : 'transparent'};color:${panelStage === s.value ? '#fff' : 'var(--text-secondary)'};transition:all var(--transition);">${s.label}</button>
+          `).join('')}
+        </div>
+      </div>
       <div class="panel-section">
         <div class="panel-section-title">Overview</div>
         <div class="panel-overview-text">${deal.investmentStrategy || 'No description available.'}</div>
@@ -3439,7 +3543,20 @@ function getFilteredDeals() {
       const haystack = [d.investmentName, d.managementCompany, d.assetClass, d.ceo, d.location || '', d.investmentStrategy || ''].join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
     }
-    if (currentTab === 'saved' && !savedDeals.has(d.id)) return false;
+    // Filter by workflow stage tab
+    if (currentTab === 'new') {
+      // "New Deals" shows deals user hasn't categorized yet
+      if (dealStages[d.id]) return false;
+    } else if (currentTab === 'interested') {
+      if (getDealStage(d.id) !== 'interested') return false;
+    } else if (currentTab === 'duediligence') {
+      if (getDealStage(d.id) !== 'duediligence') return false;
+    } else if (currentTab === 'portfolio') {
+      if (getDealStage(d.id) !== 'portfolio') return false;
+    } else if (currentTab === 'saved') {
+      // Legacy compat
+      if (!savedDeals.has(d.id)) return false;
+    }
     return true;
   });
 
@@ -3543,11 +3660,36 @@ function renderTable(deals) {
   });
 }
 
+function updateTabCounts() {
+  if (!DEALS || !DEALS.length) return;
+  const counts = { new: 0, interested: 0, duediligence: 0, portfolio: 0 };
+  DEALS.forEach(d => {
+    const stage = getDealStage(d.id);
+    if (stage === 'new' || !stage) counts.new++;
+    else counts[stage] = (counts[stage] || 0) + 1;
+  });
+  document.querySelectorAll('#dealWorkflowTabs .topbar-tab').forEach(tab => {
+    const t = tab.dataset.tab;
+    const countSpan = tab.querySelector('.tab-count');
+    const count = counts[t] || 0;
+    if (t === 'new') {
+      // Don't show count for new deals (it's the default)
+      if (countSpan) countSpan.remove();
+    } else if (count > 0) {
+      if (countSpan) countSpan.textContent = count;
+      else tab.insertAdjacentHTML('beforeend', ` <span class="tab-count" style="background:rgba(255,255,255,0.25);padding:1px 6px;border-radius:10px;font-size:10px;margin-left:2px;">${count}</span>`);
+    } else {
+      if (countSpan) countSpan.remove();
+    }
+  });
+}
+
 function renderAll() {
   const deals = getFilteredDeals();
   document.getElementById('visibleCount').textContent = deals.length;
   document.getElementById('dealCountBadge').textContent = DEALS.length;
   updateStats(deals);
+  updateTabCounts();
 
   const grid = document.getElementById('cardGrid');
   const table = document.getElementById('tableView');
@@ -3837,10 +3979,78 @@ function renderMapView() {
 }
 
 function toggleSave(id) {
-  if (savedDeals.has(id)) savedDeals.delete(id);
-  else savedDeals.add(id);
-  localStorage.setItem('gycSavedDeals', JSON.stringify([...savedDeals]));
+  // Legacy compat — toggle between new and interested
+  if (getDealStage(id) !== 'new') setDealStage(id, 'new');
+  else setDealStage(id, 'interested');
   renderAll();
+}
+
+function toggleStageDropdown(dealId, btn) {
+  // Close any existing dropdowns
+  document.querySelectorAll('.stage-dropdown').forEach(d => d.remove());
+  const card = btn.closest('.deal-card') || btn.closest('.panel-body');
+  const stages = ['new', 'interested', 'duediligence', 'portfolio'];
+  const current = getDealStage(dealId);
+  const dd = document.createElement('div');
+  dd.className = 'stage-dropdown';
+  dd.innerHTML = stages.map(s => `
+    <button class="stage-dropdown-item ${current === s ? 'active' : ''}" onclick="event.stopPropagation(); changeDealStage('${dealId}', '${s}')">
+      <span class="stage-dot stage-dot-${s}"></span>
+      ${stageLabel(s)}
+    </button>
+  `).join('');
+  btn.parentElement.appendChild(dd);
+  // Close on outside click
+  setTimeout(() => {
+    const closer = function(e) {
+      if (!dd.contains(e.target) && e.target !== btn) {
+        dd.remove();
+        document.removeEventListener('click', closer, true);
+      }
+    };
+    document.addEventListener('click', closer, true);
+  }, 10);
+}
+
+function changeDealStage(dealId, newStage) {
+  const oldStage = getDealStage(dealId);
+  document.querySelectorAll('.stage-dropdown').forEach(d => d.remove());
+
+  if (newStage === 'portfolio' && oldStage !== 'portfolio') {
+    // Moving to portfolio — open the add-to-portfolio modal pre-filled with deal data
+    const deal = DEALS.find(d => d.id === dealId);
+    if (deal) {
+      // Check if already in portfolio investments
+      const existing = portfolioInvestments.find(i => i.dealId === dealId);
+      if (!existing) {
+        setDealStage(dealId, newStage);
+        showAddInvestmentModal(null, deal, dealId);
+        return;
+      }
+    }
+  }
+
+  setDealStage(dealId, newStage);
+
+  // If moving OUT of portfolio, optionally remove from portfolio investments
+  if (oldStage === 'portfolio' && newStage !== 'portfolio') {
+    const idx = portfolioInvestments.findIndex(i => i.dealId === dealId);
+    if (idx >= 0) {
+      portfolioInvestments.splice(idx, 1);
+      savePortfolio();
+    }
+  }
+
+  renderAll();
+  // Re-render panel if open
+  const panel = document.getElementById('detailPanel');
+  if (panel && panel.classList.contains('open')) {
+    const panelDealId = panel.querySelector('[data-panel-deal-id]');
+    if (panelDealId && panelDealId.dataset.panelDealId === dealId) {
+      const deal = DEALS.find(d => d.id === dealId);
+      if (deal) document.getElementById('panelContent').innerHTML = renderPanel(deal);
+    }
+  }
 }
 
 function openPanel(id) {
@@ -5599,7 +5809,64 @@ function sortPortfolioTable(col) {
   renderPortfolioTable();
 }
 
-function showAddInvestmentModal(editId, prefillDeal) {
+function showDealSearchModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'dealSearchModal';
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+  const deals = (typeof DEALS !== 'undefined' ? DEALS : []);
+  overlay.innerHTML = `<div class="modal-card" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">Add to Portfolio</div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">Search for an existing deal or add a custom investment.</p>
+    <input type="text" id="dealSearchInput" placeholder="Search deals by name or sponsor..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:14px;margin-bottom:12px;box-sizing:border-box;" oninput="filterDealSearchResults()">
+    <div id="dealSearchResults" style="max-height:280px;overflow-y:auto;margin-bottom:16px;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;text-align:center;">
+      <button onclick="closeModal(); showAddInvestmentModal();" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">+ Add Custom Investment (Not in Database)</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('dealSearchInput').focus();
+  filterDealSearchResults();
+}
+
+function filterDealSearchResults() {
+  const q = (document.getElementById('dealSearchInput').value || '').toLowerCase();
+  const deals = (typeof DEALS !== 'undefined' ? DEALS : []);
+  const results = document.getElementById('dealSearchResults');
+  if (!results) return;
+
+  const matched = deals.filter(d => {
+    if (!q) return false;
+    const hay = [d.investmentName, d.managementCompany, d.assetClass, d.ceo].join(' ').toLowerCase();
+    return hay.includes(q);
+  }).slice(0, 10);
+
+  if (!q) {
+    results.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Type to search deals...</div>';
+    return;
+  }
+
+  if (matched.length === 0) {
+    results.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No deals found. Use "Add Custom Investment" below.</div>';
+    return;
+  }
+
+  results.innerHTML = matched.map(d => {
+    const alreadyInPortfolio = portfolioInvestments.some(i => i.dealId === d.id);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:background var(--transition);${alreadyInPortfolio ? 'opacity:0.5;' : ''}" ${alreadyInPortfolio ? '' : `onclick="closeModal(); showAddInvestmentModal(null, DEALS.find(d=>d.id==='${d.id}'), '${d.id}')"`}>
+      <div>
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">${d.investmentName}</div>
+        <div style="font-size:11px;color:var(--text-secondary);">${d.managementCompany} &middot; ${d.assetClass}</div>
+      </div>
+      <div style="font-size:11px;color:${alreadyInPortfolio ? 'var(--primary)' : 'var(--text-muted)'};font-weight:600;">${alreadyInPortfolio ? 'Already Added' : 'Select &rarr;'}</div>
+    </div>`;
+  }).join('');
+}
+
+function showAddInvestmentModal(editId, prefillDeal, linkDealId) {
   const existing = editId ? portfolioInvestments.find(i => i.id === editId) : null;
   const pf = prefillDeal || {};
   const v = existing || {
@@ -5643,15 +5910,16 @@ function showAddInvestmentModal(editId, prefillDeal) {
     </div>
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
       <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
-      <button onclick="saveInvestmentFromModal('${editId || ''}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">${existing ? 'Save Changes' : 'Add Investment'}</button>
+      <button onclick="saveInvestmentFromModal('${editId || ''}', '${linkDealId || ''}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">${existing ? 'Save Changes' : 'Add Investment'}</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
 }
 
-function saveInvestmentFromModal(editId) {
+function saveInvestmentFromModal(editId, linkDealId) {
   const data = {
     id: editId || 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    dealId: linkDealId || '',
     investmentName: document.getElementById('modalInvestmentName').value,
     sponsor: document.getElementById('modalSponsor').value,
     assetClass: document.getElementById('modalAssetClass').value,
@@ -5672,9 +5940,14 @@ function saveInvestmentFromModal(editId) {
   } else {
     portfolioInvestments.push(data);
   }
+  // If linked to a deal, set its stage to portfolio
+  if (linkDealId) {
+    setDealStage(linkDealId, 'portfolio');
+  }
   savePortfolio();
   closeModal();
   renderPortfolio();
+  renderAll(); // refresh deal cards with updated stages
 }
 
 function deleteInvestment(id) {
