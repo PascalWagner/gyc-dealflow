@@ -1222,19 +1222,22 @@ const FALLBACK_DATA = {
 
 const WEBHOOK_URL = 'https://hook.us2.make.com/SPONSOR_DATA_WEBHOOK';
 
-// ========== GET SPONSOR ID ==========
-function getSponsorId() {
+// ========== GET SPONSOR PARAMS ==========
+function getSponsorParams() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('id') || FALLBACK_DATA.sponsor.id;
+  const id = params.get('id');
+  const company = params.get('company');
+  return { id, company };
 }
 
 // ========== FETCH SPONSOR DATA ==========
-async function fetchSponsorData(sponsorId) {
+async function fetchSponsorData(params) {
   try {
+    const body = params.id ? { sponsorId: params.id } : { companyName: params.company };
     const resp = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sponsorId })
+      body: JSON.stringify(body)
     });
     if (!resp.ok) throw new Error('Webhook failed');
     const data = await resp.json();
@@ -1481,7 +1484,8 @@ function handleGetIntroduced() {
 }
 
 function saveNotes() {
-  const sponsorId = getSponsorId();
+  const params = getSponsorParams();
+  const sponsorId = params.id || params.company || 'unknown';
   const text = document.getElementById('myNotes').value;
   const timestamp = new Date().toISOString();
   localStorage.setItem('gycSponsorNotes_' + sponsorId, JSON.stringify({ text, timestamp }));
@@ -1499,8 +1503,8 @@ function saveNotes() {
 // ========== BOOT ==========
 async function init() {
   initAuth();
-  const sponsorId = getSponsorId();
-  const data = await fetchSponsorData(sponsorId);
+  const params = getSponsorParams();
+  const data = await fetchSponsorData(params);
   renderSponsor(data);
 }
 

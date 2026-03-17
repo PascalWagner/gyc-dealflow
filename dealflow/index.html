@@ -2792,7 +2792,7 @@ function renderGPs() {
     const initials = (gp.name || 'N/A').split(' ').map(n => n[0]).join('');
     const avgIRR = gp.deals.filter(d => d.targetIRR).reduce((s, d, _, a) => s + d.targetIRR / a.length, 0);
     const tags = [...gp.assetClasses].slice(0, 3);
-    return `<div class="gp-card" onclick="openPanel('${gp.deals[0].id}')">
+    return `<div class="gp-card" onclick="window.location.href='sponsor.html?company='+encodeURIComponent('${gp.company}')">
       <div class="gp-avatar">${initials}</div>
       <div class="gp-name">${gp.name || 'Unknown'}</div>
       <div class="gp-company">${gp.company}</div>
