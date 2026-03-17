@@ -8081,17 +8081,17 @@ function renderSchemaPage() {
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Tables</div>
         <div style="font-size:24px;font-weight:800;color:var(--text-dark);">10</div>
-        <div style="font-size:10px;color:var(--text-muted);">3 backend, 7 local</div>
+        <div style="font-size:10px;color:var(--text-muted);">7 backend, 3 local</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">Persistent</div>
-        <div style="font-size:24px;font-weight:800;color:#51BE7B);">3</div>
-        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies, Auth</div>
+        <div style="font-size:24px;font-weight:800;color:#51BE7B;">7</div>
+        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies, Auth + 4 User Tables</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:4px;">localStorage Only</div>
-        <div style="font-size:24px;font-weight:800;color:#f59e0b;">7</div>
-        <div style="font-size:10px;color:var(--text-muted);">Will be lost on cache clear</div>
+        <div style="font-size:24px;font-weight:800;color:#f59e0b;">3</div>
+        <div style="font-size:10px;color:var(--text-muted);">User Deals, Analytics, Wizard</div>
       </div>
     </div>
 
@@ -8129,40 +8129,47 @@ function renderSchemaPage() {
       { name: '+ 18 more fields', type: '...', example: 'Check size, lockup, instruments, etc.' }
     ], 'Per contact')}
 
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:12px;margin-top:32px;padding-left:4px;">localStorage Only (Not Yet Synced)</div>
-
-    ${tableCard('Deal Vetting Stages', 'localStorage', 'localStorage · gycDealStages', [
-      { name: 'Deal ID', type: 'text (key)', example: Object.keys(stages)[0] || '—' },
+    ${tableCard('User Deal Stages', 'persistent', 'Airtable · tbl0g5yms16Qi2h5I + localStorage', [
+      { name: 'Email', type: 'email', example: user?.email || '—' },
+      { name: 'Deal ID', type: 'text', example: Object.keys(stages)[0] || '—' },
       { name: 'Stage', type: 'enum', example: 'new / interested / duediligence / portfolio / passed' },
-      { name: 'Deals Staged', type: 'count', example: stageCount + ' deals have stages set' }
+      { name: 'Notes', type: 'long text', example: '—' },
+      { name: 'Updated At', type: 'datetime', example: '—' }
     ], stageCount)}
 
-    ${tableCard('User Portfolio', 'localStorage', 'localStorage · gycPortfolio', [
+    ${tableCard('User Portfolio', 'persistent', 'Airtable · tblK0Jb6yrxHSf1Y6 + localStorage', [
+      { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Investment Name', type: 'text', example: portfolio[0]?.investmentName || '—' },
       { name: 'Sponsor', type: 'text', example: portfolio[0]?.sponsor || '—' },
       { name: 'Amount Invested', type: 'currency', example: portfolio[0]?.amountInvested ? '$' + parseFloat(portfolio[0].amountInvested).toLocaleString() : '—' },
       { name: 'Date Invested', type: 'date', example: portfolio[0]?.dateInvested || '—' },
       { name: 'Status', type: 'enum', example: 'Active / Exited / Pending / Distributing' },
       { name: 'Distributions Received', type: 'currency', example: '—' },
-      { name: '+ 5 more fields', type: '...', example: 'Entity, target IRR, notes, etc.' }
+      { name: '+ 8 more fields', type: '...', example: 'Entity, target IRR, notes, asset class, etc.' }
     ], portfolio.length)}
 
-    ${tableCard('Investment Goals', 'localStorage', 'localStorage · gycGoals', [
+    ${tableCard('User Goals', 'persistent', 'Airtable · tblWkUZWhHkuG2waP + localStorage', [
+      { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Goal Type', type: 'enum', example: goals?.type || '—' },
       { name: 'Current Income', type: 'currency', example: goals ? '$' + (goals.currentIncome || 0).toLocaleString() : '—' },
       { name: 'Target Income', type: 'currency', example: goals ? '$' + goals.targetIncome.toLocaleString() : '—' },
       { name: 'Capital Available', type: 'currency', example: goals ? '$' + goals.capital.toLocaleString() : '—' },
       { name: 'Timeline', type: 'number (years)', example: goals?.timeline || '—' },
-      { name: 'Tax Reduction', type: 'currency', example: goals ? '$' + (goals.taxReduction || 0).toLocaleString() : '—' }
+      { name: 'Tax Reduction', type: 'currency', example: goals ? '$' + (goals.taxReduction || 0).toLocaleString() : '—' },
+      { name: 'Updated At', type: 'datetime', example: '—' }
     ], goals ? 1 : 0)}
 
-    ${tableCard('Tax Documents', 'localStorage', 'localStorage · gycTaxDocs', [
+    ${tableCard('User Tax Docs', 'persistent', 'Airtable · tblQZllNS7B9DmW83 + localStorage', [
+      { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Tax Year', type: 'number', example: taxDocs[0]?.taxYear || '—' },
       { name: 'Investment Name', type: 'text', example: taxDocs[0]?.investmentName || '—' },
       { name: 'Form Type', type: 'enum', example: 'K-1 / 1099-INT' },
       { name: 'Upload Status', type: 'enum', example: 'Pending / Received' },
-      { name: '+ 9 more fields', type: '...', example: 'Entity, portal URL, contact info, etc.' }
+      { name: 'Entity Invested Into', type: 'text', example: '—' },
+      { name: '+ 9 more fields', type: '...', example: 'Portal URL, contact info, notes, etc.' }
     ], taxDocs.length)}
+
+    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:12px;margin-top:32px;padding-left:4px;">localStorage Only (Not Yet Synced)</div>
 
     ${tableCard('User Submitted Deals', 'localStorage', 'localStorage · gycUserDeals', [
       { name: 'Investment Name', type: 'text', example: userDeals[0]?.investmentName || '—' },
@@ -8186,11 +8193,11 @@ function renderSchemaPage() {
       { name: '+ 20 more fields', type: '...', example: 'Synced to GHL on save' }
     ], Object.keys(wizardData).length > 0 ? 1 : 0)}
 
-    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:20px;margin-top:16px;">
-      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#dc2626;margin-bottom:8px;">Migration Status</div>
-      <div style="font-size:13px;color:#991b1b;line-height:1.8;">
-        <strong>7 tables</strong> are stored in localStorage only and will be lost if the user clears their browser cache or switches devices.<br>
-        <strong>Action needed:</strong> Create Airtable tables for User Deal Stages, User Portfolio, User Goals, User Tax Docs, and User Submitted Deals, then build sync endpoints to persist this data.
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);padding:20px;margin-top:16px;">
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px;">Migration Status</div>
+      <div style="font-size:13px;color:#166534;line-height:1.8;">
+        <strong>7 of 10 tables</strong> are now synced to persistent backends (Airtable + GHL). User data persists across devices and browser clears.<br>
+        <strong>3 remaining localStorage tables:</strong> User Submitted Deals, Analytics Events, and Buy Box Wizard Data. These are lower priority — Wizard data already syncs to GHL on save.
       </div>
     </div>
   `;
