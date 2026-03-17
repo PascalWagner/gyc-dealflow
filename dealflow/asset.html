@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property History - GYC Dealflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --primary-light: #32C583;
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0A1E21;
+  --bg-sidebar-hover: #14333A;
+  --bg-sidebar-active: #1F5159;
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --text-sidebar: rgba(255,255,255,0.55);
+  --text-sidebar-active: #FFFFFF;
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-width: 240px;
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --orange: #CF7A30;
+  --orange-bg: #FFF3E6;
+  --red: #D04040;
+  --blue: #2563EB;
+  --blue-bg: #EFF6FF;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --mint-bg: #E7F5F0;
+  --off-white: #FAF9F5;
+  --charcoal: #141413;
+  --slate: #607179;
+  --transition: 0.2s ease;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+  --purple: #7C3AED;
+  --purple-bg: #F3E8FF;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ====== SIDEBAR ====== */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-logo {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar-logo-icon {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: -0.5px;
+}
+
+.sidebar-logo-text {
+  font-family: var(--font-headline);
+  font-size: 18px;
+  font-weight: 400;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.nav-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
+}
+.nav-back:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-back svg { width: 16px; height: 16px; }
+
+.nav-section-label {
+  padding: 16px 24px 8px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.3);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--text-sidebar);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  text-decoration: none;
+}
+
+.nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-item.active {
+  background: var(--bg-sidebar-active);
+  color: var(--text-sidebar-active);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+}
+
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.sidebar-user {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-user-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-tier {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-logout {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.sidebar-logout:hover { color: #fff; }
+.sidebar-logout svg { width: 16px; height: 16px; }
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ====== MAIN CONTENT ====== */
+.main {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dark);
+  padding: 4px;
+}
+.mobile-menu-btn svg { width: 24px; height: 24px; }
+
+.mobile-topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  height: 56px;
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  z-index: 50;
+}
+
+.mobile-topbar-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+/* ====== CONTENT AREA ====== */
+.content-wrap {
+  max-width: 1200px;
+  padding: 32px 40px 64px;
+  margin: 0 auto;
+}
+
+/* ====== LOADING SKELETON ====== */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-light);
+  border-radius: var(--radius);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.skeleton-header { height: 160px; margin-bottom: 20px; }
+.skeleton-stats { height: 80px; margin-bottom: 20px; }
+.skeleton-card { height: 200px; margin-bottom: 20px; }
+
+.loading-wrap { display: block; }
+.loaded-wrap { display: none; }
+
+/* ====== PROPERTY HEADER ====== */
+.property-header {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.property-header-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.property-icon {
+  width: 72px; height: 72px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--teal-deep), var(--teal-midnight));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.property-icon svg {
+  width: 36px; height: 36px;
+  color: var(--accent-green);
+}
+
+.property-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.property-name {
+  font-family: var(--font-headline);
+  font-size: 32px;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.property-address {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.property-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.property-tag {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.property-tag.asset-class {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.property-tag.location-tag {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.property-tag.status-active {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.property-tag.status-closed {
+  background: var(--orange-bg);
+  color: var(--orange);
+}
+
+/* ====== STATS STRIP ====== */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.stat-item {
+  background: var(--bg-card);
+  padding: 20px 24px;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: var(--font-ui);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ====== DISCLAIMER BANNER ====== */
+.disclaimer-banner {
+  background: var(--orange-bg);
+  border: 1px solid rgba(207,122,48,0.2);
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--orange);
+  font-weight: 500;
+}
+
+.disclaimer-banner .icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* ====== SECTION CARDS ====== */
+.section-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.section-title {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.section-badge {
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.section-body {
+  padding: 24px;
+}
+
+/* ====== PRICE HISTORY TIMELINE ====== */
+.timeline {
+  position: relative;
+  padding-left: 40px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--border);
+}
+
+.timeline-event {
+  position: relative;
+  padding-bottom: 32px;
+}
+
+.timeline-event:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -40px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 3px solid;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+.timeline-dot.listed { border-color: var(--blue); }
+.timeline-dot.sold { border-color: var(--green); }
+.timeline-dot.refinanced { border-color: var(--purple); }
+.timeline-dot.offering { border-color: var(--orange); }
+
+.timeline-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.timeline-dot.listed::after { background: var(--blue); }
+.timeline-dot.sold::after { background: var(--green); }
+.timeline-dot.refinanced::after { background: var(--purple); }
+.timeline-dot.offering::after { background: var(--orange); }
+
+.timeline-date {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.timeline-type {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.timeline-type.listed { background: var(--blue-bg); color: var(--blue); }
+.timeline-type.sold { background: var(--green-bg); color: var(--green); }
+.timeline-type.refinanced { background: var(--purple-bg); color: var(--purple); }
+.timeline-type.offering { background: var(--orange-bg); color: var(--orange); }
+
+.timeline-detail {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text-dark);
+  line-height: 1.6;
+}
+
+.timeline-detail strong {
+  font-weight: 600;
+}
+
+.timeline-price {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 4px 0;
+}
+
+.timeline-sponsor-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+.timeline-sponsor-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* ====== VALUATION CHART ====== */
+.valuation-chart-wrap {
+  position: relative;
+  width: 100%;
+  max-height: 340px;
+}
+.valuation-chart-wrap canvas {
+  width: 100% !important;
+  max-height: 320px;
+}
+.chart-subtitle {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.chart-subtitle .positive { color: var(--green); font-weight: 600; }
+.chart-subtitle .negative { color: var(--red); font-weight: 600; }
+
+/* ====== PRICE HISTORY TABLE ====== */
+.price-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.price-history-table thead th {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.price-history-table tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--transition);
+}
+.price-history-table tbody tr:hover {
+  background: var(--bg-cream);
+}
+.price-history-table tbody td {
+  padding: 14px 14px;
+  vertical-align: middle;
+}
+.price-history-table .ph-date {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+.price-history-table .ph-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+.ph-event.listed { background: var(--blue-bg); color: var(--blue); }
+.ph-event.sold { background: var(--green-bg); color: var(--green); }
+.ph-event.refinanced { background: var(--purple-bg); color: var(--purple); }
+.ph-event.offering { background: var(--orange-bg); color: var(--orange); }
+.ph-event.price-change { background: #FFF3E6; color: var(--orange); }
+.ph-event.acquired { background: var(--green-bg); color: #1a7a4c; }
+.price-history-table .ph-price-main {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-dark);
+}
+.price-history-table .ph-price-unit {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.price-history-table .ph-change {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 14px;
+}
+.ph-change.positive { color: var(--green); }
+.ph-change.negative { color: var(--red); }
+.ph-change.neutral { color: var(--text-muted); }
+.price-history-table .ph-buyer-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+}
+.price-history-table .ph-buyer-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .price-history-table {
+    font-size: 13px;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .price-history-table thead th,
+  .price-history-table tbody td {
+    padding: 10px 10px;
+  }
+}
+
+/* ====== DEAL HISTORY CARDS ====== */
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.deal-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  transition: all var(--transition);
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+
+.deal-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.deal-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.deal-card-name {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+
+.deal-card-status {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.deal-card-status.green { background: var(--green-bg); color: var(--green); }
+.deal-card-status.orange { background: var(--orange-bg); color: var(--orange); }
+.deal-card-status.blue { background: var(--blue-bg); color: var(--blue); }
+
+.deal-card-sponsor {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deal-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+}
+
+.deal-metric-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.deal-metric-value {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.deal-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+
+.deal-card-type {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.deal-card-date {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ====== COMPARABLE PROPERTIES ====== */
+.comps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.comp-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  transition: all var(--transition);
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+.comp-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.comp-card-name {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+.comp-card-location {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.comp-card-meta {
+  display: flex;
+  gap: 16px;
+}
+
+.comp-card-meta span {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.comp-card-meta strong {
+  color: var(--text-dark);
+  font-weight: 700;
+}
+
+/* ====== MAP ====== */
+.map-container {
+  height: 350px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+#propertyMap {
+  width: 100%;
+  height: 100%;
+}
+
+/* ====== EMPTY STATE ====== */
+.empty-inline {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 1024px) {
+  .stats-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .deals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay.open {
+    display: block;
+  }
+  .mobile-topbar {
+    display: flex;
+  }
+  .main {
+    margin-left: 0;
+  }
+  .content-wrap {
+    padding: 20px 16px 48px;
+  }
+  .property-header {
+    padding: 24px 20px;
+  }
+  .property-header-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  .property-tags { justify-content: center; }
+  .property-name { font-size: 24px; }
+  .stats-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .section-body {
+    padding: 20px 18px;
+  }
+  .section-header {
+    padding: 16px 18px;
+  }
+  .comps-grid {
+    grid-template-columns: 1fr;
+  }
+  .map-container {
+    height: 260px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .deals-grid {
+    grid-template-columns: 1fr;
+  }
+  .deal-card-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .property-header-inner {
+    gap: 12px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">GYC</div>
+    <div class="sidebar-logo-text">Grow Your Cashflow</div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-back" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Deals
+    </a>
+    <div class="nav-section-label">Marketplace</div>
+    <a class="nav-item" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Live Deals
+    </a>
+    <a class="nav-item" href="sponsor.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Find a GP
+    </a>
+    <a class="nav-item active" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Property History
+    </a>
+    <div class="nav-section-label">My Investing</div>
+    <a class="nav-item" href="index.html#buybox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Buy Box Builder
+    </a>
+    <a class="nav-item" href="index.html#report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      My Buy Box Report
+    </a>
+    <div class="nav-section-label">Account</div>
+    <a class="nav-item" href="index.html#settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a class="nav-item" href="index.html#follows">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      Follows
+    </a>
+    <a class="nav-item" href="index.html#subscription">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Subscription
+    </a>
+  </nav>
+  <div class="sidebar-user" id="sidebarUser" style="display:none">
+    <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
+      <div class="sidebar-user-tier" id="sidebarTier">Explorer</div>
+    </div>
+    <button class="sidebar-logout" onclick="logout()" title="Sign out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    <div style="font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.5px;">GYC Dealflow v1.0</div>
+  </div>
+</aside>
+
+<!-- Sidebar overlay for mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="mobile-topbar-title" id="mobileTitle">Property History</div>
+  <a href="index.html" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">Deals</a>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="content-wrap">
+
+    <!-- Loading Skeleton -->
+    <div class="loading-wrap" id="loadingSkeleton">
+      <div class="skeleton skeleton-header"></div>
+      <div class="skeleton skeleton-stats"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+
+    <!-- Loaded Content -->
+    <div class="loaded-wrap" id="loadedContent">
+
+      <!-- Disclaimer Banner -->
+      <div class="disclaimer-banner">
+        <span class="icon">&#9888;&#65039;</span>
+        Property history and location data are approximate. We're working on verifying exact details.
+      </div>
+
+      <!-- Property Header -->
+      <div class="property-header">
+        <div class="property-header-inner">
+          <div class="property-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="property-header-info">
+            <h1 class="property-name" id="propertyName">Loading...</h1>
+            <p class="property-address" id="propertyAddress"></p>
+            <div class="property-tags" id="propertyTags"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Strip -->
+      <div class="stats-strip" id="statsStrip"></div>
+
+      <!-- Price History Timeline -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Price History</div>
+        </div>
+        <div class="section-body">
+          <div class="timeline" id="priceTimeline"></div>
+        </div>
+      </div>
+
+      <!-- Valuation History Chart -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Valuation History</div>
+            <div class="chart-subtitle" id="chartSubtitle"></div>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="valuation-chart-wrap">
+            <canvas id="valuationChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price History Table -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Price History</div>
+        </div>
+        <div class="section-body" style="padding:0;">
+          <table class="price-history-table" id="priceHistoryTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Event</th>
+                <th>Price</th>
+                <th>% Change</th>
+                <th>Buyer / Operator</th>
+              </tr>
+            </thead>
+            <tbody id="priceHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Deal History -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Deal History</div>
+          <span class="section-badge" id="dealsCount">0</span>
+        </div>
+        <div class="section-body">
+          <div class="deals-grid" id="dealsGrid"></div>
+          <div class="empty-inline" id="dealsEmpty" style="display:none;">
+            <p>No deals recorded for this property yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparable Properties -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Nearby Deals</div>
+        </div>
+        <div class="section-body">
+          <div class="comps-grid" id="compsGrid"></div>
+        </div>
+      </div>
+
+      <!-- Location Map -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Location</div>
+        </div>
+        <div class="section-body" style="padding:0;">
+          <div class="map-container">
+            <div id="propertyMap"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /loaded-wrap -->
+  </div><!-- /content-wrap -->
+</div><!-- /main -->
+
+<script>
+// ========== AUTH GATE ==========
+(function enforceAuth() {
+  const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+  if (!user || !user.token || user.token === 'local-session') {
+    localStorage.removeItem('gycUser');
+    window.location.href = 'deal-login.html';
+  }
+})();
+
+function getUser() {
+  return JSON.parse(localStorage.getItem('gycUser') || 'null');
+}
+
+function logout() {
+  localStorage.removeItem('gycUser');
+  window.location.href = 'deal-login.html';
+}
+
+// ========== SIDEBAR ==========
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ========== INIT AUTH UI ==========
+function initAuth() {
+  const user = getUser();
+  const userEl = document.getElementById('sidebarUser');
+  if (user && user.email) {
+    userEl.style.display = 'flex';
+    const name = user.name || user.email.split('@')[0];
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('sidebarAvatar').textContent = initials;
+    document.getElementById('sidebarName').textContent = name;
+    document.getElementById('sidebarTier').textContent = (user.tier || 'explorer').charAt(0).toUpperCase() + (user.tier || 'explorer').slice(1);
+  }
+}
+
+// ========== HELPERS ==========
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escAttr(str) {
+  return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function currency(val) {
+  if (val == null) return '--';
+  if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+  return '$' + val.toLocaleString();
+}
+
+function pct(val) {
+  if (val == null) return '--';
+  return (val * 100).toFixed(1) + '%';
+}
+
+function multiple(val) {
+  if (val == null) return '--';
+  return val.toFixed(1) + 'x';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '--';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatMonthYear(dateStr) {
+  if (!dateStr) return '--';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+}
+
+function statusClass(status) {
+  if (!status) return 'green';
+  const s = status.toLowerCase();
+  if (s.includes('active') || s.includes('open')) return 'green';
+  if (s.includes('closed') || s.includes('sold')) return 'orange';
+  return 'green';
+}
+
+// ========== SAMPLE DATA ==========
+// Structured for easy API swap later
+function getPropertyData(address) {
+  // In the future, fetch from API using address param
+  // For now, return hardcoded sample data
+  const SAMPLE_DATA = {
+    'highland hills apartments, georgia': {
+      name: 'Highland Hills Apartments',
+      address: '1234 Highland Hills Dr, Macon, GA 31204',
+      propertyType: 'Multi Family',
+      location: 'Macon, Georgia',
+      lat: 32.8407,
+      lng: -83.6324,
+      currentStatus: 'Active',
+      totalDealsSeen: 3,
+      firstListed: '2018-01-10',
+      lastActivity: '2025-11-14',
+      timeline: [
+        {
+          date: '2018-01-10',
+          type: 'sold',
+          label: 'Acquired',
+          price: 8500000,
+          pricePerUnit: 75893,
+          units: 112,
+          pctChange: null,
+          description: 'Acquired by Southeastern Properties LLC',
+          sponsor: 'Southeastern Properties LLC',
+          sponsorId: null,
+          sponsorCompany: 'Southeastern Properties LLC'
+        },
+        {
+          date: '2020-03-15',
+          type: 'listed',
+          label: 'Listed for Sale',
+          price: 15000000,
+          pricePerUnit: 133929,
+          units: 112,
+          pctChange: 76.5,
+          description: 'Property listed for syndication offering',
+          sponsor: 'Original Sponsor Group',
+          sponsorId: null,
+          sponsorCompany: 'Original Sponsor Group'
+        },
+        {
+          date: '2021-09-01',
+          type: 'sold',
+          label: 'Sold',
+          price: 18200000,
+          pricePerUnit: 162500,
+          units: 112,
+          pctChange: 21.3,
+          description: 'Sold to Midtown Capital Partners',
+          sponsor: 'Midtown Capital Partners',
+          sponsorId: null,
+          sponsorCompany: 'Midtown Capital Partners'
+        },
+        {
+          date: '2023-06-15',
+          type: 'refinanced',
+          label: 'Refinanced',
+          price: 20000000,
+          pricePerUnit: 178571,
+          units: 112,
+          pctChange: 9.9,
+          description: 'Refinanced at updated valuation',
+          sponsor: 'Midtown Capital Partners',
+          sponsorId: null,
+          sponsorCompany: 'Midtown Capital Partners'
+        },
+        {
+          date: '2025-11-14',
+          type: 'offering',
+          label: 'New Offering',
+          price: 22500000,
+          pricePerUnit: 200893,
+          units: 112,
+          pctChange: 12.5,
+          description: 'New syndication offering listed on GYC Dealflow',
+          sponsor: 'Cohen Investment Group',
+          sponsorId: 'rec04XU06Qn5rIRJP',
+          sponsorCompany: 'Cohen Investment Group'
+        }
+      ],
+      deals: [
+        {
+          id: 'rec_old_highland',
+          name: 'Highland Hills Apartments - 2020 Syndication',
+          sponsor: 'Original Sponsor',
+          sponsorId: null,
+          assetClass: 'Multi Family',
+          dealType: 'Syndication',
+          targetIRR: 0.12,
+          equityMultiple: 1.8,
+          minInvestment: 50000,
+          status: 'Closed',
+          strategy: 'Value-Add',
+          addedDate: '2020-03-15'
+        },
+        {
+          id: 'rec0ZkWEkJd7kvA5l',
+          name: 'Highland Hills Apartments',
+          sponsor: 'Cohen Investment Group',
+          sponsorId: 'rec04XU06Qn5rIRJP',
+          assetClass: 'Multi Family',
+          dealType: 'Syndication',
+          targetIRR: 0.15,
+          equityMultiple: 2.0,
+          minInvestment: 25000,
+          status: 'Open to invest',
+          strategy: 'Value-Add',
+          addedDate: '2025-11-14'
+        }
+      ],
+      comparables: [
+        {
+          name: 'River Bend Apartments',
+          address: '5678 River Bend Way, Macon, GA 31201',
+          location: 'Macon, Georgia',
+          propertyType: 'Multi Family',
+          deals: 1,
+          lastActivity: '2024-09-01'
+        },
+        {
+          name: 'Peach Grove Residences',
+          address: '910 Peach Grove Ln, Warner Robins, GA 31088',
+          location: 'Warner Robins, Georgia',
+          propertyType: 'Multi Family',
+          deals: 1,
+          lastActivity: '2025-02-20'
+        },
+        {
+          name: 'Magnolia Pointe Industrial',
+          address: '2200 Industrial Blvd, Macon, GA 31206',
+          location: 'Macon, Georgia',
+          propertyType: 'Industrial',
+          deals: 2,
+          lastActivity: '2025-06-10'
+        }
+      ]
+    }
+  };
+
+  // Normalize address for lookup
+  const normalized = (address || '').toLowerCase().trim();
+
+  // Try exact match first, then partial
+  if (SAMPLE_DATA[normalized]) return SAMPLE_DATA[normalized];
+
+  for (const key in SAMPLE_DATA) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return SAMPLE_DATA[key];
+    }
+  }
+
+  // Default: return the Highland Hills data
+  return SAMPLE_DATA['highland hills apartments, georgia'];
+}
+
+// ========== RENDER ==========
+function renderProperty(data) {
+  // Page title
+  document.title = data.name + ' - Property History - GYC Dealflow';
+  document.getElementById('mobileTitle').textContent = data.name;
+
+  // Property header
+  document.getElementById('propertyName').textContent = data.name;
+  document.getElementById('propertyAddress').textContent = data.address;
+
+  // Tags
+  const tagsEl = document.getElementById('propertyTags');
+  let tagsHtml = '';
+  if (data.propertyType) {
+    tagsHtml += '<span class="property-tag asset-class">' + escHtml(data.propertyType) + '</span>';
+  }
+  if (data.location) {
+    tagsHtml += '<span class="property-tag location-tag">' + escHtml(data.location) + '</span>';
+  }
+  if (data.currentStatus) {
+    const sc = statusClass(data.currentStatus);
+    tagsHtml += '<span class="property-tag status-' + (sc === 'green' ? 'active' : 'closed') + '">' + escHtml(data.currentStatus) + '</span>';
+  }
+  tagsEl.innerHTML = tagsHtml;
+
+  // Stats strip
+  const statsEl = document.getElementById('statsStrip');
+  const stats = [
+    { label: 'Total Deals Seen', value: data.totalDealsSeen || 0 },
+    { label: 'First Listed', value: formatDate(data.firstListed) },
+    { label: 'Last Activity', value: formatDate(data.lastActivity) },
+    { label: 'Current Status', value: data.currentStatus || '--' }
+  ];
+  statsEl.innerHTML = stats.map(s =>
+    '<div class="stat-item"><div class="stat-value">' + escHtml(String(s.value)) + '</div><div class="stat-label">' + escHtml(s.label) + '</div></div>'
+  ).join('');
+
+  // Price History Timeline
+  renderTimeline(data.timeline || []);
+
+  // Valuation Chart
+  renderValuationChart(data.timeline || []);
+
+  // Price History Table
+  renderPriceHistoryTable(data.timeline || []);
+
+  // Deal History
+  renderDeals(data.deals || []);
+
+  // Comparable Properties
+  renderComps(data.comparables || []);
+
+  // Map
+  renderMap(data.lat, data.lng, data.name);
+}
+
+function renderTimeline(events) {
+  const el = document.getElementById('priceTimeline');
+  if (!events.length) {
+    el.innerHTML = '<div class="empty-inline"><p>No price history available.</p></div>';
+    return;
+  }
+
+  // Sort chronologically (oldest first for timeline)
+  const sorted = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  el.innerHTML = sorted.map(ev => {
+    const typeClass = ev.type || 'listed';
+    let priceHtml = '';
+    if (ev.price) {
+      priceHtml = '<div class="timeline-price">' + currency(ev.price) + '</div>';
+    }
+
+    let sponsorHtml = '';
+    if (ev.sponsor) {
+      if (ev.sponsorId) {
+        sponsorHtml = '<a class="timeline-sponsor-link" href="sponsor.html?id=' + escAttr(ev.sponsorId) + '">' + escHtml(ev.sponsor) + '</a>';
+      } else if (ev.sponsorCompany) {
+        sponsorHtml = '<a class="timeline-sponsor-link" href="sponsor.html?company=' + encodeURIComponent(ev.sponsorCompany) + '">' + escHtml(ev.sponsor) + '</a>';
+      } else {
+        sponsorHtml = '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);">' + escHtml(ev.sponsor) + '</span>';
+      }
+    }
+
+    return '<div class="timeline-event">' +
+      '<div class="timeline-dot ' + typeClass + '"></div>' +
+      '<div class="timeline-date">' + formatMonthYear(ev.date) + '</div>' +
+      '<span class="timeline-type ' + typeClass + '">' + escHtml(ev.label) + '</span>' +
+      priceHtml +
+      '<div class="timeline-detail">' + escHtml(ev.description) + '</div>' +
+      (sponsorHtml ? '<div style="margin-top:6px;">' + sponsorHtml + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function renderValuationChart(events) {
+  const sorted = [...events].filter(e => e.price).sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (sorted.length < 2) return;
+
+  const labels = sorted.map(e => {
+    const d = new Date(e.date);
+    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  });
+  const prices = sorted.map(e => e.price);
+  const pointColors = sorted.map(e => {
+    if (e.type === 'offering' || e.type === 'listed') return '#51BE7B';
+    return '#8A9AA0';
+  });
+  const pointBorders = sorted.map(e => {
+    if (e.type === 'offering' || e.type === 'listed') return '#51BE7B';
+    return '#8A9AA0';
+  });
+
+  // Subtitle: total % change
+  const first = sorted[0].price;
+  const last = sorted[sorted.length - 1].price;
+  const totalPct = ((last - first) / first * 100).toFixed(1);
+  const subtitleEl = document.getElementById('chartSubtitle');
+  const sign = totalPct > 0 ? '+' : '';
+  const cls = totalPct >= 0 ? 'positive' : 'negative';
+  subtitleEl.innerHTML = '<span class="' + cls + '">' + sign + totalPct + '%</span> since ' + labels[0] +
+    ' (' + currency(first) + ' &rarr; ' + currency(last) + ')';
+
+  const ctx = document.getElementById('valuationChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Valuation',
+        data: prices,
+        borderColor: '#51BE7B',
+        backgroundColor: 'rgba(81, 190, 123, 0.08)',
+        fill: true,
+        tension: 0.3,
+        borderWidth: 3,
+        pointRadius: 7,
+        pointHoverRadius: 10,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointBorders,
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0A1E21',
+          titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 13, weight: '600' },
+          bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(ctx) {
+              var val = ctx.parsed.y;
+              if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+              if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
+              return '$' + val;
+            },
+            afterLabel: function(ctx) {
+              var ev = sorted[ctx.dataIndex];
+              var parts = [ev.label];
+              if (ev.pricePerUnit) parts.push('$' + ev.pricePerUnit.toLocaleString() + '/unit');
+              if (ev.pctChange !== null && ev.pctChange !== undefined) parts.push((ev.pctChange > 0 ? '+' : '') + ev.pctChange + '%');
+              return parts.join(' | ');
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+            color: '#8A9AA0'
+          }
+        },
+        y: {
+          grid: { color: '#EDF1F2' },
+          ticks: {
+            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+            color: '#8A9AA0',
+            callback: function(val) {
+              if (val >= 1000000) return '$' + (val / 1000000).toFixed(0) + 'M';
+              if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
+              return '$' + val;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderPriceHistoryTable(events) {
+  const tbody = document.getElementById('priceHistoryBody');
+  const sorted = [...events].filter(e => e.price).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (!sorted.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted);">No price history available.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = sorted.map(function(ev) {
+    var dateStr = new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    var typeClass = ev.type || 'listed';
+    if (ev.label === 'Acquired') typeClass = 'acquired';
+
+    var priceHtml = '<div class="ph-price-main">' + currency(ev.price) + '</div>';
+    if (ev.pricePerUnit) {
+      priceHtml += '<div class="ph-price-unit">$' + ev.pricePerUnit.toLocaleString() + '/unit</div>';
+    }
+
+    var changeHtml = '';
+    if (ev.pctChange !== null && ev.pctChange !== undefined) {
+      var sign = ev.pctChange > 0 ? '+' : '';
+      var changeCls = ev.pctChange > 0 ? 'positive' : (ev.pctChange < 0 ? 'negative' : 'neutral');
+      changeHtml = '<span class="ph-change ' + changeCls + '">' + sign + ev.pctChange + '%</span>';
+    } else {
+      changeHtml = '<span class="ph-change neutral">&mdash;</span>';
+    }
+
+    var buyerHtml = '';
+    if (ev.sponsor) {
+      if (ev.sponsorId) {
+        buyerHtml = '<a class="ph-buyer-link" href="sponsor.html?id=' + escAttr(ev.sponsorId) + '">' + escHtml(ev.sponsor) + '</a>';
+      } else if (ev.sponsorCompany) {
+        buyerHtml = '<a class="ph-buyer-link" href="sponsor.html?company=' + encodeURIComponent(ev.sponsorCompany) + '">' + escHtml(ev.sponsor) + '</a>';
+      } else {
+        buyerHtml = escHtml(ev.sponsor);
+      }
+    }
+
+    return '<tr>' +
+      '<td class="ph-date">' + dateStr + '</td>' +
+      '<td><span class="ph-event ' + typeClass + '">' + escHtml(ev.label) + '</span></td>' +
+      '<td>' + priceHtml + '</td>' +
+      '<td>' + changeHtml + '</td>' +
+      '<td>' + buyerHtml + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderDeals(deals) {
+  const gridEl = document.getElementById('dealsGrid');
+  const countEl = document.getElementById('dealsCount');
+  const emptyEl = document.getElementById('dealsEmpty');
+
+  countEl.textContent = deals.length;
+
+  if (!deals.length) {
+    gridEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+
+  // Sort newest first
+  const sorted = [...deals].sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
+
+  gridEl.innerHTML = sorted.map(d => {
+    const sc = statusClass(d.status);
+    const href = d.id ? 'deal.html?id=' + encodeURIComponent(d.id) : '#';
+
+    return '<a class="deal-card" href="' + href + '">' +
+      '<div class="deal-card-header">' +
+        '<div class="deal-card-name">' + escHtml(d.name) + '</div>' +
+        '<span class="deal-card-status ' + sc + '">' + escHtml(d.status || 'Unknown') + '</span>' +
+      '</div>' +
+      '<div class="deal-card-sponsor">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' +
+        escHtml(d.sponsor) +
+      '</div>' +
+      '<div class="deal-card-metrics">' +
+        '<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">' + pct(d.targetIRR) + '</div></div>' +
+        '<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">' + multiple(d.equityMultiple) + '</div></div>' +
+        '<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">' + currency(d.minInvestment) + '</div></div>' +
+      '</div>' +
+      '<div class="deal-card-footer">' +
+        '<span class="deal-card-type">' + escHtml(d.dealType || '') + (d.strategy ? ' &middot; ' + escHtml(d.strategy) : '') + '</span>' +
+        '<span class="deal-card-date">' + formatDate(d.addedDate) + '</span>' +
+      '</div>' +
+    '</a>';
+  }).join('');
+}
+
+function renderComps(comps) {
+  const gridEl = document.getElementById('compsGrid');
+
+  if (!comps.length) {
+    gridEl.innerHTML = '<div class="empty-inline"><p>No nearby deals found.</p></div>';
+    return;
+  }
+
+  gridEl.innerHTML = comps.map(c => {
+    const href = 'asset.html?address=' + encodeURIComponent(c.address || c.name);
+    return '<a class="comp-card" href="' + href + '">' +
+      '<div class="comp-card-name">' + escHtml(c.name) + '</div>' +
+      '<div class="comp-card-location">' + escHtml(c.location || c.address) + '</div>' +
+      '<div class="comp-card-meta">' +
+        '<span><strong>' + c.deals + '</strong> deal' + (c.deals !== 1 ? 's' : '') + '</span>' +
+        '<span>' + escHtml(c.propertyType || '') + '</span>' +
+        '<span>Last: ' + formatDate(c.lastActivity) + '</span>' +
+      '</div>' +
+    '</a>';
+  }).join('');
+}
+
+function renderMap(lat, lng, name) {
+  if (!lat || !lng) {
+    document.getElementById('propertyMap').innerHTML = '<div class="empty-inline"><p>Location data not available.</p></div>';
+    return;
+  }
+
+  try {
+    const map = L.map('propertyMap').setView([lat, lng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    L.marker([lat, lng]).addTo(map)
+      .bindPopup('<strong>' + escHtml(name) + '</strong>')
+      .openPopup();
+  } catch (e) {
+    console.warn('Map init failed:', e);
+  }
+}
+
+// ========== INIT ==========
+async function init() {
+  initAuth();
+
+  // Get address from URL param
+  const params = new URLSearchParams(window.location.search);
+  const address = params.get('address') || '';
+
+  // Load property data
+  const data = getPropertyData(address);
+
+  // Brief delay to show loading skeleton
+  await new Promise(r => setTimeout(r, 300));
+
+  // Render
+  renderProperty(data);
+
+  // Show content
+  document.getElementById('loadingSkeleton').style.display = 'none';
+  document.getElementById('loadedContent').style.display = 'block';
+}
+
+init();
+</script>
+</body>
+</html>

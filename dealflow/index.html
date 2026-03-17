@@ -2221,7 +2221,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
 
 <script>
 // ========== AIRTABLE INTEGRATION ==========
-const AIRTABLE_DEALS_WEBHOOK = 'https://hook.us2.make.com/DEALS_EXPORT_WEBHOOK'; // TODO: Replace with real webhook
+const AIRTABLE_DEALS_WEBHOOK = 'https://hook.us2.make.com/mle5lalvak7925ru3nqse1eg45yrrs7p';
 
 // Hardcoded fallback deals (used if API is unavailable)
 const FALLBACK_DEALS = [
@@ -2298,13 +2298,19 @@ function transformAirtableRecord(rec) {
 // Fetch deals from Airtable via webhook
 async function fetchDealsFromAirtable() {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
     const resp = await fetch(AIRTABLE_DEALS_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'getAllDeals' })
+      body: JSON.stringify({ action: 'getAllDeals' }),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     if (!resp.ok) throw new Error('Webhook returned ' + resp.status);
-    const data = await resp.json();
+    const text = await resp.text();
+    if (!text.startsWith('[') && !text.startsWith('{')) throw new Error('Not JSON: ' + text.slice(0, 50));
+    const data = JSON.parse(text);
     if (Array.isArray(data) && data.length > 0) {
       // Check if data is already in dashboard format or needs transformation
       const first = data[0];
