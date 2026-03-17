@@ -1970,10 +1970,6 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
       Dashboard
     </a>
-    <a class="nav-item" href="#" data-page="goals" onclick="navigateTo('goals'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-      My Goals
-    </a>
     <a class="nav-item" href="#" data-page="buybox" onclick="navigateTo('buybox'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       My Buy Box
@@ -2601,14 +2597,64 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Investment Managers</div>
-      <div class="topbar-spacer"></div>
-      <select class="filter-select" id="managersAssetFilter" onchange="renderManagersPage()" style="min-width:160px;font-size:12px;">
-        <option value="">All Asset Classes</option>
-      </select>
     </div>
-    <div class="content-area" style="padding:24px;">
-      <div id="managersStats" style="margin-bottom:20px;"></div>
-      <div id="managersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+    <div class="content-area" style="padding:24px;display:flex;gap:24px;align-items:flex-start;">
+      <!-- Filter Sidebar -->
+      <div id="managersFilterSidebar" style="width:260px;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:sticky;top:24px;">
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Filters</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Use filters to narrow your search.</div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Search by Name</label>
+          <input type="text" id="managersNameSearch" oninput="renderManagersPage()" placeholder="Search managers..." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</label>
+          <select id="managersAssetFilter" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
+            <option value="">All Asset Classes</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Manager Type</label>
+          <select id="managersTypeFilter" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
+            <option value="">All Types</option>
+            <option value="Operator">Operator</option>
+            <option value="Fund Manager">Fund Manager</option>
+            <option value="Capital Allocator">Capital Allocator</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Minimum Deals</label>
+          <select id="managersMinDeals" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
+            <option value="0">Any</option>
+            <option value="3">3+ deals</option>
+            <option value="5">5+ deals</option>
+            <option value="10">10+ deals</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Sort By</label>
+          <select id="managersSortBy" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
+            <option value="deals">Most Deals</option>
+            <option value="name">Name (A-Z)</option>
+            <option value="newest">Newest First</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button onclick="document.getElementById('managersNameSearch').value='';document.getElementById('managersAssetFilter').value='';document.getElementById('managersTypeFilter').value='';document.getElementById('managersMinDeals').value='0';document.getElementById('managersSortBy').value='deals';renderManagersPage();" style="flex:1;padding:8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--text-secondary);">Reset Filters</button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div style="flex:1;min-width:0;">
+        <div id="managersStats" style="margin-bottom:20px;"></div>
+        <div id="managersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+      </div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
     </div>
@@ -2706,7 +2752,27 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </button>
       <div class="topbar-title">Office Hours</div>
     </div>
-    <div class="sub-page" style="max-width:1000px">
+    <div class="sub-page" style="max-width:1000px;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
+        <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
+        <div style="font-size:15px;color:var(--text-secondary);max-width:420px;line-height:1.6;margin-bottom:24px;">Live office hours, deal reviews, and GP spotlight sessions with Pascal are launching soon. Join the community to get notified.</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Weekly</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Review & Q&A</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Monthly</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Debt Fund Deep Dive</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Bi-weekly</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">GP Spotlight Interviews</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:none;">
       <div class="settings-page-desc" style="margin-top:0;">Join Pascal and the GYC community for live Q&A, deal reviews, and market analysis sessions.</div>
 
       <!-- Upcoming Sessions -->
@@ -2773,6 +2839,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </div>
         </div>
       </div>
+      </div><!-- end display:none -->
     </div>
   </div>
 
@@ -2784,7 +2851,27 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </button>
       <div class="topbar-title">Cash Flow Academy</div>
     </div>
-    <div class="sub-page" style="max-width:1100px">
+    <div class="sub-page" style="max-width:1100px;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
+        <div style="font-size:15px;color:var(--text-secondary);max-width:420px;line-height:1.6;margin-bottom:24px;">Structured courses on LP investing, due diligence, and portfolio construction are in development.</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Beginner</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">LP Investing 101</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Intermediate</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Due Diligence Framework</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Advanced</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Portfolio Construction</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:none;">
       <div class="settings-page-desc" style="margin-top:0;">Master passive investing with structured courses, frameworks, and resources built for accredited investors.</div>
 
       <!-- Course Categories -->
@@ -2927,6 +3014,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
           </div>
         </div>
       </div>
+      </div><!-- end display:none -->
     </div>
   </div>
 
@@ -3188,6 +3276,26 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <button onclick="showAddTaxDocModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Tax Document</button>
     </div>
     <div class="content-area" style="padding:24px;max-width:1200px;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
+        <div style="font-size:15px;color:var(--text-secondary);max-width:420px;line-height:1.6;margin-bottom:24px;">Tax document tracking, K-1 management, CPA-ready reporting, and bulk download are coming soon.</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">K-1 Tracker</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Track receipt status per investment</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Download All Docs</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">One-click export for your CPA</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Tax Year Summary</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Annual investment income overview</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:none;">
       <div id="taxSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
       <div id="taxPrepTableContainer">
         <table class="table-view" id="taxPrepTable" style="display:table;width:100%;">
@@ -3213,6 +3321,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;margin-right:10px;">Auto-Populate from Portfolio</button>
         <button onclick="showAddTaxDocModal()" style="padding:10px 24px;background:transparent;color:var(--primary);border:2px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Manually</button>
       </div>
+      </div><!-- end display:none -->
     </div>
   </div>
 
@@ -6148,7 +6257,6 @@ function renderManagersPage() {
   // Populate asset class filter options
   const allAssetClasses = new Set();
   companies.forEach(c => c.assetClasses.forEach(ac => { if (ac) allAssetClasses.add(ac); }));
-  const currentFilter = filterSelect.value;
   const existingOptions = filterSelect.querySelectorAll('option:not(:first-child)');
   if (existingOptions.length === 0) {
     [...allAssetClasses].sort().forEach(ac => {
@@ -6158,24 +6266,47 @@ function renderManagersPage() {
       filterSelect.appendChild(opt);
     });
   }
-  filterSelect.value = currentFilter;
+
+  // Get filter values
+  const assetFilter = filterSelect.value;
+  const nameSearch = (document.getElementById('managersNameSearch')?.value || '').toLowerCase().trim();
+  const typeFilter = document.getElementById('managersTypeFilter')?.value || '';
+  const minDeals = parseInt(document.getElementById('managersMinDeals')?.value || '0');
+  const sortBy = document.getElementById('managersSortBy')?.value || 'deals';
 
   // Filter
-  const filtered = currentFilter
-    ? companies.filter(c => c.assetClasses.has(currentFilter))
-    : companies;
+  const filtered = companies.filter(c => {
+    if (assetFilter && !c.assetClasses.has(assetFilter)) return false;
+    if (nameSearch && !c.name.toLowerCase().includes(nameSearch) && !(c.ceo && c.ceo.toLowerCase().includes(nameSearch))) return false;
+    if (typeFilter && c.type !== typeFilter) return false;
+    if (minDeals > 0 && c.dealCount < minDeals) return false;
+    return true;
+  });
 
-  // Sort by # deals descending, then name
-  filtered.sort((a, b) => b.dealCount - a.dealCount || a.name.localeCompare(b.name));
+  // Sort
+  if (sortBy === 'name') {
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortBy === 'newest') {
+    filtered.sort((a, b) => (b.foundingYear || 0) - (a.foundingYear || 0) || b.dealCount - a.dealCount);
+  } else {
+    filtered.sort((a, b) => b.dealCount - a.dealCount || a.name.localeCompare(b.name));
+  }
 
   // Stats bar
   const statsEl = document.getElementById('managersStats');
+  const activeFilterCount = (assetFilter ? 1 : 0) + (nameSearch ? 1 : 0) + (typeFilter ? 1 : 0) + (minDeals > 0 ? 1 : 0);
   if (statsEl) {
     statsEl.innerHTML = `
-      <div style="display:flex;gap:24px;font-size:13px;color:var(--text-secondary);">
-        <span><strong style="color:var(--text-dark);">${filtered.length}</strong> managers</span>
-        <span><strong style="color:var(--text-dark);">${[...allAssetClasses].length}</strong> asset classes</span>
-        <span><strong style="color:var(--text-dark);">${filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);">Managers</div>
+          <span style="padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;background:var(--primary);color:#fff;">${filtered.length}</span>
+          ${activeFilterCount > 0 ? '<span style="font-size:11px;color:var(--text-muted);">' + activeFilterCount + ' filter' + (activeFilterCount !== 1 ? 's' : '') + ' active</span>' : ''}
+        </div>
+        <div style="display:flex;gap:20px;font-size:12px;color:var(--text-muted);">
+          <span><strong style="color:var(--text-dark);">${[...allAssetClasses].length}</strong> asset classes</span>
+          <span><strong style="color:var(--text-dark);">${filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
+        </div>
       </div>
     `;
   }

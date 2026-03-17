@@ -4,7 +4,7 @@
     {
       "name": "GYC Income Fund",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8766", "-d", "/Users/pascalwagner/AI"],
+      "runtimeArgs": ["-m", "http.server", "8766", "-d", "/Users/pascalwagner/AI/gyc-income-fund-dataroom"],
       "port": 8766,
       "autoPort": true
     },
@@ -32,7 +32,7 @@
     {
       "name": "Deal Dashboard",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8771", "-d", "/Users/pascalwagner/AI"],
+      "runtimeArgs": ["-m", "http.server", "8771", "-d", "/Users/pascalwagner/AI/dealflow"],
       "port": 8771,
       "autoPort": true
     }
