@@ -2512,21 +2512,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </select>
     </div>
     <div class="content-area" style="padding:24px;">
-      <div id="managersTableContainer">
-        <table class="table-view" id="managersTable" style="display:table;width:100%;">
-          <thead>
-            <tr>
-              <th>Company Name</th>
-              <th>CEO</th>
-              <th>Asset Classes</th>
-              <th># Deals</th>
-              <th>Type</th>
-              <th>Website</th>
-            </tr>
-          </thead>
-          <tbody id="managersTableBody"></tbody>
-        </table>
-      </div>
+      <div id="managersStats" style="margin-bottom:20px;"></div>
+      <div id="managersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+      <!-- Hidden table for legacy compat -->
+      <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
     </div>
   </div>
 
@@ -2961,6 +2950,15 @@ html.dark .card-match-badge.red { background: #2E1515; }
           <button class="topbar-tab" onclick="toggleDebtFilter('aum','small',this)" data-filter-group="aum">Small (&lt;$100M)</button>
           <button class="topbar-tab" onclick="toggleDebtFilter('aum','mid',this)" data-filter-group="aum">Mid ($100M-$1B)</button>
           <button class="topbar-tab" onclick="toggleDebtFilter('aum','institutional',this)" data-filter-group="aum">Institutional ($1B+)</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Debt Position:</span>
+          <select id="debtPositionFilter" onchange="debtFilterPosition=this.value;renderDebtStats(getFilteredDebtFunds(),debtFundData);renderDebtChart();renderDebtTable();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="all">All Positions</option>
+            <option value="1st">1st Position</option>
+            <option value="2nd">2nd Position</option>
+            <option value="Mezzanine">Mezzanine</option>
+          </select>
         </div>
       </div>
 
@@ -3464,13 +3462,49 @@ function renderPanel(deal) {
       </div>
     </div>
     <div class="panel-body" data-panel-deal-id="${deal.id}">
-      <div style="margin-bottom:16px;">
-        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Vetting Stage</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${panelStageOptions.map(s => `
-            <button onclick="changeDealStage('${deal.id}', '${s.value}')" style="padding:6px 14px;border-radius:20px;font-family:var(--font-ui);font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid ${panelStage === s.value ? s.color : 'var(--border)'};background:${panelStage === s.value ? s.color : 'transparent'};color:${panelStage === s.value ? '#fff' : 'var(--text-secondary)'};transition:all var(--transition);">${s.label}</button>
-          `).join('')}
-        </div>
+      <div style="margin-bottom:20px;background:var(--bg-main);border-radius:var(--radius);padding:16px 16px 14px;">
+        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:12px;">Your Vetting Pipeline</div>
+        ${(() => {
+          const mainStages = panelStageOptions.filter(s => s.value !== 'passed');
+          const currentIdx = mainStages.findIndex(s => s.value === panelStage);
+          const isPassed = panelStage === 'passed';
+          return `
+          <div style="display:flex;align-items:center;gap:0;margin-bottom:${isPassed ? '10px' : '0'};">
+            ${mainStages.map((s, i) => {
+              const isActive = s.value === panelStage && !isPassed;
+              const isCompleted = !isPassed && currentIdx > i;
+              const isFuture = isPassed || (!isActive && !isCompleted);
+              const dotBg = isActive ? s.color : isCompleted ? s.color : 'var(--border)';
+              const dotSize = isActive ? '28px' : '20px';
+              const lineColor = isCompleted ? mainStages[i].color : 'var(--border)';
+              const checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="11" height="11"><polyline points="4 12 10 18 20 6"/></svg>';
+              const icons = {
+                new: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><circle cx="12" cy="12" r="4"/></svg>',
+                interested: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.18L12 21z"/></svg>',
+                duediligence: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
+                portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>'
+              };
+              return `
+                ${i > 0 ? '<div style="flex:1;height:2px;background:' + lineColor + ';transition:background 0.3s;"></div>' : ''}
+                <div onclick="changeDealStage('${deal.id}', '${s.value}')" style="display:flex;flex-direction:column;align-items:center;cursor:pointer;position:relative;z-index:1;" title="${s.label}">
+                  <div style="width:${dotSize};height:${dotSize};border-radius:50%;background:${dotBg};display:flex;align-items:center;justify-content:center;transition:all 0.3s;${isActive ? 'box-shadow:0 0 0 4px ' + s.color + '33;' : ''}">
+                    ${isCompleted ? checkSvg : (isActive ? icons[s.value] : '<div style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);opacity:0.4;"></div>')}
+                  </div>
+                  <div style="font-size:9px;font-weight:${isActive ? '800' : '600'};color:${isActive ? s.color : isCompleted ? 'var(--text-dark)' : 'var(--text-muted)'};margin-top:6px;white-space:nowrap;font-family:var(--font-ui);letter-spacing:0.3px;">${s.label}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          ${isPassed ? '' : ''}
+          <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <button onclick="changeDealStage('${deal.id}', 'passed')" style="padding:4px 12px;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;border:1px solid ${isPassed ? '#6b7280' : 'var(--border)'};background:${isPassed ? '#6b7280' : 'transparent'};color:${isPassed ? '#fff' : 'var(--text-muted)'};transition:all var(--transition);display:flex;align-items:center;gap:4px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Pass
+            </button>
+            <span style="font-size:10px;color:var(--text-muted);font-style:italic;">${isPassed ? 'This deal has been passed on' : 'Not interested in this deal'}</span>
+          </div>
+          `;
+        })()}
       </div>
       <div class="panel-section">
         <div class="panel-section-title">Overview</div>
@@ -5423,39 +5457,150 @@ function renderGoalsDashboard() {
         </div>
       ` : ''}
     </div>
+
   `;
 
-  // Matching deals section
-  const matchingDeals = document.getElementById('goalsMatchingDeals');
-  const deals = (typeof DEALS !== 'undefined' ? DEALS : []);
-  const goodDeals = deals.filter(d => {
-    if (!d.cashOnCash && !d.targetIRR) return false;
-    const yield_ = d.cashOnCash || (d.preferredReturn ? d.preferredReturn : null);
-    return yield_ && yield_ >= 0.06;
-  }).slice(0, 6);
+  // Year-by-Year Roadmap (built outside template literal to avoid nesting issues)
+  const rmYears = parseInt(g.timeline) || 5;
+  const rmAnnualDeploy = Math.round(capitalNeeded / rmYears);
+  const rmAnnualDeals = Math.ceil(rmAnnualDeploy / 100000);
+  let roadmapRows = '';
+  for (let y = 1; y <= rmYears; y++) {
+    const cumCapital = Math.min(capitalNeeded, rmAnnualDeploy * y);
+    const cumIncome = Math.round(cumCapital * 0.08);
+    const pct = Math.round((cumIncome / gap) * 100);
+    const isFinal = y === rmYears;
+    roadmapRows += '<div style="display:flex;align-items:flex-start;gap:16px;position:relative;' + (y < rmYears ? 'padding-bottom:20px;' : '') + '">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:' + (isFinal ? 'var(--primary)' : 'var(--bg-main)') + ';border:2px solid ' + (isFinal ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:' + (isFinal ? '#fff' : 'var(--text-dark)') + ';position:relative;z-index:1;">Y' + y + '</div>'
+      + (y < rmYears ? '<div style="width:2px;flex:1;background:var(--border);min-height:20px;"></div>' : '')
+      + '</div>'
+      + '<div style="flex:1;padding-top:4px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">'
+      + '<div style="font-weight:700;font-size:13px;color:var(--text-dark);">Year ' + y + (isFinal ? ' — Goal Reached!' : '') + '</div>'
+      + '<div style="font-size:12px;font-weight:700;color:' + (isFinal ? 'var(--primary)' : 'var(--text-secondary)') + ';">' + pct + '%</div>'
+      + '</div>'
+      + '<div style="height:8px;background:var(--bg-main);border-radius:4px;overflow:hidden;margin-bottom:6px;">'
+      + '<div style="height:100%;width:' + Math.min(100, pct) + '%;background:' + (isFinal ? 'var(--primary)' : '#3b82f6') + ';border-radius:4px;"></div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--text-muted);line-height:1.6;">'
+      + 'Deploy <strong>$' + rmAnnualDeploy.toLocaleString() + '</strong> across ~' + rmAnnualDeals + ' deals &rarr; <strong>$' + cumIncome.toLocaleString() + '/yr</strong> passive income'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }
 
-  if (goodDeals.length > 0) {
-    matchingDeals.innerHTML = `
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deals That Could Help You Get There</div>
-          <button onclick="navigateTo('deals')" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);">View All Deals &rarr;</button>
+  breakdownSection.innerHTML += `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-top:16px;">
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Your ${g.timeline}-Year Roadmap</div>
+      <div style="position:relative;">
+        ${roadmapRows}
+      </div>
+      <div style="margin-top:16px;padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Deploy Per Year</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-dark);">$${rmAnnualDeploy.toLocaleString()}</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;">
-          ${goodDeals.map(d => `
-            <div onclick="navigateTo('deals');setTimeout(()=>openPanel('${d.id}'),200);" style="padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background=''">
-              <div style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:4px;">${d.investmentName}</div>
-              <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px;">${d.managementCompany} &middot; ${d.assetClass}</div>
-              <div style="display:flex;gap:16px;font-size:11px;">
-                ${d.targetIRR ? `<span><strong>${(d.targetIRR * 100).toFixed(1)}%</strong> IRR</span>` : ''}
-                ${d.preferredReturn ? `<span><strong>${(d.preferredReturn * 100).toFixed(1)}%</strong> Pref</span>` : ''}
-                ${d.cashOnCash ? `<span><strong>${(d.cashOnCash * 100).toFixed(1)}%</strong> CoC</span>` : ''}
-              </div>
-            </div>
-          `).join('')}
+        <div style="flex:1;min-width:140px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Deploy Per Quarter</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-dark);">$${Math.round(rmAnnualDeploy / 4).toLocaleString()}</div>
+        </div>
+        <div style="flex:1;min-width:140px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Deals Per Year</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-dark);">${rmAnnualDeals}</div>
+        </div>
+        <div style="flex:1;min-width:140px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Avg Per Deal</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text-dark);">$100K</div>
         </div>
       </div>
-    `;
+    </div>
+  `;
+
+  // Matching deals section — builds fit reasons per deal
+  const matchingDeals = document.getElementById('goalsMatchingDeals');
+  const deals = (typeof DEALS !== 'undefined' ? DEALS : []);
+
+  // Score and rank deals by goal fit
+  const scoredDeals = deals.map(d => {
+    const reasons = [];
+    let score = 0;
+    const yld = d.cashOnCash || d.preferredReturn || 0;
+    const irr = d.targetIRR || 0;
+
+    // Cash flow match
+    if (yld >= 0.08) { reasons.push('Strong cash yield (' + (yld * 100).toFixed(1) + '%) accelerates your passive income goal'); score += 3; }
+    else if (yld >= 0.06) { reasons.push('Solid cash flow at ' + (yld * 100).toFixed(1) + '% yield contributes to passive income'); score += 2; }
+
+    // High IRR
+    if (irr >= 0.15) { reasons.push('High target return (' + (irr * 100).toFixed(1) + '% IRR) helps grow capital faster'); score += 2; }
+    else if (irr >= 0.10) { reasons.push('Competitive ' + (irr * 100).toFixed(1) + '% target IRR for capital growth'); score += 1; }
+
+    // Accessible minimum
+    if (d.investmentMinimum && d.investmentMinimum <= 50000 && d.investmentMinimum > 0) { reasons.push('Low minimum ($' + d.investmentMinimum.toLocaleString() + ') — easy to start or diversify'); score += 1; }
+    else if (d.investmentMinimum && d.investmentMinimum <= 100000 && d.investmentMinimum > 0) { reasons.push('Accessible $' + d.investmentMinimum.toLocaleString() + ' minimum fits typical deal sizing'); score += 0.5; }
+
+    // Tax benefits
+    if (g.taxReduction > 0 && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage')) {
+      reasons.push('Real estate depreciation in ' + d.assetClass.toLowerCase() + ' can offset taxable income');
+      score += 2;
+    }
+
+    // Evergreen / recurring
+    if (d.status === 'Evergreen') { reasons.push('Evergreen fund — invest on your timeline, no rush to deploy'); score += 1; }
+
+    // Monthly distributions
+    if (d.distributions === 'Monthly') { reasons.push('Monthly distributions for steady cash flow'); score += 1; }
+    else if (d.distributions === 'Quarterly') { reasons.push('Quarterly distributions'); score += 0.5; }
+
+    // Capital fits deployment pace
+    if (d.investmentMinimum && d.investmentMinimum > 0 && d.investmentMinimum <= rmAnnualDeploy) {
+      score += 0.5;
+    }
+
+    return { ...d, _fitReasons: reasons, _fitScore: score };
+  }).filter(d => d._fitScore >= 2 && d._fitReasons.length >= 2)
+    .sort((a, b) => b._fitScore - a._fitScore)
+    .slice(0, 4);
+
+  if (scoredDeals.length > 0) {
+    let dealCards = '';
+    scoredDeals.forEach(d => {
+      const topReasons = d._fitReasons.slice(0, 3);
+      const yieldVal = d.cashOnCash || d.preferredReturn || 0;
+      const annualIncome = d.investmentMinimum ? Math.round(d.investmentMinimum * (yieldVal || (d.targetIRR || 0.08))) : 0;
+
+      dealCards += '<div onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + d.id + '\'),200);" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 4px 12px rgba(81,190,123,0.1)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+        + '<div>'
+        + '<div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + d.investmentName + '</div>'
+        + '<div style="font-size:11px;color:var(--text-secondary);">' + d.managementCompany + ' &middot; ' + d.assetClass + '</div>'
+        + '</div>'
+        + (d.status === 'Evergreen' ? '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:#51BE7B22;color:var(--primary);white-space:nowrap;">EVERGREEN</span>' : '')
+        + '</div>'
+        + '<div style="display:flex;gap:12px;margin-bottom:14px;">'
+        + (d.targetIRR ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Target IRR</div></div>' : '')
+        + (yieldVal ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--primary);">' + (yieldVal * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">' + (d.cashOnCash ? 'Cash-on-Cash' : 'Pref Return') + '</div></div>' : '')
+        + (d.investmentMinimum ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum.toLocaleString()) + '</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Minimum</div></div>' : '')
+        + '</div>'
+        + '<div style="flex:1;border-top:1px solid var(--border);padding-top:12px;">'
+        + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Why This Fits Your Plan</div>'
+        + topReasons.map(function(r) { return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:5px;font-size:11px;color:var(--text-secondary);line-height:1.5;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;margin-top:2px;"><polyline points="4 12 10 18 20 6"/></svg>' + r + '</div>'; }).join('')
+        + (annualIncome > 0 ? '<div style="margin-top:8px;padding:6px 10px;background:var(--primary);background:linear-gradient(135deg,var(--primary),#3bba78);border-radius:var(--radius-sm);font-size:11px;font-weight:700;color:#fff;text-align:center;">At min investment: ~$' + annualIncome.toLocaleString() + '/yr toward your goal</div>' : '')
+        + '</div>'
+        + '</div>';
+    });
+
+    matchingDeals.innerHTML = '<div style="margin-top:16px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+      + '<div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">Deals That Could Help You Get There</div>'
+      + '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Matched to your income goal, risk profile, and investment pace</div></div>'
+      + '<button onclick="navigateTo(\'deals\')" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Explore All Deals &rarr;</button>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">'
+      + dealCards
+      + '</div>'
+      + '</div>';
   } else {
     matchingDeals.innerHTML = '';
   }
@@ -5508,6 +5653,7 @@ let debtSortAsc = true;
 let highlightedDebtFund = null;
 let debtFilterFinancials = 'all';
 let debtFilterAUM = 'all';
+let debtFilterPosition = 'all';
 let dealsBuyBoxApplied = false;
 let debtBuyBoxApplied = false;
 let buyBoxProgrammaticChange = false;
@@ -5515,6 +5661,7 @@ let buyBoxProgrammaticChange = false;
 function toggleDebtFilter(group, value, btn) {
   if (group === 'financials') debtFilterFinancials = value;
   if (group === 'aum') debtFilterAUM = value;
+  if (group === 'position') debtFilterPosition = value;
   // Update button states
   const siblings = btn.parentElement.querySelectorAll('.topbar-tab');
   siblings.forEach(b => b.classList.remove('active'));
@@ -5541,6 +5688,7 @@ function getFilteredDebtFunds() {
       if (debtFilterAUM === 'mid' && (aum < 100000000 || aum >= 1000000000)) return false;
       if (debtFilterAUM === 'institutional' && aum < 1000000000) return false;
     }
+    if (debtFilterPosition !== 'all' && (f.debtPosition || '') !== debtFilterPosition) return false;
     return true;
   });
 }
@@ -5594,6 +5742,11 @@ function renderDebtFunds() {
     _return2023: generateYearReturn(f.targetIRR, 2023),
     _return2022: generateYearReturn(f.targetIRR, 2022)
   }));
+
+  // Auto-apply Buy Box on first load if user has one configured
+  if (!debtBuyBoxApplied && buyBox && Object.keys(buyBox).length > 0) {
+    toggleDebtBuyBox();
+  }
 
   renderDebtStats(getFilteredDebtFunds(), debtFundData);
   renderDebtChart();
@@ -5901,24 +6054,56 @@ function renderManagersPage() {
   // Sort by # deals descending, then name
   filtered.sort((a, b) => b.dealCount - a.dealCount || a.name.localeCompare(b.name));
 
-  tbody.innerHTML = filtered.map(c => {
-    const assetStr = [...c.assetClasses].filter(Boolean).sort().join(', ');
-    const websiteLink = c.website
-      ? '<a href="' + (c.website.startsWith('http') ? c.website : 'https://' + c.website) + '" target="_blank" style="color:var(--primary);text-decoration:none;" onclick="event.stopPropagation()">' + c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') + '</a>'
-      : '<span style="color:var(--text-muted)">—</span>';
-    return '<tr style="cursor:pointer" onclick="navigateTo(\'deals\'); setTimeout(function(){ var s=document.getElementById(\'filterSearch\'); if(s){s.value=\'' + c.name.replace(/'/g, "\\'") + '\'; s.dispatchEvent(new Event(\'input\'));} },100)">' +
-      '<td class="name-cell" style="font-weight:600;color:var(--text-dark);">' + c.name + '</td>' +
-      '<td>' + (c.ceo || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
-      '<td>' + (assetStr || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
-      '<td style="text-align:center;font-weight:600;">' + c.dealCount + '</td>' +
-      '<td>' + (c.type || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
-      '<td>' + websiteLink + '</td>' +
-    '</tr>';
-  }).join('');
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No management companies found.</td></tr>';
+  // Stats bar
+  const statsEl = document.getElementById('managersStats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div style="display:flex;gap:24px;font-size:13px;color:var(--text-secondary);">
+        <span><strong style="color:var(--text-dark);">${filtered.length}</strong> managers</span>
+        <span><strong style="color:var(--text-dark);">${[...allAssetClasses].length}</strong> asset classes</span>
+        <span><strong style="color:var(--text-dark);">${filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
+      </div>
+    `;
   }
+
+  // Render cards
+  const grid = document.getElementById('managersGrid');
+  if (grid) {
+    grid.innerHTML = filtered.map(c => {
+      const initials = c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const assetBadges = [...c.assetClasses].filter(Boolean).sort().slice(0, 4).map(ac =>
+        `<span style="display:inline-block;padding:2px 8px;background:var(--bg-main);border:1px solid var(--border);border-radius:12px;font-size:10px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">${ac}</span>`
+      ).join('');
+      const moreCount = [...c.assetClasses].filter(Boolean).length - 4;
+      const websiteUrl = c.website ? (c.website.startsWith('http') ? c.website : 'https://' + c.website) : '';
+      const websiteDisplay = c.website ? c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
+
+      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);position:relative;" onclick="navigateTo('deals');setTimeout(function(){var s=document.getElementById('filterSearch');if(s){s.value='${c.name.replace(/'/g, "\\'")}';s.dispatchEvent(new Event('input'));}},100)" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div style="width:44px;height:44px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;font-family:var(--font-ui);flex-shrink:0;">${initials}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+            <div style="font-size:12px;color:var(--text-secondary);">${c.ceo ? c.ceo : ''} ${c.ceo && c.type ? '·' : ''} ${c.type || ''}</div>
+          </div>
+          <div style="text-align:center;flex-shrink:0;">
+            <div style="font-size:22px;font-weight:800;color:var(--primary);">${c.dealCount}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">deals</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">
+          ${assetBadges}${moreCount > 0 ? `<span style="display:inline-block;padding:2px 8px;background:var(--bg-main);border:1px solid var(--border);border-radius:12px;font-size:10px;font-weight:600;color:var(--text-muted);">+${moreCount}</span>` : ''}
+        </div>
+        ${websiteUrl ? `<a href="${websiteUrl}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${websiteDisplay}</a>` : ''}
+      </div>`;
+    }).join('');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-muted);font-size:14px;">No management companies found.</div>';
+    }
+  }
+
+  // Legacy table compat
+  tbody.innerHTML = '';
 }
 
 // ========== MY PORTFOLIO ==========
@@ -5969,51 +6154,69 @@ function renderPortfolioInDeals(container, portfolioDeals) {
     </tr>`;
   }).join('');
 
+  const thStyle = 'padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);white-space:nowrap;';
+  const tdStyle = 'padding:12px 14px;border-top:1px solid var(--border);';
+
+  container.style.display = 'block';
   container.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Invested</div>
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
+    <div style="max-width:1100px;margin:0 auto;">
+      <!-- Summary Cards Row -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
+          <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${active.length}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
+          <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg IRR</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</div>
+          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
+        </div>
       </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Active Investments</div>
-        <div style="font-size:22px;font-weight:800;color:var(--text-dark);">${active.length}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Distributions</div>
-        <div style="font-size:22px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Avg Target IRR</div>
-        <div style="font-size:22px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Asset Classes</div>
-        <div style="font-size:22px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
-      </div>
+
+      ${portfolioInvestments.length > 0 ? `
+      <!-- Investments Table -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="showDealSearchModal()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
+            <button onclick="navigateTo('portfolio')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);">Full Portfolio &rarr;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr>
+                <th style="${thStyle}">Investment</th>
+                <th style="${thStyle}">Sponsor</th>
+                <th style="${thStyle}">Asset Class</th>
+                <th style="${thStyle}">Amount</th>
+                <th style="${thStyle}">Status</th>
+                <th style="${thStyle}">Target IRR</th>
+                <th style="${thStyle}">Distributions</th>
+                <th style="${thStyle}">Actions</th>
+              </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+          </table>
+        </div>
+      </div>` : `
+      <div style="text-align:center;padding:40px;">
+        <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
+        <button onclick="navigateTo('portfolio')" style="padding:12px 28px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:14px;cursor:pointer;color:var(--text-secondary);margin-left:8px;">Go to Full Portfolio &rarr;</button>
+      </div>`}
     </div>
-    ${portfolioInvestments.length > 0 ? `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border);">
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Investment</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Sponsor</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Asset Class</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Amount</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Status</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Target IRR</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Distributions</th>
-            <th style="padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Actions</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-    </div>
-    <div style="margin-top:16px;text-align:center;">
-      <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
-      <button onclick="navigateTo('portfolio')" style="padding:10px 24px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);margin-left:8px;">View Full Portfolio &rarr;</button>
-    </div>` : ''}
   `;
 }
 
@@ -6322,6 +6525,9 @@ function filterDealSearchResults() {
 function showAddInvestmentModal(editId, prefillDeal, linkDealId) {
   const existing = editId ? portfolioInvestments.find(i => i.id === editId) : null;
   const pf = prefillDeal || {};
+  const isLinkedDeal = !!(linkDealId || (pf && pf.id));
+  const effectiveLinkId = linkDealId || (pf && pf.id) || '';
+
   const v = existing || {
     investmentName: pf.investmentName || '',
     sponsor: pf.managementCompany || '',
@@ -6334,38 +6540,103 @@ function showAddInvestmentModal(editId, prefillDeal, linkDealId) {
     holdPeriod: pf.holdPeriod || '',
     investingEntity: '',
     entityInvestedInto: '',
-    notes: ''
+    notes: '',
+    subscriptionDoc: ''
   };
+
   const assetOptions = ['Multi Family','Self Storage','Industrial','Lending','Short Term Rental','Hotels/Hospitality','Mixed-Use','RV/Mobile Home Parks','Business / Other','Land','Senior Living','Car Wash','ATM','Oil & Gas','Other'];
   const statusOptions = ['Active','Exited','Pending','Distributing'];
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'investmentModal';
   overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
-  overlay.innerHTML = `<div class="modal-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-      <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">${existing ? 'Edit' : 'Add'} Investment</div>
-      <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
-      <div class="modal-field" style="grid-column:1/-1"><label>Investment Name</label><input id="modalInvestmentName" value="${v.investmentName}"></div>
-      <div class="modal-field"><label>Sponsor / Management Company</label><input id="modalSponsor" value="${v.sponsor}"></div>
-      <div class="modal-field"><label>Asset Class</label><select id="modalAssetClass">${assetOptions.map(o => `<option value="${o}" ${v.assetClass === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
-      <div class="modal-field"><label>Amount Invested ($)</label><input id="modalAmountInvested" type="number" value="${v.amountInvested}"></div>
-      <div class="modal-field"><label>Date Invested</label><input id="modalDateInvested" type="date" value="${v.dateInvested}"></div>
-      <div class="modal-field"><label>Status</label><select id="modalStatus">${statusOptions.map(o => `<option value="${o}" ${v.status === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
-      <div class="modal-field"><label>Target IRR (%)</label><input id="modalTargetIRR" type="number" step="0.1" value="${v.targetIRR}"></div>
-      <div class="modal-field"><label>Distributions Received ($)</label><input id="modalDistributionsReceived" type="number" value="${v.distributionsReceived}"></div>
-      <div class="modal-field"><label>Hold Period (Years)</label><input id="modalHoldPeriod" type="number" step="0.5" value="${v.holdPeriod}"></div>
-      <div class="modal-field"><label>Investing Entity</label><input id="modalInvestingEntity" value="${v.investingEntity || ''}"></div>
-      <div class="modal-field" style="grid-column:1/-1"><label>Entity Invested Into</label><input id="modalEntityInvestedInto" value="${v.entityInvestedInto || ''}"></div>
-      <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="modalNotes">${v.notes || ''}</textarea></div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
-      <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
-      <button onclick="saveInvestmentFromModal('${editId || ''}', '${linkDealId || ''}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">${existing ? 'Save Changes' : 'Add Investment'}</button>
-    </div>
-  </div>`;
+
+  // Two modes: linked deal (simplified) vs custom/edit (full form)
+  if (isLinkedDeal && !existing) {
+    // Simplified modal for adding an existing deal to portfolio
+    const irr = v.targetIRR ? v.targetIRR + '%' : '---';
+    const minInv = pf.investmentMinimum ? '$' + Number(pf.investmentMinimum).toLocaleString() : '---';
+    const holdPd = pf.holdPeriod ? (pf.holdPeriod < 1 ? Math.round(pf.holdPeriod * 12) + ' mo' : pf.holdPeriod + ' yrs') : '---';
+
+    overlay.innerHTML = `<div class="modal-card" style="max-width:480px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">Add Investment to Portfolio</div>
+        <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+      </div>
+
+      <!-- Deal info (read-only) -->
+      <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;">
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">${v.investmentName}</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;">${v.sponsor} &middot; ${v.assetClass}</div>
+        <div style="display:flex;gap:16px;font-size:12px;color:var(--text-muted);">
+          <span>IRR: <strong style="color:var(--text-dark);">${irr}</strong></span>
+          <span>Min: <strong style="color:var(--text-dark);">${minInv}</strong></span>
+          <span>Hold: <strong style="color:var(--text-dark);">${holdPd}</strong></span>
+        </div>
+      </div>
+
+      <!-- Hidden fields to carry deal data -->
+      <input type="hidden" id="modalInvestmentName" value="${v.investmentName}">
+      <input type="hidden" id="modalSponsor" value="${v.sponsor}">
+      <input type="hidden" id="modalAssetClass" value="${v.assetClass}">
+      <input type="hidden" id="modalTargetIRR" value="${v.targetIRR}">
+      <input type="hidden" id="modalHoldPeriod" value="${v.holdPeriod}">
+      <input type="hidden" id="modalDistributionsReceived" value="">
+      <input type="hidden" id="modalStatus" value="Active">
+      <input type="hidden" id="modalInvestingEntity" value="">
+      <input type="hidden" id="modalEntityInvestedInto" value="">
+      <input type="hidden" id="modalNotes" value="">
+
+      <!-- User inputs -->
+      <div class="modal-field" style="margin-bottom:16px;">
+        <label style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Amount Invested ($) *</label>
+        <input id="modalAmountInvested" type="number" placeholder="e.g. 50000" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;box-sizing:border-box;">
+      </div>
+
+      <div class="modal-field" style="margin-bottom:16px;">
+        <label style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Date Invested *</label>
+        <input id="modalDateInvested" type="date" style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;box-sizing:border-box;">
+      </div>
+
+      <div class="modal-field" style="margin-bottom:20px;">
+        <label style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Subscription Document (for verification)</label>
+        <div style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color var(--transition);" onclick="document.getElementById('subscriptionDocInput').click()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="28" height="28" style="margin-bottom:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div id="subscriptionDocLabel" style="font-size:12px;color:var(--text-muted);">Click to upload PDF or image</div>
+          <input type="file" id="subscriptionDocInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="document.getElementById('subscriptionDocLabel').textContent=this.files[0]?this.files[0].name:'Click to upload PDF or image'">
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Verified investors can leave reviews and access premium features.</div>
+      </div>
+
+      <button onclick="saveInvestmentFromModal('', '${effectiveLinkId}')" style="width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:15px;cursor:pointer;">Add to My Portfolio</button>
+    </div>`;
+  } else {
+    // Full form for custom deals or editing existing
+    overlay.innerHTML = `<div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">${existing ? 'Edit' : 'Add'} Investment</div>
+        <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+        <div class="modal-field" style="grid-column:1/-1"><label>Investment Name</label><input id="modalInvestmentName" value="${v.investmentName}"></div>
+        <div class="modal-field"><label>Sponsor / Management Company</label><input id="modalSponsor" value="${v.sponsor}"></div>
+        <div class="modal-field"><label>Asset Class</label><select id="modalAssetClass">${assetOptions.map(o => `<option value="${o}" ${v.assetClass === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="modal-field"><label>Amount Invested ($)</label><input id="modalAmountInvested" type="number" value="${v.amountInvested}"></div>
+        <div class="modal-field"><label>Date Invested</label><input id="modalDateInvested" type="date" value="${v.dateInvested}"></div>
+        <div class="modal-field"><label>Status</label><select id="modalStatus">${statusOptions.map(o => `<option value="${o}" ${v.status === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="modal-field"><label>Target IRR (%)</label><input id="modalTargetIRR" type="number" step="0.1" value="${v.targetIRR}"></div>
+        <div class="modal-field"><label>Distributions Received ($)</label><input id="modalDistributionsReceived" type="number" value="${v.distributionsReceived}"></div>
+        <div class="modal-field"><label>Hold Period (Years)</label><input id="modalHoldPeriod" type="number" step="0.5" value="${v.holdPeriod}"></div>
+        <div class="modal-field"><label>Investing Entity</label><input id="modalInvestingEntity" value="${v.investingEntity || ''}"></div>
+        <div class="modal-field" style="grid-column:1/-1"><label>Entity Invested Into</label><input id="modalEntityInvestedInto" value="${v.entityInvestedInto || ''}"></div>
+        <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="modalNotes">${v.notes || ''}</textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
+        <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
+        <button onclick="saveInvestmentFromModal('${editId || ''}', '${effectiveLinkId}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">${existing ? 'Save Changes' : 'Add Investment'}</button>
+      </div>
+    </div>`;
+  }
   document.body.appendChild(overlay);
 }
 
@@ -6398,9 +6669,34 @@ function saveInvestmentFromModal(editId, linkDealId) {
     setDealStage(linkDealId, 'portfolio');
   }
   savePortfolio();
+
+  // Auto-add tax document for new portfolio investments
+  if (!editId) {
+    const taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+    const year = new Date().getFullYear();
+    const alreadyExists = taxDocs.some(t => t.investmentName === data.investmentName && t.taxYear == year);
+    if (!alreadyExists) {
+      taxDocs.push({
+        id: 'tax_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        taxYear: year,
+        investmentName: data.investmentName,
+        investingEntity: data.investingEntity || '',
+        entityInvestedInto: data.entityInvestedInto || '',
+        formType: 'K-1',
+        status: 'Pending',
+        dateReceived: '',
+        portalUrl: '',
+        contact: '',
+        notes: '',
+        fileUrl: ''
+      });
+      localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocs));
+    }
+  }
+
   closeModal();
   renderPortfolio();
-  renderAll(); // refresh deal cards with updated stages
+  renderAll();
 }
 
 function deleteInvestment(id) {
@@ -6692,6 +6988,9 @@ function toggleDebtBuyBox() {
     if (updateBtn) updateBtn.classList.remove('visible');
     debtFilterFinancials = 'all';
     debtFilterAUM = 'all';
+    debtFilterPosition = 'all';
+    const posSelect = document.getElementById('debtPositionFilter');
+    if (posSelect) posSelect.value = 'all';
     // Reset button states
     document.querySelectorAll('[data-filter-group="financials"] .topbar-tab, [data-filter-group="financials"]').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('[data-filter-group="aum"] .topbar-tab, [data-filter-group="aum"]').forEach(b => b.classList.remove('active'));
