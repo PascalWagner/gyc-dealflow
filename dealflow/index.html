@@ -6155,9 +6155,10 @@ function renderDebtChart() {
   const metricKey = metricKeys[debtChartMetric] || '_yieldData';
   const metricLabel = metricLabels[debtChartMetric] || 'Yield (%)';
 
-  // Show/hide Coming Soon overlay for delinquency
+  // Show Coming Soon overlay for metrics without real data
   const overlay = document.getElementById('debtChartComingSoon');
-  if (overlay) overlay.style.display = debtChartMetric === 'delinquency' ? 'flex' : 'none';
+  const isSimulated = debtChartMetric === 'delinquency' || debtChartMetric === 'leverage' || debtChartMetric === 'ltv';
+  if (overlay) overlay.style.display = isSimulated ? 'flex' : 'none';
 
   const datasets = filteredFunds.map(f => {
     const isHighlighted = highlightedDebtFund === f.id;
@@ -6272,9 +6273,19 @@ function switchDebtMetric(metric, btn) {
   document.querySelectorAll('#debtChartToggles .topbar-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderDebtChart();
-  // Show/hide Coming Soon overlay for delinquency
+  // Show Coming Soon overlay for metrics without real data
   const overlay = document.getElementById('debtChartComingSoon');
-  if (overlay) overlay.style.display = metric === 'delinquency' ? 'flex' : 'none';
+  const isSimulated = metric === 'delinquency' || metric === 'leverage' || metric === 'ltv';
+  if (overlay) {
+    overlay.style.display = isSimulated ? 'flex' : 'none';
+    const title = overlay.querySelector('div:first-child');
+    const desc = overlay.querySelector('div:last-child');
+    if (title) title.textContent = 'Coming Soon';
+    if (desc) {
+      const labels = { leverage: 'Leverage ratio', ltv: 'Loan-to-value', delinquency: 'Delinquency rate' };
+      desc.textContent = (labels[metric] || 'This') + ' data is not yet available. We\'re working on sourcing verified metrics from fund managers.';
+    }
+  }
 }
 
 function renderDebtTable() {
