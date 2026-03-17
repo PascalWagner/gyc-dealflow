@@ -2040,6 +2040,12 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;opacity:0.5;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </div>
   <div class="sidebar-footer">
+    <div style="text-align:center;margin-bottom:8px;">
+      <a href="#" onclick="event.preventDefault();showFeedbackModal();" style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;opacity:0.7;transition:opacity var(--transition);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Having issues? Submit feedback
+      </a>
+    </div>
     <div class="theme-toggle" onclick="toggleTheme()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <span>Light Mode</span>
@@ -2049,6 +2055,44 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
 </aside>
+
+<!-- Feedback Modal -->
+<div id="feedbackModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeFeedbackModal()">
+  <div style="background:var(--bg-card);border-radius:var(--radius);width:100%;max-width:520px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-family:var(--font-headline);font-size:18px;font-weight:400;color:var(--text-dark);">Submit Feedback</div>
+      <button onclick="closeFeedbackModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:24px;">
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">Let us know what's not working or what you'd like to see improved. We read every submission.</div>
+      <div style="margin-bottom:16px;">
+        <label style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);display:block;margin-bottom:6px;">Type</label>
+        <select id="feedbackType" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-body);font-size:13px;color:var(--text-dark);">
+          <option value="bug">Bug Report</option>
+          <option value="feature">Feature Request</option>
+          <option value="question">Question</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);display:block;margin-bottom:6px;">Message</label>
+        <textarea id="feedbackMessage" rows="4" placeholder="I am struggling with... and would love the ability to..." style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-body);font-size:13px;color:var(--text-dark);resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);display:block;margin-bottom:6px;">Screenshot (optional)</label>
+        <div id="feedbackDropZone" onclick="document.getElementById('feedbackFileInput').click()" style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:all var(--transition);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='var(--bg-main)'" ondragleave="this.style.borderColor='var(--border)';this.style.background=''" ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='';handleFeedbackFile(event.dataTransfer.files[0])">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="24" height="24" style="margin-bottom:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div style="font-size:12px;color:var(--text-muted);" id="feedbackFileName">Click or drag to upload a screenshot</div>
+        </div>
+        <input type="file" id="feedbackFileInput" accept="image/*" style="display:none;" onchange="handleFeedbackFile(this.files[0])">
+      </div>
+      <div id="feedbackStatus" style="display:none;padding:10px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;text-align:center;margin-bottom:12px;"></div>
+      <button id="feedbackSubmitBtn" onclick="submitFeedback()" style="width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Submit Feedback</button>
+    </div>
+  </div>
+</div>
 
 <!-- Overlay for panel -->
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
@@ -4410,6 +4454,8 @@ function initAuth() {
     user.isNewUser = false;
     localStorage.setItem('gycUser', JSON.stringify(user));
   }
+  // Ensure admin nav is shown after auth resolves
+  showAdminNav();
 }
 
 function logout() {
@@ -7066,7 +7112,7 @@ function filterAcademyCourses(level) {
 }
 
 // ========== ADMIN & ANALYTICS ==========
-const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com'];
+const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'pascal@growyourcashflow.io', 'info@pascalwagner.com'];
 
 function isAdmin() {
   const user = getUser();
@@ -7313,6 +7359,99 @@ function clearAnalyticsData() {
     localStorage.removeItem(ANALYTICS_KEY);
     sessionStorage.removeItem(ANALYTICS_PAGEVIEWS_KEY);
     refreshAnalyticsDashboard();
+  }
+}
+
+// ========== FEEDBACK SYSTEM ==========
+let feedbackFileData = null;
+
+function showFeedbackModal() {
+  const overlay = document.getElementById('feedbackModalOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('feedbackMessage').value = '';
+  document.getElementById('feedbackType').value = 'bug';
+  document.getElementById('feedbackFileName').textContent = 'Click or drag to upload a screenshot';
+  document.getElementById('feedbackStatus').style.display = 'none';
+  document.getElementById('feedbackSubmitBtn').disabled = false;
+  document.getElementById('feedbackSubmitBtn').textContent = 'Submit Feedback';
+  feedbackFileData = null;
+}
+
+function closeFeedbackModal() {
+  document.getElementById('feedbackModalOverlay').style.display = 'none';
+}
+
+function handleFeedbackFile(file) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    document.getElementById('feedbackFileName').textContent = 'Please upload an image file';
+    return;
+  }
+  document.getElementById('feedbackFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    feedbackFileData = e.target.result; // base64 data URL
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitFeedback() {
+  const type = document.getElementById('feedbackType').value;
+  const message = document.getElementById('feedbackMessage').value.trim();
+  const statusEl = document.getElementById('feedbackStatus');
+  const btn = document.getElementById('feedbackSubmitBtn');
+
+  if (!message) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#fef2f2';
+    statusEl.style.color = '#dc2626';
+    statusEl.textContent = 'Please enter a message.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  const user = getUser();
+  const payload = {
+    type: type,
+    message: message,
+    userEmail: user?.email || 'anonymous',
+    userName: user?.name || 'Unknown',
+    page: currentPage || 'unknown',
+    timestamp: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    screenshot: feedbackFileData || null
+  };
+
+  try {
+    const resp = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (resp.ok) {
+      statusEl.style.display = 'block';
+      statusEl.style.background = '#f0fdf4';
+      statusEl.style.color = 'var(--primary)';
+      statusEl.textContent = 'Thank you! Your feedback has been sent.';
+      btn.textContent = 'Sent!';
+      setTimeout(() => closeFeedbackModal(), 2000);
+    } else {
+      throw new Error('Failed');
+    }
+  } catch (e) {
+    // Fallback: send via mailto
+    const subject = encodeURIComponent('[GYC Dealflow] ' + type.charAt(0).toUpperCase() + type.slice(1) + ' from ' + (user?.name || 'User'));
+    const body = encodeURIComponent(message + '\n\n---\nFrom: ' + (user?.email || 'anonymous') + '\nPage: ' + (currentPage || 'unknown') + '\nTime: ' + new Date().toLocaleString());
+    window.open('mailto:pascal@growyourcashflow.io?subject=' + subject + '&body=' + body, '_blank');
+    statusEl.style.display = 'block';
+    statusEl.style.background = '#f0fdf4';
+    statusEl.style.color = 'var(--primary)';
+    statusEl.textContent = 'Opening email client as fallback...';
+    btn.textContent = 'Sent!';
+    btn.disabled = false;
   }
 }
 
