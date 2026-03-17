@@ -7051,8 +7051,9 @@ function renderAssetsPage() {
     locs.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; stateSelect.appendChild(o); });
   }
 
-  // Filter deals into assets
+  // Filter deals into assets — only syndications (single-property deals), not funds
   const assets = deals.filter(d => {
+    if (d.dealType === 'Fund') return false;
     if (classFilter && d.assetClass !== classFilter) return false;
     const loc = (d.location || d.investingGeography || '').toLowerCase();
     if (stateFilter && loc !== stateFilter.toLowerCase()) return false;
