@@ -5791,121 +5791,185 @@ function renderReport() {
   const d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
   if (!d.firstName && !d.goal) return;
 
-  const name = (d.firstName || 'Investor') + ' ' + (d.lastName || '');
+  const name = (d.firstName || 'Investor');
   const matchCount = getMatchingDealCount(d);
   const branch = d._branch || (d.goal && d.goal.includes('Cash') ? 'cashflow' : d.goal && d.goal.includes('Equity') ? 'growth' : d.goal && d.goal.includes('Tax') ? 'tax' : 'cashflow');
 
-  // Branch-specific config
   const branchConfig = {
-    cashflow: { label: 'Cash Flow', color: 'var(--green)', icon: '&#128176;', bg: 'rgba(81,190,123,0.08)' },
-    growth: { label: 'Equity Growth', color: 'var(--blue)', icon: '&#128200;', bg: 'rgba(37,99,235,0.08)' },
-    tax: { label: 'Tax Optimization', color: 'var(--orange)', icon: '&#128737;', bg: 'rgba(207,122,48,0.08)' }
+    cashflow: { label: 'Cash Flow', color: '#51BE7B', colorBg: 'rgba(81,190,123,0.08)', icon: '&#128176;',
+      headline: 'Build Predictable Passive Income',
+      subtext: 'You\'re focused on consistent distributions from day one. Here\'s your roadmap to get there.' },
+    growth: { label: 'Equity Growth', color: '#2563EB', colorBg: 'rgba(37,99,235,0.08)', icon: '&#128200;',
+      headline: 'Grow Your Wealth Through Real Estate',
+      subtext: 'You\'re focused on equity appreciation and higher total returns. Here are the deals that fit.' },
+    tax: { label: 'Tax Optimization', color: '#CF7A30', colorBg: 'rgba(207,122,48,0.08)', icon: '&#128737;',
+      headline: 'Reduce Your Tax Burden',
+      subtext: 'You\'re focused on sheltering income through depreciation and tax-advantaged structures.' }
   };
   const bc = branchConfig[branch] || branchConfig.cashflow;
 
-  // Build metric cards based on what data exists
-  function metricCard(value, label, highlight) {
-    if (!value) return '';
-    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${highlight ? bc.color : 'var(--text-dark)'};line-height:1;">${value}</div>
-      <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">${label}</div>
-    </div>`;
+  // Get top matching deals
+  const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+  const assetMap = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
+  const userAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
+  const matchedDeals = allDeals.filter(deal => {
+    if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
+    const stage = getDealStage(deal.id);
+    if (stage === 'passed') return false;
+    return true;
+  }).slice(0, 3);
+
+  // Build progress section based on branch
+  let goalSection = '';
+  if (branch === 'cashflow') {
+    const current = d.currentCashFlow || '$0';
+    const target = d.targetCashFlow || 'Not set';
+    const checkSize = d.checkSize || 'Not set';
+    goalSection = `
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Current Cash Flow</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);">${current}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">per year</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${bc.color}" stroke-width="2.5" style="width:32px;height:32px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">YOUR GOAL</div>
+        </div>
+        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Target Cash Flow</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:${bc.color};">${target}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">per year</div>
+        </div>
+      </div>`;
+  } else if (branch === 'growth') {
+    const minIRR = d.minIRR || 'Not set';
+    const risk = d.riskTolerance || 'Not set';
+    goalSection = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px;">
+        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Minimum IRR Target</div>
+          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:${bc.color};">${minIRR}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Risk Profile</div>
+          <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);">${risk}</div>
+        </div>
+      </div>`;
+  } else {
+    const taxable = d.taxableIncome || 'Not set';
+    const offset = d.taxOffset || 'Not set';
+    goalSection = `
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Taxable Income</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);">${taxable}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${bc.color}" stroke-width="2.5" style="width:32px;height:32px;"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">OFFSET</div>
+        </div>
+        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Tax Offset Goal</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:${bc.color};">${offset}</div>
+        </div>
+      </div>`;
   }
 
-  // Build preference pills
-  function prefPills(items, emptyText) {
-    if (!items || (Array.isArray(items) && items.length === 0)) return `<span style="color:var(--text-muted);font-size:13px;">${emptyText || 'Not set'}</span>`;
-    const arr = Array.isArray(items) ? items : [items];
-    return arr.map(i => `<span style="display:inline-block;padding:5px 14px;background:var(--bg-cream);border:1px solid var(--border);border-radius:100px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);margin:3px 4px 3px 0;">${i}</span>`).join('');
-  }
+  // Build criteria pills
+  function pill(label) { return `<span style="display:inline-block;padding:6px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:100px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);margin:3px 4px 3px 0;">${label}</span>`; }
+  const assetPills = (d.assetClasses || []).map(pill).join('') || '<span style="color:var(--text-muted);font-size:13px;">All asset classes</span>';
+  const stratPills = [...(d.strategies || []), ...(d.instruments || [])].map(pill).join('');
 
-  // Build detail row (only if value exists)
-  function detailRow(label, value) {
-    if (!value || value === '---') return '';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-light);">
-      <span style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">${label}</span>
-      <span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">${value}</span>
-    </div>`;
+  // Quick specs
+  const specs = [];
+  if (d.checkSize) specs.push({ label: 'Check Size', value: d.checkSize });
+  if (d.lockup) specs.push({ label: 'Lockup', value: d.lockup });
+  if (d.distributions) specs.push({ label: 'Distributions', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
+  if (d.accreditation) specs.push({ label: 'Accreditation', value: d.accreditation.split(' (')[0].split(' based')[0] });
+
+  // Matching deal cards
+  let dealCardsHtml = '';
+  if (matchedDeals.length > 0) {
+    dealCardsHtml = matchedDeals.map(deal => {
+      const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="navigateTo('deals'); setTimeout(() => openPanel('${deal.id}'), 300);">
+        <div style="height:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;position:relative;">
+          <span style="font-size:28px;opacity:0.3;">${ph.icon}</span>
+          <span style="position:absolute;top:8px;left:8px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;">${deal.assetClass || ''}</span>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${deal.investmentName}</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${deal.managementCompany || ''}</div>
+          <div style="display:flex;gap:12px;">
+            ${deal.targetIRR ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">IRR</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--green);">${fmt(deal.targetIRR,'pct')}</span></div>` : ''}
+            ${deal.investmentMinimum ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Min</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);">${fmt(deal.investmentMinimum,'money')}</span></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   const container = document.getElementById('reportContent');
   container.innerHTML = `
-    <div style="max-width:800px;margin:0 auto;padding:24px;">
+    <div style="max-width:860px;margin:0 auto;padding:24px;">
 
-      <!-- Hero Card -->
-      <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:32px;margin-bottom:24px;color:#fff;">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-          <div>
-            <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.5);margin-bottom:6px;">My Investment Profile</div>
-            <div style="font-family:var(--font-headline);font-size:28px;color:#fff;">${name.trim()}'s Buy Box</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:${bc.bg};border-radius:100px;">
-            <span style="font-size:18px;">${bc.icon}</span>
-            <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:${bc.color};">${bc.label} Investor</span>
-          </div>
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:40px 36px;margin-bottom:28px;color:#fff;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <span style="font-size:24px;">${bc.icon}</span>
+          <span style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};">${bc.label} Strategy</span>
         </div>
-        <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
-          <button onclick="openBuyBoxWizard()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">Edit Preferences</button>
-          <button onclick="navigateTo('deals')" style="padding:10px 24px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;">Browse ${matchCount} Matching Deals &rarr;</button>
+        <div style="font-family:var(--font-headline);font-size:32px;color:#fff;margin-bottom:8px;">${bc.headline}</div>
+        <div style="font-family:var(--font-body);font-size:16px;color:rgba(255,255,255,0.65);margin-bottom:24px;max-width:560px;line-height:1.6;">${bc.subtext}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button onclick="openBuyBoxWizard()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Edit My Buy Box</button>
+          <button onclick="navigateTo('deals')" style="padding:12px 28px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Browse ${matchCount} Matching Deals &rarr;</button>
         </div>
       </div>
 
-      <!-- Key Metrics Row -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
-        ${metricCard(d.checkSize, 'Check Size', false)}
-        ${metricCard(d.minIRR || (d.riskTolerance ? d.riskTolerance.match(/\\d+/)?.[0] + '%' : ''), 'Min IRR Target', true)}
-        ${metricCard(matchCount, 'Matching Deals', true)}
-        ${metricCard(d.lockup || '', 'Lockup Tolerance', false)}
-        ${branch === 'cashflow' ? metricCard(d.targetCashFlow, 'CF Target', true) : ''}
-        ${branch === 'cashflow' ? metricCard(d.currentCashFlow, 'Current CF', false) : ''}
-        ${branch === 'tax' ? metricCard(d.taxOffset, 'Tax Offset Goal', true) : ''}
-        ${branch === 'tax' ? metricCard(d.taxableIncome, 'Taxable Income', false) : ''}
-      </div>
+      <!-- Goal Progress Section -->
+      ${goalSection}
 
-      <!-- Preferences Cards -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
-
-        <!-- Asset Classes -->
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:14px;">Asset Classes</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0;">${prefPills(d.assetClasses, 'All asset classes')}</div>
+      <!-- What I'm Looking For -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;">
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">What I'm Looking For</div>
+        <div style="margin-bottom:16px;">
+          <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Asset Classes</div>
+          <div style="display:flex;flex-wrap:wrap;">${assetPills}</div>
         </div>
+        ${stratPills ? `<div>
+          <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Strategies</div>
+          <div style="display:flex;flex-wrap:wrap;">${stratPills}</div>
+        </div>` : ''}
+      </div>
 
-        <!-- Strategies -->
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:14px;">Strategies & Instruments</div>
-          <div style="display:flex;flex-wrap:wrap;gap:0;">
-            ${prefPills(d.strategies, '')}
-            ${prefPills(d.instruments, '')}
-          </div>
+      <!-- Quick Specs -->
+      ${specs.length > 0 ? `
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(specs.length, 4)},1fr);gap:12px;margin-bottom:20px;">
+        ${specs.map(s => `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
+          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">${s.value}</div>
+        </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Top Matching Deals -->
+      ${matchedDeals.length > 0 ? `
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Top Deals For You</div>
+          <button onclick="navigateTo('deals')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;">See all ${matchCount} &rarr;</button>
         </div>
-      </div>
-
-      <!-- Details Card -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;">
-        <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Profile Details</div>
-        ${detailRow('Primary Goal', d.goal)}
-        ${detailRow('Accreditation', d.accreditation)}
-        ${detailRow('Annual Income', d.annualIncome)}
-        ${detailRow('Check Size', d.checkSize)}
-        ${detailRow('Risk Tolerance', d.riskTolerance)}
-        ${detailRow('Lockup Tolerance', d.lockup)}
-        ${detailRow('Distribution Preference', safeJoin(d.distributions))}
-        ${detailRow('Investment Entity', d.entity)}
-        ${detailRow('Tax Timeline', d.taxTimeline)}
-        ${detailRow('Min Target IRR', d.minIRR)}
-        ${detailRow('Min Year-1 Cash Yield', d.minCashYield)}
-        ${detailRow('Capital Availability', d.capitalReady)}
-        ${detailRow('Deployment Urgency', d.urgency)}
-        ${detailRow('Audit Requirement', d.auditPref)}
-        ${detailRow('Firm Size Preference', safeJoin(d.firmSize))}
-      </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+          ${dealCardsHtml}
+        </div>
+      </div>` : ''}
 
       <!-- Office Hours CTA -->
-      <div style="background:var(--mint-bg);border:1px solid rgba(81,190,123,0.2);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div style="background:linear-gradient(135deg,${bc.colorBg},var(--bg-card));border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div>
-          <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Ready to deploy capital?</div>
-          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Join office hours every Thursday 12-1pm ET for 1:1 guidance from Pascal.</div>
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Book 1:1 office hours with Pascal every Thursday 12-1pm ET.</div>
         </div>
         <button onclick="navigateTo('officehours')" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Book Office Hours</button>
       </div>
