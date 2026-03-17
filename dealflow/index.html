@@ -1991,10 +1991,6 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Investment Managers
     </a>
-    <a class="nav-item" href="#" data-page="dealflow" onclick="navigateTo('dealflow'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Deal Flow
-    </a>
     <div class="nav-section-label">My Investments</div>
     <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
@@ -2018,7 +2014,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       GYC Income Fund
     </a>
-    <div class="nav-section-label" style="margin-top:auto;"></div>
+    <div class="nav-section-label" style="margin-top:auto;">Account</div>
+    <a class="nav-item" href="#" data-page="dealflow" onclick="navigateTo('dealflow'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Deal Flow Stats
+    </a>
     <a class="nav-item" href="#" data-page="subscription" onclick="navigateTo('subscription'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Subscription
@@ -3019,7 +3019,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">Deal Flow</div>
+      <div class="topbar-title">Deal Flow Stats</div>
     </div>
     <div class="content-area" id="dealflowContent"></div>
   </div>
@@ -5715,93 +5715,9 @@ function renderGoalsDashboard() {
     </div>
   `;
 
-  // Matching deals section — builds fit reasons per deal
+  // Matching deals section — removed from goals, now on dashboard
   const matchingDeals = document.getElementById('goalsMatchingDeals');
-  const deals = (typeof DEALS !== 'undefined' ? DEALS : []);
-
-  // Score and rank deals by goal fit
-  const scoredDeals = deals.map(d => {
-    const reasons = [];
-    let score = 0;
-    const yld = d.cashOnCash || d.preferredReturn || 0;
-    const irr = d.targetIRR || 0;
-
-    // Cash flow match
-    if (yld >= 0.08) { reasons.push('Strong cash yield (' + (yld * 100).toFixed(1) + '%) accelerates your passive income goal'); score += 3; }
-    else if (yld >= 0.06) { reasons.push('Solid cash flow at ' + (yld * 100).toFixed(1) + '% yield contributes to passive income'); score += 2; }
-
-    // High IRR
-    if (irr >= 0.15) { reasons.push('High target return (' + (irr * 100).toFixed(1) + '% IRR) helps grow capital faster'); score += 2; }
-    else if (irr >= 0.10) { reasons.push('Competitive ' + (irr * 100).toFixed(1) + '% target IRR for capital growth'); score += 1; }
-
-    // Accessible minimum
-    if (d.investmentMinimum && d.investmentMinimum <= 50000 && d.investmentMinimum > 0) { reasons.push('Low minimum ($' + d.investmentMinimum.toLocaleString() + ') — easy to start or diversify'); score += 1; }
-    else if (d.investmentMinimum && d.investmentMinimum <= 100000 && d.investmentMinimum > 0) { reasons.push('Accessible $' + d.investmentMinimum.toLocaleString() + ' minimum fits typical deal sizing'); score += 0.5; }
-
-    // Tax benefits
-    if (g.taxReduction > 0 && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage')) {
-      reasons.push('Real estate depreciation in ' + d.assetClass.toLowerCase() + ' can offset taxable income');
-      score += 2;
-    }
-
-    // Evergreen / recurring
-    if (d.status === 'Evergreen') { reasons.push('Evergreen fund — invest on your timeline, no rush to deploy'); score += 1; }
-
-    // Monthly distributions
-    if (d.distributions === 'Monthly') { reasons.push('Monthly distributions for steady cash flow'); score += 1; }
-    else if (d.distributions === 'Quarterly') { reasons.push('Quarterly distributions'); score += 0.5; }
-
-    // Capital fits deployment pace
-    if (d.investmentMinimum && d.investmentMinimum > 0 && d.investmentMinimum <= rmAnnualDeploy) {
-      score += 0.5;
-    }
-
-    return { ...d, _fitReasons: reasons, _fitScore: score };
-  }).filter(d => d._fitScore >= 2 && d._fitReasons.length >= 2)
-    .sort((a, b) => b._fitScore - a._fitScore)
-    .slice(0, 4);
-
-  if (scoredDeals.length > 0) {
-    let dealCards = '';
-    scoredDeals.forEach(d => {
-      const topReasons = d._fitReasons.slice(0, 3);
-      const yieldVal = d.cashOnCash || d.preferredReturn || 0;
-      const annualIncome = d.investmentMinimum ? Math.round(d.investmentMinimum * (yieldVal || (d.targetIRR || 0.08))) : 0;
-
-      dealCards += '<div onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + d.id + '\'),200);" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 4px 12px rgba(81,190,123,0.1)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
-        + '<div>'
-        + '<div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + d.investmentName + '</div>'
-        + '<div style="font-size:11px;color:var(--text-secondary);">' + d.managementCompany + ' &middot; ' + d.assetClass + '</div>'
-        + '</div>'
-        + (d.status === 'Evergreen' ? '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:#51BE7B22;color:var(--primary);white-space:nowrap;">EVERGREEN</span>' : '')
-        + '</div>'
-        + '<div style="display:flex;gap:12px;margin-bottom:14px;">'
-        + (d.targetIRR ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Target IRR</div></div>' : '')
-        + (yieldVal ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--primary);">' + (yieldVal * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">' + (d.cashOnCash ? 'Cash-on-Cash' : 'Pref Return') + '</div></div>' : '')
-        + (d.investmentMinimum ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum.toLocaleString()) + '</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Minimum</div></div>' : '')
-        + '</div>'
-        + '<div style="flex:1;border-top:1px solid var(--border);padding-top:12px;">'
-        + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Why This Fits Your Plan</div>'
-        + topReasons.map(function(r) { return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:5px;font-size:11px;color:var(--text-secondary);line-height:1.5;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;margin-top:2px;"><polyline points="4 12 10 18 20 6"/></svg>' + r + '</div>'; }).join('')
-        + (annualIncome > 0 ? '<div style="margin-top:8px;padding:6px 10px;background:var(--primary);background:linear-gradient(135deg,var(--primary),#3bba78);border-radius:var(--radius-sm);font-size:11px;font-weight:700;color:#fff;text-align:center;">At min investment: ~$' + annualIncome.toLocaleString() + '/yr toward your goal</div>' : '')
-        + '</div>'
-        + '</div>';
-    });
-
-    matchingDeals.innerHTML = '<div style="margin-top:16px;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-      + '<div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">Deals That Could Help You Get There</div>'
-      + '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Matched to your income goal, risk profile, and investment pace</div></div>'
-      + '<button onclick="navigateTo(\'deals\')" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Explore All Deals &rarr;</button>'
-      + '</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">'
-      + dealCards
-      + '</div>'
-      + '</div>';
-  } else {
-    matchingDeals.innerHTML = '';
-  }
+  if (matchingDeals) matchingDeals.innerHTML = '';
 }
 
 // ========== ACTIVITY TRACKING (GHL SYNC) ==========
@@ -7653,8 +7569,10 @@ function renderDashboard() {
               <tbody>
                 ${portfolio.map(p => {
                   const statusColor = p.status === 'Active' ? 'var(--primary)' : p.status === 'Distributing' ? '#3b82f6' : p.status === 'Exited' ? '#6b7280' : '#f59e0b';
-                  return '<tr style="border-bottom:1px solid var(--border);">'
-                    + '<td style="padding:10px 8px;"><div style="font-weight:700;color:var(--text-dark);">' + p.investmentName + '</div><div style="font-size:11px;color:var(--text-muted);">' + (p.sponsor || '') + ' · ' + (p.assetClass || '') + '</div></td>'
+                  const matchedDeal = deals.find(d => d.investmentName && p.investmentName && d.investmentName.toLowerCase().trim() === p.investmentName.toLowerCase().trim());
+                  const clickAttr = matchedDeal ? 'onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + matchedDeal.id + '\'),200)" style="border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'"' : 'style="border-bottom:1px solid var(--border);"';
+                  return '<tr ' + clickAttr + '>'
+                    + '<td style="padding:10px 8px;"><div style="font-weight:700;color:var(--text-dark);">' + p.investmentName + (matchedDeal ? ' <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:12px;height:12px;vertical-align:middle;margin-left:4px;"><polyline points="9 18 15 12 9 6"/></svg>' : '') + '</div><div style="font-size:11px;color:var(--text-muted);">' + (p.sponsor || '') + ' · ' + (p.assetClass || '') + '</div></td>'
                     + '<td style="padding:10px 8px;text-align:right;font-weight:600;">$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
                     + '<td style="padding:10px 8px;text-align:right;color:var(--primary);font-weight:600;">$' + (parseFloat(p.distributionsReceived) || 0).toLocaleString() + '</td>'
                     + '<td style="padding:10px 8px;text-align:center;"><span style="padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'Active') + '</span></td>'
@@ -7698,7 +7616,76 @@ function renderDashboard() {
         </div>
       ` : '<div style="text-align:center;padding:20px;font-size:13px;color:var(--text-muted);">No untriaged deals right now.</div>'}
     </div>
+
+    <!-- Deals That Could Help You Get There -->
+    <div id="dashboardGoalDeals" style="margin-top:24px;"></div>
   `;
+
+  // Render goal-matched deals if user has goals set
+  if (hasGoals && goalGap > 0) {
+    const annualDeploy = Math.round((goalGap / 0.08) / (parseInt(goals.timeline) || 5));
+    const scoredDeals = deals.map(d => {
+      const reasons = [];
+      let score = 0;
+      const yld = d.cashOnCash || d.preferredReturn || 0;
+      const irr = d.targetIRR || 0;
+      if (yld >= 0.08) { reasons.push('Strong cash yield (' + (yld * 100).toFixed(1) + '%) accelerates your passive income goal'); score += 3; }
+      else if (yld >= 0.06) { reasons.push('Solid cash flow at ' + (yld * 100).toFixed(1) + '% yield contributes to passive income'); score += 2; }
+      if (irr >= 0.15) { reasons.push('High target return (' + (irr * 100).toFixed(1) + '% IRR) helps grow capital faster'); score += 2; }
+      else if (irr >= 0.10) { reasons.push('Competitive ' + (irr * 100).toFixed(1) + '% target IRR for capital growth'); score += 1; }
+      if (d.investmentMinimum && d.investmentMinimum <= 50000 && d.investmentMinimum > 0) { reasons.push('Low minimum ($' + d.investmentMinimum.toLocaleString() + ') — easy to start or diversify'); score += 1; }
+      else if (d.investmentMinimum && d.investmentMinimum <= 100000 && d.investmentMinimum > 0) { reasons.push('Accessible $' + d.investmentMinimum.toLocaleString() + ' minimum fits typical deal sizing'); score += 0.5; }
+      if ((goals.taxReduction || 0) > 0 && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage')) { reasons.push('Real estate depreciation in ' + d.assetClass.toLowerCase() + ' can offset taxable income'); score += 2; }
+      if (d.status === 'Evergreen') { reasons.push('Evergreen fund — invest on your timeline, no rush to deploy'); score += 1; }
+      if (d.distributions === 'Monthly') { reasons.push('Monthly distributions for steady cash flow'); score += 1; }
+      else if (d.distributions === 'Quarterly') { reasons.push('Quarterly distributions'); score += 0.5; }
+      if (d.investmentMinimum && d.investmentMinimum > 0 && d.investmentMinimum <= annualDeploy) { score += 0.5; }
+      return { ...d, _fitReasons: reasons, _fitScore: score };
+    }).filter(d => d._fitScore >= 2 && d._fitReasons.length >= 2)
+      .sort((a, b) => b._fitScore - a._fitScore)
+      .slice(0, 4);
+
+    if (scoredDeals.length > 0) {
+      let goalDealCards = '';
+      scoredDeals.forEach(d => {
+        const topReasons = d._fitReasons.slice(0, 3);
+        const yieldVal = d.cashOnCash || d.preferredReturn || 0;
+        const annualIncome = d.investmentMinimum ? Math.round(d.investmentMinimum * (yieldVal || (d.targetIRR || 0.08))) : 0;
+        goalDealCards += '<div onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + d.id + '\'),200);" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 4px 12px rgba(81,190,123,0.1)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+          + '<div>'
+          + '<div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + d.investmentName + '</div>'
+          + '<div style="font-size:11px;color:var(--text-secondary);">' + d.managementCompany + ' &middot; ' + d.assetClass + '</div>'
+          + '</div>'
+          + (d.status === 'Evergreen' ? '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:#51BE7B22;color:var(--primary);white-space:nowrap;">EVERGREEN</span>' : '')
+          + '</div>'
+          + '<div style="display:flex;gap:12px;margin-bottom:14px;">'
+          + (d.targetIRR ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Target IRR</div></div>' : '')
+          + (yieldVal ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--primary);">' + (yieldVal * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">' + (d.cashOnCash ? 'Cash-on-Cash' : 'Pref Return') + '</div></div>' : '')
+          + (d.investmentMinimum ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum.toLocaleString()) + '</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Minimum</div></div>' : '')
+          + '</div>'
+          + '<div style="flex:1;border-top:1px solid var(--border);padding-top:12px;">'
+          + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Why This Fits Your Plan</div>'
+          + topReasons.map(function(r) { return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:5px;font-size:11px;color:var(--text-secondary);line-height:1.5;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;margin-top:2px;"><polyline points="4 12 10 18 20 6"/></svg>' + r + '</div>'; }).join('')
+          + (annualIncome > 0 ? '<div style="margin-top:8px;padding:6px 10px;background:var(--primary);background:linear-gradient(135deg,var(--primary),#3bba78);border-radius:var(--radius-sm);font-size:11px;font-weight:700;color:#fff;text-align:center;">At min investment: ~$' + annualIncome.toLocaleString() + '/yr toward your goal</div>' : '')
+          + '</div>'
+          + '</div>';
+      });
+
+      const goalDealsEl = document.getElementById('dashboardGoalDeals');
+      if (goalDealsEl) {
+        goalDealsEl.innerHTML = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+          + '<div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deals That Could Help You Get There</div>'
+          + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Matched to your $' + goals.targetIncome.toLocaleString() + '/yr income goal, risk profile, and investment pace</div></div>'
+          + '<button onclick="navigateTo(\'deals\')" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Explore All Deals &rarr;</button>'
+          + '</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">'
+          + goalDealCards
+          + '</div></div>';
+      }
+    }
+  }
 
   // Render pie chart if portfolio exists
   if (portfolio.length > 0 && Object.keys(assetBreakdown).length > 0) {
@@ -7842,7 +7829,7 @@ function renderDealFlowPage() {
   const sourceColors = ['#2C6E49', '#4C956C', '#FEFEE3', '#D68C45', '#3D405B', '#8B5E3C'];
 
   container.innerHTML = '<div class="sub-page" style="max-width:1100px;">' +
-    '<h2 style="font-size:22px;font-weight:800;margin-bottom:4px;">Deal Flow</h2>' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:4px;">Deal Flow Stats</h2>' +
     '<p style="color:var(--text-muted);font-size:13px;margin-bottom:24px;">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>' +
 
     // Summary cards
