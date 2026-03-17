@@ -2043,16 +2043,8 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </a>
     </div>
   </nav>
-  <div class="sidebar-user" id="sidebarUser" style="display:none;cursor:pointer;" onclick="navigateTo('settings')">
-    <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
-    <div class="sidebar-user-info">
-      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
-      <div class="sidebar-user-tier" id="sidebarTier">Explorer</div>
-    </div>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;opacity:0.5;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  </div>
-  <!-- Admin: View As User -->
-  <div id="adminViewAs" style="display:none;padding:0 12px;margin-top:4px;">
+  <!-- Admin: View As User (hidden by default) -->
+  <div id="adminViewAs" style="display:none;padding:0 16px;margin-bottom:4px;">
     <div id="viewAsImpersonating" style="display:none;background:#f59e0b22;border:1px solid #f59e0b44;border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:4px;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -2079,19 +2071,25 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
   <div class="sidebar-footer">
-    <div style="text-align:center;margin-bottom:8px;">
-      <a href="#" onclick="event.preventDefault();showFeedbackModal();" style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;opacity:0.7;transition:opacity var(--transition);" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Having issues? Submit feedback
-      </a>
-    </div>
-    <div class="theme-toggle" onclick="toggleTheme()">
+    <a href="#" onclick="event.preventDefault();showFeedbackModal();" style="font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--text-sidebar);text-decoration:none;display:flex;align-items:center;gap:10px;padding:4px 0;transition:opacity var(--transition);opacity:0.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Send Feedback
+    </a>
+    <div class="theme-toggle" onclick="toggleTheme()" style="padding:4px 0;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <span>Light Mode</span>
       <div class="toggle-track" id="themeToggle">
         <div class="toggle-thumb"></div>
       </div>
     </div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser" style="display:none;cursor:pointer;" onclick="navigateTo('settings')">
+    <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
+      <div class="sidebar-user-email" id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;opacity:0.4;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </div>
 </aside>
 
@@ -4594,7 +4592,8 @@ function initAuth() {
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     document.getElementById('sidebarAvatar').textContent = initials;
     document.getElementById('sidebarName').textContent = name;
-    document.getElementById('sidebarTier').textContent = (user.tier || 'explorer').charAt(0).toUpperCase() + (user.tier || 'explorer').slice(1);
+    const sidebarEmailEl = document.getElementById('sidebarEmail');
+    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
 
     // Populate profile fields if available
     const firstInput = document.querySelector('#stab-profile .profile-input[type="text"]');
@@ -8294,7 +8293,8 @@ function viewAsUser(email, name, contactId, tier) {
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('sidebarAvatar').textContent = initials;
   document.getElementById('sidebarName').textContent = name;
-  document.getElementById('sidebarTier').textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+  const sidebarEmailEl2 = document.getElementById('sidebarEmail');
+  if (sidebarEmailEl2) sidebarEmailEl2.textContent = email;
 
   // Show impersonation indicator
   document.getElementById('viewAsSearch').style.display = 'none';
@@ -8321,7 +8321,8 @@ function exitViewAs() {
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('sidebarAvatar').textContent = initials;
   document.getElementById('sidebarName').textContent = name;
-  document.getElementById('sidebarTier').textContent = (adminRealUser.tier || 'explorer').charAt(0).toUpperCase() + (adminRealUser.tier || 'explorer').slice(1);
+  const sidebarEmailEl3 = document.getElementById('sidebarEmail');
+  if (sidebarEmailEl3) sidebarEmailEl3.textContent = adminRealUser.email || '';
 
   // Hide impersonation indicator, show search
   document.getElementById('viewAsImpersonating').style.display = 'none';
