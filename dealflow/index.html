@@ -1763,10 +1763,6 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <div class="sidebar-logo-text">Grow Your Cashflow</div>
   </div>
   <nav class="sidebar-nav">
-    <a class="nav-item nav-item-promo" href="#" data-page="incomefund" onclick="navigateTo('incomefund'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      GYC Income Fund
-    </a>
     <a class="nav-item" href="#" data-page="buybox" onclick="navigateTo('buybox'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       My Buy Box
@@ -1780,6 +1776,10 @@ html.dark .card-match-badge.red { background: #2E1515; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
       Debt Fund Explorer
     </a>
+    <a class="nav-item" href="#" data-page="managers" onclick="navigateTo('managers'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Investment Managers
+    </a>
     <div class="nav-section-label">Education</div>
     <a class="nav-item" href="#" data-page="officehours" onclick="navigateTo('officehours'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
@@ -1788,6 +1788,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <a class="nav-item" href="#" data-page="academy" onclick="navigateTo('academy'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
       Cash Flow Academy
+    </a>
+    <div class="nav-section-label">Opportunities</div>
+    <a class="nav-item nav-item-promo" href="#" data-page="incomefund" onclick="navigateTo('incomefund'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      GYC Income Fund
     </a>
     <div class="nav-section-label" style="margin-top:auto;"></div>
     <a class="nav-item" href="#" data-page="subscription" onclick="navigateTo('subscription'); return false">
@@ -1837,7 +1842,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
   <button class="panel-close" onclick="closePanel()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
-  <div id="panelContent"></div>
+  <div id="panelContent" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;"></div>
 </div>
 
 <!-- Main Content -->
@@ -1870,7 +1875,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <div class="office-hours-banner">
       <div class="office-hours-pulse"></div>
       <div class="office-hours-text">Live Office Hours every <span>Thursday 12-1pm ET</span> - Get your deals reviewed by Pascal</div>
-      <button class="office-hours-join" onclick="window.open('https://growyourcashflow.com/office-hours','_blank')">Join This Week</button>
+      <button class="office-hours-join" onclick="navigateTo('officehours')">Join This Week</button>
     </div>
     <div class="filter-bar">
       <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
@@ -1952,87 +1957,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <div class="settings-page">
       <div class="settings-tabs">
         <button class="settings-tab active" data-stab="profile" onclick="switchSettingsTab(this)">Profile</button>
-        <button class="settings-tab" data-stab="buybox" onclick="switchSettingsTab(this)">Buy Box</button>
         <button class="settings-tab" data-stab="notifications" onclick="switchSettingsTab(this)">Notifications</button>
       </div>
 
-      <!-- Buy Box Tab -->
-      <div class="settings-panel" id="stab-buybox">
-        <div class="settings-page-title">Investment Buy Box</div>
-        <div class="settings-page-desc">Define your ideal investment criteria. Deals will be scored against your buy box and tagged with match percentages so you can quickly spot the best fits.</div>
-
-        <div class="settings-section">
-          <div class="settings-card">
-            <div class="settings-card-title">Preferred Asset Classes</div>
-            <div class="settings-card-desc">Select which property types you're interested in</div>
-            <div class="checkbox-grid" id="bbAssetClasses"></div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-card">
-            <div class="settings-card-title">Investment Strategy</div>
-            <div class="settings-card-desc">What strategies align with your goals?</div>
-            <div class="checkbox-grid" id="bbStrategies"></div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-card">
-            <div class="settings-card-title">Deal Structure</div>
-            <div class="settings-card-desc">Fund vs. syndication preference</div>
-            <div class="checkbox-grid" id="bbDealTypes"></div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-card">
-            <div class="settings-card-title">Financial Criteria</div>
-            <div class="settings-card-desc">Set your target ranges for key metrics</div>
-            <div class="range-group">
-              <div class="range-label">Target IRR Range</div>
-              <div class="range-inputs">
-                <input type="text" class="range-input" id="bbIrrMin" placeholder="8%" value="8%">
-                <span class="range-sep">to</span>
-                <input type="text" class="range-input" id="bbIrrMax" placeholder="25%" value="25%">
-              </div>
-            </div>
-            <div class="range-group">
-              <div class="range-label">Min Investment Budget</div>
-              <div class="range-inputs">
-                <input type="text" class="range-input" id="bbMinInvest" placeholder="$25,000" value="$25,000">
-                <span class="range-sep">to</span>
-                <input type="text" class="range-input" id="bbMaxInvest" placeholder="$250,000" value="$250,000">
-              </div>
-            </div>
-            <div class="range-group">
-              <div class="range-label">Preferred Hold Period</div>
-              <div class="range-inputs">
-                <input type="text" class="range-input" id="bbHoldMin" placeholder="2 years" value="2 years">
-                <span class="range-sep">to</span>
-                <input type="text" class="range-input" id="bbHoldMax" placeholder="10 years" value="10 years">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-card">
-            <div class="settings-card-title">Investment Objective</div>
-            <div class="settings-card-desc">What is your primary goal?</div>
-            <div class="checkbox-grid" id="bbObjectives"></div>
-          </div>
-        </div>
-
-        <div class="settings-save-bar">
-          <button class="btn-cta btn-cta-primary" onclick="saveBuyBox()">Save Buy Box</button>
-          <button class="btn-cta btn-cta-secondary" style="width:auto;padding:12px 24px" onclick="resetBuyBox()">Reset to Defaults</button>
-          <span class="save-status" id="saveStatus">Preferences saved!</span>
-        </div>
-      </div>
-
       <!-- Profile Tab -->
-      <div class="settings-panel" id="stab-profile" style="display:none">
+      <div class="settings-panel" id="stab-profile">
         <div class="settings-page-title">Your Profile</div>
         <div class="settings-page-desc">Manage your account information and investor profile.</div>
 
@@ -2160,11 +2089,13 @@ html.dark .card-match-badge.red { background: #2E1515; }
       </button>
       <div class="topbar-title">My Buy Box</div>
       <div class="topbar-spacer"></div>
+      <span id="buyboxTopbarActions" style="display:inline-flex;gap:8px;">
       <button class="btn-cta btn-cta-primary" style="width:auto;padding:8px 20px;font-size:11px" onclick="window.print()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;vertical-align:middle"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></polyline></svg>
         Print / Save PDF
       </button>
       <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openBuyBoxWizard()">Edit Buy Box</button>
+      </span>
     </div>
     <div class="report-page" id="reportContent">
       <div style="text-align:center;padding:80px 32px;color:var(--text-muted)">
@@ -2320,6 +2251,37 @@ html.dark .card-match-badge.red { background: #2E1515; }
     </div>
   </div>
 
+
+  <!-- PAGE: Investment Managers -->
+  <div class="page" id="page-managers">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Investment Managers</div>
+      <div class="topbar-spacer"></div>
+      <select class="filter-select" id="managersAssetFilter" onchange="renderManagersPage()" style="min-width:160px;font-size:12px;">
+        <option value="">All Asset Classes</option>
+      </select>
+    </div>
+    <div class="content-area" style="padding:24px;">
+      <div id="managersTableContainer">
+        <table class="table-view" id="managersTable" style="display:table;width:100%;">
+          <thead>
+            <tr>
+              <th>Company Name</th>
+              <th>CEO</th>
+              <th>Asset Classes</th>
+              <th># Deals</th>
+              <th>Type</th>
+              <th>Website</th>
+            </tr>
+          </thead>
+          <tbody id="managersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   <!-- PAGE: GYC Income Fund -->
   <div class="page" id="page-incomefund">
@@ -2784,14 +2746,13 @@ html.dark .card-match-badge.red { background: #2E1515; }
           <thead>
             <tr>
               <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2022')">2022 <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('avgLoanLTV')">LTV <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
             </tr>
           </thead>
           <tbody id="debtFundTableBody"></tbody>
@@ -3200,7 +3161,7 @@ function renderPanel(deal) {
         </div>
       </div>
       <div class="panel-actions">
-        <a href="deal.html?id=\${deal.id}" class="btn-cta btn-cta-primary" style="text-decoration:none;text-align:center;">View Deal Page</a>
+        <a href="deal.html?id=${deal.id}" class="btn-cta btn-cta-primary" style="text-decoration:none;text-align:center;">View Deal Page</a>
         <button class="btn-cta btn-cta-secondary">Deck Review</button>
       </div>
       <div class="panel-added-date">Added on ${deal.addedDate}</div>
@@ -3459,67 +3420,124 @@ const CITY_COORDS = {
   'columbus, oh':[39.96,-83.00],'pittsburgh, pa':[40.44,-79.99],'baltimore, md':[39.29,-76.61],
   'washington, dc':[38.91,-77.04],'richmond, va':[37.54,-77.44],'memphis, tn':[35.15,-90.05],
   'new orleans, la':[29.95,-90.07],'oklahoma city, ok':[35.47,-97.52],'san jose, ca':[37.34,-121.89],
-  'sacramento, ca':[38.58,-121.49],'tucson, az':[32.22,-110.97],'albuquerque, nm':[35.08,-106.65]
+  'sacramento, ca':[38.58,-121.49],'tucson, az':[32.22,-110.97],'albuquerque, nm':[35.08,-106.65],
+  'fort worth, tx':[32.75,-97.33],'el paso, tx':[31.76,-106.49],'milwaukee, wi':[43.04,-87.91],
+  'louisville, ky':[38.25,-85.76],'omaha, ne':[41.26,-95.94],'virginia beach, va':[36.85,-75.98],
+  'colorado springs, co':[38.83,-104.82],'reno, nv':[39.53,-119.81],'des moines, ia':[41.59,-93.62],
+  'little rock, ar':[34.75,-92.29],'birmingham, al':[33.52,-86.81],'greenville, sc':[34.85,-82.39],
+  'spokane, wa':[47.66,-117.43],'tulsa, ok':[36.15,-95.99],'knoxville, tn':[35.96,-83.92],
+  'hartford, ct':[41.76,-72.68],'grand rapids, mi':[42.96,-85.66],'providence, ri':[41.82,-71.41],
+  'savannah, ga':[32.08,-81.09],'charleston, sc':[32.78,-79.93],'wilmington, nc':[34.24,-77.95],
+  'fresno, ca':[36.74,-119.77],'bakersfield, ca':[35.37,-119.02],'stockton, ca':[37.96,-121.29],
+  'anchorage, ak':[61.22,-149.90],'honolulu, hi':[21.31,-157.86],'columbia, sc':[34.00,-81.03],
+  'lexington, ky':[38.04,-84.50],'dayton, oh':[39.76,-84.19],'akron, oh':[41.08,-81.52],
+  'madison, wi':[43.07,-89.40],'norfolk, va':[36.85,-76.29],'durham, nc':[35.99,-78.90],
+  'baton rouge, la':[30.45,-91.19],'lubbock, tx':[33.58,-101.85],'laredo, tx':[27.51,-99.51],
+  'lincoln, ne':[40.81,-96.70],'fargo, nd':[46.88,-96.79],'sioux falls, sd':[43.55,-96.73],
+  'billings, mt':[45.78,-108.50],'rapid city, sd':[44.08,-103.23],'cheyenne, wy':[41.14,-104.82],
+  'bentonville, ar':[36.37,-94.21],'mobile, al':[30.70,-88.04],'pensacola, fl':[30.44,-87.22],
+  'ft. lauderdale, fl':[26.12,-80.14],'west palm beach, fl':[26.72,-80.05],'naples, fl':[26.14,-81.79],
+  'st. petersburg, fl':[27.77,-82.64],'sarasota, fl':[27.34,-82.53]
 };
 
+// Major US metro areas for scattering deals that don't have specific locations
+const SCATTER_CITIES = [
+  [33.75,-84.39],[30.27,-97.74],[42.36,-71.06],[35.23,-80.84],[41.88,-87.63],
+  [32.78,-96.80],[39.74,-104.99],[42.33,-83.05],[29.76,-95.37],[39.77,-86.16],
+  [30.33,-81.66],[39.10,-94.58],[36.17,-115.14],[34.05,-118.24],[25.76,-80.19],
+  [44.98,-93.27],[36.16,-86.78],[40.71,-74.01],[35.47,-97.52],[28.54,-81.38],
+  [39.95,-75.17],[33.45,-112.07],[40.44,-79.99],[45.52,-122.68],[35.78,-78.64],
+  [37.54,-77.44],[38.58,-121.49],[40.76,-111.89],[29.42,-98.49],[37.77,-122.42],
+  [32.72,-117.16],[47.61,-122.33],[38.63,-90.20],[27.95,-82.46],[38.91,-77.04],
+  [35.05,-85.31],[39.96,-83.00],[38.25,-85.76],[43.04,-87.91],[41.26,-95.94],
+  [34.85,-82.39],[32.08,-81.09],[32.78,-79.93],[30.45,-91.19],[36.15,-95.99],
+  [33.52,-86.81],[34.75,-92.29],[35.96,-83.92],[38.04,-84.50],[41.76,-72.68]
+];
+
+// Simple deterministic hash from deal ID to scatter consistently
+function hashDealId(id) {
+  let h = 0;
+  for (let i = 0; i < (id || '').length; i++) {
+    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 function geocodeDeal(deal) {
+  const h = hashDealId(deal.id);
+  // Small deterministic offset so overlapping dots spread out
+  const jitterLat = ((h % 100) - 50) * 0.006;
+  const jitterLng = (((h >> 8) % 100) - 50) * 0.008;
+
+  function withJitter(coords) {
+    return [coords[0] + jitterLat, coords[1] + jitterLng];
+  }
+
   // Try location field first
   const loc = (deal.location || '').trim();
   if (loc) {
     const locLower = loc.toLowerCase();
-    if (CITY_COORDS[locLower]) return CITY_COORDS[locLower];
-    // Check state name
-    if (STATE_NAMES[locLower]) return STATE_COORDS[STATE_NAMES[locLower]];
-    // Check state abbreviation
+    if (CITY_COORDS[locLower]) return withJitter(CITY_COORDS[locLower]);
+    if (STATE_NAMES[locLower]) return withJitter(STATE_COORDS[STATE_NAMES[locLower]]);
     const abbr = loc.toUpperCase();
-    if (STATE_COORDS[abbr]) return STATE_COORDS[abbr];
+    if (STATE_COORDS[abbr]) return withJitter(STATE_COORDS[abbr]);
     // Try "City, ST" pattern
     const parts = loc.split(',').map(s => s.trim());
     if (parts.length === 2) {
+      const cityKey = parts[0].toLowerCase() + ', ' + parts[1].toLowerCase();
+      if (CITY_COORDS[cityKey]) return withJitter(CITY_COORDS[cityKey]);
       const st = parts[1].toUpperCase();
-      if (STATE_COORDS[st]) return STATE_COORDS[st];
+      if (STATE_COORDS[st]) return withJitter(STATE_COORDS[st]);
     }
   }
-  // Try investingGeography
+  // Try investingGeography (even for USA/Nationwide — will fall through to scatter)
   const geo = (deal.investingGeography || '').trim();
-  if (geo && geo !== 'USA' && geo !== 'Nationwide') {
+  if (geo && geo !== 'USA' && geo !== 'Nationwide' && geo.toLowerCase() !== 'various') {
     const geoLower = geo.toLowerCase();
-    if (CITY_COORDS[geoLower]) return CITY_COORDS[geoLower];
-    if (STATE_NAMES[geoLower]) return STATE_COORDS[STATE_NAMES[geoLower]];
+    if (CITY_COORDS[geoLower]) return withJitter(CITY_COORDS[geoLower]);
+    if (STATE_NAMES[geoLower]) return withJitter(STATE_COORDS[STATE_NAMES[geoLower]]);
     const geoAbbr = geo.toUpperCase();
-    if (STATE_COORDS[geoAbbr]) return STATE_COORDS[geoAbbr];
-    // Try multi-state: "Sunbelt", "Southeast", etc - place at a representative spot
+    if (STATE_COORDS[geoAbbr]) return withJitter(STATE_COORDS[geoAbbr]);
     const regionCoords = {
       'sunbelt':[33.4,-97.0],'southeast':[33.5,-84.4],'southwest':[33.4,-112.0],
       'midwest':[41.9,-87.6],'northeast':[40.7,-74.0],'pacific northwest':[47.6,-122.3],
-      'mountain west':[39.7,-105.0],'sunbelt & mountain west':[36.2,-105.0]
+      'mountain west':[39.7,-105.0],'sunbelt & mountain west':[36.2,-105.0],
+      'sun belt':[33.4,-97.0],'south':[33.0,-86.0],'west coast':[36.8,-119.4],
+      'east coast':[39.0,-76.0],'mid-atlantic':[39.5,-76.5],'new england':[42.4,-71.4],
+      'great lakes':[42.5,-85.5],'plains':[41.0,-96.0],'rocky mountain':[39.7,-105.0]
     };
-    if (regionCoords[geoLower]) return regionCoords[geoLower];
+    if (regionCoords[geoLower]) return withJitter(regionCoords[geoLower]);
     // Try parsing comma-separated states
     const states = geo.split(/[,&\/]/).map(s => s.trim());
     for (const s of states) {
       const sLower = s.toLowerCase();
-      if (STATE_NAMES[sLower]) return STATE_COORDS[STATE_NAMES[sLower]];
-      if (STATE_COORDS[s.toUpperCase()]) return STATE_COORDS[s.toUpperCase()];
+      if (STATE_NAMES[sLower]) return withJitter(STATE_COORDS[STATE_NAMES[sLower]]);
+      if (STATE_COORDS[s.toUpperCase()]) return withJitter(STATE_COORDS[s.toUpperCase()]);
     }
   }
-  // Try deal name for city/state hints
-  const name = (deal.investmentName || '').toLowerCase();
+  // Try deal name and management company name for city/state hints
+  const searchText = ((deal.investmentName || '') + ' ' + (deal.managementCompany || '')).toLowerCase();
   for (const [city, coords] of Object.entries(CITY_COORDS)) {
     const cityName = city.split(',')[0];
-    if (name.includes(cityName)) return coords;
+    if (cityName.length > 3 && searchText.includes(cityName)) return withJitter(coords);
   }
-  return null;
+  // Try state names in the deal name
+  for (const [stateName, abbr] of Object.entries(STATE_NAMES)) {
+    if (stateName.length > 4 && searchText.includes(stateName)) return withJitter(STATE_COORDS[abbr]);
+  }
+  // Fallback: scatter across major US cities using deterministic hash
+  const scatterIdx = h % SCATTER_CITIES.length;
+  return withJitter(SCATTER_CITIES[scatterIdx]);
 }
 
 function renderMapView() {
   const container = document.getElementById('mapView');
-  const mapDeals = DEALS.filter(d => geocodeDeal(d) !== null);
+  const mapDeals = getFilteredDeals();
   const sixMonthsAgo = new Date("2026-03-17");
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   if (!dealMap) {
-    container.innerHTML = '<div class="map-disclaimer">\u26a0\ufe0f Note: Property locations shown are approximate and may not be accurate. We\'re working on verifying exact addresses.</div><div id="leafletMap" style="width:100%;height:100%;"></div>';
+    container.innerHTML = '<div class="map-disclaimer">\u26a0\ufe0f Note: Locations are approximate. Nationwide deals are scattered across major metros for visibility.</div><div id="leafletMap" style="width:100%;height:100%;"></div>';
     dealMap = L.map('leafletMap').setView([37.5, -96], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -3622,8 +3640,22 @@ function navigateTo(page) {
   if (page === 'follows') renderFollows();
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
+  if (page === 'managers') renderManagersPage();
   if (page === 'analytics') refreshAnalyticsDashboard();
-  if (page === 'buybox') { renderReport(); if (!localStorage.getItem('gycBuyBoxComplete')) openBuyBoxWizard(); }
+  if (page === 'buybox') {
+    renderReport();
+    const bbActions = document.getElementById('buyboxTopbarActions');
+    if (bbActions) {
+      if (!localStorage.getItem('gycBuyBoxComplete')) {
+        bbActions.style.opacity = '0.4';
+        bbActions.style.pointerEvents = 'none';
+        openBuyBoxWizard();
+      } else {
+        bbActions.style.opacity = '1';
+        bbActions.style.pointerEvents = 'auto';
+      }
+    }
+  }
   // Close mobile sidebar
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -4372,19 +4404,35 @@ async function fetchBuyBoxFromGHL() {
     const data = await resp.json();
     if (data.success && data.buyBox && Object.keys(data.buyBox).length > 0) {
       const ghl = data.buyBox;
-      // Merge GHL data into wizardData (don't overwrite if wizard already has data)
       const existing = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
       let updated = false;
+
+      // Pull in firstName/lastName from contact name if not already set
+      if (data.name && !existing.firstName) {
+        const parts = data.name.trim().split(/\s+/);
+        existing.firstName = parts[0] || '';
+        existing.lastName = parts.slice(1).join(' ') || '';
+        updated = true;
+      }
+
+      // Merge GHL buy box data — overwrite empty/missing local fields with GHL data
       for (const [key, val] of Object.entries(ghl)) {
-        if (val && (!existing[key] || (Array.isArray(existing[key]) && existing[key].length === 0))) {
-          existing[key] = val;
-          updated = true;
+        if (val !== undefined && val !== null && val !== '') {
+          const localVal = existing[key];
+          const localEmpty = !localVal || localVal === '' || (Array.isArray(localVal) && localVal.length === 0);
+          if (localEmpty) {
+            existing[key] = val;
+            updated = true;
+          }
         }
       }
       if (updated) {
         wizardData = { ...wizardData, ...existing };
         localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+        localStorage.setItem('gycBuyBoxComplete', 'true');
         syncWizardToBuyBox();
+        // Re-render the report if we're on the buy box page
+        renderReport();
         console.log('Buy box synced from GHL:', Object.keys(ghl).length, 'fields');
       }
     }
@@ -4975,14 +5023,13 @@ function renderDebtTable() {
     const isHL = highlightedDebtFund === f.id;
     return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to highlight on chart">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
+      <td>${f.debtPosition || '—'}</td>
+      <td>${aumStr}</td>
+      <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;${financialsBadge};">${financialsStr}</span></td>
       <td>${fmtReturn(f._return2025)}</td>
       <td>${fmtReturn(f._return2024)}</td>
       <td>${fmtReturn(f._return2023)}</td>
       <td>${fmtReturn(f._return2022)}</td>
-      <td>${ltvStr}</td>
-      <td>${aumStr}</td>
-      <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;${financialsBadge};">${financialsStr}</span></td>
-      <td>${f.debtPosition || '—'}</td>
     </tr>`;
   }).join('');
 
@@ -4998,6 +5045,89 @@ function sortDebtTable(col) {
     debtSortAsc = true;
   }
   renderDebtTable();
+}
+
+// ========== INVESTMENT MANAGERS PAGE ==========
+function renderManagersPage() {
+  const deals = window.DEALS || [];
+  const filterSelect = document.getElementById('managersAssetFilter');
+  const tbody = document.getElementById('managersTableBody');
+  if (!tbody) return;
+
+  // Build management company map from deals
+  const companyMap = {};
+  deals.forEach(d => {
+    const name = d.managementCompany;
+    if (!name) return;
+    if (!companyMap[name]) {
+      companyMap[name] = {
+        name: name,
+        ceo: d.ceo || '',
+        assetClasses: new Set(),
+        dealTypes: new Set(),
+        deals: [],
+        website: ''
+      };
+    }
+    companyMap[name].deals.push(d);
+    if (d.assetClass) companyMap[name].assetClasses.add(d.assetClass);
+    if (d.dealType) companyMap[name].dealTypes.add(d.dealType);
+  });
+
+  // Enrich from GYC_COMPANIES if available
+  const apiCompanies = window.GYC_COMPANIES || [];
+  apiCompanies.forEach(c => {
+    const name = c.name || c.companyName;
+    if (name && companyMap[name]) {
+      if (c.website) companyMap[name].website = c.website;
+      if (c.ceo) companyMap[name].ceo = c.ceo;
+    }
+  });
+
+  const companies = Object.values(companyMap);
+
+  // Populate asset class filter options
+  const allAssetClasses = new Set();
+  companies.forEach(c => c.assetClasses.forEach(ac => allAssetClasses.add(ac)));
+  const currentFilter = filterSelect.value;
+  const existingOptions = filterSelect.querySelectorAll('option:not(:first-child)');
+  if (existingOptions.length === 0) {
+    [...allAssetClasses].sort().forEach(ac => {
+      const opt = document.createElement('option');
+      opt.value = ac;
+      opt.textContent = ac;
+      filterSelect.appendChild(opt);
+    });
+  }
+  filterSelect.value = currentFilter;
+
+  // Filter
+  const filtered = currentFilter
+    ? companies.filter(c => c.assetClasses.has(currentFilter))
+    : companies;
+
+  // Sort by # deals descending
+  filtered.sort((a, b) => b.deals.length - a.deals.length);
+
+  tbody.innerHTML = filtered.map(c => {
+    const assetStr = [...c.assetClasses].sort().join(', ');
+    const typeStr = [...c.dealTypes].sort().join(', ');
+    const websiteLink = c.website
+      ? '<a href="' + (c.website.startsWith('http') ? c.website : 'https://' + c.website) + '" target="_blank" style="color:var(--primary);text-decoration:none;" onclick="event.stopPropagation()">' + c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') + '</a>'
+      : '<span style="color:var(--text-muted)">—</span>';
+    return '<tr style="cursor:pointer" onclick="navigateTo(\'deals\'); setTimeout(function(){ var s=document.getElementById(\'searchInput\'); if(s){s.value=\'' + c.name.replace(/'/g, "\\'") + '\'; s.dispatchEvent(new Event(\'input\'));} },100)">' +
+      '<td class="name-cell" style="font-weight:600;color:var(--text-dark);">' + c.name + '</td>' +
+      '<td>' + (c.ceo || '<span style="color:var(--text-muted)">—</span>') + '</td>' +
+      '<td>' + assetStr + '</td>' +
+      '<td style="text-align:center;font-weight:600;">' + c.deals.length + '</td>' +
+      '<td>' + typeStr + '</td>' +
+      '<td>' + websiteLink + '</td>' +
+    '</tr>';
+  }).join('');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">No management companies found.</td></tr>';
+  }
 }
 
 // ========== BUY BOX TOGGLE (LIVE DEALS) ==========
@@ -5411,9 +5541,14 @@ if (window.location.hash === '#onboarding') {
   history.replaceState(null, '', window.location.pathname);
 }
 
-// If buy box is complete, pre-render report
+// If buy box is complete, pre-render report and enable buttons
 if (localStorage.getItem('gycBuyBoxComplete')) {
   renderReport();
+  const bbActions = document.getElementById('buyboxTopbarActions');
+  if (bbActions) { bbActions.style.opacity = '1'; bbActions.style.pointerEvents = 'auto'; }
+} else {
+  const bbActions = document.getElementById('buyboxTopbarActions');
+  if (bbActions) { bbActions.style.opacity = '0.4'; bbActions.style.pointerEvents = 'none'; }
 }
 
 // Sync buy box from GHL (background, non-blocking)
