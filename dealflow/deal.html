@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal Detail - GYC Dealflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --primary-light: #32C583;
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0A1E21;
+  --bg-sidebar-hover: #14333A;
+  --bg-sidebar-active: #1F5159;
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --text-sidebar: rgba(255,255,255,0.55);
+  --text-sidebar-active: #FFFFFF;
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-width: 240px;
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --orange: #CF7A30;
+  --orange-bg: #FFF3E6;
+  --red: #D04040;
+  --blue: #2563EB;
+  --blue-bg: #EFF6FF;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --mint-bg: #E7F5F0;
+  --off-white: #FAF9F5;
+  --charcoal: #141413;
+  --slate: #607179;
+  --transition: 0.2s ease;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ====== SIDEBAR ====== */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-logo {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar-logo-icon {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: -0.5px;
+}
+
+.sidebar-logo-text {
+  font-family: var(--font-headline);
+  font-size: 18px;
+  font-weight: 400;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.nav-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
+}
+.nav-back:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-back svg { width: 16px; height: 16px; }
+
+.nav-section-label {
+  padding: 16px 24px 8px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.3);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--text-sidebar);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  text-decoration: none;
+}
+
+.nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-item.active {
+  background: var(--bg-sidebar-active);
+  color: var(--text-sidebar-active);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+}
+
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.sidebar-user {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-user-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-tier {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-green);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-logout {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.sidebar-logout:hover { color: #fff; }
+.sidebar-logout svg { width: 16px; height: 16px; }
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ====== MAIN CONTENT ====== */
+.main {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dark);
+  padding: 4px;
+}
+.mobile-menu-btn svg { width: 24px; height: 24px; }
+
+.mobile-topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  height: 56px;
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  z-index: 50;
+}
+
+.mobile-topbar-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+/* ====== CONTENT AREA ====== */
+.content-wrap {
+  max-width: 1200px;
+  padding: 32px 40px 64px;
+  margin: 0 auto;
+}
+
+/* ====== LOADING SKELETON ====== */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-light);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.skeleton-header { height: 180px; margin-bottom: 24px; }
+.skeleton-stats { height: 80px; margin-bottom: 24px; }
+.skeleton-card { height: 200px; margin-bottom: 20px; }
+
+.loading-wrap { display: block; }
+.loaded-wrap { display: none; }
+.page-loaded .loading-wrap { display: none; }
+.page-loaded .loaded-wrap { display: block; }
+
+/* ====== BREADCRUMB ====== */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.breadcrumb a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.breadcrumb a:hover { color: var(--primary-hover); }
+.breadcrumb svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ====== DEAL HEADER ====== */
+.deal-header {
+  background: linear-gradient(145deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.deal-header::after {
+  content: '';
+  position: absolute;
+  top: -60%; right: -10%;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(81,190,123,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.deal-header-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.deal-name {
+  font-family: var(--font-headline);
+  font-size: 32px;
+  color: #fff;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+.deal-company {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+.deal-company a {
+  color: var(--accent-green);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.deal-company a:hover { color: #fff; text-decoration: underline; }
+
+.deal-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.deal-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.deal-badge.asset-class {
+  background: rgba(81,190,123,0.15);
+  color: var(--accent-green);
+}
+.deal-badge.deal-type {
+  background: rgba(37,99,235,0.15);
+  color: #93C5FD;
+}
+.deal-badge.status-open {
+  background: rgba(81,190,123,0.15);
+  color: var(--accent-green);
+}
+.deal-badge.status-evergreen {
+  background: rgba(37,99,235,0.15);
+  color: #93C5FD;
+}
+.deal-badge.status-closed {
+  background: rgba(208,64,64,0.15);
+  color: #FCA5A5;
+}
+
+/* ====== KEY METRICS STRIP ====== */
+.metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+
+.metric-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+}
+.metric-value.highlight { color: var(--primary); }
+
+/* ====== SECTIONS ====== */
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-header svg { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+
+.section-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.2px;
+}
+
+.section-body {
+  padding: 24px;
+}
+
+/* ====== OVERVIEW ====== */
+.overview-text {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* ====== DETAILS GRID ====== */
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.detail-item {}
+
+.detail-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+/* ====== DEAL SUMMARY ====== */
+.summary-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.summary-label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 140px;
+  flex-shrink: 0;
+}
+.summary-value {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.fees-list {
+  list-style: none;
+  padding: 0;
+}
+.fees-list li {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-dark);
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+.fees-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* ====== GEOGRAPHY / MAP ====== */
+.map-container {
+  height: 280px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 16px;
+  border: 1px solid var(--border);
+}
+
+.geo-info {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.geo-item {}
+.geo-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.geo-value {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+/* ====== SPONSOR SECTION ====== */
+.sponsor-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sponsor-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  color: #fff;
+  font-size: 18px;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+.sponsor-info {}
+.sponsor-ceo-name {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.sponsor-company-link {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.sponsor-company-link:hover { color: var(--primary-hover); text-decoration: underline; }
+
+/* ====== ACTION BUTTONS ====== */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition);
+  text-decoration: none;
+}
+.btn-action svg { width: 16px; height: 16px; }
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-dark);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: var(--bg-cream);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ====== NOT FOUND ====== */
+.not-found {
+  text-align: center;
+  padding: 80px 20px;
+}
+.not-found h2 {
+  font-family: var(--font-headline);
+  font-size: 28px;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+}
+.not-found p {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.not-found a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.not-found a:hover { text-decoration: underline; }
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 1024px) {
+  .metrics-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .details-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay.open {
+    display: block;
+  }
+  .mobile-topbar {
+    display: flex;
+  }
+  .main {
+    margin-left: 0;
+  }
+  .content-wrap {
+    padding: 20px 16px 48px;
+  }
+  .deal-header {
+    padding: 24px 20px;
+  }
+  .deal-name { font-size: 24px; }
+  .metrics-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .section-body {
+    padding: 20px 18px;
+  }
+  .section-header {
+    padding: 16px 18px;
+  }
+  .summary-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .summary-label {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  .action-buttons {
+    flex-direction: column;
+  }
+  .btn-action {
+    justify-content: center;
+    width: 100%;
+  }
+  .geo-info {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">GYC</div>
+    <div class="sidebar-logo-text">Grow Your Cashflow</div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-back" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Deals
+    </a>
+    <div class="nav-section-label">Marketplace</div>
+    <a class="nav-item active" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Live Deals
+    </a>
+    <a class="nav-item" href="sponsor.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Find a GP
+    </a>
+    <div class="nav-section-label">My Investing</div>
+    <a class="nav-item" href="index.html#buybox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Buy Box Builder
+    </a>
+    <a class="nav-item" href="index.html#report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      My Buy Box Report
+    </a>
+    <div class="nav-section-label">Account</div>
+    <a class="nav-item" href="index.html#settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a class="nav-item" href="index.html#follows">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      Follows
+    </a>
+    <a class="nav-item" href="index.html#subscription">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Subscription
+    </a>
+  </nav>
+  <div class="sidebar-user" id="sidebarUser" style="display:none">
+    <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
+      <div class="sidebar-user-tier" id="sidebarTier">Explorer</div>
+    </div>
+    <button class="sidebar-logout" onclick="logout()" title="Sign out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    <div style="font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.5px;">GYC Dealflow v1.0</div>
+  </div>
+</aside>
+
+<!-- Sidebar overlay for mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="mobile-topbar-title" id="mobileTitle">Deal Detail</div>
+  <a href="index.html" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">Deals</a>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="content-wrap">
+
+    <!-- Loading Skeleton -->
+    <div class="loading-wrap" id="loadingSkeleton">
+      <div class="skeleton skeleton-header"></div>
+      <div class="skeleton skeleton-stats"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+
+    <!-- Loaded Content -->
+    <div class="loaded-wrap" id="loadedContent"></div>
+
+  </div>
+</div>
+
+<script>
+// ========== AUTH GATE ==========
+(function enforceAuth() {
+  const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+  if (!user || !user.token || user.token === 'local-session') {
+    localStorage.removeItem('gycUser');
+    window.location.href = 'deal-login.html';
+  }
+})();
+
+function getUser() {
+  return JSON.parse(localStorage.getItem('gycUser') || 'null');
+}
+
+function logout() {
+  localStorage.removeItem('gycUser');
+  window.location.href = 'deal-login.html';
+}
+
+// ========== SIDEBAR ==========
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ========== INIT AUTH UI ==========
+function initAuth() {
+  const user = getUser();
+  const userEl = document.getElementById('sidebarUser');
+  if (user && user.firstName) {
+    const initials = (user.firstName?.[0] || '') + (user.lastName?.[0] || '');
+    document.getElementById('sidebarAvatar').textContent = initials.toUpperCase();
+    document.getElementById('sidebarName').textContent = (user.firstName + ' ' + (user.lastName || '')).trim();
+    document.getElementById('sidebarTier').textContent = user.tier || 'Explorer';
+    userEl.style.display = 'flex';
+  }
+}
+
+// ========== DEALS DATA ==========
+const DEALS = [
+  {id:"rec012",dealNumber:81,investmentName:"COARE 2023 FUND I",assetClass:"RV/Mobile Home Parks",dealType:"Fund",targetIRR:0.1973,equityMultiple:3.05,preferredReturn:0.08,investmentMinimum:250000,lpGpSplit:"70/30",holdPeriod:5,addedDate:"2023-04-08",status:"Open to invest",offeringType:"Unknown",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire a national portfolio of mobile home communities valued at approximately $65 million, increase its value to around $91 million within 5 years, and create a perpetual cash flow stream for investors.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",sponsorInDeal:0.04,ceo:"Hansel Rodriguez",managementCompany:"COARE Capital",fees:["6% of Gross Revenue Management Fee","1.5% Acquisition Fee"],firstYrDepreciation:"120%",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec0UMH",dealNumber:19,investmentName:"PFD Fund V",assetClass:"Business / Other",dealType:"Fund",targetIRR:0.191,preferredReturn:0.08,investmentMinimum:104000,lpGpSplit:"70/30",holdPeriod:10,addedDate:"2023-02-23",status:"Open to invest",investingGeography:"USA",investmentStrategy:"Accessing attractive real estate locations for ATMs, strategically positioning for next generation revenue opportunities through advertising monetization.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Andy Elfers",managementCompany:"The Prestige Fund",strategy:"Value-Add",instrument:"Equity",firstYrDepreciation:"80%-100%"},
+  {id:"rec26jk",dealNumber:126,investmentName:"SubTo Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.14,investmentMinimum:100000,lpGpSplit:"90/10",holdPeriod:7,addedDate:"2023-07-17",status:"Open to invest",offeringSize:12000000,investingGeography:"USA",investmentStrategy:"Acquire class B and C multifamily properties in Arizona and similar growth market states within the Sunbelt region.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Cashflow",ceo:"Pace Morby",managementCompany:"SubTo Fund",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec3ii",dealNumber:25,investmentName:"National Diversified Fund 6",assetClass:"Mixed-Use",dealType:"Fund",targetIRR:0.20,preferredReturn:0.05,investmentMinimum:50000,lpGpSplit:"80/20",holdPeriod:5,addedDate:"2023-02-28",status:"Open to invest",investingGeography:"USA",investmentStrategy:"STI Short Term Income Fund offers passive real estate investment opportunities with expected IRR of 7-8% per year, paid quarterly.",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Lon Welsh",managementCompany:"Ironton Capital",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec4L8d",dealNumber:91,investmentName:"Spartan Storage Fund 1",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.18,equityMultiple:2.2,preferredReturn:0.08,investmentMinimum:50000,lpGpSplit:"70/30",holdPeriod:4,addedDate:"2023-04-17",status:"Open to invest",offeringType:"506(c)",offeringSize:150000000,investingGeography:"USA",investmentStrategy:"Identified FreeUp Storage facilities in Shelby County, KY for acquisition. Located near major interstates with growth catalysts including new 380,000 SF facility bringing 700 jobs.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Scott Lewis",managementCompany:"Spartan Investment Group",fees:["2% Disposition Fee","6% of Gross Revenue Management Fee","1% Refinancing Fee"],strategy:"Value-Add",instrument:"Equity",cashOnCash:0.14},
+  {id:"rec4ee5",dealNumber:137,investmentName:"Haven Fund II LLC",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.25,preferredReturn:0.08,investmentMinimum:50000,lpGpSplit:"75/25",holdPeriod:10,addedDate:"2023-07-20",status:"Open to invest",offeringType:"506(c)",offeringSize:20000000,investingGeography:"USA",investmentStrategy:"Purchase 10 to 20 MHC assets across strategically targeted markets, hold for 5-10 years, then exit following substantial value growth.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Equity Growth",ceo:"Thomas O. Miller",managementCompany:"Haven Capital Ventures",strategy:"Value-Add",instrument:"Equity",cashOnCash:0.12},
+  {id:"rec5Sr2",dealNumber:125,investmentName:"VF Portfolio I",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.30,investmentMinimum:75000,lpGpSplit:"85/15",holdPeriod:5,addedDate:"2023-07-14",status:"Open to invest",offeringSize:10000000,investingGeography:"USA",investmentStrategy:"Value-Add Workforce Housing in Denver, leveraging VonFinch's vertically integrated partnership with management team.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Steven Pesavento",managementCompany:"Vonfinch Capital",fees:["2% Acquisition Fee","2% Asset Management Fee"],strategy:"Value-Add",instrument:"Equity",cashOnCash:0.08},
+  {id:"rec5q3C",dealNumber:28,investmentName:"Welcome Capital Fund 1",assetClass:"Short Term Rental",dealType:"Fund",targetIRR:0.18,equityMultiple:2.0,preferredReturn:0.07,investmentMinimum:50000,lpGpSplit:"60/40",holdPeriod:5,addedDate:"2023-02-28",status:"Open to invest",offeringType:"506(c)",investingGeography:"USA",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Cashflow",ceo:"Diya Liu",managementCompany:"Welcome Capital",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec5rSc",dealNumber:103,investmentName:"Patriot Fund IV",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.22,investmentMinimum:50000,holdPeriod:5,addedDate:"2023-06-15",status:"Open to invest",offeringType:"506(c)",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire existing self-storage facilities, mobile home parks, or industrial facilities and install capital improvements, optimize management, and stabilize the assets.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Jeremiah Boucher",managementCompany:"Patriot Holdings",fees:["2% Acquisition Fee","1.5% Capital Deployed","1% Guarantor Fee","8% Property Management Fee"],strategy:"Value-Add",instrument:"Equity",preferredReturn:0.09},
+  {id:"rec5vZF",dealNumber:108,investmentName:"The Henry at Generation Park",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.1355,equityMultiple:1.8,preferredReturn:0.07,investmentMinimum:50000,holdPeriod:5,addedDate:"2023-06-22",status:"Open to invest",investingGeography:"USA",investmentStrategy:"QC Capital invests in commercial real estate assets since 2018 with a portfolio of $120M+ and 800+ apartment units.",distributions:"Monthly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Christopher Salerno",managementCompany:"QC Capital",strategy:"Value-Add",instrument:"Equity",cashOnCash:0.0645},
+  {id:"rec07kt",dealNumber:395,investmentName:"Bayside 44 Industrial Park",assetClass:"Industrial",dealType:"Syndication",targetIRR:0.213,equityMultiple:1.5,preferredReturn:0.08,investmentMinimum:15000,holdPeriod:2,addedDate:"2024-08-08",offeringType:"501(a)",investmentStrategy:"Targeting a 21.3% IRR through acquisition and repositioning of industrial park in Clearwater, FL, leveraging off-market purchase at 25% discount.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Equity Growth",ceo:"Charles Clinton",managementCompany:"EM Investment Partners",strategy:"Value-Add",instrument:"Equity",location:"Clearwater, FL"},
+  {id:"rec0EGv",dealNumber:494,investmentName:"Cambridge Court Apartments",assetClass:"Multi Family",dealType:"Syndication",equityMultiple:3.0,investmentMinimum:50000,holdPeriod:10,addedDate:"2024-12-18",offeringType:"506(c)",investmentStrategy:"Targets strong cash flow with a 10-20 year hold, utilizing seller financing (4.5% interest-only), cost segregation for tax benefits, and planned rent increases.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",ceo:"Joe Rinderknecht",managementCompany:"UPC Fund",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec0RI3",dealNumber:316,investmentName:"YS ALTNOTES II LLC",assetClass:"Business / Other",dealType:"Syndication",targetIRR:0.065,investmentMinimum:10000,holdPeriod:0.9,addedDate:"2024-04-24",offeringType:"506(c)",investmentStrategy:"Aims to provide accredited investors with a 6.5% target annualized net yield through a 9-month term syndication, focusing on debt investments across diversified asset classes.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Cashflow",ceo:"Michael Weisz",managementCompany:"Yieldstreet",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec0YOu",dealNumber:846,investmentName:"The Heritage Fund",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.2031,equityMultiple:2.21,investmentMinimum:50000,holdPeriod:5,addedDate:"2025-10-23",offeringType:"506(c)",investmentStrategy:"Targets 10-12 Class A self-storage facilities in high-growth U.S. markets, backed by $10M GP co-investment and assets acquired ~30% below replacement cost.",distributions:"Quarterly",availableTo:"Accredited",ceo:"AJ Osborne",managementCompany:"Cedar",strategy:"Value-Add",instrument:"Equity"},
+  {id:"rec0Zkw",dealNumber:871,investmentName:"Highland Hills Apartments",assetClass:"Multi Family",dealType:"Syndication",targetIRR:0.15,equityMultiple:2.0,preferredReturn:0.08,investmentMinimum:25000,holdPeriod:5,addedDate:"2025-11-14",offeringType:"506(c)",investmentStrategy:"Recapitalize a 112-unit Class A asset in a high-growth GA submarket with 91% occupancy using preferred equity.",distributions:"Quarterly",availableTo:"Accredited",cashOnCash:0.08,ceo:"Hugh D. Cohen",managementCompany:"Cohen Investment Group",strategy:"Value-Add",instrument:"Equity",location:"Georgia"},
+  {id:"rec0iJP",dealNumber:241,investmentName:"Moxy Chattanooga",assetClass:"Hotels/Hospitality",dealType:"Syndication",targetIRR:0.173,investmentMinimum:25000,addedDate:"2024-01-04",offeringType:"506(c)",investmentStrategy:"Capitalize on targeted 17.3% IRR through development and operation of Moxy Hotel, Downtown Chattanooga, with exit within 5 years aiming for 1.8x equity multiple.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Sanjay Vora",managementCompany:"Del Monte Hotels",strategy:"Development",instrument:"Equity",location:"Chattanooga, TN"},
+  {id:"rec07kx",dealNumber:732,investmentName:"Hornet Debt Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.096,investmentMinimum:0,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending fund focused on residential transition loans.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Brian Whitten",managementCompany:"Hornet Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
+  {id:"rec0Htb",dealNumber:733,investmentName:"RD Real Estate Debt Fund II",assetClass:"Lending",dealType:"Fund",investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",offeringSize:1662500,investmentStrategy:"Invests in shorter-term senior-secured real estate loans in the Greater Boston Area, funding 300+ projects over 8 years.",distributions:"Quarterly",ceo:"Sean Kelly-Rand",managementCompany:"RD Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:133000000,loanCount:80,avgLoanLTV:0.64},
+  {id:"rec1HuV",dealNumber:719,investmentName:"Pacific Western Trust Deeds",assetClass:"Lending",dealType:"Syndication",targetIRR:0.10,investmentMinimum:10000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Trust Deeds requiring borrowers with 10+ years of commercial lending experience. Strategies: Land Acquisition, Development, Construction & Tenant Improvement.",distributions:"Monthly",financials:"Audited",availableTo:"Unaccredited",ceo:"Carrie Cook",managementCompany:"Pacific Western Realty Advisors",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
+  {id:"rec1dwW",dealNumber:712,investmentName:"Alcova Capital Yield Premium Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,preferredReturn:0.06,investmentMinimum:250000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Commercial real estate lending fund with quarterly distributions and audited financials.",distributions:"Quarterly",financials:"Audited",availableTo:"Accredited",ceo:"Russell Diamond",managementCompany:"Alcova Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:227000000,loanCount:45},
+  {id:"rec1pkw",dealNumber:749,investmentName:"Arixa Secured Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending with 15+ year track record, monthly distributions, and audited financials.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Jan Brzeski",managementCompany:"Arixa Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:209000000,loanCount:60,avgLoanLTV:0.65},
+  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615},
+  {id:"rec2gb9",dealNumber:793,investmentName:"Industrial Real Estate Income Trust (BIGi)",assetClass:"Industrial",dealType:"Fund",targetIRR:0.11,preferredReturn:0.05,investmentMinimum:25000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"CRE Industrial single-tenant buildings that generate stable yield with monthly distributions.",distributions:"Monthly",availableTo:"Accredited",ceo:"Jonathan Slager",managementCompany:"Modiv Industrial",strategy:"Core/Stabilized",instrument:"Equity",fundAUM:825000000},
+  {id:"rec532e",dealNumber:776,investmentName:"The Private Credit Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.09,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Private credit fund focused on real estate-backed lending with quarterly distributions.",distributions:"Quarterly",availableTo:"Accredited",ceo:"Tait Duryea",managementCompany:"Alpine Note",strategy:"Lending",instrument:"Preferred Equity",debtPosition:"2nd"},
+  {id:"rec62hE",dealNumber:770,investmentName:"Income Plus Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.09,preferredReturn:0.06,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"60% preferred equity portfolio in Class A multifamily, Sunbelt & Mountain West (Colorado/Utah). Debt & equity blend.",distributions:"Monthly",availableTo:"Accredited",ceo:"David Scherer",managementCompany:"Origin Investments",strategy:"Lending",instrument:"Equity",fundAUM:500000000,investingGeography:"Sunbelt & Mountain West"}
+];
+
+// ========== FORMATTERS ==========
+function fmt(val, type) {
+  if (val === undefined || val === null || val === '') return '---';
+  if (type === 'pct') return (val * 100).toFixed(1) + '%';
+  if (type === 'pct0') return (val * 100).toFixed(0) + '%';
+  if (type === 'money') {
+    if (val === 0) return '$0';
+    if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+    if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
+    return '$' + val.toLocaleString();
+  }
+  if (type === 'multiple') return val.toFixed(2) + 'x';
+  return val;
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 3);
+}
+
+function statusBadgeClass(status) {
+  if (status === 'Open to invest') return 'status-open';
+  if (status === 'Evergreen') return 'status-evergreen';
+  return 'status-closed';
+}
+
+// ========== GEOCODE & MAP ==========
+async function geocodeAndMap(locationStr, containerId) {
+  try {
+    const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(locationStr) + '&limit=1');
+    const data = await resp.json();
+    if (data && data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      const map = L.map(containerId).setView([lat, lon], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18
+      }).addTo(map);
+      L.marker([lat, lon]).addTo(map).bindPopup(locationStr).openPopup();
+    }
+  } catch (e) {
+    console.warn('Geocoding failed:', e);
+  }
+}
+
+// ========== RENDER PAGE ==========
+function renderDeal() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const container = document.getElementById('loadedContent');
+
+  if (!id) {
+    container.innerHTML = renderNotFound();
+    document.body.classList.add('page-loaded');
+    return;
+  }
+
+  const deal = DEALS.find(d => d.id === id);
+
+  if (!deal) {
+    container.innerHTML = renderNotFound();
+    document.body.classList.add('page-loaded');
+    return;
+  }
+
+  // Set page title
+  document.title = deal.investmentName + ' - GYC Dealflow';
+  document.getElementById('mobileTitle').textContent = deal.investmentName;
+
+  let html = '';
+
+  // Breadcrumb
+  html += '<div class="breadcrumb">';
+  html += '<a href="index.html">Deals</a>';
+  html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  html += '<span>' + esc(deal.investmentName) + '</span>';
+  html += '</div>';
+
+  // Header banner
+  html += '<div class="deal-header"><div class="deal-header-inner">';
+  html += '<h1 class="deal-name">' + esc(deal.investmentName) + '</h1>';
+  html += '<div class="deal-company">by <a href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a></div>';
+  html += '<div class="deal-badges">';
+  if (deal.assetClass) html += '<span class="deal-badge asset-class">' + esc(deal.assetClass) + '</span>';
+  if (deal.dealType) html += '<span class="deal-badge deal-type">' + esc(deal.dealType) + '</span>';
+  if (deal.status) html += '<span class="deal-badge ' + statusBadgeClass(deal.status) + '">' + esc(deal.status) + '</span>';
+  html += '</div>';
+  html += '</div></div>';
+
+  // Key metrics strip
+  html += '<div class="metrics-strip">';
+  html += metricCard('Target IRR', fmt(deal.targetIRR, 'pct'), true);
+  html += metricCard('Equity Multiple', fmt(deal.equityMultiple, 'multiple'), false);
+  html += metricCard('Pref Return', fmt(deal.preferredReturn, 'pct'), false);
+  html += metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), false);
+  html += metricCard('Hold Period', deal.holdPeriod ? deal.holdPeriod + ' yrs' : '---', false);
+  html += metricCard('LP/GP Split', deal.lpGpSplit || '---', false);
+  html += '</div>';
+
+  // Overview section
+  if (deal.investmentStrategy) {
+    html += '<div class="section">';
+    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span class="section-title">Overview</span></div>';
+    html += '<div class="section-body"><p class="overview-text">' + esc(deal.investmentStrategy) + '</p></div>';
+    html += '</div>';
+  }
+
+  // Investment Details section
+  html += '<div class="section">';
+  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="section-title">Investment Details</span></div>';
+  html += '<div class="section-body"><div class="details-grid">';
+  html += detailItem('Distributions', deal.distributions);
+  html += detailItem('Available To', deal.availableTo);
+  html += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
+  html += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
+  html += detailItem('Offering Type', deal.offeringType);
+  html += detailItem('Objective', deal.investmentObjective);
+  html += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
+  html += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
+  html += '</div></div>';
+  html += '</div>';
+
+  // Deal Summary section
+  html += '<div class="section">';
+  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="section-title">Deal Summary</span></div>';
+  html += '<div class="section-body">';
+  html += summaryRow('Strategy', deal.strategy);
+  html += summaryRow('Instrument', deal.instrument);
+  if (deal.debtPosition) html += summaryRow('Debt Position', deal.debtPosition);
+  if (deal.financials) html += summaryRow('Financials', deal.financials);
+  if (deal.fundAUM) html += summaryRow('Fund AUM', fmt(deal.fundAUM, 'money'));
+  if (deal.loanCount) html += summaryRow('Loan Count', deal.loanCount);
+  if (deal.avgLoanLTV) html += summaryRow('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
+  if (deal.fees && deal.fees.length > 0) {
+    html += '<div class="summary-row"><div class="summary-label">Fees</div><div class="summary-value"><ul class="fees-list">';
+    deal.fees.forEach(function(fee) {
+      html += '<li>' + esc(fee) + '</li>';
+    });
+    html += '</ul></div></div>';
+  }
+  html += '</div></div>';
+
+  // Geography section
+  if (deal.location || deal.investingGeography) {
+    html += '<div class="section">';
+    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="section-title">Geography</span></div>';
+    html += '<div class="section-body">';
+    html += '<div class="geo-info">';
+    if (deal.location) html += '<div class="geo-item"><div class="geo-label">Location</div><div class="geo-value">' + esc(deal.location) + '</div></div>';
+    if (deal.investingGeography) html += '<div class="geo-item"><div class="geo-label">Investing Geography</div><div class="geo-value">' + esc(deal.investingGeography) + '</div></div>';
+    html += '</div>';
+    if (deal.location) {
+      html += '<div class="map-container" id="dealMap"></div>';
+    }
+    html += '</div></div>';
+  }
+
+  // Sponsor section
+  html += '<div class="section">';
+  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="section-title">Sponsor</span></div>';
+  html += '<div class="section-body"><div class="sponsor-card">';
+  html += '<div class="sponsor-avatar">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
+  html += '<div class="sponsor-info">';
+  if (deal.ceo) html += '<div class="sponsor-ceo-name">' + esc(deal.ceo) + '</div>';
+  html += '<a class="sponsor-company-link" href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a>';
+  html += '</div></div></div>';
+  html += '</div>';
+
+  // Action buttons
+  html += '<div class="section"><div class="section-body"><div class="action-buttons">';
+  html += '<button class="btn-action btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
+  html += '<button class="btn-action btn-secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Deck Review</button>';
+  html += '<button class="btn-action btn-secondary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
+  html += '</div></div></div>';
+
+  container.innerHTML = html;
+  document.body.classList.add('page-loaded');
+
+  // Init map if location exists
+  if (deal.location && document.getElementById('dealMap')) {
+    geocodeAndMap(deal.location, 'dealMap');
+  }
+}
+
+function metricCard(label, value, highlight) {
+  return '<div class="metric-card"><div class="metric-label">' + esc(label) + '</div><div class="metric-value' + (highlight ? ' highlight' : '') + '">' + esc(value) + '</div></div>';
+}
+
+function detailItem(label, value) {
+  var display = (value === undefined || value === null || value === '') ? '---' : value;
+  return '<div class="detail-item"><div class="detail-label">' + esc(label) + '</div><div class="detail-value">' + esc(String(display)) + '</div></div>';
+}
+
+function summaryRow(label, value) {
+  var display = (value === undefined || value === null || value === '') ? '---' : value;
+  return '<div class="summary-row"><div class="summary-label">' + esc(label) + '</div><div class="summary-value">' + esc(String(display)) + '</div></div>';
+}
+
+function renderNotFound() {
+  return '<div class="not-found"><h2>Deal Not Found</h2><p>The deal you are looking for does not exist or may have been removed.</p><a href="index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg> Back to Dashboard</a></div>';
+}
+
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  var div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+// ========== INIT ==========
+initAuth();
+renderDeal();
+</script>
+</body>
+</html>
