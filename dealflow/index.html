@@ -137,7 +137,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 24px;
+  padding: 10px 16px 10px 24px;
   color: var(--text-sidebar);
   cursor: pointer;
   transition: all var(--transition);
@@ -180,12 +180,13 @@ body {
   margin-left: auto;
   background: var(--primary);
   color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
   border-radius: 10px;
-  min-width: 20px;
+  min-width: 18px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .sidebar-footer {
@@ -2751,8 +2752,9 @@ html.dark .card-match-badge.red { background: #2E1515; }
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
           <div style="display:flex;gap:8px;" id="debtChartToggles">
             <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
+            <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
+            <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
             <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
-            <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Leverage (LTV)</button>
           </div>
         </div>
         <div style="display:flex;gap:16px;align-items:stretch;">
@@ -2761,7 +2763,7 @@ html.dark .card-match-badge.red { background: #2E1515; }
             <canvas id="debtFundChart"></canvas>
           </div>
         </div>
-        <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;">Historical data is simulated. Actual fund metrics coming soon.</p>
+        <p id="debtChartDisclaimer" style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;display:none;">Delinquency rate data is simulated. Actual metrics coming soon.</p>
       </div>
 
       <!-- Debt Funds Table -->
@@ -2770,7 +2772,6 @@ html.dark .card-match-badge.red { background: #2E1515; }
           <thead>
             <tr>
               <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('targetIRR')">Yield <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
@@ -3599,6 +3600,11 @@ function navigateTo(page) {
   analyticsPageEnter(page);
   // Fire GA4 event
   if (typeof gtag === 'function') gtag('event', 'page_view', { page_title: page });
+  // Close wizard overlay if open (so it doesn't block navigation)
+  const wizOverlay = document.getElementById('wizardOverlay');
+  if (wizOverlay && wizOverlay.classList.contains('active') && page !== 'buybox') {
+    closeWizard();
+  }
   // Render page-specific content
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
@@ -4329,12 +4335,50 @@ async function syncBuyBoxToGHL() {
   const user = getUser();
   if (!user) return;
   try {
+    // Sync to our serverless API which writes to GHL custom fields
+    await fetch('/api/buybox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, wizardData })
+    }).catch(() => {});
+    // Also try legacy webhook as fallback
     await fetch(WEBHOOKS.buyBoxSync, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: user.email, buyBox: wizardData, timestamp: new Date().toISOString() })
     }).catch(() => {});
   } catch(e) {}
+}
+
+// Fetch buy box from GHL on login and populate wizard data
+async function fetchBuyBoxFromGHL() {
+  const user = getUser();
+  if (!user || !user.email) return;
+  try {
+    const resp = await fetch('/api/buybox?email=' + encodeURIComponent(user.email));
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.success && data.buyBox && Object.keys(data.buyBox).length > 0) {
+      const ghl = data.buyBox;
+      // Merge GHL data into wizardData (don't overwrite if wizard already has data)
+      const existing = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+      let updated = false;
+      for (const [key, val] of Object.entries(ghl)) {
+        if (val && (!existing[key] || (Array.isArray(existing[key]) && existing[key].length === 0))) {
+          existing[key] = val;
+          updated = true;
+        }
+      }
+      if (updated) {
+        wizardData = { ...wizardData, ...existing };
+        localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+        syncWizardToBuyBox();
+        console.log('Buy box synced from GHL:', Object.keys(ghl).length, 'fields');
+      }
+    }
+  } catch(e) {
+    console.warn('GHL buy box fetch failed:', e.message);
+  }
 }
 
 // ========== MAGAZINE-STYLE BUY BOX REPORT ==========
@@ -4710,6 +4754,7 @@ function renderDebtFunds() {
     _yieldData: generateMonthlyData((f.targetIRR || 0.09) * 100, 12, 0.3),
     _delinquencyData: generateMonthlyData(Math.random() * 3 + 0.5, 12, 0.4),
     _ltvData: generateMonthlyData((f.avgLoanLTV || 0.65) * 100, 12, 2),
+    _leverageData: generateMonthlyData(f.avgLoanLTV ? (1 / (1 - f.avgLoanLTV)) : 1.8, 12, 0.15),
     _color: CHART_COLORS[i % CHART_COLORS.length],
     _return2025: generateYearReturn(f.targetIRR, 2025),
     _return2024: generateYearReturn(f.targetIRR, 2024),
@@ -4746,14 +4791,15 @@ function renderDebtStats(filteredFunds, allFunds) {
   const fmtMaxAUM = maxAUM >= 1e9 ? '$' + (maxAUM / 1e9).toFixed(1) + 'B' : maxAUM >= 1e6 ? '$' + (maxAUM / 1e6).toFixed(0) + 'M' : '$' + maxAUM.toLocaleString();
 
   document.getElementById('debtFundStats').innerHTML = [
-    { label: 'Total Debt Funds', value: filteredCount, sub: '<span style="color:var(--text-muted);font-size:18px;font-weight:500;"> / ' + totalCount + '</span>', color: 'var(--primary)' },
+    { label: 'Total Debt Funds', value: filteredCount + '<span style="color:var(--text-muted);font-size:18px;font-weight:500;"> / ' + totalCount + '</span>', color: 'var(--primary)' },
     { label: 'Average Yield', value: avgYield + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minYield + '% — Max ' + maxYield + '%</span>', color: 'var(--green)' },
     { label: 'Average Loan-to-Value', value: avgLTV + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minLTV + '% — Max ' + maxLTV + '%</span>', color: 'var(--orange)' },
     { label: 'Total AUM', value: fmtAUM, sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">' + fmtMinAUM + ' — ' + fmtMaxAUM + '</span>', color: 'var(--blue)' }
   ].map(s => `
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
       <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
-      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}${s.sub || ''}</div>
+      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}</div>
+      ${s.sub ? '<div style="margin-top:4px;">' + s.sub + '</div>' : ''}
     </div>
   `).join('');
 }
@@ -4763,8 +4809,14 @@ function renderDebtChart() {
   if (!ctx) return;
   if (debtFundChart) debtFundChart.destroy();
 
-  const metricKey = debtChartMetric === 'yield' ? '_yieldData' : debtChartMetric === 'delinquency' ? '_delinquencyData' : '_ltvData';
-  const metricLabel = debtChartMetric === 'yield' ? 'Yield (%)' : debtChartMetric === 'delinquency' ? 'Delinquency Rate (%)' : 'LTV (%)';
+  const metricKeys = { yield: '_yieldData', delinquency: '_delinquencyData', ltv: '_ltvData', leverage: '_leverageData' };
+  const metricLabels = { yield: 'Yield (%)', delinquency: 'Delinquency Rate (%)', ltv: 'Loan-to-Value (%)', leverage: 'Leverage Ratio (x)' };
+  const metricKey = metricKeys[debtChartMetric] || '_yieldData';
+  const metricLabel = metricLabels[debtChartMetric] || 'Yield (%)';
+
+  // Show disclaimer only for delinquency
+  const disclaimer = document.getElementById('debtChartDisclaimer');
+  if (disclaimer) disclaimer.style.display = debtChartMetric === 'delinquency' ? '' : 'none';
 
   const filteredFunds = getFilteredDebtFunds();
   const datasets = filteredFunds.map(f => {
@@ -4911,7 +4963,6 @@ function renderDebtTable() {
     const isHL = highlightedDebtFund === f.id;
     return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to highlight on chart">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
-      <td class="irr-cell">${yieldStr}</td>
       <td>${fmtReturn(f._return2025)}</td>
       <td>${fmtReturn(f._return2024)}</td>
       <td>${fmtReturn(f._return2023)}</td>
@@ -5352,6 +5403,9 @@ if (window.location.hash === '#onboarding') {
 if (localStorage.getItem('gycBuyBoxComplete')) {
   renderReport();
 }
+
+// Sync buy box from GHL (background, non-blocking)
+fetchBuyBoxFromGHL();
 </script>
 </body>
 </html>
