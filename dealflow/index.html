@@ -3136,37 +3136,49 @@ html.dark .card-match-badge.red { background: #2E1515; }
     <div class="sub-page" style="max-width:1200px">
       <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
 
-      <!-- Debt Fund Filters (moved above stats & chart) -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+      <!-- Debt Fund Filters -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()">
           <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
           Apply My Buy Box
         </button>
         <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
         <div style="width:1px;height:24px;background:var(--border);"></div>
-        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Filters</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Financials:</span>
-          <button class="topbar-tab active" onclick="toggleDebtFilter('financials','all',this)" data-filter-group="financials">All</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Audited',this)" data-filter-group="financials">Audited</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Unaudited',this)" data-filter-group="financials">Unaudited</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">AUM Size:</span>
-          <button class="topbar-tab active" onclick="toggleDebtFilter('aum','all',this)" data-filter-group="aum">All</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('aum','small',this)" data-filter-group="aum">Small (&lt;$100M)</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('aum','mid',this)" data-filter-group="aum">Mid ($100M-$1B)</button>
-          <button class="topbar-tab" onclick="toggleDebtFilter('aum','institutional',this)" data-filter-group="aum">Institutional ($1B+)</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Debt Position:</span>
-          <select id="debtPositionFilter" onchange="debtFilterPosition=this.value;renderDebtStats(getFilteredDebtFunds(),debtFundData);renderDebtChart();renderDebtTable();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All Positions</option>
-            <option value="1st">1st Position</option>
-            <option value="2nd">2nd Position</option>
-            <option value="Mezzanine">Mezzanine</option>
-          </select>
-        </div>
+        <select id="debtFinancialsFilter" onchange="debtFilterFinancials=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">All Financials</option>
+          <option value="Audited">Audited</option>
+          <option value="Unaudited">Unaudited</option>
+        </select>
+        <select id="debtAUMFilter" onchange="debtFilterAUM=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">All AUM Sizes</option>
+          <option value="small">Small (&lt;$100M)</option>
+          <option value="mid">Mid ($100M-$1B)</option>
+          <option value="institutional">Institutional ($1B+)</option>
+        </select>
+        <select id="debtPositionFilter" onchange="debtFilterPosition=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">All Positions</option>
+          <option value="1st">1st Position</option>
+          <option value="2nd">2nd Position</option>
+          <option value="Mezzanine">Mezzanine</option>
+        </select>
+        <select id="debtDistributionFilter" onchange="debtFilterDistribution=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">All Distributions</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+        </select>
+        <select id="debtMinimumFilter" onchange="debtFilterMinimum=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">All Minimums</option>
+          <option value="25000">Under $25K</option>
+          <option value="50000">Under $50K</option>
+          <option value="100000">Under $100K</option>
+          <option value="250000">Under $250K</option>
+        </select>
+        <select id="debtYieldFilter" onchange="debtFilterYield=this.value;onDebtFilterChange();" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+          <option value="all">All Yields</option>
+          <option value="8">8%+</option>
+          <option value="9">9%+</option>
+          <option value="10">10%+</option>
+        </select>
       </div>
 
       <!-- Stat Cards -->
@@ -3183,13 +3195,17 @@ html.dark .card-match-badge.red { background: #2E1515; }
             <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
           </div>
         </div>
-        <div class="debt-chart-wrapper">
+        <div class="debt-chart-wrapper" style="position:relative;">
           <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
             <canvas id="debtFundChart"></canvas>
           </div>
           <div id="debtChartLegend" style="min-width:180px;max-width:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:8px 0;font-family:var(--font-ui);font-size:12px;order:0;"></div>
+          <!-- Coming Soon overlay for delinquency -->
+          <div id="debtChartComingSoon" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);border-radius:var(--radius);z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+            <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:var(--text-secondary);">Coming Soon</div>
+            <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);max-width:340px;text-align:center;">Delinquency rate data is not yet available. We're working on sourcing verified metrics from fund managers.</div>
+          </div>
         </div>
-        <p id="debtChartDisclaimer" style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;display:none;">Delinquency rate data is simulated. Actual metrics coming soon.</p>
       </div>
 
       <!-- Debt Funds Table -->
@@ -5877,18 +5893,14 @@ let highlightedDebtFund = null;
 let debtFilterFinancials = 'all';
 let debtFilterAUM = 'all';
 let debtFilterPosition = 'all';
+let debtFilterDistribution = 'all';
+let debtFilterMinimum = 'all';
+let debtFilterYield = 'all';
 let dealsBuyBoxApplied = false;
 let debtBuyBoxApplied = false;
 let buyBoxProgrammaticChange = false;
 
-function toggleDebtFilter(group, value, btn) {
-  if (group === 'financials') debtFilterFinancials = value;
-  if (group === 'aum') debtFilterAUM = value;
-  if (group === 'position') debtFilterPosition = value;
-  // Update button states
-  const siblings = btn.parentElement.querySelectorAll('.topbar-tab');
-  siblings.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+function onDebtFilterChange() {
   // If buy box was applied, un-toggle and show update button
   if (debtBuyBoxApplied) {
     debtBuyBoxApplied = false;
@@ -5912,6 +5924,15 @@ function getFilteredDebtFunds() {
       if (debtFilterAUM === 'institutional' && aum < 1000000000) return false;
     }
     if (debtFilterPosition !== 'all' && (f.debtPosition || '') !== debtFilterPosition) return false;
+    if (debtFilterDistribution !== 'all' && (f.distributions || '') !== debtFilterDistribution) return false;
+    if (debtFilterMinimum !== 'all') {
+      const max = parseInt(debtFilterMinimum);
+      if ((f.investmentMinimum || 0) > max) return false;
+    }
+    if (debtFilterYield !== 'all') {
+      const minYield = parseInt(debtFilterYield) / 100;
+      if ((f.targetIRR || 0) < minYield) return false;
+    }
     return true;
   });
 }
@@ -6023,9 +6044,9 @@ function renderDebtChart() {
   const metricKey = metricKeys[debtChartMetric] || '_yieldData';
   const metricLabel = metricLabels[debtChartMetric] || 'Yield (%)';
 
-  // Show disclaimer only for delinquency
-  const disclaimer = document.getElementById('debtChartDisclaimer');
-  if (disclaimer) disclaimer.style.display = debtChartMetric === 'delinquency' ? '' : 'none';
+  // Show/hide Coming Soon overlay for delinquency
+  const overlay = document.getElementById('debtChartComingSoon');
+  if (overlay) overlay.style.display = debtChartMetric === 'delinquency' ? 'flex' : 'none';
 
   const filteredFunds = getFilteredDebtFunds();
   const datasets = filteredFunds.map(f => {
@@ -6139,6 +6160,9 @@ function switchDebtMetric(metric, btn) {
   document.querySelectorAll('#debtChartToggles .topbar-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderDebtChart();
+  // Show/hide Coming Soon overlay for delinquency
+  const overlay = document.getElementById('debtChartComingSoon');
+  if (overlay) overlay.style.display = metric === 'delinquency' ? 'flex' : 'none';
 }
 
 function renderDebtTable() {
@@ -7225,33 +7249,29 @@ function updateDealsBuyBox() {
 }
 
 // ========== BUY BOX TOGGLE (DEBT FUND EXPLORER) ==========
+function resetDebtFilterDropdowns() {
+  const ids = ['debtFinancialsFilter','debtAUMFilter','debtPositionFilter','debtDistributionFilter','debtMinimumFilter','debtYieldFilter'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = 'all'; });
+}
+
 function toggleDebtBuyBox() {
   const toggle = document.getElementById('debtBuyBoxToggle');
   const updateBtn = document.getElementById('debtBuyBoxUpdate');
   if (debtBuyBoxApplied) {
-    // Turn off - reset debt filters
+    // Turn off - reset all debt filters
     debtBuyBoxApplied = false;
     toggle.classList.remove('active');
     if (updateBtn) updateBtn.classList.remove('visible');
     debtFilterFinancials = 'all';
     debtFilterAUM = 'all';
     debtFilterPosition = 'all';
-    const posSelect = document.getElementById('debtPositionFilter');
-    if (posSelect) posSelect.value = 'all';
-    // Reset button states
-    document.querySelectorAll('[data-filter-group="financials"] .topbar-tab, [data-filter-group="financials"]').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('[data-filter-group="aum"] .topbar-tab, [data-filter-group="aum"]').forEach(b => b.classList.remove('active'));
-    // Set "All" buttons active
-    document.querySelectorAll('#page-debtfunds .topbar-tab').forEach(b => {
-      if (b.textContent.trim() === 'All' && (b.getAttribute('data-filter-group') === 'financials' || b.getAttribute('data-filter-group') === 'aum')) {
-        // handled below
-      }
-    });
-    // Simpler: re-click the All buttons
-    const allBtns = document.querySelectorAll('#page-debtfunds [data-filter-group]');
-    allBtns.forEach(btn => {
-      if (btn.onclick && btn.textContent.trim() === 'All') btn.click();
-    });
+    debtFilterDistribution = 'all';
+    debtFilterMinimum = 'all';
+    debtFilterYield = 'all';
+    resetDebtFilterDropdowns();
+    renderDebtStats(getFilteredDebtFunds(), debtFundData);
+    renderDebtChart();
+    renderDebtTable();
     return;
   }
   // Apply buy box to debt fund filters
@@ -7259,32 +7279,29 @@ function toggleDebtBuyBox() {
   toggle.classList.add('active');
   if (updateBtn) updateBtn.classList.remove('visible');
 
-  // Check if buy box has financials preference
-  // For debt funds: if buy box strategies includes "Lending", that's a match
-  // We can set financials filter based on common preferences
-  // Keep financials as 'all' unless user has a specific pref (not in standard buy box)
   // AUM: use min/max invest as a proxy for fund size preference
   const maxInvStr = buyBox.maxInvest || '';
   const maxInvNum = parseInt(maxInvStr.replace(/[^0-9]/g, ''));
   if (maxInvNum && maxInvNum <= 50000) {
-    // Smaller investor -> likely small funds
     debtFilterAUM = 'small';
   } else if (maxInvNum && maxInvNum >= 500000) {
     debtFilterAUM = 'institutional';
   } else {
     debtFilterAUM = 'all';
   }
+  // Set minimum investment from buy box
+  const minInvStr = buyBox.minInvest || '';
+  const minInvNum = parseInt(minInvStr.replace(/[^0-9]/g, ''));
+  if (minInvNum && minInvNum <= 25000) debtFilterMinimum = '25000';
+  else if (minInvNum && minInvNum <= 50000) debtFilterMinimum = '50000';
+  else if (minInvNum && minInvNum <= 100000) debtFilterMinimum = '100000';
+  else debtFilterMinimum = 'all';
 
-  // Update button UI for AUM
-  const aumBtns = document.querySelectorAll('#page-debtfunds [data-filter-group="aum"]');
-  aumBtns.forEach(b => {
-    b.classList.remove('active');
-    const txt = b.textContent.trim();
-    if (debtFilterAUM === 'all' && txt === 'All') b.classList.add('active');
-    if (debtFilterAUM === 'small' && txt.includes('<$100M')) b.classList.add('active');
-    if (debtFilterAUM === 'mid' && txt.includes('$100M')) b.classList.add('active');
-    if (debtFilterAUM === 'institutional' && txt.includes('$1B+')) b.classList.add('active');
-  });
+  // Update dropdown UI
+  const aumSelect = document.getElementById('debtAUMFilter');
+  if (aumSelect) aumSelect.value = debtFilterAUM;
+  const minSelect = document.getElementById('debtMinimumFilter');
+  if (minSelect) minSelect.value = debtFilterMinimum;
 
   renderDebtStats(getFilteredDebtFunds(), debtFundData);
   renderDebtChart();
