@@ -162,9 +162,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // Debug: include what keys exist on the contact for troubleshooting
-      const contactKeys = Object.keys(contactData).filter(k => k.toLowerCase().includes('custom') || k.toLowerCase().includes('field'));
-
       return res.status(200).json({
         success: true,
         contactId: contact.id,
@@ -172,12 +169,10 @@ export default async function handler(req, res) {
         buyBox,
         rawFields,
         _debug: {
-          contactKeys,
-          hasCustomFields: Array.isArray(contactData.customFields),
-          customFieldsLength: Array.isArray(contactData.customFields) ? contactData.customFields.length : 0,
-          hasCustomField: !!contactData.customField,
-          customFieldType: typeof contactData.customField,
-          allKeys: Object.keys(contactData)
+          customFieldRaw: contactData.customField,
+          customFieldsRaw: contactData.customFields,
+          reverseMapKeys: Object.keys(REVERSE_MAP).slice(0, 5),
+          tags: contactData.tags
         }
       });
     } catch (e) {
