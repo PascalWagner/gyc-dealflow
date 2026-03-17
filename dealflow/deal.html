@@ -992,7 +992,7 @@ async function geocodeAndMap(locationStr, containerId) {
 }
 
 // ========== RENDER PAGE ==========
-function renderDeal() {
+async function renderDeal() {
   const params = new URLSearchParams(window.location.search);
   const id = params.get('id');
   const container = document.getElementById('loadedContent');
@@ -1003,7 +1003,19 @@ function renderDeal() {
     return;
   }
 
-  const deal = DEALS.find(d => d.id === id);
+  let deal = DEALS.find(d => d.id === id);
+
+  // If not in hardcoded list, fetch from Airtable API
+  if (!deal) {
+    try {
+      container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
+      const resp = await fetch('/api/deals');
+      if (resp.ok) {
+        const allDeals = await resp.json();
+        deal = allDeals.find(d => d.id === id);
+      }
+    } catch (e) { console.warn('API fetch failed:', e.message); }
+  }
 
   if (!deal) {
     container.innerHTML = renderNotFound();

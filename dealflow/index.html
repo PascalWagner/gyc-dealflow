@@ -2257,19 +2257,39 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;">Historical data is simulated. Actual fund metrics coming soon.</p>
       </div>
 
+      <!-- Debt Fund Filters -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Filters</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Financials:</span>
+          <button class="topbar-tab active" onclick="toggleDebtFilter('financials','all',this)" data-filter-group="financials">All</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Audited',this)" data-filter-group="financials">Audited</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('financials','Unaudited',this)" data-filter-group="financials">Unaudited</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">AUM Size:</span>
+          <button class="topbar-tab active" onclick="toggleDebtFilter('aum','all',this)" data-filter-group="aum">All</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('aum','small',this)" data-filter-group="aum">Small (&lt;$100M)</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('aum','mid',this)" data-filter-group="aum">Mid ($100M-$1B)</button>
+          <button class="topbar-tab" onclick="toggleDebtFilter('aum','institutional',this)" data-filter-group="aum">Institutional ($1B+)</button>
+        </div>
+      </div>
+
       <!-- Debt Funds Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;">
         <table class="table-view" id="debtFundTable" style="display:table;">
           <thead>
             <tr>
               <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('ceo')">Sponsor / CEO <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('targetIRR')">Yield <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('_return2022')">2022 <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('avgLoanLTV')">LTV <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('investmentMinimum')">Min Investment <span class="sort-arrow">&#9650;</span></th>
+              <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
               <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('status')">Status <span class="sort-arrow">&#9650;</span></th>
             </tr>
           </thead>
           <tbody id="debtFundTableBody"></tbody>
@@ -2868,15 +2888,102 @@ function switchView(el) {
 let dealMap = null;
 function closeMapPopup() { if (dealMap) dealMap.closePopup(); }
 let mapMarkers = [];
-const LOCATION_COORDS = {
-  "Clearwater, FL": [27.9659, -82.8001],
-  "Georgia": [33.7490, -84.3880],
-  "Chattanooga, TN": [35.0456, -85.3097]
+const STATE_COORDS = {
+  'AL':[32.8,-86.8],'AK':[64.2,-152.5],'AZ':[34.0,-111.1],'AR':[35.2,-91.8],'CA':[36.8,-119.4],
+  'CO':[39.1,-105.4],'CT':[41.6,-72.7],'DE':[38.9,-75.5],'FL':[27.8,-81.8],'GA':[33.0,-83.5],
+  'HI':[19.9,-155.6],'ID':[44.2,-114.4],'IL':[40.6,-89.4],'IN':[40.3,-86.1],'IA':[42.0,-93.2],
+  'KS':[39.0,-98.5],'KY':[37.8,-84.3],'LA':[30.9,-92.3],'ME':[45.3,-69.4],'MD':[39.0,-76.6],
+  'MA':[42.4,-71.4],'MI':[44.3,-85.6],'MN':[46.7,-94.7],'MS':[32.7,-89.7],'MO':[38.5,-92.3],
+  'MT':[46.9,-110.4],'NE':[41.5,-99.7],'NV':[38.8,-116.4],'NH':[43.2,-71.6],'NJ':[40.1,-74.5],
+  'NM':[34.5,-105.9],'NY':[43.3,-74.0],'NC':[35.8,-80.0],'ND':[47.5,-100.4],'OH':[40.4,-82.8],
+  'OK':[35.0,-97.1],'OR':[43.8,-120.6],'PA':[41.2,-77.2],'RI':[41.6,-71.5],'SC':[33.8,-81.2],
+  'SD':[43.9,-99.9],'TN':[35.5,-86.0],'TX':[31.0,-100.0],'UT':[39.3,-111.1],'VT':[44.0,-72.7],
+  'VA':[37.8,-79.4],'WA':[47.8,-120.7],'WV':[38.6,-80.6],'WI':[43.8,-88.8],'WY':[43.1,-107.6],
+  'DC':[38.9,-77.0]
 };
+const STATE_NAMES = {
+  'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA','colorado':'CO',
+  'connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA','hawaii':'HI','idaho':'ID',
+  'illinois':'IL','indiana':'IN','iowa':'IA','kansas':'KS','kentucky':'KY','louisiana':'LA',
+  'maine':'ME','maryland':'MD','massachusetts':'MA','michigan':'MI','minnesota':'MN',
+  'mississippi':'MS','missouri':'MO','montana':'MT','nebraska':'NE','nevada':'NV',
+  'new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY',
+  'north carolina':'NC','north dakota':'ND','ohio':'OH','oklahoma':'OK','oregon':'OR',
+  'pennsylvania':'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',
+  'tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT','virginia':'VA','washington':'WA',
+  'west virginia':'WV','wisconsin':'WI','wyoming':'WY','district of columbia':'DC'
+};
+const CITY_COORDS = {
+  'clearwater, fl':[27.97,-82.80],'chattanooga, tn':[35.05,-85.31],'atlanta, ga':[33.75,-84.39],
+  'houston, tx':[29.76,-95.37],'dallas, tx':[32.78,-96.80],'austin, tx':[30.27,-97.74],
+  'san antonio, tx':[29.42,-98.49],'phoenix, az':[33.45,-112.07],'denver, co':[39.74,-104.99],
+  'nashville, tn':[36.16,-86.78],'charlotte, nc':[35.23,-80.84],'raleigh, nc':[35.78,-78.64],
+  'tampa, fl':[27.95,-82.46],'orlando, fl':[28.54,-81.38],'jacksonville, fl':[30.33,-81.66],
+  'miami, fl':[25.76,-80.19],'los angeles, ca':[34.05,-118.24],'san francisco, ca':[37.77,-122.42],
+  'san diego, ca':[32.72,-117.16],'seattle, wa':[47.61,-122.33],'portland, or':[45.52,-122.68],
+  'las vegas, nv':[36.17,-115.14],'salt lake city, ut':[40.76,-111.89],'boise, id':[43.62,-116.21],
+  'new york, ny':[40.71,-74.01],'boston, ma':[42.36,-71.06],'philadelphia, pa':[39.95,-75.17],
+  'chicago, il':[41.88,-87.63],'detroit, mi':[42.33,-83.05],'minneapolis, mn':[44.98,-93.27],
+  'st. louis, mo':[38.63,-90.20],'kansas city, mo':[39.10,-94.58],'indianapolis, in':[39.77,-86.16],
+  'columbus, oh':[39.96,-83.00],'pittsburgh, pa':[40.44,-79.99],'baltimore, md':[39.29,-76.61],
+  'washington, dc':[38.91,-77.04],'richmond, va':[37.54,-77.44],'memphis, tn':[35.15,-90.05],
+  'new orleans, la':[29.95,-90.07],'oklahoma city, ok':[35.47,-97.52],'san jose, ca':[37.34,-121.89],
+  'sacramento, ca':[38.58,-121.49],'tucson, az':[32.22,-110.97],'albuquerque, nm':[35.08,-106.65]
+};
+
+function geocodeDeal(deal) {
+  // Try location field first
+  const loc = (deal.location || '').trim();
+  if (loc) {
+    const locLower = loc.toLowerCase();
+    if (CITY_COORDS[locLower]) return CITY_COORDS[locLower];
+    // Check state name
+    if (STATE_NAMES[locLower]) return STATE_COORDS[STATE_NAMES[locLower]];
+    // Check state abbreviation
+    const abbr = loc.toUpperCase();
+    if (STATE_COORDS[abbr]) return STATE_COORDS[abbr];
+    // Try "City, ST" pattern
+    const parts = loc.split(',').map(s => s.trim());
+    if (parts.length === 2) {
+      const st = parts[1].toUpperCase();
+      if (STATE_COORDS[st]) return STATE_COORDS[st];
+    }
+  }
+  // Try investingGeography
+  const geo = (deal.investingGeography || '').trim();
+  if (geo && geo !== 'USA' && geo !== 'Nationwide') {
+    const geoLower = geo.toLowerCase();
+    if (CITY_COORDS[geoLower]) return CITY_COORDS[geoLower];
+    if (STATE_NAMES[geoLower]) return STATE_COORDS[STATE_NAMES[geoLower]];
+    const geoAbbr = geo.toUpperCase();
+    if (STATE_COORDS[geoAbbr]) return STATE_COORDS[geoAbbr];
+    // Try multi-state: "Sunbelt", "Southeast", etc - place at a representative spot
+    const regionCoords = {
+      'sunbelt':[33.4,-97.0],'southeast':[33.5,-84.4],'southwest':[33.4,-112.0],
+      'midwest':[41.9,-87.6],'northeast':[40.7,-74.0],'pacific northwest':[47.6,-122.3],
+      'mountain west':[39.7,-105.0],'sunbelt & mountain west':[36.2,-105.0]
+    };
+    if (regionCoords[geoLower]) return regionCoords[geoLower];
+    // Try parsing comma-separated states
+    const states = geo.split(/[,&\/]/).map(s => s.trim());
+    for (const s of states) {
+      const sLower = s.toLowerCase();
+      if (STATE_NAMES[sLower]) return STATE_COORDS[STATE_NAMES[sLower]];
+      if (STATE_COORDS[s.toUpperCase()]) return STATE_COORDS[s.toUpperCase()];
+    }
+  }
+  // Try deal name for city/state hints
+  const name = (deal.investmentName || '').toLowerCase();
+  for (const [city, coords] of Object.entries(CITY_COORDS)) {
+    const cityName = city.split(',')[0];
+    if (name.includes(cityName)) return coords;
+  }
+  return null;
+}
 
 function renderMapView() {
   const container = document.getElementById('mapView');
-  const mapDeals = DEALS.filter(d => d.dealType === "Syndication" && d.location && LOCATION_COORDS[d.location]);
+  const mapDeals = DEALS.filter(d => geocodeDeal(d) !== null);
   const sixMonthsAgo = new Date("2026-03-17");
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
@@ -2894,7 +3001,7 @@ function renderMapView() {
   mapMarkers = [];
 
   mapDeals.forEach(deal => {
-    const coords = LOCATION_COORDS[deal.location];
+    const coords = geocodeDeal(deal);
     const dealDate = new Date(deal.addedDate);
     const isActive = dealDate >= sixMonthsAgo;
     const color = isActive ? '#51BE7B' : '#8A9AA0';
@@ -3987,6 +4094,39 @@ let debtChartMetric = 'yield';
 let debtSortCol = 'investmentName';
 let debtSortAsc = true;
 let highlightedDebtFund = null;
+let debtFilterFinancials = 'all';
+let debtFilterAUM = 'all';
+
+function toggleDebtFilter(group, value, btn) {
+  if (group === 'financials') debtFilterFinancials = value;
+  if (group === 'aum') debtFilterAUM = value;
+  // Update button states
+  const siblings = btn.parentElement.querySelectorAll('.topbar-tab');
+  siblings.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDebtChart();
+  renderDebtTable();
+}
+
+function getFilteredDebtFunds() {
+  return debtFundData.filter(f => {
+    if (debtFilterFinancials !== 'all' && f.financials !== debtFilterFinancials) return false;
+    if (debtFilterAUM !== 'all') {
+      const aum = f.fundAUM || 0;
+      if (debtFilterAUM === 'small' && aum >= 100000000) return false;
+      if (debtFilterAUM === 'mid' && (aum < 100000000 || aum >= 1000000000)) return false;
+      if (debtFilterAUM === 'institutional' && aum < 1000000000) return false;
+    }
+    return true;
+  });
+}
+
+function generateYearReturn(baseIRR, year) {
+  // Simulated year-over-year returns with some variance
+  const variance = (Math.random() - 0.5) * 0.03;
+  const yearOffset = (2025 - year) * 0.005 * (Math.random() - 0.3);
+  return Math.max(0, (baseIRR || 0.09) + variance + yearOffset);
+}
 
 function getDebtFunds() {
   return DEALS.filter(d =>
@@ -4023,7 +4163,11 @@ function renderDebtFunds() {
     _yieldData: generateMonthlyData((f.targetIRR || 0.09) * 100, 12, 0.3),
     _delinquencyData: generateMonthlyData(Math.random() * 3 + 0.5, 12, 0.4),
     _ltvData: generateMonthlyData((f.avgLoanLTV || 0.65) * 100, 12, 2),
-    _color: CHART_COLORS[i % CHART_COLORS.length]
+    _color: CHART_COLORS[i % CHART_COLORS.length],
+    _return2025: generateYearReturn(f.targetIRR, 2025),
+    _return2024: generateYearReturn(f.targetIRR, 2024),
+    _return2023: generateYearReturn(f.targetIRR, 2023),
+    _return2022: generateYearReturn(f.targetIRR, 2022)
   }));
 
   renderDebtStats(funds);
@@ -4062,7 +4206,8 @@ function renderDebtChart() {
   const metricKey = debtChartMetric === 'yield' ? '_yieldData' : debtChartMetric === 'delinquency' ? '_delinquencyData' : '_ltvData';
   const metricLabel = debtChartMetric === 'yield' ? 'Yield (%)' : debtChartMetric === 'delinquency' ? 'Delinquency Rate (%)' : 'LTV (%)';
 
-  const datasets = debtFundData.map(f => {
+  const filteredFunds = getFilteredDebtFunds();
+  const datasets = filteredFunds.map(f => {
     const isHighlighted = highlightedDebtFund === f.id;
     const isAnyHighlighted = highlightedDebtFund !== null;
     return {
@@ -4084,7 +4229,19 @@ function renderDebtChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
+      hover: { mode: 'nearest', intersect: true },
+      interaction: { mode: 'nearest', intersect: false },
+      onClick: function(event, elements) {
+        if (elements.length > 0) {
+          const idx = elements[0].datasetIndex;
+          const fund = filteredFunds[idx];
+          if (fund) {
+            highlightedDebtFund = highlightedDebtFund === fund.id ? null : fund.id;
+            renderDebtChart();
+            renderDebtTable();
+          }
+        }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -4093,6 +4250,14 @@ function renderDebtChart() {
           bodyFont: { family: 'Source Sans 3' },
           padding: 12,
           cornerRadius: 8,
+          filter: function(tooltipItem) {
+            // Only show tooltip for highlighted fund, or nearest if none highlighted
+            if (highlightedDebtFund !== null) {
+              const fund = filteredFunds[tooltipItem.datasetIndex];
+              return fund && fund.id === highlightedDebtFund;
+            }
+            return true;
+          },
           callbacks: {
             label: function(ctx) {
               return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
@@ -4120,7 +4285,7 @@ function renderDebtChart() {
   // Render custom side legend
   const legendEl = document.getElementById('debtChartLegend');
   if (legendEl) {
-    legendEl.innerHTML = debtFundData.map(f => {
+    legendEl.innerHTML = filteredFunds.map(f => {
       const isActive = highlightedDebtFund === f.id;
       const isAnyActive = highlightedDebtFund !== null;
       const dotColor = isAnyActive ? (isActive ? f._color : '#ccc') : f._color;
@@ -4149,7 +4314,8 @@ function switchDebtMetric(metric, btn) {
 }
 
 function renderDebtTable() {
-  const sorted = [...debtFundData].sort((a, b) => {
+  const filtered = getFilteredDebtFunds();
+  const sorted = [...filtered].sort((a, b) => {
     let va = a[debtSortCol], vb = b[debtSortCol];
     if (va == null) va = '';
     if (vb == null) vb = '';
@@ -4162,21 +4328,31 @@ function renderDebtTable() {
 
   const tbody = document.getElementById('debtFundTableBody');
   if (!tbody) return;
+
+  function fmtReturn(v) {
+    if (!v) return '<span style="color:var(--text-muted)">—</span>';
+    const pct = (v * 100).toFixed(1);
+    return '<span style="color:var(--green);font-weight:600;">' + pct + '%</span>';
+  }
+
   tbody.innerHTML = sorted.map(f => {
     const yieldStr = f.targetIRR ? (f.targetIRR * 100).toFixed(1) + '%' : '—';
     const ltvStr = f.avgLoanLTV ? (f.avgLoanLTV * 100).toFixed(0) + '%' : '—';
     const aumStr = f.fundAUM ? (f.fundAUM >= 1e9 ? '$' + (f.fundAUM / 1e9).toFixed(1) + 'B' : f.fundAUM >= 1e6 ? '$' + (f.fundAUM / 1e6).toFixed(0) + 'M' : '$' + f.fundAUM.toLocaleString()) : '—';
-    const minStr = f.investmentMinimum ? '$' + f.investmentMinimum.toLocaleString() : '—';
+    const financialsStr = f.financials || '—';
+    const financialsBadge = financialsStr === 'Audited' ? 'background:var(--green-bg);color:var(--green)' : financialsStr === 'Unaudited' ? 'background:var(--orange-bg);color:var(--orange)' : 'background:var(--border-light);color:var(--text-muted)';
     const isHL = highlightedDebtFund === f.id;
     return `<tr onclick="toggleDebtFundHighlight('${f.id}')" style="${isHL ? 'background:var(--green-bg);' : ''}" title="Click to highlight on chart">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
-      <td><a href="sponsor.html?company=${encodeURIComponent(f.managementCompany || '')}" style="color:var(--text-secondary);text-decoration:none;" onclick="event.stopPropagation()">${f.ceo || '—'}</a></td>
       <td class="irr-cell">${yieldStr}</td>
+      <td>${fmtReturn(f._return2025)}</td>
+      <td>${fmtReturn(f._return2024)}</td>
+      <td>${fmtReturn(f._return2023)}</td>
+      <td>${fmtReturn(f._return2022)}</td>
       <td>${ltvStr}</td>
       <td>${aumStr}</td>
-      <td>${minStr}</td>
+      <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;${financialsBadge};">${financialsStr}</span></td>
       <td>${f.debtPosition || '—'}</td>
-      <td><span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${f.status === 'Evergreen' ? 'var(--green-bg);color:var(--green)' : f.status === 'Open to invest' ? 'var(--blue-bg);color:var(--blue)' : 'var(--orange-bg);color:var(--orange)'};">${f.status || '—'}</span></td>
     </tr>`;
   }).join('');
 
