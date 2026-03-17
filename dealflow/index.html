@@ -2248,8 +2248,11 @@ html.dark .card-match-badge.red { background: #2E1515; }
             <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Leverage (LTV)</button>
           </div>
         </div>
-        <div style="position:relative;height:360px;">
-          <canvas id="debtFundChart"></canvas>
+        <div style="display:flex;gap:16px;align-items:stretch;">
+          <div id="debtChartLegend" style="min-width:180px;max-width:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:8px 0;font-family:var(--font-ui);font-size:12px;"></div>
+          <div style="position:relative;height:360px;flex:1;min-width:0;">
+            <canvas id="debtFundChart"></canvas>
+          </div>
         </div>
         <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;font-style:italic;">Historical data is simulated. Actual fund metrics coming soon.</p>
       </div>
@@ -4065,7 +4068,7 @@ function renderDebtChart() {
     return {
       label: f.investmentName,
       data: f[metricKey],
-      borderColor: isAnyHighlighted ? (isHighlighted ? '#51BE7B' : 'rgba(150,150,150,0.25)') : f._color,
+      borderColor: isAnyHighlighted ? (isHighlighted ? f._color : 'rgba(200,200,200,0.3)') : f._color,
       backgroundColor: 'transparent',
       borderWidth: isAnyHighlighted ? (isHighlighted ? 3 : 1) : 2,
       pointRadius: isAnyHighlighted ? (isHighlighted ? 4 : 0) : 2,
@@ -4083,16 +4086,7 @@ function renderDebtChart() {
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            font: { family: 'Plus Jakarta Sans', size: 11 },
-            usePointStyle: true,
-            pointStyle: 'circle',
-            padding: 16,
-            boxWidth: 8
-          }
-        },
+        legend: { display: false },
         tooltip: {
           backgroundColor: 'rgba(10,30,33,0.95)',
           titleFont: { family: 'Plus Jakarta Sans', weight: '600' },
@@ -4122,6 +4116,29 @@ function renderDebtChart() {
       }
     }
   });
+
+  // Render custom side legend
+  const legendEl = document.getElementById('debtChartLegend');
+  if (legendEl) {
+    legendEl.innerHTML = debtFundData.map(f => {
+      const isActive = highlightedDebtFund === f.id;
+      const isAnyActive = highlightedDebtFund !== null;
+      const dotColor = isAnyActive ? (isActive ? f._color : '#ccc') : f._color;
+      const textColor = isAnyActive && !isActive ? 'var(--text-muted)' : 'var(--text-dark)';
+      const fontWeight = isActive ? '700' : '500';
+      const bg = isActive ? 'var(--mint-bg)' : 'transparent';
+      return '<div onclick="toggleDebtFundHighlight(\'' + f.id + '\')" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;background:' + bg + ';transition:all 0.15s ease;" onmouseover="this.style.background=\'' + (isActive ? 'var(--mint-bg)' : 'var(--border-light)') + '\';" onmouseout="this.style.background=\'' + bg + '\';">'
+        + '<span style="width:10px;height:10px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;"></span>'
+        + '<span style="color:' + textColor + ';font-weight:' + fontWeight + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (f.investmentName || '') + '">' + (f.investmentName || 'Unknown') + '</span>'
+        + '</div>';
+    }).join('');
+  }
+}
+
+function toggleDebtFundHighlight(id) {
+  highlightedDebtFund = highlightedDebtFund === id ? null : id;
+  renderDebtChart();
+  renderDebtTable();
 }
 
 function switchDebtMetric(metric, btn) {
@@ -4151,7 +4168,7 @@ function renderDebtTable() {
     const aumStr = f.fundAUM ? (f.fundAUM >= 1e9 ? '$' + (f.fundAUM / 1e9).toFixed(1) + 'B' : f.fundAUM >= 1e6 ? '$' + (f.fundAUM / 1e6).toFixed(0) + 'M' : '$' + f.fundAUM.toLocaleString()) : '—';
     const minStr = f.investmentMinimum ? '$' + f.investmentMinimum.toLocaleString() : '—';
     const isHL = highlightedDebtFund === f.id;
-    return `<tr onclick="highlightDebtFund('${f.id}')" style="${isHL ? 'background:var(--green-bg);' : ''}" title="Click to highlight on chart">
+    return `<tr onclick="toggleDebtFundHighlight('${f.id}')" style="${isHL ? 'background:var(--green-bg);' : ''}" title="Click to highlight on chart">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
       <td><a href="sponsor.html?company=${encodeURIComponent(f.managementCompany || '')}" style="color:var(--text-secondary);text-decoration:none;" onclick="event.stopPropagation()">${f.ceo || '—'}</a></td>
       <td class="irr-cell">${yieldStr}</td>
@@ -4174,12 +4191,6 @@ function sortDebtTable(col) {
     debtSortCol = col;
     debtSortAsc = true;
   }
-  renderDebtTable();
-}
-
-function highlightDebtFund(id) {
-  highlightedDebtFund = highlightedDebtFund === id ? null : id;
-  renderDebtChart();
   renderDebtTable();
 }
 
