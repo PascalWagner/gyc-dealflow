@@ -7193,8 +7193,12 @@ function renderPortfolioRisk() {
 }
 
 function renderPortfolioTable() {
-  const tbody = document.getElementById('portfolioTableBody');
-  if (!tbody) return;
+  // Replace old table with card-based layout
+  const tableContainer = document.getElementById('portfolioTableContainer');
+  if (!tableContainer) return;
+  const statusColors = { Active: 'var(--green)', Distributing: 'var(--blue)', Exited: 'var(--text-muted)', Pending: 'var(--orange)' };
+  const statusBgs = { Active: 'rgba(81,190,123,0.08)', Distributing: 'rgba(59,130,246,0.08)', Exited: 'rgba(0,0,0,0.04)', Pending: 'rgba(245,158,11,0.08)' };
+
   const sorted = [...portfolioInvestments].sort((a, b) => {
     let va = a[portfolioSortCol], vb = b[portfolioSortCol];
     if (portfolioSortCol === 'amountInvested' || portfolioSortCol === 'distributionsReceived' || portfolioSortCol === 'targetIRR') {
@@ -7206,24 +7210,45 @@ function renderPortfolioTable() {
     if (va > vb) return portfolioSortAsc ? 1 : -1;
     return 0;
   });
-  tbody.innerHTML = sorted.map(inv => {
-    const statusColors = { Active: 'var(--green)', Distributing: 'var(--blue)', Exited: 'var(--text-muted)', Pending: 'var(--orange)' };
-    const statusColor = statusColors[inv.status] || 'var(--text-muted)';
-    return `<tr>
-      <td style="font-weight:600;color:var(--text-dark)">${inv.investmentName || '--'}</td>
-      <td>${inv.sponsor || '--'}</td>
-      <td>${inv.assetClass || '--'}</td>
-      <td>$${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</td>
-      <td>${inv.dateInvested || '--'}</td>
-      <td><span style="color:${statusColor};font-weight:600">${inv.status || '--'}</span></td>
-      <td>${inv.targetIRR ? inv.targetIRR + '%' : '--'}</td>
-      <td>$${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</td>
-      <td>
-        <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:600;margin-right:8px;">Edit</button>
-        <button onclick="deleteInvestment('${inv.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:600;">Delete</button>
-      </td>
-    </tr>`;
+
+  const cards = sorted.map(inv => {
+    const sc = statusColors[inv.status] || 'var(--text-muted)';
+    const sb = statusBgs[inv.status] || 'rgba(0,0,0,0.04)';
+    const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(inv.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:stretch;">
+        <div style="width:6px;background:${sc};flex-shrink:0;"></div>
+        <div style="flex:1;padding:20px 24px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+            <div style="min-width:0;flex:1;">
+              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">${inv.investmentName || 'Unnamed'}</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${inv.sponsor || ''}${inv.assetClass ? ' &middot; ' + inv.assetClass : ''}${inv.dateInvested ? ' &middot; ' + inv.dateInvested : ''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
+              <span style="padding:4px 12px;border-radius:100px;background:${sb};font-family:var(--font-ui);font-size:11px;font-weight:700;color:${sc};">${inv.status || 'Unknown'}</span>
+              <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Edit</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:28px;flex-wrap:wrap;">
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Invested</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);">$${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</div></div>
+            ${inv.targetIRR ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--green);">${inv.targetIRR}%</div></div>` : ''}
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:${parseFloat(inv.distributionsReceived || 0) > 0 ? 'var(--green)' : 'var(--text-dark)'};">$${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</div></div>
+            ${inv.equityMultiple ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Equity Multiple</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);">${inv.equityMultiple}x</div></div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
+
+  tableContainer.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
+      <button onclick="showDealSearchModal()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      ${cards}
+    </div>
+  `;
 }
 
 function sortPortfolioTable(col) {
