@@ -458,7 +458,7 @@ async function handleSignIn() {
           tier: data.tier || 'explorer',
           loggedInAt: new Date().toISOString()
         }));
-        window.location.href = 'deal-dashboard.html';
+        window.location.href = 'index.html';
       } else {
         document.getElementById('signinError').textContent = data.error || 'Invalid email or password.';
         document.getElementById('signinError').classList.add('show');
@@ -535,7 +535,7 @@ async function handleSignUp() {
           loggedInAt: new Date().toISOString(),
           isNewUser: true
         }));
-        window.location.href = 'deal-dashboard.html#onboarding';
+        window.location.href = 'index.html#onboarding';
       } else {
         document.getElementById('signupError').textContent = data.error || 'Sign up failed. Please try again.';
         document.getElementById('signupError').classList.add('show');
@@ -559,7 +559,7 @@ async function handleSignUp() {
 // ========== REDIRECT IF LOGGED IN ==========
 const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
 if (user && user.token) {
-  window.location.href = 'deal-dashboard.html';
+  window.location.href = 'index.html';
 }
 </script>
 </body>
