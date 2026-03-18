@@ -4777,9 +4777,11 @@ function renderFeedCard(deal) {
   const stage = getDealStage(deal.id);
   const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
   const isPassed = stage === 'passed';
-  const hero = getAssetHero(deal.assetClass);
+  const isCredit = isCreditFund(deal);
+  const hero = isCredit ? getAssetHero('lending') : getAssetHero(deal.assetClass);
   const heroImg = deal.imageUrl || '';
   const heroBg = heroImg ? `url(${heroImg}) center/cover no-repeat` : hero.gradient;
+  const primaryBadge = isCredit ? creditBadgeLabel(deal) : (deal.assetClass || 'Other');
 
   return `
     <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid ${isInterested ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius);overflow:hidden;transition:all 0.2s ease;${isPassed ? 'opacity:0.45;' : ''}box-shadow:var(--shadow-card);width:100%;">
@@ -4787,7 +4789,7 @@ function renderFeedCard(deal) {
       <div onclick="window.location.href='deal.html?id=${deal.id}'" style="height:140px;background:${heroBg};position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;">
         ${!heroImg ? `<div style="width:80px;height:80px;opacity:0.3;">${hero.icon}</div>` : ''}
         <div style="position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;">
-          <span class="credit-badge">${deal.assetClass || 'Other'}</span>
+          <span class="credit-badge">${primaryBadge}</span>
           ${deal.dealType ? `<span class="credit-badge">${deal.dealType}</span>` : ''}
         </div>
       </div>
