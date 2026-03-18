@@ -1249,21 +1249,27 @@ html.dark .mobile-tab-bar {
 /* Safe area: push content below Dynamic Island / notch */
 html.cap-ios body {
   padding-top: env(safe-area-inset-top, 54px);
+  -webkit-touch-callout: none;
+}
+html.cap-ios .main {
+  margin-left: 0 !important;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
-/* Topbar: compact for iOS, no extra top padding (body handles it) */
+/* ── Topbar ────────────────────────────────────────── */
 html.cap-ios .topbar {
-  padding-top: 0 !important;
-  height: 52px;
-  gap: 8px;
-  padding-left: 12px;
-  padding-right: 12px;
+  padding: 0 12px !important;
+  height: 44px;
+  gap: 6px;
 }
 html.cap-ios .topbar-title {
-  font-size: 18px;
-  margin-right: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  margin-right: 6px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
+/* Workflow tabs: horizontally scrollable pill row */
 html.cap-ios .topbar-tabs {
   gap: 2px;
   padding: 2px;
@@ -1271,72 +1277,81 @@ html.cap-ios .topbar-tabs {
   -webkit-overflow-scrolling: touch;
   flex-shrink: 1;
   min-width: 0;
+  scrollbar-width: none;
 }
+html.cap-ios .topbar-tabs::-webkit-scrollbar { display: none; }
 html.cap-ios .topbar-tab {
   font-size: 11px;
   padding: 5px 10px;
   white-space: nowrap;
   flex-shrink: 0;
 }
-
-/* Hide hamburger menu on iOS (we have the bottom tab bar) */
-html.cap-ios .mobile-menu-btn {
+/* View toggle: hide grid + list, keep feed + map only */
+html.cap-ios .topbar-view-toggle .view-btn[data-view="grid"],
+html.cap-ios .topbar-view-toggle .view-btn[data-view="list"] {
   display: none !important;
 }
-
-/* Office hours banner: compact on iOS */
-html.cap-ios .office-hours-banner {
-  padding: 10px 16px;
-  gap: 10px;
-}
-html.cap-ios .office-hours-text {
-  font-size: 12px;
-  line-height: 1.4;
-}
-html.cap-ios .office-hours-join {
-  padding: 6px 14px;
-  font-size: 11px;
+html.cap-ios .topbar-spacer { display: none; }
+html.cap-ios .topbar-view-toggle {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
-/* Filter bar: tighter on iOS */
+/* ── Hide elements not needed on iOS ──────────────── */
+html.cap-ios .mobile-menu-btn { display: none !important; }
+/* Hide office hours banner entirely on iOS app */
+html.cap-ios .office-hours-banner { display: none !important; }
+
+/* ── Filter bar ───────────────────────────────────── */
 html.cap-ios .filter-bar {
   padding: 10px 12px;
   gap: 6px;
+  flex-wrap: wrap;
 }
 html.cap-ios .filter-bar select,
 html.cap-ios .filter-bar input {
   font-size: 13px;
   padding: 8px 10px;
+  border-radius: 8px;
 }
 html.cap-ios .buybox-toggle {
   font-size: 12px;
   padding: 6px 10px;
 }
+/* Make search + clear/add row full width */
+html.cap-ios .filter-bar > div[style*="position:relative"] {
+  flex-basis: 100% !important;
+  min-width: 0 !important;
+}
 
-/* Stats bar: single line, compact */
+/* ── Stats bar ────────────────────────────────────── */
 html.cap-ios .stats-bar {
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
-/* Content area: proper bottom padding for tab bar */
+/* ── Content area ─────────────────────────────────── */
 html.cap-ios .content-area {
   padding: 12px;
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 16px;
 }
 
-/* Deal cards: cleaner on iOS */
+/* ── Deal cards ───────────────────────────────────── */
 html.cap-ios .deal-card {
   border-radius: 14px;
 }
-
-/* Detail panel: full screen with safe areas on iOS */
-html.cap-ios .detail-panel {
-  top: env(safe-area-inset-top, 54px);
-  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+html.cap-ios .card-grid {
+  gap: 14px;
 }
 
-/* Sidebar overlay: account for safe areas */
+/* ── Detail panel: full screen with safe areas ────── */
+html.cap-ios .detail-panel {
+  top: env(safe-area-inset-top, 54px);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Sidebar: account for safe areas ──────────────── */
 html.cap-ios .sidebar {
   padding-top: env(safe-area-inset-top, 54px);
 }
@@ -1344,14 +1359,19 @@ html.cap-ios .sidebar.open {
   transform: translateX(0);
 }
 
-/* Main content: no left margin on iOS */
-html.cap-ios .main {
-  margin-left: 0 !important;
+/* ── Pages: ensure all pages have proper spacing ──── */
+html.cap-ios .page .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-/* Disable Safari back link appearance */
-html.cap-ios {
-  -webkit-touch-callout: none;
+/* ── Settings / sub-pages: tighter padding ────────── */
+html.cap-ios .settings-page {
+  padding: 20px 16px;
+}
+html.cap-ios .wizard-overlay {
+  padding-top: env(safe-area-inset-top, 54px);
 }
 
 /* Scrollbar */
