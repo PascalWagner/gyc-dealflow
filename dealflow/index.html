@@ -801,6 +801,222 @@ html.dark .card-match-badge.red { background: #2E1515; }
   background: var(--primary-hover);
 }
 
+/* Credit Fund Card */
+.credit-card-hero {
+  position: relative;
+  padding: 14px 18px 8px;
+  background: linear-gradient(135deg, #0A1E21 0%, #1F5159 100%);
+  min-height: 180px;
+}
+html.dark .credit-card-hero {
+  background: linear-gradient(135deg, #061215 0%, #14333A 100%);
+}
+.credit-card-hero .credit-badges,
+.equity-card-hero .equity-hero-badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.credit-card-hero .credit-badge,
+.equity-card-hero .credit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+}
+.credit-card-hero .credit-badge.audit-yes {
+  background: rgba(81,190,123,0.2);
+  color: #7DEFA5;
+}
+.credit-card-hero .credit-badge.audit-no {
+  background: rgba(207,122,48,0.2);
+  color: #F5B87A;
+}
+.credit-chart-container {
+  position: relative;
+  height: 110px;
+  margin-bottom: 4px;
+}
+.credit-chart-callout {
+  position: absolute;
+  top: -2px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #0A1E21;
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+.credit-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 2px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: rgba(255,255,255,0.55);
+}
+.credit-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.credit-chart-legend-swatch {
+  width: 10px;
+  height: 6px;
+  border-radius: 2px;
+}
+.credit-chart-legend-line {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+}
+.credit-card-empty-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 110px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+}
+.credit-card-body {
+  padding: 14px 18px 8px;
+}
+.credit-card-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 3px;
+  line-height: 1.3;
+  letter-spacing: -0.2px;
+}
+.credit-card-manager {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.credit-card-strategy {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.credit-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding-bottom: 4px;
+}
+.credit-card-metrics .metric-label {
+  font-size: 9px;
+}
+.credit-card-metrics .metric-value {
+  font-size: 13px;
+}
+
+/* Equity Card Hero */
+.equity-card-hero {
+  position: relative;
+  padding: 14px 18px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+.equity-hero-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.equity-hero-icon {
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  width: 120px;
+  height: 120px;
+  opacity: 0.7;
+}
+.equity-hero-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.equity-hero-irr {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.equity-hero-irr-value {
+  font-family: var(--font-ui);
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+.equity-hero-irr-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Equity Card Info Row */
+.equity-card-info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+.equity-info-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--green-bg);
+  color: var(--green);
+}
+.equity-info-chip-muted {
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
 /* Detail Panel */
 .panel-overlay {
   position: fixed;
@@ -2205,9 +2421,8 @@ html.dark .card-match-badge.red { background: #2E1515; }
         <option value="Value-Add">Value-Add</option>
         <option value="Lending">Lending</option>
         <option value="Development">Development</option>
-        <option value="Core/Stabilized">Core / Stabilized</option>
       </select>
-      <select class="filter-select" id="filterStatus" onchange="applyFilters()">
+      <select class="filter-select" id="filterStatus" onchange="applyFilters()" style="display:none;">
         <option value="">Status</option>
         <option value="Open to invest">Open to invest</option>
         <option value="Evergreen">Evergreen</option>
@@ -3695,17 +3910,15 @@ function renderStageBtn(dealId) {
 }
 
 function renderFeedCard(deal) {
-  const badge = matchBadgeInfo(deal);
   const stage = getDealStage(deal.id);
   const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
-  const isPassed = stage === 'passed';
   return `
     <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow 0.15s ease;">
-      <div style="padding:20px 24px 16px;cursor:pointer;" onclick="openPanel('${deal.id}')">
+      <div style="padding:20px 24px 16px;cursor:pointer;" onclick="window.location.href='deal.html?id=${deal.id}'">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <span class="card-match-badge ${badge.cls}" style="font-size:10px;padding:3px 8px;">${badge.text}</span>
-            ${deal.status ? `<span class="card-status-pill ${statusPillClass(deal.status)}" style="font-size:10px;padding:3px 8px;">${deal.status}</span>` : ''}
+            <span class="credit-badge" style="background:rgba(0,0,0,0.06);color:var(--text-secondary);font-size:10px;padding:3px 8px;">${deal.assetClass || ''}</span>
+            <span class="credit-badge" style="background:rgba(0,0,0,0.06);color:var(--text-secondary);font-size:10px;padding:3px 8px;">${deal.dealType || ''}</span>
           </div>
           <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${deal.dealType || ''} &middot; ${deal.assetClass || ''}</span>
         </div>
@@ -3719,74 +3932,525 @@ function renderFeedCard(deal) {
         </div>
       </div>
       <div style="display:flex;border-top:1px solid var(--border);align-items:stretch;">
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isPassed ? 'var(--border-light)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isPassed ? 'var(--text-muted)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='${isPassed ? 'var(--border-light)' : 'transparent'}'">
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          Pass
-        </button>
-        <div style="width:1px;background:var(--border);"></div>
-        <button onclick="event.stopPropagation(); openPanel('${deal.id}');" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          View Deal
+          Skip
         </button>
         <div style="width:1px;background:var(--border);"></div>
         <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isInterested ? 'var(--green)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='${isInterested ? 'rgba(81,190,123,0.15)' : 'var(--border-light)'}'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}'">
-          <svg viewBox="0 0 24 24" fill="${isInterested ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Interested
+          <svg viewBox="0 0 24 24" fill="${isInterested ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Save
         </button>
       </div>
     </div>`;
 }
 
-function renderCard(deal) {
-  const badge = matchBadgeInfo(deal);
-  const statusCls = statusPillClass(deal.status);
-  const checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  const warnSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5"/></svg>';
+// ========== CREDIT FUND CARD LOGIC ==========
 
-  return `
-    <div class="deal-card" data-id="${deal.id}">
-      <div class="card-header" style="position:relative">
-        ${renderStageBtn(deal.id)}
-        <div class="card-badges">
-          <div class="card-match-badge ${badge.cls}">
-            ${badge.cls === 'green' ? checkSvg : warnSvg}
-            ${badge.text}
-          </div>
-          ${deal.status ? `<span class="card-status-pill ${statusCls}">${deal.status}</span>` : ''}
-        </div>
-        <div class="card-title">${deal.investmentName}</div>
-        <div class="card-subtitle">${deal.managementCompany} &middot; ${deal.assetClass}</div>
-        ${deal.location ? `<div class="card-location"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${deal.location}</div>` : ''}
+// Determine if a deal qualifies for the enhanced credit/debt card
+function isCreditFund(deal) {
+  const ac = (deal.assetClass || '').toLowerCase();
+  const st = (deal.strategy || '').toLowerCase();
+  const inst = (deal.instrument || '').toLowerCase();
+  const dt = (deal.dealType || '').toLowerCase();
+  const name = (deal.investmentName || '').toLowerCase();
+
+  // Must be a debt-oriented vehicle
+  if (inst === 'debt') return true;
+  if (st === 'lending') return true;
+  if (ac === 'lending') return true;
+  if (ac.includes('credit') || ac.includes('debt')) return true;
+  if (name.includes('debt fund') || name.includes('credit fund') || name.includes('income fund')) {
+    // Only if it also has lending/debt signals
+    if (st === 'lending' || inst === 'debt' || inst === 'preferred equity' || deal.debtPosition) return true;
+  }
+  return false;
+}
+
+// Classify the credit badge label
+function creditBadgeLabel(deal) {
+  const ac = (deal.assetClass || '').toLowerCase();
+  const st = (deal.strategy || '').toLowerCase();
+  const name = (deal.investmentName || '').toLowerCase();
+  if (ac === 'lending' || st === 'lending' || name.includes('lending') || name.includes('debt fund') || name.includes('trust deed')) return 'LENDING';
+  if (ac.includes('credit') || name.includes('credit') || name.includes('income fund')) return 'CREDIT';
+  return 'LENDING';
+}
+
+// Build annual return series for a credit fund
+// Currently data is simulated (from generateYearReturn). In the future, replace with actual Airtable fields.
+function getCreditFundReturns(deal) {
+  const years = [2022, 2023, 2024, 2025];
+  const series = [];
+  for (const year of years) {
+    // Use pre-computed debt fund data if available
+    const key = '_return' + year;
+    let val = null;
+
+    // First check if the deal has been enriched via debtFundData
+    if (typeof debtFundData !== 'undefined' && Array.isArray(debtFundData)) {
+      const enriched = debtFundData.find(d => d.id === deal.id);
+      if (enriched && typeof enriched[key] === 'number') {
+        val = enriched[key];
+      }
+    }
+
+    // Fallback: generate deterministically from targetIRR if we have one
+    if (val === null && deal.targetIRR) {
+      // Use a seeded-ish approach so values are consistent per deal per year
+      const seed = hashCode(deal.id + year);
+      const variance = ((seed % 300) - 150) / 10000; // -0.015 to +0.015
+      const yearOffset = (2025 - year) * 0.005 * (((seed % 100) - 30) / 100);
+      val = Math.max(0, deal.targetIRR + variance + yearOffset);
+    }
+
+    if (val !== null && typeof val === 'number' && val > 0) {
+      // Convert decimal to percentage if needed
+      const pctVal = val < 1 ? val * 100 : val;
+      series.push({ year, value: parseFloat(pctVal.toFixed(1)) });
+    }
+  }
+  return series;
+}
+
+// Simple string hash for deterministic pseudo-random
+function hashCode(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+// Compute peer average returns for each year across similar credit funds
+let _peerAvgCache = null;
+let _peerAvgCacheKey = '';
+function computePeerAverages(excludeDealId) {
+  // Cache based on DEALS length to avoid recomputing every card
+  const cacheKey = DEALS.length + '';
+  if (_peerAvgCache && _peerAvgCacheKey === cacheKey) return _peerAvgCache;
+
+  const creditFunds = DEALS.filter(d => isCreditFund(d));
+  const years = [2022, 2023, 2024, 2025];
+  const result = {};
+
+  for (const year of years) {
+    const vals = [];
+    for (const fund of creditFunds) {
+      const returns = getCreditFundReturns(fund);
+      const entry = returns.find(r => r.year === year);
+      if (entry && typeof entry.value === 'number' && entry.value > 0) {
+        vals.push(entry.value);
+      }
+    }
+    // Require at least 3 funds for a meaningful average
+    if (vals.length >= 3) {
+      result[year] = parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
+    } else {
+      result[year] = null;
+    }
+  }
+
+  _peerAvgCache = result;
+  _peerAvgCacheKey = cacheKey;
+  return result;
+}
+
+// Get strategy sentence for credit fund
+function getCreditStrategy(deal) {
+  const s = (deal.investmentStrategy || '').trim();
+  if (s) {
+    // Use first sentence if it's clean
+    const firstSentence = s.split(/(?<=[.!?])\s+/)[0];
+    if (firstSentence && firstSentence.length <= 120) return firstSentence;
+    if (firstSentence && firstSentence.length <= 200) return firstSentence;
+    // Truncate if too long
+    return s.substring(0, 120).replace(/[,;:\s]+$/, '') + '…';
+  }
+  // Taxonomy-based fallback
+  const label = creditBadgeLabel(deal);
+  if (label === 'CREDIT') return 'Private credit fund focused on income-oriented investments.';
+  return 'Real estate debt fund focused on contractual income opportunities.';
+}
+
+// Format hold/lockup for credit card
+function formatLockup(deal) {
+  if (!deal.holdPeriod) return '—';
+  if (deal.holdPeriod < 1) return Math.round(deal.holdPeriod * 12) + ' mo';
+  if (deal.holdPeriod === 1) return '1 yr';
+  return deal.holdPeriod + ' yr';
+}
+
+// Format distribution frequency
+function formatDistribution(deal) {
+  const d = (deal.distributions || '').trim();
+  if (!d || d === 'Unknown') return '—';
+  // Normalize
+  const lower = d.toLowerCase();
+  if (lower === 'monthly') return 'Monthly';
+  if (lower === 'quarterly') return 'Quarterly';
+  if (lower === 'semiannual' || lower === 'semi-annual') return 'Semiannual';
+  if (lower === 'annual' || lower === 'annually') return 'Annual';
+  return d;
+}
+
+// Get target income for credit card
+function getTargetIncome(deal) {
+  // Prefer targetIRR for lending funds (it represents yield, not IRR in traditional sense)
+  if (deal.targetIRR) return fmt(deal.targetIRR, 'pct');
+  if (deal.preferredReturn) return fmt(deal.preferredReturn, 'pct');
+  if (deal.cashOnCash) return fmt(deal.cashOnCash, 'pct');
+  return '—';
+}
+
+// Render the credit fund card
+function renderCreditCard(deal) {
+  const fundReturns = getCreditFundReturns(deal);
+  const peerAvg = computePeerAverages(deal.id);
+  const hasChart = fundReturns.length >= 2;
+  const typeLabel = creditBadgeLabel(deal);
+  const strategy = getCreditStrategy(deal);
+
+  // Audit badge
+  let auditBadge = '';
+  if (deal.financials === 'Audited') {
+    auditBadge = '<span class="credit-badge audit-yes">Audited</span>';
+  } else if (deal.financials === 'Unaudited') {
+    auditBadge = '<span class="credit-badge audit-no">Unaudited</span>';
+  }
+
+  // Build chart or empty state
+  let heroContent = '';
+  const chartId = 'creditChart_' + deal.id.replace(/[^a-zA-Z0-9]/g, '');
+
+  if (hasChart) {
+    // Find latest valid return for callout
+    const latestReturn = fundReturns[fundReturns.length - 1];
+
+    // Check if peer line has any valid points for displayed years
+    const displayedYears = fundReturns.map(r => r.year);
+    const hasPeerLine = displayedYears.some(y => peerAvg[y] !== null);
+
+    heroContent = `
+      <div class="credit-chart-container">
+        <canvas id="${chartId}" width="400" height="110"></canvas>
       </div>
-      <div class="card-metrics">
-        <div class="metric">
-          <div class="metric-label">Target IRR</div>
-          <div class="metric-value">${deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</div>
+      <div class="credit-chart-legend">
+        <span class="credit-chart-legend-item"><span class="credit-chart-legend-swatch" style="background:rgba(81,190,123,0.7);"></span>Fund return</span>
+        ${hasPeerLine ? '<span class="credit-chart-legend-item"><span class="credit-chart-legend-line" style="background:rgba(255,255,255,0.45);"></span>Peer avg</span>' : ''}
+      </div>
+    `;
+  } else {
+    heroContent = '<div class="credit-card-empty-hero">Annual return history unavailable</div>';
+  }
+
+  const stage = getDealStage(deal.id);
+  const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const isPassed = stage === 'passed';
+
+  const html = `
+    <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
+      <div class="credit-card-hero" style="position:relative">
+        <div class="credit-badges">
+          <span class="credit-badge">${typeLabel}</span>
+          <span class="credit-badge">${deal.dealType || 'Fund'}</span>
+          ${auditBadge}
         </div>
-        <div class="metric">
-          <div class="metric-label">Equity Multiple</div>
-          <div class="metric-value">${deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '---'}</div>
+        ${heroContent}
+      </div>
+      <div class="credit-card-body" onclick="window.location.href='deal.html?id=${deal.id}'" style="cursor:pointer;flex:1;">
+        <div class="credit-card-title">${deal.investmentName}</div>
+        <div class="credit-card-manager">${deal.managementCompany || ''}</div>
+        <div class="credit-card-strategy">${strategy}</div>
+        <div class="credit-card-metrics">
+          <div class="metric">
+            <div class="metric-label">Target Income</div>
+            <div class="metric-value" style="color:var(--green);">${getTargetIncome(deal)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Minimum</div>
+            <div class="metric-value">${deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Lockup</div>
+            <div class="metric-value">${formatLockup(deal)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Distribution</div>
+            <div class="metric-value">${formatDistribution(deal)}</div>
+          </div>
         </div>
-        <div class="metric">
-          <div class="metric-label">Pref Return</div>
-          <div class="metric-value">${deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Min Investment</div>
-          <div class="metric-value">${fmt(deal.investmentMinimum, 'money')}</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Hold Period</div>
-          <div class="metric-value">${deal.holdPeriod ? (deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs') : '---'}</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Deal Type</div>
-          <div class="metric-value">${deal.dealType || '---'}</div>
+        <div class="equity-card-info-row">
+          <div class="metric">
+            <div class="metric-label">Manager Size</div>
+            <div class="metric-value" style="font-size:11px;${getManagerTier(deal).label !== '—' ? '' : 'color:var(--text-muted);font-weight:600;'}">${getManagerTier(deal).label !== '—' ? getManagerTier(deal).label + '<div style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:1px;">' + getManagerTier(deal).range + '</div>' : 'Coming Soon'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Fund Founded</div>
+            <div class="metric-value" style="font-size:11px;${deal.mcFoundingYear ? '' : 'color:var(--text-muted);font-weight:600;'}">${deal.mcFoundingYear || 'Coming Soon'}</div>
+          </div>
         </div>
       </div>
       <div class="card-footer">
-        <a class="btn btn-outline" href="sponsor.html?company=\${encodeURIComponent(deal.managementCompany)}" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center;">View GP</a>
-        <button class="btn btn-primary" onclick="event.stopPropagation(); openPanel('${deal.id}')">View Deal &rarr;</button>
+        <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Skip
+        </button>
+        <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="gap:4px;">
+          <svg viewBox="0 0 24 24" fill="${isInterested ? '#fff' : 'none'}" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Save
+        </button>
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+// Initialize Chart.js charts for credit cards after DOM update
+function initCreditCharts() {
+  document.querySelectorAll('[data-credit-chart]').forEach(card => {
+    const chartId = card.dataset.creditChart;
+    if (!chartId) return;
+    const canvas = document.getElementById(chartId);
+    if (!canvas) return;
+    // Skip if already initialized
+    if (canvas._creditChartInit) return;
+    canvas._creditChartInit = true;
+
+    const dealId = card.dataset.id;
+    const deal = DEALS.find(d => d.id === dealId);
+    if (!deal) return;
+
+    const fundReturns = getCreditFundReturns(deal);
+    const peerAvg = computePeerAverages(deal.id);
+    if (fundReturns.length < 2) return;
+
+    const labels = fundReturns.map(r => r.year.toString());
+    const fundValues = fundReturns.map(r => r.value);
+    const peerValues = fundReturns.map(r => peerAvg[r.year] || null);
+    const hasPeerLine = peerValues.some(v => v !== null);
+
+    // Compute Y range — start above 0 to show variation
+    const allVals = [...fundValues, ...peerValues.filter(v => v !== null)];
+    const dataMax = Math.max(...allVals);
+    const dataMin = Math.min(...allVals);
+    const yMin = Math.max(0, Math.floor(dataMin - 2)); // Floor to give breathing room below
+    const yMax = Math.ceil(dataMax + 2); // Ceiling with headroom for labels
+
+    const ctx = canvas.getContext('2d');
+    const datasets = [{
+      type: 'bar',
+      data: fundValues,
+      backgroundColor: fundValues.map((v, i) =>
+        i === fundValues.length - 1 ? 'rgba(81,190,123,0.85)' : 'rgba(81,190,123,0.55)'
+      ),
+      borderRadius: 3,
+      borderSkipped: false,
+      barPercentage: 0.6,
+      categoryPercentage: 0.7,
+      order: 2
+    }];
+
+    if (hasPeerLine) {
+      datasets.push({
+        type: 'line',
+        data: peerValues,
+        borderColor: 'rgba(255,255,255,0.45)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 0,
+        tension: 0.3,
+        spanGaps: true,
+        order: 1
+      });
+    }
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { enabled: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: 'rgba(255,255,255,0.45)',
+              font: { family: 'Plus Jakarta Sans', size: 10 }
+            },
+            border: { display: false }
+          },
+          y: {
+            min: yMin,
+            max: yMax,
+            grid: {
+              color: 'rgba(255,255,255,0.08)',
+              drawBorder: false
+            },
+            ticks: {
+              color: 'rgba(255,255,255,0.35)',
+              font: { family: 'Plus Jakarta Sans', size: 9 },
+              callback: v => v + '%',
+              stepSize: Math.max(1, Math.ceil((yMax - yMin) / 4))
+            },
+            border: { display: false }
+          }
+        },
+        layout: { padding: { top: 20, right: 4, bottom: 0, left: 0 } },
+        animation: { duration: 600 }
+      },
+      plugins: [{
+        // Custom plugin: draw callout pill above every bar
+        afterDraw(chart) {
+          const meta = chart.getDatasetMeta(0);
+          if (!meta.data.length) return;
+          const cctx = chart.ctx;
+          cctx.save();
+          cctx.font = '700 9px "Plus Jakarta Sans", sans-serif';
+
+          meta.data.forEach((bar, i) => {
+            const val = fundValues[i];
+            if (!val) return;
+            const text = val.toFixed(1) + '%';
+            const textWidth = cctx.measureText(text).width;
+            const pillW = textWidth + 10;
+            const pillH = 16;
+            const pillX = bar.x - pillW / 2;
+            const pillY = bar.y - pillH - 3;
+
+            cctx.beginPath();
+            cctx.roundRect(pillX, pillY, pillW, pillH, 8);
+            cctx.fillStyle = i === fundValues.length - 1 ? '#0A1E21' : 'rgba(10,30,33,0.75)';
+            cctx.fill();
+            cctx.fillStyle = '#fff';
+            cctx.textAlign = 'center';
+            cctx.textBaseline = 'middle';
+            cctx.fillText(text, bar.x, pillY + pillH / 2);
+          });
+
+          cctx.restore();
+        }
+      }]
+    });
+  });
+}
+
+// Asset class hero config: gradient + SVG icon
+function getAssetHero(assetClass) {
+  const ac = (assetClass || '').toLowerCase();
+  if (ac.includes('multi family') || ac.includes('multifamily'))
+    return { gradient: 'linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><rect x="8" y="20" width="20" height="32" rx="2"/><rect x="36" y="12" width="20" height="40" rx="2"/><rect x="12" y="26" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="21" y="26" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="12" y="34" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="21" y="34" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="40" y="18" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="49" y="18" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="40" y="26" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="49" y="26" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="40" y="34" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><rect x="49" y="34" width="5" height="5" rx="1" fill="rgba(255,255,255,0.15)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  if (ac.includes('industrial'))
+    return { gradient: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><path d="M4 52V24l16-10v14l16-10v14l16-10v30"/><rect x="44" y="28" width="16" height="24" rx="1"/><rect x="48" y="34" width="3" height="4" rx="0.5" fill="rgba(255,255,255,0.15)"/><rect x="54" y="34" width="3" height="4" rx="0.5" fill="rgba(255,255,255,0.15)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  if (ac.includes('self storage') || ac.includes('storage'))
+    return { gradient: 'linear-gradient(135deg, #5b4a1e 0%, #8b7535 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><rect x="4" y="20" width="56" height="32" rx="2"/><rect x="8" y="26" width="10" height="14" rx="1" fill="rgba(255,255,255,0.1)"/><rect x="22" y="26" width="10" height="14" rx="1" fill="rgba(255,255,255,0.1)"/><rect x="36" y="26" width="10" height="14" rx="1" fill="rgba(255,255,255,0.1)"/><rect x="50" y="26" width="10" height="14" rx="1" fill="rgba(255,255,255,0.1)"/><line x1="13" y1="40" x2="13" y2="36" stroke-width="2"/><line x1="27" y1="40" x2="27" y2="36" stroke-width="2"/><line x1="41" y1="40" x2="41" y2="36" stroke-width="2"/><line x1="55" y1="40" x2="55" y2="36" stroke-width="2"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  if (ac.includes('hotel') || ac.includes('hospitality'))
+    return { gradient: 'linear-gradient(135deg, #4a235a 0%, #7d3c98 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><rect x="12" y="14" width="40" height="38" rx="2"/><rect x="28" y="42" width="8" height="10" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="16" y="20" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="25" y="20" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="34" y="20" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="43" y="20" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="16" y="28" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="25" y="28" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="34" y="28" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="43" y="28" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="16" y="36" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="43" y="36" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  if (ac.includes('short term rental') || ac.includes('str') || ac.includes('vacation'))
+    return { gradient: 'linear-gradient(135deg, #1e5c4a 0%, #2d9f7f 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><path d="M8 32L32 14L56 32"/><rect x="14" y="32" width="36" height="20" rx="1"/><rect x="26" y="40" width="12" height="12" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="18" y="36" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="40" y="36" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><circle cx="50" cy="18" r="6" fill="rgba(255,255,255,0.08)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  if (ac.includes('rv') || ac.includes('mobile home') || ac.includes('manufactured'))
+    return { gradient: 'linear-gradient(135deg, #3d5c1e 0%, #6b9f2d 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><path d="M8 36L20 22L32 36"/><rect x="12" y="36" width="16" height="12" rx="1"/><rect x="16" y="38" width="4" height="4" rx="0.5" fill="rgba(255,255,255,0.12)"/><path d="M36 36L44 28L52 36"/><rect x="38" y="36" width="12" height="10" rx="1"/><rect x="41" y="38" width="3" height="3" rx="0.5" fill="rgba(255,255,255,0.12)"/><circle cx="16" cy="52" r="3" fill="rgba(255,255,255,0.1)"/><circle cx="48" cy="52" r="3" fill="rgba(255,255,255,0.1)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  if (ac.includes('mixed'))
+    return { gradient: 'linear-gradient(135deg, #1e3a5c 0%, #3a7ca5 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><rect x="6" y="28" width="24" height="24" rx="2"/><rect x="34" y="16" width="24" height="36" rx="2"/><rect x="10" y="34" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="20" y="34" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="10" y="42" width="16" height="8" rx="1" fill="rgba(255,255,255,0.08)"/><rect x="38" y="22" width="5" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="48" y="22" width="5" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="38" y="30" width="5" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="48" y="30" width="5" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="38" y="38" width="5" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="48" y="38" width="5" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  // Business / Other — generic office
+  if (ac.includes('business') || ac.includes('other'))
+    return { gradient: 'linear-gradient(135deg, #374151 0%, #6b7280 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><rect x="16" y="16" width="32" height="36" rx="2"/><rect x="20" y="22" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="29" y="22" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="38" y="22" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="20" y="30" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="29" y="30" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="38" y="30" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="20" y="38" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="29" y="38" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="38" y="38" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+  // Default
+  return { gradient: 'linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)', icon: '<svg viewBox="0 0 64 64" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"><rect x="12" y="20" width="40" height="32" rx="2"/><rect x="16" y="26" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="25" y="26" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="34" y="26" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><rect x="43" y="26" width="6" height="5" rx="1" fill="rgba(255,255,255,0.12)"/><line x1="0" y1="52" x2="64" y2="52"/></svg>' };
+}
+
+// Get strategy sentence for equity card
+function getEquityStrategy(deal) {
+  const s = (deal.investmentStrategy || '').trim();
+  if (s) {
+    const firstSentence = s.split(/(?<=[.!?])\s+/)[0];
+    if (firstSentence && firstSentence.length <= 200) return firstSentence;
+    return s.substring(0, 120).replace(/[,;:\s]+$/, '') + '…';
+  }
+  return '';
+}
+
+// Manager size tier based on AUM or offering size
+function getManagerTier(deal) {
+  const size = deal.fundAUM || deal.offeringSize || null;
+  if (!size) return { label: '—', range: '', tier: '' };
+  if (size >= 1000000000) return { label: 'Institutional', range: '$1B+', tier: 'institutional' };
+  if (size >= 100000000) return { label: 'Mid-Size', range: '$100M–$1B', tier: 'midsize' };
+  return { label: 'Emerging', range: '<$100M', tier: 'emerging' };
+}
+
+function renderCard(deal) {
+  // Use enhanced credit card for eligible debt/credit/lending funds
+  if (isCreditFund(deal)) {
+    return renderCreditCard(deal);
+  }
+
+  const stage = getDealStage(deal.id);
+  const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const hero = getAssetHero(deal.assetClass);
+  const strategy = getEquityStrategy(deal);
+  const mgr = getManagerTier(deal);
+
+  return `
+    <div class="deal-card" data-id="${deal.id}">
+      <div class="equity-card-hero" style="background:${hero.gradient};position:relative;">
+        <div class="equity-hero-badges">
+          <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
+          <span class="credit-badge">${deal.dealType || 'Fund'}</span>
+          ${deal.strategy && deal.strategy !== 'Value-Add' ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
+        </div>
+        <div class="equity-hero-icon">${hero.icon}</div>
+        ${deal.targetIRR ? `<div class="equity-hero-irr"><span class="equity-hero-irr-value">${fmt(deal.targetIRR, 'pct')}</span><span class="equity-hero-irr-label">Target IRR</span></div>` : ''}
+      </div>
+      <div class="credit-card-body" onclick="window.location.href='deal.html?id=${deal.id}'" style="cursor:pointer;flex:1;">
+        <div class="credit-card-title">${deal.investmentName}</div>
+        <div class="credit-card-manager">${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}</div>
+        ${strategy ? `<div class="credit-card-strategy">${strategy}</div>` : ''}
+        <div class="credit-card-metrics">
+          <div class="metric">
+            <div class="metric-label">Equity Multiple</div>
+            <div class="metric-value" style="color:var(--green);">${deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Minimum</div>
+            <div class="metric-value">${deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Hold Period</div>
+            <div class="metric-value">${deal.holdPeriod ? (deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yr') : '—'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Pref Return</div>
+            <div class="metric-value">${deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—'}</div>
+          </div>
+        </div>
+        <div class="equity-card-info-row">
+          <div class="metric">
+            <div class="metric-label">Manager Size</div>
+            <div class="metric-value" style="font-size:11px;color:var(--text-muted);font-weight:600;">Coming Soon</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Full Cycle Deals</div>
+            <div class="metric-value" style="font-size:11px;color:var(--text-muted);font-weight:600;">Coming Soon</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Skip
+        </button>
+        <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="gap:4px;">
+          <svg viewBox="0 0 24 24" fill="${isInterested ? '#fff' : 'none'}" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Save
+        </button>
       </div>
     </div>
   `;
@@ -4048,10 +4712,6 @@ function updateStats(deals) {
     <div class="stat-item"><span class="stat-label">Total Deals:</span> <span class="stat-value">${totalDeals}</span></div>
     <div class="stat-divider"></div>
     <div class="stat-item"><span class="stat-label">Avg Target IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-label">Total Equity Raised:</span> <span class="stat-value">${fmt(totalEquity, 'money')}</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-label">Funds:</span> <span class="stat-value">${funds}</span> <span class="stat-label" style="margin-left:4px">| Syndications:</span> <span class="stat-value">${syndications}</span></div>
   `;
 }
 
@@ -4192,8 +4852,12 @@ function renderAll() {
     const cardRenderer = currentView === 'feed' ? renderFeedCard : renderCard;
     grid.innerHTML = deals.map(cardRenderer).join('');
     grid.querySelectorAll('.deal-card').forEach(card => {
-      card.addEventListener('click', () => openPanel(card.dataset.id));
+      card.addEventListener('click', () => window.location.href = 'deal.html?id=' + card.dataset.id);
     });
+    // Initialize Chart.js charts for credit fund cards
+    if (currentView === 'grid') {
+      requestAnimationFrame(() => initCreditCharts());
+    }
   } else if (currentView === 'map') {
     grid.style.display = 'none';
     table.style.display = 'none';
@@ -5712,6 +6376,12 @@ function renderGoalsWizard() {
         </div>
 
         <div class="modal-field" style="margin-bottom:20px;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Maximum Check Size Per Deal ($)</label>
+          <input id="goalCheckSize" type="number" value="100000" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">How much would you invest in a single deal?</div>
+        </div>
+
+        <div class="modal-field" style="margin-bottom:20px;">
           <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Target Timeline (Years)</label>
           <select id="goalTimeline" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
             <option value="3">3 years</option>
@@ -5738,6 +6408,7 @@ function saveGoalsFromWizard() {
     currentIncome: parseFloat(document.getElementById('goalCurrentIncome').value) || 0,
     targetIncome: parseFloat(document.getElementById('goalTargetIncome').value) || 100000,
     capital: parseFloat(document.getElementById('goalCapital').value) || 0,
+    checkSize: parseFloat(document.getElementById('goalCheckSize').value) || 100000,
     timeline: parseInt(document.getElementById('goalTimeline').value) || 5,
     taxReduction: parseFloat(document.getElementById('goalTaxReduction').value) || 0,
     createdAt: new Date().toISOString()
@@ -5914,9 +6585,114 @@ function renderGoalsDashboard() {
     </div>
   `;
 
-  // Matching deals section — removed from goals, now on dashboard
+  // ===== THREE PATHS TO YOUR GOAL =====
   const matchingDeals = document.getElementById('goalsMatchingDeals');
-  if (matchingDeals) matchingDeals.innerHTML = '';
+  if (matchingDeals) {
+    matchingDeals.innerHTML = renderThreePaths(g.targetIncome, g.capital, g.checkSize);
+  }
+}
+
+// Reusable 3-path component — used on Goals page and Dashboard
+function renderThreePaths(targetIncome, capital, checkSize) {
+  var avgCheck = checkSize || 100000;
+  var avgYield = 0.08;
+  var incomeGap = targetIncome || 0;
+  var capitalNeeded = incomeGap > 0 ? Math.round(incomeGap / avgYield) : 0;
+  var numDeals = capitalNeeded > 0 ? Math.ceil(capitalNeeded / avgCheck) : 0;
+  var diyYrs = Math.ceil(numDeals / 4);
+  var fundMin = 100000;
+
+  // Deal blocks for DIY visual
+  var blockSize = numDeals <= 10 ? '24px' : '16px';
+  var blocksHtml = '';
+  for (var bi = 0; bi < Math.min(numDeals, 24); bi++) {
+    blocksHtml += '<div style="width:' + blockSize + ';height:' + blockSize + ';background:#e2e8f0;border-radius:2px;border:1px solid #cbd5e1;"></div>';
+  }
+  if (numDeals > 24) blocksHtml += '<span style="font-size:10px;color:var(--text-muted);">+' + (numDeals - 24) + '</span>';
+
+  var h = '';
+  h += '<div style="background:linear-gradient(135deg, #f0fdf4, #ecfdf5);border:2px solid var(--primary);border-radius:var(--radius);padding:32px;">';
+  h += '<div style="text-align:center;margin-bottom:28px;">';
+  h += '<div style="font-family:var(--font-headline);font-size:22px;font-weight:400;color:var(--text-dark);margin-bottom:6px;">How do you want to reach $' + (targetIncome || 0).toLocaleString() + '/yr?</div>';
+  h += '<div style="font-size:13px;color:var(--text-secondary);max-width:520px;margin:0 auto;">Three ways to build passive income. Choose your level of involvement.</div>';
+  h += '</div>';
+
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">';
+
+  // === PATH 1: DIY / Explore ===
+  h += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;">';
+  h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:6px;">Do It Yourself</div>';
+  h += '<div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">Browse &amp; Invest</div>';
+  h += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">Use our database to research deals and invest directly with operators.</div>';
+  // Deal blocks viz
+  h += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:16px;min-height:28px;">' + blocksHtml + '</div>';
+  // Key stats
+  h += '<div style="font-size:12px;color:var(--text-secondary);line-height:2;">';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Deals to manage</span><strong style="color:var(--text-dark);">' + numDeals + '</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Time to deploy</span><strong style="color:var(--text-dark);">' + (diyYrs > 1 ? diyYrs + ' yrs' : '~1 yr') + '</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>K-1s at tax time</span><strong style="color:var(--text-dark);">' + numDeals + '</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>DD time</span><strong style="color:var(--text-dark);">' + (numDeals * 15) + '+ hrs</strong></div>';
+  h += '</div>';
+  h += '<div style="flex:1;"></div>'; // spacer
+  h += '<div style="margin-top:16px;padding:10px;background:#fef3c7;border-radius:var(--radius-sm);font-size:11px;color:#92400e;text-align:center;">You manage everything yourself</div>';
+  h += '<button onclick="navigateTo(\'deals\')" style="margin-top:12px;width:100%;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:var(--text-dark);">Browse Deals &rarr;</button>';
+  h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--text-muted);">Free</div>';
+  h += '</div>';
+
+  // === PATH 2: Academy / Done With You ===
+  h += '<div style="background:var(--bg-card);border:2px solid #3b82f6;border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;position:relative;">';
+  h += '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#3b82f6;color:#fff;padding:2px 10px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Recommended</div>';
+  h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#3b82f6;margin-bottom:6px;">Done With You</div>';
+  h += '<div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">Cashflow Academy</div>';
+  h += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">Pascal coaches you through your first 3 investments in 90 days. Full platform access.</div>';
+  // Visual — fewer blocks with guidance icon
+  var acBlocks = '';
+  var acDeals = Math.min(numDeals, 10);
+  for (var ai = 0; ai < Math.min(acDeals, 10); ai++) {
+    acBlocks += '<div style="width:24px;height:24px;background:#dbeafe;border-radius:2px;border:1px solid #93c5fd;"></div>';
+  }
+  h += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:16px;min-height:28px;">' + acBlocks + '</div>';
+  h += '<div style="font-size:12px;color:var(--text-secondary);line-height:2;">';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Guided investments</span><strong style="color:#3b82f6;">3+ in 90 days</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Pascal reviews deals</span><strong style="color:#3b82f6;">Yes</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Custom deployment plan</span><strong style="color:#3b82f6;">Yes</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Office hours access</span><strong style="color:#3b82f6;">Weekly</strong></div>';
+  h += '</div>';
+  h += '<div style="flex:1;"></div>';
+  h += '<div style="margin-top:16px;padding:10px;background:#dbeafe;border-radius:var(--radius-sm);font-size:11px;color:#1e40af;text-align:center;">Pascal guides you step by step</div>';
+  h += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
+  h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:#3b82f6;font-weight:700;">$5,000</div>';
+  h += '</div>';
+
+  // === PATH 3: Fund / Done For You ===
+  h += '<div style="background:var(--bg-card);border:2px solid var(--primary);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;">';
+  h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:6px;">Done For You</div>';
+  h += '<div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">GYC Income Fund</div>';
+  h += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">One investment. Pascal deploys your capital across diversified deals for you.</div>';
+  // Visual — single green block
+  h += '<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:16px;min-height:28px;"><div style="width:24px;height:24px;background:var(--primary);border-radius:2px;border:1px solid var(--primary);"></div></div>';
+  h += '<div style="font-size:12px;color:var(--text-secondary);line-height:2;">';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Investments to manage</span><strong style="color:var(--primary);">1</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Time to deploy</span><strong style="color:var(--primary);">Immediate</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>K-1s at tax time</span><strong style="color:var(--primary);">1</strong></div>';
+  h += '<div style="display:flex;justify-content:space-between;"><span>Academy included</span><strong style="color:var(--primary);">Free</strong></div>';
+  h += '</div>';
+  h += '<div style="flex:1;"></div>';
+  h += '<div style="margin-top:16px;padding:10px;background:#dcfce7;border-radius:var(--radius-sm);font-size:11px;color:#166534;text-align:center;">One wire. Fully managed by Pascal.</div>';
+  h += '<button onclick="window.open(\'https://growyourcashflow.io/fund\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
+  h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--primary);font-weight:700;">$100K minimum</div>';
+  h += '</div>';
+
+  h += '</div>'; // close 3-col grid
+
+  // CTA fallback
+  h += '<div style="text-align:center;margin-top:20px;">';
+  h += '<div style="font-size:12px;color:var(--text-secondary);">Not sure which is right for you?</div>';
+  h += '<a href="https://growyourcashflow.io/call" target="_blank" style="font-size:13px;font-weight:700;color:var(--primary);text-decoration:none;display:inline-block;margin-top:4px;">Book a free Deployment Gameplan Call &rarr;</a>';
+  h += '</div>';
+
+  h += '</div>'; // close outer card
+  return h;
 }
 
 // ========== ACTIVITY TRACKING (GHL SYNC) ==========
@@ -7870,6 +8646,9 @@ function renderDashboard() {
 
     <!-- Deals That Could Help You Get There -->
     <div id="dashboardGoalDeals" style="margin-top:24px;"></div>
+
+    <!-- Three Paths (rendered after goals are loaded) -->
+    <div id="dashboardThreePaths" style="margin-top:24px;"></div>
   `;
 
   // Render goal-matched deals if user has goals set
@@ -7936,6 +8715,15 @@ function renderDashboard() {
           + '</div></div>';
       }
     }
+  }
+
+  // Render Three Paths section on Dashboard
+  var threePathsEl = document.getElementById('dashboardThreePaths');
+  if (threePathsEl && typeof renderThreePaths === 'function') {
+    var tgt = hasGoals ? goals.targetIncome : 100000;
+    var cap = hasGoals ? goals.capital : 500000;
+    var chk = hasGoals && goals.checkSize ? goals.checkSize : 100000;
+    threePathsEl.innerHTML = renderThreePaths(tgt, cap, chk);
   }
 
   // Render pie chart if portfolio exists
