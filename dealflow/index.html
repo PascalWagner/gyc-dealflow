@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>GYC Deals - Deal Marketplace</title>
+<script>
+// Detect Capacitor iOS and add scoping class (runs before CSS paint)
+if (window.Capacitor || navigator.userAgent.includes('Capacitor') ||
+    (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge)) {
+  document.documentElement.classList.add('cap-ios');
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1233,6 +1240,119 @@ html.dark .mobile-tab-bar {
 }
 .mobile-tab-item.active svg { stroke: var(--primary); }
 .mobile-tab-item.active span { color: var(--primary); }
+
+/* ═══════════════════════════════════════════════════════
+   Capacitor iOS-only overrides (html.cap-ios)
+   These do NOT affect the mobile web version.
+   ═══════════════════════════════════════════════════════ */
+
+/* Safe area: push content below Dynamic Island / notch */
+html.cap-ios body {
+  padding-top: env(safe-area-inset-top, 54px);
+}
+
+/* Topbar: compact for iOS, no extra top padding (body handles it) */
+html.cap-ios .topbar {
+  padding-top: 0 !important;
+  height: 52px;
+  gap: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+html.cap-ios .topbar-title {
+  font-size: 18px;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+html.cap-ios .topbar-tabs {
+  gap: 2px;
+  padding: 2px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 1;
+  min-width: 0;
+}
+html.cap-ios .topbar-tab {
+  font-size: 11px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Hide hamburger menu on iOS (we have the bottom tab bar) */
+html.cap-ios .mobile-menu-btn {
+  display: none !important;
+}
+
+/* Office hours banner: compact on iOS */
+html.cap-ios .office-hours-banner {
+  padding: 10px 16px;
+  gap: 10px;
+}
+html.cap-ios .office-hours-text {
+  font-size: 12px;
+  line-height: 1.4;
+}
+html.cap-ios .office-hours-join {
+  padding: 6px 14px;
+  font-size: 11px;
+}
+
+/* Filter bar: tighter on iOS */
+html.cap-ios .filter-bar {
+  padding: 10px 12px;
+  gap: 6px;
+}
+html.cap-ios .filter-bar select,
+html.cap-ios .filter-bar input {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+html.cap-ios .buybox-toggle {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+/* Stats bar: single line, compact */
+html.cap-ios .stats-bar {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Content area: proper bottom padding for tab bar */
+html.cap-ios .content-area {
+  padding: 12px;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Deal cards: cleaner on iOS */
+html.cap-ios .deal-card {
+  border-radius: 14px;
+}
+
+/* Detail panel: full screen with safe areas on iOS */
+html.cap-ios .detail-panel {
+  top: env(safe-area-inset-top, 54px);
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Sidebar overlay: account for safe areas */
+html.cap-ios .sidebar {
+  padding-top: env(safe-area-inset-top, 54px);
+}
+html.cap-ios .sidebar.open {
+  transform: translateX(0);
+}
+
+/* Main content: no left margin on iOS */
+html.cap-ios .main {
+  margin-left: 0 !important;
+}
+
+/* Disable Safari back link appearance */
+html.cap-ios {
+  -webkit-touch-callout: none;
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
