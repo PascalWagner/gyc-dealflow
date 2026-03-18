@@ -5110,9 +5110,10 @@ function initCreditCharts() {
     const peerValues = fundReturns.map(r => peerAvg[r.year] || null);
     const hasPeerLine = peerValues.some(v => v !== null);
 
-    // Y-axis starts at 0, max = highest value + 3, rounded up
+    // Y-axis starts at 6%, max = highest value + 3, rounded up
     const allVals = [...fundValues, ...peerValues.filter(v => v !== null)];
     const dataMax = Math.max(...allVals);
+    const yMin = 6;
     const yMax = Math.ceil(dataMax + 3);
 
     const ctx = canvas.getContext('2d');
@@ -5181,7 +5182,7 @@ function initCreditCharts() {
             border: { display: false }
           },
           y: {
-            min: 0,
+            min: yMin,
             max: yMax,
             grid: {
               color: 'rgba(255,255,255,0.08)',
@@ -5200,46 +5201,47 @@ function initCreditCharts() {
         animation: { duration: 600 }
       },
       plugins: [{
-        // Custom plugin: draw callout pill above latest bar only
+        // Custom plugin: draw callout pill above every bar
         afterDraw(chart) {
           const meta = chart.getDatasetMeta(0);
           if (!meta.data.length) return;
           const cctx = chart.ctx;
           cctx.save();
-          cctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
 
-          // Only draw on the latest bar
           const lastIdx = fundValues.length - 1;
-          const bar = meta.data[lastIdx];
-          const val = fundValues[lastIdx];
-          if (val) {
+          meta.data.forEach((bar, i) => {
+            const val = fundValues[i];
+            if (!val) return;
+            const isLatest = i === lastIdx;
+            cctx.font = isLatest ? '700 11px "Plus Jakarta Sans", sans-serif' : '700 9px "Plus Jakarta Sans", sans-serif';
             const text = val.toFixed(1) + '%';
             const textWidth = cctx.measureText(text).width;
-            const pillW = textWidth + 14;
-            const pillH = 22;
+            const pillW = textWidth + (isLatest ? 14 : 10);
+            const pillH = isLatest ? 22 : 17;
             const pillX = bar.x - pillW / 2;
-            const pillY = bar.y - pillH - 6;
+            const pillY = bar.y - pillH - (isLatest ? 6 : 3);
 
-            // Draw pill with pointer triangle
             cctx.beginPath();
-            cctx.roundRect(pillX, pillY, pillW, pillH, 6);
-            cctx.fillStyle = '#0A1E21';
+            cctx.roundRect(pillX, pillY, pillW, pillH, isLatest ? 6 : 4);
+            cctx.fillStyle = isLatest ? '#0A1E21' : 'rgba(10,30,33,0.7)';
             cctx.fill();
 
-            // Small triangle pointer
-            cctx.beginPath();
-            cctx.moveTo(bar.x - 4, pillY + pillH);
-            cctx.lineTo(bar.x + 4, pillY + pillH);
-            cctx.lineTo(bar.x, pillY + pillH + 5);
-            cctx.closePath();
-            cctx.fillStyle = '#0A1E21';
-            cctx.fill();
+            if (isLatest) {
+              // Small triangle pointer for latest bar
+              cctx.beginPath();
+              cctx.moveTo(bar.x - 4, pillY + pillH);
+              cctx.lineTo(bar.x + 4, pillY + pillH);
+              cctx.lineTo(bar.x, pillY + pillH + 5);
+              cctx.closePath();
+              cctx.fillStyle = '#0A1E21';
+              cctx.fill();
+            }
 
             cctx.fillStyle = '#fff';
             cctx.textAlign = 'center';
             cctx.textBaseline = 'middle';
             cctx.fillText(text, bar.x, pillY + pillH / 2);
-          }
+          });
 
           cctx.restore();
         }
@@ -5768,15 +5770,13 @@ function renderAll() {
       grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
       return;
     }
-    const cardRenderer = currentView === 'feed' ? renderFeedCard : renderCard;
+    const cardRenderer = renderCard;
     grid.innerHTML = deals.map(cardRenderer).join('');
     grid.querySelectorAll('.deal-card').forEach(card => {
       card.addEventListener('click', () => window.location.href = 'deal.html?id=' + card.dataset.id);
     });
     // Initialize Chart.js charts for credit fund cards
-    if (currentView === 'grid') {
-      requestAnimationFrame(() => initCreditCharts());
-    }
+    requestAnimationFrame(() => initCreditCharts());
   } else if (currentView === 'map') {
     grid.style.display = 'none';
     table.style.display = 'none';
