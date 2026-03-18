@@ -1261,6 +1261,21 @@ html.cap-ios .main {
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
+/* ── Status bar background (fills the gap above topbar) ── */
+html.cap-ios::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 47px);
+  background: var(--bg-cream);
+  z-index: 51;
+}
+html.dark.cap-ios::before {
+  background: var(--bg-cream);
+}
+
 /* ── Topbar ────────────────────────────────────────── */
 html.cap-ios .topbar {
   padding: 0 12px !important;
@@ -1269,6 +1284,7 @@ html.cap-ios .topbar {
   gap: 8px;
   align-items: flex-end;
   padding-bottom: 8px !important;
+  z-index: 52;
 }
 html.cap-ios .topbar-title {
   font-size: 17px;
