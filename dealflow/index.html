@@ -1332,11 +1332,86 @@ html.cap-ios .mobile-menu-btn { display: none !important; }
 /* Hide office hours banner entirely on iOS app */
 html.cap-ios .office-hours-banner { display: none !important; }
 
-/* ── Filter bar ───────────────────────────────────── */
+/* ── Filter bar: collapsed by default on iOS ───────── */
 html.cap-ios .filter-bar {
-  padding: 10px 12px;
-  gap: 6px;
+  padding: 0 12px;
+  gap: 0;
   flex-wrap: wrap;
+  border-bottom: none;
+}
+/* Compact search + filter toggle row (always visible) */
+html.cap-ios .filter-bar::before {
+  content: none;
+}
+html.cap-ios .ios-filter-row {
+  display: flex !important;
+  width: 100%;
+  gap: 8px;
+  padding: 10px 0;
+  align-items: center;
+}
+html.cap-ios .ios-filter-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html.cap-ios .ios-filter-toggle svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text-muted);
+  transition: transform 0.2s;
+}
+html.cap-ios .ios-filter-toggle.open svg {
+  transform: rotate(180deg);
+}
+html.cap-ios .ios-filter-toggle.has-active {
+  background: var(--mint-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+html.cap-ios .ios-filter-toggle.has-active svg {
+  stroke: var(--primary);
+}
+/* Hide all filter elements by default */
+html.cap-ios .filter-bar > select,
+html.cap-ios .filter-bar > .buybox-toggle,
+html.cap-ios .filter-bar > .buybox-update-btn,
+html.cap-ios .filter-bar > button:not(.ios-filter-toggle),
+html.cap-ios .filter-bar > div[style*="position:relative"] {
+  display: none !important;
+}
+/* Expanded state: show filters in a neat grid */
+html.cap-ios .filter-bar.ios-filters-open > select,
+html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle,
+html.cap-ios .filter-bar.ios-filters-open > div[style*="position:relative"] {
+  display: flex !important;
+  width: calc(50% - 4px) !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle {
+  width: 100% !important;
+}
+html.cap-ios .filter-bar.ios-filters-open > div[style*="position:relative"] {
+  flex-basis: 100% !important;
+  width: 100% !important;
+}
+html.cap-ios .filter-bar.ios-filters-open {
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
 }
 html.cap-ios .filter-bar select,
 html.cap-ios .filter-bar input {
@@ -1344,21 +1419,46 @@ html.cap-ios .filter-bar input {
   padding: 8px 10px;
   border-radius: 8px;
 }
-html.cap-ios .buybox-toggle {
-  font-size: 12px;
-  padding: 6px 10px;
+
+/* ── Managers page: collapsible filters on iOS ─────── */
+html.cap-ios #managersFilterSidebar {
+  width: 100% !important;
+  position: static !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease, padding 0.3s ease;
 }
-/* Make search + clear/add row full width */
-html.cap-ios .filter-bar > div[style*="position:relative"] {
-  flex-basis: 100% !important;
-  min-width: 0 !important;
+html.cap-ios #managersFilterSidebar.ios-filters-open {
+  max-height: 600px;
+  padding: 14px !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Debt Fund page: collapse filter bar on iOS ────── */
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] > *:not(.ios-filter-row):not(.ios-filter-toggle) {
+  display: none !important;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > * {
+  display: flex !important;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] {
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
 }
 
 /* ── Stats bar ────────────────────────────────────── */
 html.cap-ios .stats-bar {
-  padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.6;
+  padding: 6px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-light);
 }
 
 /* ── Content area ─────────────────────────────────── */
@@ -9897,6 +9997,54 @@ fetchBuyBoxFromGHL();
   }
   // Set initial state
   updateMobileTabBar('deals');
+
+  // iOS: inject collapsible filter toggles
+  if (document.documentElement.classList.contains('cap-ios')) {
+    // Deals page filter bar
+    const dealsFilter = document.querySelector('#page-deals .filter-bar');
+    if (dealsFilter) {
+      const row = document.createElement('div');
+      row.className = 'ios-filter-row';
+      row.innerHTML = `
+        <div style="position:relative;flex:1;min-width:0;">
+          <input type="text" class="filter-input" placeholder="Search deals..."
+            oninput="document.getElementById('filterSearch').value=this.value;applyFilters();"
+            style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+        </div>
+        <button class="ios-filter-toggle" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+        <select style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:var(--font-ui);font-weight:600;flex-shrink:0;" onchange="document.getElementById('filterSort').value=this.value;applyFilters();">
+          <option value="newest">Newest</option>
+          <option value="irr">Highest IRR</option>
+          <option value="min_invest">Lowest Min</option>
+          <option value="az">A-Z</option>
+        </select>
+      `;
+      dealsFilter.insertBefore(row, dealsFilter.firstChild);
+    }
+
+    // Managers page filter toggle
+    const managersContent = document.querySelector('#page-managers .content-area');
+    if (managersContent) {
+      const sidebar = document.getElementById('managersFilterSidebar');
+      if (sidebar) {
+        const toggle = document.createElement('div');
+        toggle.style.cssText = 'padding:10px 0;display:flex;gap:8px;align-items:center;';
+        toggle.innerHTML = `
+          <input type="text" id="managersNameSearchMobile" placeholder="Search managers..."
+            oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();"
+            style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+          <button class="ios-filter-toggle" onclick="this.classList.toggle('open');document.getElementById('managersFilterSidebar').classList.toggle('ios-filters-open');">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filters
+          </button>
+        `;
+        managersContent.insertBefore(toggle, sidebar);
+      }
+    }
+  }
 })();
 </script>
 
