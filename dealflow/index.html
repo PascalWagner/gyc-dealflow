@@ -1385,8 +1385,18 @@ html.cap-ios .ios-filter-toggle.has-active svg {
   stroke: var(--primary);
 }
 /* Hide ALL original filter bar children by default on iOS */
-html.cap-ios .filter-bar > *:not(.ios-filter-row) {
+html.cap-ios .filter-bar > select,
+html.cap-ios .filter-bar > button,
+html.cap-ios .filter-bar > div:not(.ios-filter-row),
+html.cap-ios .filter-bar > .buybox-toggle,
+html.cap-ios .filter-bar > .buybox-update-btn,
+html.cap-ios .filter-bar > .filter-clear,
+html.cap-ios .filter-bar > .filter-count {
   display: none !important;
+}
+/* Always show the iOS filter row */
+html.cap-ios .filter-bar > .ios-filter-row {
+  display: flex !important;
 }
 /* Expanded state: show filter selects in a neat 2-col grid */
 html.cap-ios .filter-bar.ios-filters-open > select.filter-select {
@@ -1403,10 +1413,6 @@ html.cap-ios .filter-bar.ios-filters-open {
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-light);
-}
-/* Always show the iOS filter row */
-html.cap-ios .filter-bar > .ios-filter-row {
-  display: flex !important;
 }
 html.cap-ios .filter-bar select,
 html.cap-ios .filter-bar input {
@@ -4895,10 +4901,6 @@ function updateStats(deals) {
       <div class="stat-item"><span class="stat-label">Deals:</span> <span class="stat-value">${totalDeals}</span></div>
       <div class="stat-divider"></div>
       <div class="stat-item"><span class="stat-label">Avg IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
-      <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-label">Funds:</span> <span class="stat-value">${funds}</span></div>
-      <div class="stat-divider"></div>
-      <div class="stat-item"><span class="stat-label">Syndications:</span> <span class="stat-value">${syndications}</span></div>
     `;
   } else {
     document.getElementById('statsBar').innerHTML = `
