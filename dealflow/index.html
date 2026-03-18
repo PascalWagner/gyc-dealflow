@@ -1246,9 +1246,14 @@ html.dark .mobile-tab-bar {
    These do NOT affect the mobile web version.
    ═══════════════════════════════════════════════════════ */
 
-/* Safe area: push content below Dynamic Island / notch */
+/* Mobile dropdown: hidden by default, shown on cap-ios */
+.topbar-mobile-select {
+  display: none;
+}
+
+/* Safe area: use padding on the topbar itself, not body */
 html.cap-ios body {
-  padding-top: env(safe-area-inset-top, 54px);
+  padding-top: 0;
   -webkit-touch-callout: none;
 }
 html.cap-ios .main {
@@ -1259,32 +1264,42 @@ html.cap-ios .main {
 /* ── Topbar ────────────────────────────────────────── */
 html.cap-ios .topbar {
   padding: 0 12px !important;
-  height: 44px;
-  gap: 6px;
+  padding-top: env(safe-area-inset-top, 47px) !important;
+  height: calc(44px + env(safe-area-inset-top, 47px));
+  gap: 8px;
+  align-items: flex-end;
+  padding-bottom: 8px !important;
 }
 html.cap-ios .topbar-title {
   font-size: 17px;
   font-weight: 600;
-  margin-right: 6px;
+  margin-right: 0;
   white-space: nowrap;
   flex-shrink: 0;
 }
-/* Workflow tabs: horizontally scrollable pill row */
-html.cap-ios .topbar-tabs {
-  gap: 2px;
-  padding: 2px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* Show dropdown, hide tab buttons on iOS */
+html.cap-ios .topbar-mobile-select {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23607179' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
   flex-shrink: 1;
   min-width: 0;
-  scrollbar-width: none;
+  max-width: 160px;
 }
-html.cap-ios .topbar-tabs::-webkit-scrollbar { display: none; }
-html.cap-ios .topbar-tab {
-  font-size: 11px;
-  padding: 5px 10px;
-  white-space: nowrap;
-  flex-shrink: 0;
+html.cap-ios .topbar-tabs {
+  display: none !important;
 }
 /* View toggle: hide grid + list, keep feed + map only */
 html.cap-ios .topbar-view-toggle .view-btn[data-view="grid"],
@@ -1372,6 +1387,112 @@ html.cap-ios .settings-page {
 }
 html.cap-ios .wizard-overlay {
   padding-top: env(safe-area-inset-top, 54px);
+}
+
+/* ── More page menu ───────────────────────────────── */
+.more-menu-section {
+  margin-bottom: 24px;
+}
+.more-menu-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  padding: 0 4px 8px;
+}
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.more-menu-item:hover,
+.more-menu-item:active {
+  background: var(--border-light);
+}
+.more-menu-item svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  stroke: var(--primary);
+}
+/* Hide More page on desktop */
+#page-more { display: none; }
+html.cap-ios #page-more.active { display: block; }
+
+/* ── Managers page: stack filter sidebar above grid ── */
+html.cap-ios #page-managers .content-area {
+  flex-direction: column !important;
+  padding: 12px !important;
+  gap: 12px !important;
+}
+html.cap-ios #managersFilterSidebar {
+  width: 100% !important;
+  position: static !important;
+  padding: 14px !important;
+}
+html.cap-ios #managersFilterSidebar > div:first-child {
+  font-size: 14px !important;
+}
+/* Make filter fields row-wrap on mobile */
+html.cap-ios #managersFilterSidebar > div[style*="margin-bottom"] {
+  display: inline-block;
+  width: calc(50% - 4px) !important;
+  vertical-align: top;
+}
+
+/* ── Debt Fund Explorer: optimize for iOS ──────────── */
+html.cap-ios #page-debtfunds .content-area {
+  padding: 12px !important;
+}
+html.cap-ios #page-debtfunds .settings-page {
+  padding: 0 !important;
+}
+html.cap-ios #page-debtfunds .settings-page-title {
+  font-size: 22px !important;
+}
+/* Debt fund filter bar: wrap on mobile */
+html.cap-ios #page-debtfunds .content-area > div[style*="display:flex"][style*="flex-wrap"] {
+  gap: 8px !important;
+  padding: 12px !important;
+}
+/* Debt fund stat cards at top: stack or scroll */
+html.cap-ios .debt-stat-cards,
+html.cap-ios #page-debtfunds div[style*="grid-template-columns: repeat(4"] {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+}
+/* Debt comparison chart: stack vertically */
+html.cap-ios .debt-chart-wrapper {
+  flex-direction: column !important;
+}
+html.cap-ios .debt-chart-wrapper > div:first-child {
+  min-height: 250px !important;
+}
+html.cap-ios .debt-chart-wrapper #debtChartLegend {
+  max-width: 100% !important;
+  max-height: 120px !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  min-width: 0 !important;
+  overflow-y: auto !important;
+}
+/* Debt fund metric toggle buttons → dropdown on iOS */
+html.cap-ios .debt-metric-toggle {
+  display: none !important;
+}
+html.cap-ios .debt-metric-select-mobile {
+  display: block !important;
 }
 
 /* Scrollbar */
@@ -2588,6 +2709,15 @@ html.cap-ios .wizard-overlay {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Live Deals</div>
+      <!-- Mobile dropdown (visible only on cap-ios) -->
+      <select class="topbar-mobile-select" id="dealWorkflowSelect" onchange="switchTab(this.options[this.selectedIndex], true)">
+        <option value="new" selected>New Deals</option>
+        <option value="interested">Interested</option>
+        <option value="duediligence">Due Diligence</option>
+        <option value="portfolio">My Portfolio</option>
+        <option value="passed">Passed</option>
+      </select>
+      <!-- Desktop tabs (hidden on cap-ios) -->
       <div class="topbar-tabs" id="dealWorkflowTabs">
         <button class="topbar-tab active" data-tab="new" onclick="switchTab(this)">New Deals</button>
         <button class="topbar-tab" data-tab="interested" onclick="switchTab(this)">Interested</button>
@@ -3656,12 +3786,20 @@ html.cap-ios .wizard-overlay {
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
-          <div style="display:flex;gap:8px;" id="debtChartToggles">
+          <!-- Desktop: toggle buttons -->
+          <div class="debt-metric-toggle" style="display:flex;gap:8px;" id="debtChartToggles">
             <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
             <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
             <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
             <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
           </div>
+          <!-- Mobile: dropdown (hidden by default, shown on cap-ios) -->
+          <select class="debt-metric-select-mobile" style="display:none;padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);background:var(--bg-card);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23607179%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;" onchange="switchDebtMetric(this.value, null, true)">
+            <option value="yield">Yield</option>
+            <option value="leverage">Leverage</option>
+            <option value="ltv">Loan-to-Value</option>
+            <option value="delinquency">Delinquency Rate</option>
+          </select>
         </div>
         <div class="debt-chart-wrapper" style="position:relative;">
           <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
@@ -3837,6 +3975,67 @@ html.cap-ios .wizard-overlay {
         <button onclick="showAddTaxDocModal()" style="padding:10px 24px;background:transparent;color:var(--primary);border:2px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Manually</button>
       </div>
       </div><!-- end display:none -->
+    </div>
+  </div>
+
+  <!-- PAGE: More (iOS app only — replaces sidebar) -->
+  <div class="page" id="page-more">
+    <div class="topbar">
+      <div class="topbar-title">More</div>
+    </div>
+    <div class="content-area" style="padding:20px 16px;">
+      <div class="more-menu-section">
+        <div class="more-menu-label">Discover</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('dashboard'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('buybox'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Buy Box</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('assets'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Assets</span>
+        </a>
+      </div>
+      <div class="more-menu-section">
+        <div class="more-menu-label">My Investments</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('taxprep'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Tax Prep</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('dealflow'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Deal Flow Stats</span>
+        </a>
+      </div>
+      <div class="more-menu-section">
+        <div class="more-menu-label">Learn</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('officehours'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span>Office Hours</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('academy'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span>Cash Flow Academy</span>
+        </a>
+        <a class="more-menu-item" href="https://growyourcashflow.io/income-fund" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span>GYC Income Fund</span>
+        </a>
+      </div>
+      <div class="more-menu-section">
+        <div class="more-menu-label">Account</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('subscription'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          <span>Subscription</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('settings'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </a>
+      </div>
     </div>
   </div>
 
@@ -4772,10 +4971,23 @@ function clearFilters() {
   applyFilters();
 }
 
-function switchTab(el) {
-  document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  currentTab = el.dataset.tab;
+function switchTab(el, fromSelect) {
+  if (fromSelect) {
+    // Called from mobile <select> dropdown
+    const sel = document.getElementById('dealWorkflowSelect');
+    currentTab = sel.value;
+    // Also sync the desktop tabs
+    document.querySelectorAll('.topbar-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === currentTab);
+    });
+  } else {
+    document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentTab = el.dataset.tab;
+    // Sync mobile dropdown
+    const sel = document.getElementById('dealWorkflowSelect');
+    if (sel) sel.value = currentTab;
+  }
   renderAll();
 }
 
@@ -6977,10 +7189,13 @@ function toggleDebtFundHighlight(id) {
   }
 }
 
-function switchDebtMetric(metric, btn) {
+function switchDebtMetric(metric, btn, fromSelect) {
   debtChartMetric = metric;
   document.querySelectorAll('#debtChartToggles .topbar-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  // Sync mobile dropdown
+  const mobileSelect = document.querySelector('.debt-metric-select-mobile');
+  if (mobileSelect && fromSelect !== true) mobileSelect.value = metric;
   renderDebtChart();
   // Show Coming Soon overlay for metrics without real data
   const overlay = document.getElementById('debtChartComingSoon');
@@ -9688,7 +9903,7 @@ fetchBuyBoxFromGHL();
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span>Managers</span>
   </button>
-  <button class="mobile-tab-item" data-page="more" onclick="document.querySelector('.sidebar').classList.toggle('open')">
+  <button class="mobile-tab-item" data-page="more" onclick="navigateTo('more')">
     <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     <span>More</span>
   </button>
