@@ -1289,7 +1289,7 @@ html.cap-ios .topbar {
 html.cap-ios .topbar-title {
   font-size: 17px;
   font-weight: 600;
-  margin-right: 0;
+  margin-right: 6px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1384,34 +1384,29 @@ html.cap-ios .ios-filter-toggle.has-active {
 html.cap-ios .ios-filter-toggle.has-active svg {
   stroke: var(--primary);
 }
-/* Hide all filter elements by default */
-html.cap-ios .filter-bar > select,
-html.cap-ios .filter-bar > .buybox-toggle,
-html.cap-ios .filter-bar > .buybox-update-btn,
-html.cap-ios .filter-bar > button:not(.ios-filter-toggle),
-html.cap-ios .filter-bar > div[style*="position:relative"] {
+/* Hide ALL original filter bar children by default on iOS */
+html.cap-ios .filter-bar > *:not(.ios-filter-row) {
   display: none !important;
 }
-/* Expanded state: show filters in a neat grid */
-html.cap-ios .filter-bar.ios-filters-open > select,
-html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle,
-html.cap-ios .filter-bar.ios-filters-open > div[style*="position:relative"] {
-  display: flex !important;
+/* Expanded state: show filter selects in a neat 2-col grid */
+html.cap-ios .filter-bar.ios-filters-open > select.filter-select {
+  display: block !important;
   width: calc(50% - 4px) !important;
   min-width: 0 !important;
   flex-shrink: 0;
 }
 html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle {
-  width: 100% !important;
-}
-html.cap-ios .filter-bar.ios-filters-open > div[style*="position:relative"] {
-  flex-basis: 100% !important;
+  display: flex !important;
   width: 100% !important;
 }
 html.cap-ios .filter-bar.ios-filters-open {
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-light);
+}
+/* Always show the iOS filter row */
+html.cap-ios .filter-bar > .ios-filter-row {
+  display: flex !important;
 }
 html.cap-ios .filter-bar select,
 html.cap-ios .filter-bar input {
@@ -4885,15 +4880,28 @@ function updateStats(deals) {
   const funds = deals.filter(d => d.dealType === 'Fund').length;
   const syndications = deals.filter(d => d.dealType === 'Syndication').length;
 
-  document.getElementById('statsBar').innerHTML = `
-    <div class="stat-item"><span class="stat-label">Total Deals:</span> <span class="stat-value">${totalDeals}</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-label">Avg Target IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-label">Total Equity Raised:</span> <span class="stat-value">${fmt(totalEquity, 'money')}</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-label">Funds:</span> <span class="stat-value">${funds}</span> <span class="stat-label" style="margin-left:4px">| Syndications:</span> <span class="stat-value">${syndications}</span></div>
-  `;
+  const isIOS = document.documentElement.classList.contains('cap-ios');
+  if (isIOS) {
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item"><span class="stat-label">Deals:</span> <span class="stat-value">${totalDeals}</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Avg IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Funds:</span> <span class="stat-value">${funds}</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Syndications:</span> <span class="stat-value">${syndications}</span></div>
+    `;
+  } else {
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item"><span class="stat-label">Total Deals:</span> <span class="stat-value">${totalDeals}</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Avg Target IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Total Equity Raised:</span> <span class="stat-value">${fmt(totalEquity, 'money')}</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Funds:</span> <span class="stat-value">${funds}</span> <span class="stat-label" style="margin-left:4px">| Syndications:</span> <span class="stat-value">${syndications}</span></div>
+    `;
+  }
 }
 
 // Table view columns
