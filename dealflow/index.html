@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>GYC Deals - Deal Marketplace</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1164,18 +1164,75 @@ html.dark .card-match-badge.red { background: #2E1515; }
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; }
+  .main { margin-left: 0; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .mobile-menu-btn { display: block; }
   .card-grid { grid-template-columns: 1fr; }
-  .topbar { padding: 0 16px; }
+  .topbar { padding: 0 16px; padding-top: env(safe-area-inset-top, 0px); }
   .filter-bar { padding: 12px 16px; }
   .stats-bar { padding: 12px 16px; }
-  .content-area { padding: 16px; }
+  .content-area { padding: 16px; padding-bottom: 80px; }
   .detail-panel { width: 100vw; }
   .topbar-title { font-size: 16px; margin-right: 12px; }
   .table-view { font-size: 11px; }
   .table-view th, .table-view td { padding: 8px 10px; }
+  .mobile-tab-bar { display: flex !important; }
 }
+
+/* Mobile Bottom Tab Bar */
+.mobile-tab-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-around;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.92);
+}
+html.dark .mobile-tab-bar {
+  background: rgba(10,30,33,0.92);
+  border-top-color: rgba(255,255,255,0.08);
+}
+.mobile-tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0;
+  min-width: 56px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-tab-item svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: all 0.15s ease;
+}
+.mobile-tab-item span {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+.mobile-tab-item.active svg { stroke: var(--primary); }
+.mobile-tab-item.active span { color: var(--primary); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
@@ -9447,6 +9504,54 @@ if (localStorage.getItem('gycBuyBoxComplete')) {
 
 // Sync buy box from GHL (background, non-blocking)
 fetchBuyBoxFromGHL();
+
+// Mobile bottom tab bar — update active state on navigation
+(function() {
+  const origNavigateTo = window.navigateTo;
+  if (origNavigateTo) {
+    window.navigateTo = function(page) {
+      origNavigateTo(page);
+      updateMobileTabBar(page);
+    };
+  }
+  function updateMobileTabBar(page) {
+    document.querySelectorAll('.mobile-tab-item').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.page === page);
+    });
+    // "More" tab is active for pages not in the tab bar
+    const tabPages = ['deals', 'debtfunds', 'portfolio', 'managers'];
+    if (!tabPages.includes(page)) {
+      document.querySelector('.mobile-tab-item[data-page="more"]')?.classList.add('active');
+      tabPages.forEach(p => document.querySelector(`.mobile-tab-item[data-page="${p}"]`)?.classList.remove('active'));
+    }
+  }
+  // Set initial state
+  updateMobileTabBar('deals');
+})();
 </script>
+
+<!-- Mobile Bottom Tab Bar -->
+<div class="mobile-tab-bar">
+  <button class="mobile-tab-item active" data-page="deals" onclick="navigateTo('deals')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Deals</span>
+  </button>
+  <button class="mobile-tab-item" data-page="debtfunds" onclick="navigateTo('debtfunds')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
+    <span>Funds</span>
+  </button>
+  <button class="mobile-tab-item" data-page="portfolio" onclick="navigateTo('portfolio')">
+    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <span>Portfolio</span>
+  </button>
+  <button class="mobile-tab-item" data-page="managers" onclick="navigateTo('managers')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Managers</span>
+  </button>
+  <button class="mobile-tab-item" data-page="more" onclick="document.querySelector('.sidebar').classList.toggle('open')">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <span>More</span>
+  </button>
+</div>
 </body>
 </html>
