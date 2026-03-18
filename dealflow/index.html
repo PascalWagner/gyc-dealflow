@@ -6,10 +6,17 @@
 <title>GYC Deals - Deal Marketplace</title>
 <script>
 // Detect Capacitor iOS and add scoping class (runs before CSS paint)
-if (window.Capacitor || navigator.userAgent.includes('Capacitor') ||
-    (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge)) {
-  document.documentElement.classList.add('cap-ios');
-}
+// Check multiple signals: Capacitor bridge, standalone mode, webkit messageHandlers
+(function() {
+  var isCapacitor = window.Capacitor || navigator.userAgent.includes('Capacitor');
+  var isStandalone = window.navigator.standalone === true;
+  var hasWebKitBridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge;
+  // Also detect if loaded inside a WKWebView (no Safari chrome)
+  var isWKWebView = /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent);
+  if (isCapacitor || isStandalone || hasWebKitBridge || isWKWebView) {
+    document.documentElement.classList.add('cap-ios');
+  }
+})();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
