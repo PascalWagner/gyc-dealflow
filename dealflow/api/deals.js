@@ -133,7 +133,9 @@ function transformRecord(rec, mcLookup, peopleLookup) {
     fundAUM: f['Fund AUM'] || null,
     loanCount: f['Loan Count'] || null,
     avgLoanLTV: f['Avg Loan LTV'] || null,
-    location: f['Location'] || ''
+    location: f['Location'] || '',
+    address: f['Property Address'] || '',
+    deckUrl: Array.isArray(f['Deck']) && f['Deck'].length > 0 ? f['Deck'][0].url : ''
   };
 }
 

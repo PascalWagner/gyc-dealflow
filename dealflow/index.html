@@ -2,8 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>GYC Deals - Deal Marketplace</title>
+<script>
+// Detect Capacitor iOS and add scoping class (runs before CSS paint)
+// Check multiple signals: Capacitor bridge, standalone mode, webkit messageHandlers
+(function() {
+  var isCapacitor = window.Capacitor || navigator.userAgent.includes('Capacitor');
+  var isStandalone = window.navigator.standalone === true;
+  var hasWebKitBridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge;
+  // Also detect if loaded inside a WKWebView (no Safari chrome)
+  var isWKWebView = /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent);
+  if (isCapacitor || isStandalone || hasWebKitBridge || isWKWebView) {
+    document.documentElement.classList.add('cap-ios');
+  }
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1380,17 +1394,453 @@ html.dark .credit-card-hero {
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; }
+  .main { margin-left: 0; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
   .mobile-menu-btn { display: block; }
   .card-grid { grid-template-columns: 1fr; }
-  .topbar { padding: 0 16px; }
+  .topbar { padding: 0 16px; padding-top: env(safe-area-inset-top, 0px); }
   .filter-bar { padding: 12px 16px; }
   .stats-bar { padding: 12px 16px; }
-  .content-area { padding: 16px; }
+  .content-area { padding: 16px; padding-bottom: 80px; }
   .detail-panel { width: 100vw; }
   .topbar-title { font-size: 16px; margin-right: 12px; }
   .table-view { font-size: 11px; }
   .table-view th, .table-view td { padding: 8px 10px; }
+  .mobile-tab-bar { display: flex !important; }
+}
+
+/* Mobile Bottom Tab Bar */
+.mobile-tab-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-around;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.92);
+}
+html.dark .mobile-tab-bar {
+  background: rgba(10,30,33,0.92);
+  border-top-color: rgba(255,255,255,0.08);
+}
+.mobile-tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0;
+  min-width: 56px;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-tab-item svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: all 0.15s ease;
+}
+.mobile-tab-item span {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.15s ease;
+}
+.mobile-tab-item.active svg { stroke: var(--primary); }
+.mobile-tab-item.active span { color: var(--primary); }
+
+/* ═══════════════════════════════════════════════════════
+   Capacitor iOS-only overrides (html.cap-ios)
+   These do NOT affect the mobile web version.
+   ═══════════════════════════════════════════════════════ */
+
+/* Mobile dropdown: hidden by default, shown on cap-ios */
+.topbar-mobile-select {
+  display: none;
+}
+
+/* Safe area: use padding on the topbar itself, not body */
+html.cap-ios body {
+  padding-top: 0;
+  -webkit-touch-callout: none;
+}
+html.cap-ios .main {
+  margin-left: 0 !important;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Status bar background (fills the gap above topbar) ── */
+html.cap-ios::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 47px);
+  background: var(--bg-cream);
+  z-index: 51;
+}
+html.dark.cap-ios::before {
+  background: var(--bg-cream);
+}
+
+/* ── Topbar ────────────────────────────────────────── */
+html.cap-ios .topbar {
+  padding: 0 12px !important;
+  padding-top: env(safe-area-inset-top, 47px) !important;
+  height: calc(44px + env(safe-area-inset-top, 47px));
+  gap: 8px;
+  align-items: flex-end;
+  padding-bottom: 8px !important;
+  z-index: 52;
+}
+html.cap-ios .topbar-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin-right: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+/* Show dropdown, hide tab buttons on iOS */
+html.cap-ios .topbar-mobile-select {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23607179' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 160px;
+}
+html.cap-ios .topbar-tabs {
+  display: none !important;
+}
+/* View toggle: hide grid + list, keep feed + map only */
+html.cap-ios .topbar-view-toggle .view-btn[data-view="grid"],
+html.cap-ios .topbar-view-toggle .view-btn[data-view="list"] {
+  display: none !important;
+}
+html.cap-ios .topbar-spacer { display: none; }
+html.cap-ios .topbar-view-toggle {
+  display: none !important;
+}
+
+/* ── Hide elements not needed on iOS ──────────────── */
+html.cap-ios .mobile-menu-btn { display: none !important; }
+/* Hide office hours banner entirely on iOS app */
+html.cap-ios .office-hours-banner { display: none !important; }
+
+/* ── Filter bar: collapsed by default on iOS ───────── */
+html.cap-ios .filter-bar {
+  padding: 0 12px;
+  gap: 0;
+  flex-wrap: wrap;
+  border-bottom: none;
+}
+/* Compact search + filter toggle row (always visible) */
+html.cap-ios .filter-bar::before {
+  content: none;
+}
+html.cap-ios .ios-filter-row {
+  display: flex !important;
+  width: 100%;
+  gap: 8px;
+  padding: 10px 0;
+  align-items: center;
+}
+html.cap-ios .ios-filter-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html.cap-ios .ios-filter-toggle svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text-muted);
+  transition: transform 0.2s;
+}
+html.cap-ios .ios-filter-toggle.open svg {
+  transform: rotate(180deg);
+}
+html.cap-ios .ios-filter-toggle.has-active {
+  background: var(--mint-bg);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+html.cap-ios .ios-filter-toggle.has-active svg {
+  stroke: var(--primary);
+}
+/* Hide ALL original filter bar children by default on iOS */
+html.cap-ios .filter-bar > select,
+html.cap-ios .filter-bar > button,
+html.cap-ios .filter-bar > div:not(.ios-filter-row),
+html.cap-ios .filter-bar > .buybox-toggle,
+html.cap-ios .filter-bar > .buybox-update-btn,
+html.cap-ios .filter-bar > .filter-clear,
+html.cap-ios .filter-bar > .filter-count {
+  display: none !important;
+}
+/* Always show the iOS filter row */
+html.cap-ios .filter-bar > .ios-filter-row {
+  display: flex !important;
+}
+/* Expanded state: show filter selects in a neat 2-col grid */
+html.cap-ios .filter-bar.ios-filters-open > select.filter-select {
+  display: block !important;
+  width: calc(50% - 4px) !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle {
+  display: flex !important;
+  width: 100% !important;
+}
+html.cap-ios .filter-bar.ios-filters-open {
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+html.cap-ios .filter-bar select,
+html.cap-ios .filter-bar input {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+/* ── Managers page: collapsible filters on iOS ─────── */
+html.cap-ios #managersFilterSidebar {
+  width: 100% !important;
+  position: static !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+html.cap-ios #managersFilterSidebar.ios-filters-open {
+  max-height: 600px;
+  padding: 14px !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Debt Fund page: collapse filter bar on iOS ────── */
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] > *:not(.ios-filter-row):not(.ios-filter-toggle) {
+  display: none !important;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > * {
+  display: flex !important;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] {
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  padding: 10px 12px !important;
+}
+
+/* ── Stats bar: single row, no wrapping ───────────── */
+html.cap-ios .stats-bar {
+  padding: 5px 12px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+html.cap-ios .stats-bar::-webkit-scrollbar { display: none; }
+html.cap-ios .stats-bar .stat-divider {
+  margin: 0 6px !important;
+}
+
+/* ── Content area ─────────────────────────────────── */
+html.cap-ios .content-area {
+  padding: 12px;
+  padding-bottom: 16px;
+}
+
+/* ── Deal cards ───────────────────────────────────── */
+html.cap-ios .deal-card {
+  border-radius: 14px;
+}
+html.cap-ios .card-grid {
+  gap: 14px;
+}
+
+/* ── Detail panel: full screen with safe areas ────── */
+html.cap-ios .detail-panel {
+  top: env(safe-area-inset-top, 54px);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Sidebar: account for safe areas ──────────────── */
+html.cap-ios .sidebar {
+  padding-top: env(safe-area-inset-top, 54px);
+}
+html.cap-ios .sidebar.open {
+  transform: translateX(0);
+}
+
+/* ── Pages: ensure all pages have proper spacing ──── */
+html.cap-ios .page .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* ── Settings / sub-pages: tighter padding ────────── */
+html.cap-ios .settings-page {
+  padding: 20px 16px;
+}
+html.cap-ios .wizard-overlay {
+  padding-top: env(safe-area-inset-top, 54px);
+}
+
+/* ── More page menu ───────────────────────────────── */
+.more-menu-section {
+  margin-bottom: 24px;
+}
+.more-menu-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  padding: 0 4px 8px;
+}
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.more-menu-item:hover,
+.more-menu-item:active {
+  background: var(--border-light);
+}
+.more-menu-item svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  stroke: var(--primary);
+}
+/* Hide More page on desktop */
+#page-more { display: none; }
+html.cap-ios #page-more.active { display: block; }
+
+/* ── Managers page: stack filter sidebar above grid ── */
+html.cap-ios #page-managers .content-area {
+  flex-direction: column !important;
+  padding: 12px !important;
+  gap: 12px !important;
+}
+html.cap-ios #managersFilterSidebar {
+  width: 100% !important;
+  position: static !important;
+  padding: 14px !important;
+}
+html.cap-ios #managersFilterSidebar > div:first-child {
+  font-size: 14px !important;
+}
+/* Make filter fields row-wrap on mobile */
+html.cap-ios #managersFilterSidebar > div[style*="margin-bottom"] {
+  display: inline-block;
+  width: calc(50% - 4px) !important;
+  vertical-align: top;
+}
+
+/* ── Debt Fund Explorer: optimize for iOS ──────────── */
+html.cap-ios #page-debtfunds .content-area {
+  padding: 12px !important;
+}
+html.cap-ios #page-debtfunds .settings-page {
+  padding: 0 !important;
+}
+html.cap-ios #page-debtfunds .settings-page-title {
+  font-size: 22px !important;
+}
+/* Debt fund filter bar: wrap on mobile */
+html.cap-ios #page-debtfunds .content-area > div[style*="display:flex"][style*="flex-wrap"] {
+  gap: 8px !important;
+  padding: 12px !important;
+}
+/* Debt fund stat cards at top: stack or scroll */
+html.cap-ios .debt-stat-cards,
+html.cap-ios #page-debtfunds div[style*="grid-template-columns: repeat(4"] {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+}
+/* Debt comparison chart: stack vertically */
+html.cap-ios .debt-chart-wrapper {
+  flex-direction: column !important;
+}
+html.cap-ios .debt-chart-wrapper > div:first-child {
+  min-height: 250px !important;
+}
+html.cap-ios .debt-chart-wrapper #debtChartLegend {
+  max-width: 100% !important;
+  max-height: 120px !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  min-width: 0 !important;
+  overflow-y: auto !important;
+}
+/* Debt fund metric toggle buttons → dropdown on iOS */
+html.cap-ios .debt-metric-toggle {
+  display: none !important;
+}
+html.cap-ios .debt-metric-select-mobile {
+  display: block !important;
 }
 
 /* Scrollbar */
@@ -1871,6 +2321,244 @@ html.dark .credit-card-hero {
 .wizard-btn-next:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
 .wizard-btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
+/* Onboarding: Welcome hero screens */
+.wizard-welcome {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.wizard-welcome .wizard-card-title {
+  font-size: 38px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+.wizard-welcome .wizard-card-desc {
+  color: rgba(255,255,255,0.75);
+  font-size: 18px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+.wizard-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(81,190,123,0.15);
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+.wizard-welcome-cta {
+  display: inline-block;
+  padding: 16px 48px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.wizard-welcome-cta:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(81,190,123,0.4); }
+.wizard-body.welcome-bg {
+  background: linear-gradient(135deg, #1F5159, #0A1E21);
+}
+
+/* Onboarding: Goal selection cards */
+.wizard-goal-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+.wizard-goal-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: var(--bg-card);
+}
+.wizard-goal-card:hover { border-color: var(--primary); background: var(--mint-bg); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.wizard-goal-card.selected { border-color: var(--primary); background: var(--mint-bg); }
+.wizard-goal-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+}
+.wizard-goal-icon.cf { background: rgba(81,190,123,0.12); color: #51BE7B; }
+.wizard-goal-icon.eq { background: rgba(37,99,235,0.1); color: #2563EB; }
+.wizard-goal-icon.tax { background: rgba(207,122,48,0.1); color: #CF7A30; }
+.wizard-goal-info { flex: 1; }
+.wizard-goal-title {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.wizard-goal-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Onboarding: Deal picker */
+.wizard-deal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.wizard-deal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+.wizard-deal-card:hover { border-color: var(--primary); }
+.wizard-deal-body {
+  padding: 16px 20px;
+}
+.wizard-deal-name {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.wizard-deal-sponsor {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.wizard-deal-metrics {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wizard-deal-metric {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.wizard-deal-metric strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text-dark);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.wizard-deal-actions {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+.wizard-deal-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.wizard-deal-actions button:first-child { color: var(--text-muted); border-right: 1px solid var(--border); }
+.wizard-deal-actions button:first-child:hover { background: #FFF3E6; color: var(--orange); }
+.wizard-deal-actions button:last-child { color: var(--primary); }
+.wizard-deal-actions button:last-child:hover { background: var(--mint-bg); }
+.wizard-deal-actions button.actioned { opacity: 0.4; pointer-events: none; }
+.wizard-deal-counter {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+.wizard-deal-counter strong { color: var(--primary); }
+.wizard-skip-link {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.wizard-skip-link:hover { color: var(--text-dark); }
+
+/* Onboarding: Completion features */
+.wizard-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin: 32px 0;
+}
+@media (max-width: 600px) { .wizard-features { grid-template-columns: 1fr; } }
+.wizard-feature {
+  background: rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+}
+.wizard-feature-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+.wizard-feature-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.wizard-feature-desc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.4;
+}
+/* Section label in wizard */
+.wizard-section-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
 /* ====== BUY BOX REPORT (Magazine Style) ====== */
 .report-page { padding: 32px; }
 .report-container {
@@ -2204,6 +2892,10 @@ html.dark .credit-card-hero {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Investment Managers
     </a>
+    <a class="nav-item" href="#" data-page="assets" onclick="navigateTo('assets'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Assets
+    </a>
     <div class="nav-section-label">My Investments</div>
     <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
@@ -2213,7 +2905,7 @@ html.dark .credit-card-hero {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Tax Prep
     </a>
-    <div class="nav-section-label">Education</div>
+    <div class="nav-section-label">Support</div>
     <a class="nav-item" href="#" data-page="officehours" onclick="navigateTo('officehours'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
       Office Hours
@@ -2365,6 +3057,15 @@ html.dark .credit-card-hero {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Live Deals</div>
+      <!-- Mobile dropdown (visible only on cap-ios) -->
+      <select class="topbar-mobile-select" id="dealWorkflowSelect" onchange="switchTab(this.options[this.selectedIndex], true)">
+        <option value="new" selected>New Deals</option>
+        <option value="interested">Interested</option>
+        <option value="duediligence">Due Diligence</option>
+        <option value="portfolio">My Portfolio</option>
+        <option value="passed">Passed</option>
+      </select>
+      <!-- Desktop tabs (hidden on cap-ios) -->
       <div class="topbar-tabs" id="dealWorkflowTabs">
         <button class="topbar-tab active" data-tab="new" onclick="switchTab(this)">New Deals</button>
         <button class="topbar-tab" data-tab="interested" onclick="switchTab(this)">Interested</button>
@@ -2374,14 +3075,14 @@ html.dark .credit-card-hero {
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-view-toggle">
-        <button class="view-btn active" data-view="grid" onclick="switchView(this)" title="Grid view">
+        <button class="view-btn active" data-view="feed" onclick="switchView(this)" title="Feed view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>
+        </button>
+        <button class="view-btn" data-view="grid" onclick="switchView(this)" title="Grid view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         </button>
         <button class="view-btn" data-view="list" onclick="switchView(this)" title="List view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        </button>
-        <button class="view-btn" data-view="feed" onclick="switchView(this)" title="Feed view">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>
         </button>
         <button class="view-btn" data-view="map" onclick="switchView(this)" title="Map view">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -2674,46 +3375,50 @@ html.dark .credit-card-hero {
     </div>
     <div class="sub-page">
       <div class="settings-page-title">Choose Your Plan</div>
-      <div class="settings-page-desc">Get access to curated deal flow, GP introductions, and investment tools built for serious LPs.</div>
+      <div class="settings-page-desc">From free deal access to full-service capital deployment with Pascal by your side.</div>
       <div class="plan-grid">
         <div class="plan-card">
           <div class="plan-name">Explorer</div>
           <div class="plan-price">Free</div>
-          <div class="plan-desc">Browse live deals and save your favorites</div>
+          <div class="plan-desc">Browse live deals, build your buy box, and start evaluating opportunities.</div>
           <ul class="plan-features">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>View all live deals</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save and bookmark deals</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Basic deal filtering</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Build your investment buy box</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Deal filtering &amp; search</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Debt Fund Explorer</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly deal digest email</li>
           </ul>
           <button class="btn-cta btn-cta-secondary plan-btn">Current Plan</button>
         </div>
         <div class="plan-card featured">
-          <div class="plan-name">Investor</div>
-          <div class="plan-price">$99<span>/month</span></div>
-          <div class="plan-desc">Full access to deal flow and GP introductions</div>
+          <div class="plan-name">Academy</div>
+          <div class="plan-price">$5,000<span>/year</span></div>
+          <div class="plan-desc">Cashflow Academy membership with structured learning, community, and live coaching.</div>
           <ul class="plan-features">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Explorer</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Buy box matching & scoring</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Unlimited GP introductions</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Deck review requests</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority deal alerts</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cashflow Academy curriculum</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly live office hours with Pascal</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>GP introductions &amp; deal reviews</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Private investor community</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority deal alerts &amp; scoring</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full framework &amp; template library</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn">Upgrade Now</button>
+          <button class="btn-cta btn-cta-primary plan-btn">Join Academy</button>
         </div>
-        <div class="plan-card">
-          <div class="plan-name">Academy</div>
-          <div class="plan-price">$497<span>/month</span></div>
-          <div class="plan-desc">Full deployment plan with 1:1 guidance from Pascal</div>
+        <div class="plan-card" style="border-color:var(--teal-deep);background:linear-gradient(180deg,var(--bg-card) 0%,rgba(31,81,89,0.04) 100%);">
+          <div class="plan-name" style="color:var(--teal-deep);">Family Office</div>
+          <div class="plan-price">$25,000<span>/year</span></div>
+          <div class="plan-desc">1:1 capital allocation partnership with Pascal. For serious deployers ready to build a portfolio.</div>
           <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Investor</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>12-month deployment plan</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly 1:1 support calls</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Live deal review sessions</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Private community access</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full framework library</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Academy</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Custom 12-month deployment plan</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Dedicated 1:1 calls with Pascal</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Co-underwriting on deals</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Direct GP access &amp; negotiation support</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tax &amp; entity structuring guidance</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Portfolio construction &amp; rebalancing</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn">Apply Now</button>
+          <button class="btn-cta btn-cta-primary plan-btn" style="background:var(--teal-deep);">Apply Now</button>
         </div>
       </div>
     </div>
@@ -2872,7 +3577,7 @@ html.dark .credit-card-hero {
       <!-- Main Content -->
       <div style="flex:1;min-width:0;">
         <div id="managersStats" style="margin-bottom:20px;"></div>
-        <div id="managersGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+        <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
       </div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
@@ -3416,6 +4121,9 @@ html.dark .credit-card-hero {
             <option value="10">10%+</option>
           </select>
         </div>
+        <button onclick="clearDebtFilters()" style="align-self:center;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Filters
+        </button>
       </div>
 
       <!-- Stat Cards -->
@@ -3425,12 +4133,20 @@ html.dark .credit-card-hero {
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
-          <div style="display:flex;gap:8px;" id="debtChartToggles">
+          <!-- Desktop: toggle buttons -->
+          <div class="debt-metric-toggle" style="display:flex;gap:8px;" id="debtChartToggles">
             <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
             <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
             <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
             <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
           </div>
+          <!-- Mobile: dropdown (hidden by default, shown on cap-ios) -->
+          <select class="debt-metric-select-mobile" style="display:none;padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);background:var(--bg-card);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23607179%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;" onchange="switchDebtMetric(this.value, null, true)">
+            <option value="yield">Yield</option>
+            <option value="leverage">Leverage</option>
+            <option value="ltv">Loan-to-Value</option>
+            <option value="delinquency">Delinquency Rate</option>
+          </select>
         </div>
         <div class="debt-chart-wrapper" style="position:relative;">
           <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
@@ -3462,6 +4178,37 @@ html.dark .credit-card-hero {
           </thead>
           <tbody id="debtFundTableBody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Assets -->
+  <div class="page" id="page-assets">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Assets</div>
+      <div class="topbar-spacer"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="assetsSearchInput" placeholder="Search by name or location..." oninput="renderAssetsPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;width:220px;color:var(--text-dark);background:var(--bg-card);">
+        <select id="assetsClassFilter" onchange="renderAssetsPage()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);">
+          <option value="">All Asset Classes</option>
+        </select>
+        <select id="assetsStateFilter" onchange="renderAssetsPage()" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);">
+          <option value="">All Locations</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:0;">
+      <!-- Map -->
+      <div id="assetsMapContainer" style="height:340px;background:var(--border-light);position:relative;"></div>
+      <!-- Asset list -->
+      <div style="padding:20px 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);"><span id="assetsCount">0</span> assets</div>
+        </div>
+        <div id="assetsListContainer" style="display:flex;flex-direction:column;gap:8px;"></div>
       </div>
     </div>
   </div>
@@ -3578,6 +4325,67 @@ html.dark .credit-card-hero {
     </div>
   </div>
 
+  <!-- PAGE: More (iOS app only — replaces sidebar) -->
+  <div class="page" id="page-more">
+    <div class="topbar">
+      <div class="topbar-title">More</div>
+    </div>
+    <div class="content-area" style="padding:20px 16px;">
+      <div class="more-menu-section">
+        <div class="more-menu-label">Discover</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('dashboard'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('buybox'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Buy Box</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('assets'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>Assets</span>
+        </a>
+      </div>
+      <div class="more-menu-section">
+        <div class="more-menu-label">My Investments</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('taxprep'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Tax Prep</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('dealflow'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Deal Flow Stats</span>
+        </a>
+      </div>
+      <div class="more-menu-section">
+        <div class="more-menu-label">Learn</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('officehours'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span>Office Hours</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('academy'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span>Cash Flow Academy</span>
+        </a>
+        <a class="more-menu-item" href="https://growyourcashflow.io/income-fund" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span>GYC Income Fund</span>
+        </a>
+      </div>
+      <div class="more-menu-section">
+        <div class="more-menu-label">Account</div>
+        <a class="more-menu-item" href="#" onclick="navigateTo('subscription'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          <span>Subscription</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('settings'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -3652,7 +4460,9 @@ function transformAirtableRecord(rec) {
     fundAUM: rec['Fund AUM'] || rec.fields?.['Fund AUM'] || null,
     loanCount: rec['Loan Count'] || rec.fields?.['Loan Count'] || null,
     avgLoanLTV: rec['Avg Loan LTV'] || rec.fields?.['Avg Loan LTV'] || null,
-    location: rec['Location'] || rec.fields?.['Location'] || ''
+    location: rec['Location'] || rec.fields?.['Location'] || '',
+    address: rec['Property Address'] || rec.fields?.['Property Address'] || '',
+    deckUrl: rec['_deckUrl'] || rec.fields?.['_deckUrl'] || ''
   };
 }
 
@@ -3849,21 +4659,39 @@ if (_oldSaved.length > 0) {
 }
 let savedDeals = { has(id) { return dealStages[id] && dealStages[id] !== 'new'; }, add(id) { setDealStage(id, 'interested'); }, delete(id) { setDealStage(id, 'new'); } };
 let currentTab = 'new';
-let currentView = 'grid';
+let currentView = 'feed';
 let tableSortCol = null;
 let tableSortAsc = true;
 
 function fmt(val, type) {
   if (val === undefined || val === null || val === '') return '---';
-  if (type === 'pct') return (val * 100).toFixed(1) + '%';
-  if (type === 'pct0') return (val * 100).toFixed(0) + '%';
-  if (type === 'money') {
-    if (val === 0) return '$0';
-    if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
-    if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
-    return '$' + val.toLocaleString();
+  if (type === 'pct') {
+    const n = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(n)) return '---';
+    // If value > 1, it's already a percentage (e.g. 16.23 = 16.23%)
+    // If value <= 1, it's a decimal (e.g. 0.08 = 8%)
+    const pct = n > 1 ? n : n * 100;
+    return pct.toFixed(1) + '%';
   }
-  if (type === 'multiple') return val.toFixed(2) + 'x';
+  if (type === 'pct0') {
+    const n = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(n)) return '---';
+    const pct = n > 1 ? n : n * 100;
+    return pct.toFixed(0) + '%';
+  }
+  if (type === 'money') {
+    const n = typeof val === 'string' ? parseFloat(val.replace(/[$,]/g, '')) : val;
+    if (isNaN(n)) return '---';
+    if (n === 0) return '$0';
+    if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+    return '$' + n.toLocaleString();
+  }
+  if (type === 'multiple') {
+    const n = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(n)) return '---';
+    return n.toFixed(2) + 'x';
+  }
   return val;
 }
 
@@ -3909,37 +4737,66 @@ function renderStageBtn(dealId) {
   return `<button class="deal-stage-btn ${stageBtnClass(stage)}" onclick="event.stopPropagation(); toggleStageDropdown('${dealId}', this)">${stageLabel(stage)} ${chevron}</button>`;
 }
 
+function getAssetPlaceholder(assetClass) {
+  // Gradient placeholders by asset class
+  const colors = {
+    'Lending': { bg: 'linear-gradient(135deg,#1a365d,#2563EB)', icon: '&#128178;' },
+    'Multi Family': { bg: 'linear-gradient(135deg,#14532d,#22c55e)', icon: '&#127970;' },
+    'Self Storage': { bg: 'linear-gradient(135deg,#713f12,#f59e0b)', icon: '&#128230;' },
+    'Hotels/Hospitality': { bg: 'linear-gradient(135deg,#4a1d96,#8b5cf6)', icon: '&#127976;' },
+    'Industrial': { bg: 'linear-gradient(135deg,#3f3f46,#71717a)', icon: '&#127981;' },
+    'RV/Mobile Home Parks': { bg: 'linear-gradient(135deg,#065f46,#10b981)', icon: '&#127957;' },
+    'Short Term Rental': { bg: 'linear-gradient(135deg,#9d174d,#ec4899)', icon: '&#127965;' },
+    'Mixed-Use': { bg: 'linear-gradient(135deg,#1e3a5f,#0ea5e9)', icon: '&#127959;' },
+    'Business / Other': { bg: 'linear-gradient(135deg,#44403c,#a8a29e)', icon: '&#128188;' },
+  };
+  return colors[assetClass] || { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+}
+
 function renderFeedCard(deal) {
   const stage = getDealStage(deal.id);
   const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const isPassed = stage === 'passed';
+  const ph = getAssetPlaceholder(deal.assetClass);
+  const heroImg = deal.imageUrl || '';
+  const heroBg = heroImg ? `url(${heroImg}) center/cover no-repeat` : ph.bg;
+
   return `
-    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:box-shadow 0.15s ease;">
-      <div style="padding:20px 24px 16px;cursor:pointer;" onclick="window.location.href='deal.html?id=${deal.id}'">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="credit-badge" style="background:rgba(0,0,0,0.06);color:var(--text-secondary);font-size:10px;padding:3px 8px;">${deal.assetClass || ''}</span>
-            <span class="credit-badge" style="background:rgba(0,0,0,0.06);color:var(--text-secondary);font-size:10px;padding:3px 8px;">${deal.dealType || ''}</span>
-          </div>
-          <span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${deal.dealType || ''} &middot; ${deal.assetClass || ''}</span>
+    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid ${isInterested ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius);overflow:hidden;transition:all 0.2s ease;${isPassed ? 'opacity:0.45;' : ''}box-shadow:var(--shadow-card);width:100%;">
+      <!-- Hero Image / Placeholder -->
+      <div onclick="openPanel('${deal.id}')" style="height:140px;background:${heroBg};position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        ${!heroImg ? `<span style="font-size:48px;opacity:0.3;">${ph.icon}</span>` : ''}
+        <div style="position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;backdrop-filter:blur(8px);">${deal.assetClass || 'Other'}</span>
+          ${deal.dealType ? `<span style="font-family:var(--font-ui);font-size:10px;font-weight:600;padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.35);color:rgba(255,255,255,0.85);backdrop-filter:blur(8px);">${deal.dealType}</span>` : ''}
         </div>
-        <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">${deal.investmentName}</div>
-        <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:16px;">${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
-          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--green);">${deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</div></div>
-          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Min Invest</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">${fmt(deal.investmentMinimum, 'money')}</div></div>
-          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Pref Return</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">${deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</div></div>
-          <div><div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Hold</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">${deal.holdPeriod ? (deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs') : '---'}</div></div>
+        ${deal.status ? `<span class="card-status-pill ${statusPillClass(deal.status)}" style="position:absolute;top:12px;right:12px;font-size:10px;padding:3px 10px;">${deal.status}</span>` : ''}
+      </div>
+
+      <!-- Content -->
+      <div style="padding:16px 20px 12px;" onclick="openPanel('${deal.id}')" style="cursor:pointer;">
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;line-height:1.3;cursor:pointer;" onclick="openPanel('${deal.id}')">${deal.investmentName}</div>
+        <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+          ${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          ${deal.targetIRR ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--green);line-height:1.2;">${fmt(deal.targetIRR, 'pct')}</div></div>` : ''}
+          ${deal.preferredReturn ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Pref Return</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);line-height:1.2;">${fmt(deal.preferredReturn, 'pct')}</div></div>` : ''}
+          ${deal.investmentMinimum ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Minimum</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);line-height:1.2;">${fmt(deal.investmentMinimum, 'money')}</div></div>` : ''}
+          ${deal.holdPeriod ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Hold Period</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);line-height:1.2;">${deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs'}</div></div>` : ''}
         </div>
       </div>
-      <div style="display:flex;border-top:1px solid var(--border);align-items:stretch;">
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          Skip
+
+      <!-- Action Buttons -->
+      <div style="display:flex;border-top:1px solid var(--border);">
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:none;background:${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${isPassed ? 'var(--red)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(208,64,64,0.06)';this.style.color='#D04040'" onmouseout="this.style.background='${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'}';this.style.color='${isPassed ? '#D04040' : 'var(--text-muted)'}'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Pass
         </button>
         <div style="width:1px;background:var(--border);"></div>
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border:none;background:${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:600;color:${isInterested ? 'var(--green)' : 'var(--text-secondary)'};transition:all 0.15s;" onmouseover="this.style.background='${isInterested ? 'rgba(81,190,123,0.15)' : 'var(--border-light)'}'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}'">
-          <svg viewBox="0 0 24 24" fill="${isInterested ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          Save
+        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:none;background:${isInterested ? 'rgba(81,190,123,0.08)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${isInterested ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(81,190,123,0.08)';this.style.color='#51BE7B'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.08)' : 'transparent'}';this.style.color='${isInterested ? '#51BE7B' : 'var(--text-muted)'}'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;"><polyline points="20 6 9 17 4 12"/></svg>
+          Interested
         </button>
       </div>
     </div>`;
@@ -4708,11 +5565,20 @@ function updateStats(deals) {
   const funds = deals.filter(d => d.dealType === 'Fund').length;
   const syndications = deals.filter(d => d.dealType === 'Syndication').length;
 
-  document.getElementById('statsBar').innerHTML = `
-    <div class="stat-item"><span class="stat-label">Total Deals:</span> <span class="stat-value">${totalDeals}</span></div>
-    <div class="stat-divider"></div>
-    <div class="stat-item"><span class="stat-label">Avg Target IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
-  `;
+  const isIOS = document.documentElement.classList.contains('cap-ios');
+  if (isIOS) {
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item"><span class="stat-label">Deals:</span> <span class="stat-value">${totalDeals}</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Avg IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
+    `;
+  } else {
+    document.getElementById('statsBar').innerHTML = `
+      <div class="stat-item"><span class="stat-label">Total Deals:</span> <span class="stat-value">${totalDeals}</span></div>
+      <div class="stat-divider"></div>
+      <div class="stat-item"><span class="stat-label">Avg Target IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
+    `;
+  }
 }
 
 // Table view columns
@@ -4840,10 +5706,12 @@ function renderAll() {
     // Toggle between 3-column grid and single-column feed
     if (currentView === 'feed') {
       grid.style.gridTemplateColumns = '1fr';
-      grid.style.maxWidth = '720px';
+      grid.style.maxWidth = '';
+      grid.style.margin = '';
     } else {
       grid.style.gridTemplateColumns = '';
       grid.style.maxWidth = '';
+      grid.style.margin = '';
     }
     if (deals.length === 0) {
       grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
@@ -4907,10 +5775,23 @@ function clearFilters() {
   applyFilters();
 }
 
-function switchTab(el) {
-  document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  currentTab = el.dataset.tab;
+function switchTab(el, fromSelect) {
+  if (fromSelect) {
+    // Called from mobile <select> dropdown
+    const sel = document.getElementById('dealWorkflowSelect');
+    currentTab = sel.value;
+    // Also sync the desktop tabs
+    document.querySelectorAll('.topbar-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.tab === currentTab);
+    });
+  } else {
+    document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    currentTab = el.dataset.tab;
+    // Sync mobile dropdown
+    const sel = document.getElementById('dealWorkflowSelect');
+    if (sel) sel.value = currentTab;
+  }
   renderAll();
 }
 
@@ -5256,6 +6137,7 @@ function navigateTo(page) {
   if (page === 'settings') initBuyBox();
   if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
+  if (page === 'assets') renderAssetsPage();
   if (page === 'dashboard') renderDashboard();
   if (page === 'goals') renderGoals();
   if (page === 'portfolio') renderPortfolio();
@@ -5478,342 +6360,378 @@ function logout() {
   window.location.href = 'deal-login.html';
 }
 
-// ========== BUY BOX WIZARD ENGINE ==========
+// ========== ONBOARDING WIZARD ENGINE (Branching) ==========
 let wizardStep = 0;
+let wizardStepIndex = 0; // index into current step sequence
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
+// Step sequence branches based on goal selection
+const ONBOARDING_FLOW = {
+  common_start: [0, 1, 2],
+  cashflow: [3, 4],
+  growth: [5, 6],
+  tax: [7, 8],
+  common_end: [9, 10]
+};
+
+function getStepSequence() {
+  const branch = wizardData._branch || 'cashflow';
+  return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
+}
+
+const PHASE_LABELS = ['Welcome', 'About You', 'Your Goal', 'Your Targets', 'Preferences', 'Browse Deals', 'All Set'];
+
+function getPhaseLabel() {
+  const seq = getStepSequence();
+  const step = seq[wizardStepIndex];
+  if (step <= 2) return PHASE_LABELS[step];
+  if (step === 9) return PHASE_LABELS[5];
+  if (step === 10) return PHASE_LABELS[6];
+  return PHASE_LABELS[3 + (wizardStepIndex - 3)];
+}
+
 const WIZARD_STEPS = [
-  // 0: Welcome
+  // 0: Welcome (all paths)
   {
-    title: 'Welcome to the Passive Investing Buy Box Builder',
-    desc: 'This tool helps you get crystal clear on what you\'re looking for in your next LP investment. We\'ll walk you through your goals, risk tolerance, and preferences so we can match you with the right deals.',
-    type: 'info'
+    title: 'Welcome to Grow Your Cashflow',
+    desc: 'We\'re going to help you organize your investments, analyze your portfolio, and give you dialed-in coaching in our office hours.<br><br>Let\'s build your investment profile so we can match you with the right deals.',
+    type: 'welcome'
   },
-  // 1: Basic Info
+  // 1: About You (all paths)
   {
-    title: 'Let\'s start with the basics',
-    desc: 'We\'ll use this to personalize your buy box report.',
-    type: 'fields',
-    fields: [
-      { key: 'firstName', label: 'First Name', placeholder: 'First name', inputType: 'text' },
-      { key: 'lastName', label: 'Last Name', placeholder: 'Last name', inputType: 'text' },
-      { key: 'dob', label: 'Date of Birth', placeholder: 'MM/DD/YYYY', inputType: 'text' }
-    ]
-  },
-  // 2: Investor Profile & Accreditation
-  {
-    title: 'Investor Profile & Accreditation',
-    desc: 'This helps us understand where you\'re coming from as an investor.',
+    title: 'Tell us about yourself',
+    desc: 'We\'ll use this to personalize your experience and match you with the right opportunities.',
     type: 'mixed',
     fields: [
-      { key: 'incomeSource', label: 'Primary Source of Income', inputType: 'select', options: ['W2 - Consistent Salary', 'W2 - Sales Commissions', 'Business Distributions/Profits', 'Passive Investments', 'N/A (Student or Other)'] },
-      { key: 'lpCount', label: 'How many LP investments have you made so far?', placeholder: 'e.g. 4', inputType: 'text' }
+      { key: 'firstName', label: 'First Name', placeholder: 'First name', inputType: 'text' },
+      { key: 'lastName', label: 'Last Name', placeholder: 'Last name', inputType: 'text' }
     ],
-    radio: { key: 'accreditation', label: 'Accreditation Type', options: [
+    radio: { key: 'accreditation', label: 'Accreditation Status', options: [
       'I\'m not an accredited investor',
       'I qualify based on net worth (over $1M, excluding primary residence)',
       'I qualify based on income ($200K+ individually or $300K+ with spouse)',
       'I qualify in another way (licenses, entities, etc.)'
     ]}
   },
-  // 3: Investment Trigger
+  // 2: Goal Selection (BRANCHING POINT)
   {
-    title: 'What prompted you to start looking at new investments right now?',
-    desc: 'Choose the one that most applies.',
-    type: 'radio',
-    key: 'trigger',
-    options: [
-      'Recent liquidity event (business sale, bonus, inheritance)',
-      'Sold existing property/investment; need to redeploy',
-      'Dissatisfied with current investment performance',
-      'Shifting focus from growth to consistent income',
-      'Looking to reduce taxes this year',
-      'Diversifying out of the stock market',
-      'Planning transition away from active W-2 work',
-      'Other'
-    ]
+    title: 'What\'s the primary goal for your next investment?',
+    desc: 'This determines which opportunities we\'ll surface for you. Each path leads to different questions tailored to your strategy.',
+    type: 'goalSelect'
   },
-  // 4: Investment Goal
+  // 3: Cash Flow - Targets
   {
-    title: 'What\'s the primary goal for this next investment?',
-    desc: 'This helps determine which types of opportunities align with your objectives.',
-    type: 'radio',
-    key: 'goal',
-    options: [
-      'Cash Flow (income now)',
-      'Equity Growth (wealth later)',
-      'Tax Optimization (tax shield now)'
-    ],
-    guide: {
-      items: [
-        '<strong>Cash Flow</strong> &rarr; Lending, stabilized assets, NNN leases. Predictable income from day one.',
-        '<strong>Equity Growth</strong> &rarr; Value-add, development. Higher upside, less immediate income.',
-        '<strong>Tax Optimization</strong> &rarr; Cost segregation, bonus depreciation, oil &amp; gas. Shelter current income.'
-      ]
-    }
-  },
-  // 5: Investment Sizing
-  {
-    title: 'Let\'s size the investment properly',
-    desc: 'Understanding your capital helps us recommend deals in the right range.',
-    type: 'fields',
-    fields: [
-      { key: 'checkSize', label: 'Maximum Check Size', placeholder: '$50,000', inputType: 'text' },
-      { key: 'networth', label: 'Approximate Current Net Worth', placeholder: '$1,500,000', inputType: 'text' }
-    ]
-  },
-  // 6: Investment Structure
-  {
-    title: 'How will you be making this investment?',
-    desc: 'This affects deal eligibility and tax treatment.',
+    title: 'Let\'s dial in your cash flow needs',
+    desc: 'Understanding your current income and targets helps us recommend the right deals.',
     type: 'mixed',
-    radio: { key: 'entity', label: 'Investment Entity', options: ['Personal Name', 'LLC', 'Trust', 'Self Directed Retirement Account (SD-IRA/401K)'] },
-    checks: { key: 'fundSource', label: 'Where Is The Money Coming From?', options: ['Bank Account (Cash)', 'Investment Account (Need to Sell Stocks/Real Estate)', 'Other'] }
-  },
-  // 7: Capital Availability
-  {
-    title: 'When will your capital be available to invest?',
-    desc: 'This helps operators know if you\'re ready to move or need time.',
-    type: 'radio',
-    key: 'capitalReady',
-    options: [
-      'Ready now',
-      'Needs to be moved (already available but in another account)',
-      '1-6 months (waiting for a liquidity event)'
-    ]
-  },
-  // 8: Deployment Timeline
-  {
-    title: 'How soon would you like to invest once capital is ready?',
-    desc: 'This sets expectations with operators about your timeline.',
-    type: 'radio',
-    key: 'urgency',
-    options: [
-      'Actively looking (ASAP)',
-      'Before year-end (tax planning)',
-      'Only when the right deal appears'
-    ]
-  },
-  // 9: Asset Classes
-  {
-    title: 'Which asset classes are you interested in?',
-    desc: 'Different asset classes come with different risk/return profiles. Select all that interest you.',
-    type: 'checks',
-    key: 'assetClasses',
-    options: [
-      'Business / Other', 'Hotels / Hospitality', 'Industrial', 'Land',
-      'Multi-Family', 'NNN (Triple Net Lease)', 'Oil & Gas', 'Private Debt / Credit',
-      'RV / Mobile Home Parks', 'Self Storage', 'Senior Assisted Living',
-      'Short-Term Rentals', 'Single Family Homes', 'Retail Shopping Centres'
-    ],
-    grid: true
-  },
-  // 10: Investment Strategies
-  {
-    title: 'Which investment strategies fit your preferences?',
-    desc: 'Your strategy preference shapes the risk/return profile of your portfolio.',
-    type: 'checks',
-    key: 'strategies',
-    options: ['Lending / Credit', 'Value-Add', 'Development'],
-    guide: {
-      items: [
-        '<strong>Lending/Credit</strong> &rarr; Predictable income, lower volatility, senior-secured. Think of it like being the bank.',
-        '<strong>Value-Add</strong> &rarr; Medium risk, upside from improvements, income ramps over time.',
-        '<strong>Development</strong> &rarr; Higher risk, typically no cash flow during build, large upside at exit.'
-      ]
-    }
-  },
-  // 11: Deal Structures
-  {
-    title: 'Which deal structures would you consider?',
-    desc: 'This clarifies how diversified or focused you want your allocation to be.',
-    type: 'checks',
-    key: 'dealStructure',
-    options: ['Single Strategy Operators', 'Multi Strategy Operators'],
-    guide: {
-      items: [
-        '<strong>Single Strategy</strong> &rarr; Concentrated bet on one thesis. Easier to underwrite, higher conviction.',
-        '<strong>Multi Strategy</strong> &rarr; Diversified across strategies within one fund. More exposure, requires trust in the team.'
-      ]
-    }
-  },
-  // 12: Investment Types
-  {
-    title: 'What types of investments are you open to?',
-    desc: 'Each type offers a different cash flow, risk, and return profile.',
-    type: 'checks',
-    key: 'instruments',
-    options: ['Debt (1st Position)', 'Equity (2nd Position)'],
-    guide: {
-      items: [
-        '<strong>Debt (1st Position)</strong> &rarr; You are the lender. Predictable income, senior security, lower upside.',
-        '<strong>Equity (2nd Position)</strong> &rarr; You are an owner. Higher upside, more risk, and potential for large gains at exit.'
-      ]
-    }
-  },
-  // 13: Minimum Total Return
-  {
-    title: 'What\'s the minimum total return (IRR) that would interest you?',
-    desc: 'This is the overall annualized return over the full hold period, including both cash flow and equity gain at exit.',
-    type: 'fields',
     fields: [
-      { key: 'minIRR', label: 'Minimum Target IRR', placeholder: '7%', inputType: 'text' }
+      { key: 'currentCashFlow', label: 'What is your current annual passive income / cash flow?', placeholder: '$24,000', inputType: 'text' },
+      { key: 'targetCashFlow', label: 'What annual cash flow are you trying to get to?', placeholder: '$120,000', inputType: 'text' },
+      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$50,000', inputType: 'text' }
     ],
     guide: {
       items: [
-        '<strong>Credit/Lending:</strong> 6-20% typical range',
-        '<strong>Value-Add/Core:</strong> 10-20% typical range',
-        '<strong>Development/Opportunistic:</strong> 10-30%+ typical range'
+        '<strong>Example:</strong> $100K invested at 8% cash-on-cash = $8K/year in distributions',
+        '<strong>Tip:</strong> To reach $120K/year at 8% yield, you\'d need approximately $1.5M deployed'
       ]
     }
   },
-  // 14: Year-1 Cash Flow
+  // 4: Cash Flow - Preferences
   {
-    title: 'What\'s the minimum Year-1 cash flow you\'d need?',
-    desc: 'Focus on Year 1 income - your cash distribution requirement. Example: $100K invested with 8% cash-on-cash = $8K in Year 1.',
-    type: 'fields',
+    title: 'How do you want your income structured?',
+    desc: 'These preferences help us filter for deals that match your cash flow needs.',
+    type: 'mixed',
+    radio: { key: 'distributions', label: 'How often do you want distributions?', options: ['Monthly', 'Quarterly', 'Annually'] },
+    checks: { key: 'assetClasses', label: 'What types of cash flow investments interest you?', options: [
+      'Private Debt / Credit', 'Multi-Family', 'NNN (Triple Net Lease)', 'Self Storage', 'RV / Mobile Home Parks', 'Hotels / Hospitality'
+    ]},
+    guide: {
+      items: [
+        '<strong>Private Debt/Lending</strong> &rarr; 6-12% yields, predictable monthly/quarterly income, senior-secured',
+        '<strong>Stabilized Multi-Family</strong> &rarr; 5-9% cash yields, long-term hold, inflation protection',
+        '<strong>NNN Leases</strong> &rarr; Passive, credit-tenant backed, predictable income with minimal management'
+      ]
+    }
+  },
+  // 5: Equity Growth - Targets
+  {
+    title: 'Let\'s define your growth targets',
+    desc: 'Understanding your return expectations helps us match you with the right opportunities.',
+    type: 'mixed',
     fields: [
-      { key: 'minCashYield', label: 'Minimum Year-1 Cash-on-Cash', placeholder: '6%', inputType: 'text' }
-    ]
-  },
-  // 15: Lockup Period
-  {
-    title: 'How long are you comfortable locking up capital?',
-    desc: 'Longer lockups often provide access to higher-return opportunities but less liquidity.',
-    type: 'radio',
-    key: 'lockup',
-    options: [
-      'Less than 1 Year',
-      'At least 1 year',
-      'At least 3 years',
-      'At least 5 years'
+      { key: 'minIRR', label: 'What\'s the minimum total return (IRR) you\'re targeting?', placeholder: '15%', inputType: 'text' },
+      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$100,000', inputType: 'text' }
     ],
+    radio: { key: 'riskTolerance', label: 'What\'s your risk tolerance?', options: [
+      'Conservative (8-12% IRR target)',
+      'Moderate (12-18% IRR target)',
+      'Aggressive (18%+ IRR target)'
+    ]},
     guide: {
       items: [
-        '<strong>Short lockups</strong> &rarr; More liquidity, typically lower returns. Good for capital you may need.',
-        '<strong>Longer lockups</strong> &rarr; Access to illiquidity premium. Higher returns for patient capital.'
+        '<strong>Conservative</strong> &rarr; Core/stabilized assets with lower risk',
+        '<strong>Moderate</strong> &rarr; Value-add strategies with proven operators',
+        '<strong>Aggressive</strong> &rarr; Development, opportunistic plays with high upside'
       ]
     }
   },
-  // 16: Redemption Frequency
+  // 6: Equity Growth - Preferences
   {
-    title: 'How much flexibility do you prefer after lockup?',
-    desc: 'What redemption frequency are you comfortable with once your lockup period ends?',
-    type: 'checks',
-    key: 'redemption',
-    options: ['Monthly', 'Quarterly', 'Annually', 'End of Term'],
+    title: 'What growth strategies interest you?',
+    desc: 'Select the asset classes and strategies that fit your investment thesis.',
+    type: 'mixed',
+    radio: { key: 'lockup', label: 'How long are you willing to hold?', options: [
+      '2-3 years', '3-5 years', '5-7 years', '7+ years'
+    ]},
+    checks: { key: 'assetClasses', label: 'Which asset classes?', options: [
+      'Multi-Family', 'Industrial', 'Hotels / Hospitality', 'Self Storage', 'Short-Term Rentals', 'Mixed-Use', 'Land'
+    ]},
     guide: {
       items: [
-        '<strong>Monthly</strong> &rarr; Highly liquid, rare in private offerings. Common in open-ended credit funds.',
-        '<strong>Quarterly</strong> &rarr; Most common among evergreen debt funds.',
-        '<strong>Annually</strong> &rarr; Offers managers capital stability. Common in equity funds.',
-        '<strong>End of Term</strong> &rarr; Capital locked until maturity. Highest potential returns.'
+        '<strong>Value-Add</strong> &rarr; Buy underperforming assets, improve them, increase NOI. 12-20% IRR typical.',
+        '<strong>Development</strong> &rarr; Ground-up construction. No cash flow during build, big upside at exit.',
+        '<strong>Opportunistic</strong> &rarr; Distressed, turnaround, or high-growth. Highest risk/reward.'
       ]
     }
   },
-  // 17: Distribution Cadence
+  // 7: Tax Optimization - Situation
   {
-    title: 'What distribution cadence are you willing to accept?',
-    desc: 'Let\'s clarify how flexible you are about receiving cash flow from your investments.',
-    type: 'checks',
-    key: 'distributions',
-    options: ['Monthly', 'Quarterly', 'Annually', 'End of Term'],
-    guide: {
-      items: [
-        '<strong>Monthly</strong> &rarr; Predictable, budgeting-friendly cash flow.',
-        '<strong>Quarterly</strong> &rarr; Common for most private placements.',
-        '<strong>Annually</strong> &rarr; Uncommon for most private placements.',
-        '<strong>End of term</strong> &rarr; Common in development, growth, and turnaround projects where profits are realized at the exit.'
-      ]
-    }
-  },
-  // 18: Firm Size
-  {
-    title: 'What size of investment firm are you comfortable with?',
-    desc: 'Firm size influences experience, systems, and deal flow.',
-    type: 'checks',
-    key: 'firmSize',
-    options: ['Emerging Manager (< $20M)', 'Mid-Sized ($20M-$100M)', 'Institutional ($100M+)'],
-    guide: {
-      items: [
-        '<strong>Emerging Managers (&lt;$20M)</strong> &rarr; Often scrappy and entrepreneurial. May offer more aggressive returns, but also lack experience.',
-        '<strong>Mid-Sized ($20M-$100M)</strong> &rarr; Some track record, usually growing teams and repeatable strategies.',
-        '<strong>Institutional ($100M+)</strong> &rarr; Greater systems, staff, and capital controls. Typically manage multiple funds or strategies.'
-      ]
-    }
-  },
-  // 19: Audited Financials
-  {
-    title: 'How important are audited financials to you?',
-    desc: 'Most smaller funds under $100M don\'t conduct third-party audits. Audited financials help verify the fund\'s accounting follows standard rules.',
-    type: 'radio',
-    key: 'auditPref',
-    options: [
-      'I Require Audited Financials',
-      'Unaudited Financials Are Acceptable'
+    title: 'Let\'s understand your tax situation',
+    desc: 'Real estate investments can provide significant tax benefits through depreciation, cost segregation, and bonus depreciation.',
+    type: 'mixed',
+    fields: [
+      { key: 'taxableIncome', label: 'What\'s your approximate annual taxable income?', placeholder: '$500,000', inputType: 'text' },
+      { key: 'taxOffset', label: 'How much are you looking to offset in taxes this year?', placeholder: '$100,000', inputType: 'text' }
     ],
+    radio: { key: 'entity', label: 'What entity will you invest through?', options: [
+      'Personal Name', 'LLC', 'Trust', 'Self-Directed IRA / 401K'
+    ]},
     guide: {
       items: [
-        '<strong>Unaudited</strong> &rarr; Common for smaller funds, especially under $100M. Trust in the operator is key.',
-        '<strong>Audited</strong> &rarr; Provides external validation. Often required by institutional investors.',
-        '<strong>Note:</strong> Audits typically cost $10K-$40K+ annually, so many small funds skip them to reduce expenses.'
+        '<strong>Cost Segregation</strong> &rarr; Accelerated depreciation on components of a building (roof, HVAC, etc.)',
+        '<strong>Bonus Depreciation</strong> &rarr; Year-1 write-off of certain building improvements (currently phasing down)',
+        '<strong>Oil & Gas</strong> &rarr; Intangible drilling costs provide immediate deductions against ordinary income'
       ]
     }
   },
-  // 20: Firm Focus
+  // 8: Tax Optimization - Preferences
   {
-    title: 'How focused do you prefer the investment firm to be?',
-    desc: 'Some firms specialize in one asset class. Others diversify across multiple strategies. Your comfort here impacts which operators you\'ll want to work with.',
-    type: 'radio',
-    key: 'firmFocus',
-    options: ['Single-Strategy Firms', 'Multi-Strategy Firms'],
+    title: 'Which tax strategies interest you?',
+    desc: 'Select the timing and types of investments that align with your tax planning.',
+    type: 'mixed',
+    fields: [
+      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$75,000', inputType: 'text' }
+    ],
+    radio: { key: 'taxTimeline', label: 'When do you need the tax benefit?', options: [
+      'This tax year (immediate)',
+      'Next 1-2 years',
+      'Flexible / long-term planning'
+    ]},
+    checks: { key: 'assetClasses', label: 'Which asset types offer the tax benefits you need?', options: [
+      'Multi-Family', 'Oil & Gas', 'Land', 'Short-Term Rentals', 'Industrial'
+    ]},
     guide: {
       items: [
-        '<strong>Single-Strategy Firms</strong> &rarr; Usually more specialized and dialed in. Common among operators &lt; $100M.',
-        '<strong>Multi-Strategy Firms</strong> &rarr; More common among larger platforms. May offer better diversification but require more trust in team bandwidth.',
-        '&#x26A0;&#xFE0F; Be cautious of small firms doing too many things &mdash; it can dilute focus and performance.'
+        '<strong>Multi-Family (Cost Seg)</strong> &rarr; Accelerate depreciation on large apartment buildings for year-1 write-offs',
+        '<strong>Oil & Gas</strong> &rarr; Intangible drilling costs provide immediate 60-80% deductions',
+        '<strong>Short-Term Rentals (REPS)</strong> &rarr; Active participation can unlock passive loss deductions against W2 income'
       ]
     }
+  },
+  // 9: Browse Deals (all paths)
+  {
+    title: 'Take a look at what\'s available',
+    desc: 'Here are deals that match your preferences. Mark the ones that interest you \u2014 you can always change your mind later.',
+    type: 'dealPicker'
+  },
+  // 10: All Set (all paths)
+  {
+    title: 'You\'re all set!',
+    desc: 'Your investment profile is locked in. Here\'s what you can do next.',
+    type: 'welcome'
   }
 ];
 
 function openBuyBoxWizard() {
+  wizardStepIndex = 0;
   wizardStep = 0;
   wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
   // Pre-fill from user data
   const user = getUser();
   if (user && !wizardData.firstName) {
-    wizardData.firstName = user.firstName || '';
-    wizardData.lastName = user.lastName || '';
+    wizardData.firstName = user.firstName || (user.name || '').split(' ')[0] || '';
+    wizardData.lastName = user.lastName || (user.name || '').split(' ').slice(1).join(' ') || '';
   }
   document.getElementById('wizardOverlay').classList.add('active');
   renderWizardStep();
 }
 
 function closeWizard() {
+  collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
   document.getElementById('wizardOverlay').classList.remove('active');
+  document.querySelector('.wizard-body').classList.remove('welcome-bg');
   // Update buy box settings from wizard data
   syncWizardToBuyBox();
   if (localStorage.getItem('gycBuyBoxComplete')) {
-    renderReport();
+    if (typeof renderReport === 'function') renderReport();
   }
 }
 
 function renderWizardStep() {
+  const seq = getStepSequence();
+  wizardStep = seq[wizardStepIndex];
   const step = WIZARD_STEPS[wizardStep];
-  const total = WIZARD_STEPS.length;
-  const pct = ((wizardStep + 1) / total * 100).toFixed(0);
+  const total = seq.length;
+  const pct = ((wizardStepIndex + 1) / total * 100).toFixed(0);
   document.getElementById('wizardProgress').style.width = pct + '%';
-  document.getElementById('wizardStepLabel').textContent = `Step ${wizardStep + 1} of ${total}`;
-  document.getElementById('wizardBack').style.display = wizardStep === 0 ? 'none' : '';
-  document.getElementById('wizardNext').textContent = wizardStep === total - 1 ? 'Finish' : 'Next';
+  document.getElementById('wizardStepLabel').textContent = getPhaseLabel();
+  document.getElementById('wizardBack').style.display = wizardStepIndex === 0 ? 'none' : '';
+  document.getElementById('wizardNext').textContent = wizardStepIndex === total - 1 ? 'Finish' : 'Next';
 
-  let html = `<div class="wizard-card-title">${step.title}</div>`;
+  // Toggle welcome background
+  const wizBody = document.querySelector('.wizard-body');
+  if (step.type === 'welcome') {
+    wizBody.classList.add('welcome-bg');
+  } else {
+    wizBody.classList.remove('welcome-bg');
+  }
+
+  let html = '';
+
+  // ===== WELCOME TYPE =====
+  if (step.type === 'welcome') {
+    html += '<div class="wizard-welcome">';
+    if (wizardStep === 0) {
+      // First welcome screen
+      html += `<div class="wizard-card-title" style="font-size:38px;color:#fff;margin-bottom:16px;">${step.title}</div>`;
+      html += `<div class="wizard-card-desc" style="color:rgba(255,255,255,0.75);font-size:18px;margin-bottom:16px;">${step.desc}</div>`;
+      html += '<div class="wizard-time-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> About 5 minutes</div><br>';
+      html += '<button class="wizard-welcome-cta" onclick="wizardNext()">Get Started</button>';
+    } else {
+      // Completion screen
+      const branch = wizardData._branch || 'cashflow';
+      let summaryText = 'Your preferences are saved and we\'re matching you with deals.';
+      if (branch === 'cashflow') summaryText = 'We\'ve matched you with income-focused deals tailored to your cash flow targets.';
+      else if (branch === 'growth') summaryText = 'We\'ve matched you with growth-oriented deals targeting your return objectives.';
+      else if (branch === 'tax') summaryText = 'We\'ve matched you with deals that offer the tax benefits you\'re looking for.';
+      html += '<div style="font-size:48px;margin-bottom:16px;">&#10003;</div>';
+      html += `<div class="wizard-card-title" style="font-size:38px;color:#fff;margin-bottom:12px;">${step.title}</div>`;
+      html += `<div class="wizard-card-desc" style="color:rgba(255,255,255,0.75);font-size:17px;margin-bottom:8px;">${summaryText}</div>`;
+      html += '<div class="wizard-features">';
+      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128200;</div><div class="wizard-feature-title">Browse Live Deals</div><div class="wizard-feature-desc">Matched to your buy box</div></div>';
+      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128218;</div><div class="wizard-feature-title">Book Office Hours</div><div class="wizard-feature-desc">Get personalized coaching</div></div>';
+      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128202;</div><div class="wizard-feature-title">Track Portfolio</div><div class="wizard-feature-desc">Log your investments</div></div>';
+      html += '</div>';
+      html += '<button class="wizard-welcome-cta" onclick="wizardNext()">Go to My Dashboard</button>';
+    }
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== GOAL SELECT TYPE =====
+  if (step.type === 'goalSelect') {
+    html += `<div class="wizard-card-title">${step.title}</div>`;
+    html += `<div class="wizard-card-desc">${step.desc}</div>`;
+    html += '<div class="wizard-goal-cards">';
+    const goals = [
+      { branch: 'cashflow', title: 'Cash Flow', desc: 'I want consistent, predictable income from my investments', icon: '&#128176;', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
+      { branch: 'growth', title: 'Equity Growth', desc: 'I want to grow my wealth and diversify outside public markets', icon: '&#128200;', iconClass: 'eq', goalVal: 'Equity Growth (wealth later)' },
+      { branch: 'tax', title: 'Tax Optimization', desc: 'I want to reduce my taxable income using real estate', icon: '&#128737;', iconClass: 'tax', goalVal: 'Tax Optimization (tax shield now)' }
+    ];
+    goals.forEach(g => {
+      const sel = wizardData._branch === g.branch ? 'selected' : '';
+      html += `<div class="wizard-goal-card ${sel}" onclick="selectGoalBranch('${g.branch}', '${g.goalVal.replace(/'/g, "\\'")}')">
+        <div class="wizard-goal-icon ${g.iconClass}">${g.icon}</div>
+        <div class="wizard-goal-info">
+          <div class="wizard-goal-title">${g.title}</div>
+          <div class="wizard-goal-desc">${g.desc}</div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+    // Back button only
+    html += '<div class="wizard-inline-nav">';
+    if (wizardStepIndex > 0) {
+      html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    }
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== DEAL PICKER TYPE =====
+  if (step.type === 'dealPicker') {
+    // Sync wizard data to buy box so we can filter deals
+    collectWizardInputs();
+    syncWizardToBuyBox();
+
+    html += `<div class="wizard-card-title">${step.title}</div>`;
+    html += `<div class="wizard-card-desc">${step.desc}</div>`;
+
+    // Filter deals using buy box
+    const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+    const filtered = allDeals.filter(d => {
+      if (buyBox.assetClasses && buyBox.assetClasses.length > 0) {
+        if (!buyBox.assetClasses.includes(d.assetClass)) return false;
+      }
+      return true;
+    });
+    const toShow = (filtered.length > 0 ? filtered : allDeals).slice(0, 12);
+
+    if (toShow.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">Deals are loading... You can skip this step and browse deals from your dashboard.</div>';
+    } else {
+      html += '<div class="wizard-deal-grid">';
+      toShow.forEach(deal => {
+        const stage = typeof getDealStage === 'function' ? getDealStage(deal.id) : 'new';
+        const isPassed = stage === 'passed';
+        const isInt = stage === 'interested';
+        const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+        html += `<div class="wizard-deal-card" id="wdeal-${deal.id}" style="${isPassed ? 'opacity:0.4;' : ''}${isInt ? 'border-color:var(--green);' : ''}">
+          <div style="display:flex;align-items:stretch;">
+            <div style="width:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px 0 0 12px;"><span style="font-size:28px;opacity:0.4;">${ph.icon}</span></div>
+            <div class="wizard-deal-body" style="flex:1;padding:14px 16px;">
+              <div class="wizard-deal-name">${deal.investmentName || 'Unnamed Deal'}</div>
+              <div class="wizard-deal-sponsor">${deal.managementCompany || ''} &middot; ${deal.assetClass || ''}</div>
+              <div class="wizard-deal-metrics">
+                ${deal.targetIRR ? `<div class="wizard-deal-metric">IRR<strong style="color:var(--green);">${fmt(deal.targetIRR, 'pct')}</strong></div>` : ''}
+                ${deal.preferredReturn ? `<div class="wizard-deal-metric">Pref<strong>${fmt(deal.preferredReturn, 'pct')}</strong></div>` : ''}
+                ${deal.investmentMinimum ? `<div class="wizard-deal-metric">Min<strong>${fmt(deal.investmentMinimum, 'money')}</strong></div>` : ''}
+                ${deal.holdPeriod ? `<div class="wizard-deal-metric">Hold<strong>${deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs'}</strong></div>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;border-left:1px solid var(--border);min-width:80px;">
+              <button class="${isPassed ? 'actioned' : ''}" onclick="onboardingDealAction('${deal.id}','passed',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border:none;background:${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:700;color:${isPassed ? 'var(--red)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(208,64,64,0.06)'" onmouseout="this.style.background='${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>
+              <div style="height:1px;background:var(--border);"></div>
+              <button class="${isInt ? 'actioned' : ''}" onclick="onboardingDealAction('${deal.id}','interested',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border:none;background:${isInt ? 'rgba(81,190,123,0.08)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:700;color:${isInt ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(81,190,123,0.08)'" onmouseout="this.style.background='${isInt ? 'rgba(81,190,123,0.08)' : 'transparent'}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>Yes</button>
+            </div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+      const interested = toShow.filter(d => getDealStage(d.id) === 'interested').length;
+      html += `<div class="wizard-deal-counter"><strong>${interested}</strong> deal${interested !== 1 ? 's' : ''} marked interested</div>`;
+    }
+    html += '<div class="wizard-skip-link" onclick="wizardNext()">Skip for now</div>';
+
+    // Nav buttons
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Continue</button>';
+    html += '</div>';
+
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== STANDARD TYPES (fields, radio, checks, mixed) =====
+  html += `<div class="wizard-card-title">${step.title}</div>`;
   if (step.desc) html += `<div class="wizard-card-desc">${step.desc}</div>`;
 
   if (step.type === 'info') {
-    // Just title/desc, nothing else needed
+    // Just title/desc
   } else if (step.type === 'fields') {
     html += step.fields.map(f => {
       const val = wizardData[f.key] || '';
@@ -5846,16 +6764,15 @@ function renderWizardStep() {
     }).join('');
     html += `</div>`;
   } else if (step.type === 'mixed') {
-    // Fields first
     if (step.fields) {
       html += step.fields.map(f => {
         const val = wizardData[f.key] || '';
         if (f.inputType === 'select') {
-          html += `<div class="wizard-field"><label class="wizard-label">${f.label}</label>`;
-          html += `<select class="wizard-select" data-key="${f.key}"><option value="">Select one...</option>`;
-          html += f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
-          html += `</select></div>`;
-          return '';
+          let selectHtml = `<div class="wizard-field"><label class="wizard-label">${f.label}</label>`;
+          selectHtml += `<select class="wizard-select" data-key="${f.key}"><option value="">Select one...</option>`;
+          selectHtml += f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
+          selectHtml += `</select></div>`;
+          return selectHtml;
         }
         return `<div class="wizard-field">
           <label class="wizard-label">${f.label}</label>
@@ -5863,10 +6780,9 @@ function renderWizardStep() {
         </div>`;
       }).join('');
     }
-    // Radio
     if (step.radio) {
       const current = wizardData[step.radio.key] || '';
-      html += `<div class="wizard-field"><label class="wizard-label">${step.radio.label}</label></div>`;
+      html += `<div class="wizard-section-label">${step.radio.label}</div>`;
       html += `<div class="wizard-options">`;
       html += step.radio.options.map(opt => {
         const sel = current === opt ? 'selected' : '';
@@ -5877,10 +6793,9 @@ function renderWizardStep() {
       }).join('');
       html += `</div>`;
     }
-    // Checks
     if (step.checks) {
       const current = wizardData[step.checks.key] || [];
-      html += `<div class="wizard-field" style="margin-top:20px"><label class="wizard-label">${step.checks.label}</label></div>`;
+      html += `<div class="wizard-section-label">${step.checks.label}</div>`;
       html += `<div class="wizard-options">`;
       html += step.checks.options.map(opt => {
         const sel = current.includes(opt) ? 'selected' : '';
@@ -5900,15 +6815,57 @@ function renderWizardStep() {
     html += `</div>`;
   }
 
-  // Add inline nav buttons (reuse total from above)
+  // Inline nav buttons
   html += '<div class="wizard-inline-nav">';
-  if (wizardStep > 0) {
+  if (wizardStepIndex > 0) {
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
   }
-  html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (wizardStep === total - 1 ? 'Finish' : 'Next') + '</button>';
+  html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (wizardStepIndex === total - 1 ? 'Finish' : 'Next') + '</button>';
   html += '</div>';
 
   document.getElementById('wizardContent').innerHTML = html;
+}
+
+// Goal branch selection handler
+function selectGoalBranch(branch, goalValue) {
+  wizardData._branch = branch;
+  wizardData.goal = goalValue;
+  // Auto-set strategies based on branch
+  if (branch === 'cashflow') {
+    wizardData.strategies = wizardData.strategies || ['Lending / Credit'];
+    wizardData.instruments = ['Debt (1st Position)'];
+  } else if (branch === 'growth') {
+    wizardData.strategies = wizardData.strategies || ['Value-Add'];
+    wizardData.instruments = ['Equity (2nd Position)'];
+  } else if (branch === 'tax') {
+    wizardData.strategies = wizardData.strategies || ['Development', 'Value-Add'];
+  }
+  localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  wizardStepIndex++;
+  renderWizardStep();
+  document.querySelector('.wizard-body').scrollTop = 0;
+}
+
+// Deal action handler for onboarding deal picker
+function onboardingDealAction(dealId, stage, btnEl) {
+  if (typeof setDealStage === 'function') setDealStage(dealId, stage);
+  // Update button states visually
+  const card = btnEl.closest('.wizard-deal-card');
+  if (card) {
+    card.querySelectorAll('.wizard-deal-actions button').forEach(b => b.classList.remove('actioned'));
+    btnEl.classList.add('actioned');
+  }
+  // Update counter
+  const counterEl = document.querySelector('.wizard-deal-counter');
+  if (counterEl) {
+    const allCards = document.querySelectorAll('.wizard-deal-card');
+    let interested = 0;
+    allCards.forEach(c => {
+      const id = c.id.replace('wdeal-', '');
+      if (typeof getDealStage === 'function' && getDealStage(id) === 'interested') interested++;
+    });
+    counterEl.innerHTML = `<strong>${interested}</strong> deal${interested !== 1 ? 's' : ''} marked interested`;
+  }
 }
 
 function selectWizardRadio(el, key, value) {
@@ -5944,29 +6901,33 @@ function collectWizardInputs() {
 function wizardNext() {
   collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  const seq = getStepSequence();
 
-  if (wizardStep >= WIZARD_STEPS.length - 1) {
-    // Finish
+  if (wizardStepIndex >= seq.length - 1) {
+    // Finish — onboarding complete
     localStorage.setItem('gycBuyBoxComplete', 'true');
     syncWizardToBuyBox();
     document.getElementById('wizardOverlay').classList.remove('active');
-    // Track buy box completion
-    trackActivity('buybox_complete', { wizardData: JSON.stringify(wizardData).substring(0, 200) });
+    document.querySelector('.wizard-body').classList.remove('welcome-bg');
+    // Track onboarding completion
+    if (typeof trackActivity === 'function') {
+      trackActivity('onboarding_complete', { branch: wizardData._branch, wizardData: JSON.stringify(wizardData).substring(0, 200) });
+    }
     // Sync to GHL
     syncBuyBoxToGHL();
-    // Navigate to report
-    navigateTo('buybox');
+    // Navigate to dashboard (not buy box report)
+    navigateTo('dashboard');
     return;
   }
-  wizardStep++;
+  wizardStepIndex++;
   renderWizardStep();
   document.querySelector('.wizard-body').scrollTop = 0;
 }
 
 function wizardPrev() {
   collectWizardInputs();
-  if (wizardStep > 0) {
-    wizardStep--;
+  if (wizardStepIndex > 0) {
+    wizardStepIndex--;
     renderWizardStep();
     document.querySelector('.wizard-body').scrollTop = 0;
   }
@@ -5993,12 +6954,26 @@ function syncWizardToBuyBox() {
   const mappedStrats = (d.strategies || []).map(s => stratMap[s] || s);
 
   buyBox.assetClasses = [...new Set(mappedAssets)];
-  buyBox.strategies = mappedStrats;
+  buyBox.strategies = mappedStrats.length > 0 ? mappedStrats : buyBox.strategies;
   buyBox.objectives = d.goal ? [d.goal.split(' (')[0]] : buyBox.objectives;
   buyBox.irrMin = d.minIRR || buyBox.irrMin;
   buyBox.minInvest = d.checkSize || buyBox.minInvest;
+
+  // Store branch-specific data for dashboard/reporting
+  if (d.currentCashFlow) buyBox.currentCashFlow = d.currentCashFlow;
+  if (d.targetCashFlow) buyBox.targetCashFlow = d.targetCashFlow;
+  if (d.taxableIncome) buyBox.taxableIncome = d.taxableIncome;
+  if (d.taxOffset) buyBox.taxOffset = d.taxOffset;
+  if (d.riskTolerance) buyBox.riskTolerance = d.riskTolerance;
+  if (d._branch) buyBox._branch = d._branch;
+  if (d.lockup) buyBox.holdMin = d.lockup;
+  if (d.distributions) {
+    // If distributions is a string (from radio), convert to appropriate format
+    if (typeof d.distributions === 'string') buyBox.distributions = d.distributions;
+  }
+
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
-  renderReport();
+  if (typeof renderReport === 'function') renderReport();
 }
 
 async function syncBuyBoxToGHL() {
@@ -6073,136 +7048,191 @@ async function fetchBuyBoxFromGHL() {
 // ========== MAGAZINE-STYLE BUY BOX REPORT ==========
 function renderReport() {
   const d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-  if (!d.firstName && !d.goal) {
-    // No data yet - show empty state
-    return;
+  if (!d.firstName && !d.goal) return;
+
+  const name = (d.firstName || 'Investor');
+  const matchCount = getMatchingDealCount(d);
+  const branch = d._branch || (d.goal && d.goal.includes('Cash') ? 'cashflow' : d.goal && d.goal.includes('Equity') ? 'growth' : d.goal && d.goal.includes('Tax') ? 'tax' : 'cashflow');
+
+  const branchConfig = {
+    cashflow: { label: 'Cash Flow', color: '#51BE7B', colorBg: 'rgba(81,190,123,0.08)', icon: '&#128176;',
+      headline: 'Build Predictable Passive Income',
+      subtext: 'You\'re focused on consistent distributions from day one. Here\'s your roadmap to get there.' },
+    growth: { label: 'Equity Growth', color: '#2563EB', colorBg: 'rgba(37,99,235,0.08)', icon: '&#128200;',
+      headline: 'Grow Your Wealth Through Real Estate',
+      subtext: 'You\'re focused on equity appreciation and higher total returns. Here are the deals that fit.' },
+    tax: { label: 'Tax Optimization', color: '#CF7A30', colorBg: 'rgba(207,122,48,0.08)', icon: '&#128737;',
+      headline: 'Reduce Your Tax Burden',
+      subtext: 'You\'re focused on sheltering income through depreciation and tax-advantaged structures.' }
+  };
+  const bc = branchConfig[branch] || branchConfig.cashflow;
+
+  // Get top matching deals
+  const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+  const assetMap = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
+  const userAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
+  const matchedDeals = allDeals.filter(deal => {
+    if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
+    const stage = getDealStage(deal.id);
+    if (stage === 'passed') return false;
+    return true;
+  }).slice(0, 3);
+
+  // Build progress section based on branch
+  let goalSection = '';
+  if (branch === 'cashflow') {
+    const current = d.currentCashFlow || '$0';
+    const target = d.targetCashFlow || 'Not set';
+    const checkSize = d.checkSize || 'Not set';
+    goalSection = `
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Current Cash Flow</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);">${current}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">per year</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${bc.color}" stroke-width="2.5" style="width:32px;height:32px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">YOUR GOAL</div>
+        </div>
+        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Target Cash Flow</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:${bc.color};">${target}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">per year</div>
+        </div>
+      </div>`;
+  } else if (branch === 'growth') {
+    const minIRR = d.minIRR || 'Not set';
+    const risk = d.riskTolerance || 'Not set';
+    goalSection = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px;">
+        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Minimum IRR Target</div>
+          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:${bc.color};">${minIRR}</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Risk Profile</div>
+          <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);">${risk}</div>
+        </div>
+      </div>`;
+  } else {
+    const taxable = d.taxableIncome || 'Not set';
+    const offset = d.taxOffset || 'Not set';
+    goalSection = `
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Taxable Income</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);">${taxable}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="${bc.color}" stroke-width="2.5" style="width:32px;height:32px;"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">OFFSET</div>
+        </div>
+        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Tax Offset Goal</div>
+          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:${bc.color};">${offset}</div>
+        </div>
+      </div>`;
   }
 
-  const name = (d.firstName || 'Investor') + ' ' + (d.lastName || '');
-  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  // Build criteria pills
+  function pill(label) { return `<span style="display:inline-block;padding:6px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:100px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);margin:3px 4px 3px 0;">${label}</span>`; }
+  const assetPills = (d.assetClasses || []).map(pill).join('') || '<span style="color:var(--text-muted);font-size:13px;">All asset classes</span>';
+  const stratPills = [...(d.strategies || []), ...(d.instruments || [])].map(pill).join('');
 
-  // Count matching deals
-  const matchCount = getMatchingDealCount(d);
+  // Quick specs
+  const specs = [];
+  if (d.checkSize) specs.push({ label: 'Check Size', value: d.checkSize });
+  if (d.lockup) specs.push({ label: 'Lockup', value: d.lockup });
+  if (d.distributions) specs.push({ label: 'Distributions', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
+  if (d.accreditation) specs.push({ label: 'Accreditation', value: d.accreditation.split(' (')[0].split(' based')[0] });
+
+  // Matching deal cards
+  let dealCardsHtml = '';
+  if (matchedDeals.length > 0) {
+    dealCardsHtml = matchedDeals.map(deal => {
+      const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="navigateTo('deals'); setTimeout(() => openPanel('${deal.id}'), 300);">
+        <div style="height:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;position:relative;">
+          <span style="font-size:28px;opacity:0.3;">${ph.icon}</span>
+          <span style="position:absolute;top:8px;left:8px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;">${deal.assetClass || ''}</span>
+        </div>
+        <div style="padding:14px 16px;">
+          <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${deal.investmentName}</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${deal.managementCompany || ''}</div>
+          <div style="display:flex;gap:12px;">
+            ${deal.targetIRR ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">IRR</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--green);">${fmt(deal.targetIRR,'pct')}</span></div>` : ''}
+            ${deal.investmentMinimum ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Min</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);">${fmt(deal.investmentMinimum,'money')}</span></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 
   const container = document.getElementById('reportContent');
   container.innerHTML = `
-    <div class="report-container">
-      <div class="report-hero">
-        <div class="report-hero-eyebrow">LP Investing Buy Box</div>
-        <div class="report-hero-name">${name.trim()}</div>
-        <div class="report-hero-subtitle">Personalized Investment Profile</div>
-        <div class="report-hero-date">Generated ${today} &middot; Grow Your Cashflow</div>
-      </div>
+    <div style="max-width:860px;margin:0 auto;padding:24px;">
 
-      <div class="report-body">
-        <!-- Key Metrics -->
-        <div class="report-section">
-          <div class="report-section-title">Investment Snapshot</div>
-          <div class="report-metric-row">
-            <div class="report-metric-card">
-              <div class="report-metric-number">${d.checkSize || '---'}</div>
-              <div class="report-metric-label">Max Check Size</div>
-            </div>
-            <div class="report-metric-card">
-              <div class="report-metric-number">${d.minIRR || '---'}</div>
-              <div class="report-metric-label">Min Target IRR</div>
-            </div>
-            <div class="report-metric-card">
-              <div class="report-metric-number">${matchCount}</div>
-              <div class="report-metric-label">Matching Deals</div>
-            </div>
-          </div>
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:40px 36px;margin-bottom:28px;color:#fff;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <span style="font-size:24px;">${bc.icon}</span>
+          <span style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};">${bc.label} Strategy</span>
         </div>
-
-        <!-- Investor Profile -->
-        <div class="report-section">
-          <div class="report-section-title">Investor Profile</div>
-          <div class="report-grid">
-            ${reportItem('Date of Birth', d.dob)}
-            ${reportItem('Net Worth', d.networth)}
-            ${reportItem('Primary Income', d.incomeSource)}
-            ${reportItem('LP Investments', d.lpCount)}
-            ${reportItem('Accreditation', d.accreditation)}
-            ${reportItem('Investment Entity', d.entity)}
-          </div>
-        </div>
-
-        <!-- Objectives & Constraints -->
-        <div class="report-section">
-          <div class="report-section-title">Objectives &amp; Constraints</div>
-          <div class="report-grid">
-            ${reportItem('Investment Trigger', d.trigger)}
-            ${reportItem('Primary Objective', d.goal)}
-            ${reportItem('Max Check Size', d.checkSize)}
-            ${reportItem('Capital Availability', d.capitalReady)}
-            ${reportItem('Deployment Urgency', d.urgency)}
-            ${reportItem('Source of Funds', safeJoin(d.fundSource))}
-          </div>
-        </div>
-
-        <!-- Deal Type Preferences -->
-        <div class="report-section">
-          <div class="report-section-title">Deal Type Preferences</div>
-          <div style="margin-bottom:16px">
-            <div class="report-item-label">Asset Classes of Interest</div>
-            <div class="report-tags" style="margin-top:8px">
-              ${(d.assetClasses || []).map(a => `<span class="report-tag">${a}</span>`).join('') || '<span style="color:var(--text-muted)">Not specified</span>'}
-            </div>
-          </div>
-          <div class="report-grid">
-            ${reportItem('Deal Structure', safeJoin(d.dealStructure))}
-            ${reportItem('Investing Strategies', safeJoin(d.strategies))}
-            ${reportItem('Investing Instrument', safeJoin(d.instruments))}
-          </div>
-        </div>
-
-        <!-- Risk & Liquidity -->
-        <div class="report-section">
-          <div class="report-section-title">Risk &amp; Liquidity</div>
-          <div class="report-grid">
-            ${reportItem('Lockup Tolerance', d.lockup)}
-            ${reportItem('Redemption Flexibility', safeJoin(d.redemption))}
-          </div>
-        </div>
-
-        <!-- Underwriting Guardrails -->
-        <div class="report-section">
-          <div class="report-section-title">Underwriting Guardrails</div>
-          <div class="report-grid">
-            ${reportItem('Min Target IRR', d.minIRR)}
-            ${reportItem('Min Year-1 Cash Yield', d.minCashYield)}
-            ${reportItem('Distribution Cadence', safeJoin(d.distributions))}
-            ${reportItem('Audit Requirement', d.auditPref)}
-          </div>
-        </div>
-
-        <!-- Operator & Governance -->
-        <div class="report-section">
-          <div class="report-section-title">Operator &amp; Governance</div>
-          <div class="report-grid">
-            ${reportItem('Firm Size Preference', safeJoin(d.firmSize))}
-            ${reportItem('Firm Focus', d.firmFocus)}
-          </div>
-        </div>
-
-        <!-- CTA -->
-        <div class="report-callout">
-          <div class="report-callout-title">Ready to Deploy?</div>
-          <div class="report-callout-desc">Join our office hours every Thursday 12-1pm ET and get 1:1 guidance from Pascal on your next investment.</div>
-          <button class="report-callout-btn" onclick="window.open('https://growyourcashflow.com/office-hours','_blank')">Join Office Hours</button>
+        <div style="font-family:var(--font-headline);font-size:32px;color:#fff;margin-bottom:8px;">${bc.headline}</div>
+        <div style="font-family:var(--font-body);font-size:16px;color:rgba(255,255,255,0.65);margin-bottom:24px;max-width:560px;line-height:1.6;">${bc.subtext}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button onclick="openBuyBoxWizard()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Edit My Buy Box</button>
+          <button onclick="navigateTo('deals')" style="padding:12px 28px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Browse ${matchCount} Matching Deals &rarr;</button>
         </div>
       </div>
 
-      <div class="report-footer">
-        <div class="report-footer-logo">Grow Your Cashflow</div>
-        <div class="report-footer-url">growyourcashflow.com</div>
-      </div>
-    </div>
+      <!-- Goal Progress Section -->
+      ${goalSection}
 
-    <div class="report-actions">
-      <button class="btn-cta btn-cta-primary" style="width:auto;padding:14px 32px" onclick="window.print()">Print / Save as PDF</button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:14px 32px" onclick="openBuyBoxWizard()">Edit My Buy Box</button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:14px 32px" onclick="navigateTo('deals')">View Matching Deals</button>
+      <!-- What I'm Looking For -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;">
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">What I'm Looking For</div>
+        <div style="margin-bottom:16px;">
+          <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Asset Classes</div>
+          <div style="display:flex;flex-wrap:wrap;">${assetPills}</div>
+        </div>
+        ${stratPills ? `<div>
+          <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Strategies</div>
+          <div style="display:flex;flex-wrap:wrap;">${stratPills}</div>
+        </div>` : ''}
+      </div>
+
+      <!-- Quick Specs -->
+      ${specs.length > 0 ? `
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(specs.length, 4)},1fr);gap:12px;margin-bottom:20px;">
+        ${specs.map(s => `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
+          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">${s.value}</div>
+        </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Top Matching Deals -->
+      ${matchedDeals.length > 0 ? `
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Top Deals For You</div>
+          <button onclick="navigateTo('deals')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;">See all ${matchCount} &rarr;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+          ${dealCardsHtml}
+        </div>
+      </div>` : ''}
+
+      <!-- Office Hours CTA -->
+      <div style="background:linear-gradient(135deg,${bc.colorBg},var(--bg-card));border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Book 1:1 office hours with Pascal every Thursday 12-1pm ET.</div>
+        </div>
+        <button onclick="navigateTo('officehours')" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Book Office Hours</button>
+      </div>
+
     </div>
   `;
 }
@@ -6244,21 +7274,29 @@ function initSubscription() {
 
   document.querySelectorAll('.plan-btn').forEach(btn => {
     const card = btn.closest('.plan-card');
-    const planName = card.querySelector('.plan-name').textContent.toLowerCase();
+    const planName = card.querySelector('.plan-name').textContent.toLowerCase().trim();
 
-    if (planName === currentTier) {
+    if (planName === currentTier || (planName === 'family office' && currentTier === 'family_office')) {
       btn.textContent = 'Current Plan';
       btn.className = 'btn-cta btn-cta-secondary plan-btn';
+      btn.style.background = '';
       btn.onclick = null;
     } else if (planName === 'explorer') {
-      btn.textContent = 'Downgrade';
-      btn.onclick = () => handleSubscribe('explorer', 0);
-    } else if (planName === 'investor') {
-      btn.textContent = currentTier === 'academy' ? 'Current includes this' : 'Upgrade Now';
-      btn.onclick = currentTier === 'academy' ? null : () => handleSubscribe('investor', 99);
+      btn.textContent = currentTier !== 'explorer' ? 'Included' : 'Current Plan';
+      btn.className = 'btn-cta btn-cta-secondary plan-btn';
+      btn.onclick = null;
     } else if (planName === 'academy') {
+      if (currentTier === 'family_office') {
+        btn.textContent = 'Included';
+        btn.className = 'btn-cta btn-cta-secondary plan-btn';
+        btn.onclick = null;
+      } else {
+        btn.textContent = 'Join Academy';
+        btn.onclick = () => handleSubscribe('academy', 5000);
+      }
+    } else if (planName === 'family office') {
       btn.textContent = 'Apply Now';
-      btn.onclick = () => handleSubscribe('academy', 497);
+      btn.onclick = () => handleSubscribe('family_office', 25000);
     }
   });
 }
@@ -6739,7 +7777,7 @@ let debtFundData = [];
 let debtChartMetric = 'yield';
 let debtSortCol = 'investmentName';
 let debtSortAsc = true;
-let highlightedDebtFund = null;
+let highlightedDebtFunds = new Set();
 let debtFilterFinancials = 'all';
 let debtFilterAUM = 'all';
 let debtFilterPosition = 'all';
@@ -6749,6 +7787,19 @@ let debtFilterYield = 'all';
 let dealsBuyBoxApplied = false;
 let debtBuyBoxApplied = false;
 let buyBoxProgrammaticChange = false;
+
+function clearDebtFilters() {
+  ['debtFinancialsFilter','debtAUMFilter','debtPositionFilter','debtDistributionFilter','debtMinimumFilter','debtYieldFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 'all';
+  });
+  debtBuyBoxApplied = false;
+  const toggle = document.getElementById('debtBuyBoxToggle');
+  if (toggle) toggle.classList.remove('active');
+  const updateBtn = document.getElementById('debtBuyBoxUpdate');
+  if (updateBtn) updateBtn.classList.remove('visible');
+  syncDebtFilters();
+}
 
 function syncDebtFilters() {
   // Read all filter values directly from DOM to stay in sync
@@ -6848,10 +7899,8 @@ function renderDebtFunds() {
     _return2022: generateYearReturn(f.targetIRR, 2022)
   }));
 
-  // Auto-apply Buy Box on first load if user has one configured
-  if (!debtBuyBoxApplied && buyBox && Object.keys(buyBox).length > 0) {
-    toggleDebtBuyBox();
-  }
+  // Buy Box is NOT auto-applied — user clicks "Apply My Buy Box" manually
+  // This ensures all funds show by default on first visit
 
   renderDebtStats(getFilteredDebtFunds(), debtFundData);
   renderDebtChart();
@@ -6936,13 +7985,20 @@ function renderDebtChart() {
   const isSimulated = debtChartMetric === 'delinquency' || debtChartMetric === 'leverage' || debtChartMetric === 'ltv';
   if (overlay) overlay.style.display = isSimulated ? 'flex' : 'none';
 
-  const datasets = filteredFunds.map(f => {
-    const isHighlighted = highlightedDebtFund === f.id;
-    const isAnyHighlighted = highlightedDebtFund !== null;
+  // Sort: selected funds first
+  const sortedFunds = [...filteredFunds].sort((a, b) => {
+    const aH = highlightedDebtFunds.has(a.id) ? 0 : 1;
+    const bH = highlightedDebtFunds.has(b.id) ? 0 : 1;
+    return aH - bH;
+  });
+
+  const datasets = sortedFunds.map(f => {
+    const isHighlighted = highlightedDebtFunds.has(f.id);
+    const isAnyHighlighted = highlightedDebtFunds.size > 0;
     return {
       label: f.investmentName,
       data: f[metricKey],
-      borderColor: isAnyHighlighted ? (isHighlighted ? f._color : 'rgba(200,200,200,0.3)') : f._color,
+      borderColor: isAnyHighlighted ? (isHighlighted ? f._color : 'rgba(200,200,200,0.25)') : f._color,
       backgroundColor: 'transparent',
       borderWidth: isAnyHighlighted ? (isHighlighted ? 3 : 1) : 2,
       pointRadius: isAnyHighlighted ? (isHighlighted ? 4 : 0) : 2,
@@ -6963,9 +8019,10 @@ function renderDebtChart() {
       onClick: function(event, elements) {
         if (elements.length > 0) {
           const idx = elements[0].datasetIndex;
-          const fund = filteredFunds[idx];
+          const fund = sortedFunds[idx];
           if (fund) {
-            highlightedDebtFund = highlightedDebtFund === fund.id ? null : fund.id;
+            if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id);
+            else highlightedDebtFunds.add(fund.id);
             renderDebtChart();
             renderDebtTable();
           }
@@ -6980,10 +8037,9 @@ function renderDebtChart() {
           padding: 12,
           cornerRadius: 8,
           filter: function(tooltipItem) {
-            // Only show tooltip for highlighted fund, or nearest if none highlighted
-            if (highlightedDebtFund !== null) {
-              const fund = filteredFunds[tooltipItem.datasetIndex];
-              return fund && fund.id === highlightedDebtFund;
+            if (highlightedDebtFunds.size > 0) {
+              const fund = sortedFunds[tooltipItem.datasetIndex];
+              return fund && highlightedDebtFunds.has(fund.id);
             }
             return true;
           },
@@ -7001,7 +8057,7 @@ function renderDebtChart() {
         },
         y: {
           min: debtChartMetric === 'yield' ? 0 : undefined,
-          max: debtChartMetric === 'yield' ? 13 : undefined,
+          max: debtChartMetric === 'yield' ? 40 : undefined,
           title: { display: true, text: metricLabel, font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
           grid: { color: 'rgba(0,0,0,0.05)' },
           ticks: {
@@ -7013,17 +8069,23 @@ function renderDebtChart() {
     }
   });
 
-  // Render custom side legend
+  // Render custom side legend (selected funds first)
   const legendEl = document.getElementById('debtChartLegend');
   if (legendEl) {
-    legendEl.innerHTML = filteredFunds.map(f => {
-      const isActive = highlightedDebtFund === f.id;
-      const isAnyActive = highlightedDebtFund !== null;
+    const legendFunds = [...filteredFunds].sort((a, b) => {
+      const aH = highlightedDebtFunds.has(a.id) ? 0 : 1;
+      const bH = highlightedDebtFunds.has(b.id) ? 0 : 1;
+      return aH - bH;
+    });
+    legendEl.innerHTML = legendFunds.map(f => {
+      const isActive = highlightedDebtFunds.has(f.id);
+      const isAnyActive = highlightedDebtFunds.size > 0;
       const dotColor = isAnyActive ? (isActive ? f._color : '#ccc') : f._color;
       const textColor = isAnyActive && !isActive ? 'var(--text-muted)' : 'var(--text-dark)';
       const fontWeight = isActive ? '700' : '500';
       const bg = isActive ? 'var(--mint-bg)' : 'transparent';
-      return '<div onclick="toggleDebtFundHighlight(\'' + f.id + '\')" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;background:' + bg + ';transition:all 0.15s ease;" onmouseover="this.style.background=\'' + (isActive ? 'var(--mint-bg)' : 'var(--border-light)') + '\';" onmouseout="this.style.background=\'' + bg + '\';">'
+      const border = isActive ? 'border:1px solid rgba(81,190,123,0.3);' : 'border:1px solid transparent;';
+      return '<div onclick="toggleDebtFundHighlight(\'' + f.id + '\')" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;background:' + bg + ';' + border + 'transition:all 0.15s ease;" onmouseover="this.style.background=\'' + (isActive ? 'var(--mint-bg)' : 'var(--border-light)') + '\';" onmouseout="this.style.background=\'' + bg + '\';">'
         + '<span style="width:10px;height:10px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;"></span>'
         + '<span style="color:' + textColor + ';font-weight:' + fontWeight + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (f.investmentName || '') + '">' + (f.investmentName || 'Unknown') + '</span>'
         + '</div>';
@@ -7032,22 +8094,24 @@ function renderDebtChart() {
 }
 
 function toggleDebtFundHighlight(id) {
-  highlightedDebtFund = highlightedDebtFund === id ? null : id;
+  if (highlightedDebtFunds.has(id)) highlightedDebtFunds.delete(id);
+  else highlightedDebtFunds.add(id);
   renderDebtChart();
   renderDebtTable();
-  // Scroll highlighted row into view
-  if (highlightedDebtFund) {
-    const row = document.querySelector('#debtFundTableBody tr[data-fund-id="' + highlightedDebtFund + '"]');
-    if (row) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+  // Scroll first highlighted row into view
+  if (highlightedDebtFunds.size > 0) {
+    const row = document.querySelector('#debtFundTableBody tr[data-fund-id="' + id + '"]');
+    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
-function switchDebtMetric(metric, btn) {
+function switchDebtMetric(metric, btn, fromSelect) {
   debtChartMetric = metric;
   document.querySelectorAll('#debtChartToggles .topbar-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  // Sync mobile dropdown
+  const mobileSelect = document.querySelector('.debt-metric-select-mobile');
+  if (mobileSelect && fromSelect !== true) mobileSelect.value = metric;
   renderDebtChart();
   // Show Coming Soon overlay for metrics without real data
   const overlay = document.getElementById('debtChartComingSoon');
@@ -7067,6 +8131,10 @@ function switchDebtMetric(metric, btn) {
 function renderDebtTable() {
   const filtered = getFilteredDebtFunds();
   const sorted = [...filtered].sort((a, b) => {
+    // Selected funds always come first
+    const aH = highlightedDebtFunds.has(a.id) ? 0 : 1;
+    const bH = highlightedDebtFunds.has(b.id) ? 0 : 1;
+    if (aH !== bH) return aH - bH;
     let va = a[debtSortCol], vb = b[debtSortCol];
     if (va == null) va = '';
     if (vb == null) vb = '';
@@ -7097,8 +8165,8 @@ function renderDebtTable() {
     const aumStr = f.fundAUM ? (f.fundAUM >= 1e9 ? '$' + (f.fundAUM / 1e9).toFixed(1) + 'B' : f.fundAUM >= 1e6 ? '$' + (f.fundAUM / 1e6).toFixed(0) + 'M' : '$' + f.fundAUM.toLocaleString()) : '—';
     const financialsStr = f.financials || '—';
     const financialsBadge = financialsStr === 'Audited' ? 'background:var(--green-bg);color:var(--green)' : financialsStr === 'Unaudited' ? 'background:var(--orange-bg);color:var(--orange)' : 'background:var(--border-light);color:var(--text-muted)';
-    const isHL = highlightedDebtFund === f.id;
-    return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to highlight on chart">
+    const isHL = highlightedDebtFunds.has(f.id);
+    return `<tr data-fund-id="${f.id}" onclick="toggleDebtFundHighlight('${f.id}')" class="${isHL ? 'debt-row-highlighted' : ''}" title="Click to select/deselect">
       <td class="name-cell"><a href="deal.html?id=${f.id}" style="color:var(--text-dark);text-decoration:none;" onclick="event.stopPropagation()">${f.investmentName}</a></td>
       <td>${f.debtPosition || '—'}</td>
       <td>${aumStr}</td>
@@ -7290,6 +8358,180 @@ function savePortfolio() {
   portfolioInvestments.forEach(item => syncPortfolioItem(item));
 }
 
+// ========== ASSETS PAGE ==========
+let assetsMap = null;
+let assetsMarkers = [];
+let assetsHighlightedId = null;
+
+function renderAssetsPage() {
+  const deals = typeof DEALS !== 'undefined' ? DEALS : [];
+  const searchVal = (document.getElementById('assetsSearchInput')?.value || '').toLowerCase().trim();
+  const classFilter = document.getElementById('assetsClassFilter')?.value || '';
+  const stateFilter = document.getElementById('assetsStateFilter')?.value || '';
+
+  // Populate filter dropdowns on first render
+  const classSelect = document.getElementById('assetsClassFilter');
+  if (classSelect && classSelect.options.length <= 1) {
+    const classes = [...new Set(deals.map(d => d.assetClass).filter(Boolean))].sort();
+    classes.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; classSelect.appendChild(o); });
+  }
+  const stateSelect = document.getElementById('assetsStateFilter');
+  if (stateSelect && stateSelect.options.length <= 1) {
+    const locs = [...new Set(deals.map(d => d.location || d.investingGeography || '').filter(Boolean))].sort();
+    locs.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = l; stateSelect.appendChild(o); });
+  }
+
+  // Filter deals into assets — only syndications (single-property deals), not funds
+  const assets = deals.filter(d => {
+    if (d.dealType === 'Fund') return false;
+    if (classFilter && d.assetClass !== classFilter) return false;
+    const loc = (d.location || d.investingGeography || '').toLowerCase();
+    if (stateFilter && loc !== stateFilter.toLowerCase()) return false;
+    if (searchVal) {
+      const haystack = ((d.investmentName || '') + ' ' + (d.managementCompany || '') + ' ' + loc + ' ' + (d.assetClass || '')).toLowerCase();
+      if (!haystack.includes(searchVal)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('assetsCount').textContent = assets.length;
+
+  // Render asset rows
+  const container = document.getElementById('assetsListContainer');
+  if (assets.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-muted);"><div style="font-size:36px;opacity:0.3;margin-bottom:12px;">&#127968;</div><div style="font-size:15px;font-weight:600;">No assets match your search</div></div>';
+  } else {
+    container.innerHTML = assets.map(d => {
+      const loc = d.location || d.investingGeography || 'Unknown';
+      const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(d.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+      const isHL = assetsHighlightedId === d.id;
+      return `<div class="asset-row" data-asset-id="${d.id}" onclick="highlightAsset('${d.id}')" style="display:flex;align-items:center;gap:16px;padding:14px 18px;background:${isHL ? 'var(--mint-bg)' : 'var(--bg-card)'};border:1px solid ${isHL ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;" onmouseover="if(!${isHL})this.style.borderColor='var(--primary)'" onmouseout="if(!${isHL})this.style.borderColor='var(--border)'">
+        <div style="width:44px;height:44px;border-radius:10px;background:${ph.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:20px;opacity:0.5;">${ph.icon}</span></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.investmentName}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${d.managementCompany || ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+          <span style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 10px;border-radius:100px;background:rgba(81,190,123,0.08);color:var(--green);">${d.assetClass || ''}</span>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Location</div>
+            <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">${loc}</div>
+          </div>
+          ${d.targetIRR ? `<div style="text-align:right;">
+            <div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">IRR</div>
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:var(--green);">${fmt(d.targetIRR, 'pct')}</div>
+          </div>` : ''}
+          <a href="asset.html?id=${d.id}" onclick="event.stopPropagation()" style="padding:6px 14px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">View &rarr;</a>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render map
+  renderAssetsMap(assets);
+}
+
+function renderAssetsMap(assets) {
+  const mapEl = document.getElementById('assetsMapContainer');
+  if (!mapEl) return;
+
+  if (!assetsMap) {
+    assetsMap = L.map(mapEl, { scrollWheelZoom: true }).setView([39.5, -98.5], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+      maxZoom: 18
+    }).addTo(assetsMap);
+  }
+
+  // Clear old markers
+  assetsMarkers.forEach(m => assetsMap.removeLayer(m));
+  assetsMarkers = [];
+
+  assets.forEach(d => {
+    const coords = getAssetCoords(d);
+    if (!coords) return;
+    const isHL = assetsHighlightedId === d.id;
+    const marker = L.circleMarker(coords, {
+      radius: isHL ? 10 : 6,
+      fillColor: isHL ? '#51BE7B' : '#1F5159',
+      color: isHL ? '#51BE7B' : '#0A1E21',
+      weight: isHL ? 3 : 1.5,
+      fillOpacity: isHL ? 0.9 : 0.7
+    }).addTo(assetsMap);
+
+    marker.bindPopup(`<div style="font-family:var(--font-ui);min-width:180px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;">${d.investmentName}</div>
+      <div style="font-size:11px;color:#607179;margin-bottom:6px;">${d.managementCompany || ''} &middot; ${d.assetClass || ''}</div>
+      ${d.targetIRR ? `<div style="font-size:11px;"><strong>IRR:</strong> ${fmt(d.targetIRR, 'pct')}</div>` : ''}
+      <a href="asset.html?id=${d.id}" style="display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:#51BE7B;">View Asset &rarr;</a>
+    </div>`);
+
+    marker.on('click', () => {
+      assetsHighlightedId = d.id;
+      renderAssetsPage();
+      const row = document.querySelector(`.asset-row[data-asset-id="${d.id}"]`);
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    marker._dealId = d.id;
+    assetsMarkers.push(marker);
+  });
+
+  setTimeout(() => assetsMap.invalidateSize(), 100);
+}
+
+function getAssetCoords(deal) {
+  // Reuse existing geocoding from the deals map
+  const loc = (deal.location || '').toLowerCase().trim();
+  const geo = (deal.investingGeography || '').toLowerCase().trim();
+
+  // Check city coords first
+  if (typeof CITY_COORDS !== 'undefined') {
+    if (CITY_COORDS[loc]) return CITY_COORDS[loc];
+    if (CITY_COORDS[geo]) return CITY_COORDS[geo];
+    // Partial match
+    for (const [city, coords] of Object.entries(CITY_COORDS)) {
+      if (loc.includes(city) || geo.includes(city)) return coords;
+    }
+  }
+
+  // Check state coords
+  if (typeof STATE_COORDS !== 'undefined') {
+    // Extract state abbreviation
+    const stateMatch = (loc + ' ' + geo).match(/\b([A-Z]{2})\b/i) || (loc + ' ' + geo).match(/(texas|colorado|florida|arizona|california|georgia|tennessee|utah|ohio|michigan|virginia|nevada|oregon)/i);
+    if (stateMatch) {
+      const stateMap = { texas: 'TX', colorado: 'CO', florida: 'FL', arizona: 'AZ', california: 'CA', georgia: 'GA', tennessee: 'TN', utah: 'UT', ohio: 'OH', michigan: 'MI', virginia: 'VA', nevada: 'NV', oregon: 'OR' };
+      const abbr = stateMap[stateMatch[1].toLowerCase()] || stateMatch[1].toUpperCase();
+      if (STATE_COORDS[abbr]) return STATE_COORDS[abbr];
+    }
+  }
+
+  // Scatter fallback - use deterministic position based on deal name
+  if (typeof SCATTER_CITIES !== 'undefined' && SCATTER_CITIES.length > 0) {
+    let hash = 0;
+    const name = deal.investmentName || deal.id || '';
+    for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    const idx = Math.abs(hash) % SCATTER_CITIES.length;
+    const base = SCATTER_CITIES[idx];
+    return [base[0] + (Math.random() - 0.5) * 2, base[1] + (Math.random() - 0.5) * 2];
+  }
+
+  return null;
+}
+
+function highlightAsset(id) {
+  assetsHighlightedId = assetsHighlightedId === id ? null : id;
+  renderAssetsPage();
+  // Pan map to the highlighted asset
+  if (assetsHighlightedId) {
+    const marker = assetsMarkers.find(m => m._dealId === id);
+    if (marker) {
+      assetsMap.setView(marker.getLatLng(), 8, { animate: true });
+      marker.openPopup();
+    }
+  }
+}
+
 function renderPortfolioInDeals(container, portfolioDeals) {
   // Reload from storage
   portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
@@ -7311,84 +8553,84 @@ function renderPortfolioInDeals(container, portfolioDeals) {
   const sponsors = new Set(portfolioInvestments.map(i => i.sponsor).filter(Boolean));
   const avgIRR = portfolioInvestments.filter(i => i.targetIRR).reduce((s, i, _, a) => s + parseFloat(i.targetIRR) / a.length, 0);
 
-  let tableRows = portfolioInvestments.map(inv => {
-    const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
-    return `<tr>
-      <td style="font-weight:600;">${inv.investmentName}</td>
-      <td>${inv.sponsor || '---'}</td>
-      <td>${inv.assetClass || '---'}</td>
-      <td>$${Number(inv.amountInvested || 0).toLocaleString()}</td>
-      <td><span style="color:${statusColors[inv.status] || 'var(--text-secondary)'};font-weight:600;">${inv.status || '---'}</span></td>
-      <td>${inv.targetIRR ? inv.targetIRR + '%' : '---'}</td>
-      <td>$${Number(inv.distributionsReceived || 0).toLocaleString()}</td>
-      <td>
-        <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:none;color:var(--primary);font-weight:600;cursor:pointer;font-size:12px;padding:2px 6px;">Edit</button>
-        <button onclick="if(confirm('Remove from portfolio?')){deleteInvestment('${inv.id}');renderAll();}" style="background:none;border:none;color:#e74c3c;font-weight:600;cursor:pointer;font-size:12px;padding:2px 6px;">Delete</button>
-      </td>
-    </tr>`;
-  }).join('');
+  const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
 
-  const thStyle = 'padding:12px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);white-space:nowrap;';
-  const tdStyle = 'padding:12px 14px;border-top:1px solid var(--border);';
+  let investmentCards = portfolioInvestments.map(inv => {
+    const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(inv.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+    const statusColor = statusColors[inv.status] || 'var(--text-secondary)';
+    const statusBg = inv.status === 'Active' ? 'rgba(81,190,123,0.08)' : inv.status === 'Distributing' ? 'rgba(59,130,246,0.08)' : inv.status === 'Pending' ? 'rgba(245,158,11,0.08)' : 'rgba(0,0,0,0.04)';
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:stretch;">
+        <!-- Left: Colored accent bar -->
+        <div style="width:6px;background:${statusColor};flex-shrink:0;"></div>
+        <!-- Content -->
+        <div style="flex:1;padding:20px 24px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+            <div>
+              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">${inv.investmentName}</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${inv.sponsor || ''}${inv.assetClass ? ' &middot; ' + inv.assetClass : ''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="padding:4px 12px;border-radius:100px;background:${statusBg};font-family:var(--font-ui);font-size:11px;font-weight:700;color:${statusColor};">${inv.status || 'Unknown'}</span>
+              <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Edit</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Invested</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">$${Number(inv.amountInvested || 0).toLocaleString()}</div></div>
+            ${inv.targetIRR ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--green);">${inv.targetIRR}%</div></div>` : ''}
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:${parseFloat(inv.distributionsReceived || 0) > 0 ? 'var(--green)' : 'var(--text-dark)'};">$${Number(inv.distributionsReceived || 0).toLocaleString()}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 
   container.style.display = 'block';
   container.innerHTML = `
-    <div style="max-width:1100px;margin:0 auto;">
+    <div style="margin:0 auto;">
       <!-- Summary Cards Row -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
-          <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--primary);">$${totalInvested.toLocaleString()}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${active.length}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${active.length}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
-          <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg IRR</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg IRR</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</div>
-          <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</div>
+          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
         </div>
       </div>
 
+      <!-- Header Row -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
+          <button onclick="navigateTo('portfolio')" style="padding:8px 18px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);">Full Portfolio &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Investment Cards -->
       ${portfolioInvestments.length > 0 ? `
-      <!-- Investments Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
-          <div style="display:flex;gap:8px;">
-            <button onclick="showDealSearchModal()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
-            <button onclick="navigateTo('portfolio')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);">Full Portfolio &rarr;</button>
-          </div>
-        </div>
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr>
-                <th style="${thStyle}">Investment</th>
-                <th style="${thStyle}">Sponsor</th>
-                <th style="${thStyle}">Asset Class</th>
-                <th style="${thStyle}">Amount</th>
-                <th style="${thStyle}">Status</th>
-                <th style="${thStyle}">Target IRR</th>
-                <th style="${thStyle}">Distributions</th>
-                <th style="${thStyle}">Actions</th>
-              </tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-          </table>
-        </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${investmentCards}
       </div>` : `
-      <div style="text-align:center;padding:40px;">
-        <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
-        <button onclick="navigateTo('portfolio')" style="padding:12px 28px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:14px;cursor:pointer;color:var(--text-secondary);margin-left:8px;">Go to Full Portfolio &rarr;</button>
+      <div style="text-align:center;padding:60px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
+        <div style="font-size:40px;opacity:0.25;margin-bottom:12px;">&#128188;</div>
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Add your first investment to start tracking your portfolio.</div>
+        <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Investment</button>
       </div>`}
     </div>
   `;
@@ -7528,8 +8770,12 @@ function renderPortfolioRisk() {
 }
 
 function renderPortfolioTable() {
-  const tbody = document.getElementById('portfolioTableBody');
-  if (!tbody) return;
+  // Replace old table with card-based layout
+  const tableContainer = document.getElementById('portfolioTableContainer');
+  if (!tableContainer) return;
+  const statusColors = { Active: 'var(--green)', Distributing: 'var(--blue)', Exited: 'var(--text-muted)', Pending: 'var(--orange)' };
+  const statusBgs = { Active: 'rgba(81,190,123,0.08)', Distributing: 'rgba(59,130,246,0.08)', Exited: 'rgba(0,0,0,0.04)', Pending: 'rgba(245,158,11,0.08)' };
+
   const sorted = [...portfolioInvestments].sort((a, b) => {
     let va = a[portfolioSortCol], vb = b[portfolioSortCol];
     if (portfolioSortCol === 'amountInvested' || portfolioSortCol === 'distributionsReceived' || portfolioSortCol === 'targetIRR') {
@@ -7541,24 +8787,45 @@ function renderPortfolioTable() {
     if (va > vb) return portfolioSortAsc ? 1 : -1;
     return 0;
   });
-  tbody.innerHTML = sorted.map(inv => {
-    const statusColors = { Active: 'var(--green)', Distributing: 'var(--blue)', Exited: 'var(--text-muted)', Pending: 'var(--orange)' };
-    const statusColor = statusColors[inv.status] || 'var(--text-muted)';
-    return `<tr>
-      <td style="font-weight:600;color:var(--text-dark)">${inv.investmentName || '--'}</td>
-      <td>${inv.sponsor || '--'}</td>
-      <td>${inv.assetClass || '--'}</td>
-      <td>$${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</td>
-      <td>${inv.dateInvested || '--'}</td>
-      <td><span style="color:${statusColor};font-weight:600">${inv.status || '--'}</span></td>
-      <td>${inv.targetIRR ? inv.targetIRR + '%' : '--'}</td>
-      <td>$${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</td>
-      <td>
-        <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:13px;font-weight:600;margin-right:8px;">Edit</button>
-        <button onclick="deleteInvestment('${inv.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;font-weight:600;">Delete</button>
-      </td>
-    </tr>`;
+
+  const cards = sorted.map(inv => {
+    const sc = statusColors[inv.status] || 'var(--text-muted)';
+    const sb = statusBgs[inv.status] || 'rgba(0,0,0,0.04)';
+    const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(inv.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+    return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:stretch;">
+        <div style="width:6px;background:${sc};flex-shrink:0;"></div>
+        <div style="flex:1;padding:20px 24px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+            <div style="min-width:0;flex:1;">
+              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">${inv.investmentName || 'Unnamed'}</div>
+              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${inv.sponsor || ''}${inv.assetClass ? ' &middot; ' + inv.assetClass : ''}${inv.dateInvested ? ' &middot; ' + inv.dateInvested : ''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
+              <span style="padding:4px 12px;border-radius:100px;background:${sb};font-family:var(--font-ui);font-size:11px;font-weight:700;color:${sc};">${inv.status || 'Unknown'}</span>
+              <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Edit</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:28px;flex-wrap:wrap;">
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Invested</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);">$${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</div></div>
+            ${inv.targetIRR ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--green);">${inv.targetIRR}%</div></div>` : ''}
+            <div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:${parseFloat(inv.distributionsReceived || 0) > 0 ? 'var(--green)' : 'var(--text-dark)'};">$${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</div></div>
+            ${inv.equityMultiple ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Equity Multiple</div><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);">${inv.equityMultiple}x</div></div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
+
+  tableContainer.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Your Investments</div>
+      <button onclick="showDealSearchModal()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      ${cards}
+    </div>
+  `;
 }
 
 function sortPortfolioTable(col) {
@@ -7881,7 +9148,7 @@ function deleteInvestment(id) {
 }
 
 function closeModal() {
-  const m = document.getElementById('investmentModal') || document.getElementById('taxDocModal');
+  const m = document.getElementById('investmentModal') || document.getElementById('taxDocModal') || document.getElementById('addDealModal') || document.querySelector('.modal-overlay');
   if (m) m.remove();
 }
 
@@ -8673,7 +9940,7 @@ function renderDashboard() {
       return { ...d, _fitReasons: reasons, _fitScore: score };
     }).filter(d => d._fitScore >= 2 && d._fitReasons.length >= 2)
       .sort((a, b) => b._fitScore - a._fitScore)
-      .slice(0, 4);
+      .slice(0, 3);
 
     if (scoredDeals.length > 0) {
       let goalDealCards = '';
@@ -9274,11 +10541,48 @@ function searchViewAsUsers(query) {
   }, 400);
 }
 
+// Keys that are per-user and need to be scoped when impersonating
+const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals'];
+
+function saveUserScopedData(email) {
+  // Save current localStorage data under the user's email prefix
+  const bundle = {};
+  USER_SCOPED_KEYS.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) bundle[k] = v;
+  });
+  sessionStorage.setItem('gycScopedData_' + email, JSON.stringify(bundle));
+}
+
+function loadUserScopedData(email) {
+  // Clear current per-user data
+  USER_SCOPED_KEYS.forEach(k => localStorage.removeItem(k));
+  // Load saved data for this email if it exists
+  const saved = sessionStorage.getItem('gycScopedData_' + email);
+  if (saved) {
+    const bundle = JSON.parse(saved);
+    Object.keys(bundle).forEach(k => localStorage.setItem(k, bundle[k]));
+  }
+  // Refresh in-memory state from localStorage
+  dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || 'null') || { assetClasses: [], strategies: [], dealTypes: [], objectives: [], irrMin: '', irrMax: '', minInvest: '', maxInvest: '', holdMin: '', holdMax: '' };
+  wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+}
+
 function viewAsUser(email, name, contactId, tier) {
   // Save admin's real session
   if (!adminRealUser) {
     adminRealUser = JSON.parse(localStorage.getItem('gycUser'));
     sessionStorage.setItem('gycAdminRealUser', JSON.stringify(adminRealUser));
+    // Save admin's per-user data
+    saveUserScopedData(adminRealUser.email);
+  }
+
+  // Save current impersonated user's data if switching between users
+  const currentUser = getUser();
+  if (currentUser && currentUser.email !== email) {
+    saveUserScopedData(currentUser.email);
   }
 
   // Swap to target user
@@ -9290,6 +10594,9 @@ function viewAsUser(email, name, contactId, tier) {
     token: 'impersonated'
   };
   localStorage.setItem('gycUser', JSON.stringify(impersonatedUser));
+
+  // Load target user's scoped data (clears admin's portfolio, deal stages, etc.)
+  loadUserScopedData(email);
 
   // Close dropdown
   document.getElementById('viewAsDropdown').style.display = 'none';
@@ -9310,16 +10617,23 @@ function viewAsUser(email, name, contactId, tier) {
   // Fetch their buy box from GHL
   fetchBuyBoxForUser(email);
 
-  // Navigate to deals to see their view
-  navigateTo('deals');
+  // Navigate to dashboard to see their full view
+  navigateTo('dashboard');
 }
 
 function exitViewAs() {
   if (!adminRealUser) return;
 
+  // Save the impersonated user's data before switching back
+  const currentUser = getUser();
+  if (currentUser) saveUserScopedData(currentUser.email);
+
   // Restore admin session
   localStorage.setItem('gycUser', JSON.stringify(adminRealUser));
   sessionStorage.removeItem('gycAdminRealUser');
+
+  // Restore admin's per-user data (portfolio, deal stages, buy box, etc.)
+  loadUserScopedData(adminRealUser.email);
 
   // Restore sidebar
   const name = adminRealUser.name || 'Admin';
@@ -9335,9 +10649,8 @@ function exitViewAs() {
 
   adminRealUser = null;
 
-  // Restore admin's buy box
-  const user = getUser();
-  if (user?.email) fetchBuyBoxForUser(user.email);
+  // Navigate to dashboard with restored data
+  navigateTo('dashboard');
 }
 
 async function fetchBuyBoxForUser(email) {
@@ -9474,6 +10787,102 @@ if (localStorage.getItem('gycBuyBoxComplete')) {
 
 // Sync buy box from GHL (background, non-blocking)
 fetchBuyBoxFromGHL();
+
+// Mobile bottom tab bar — update active state on navigation
+(function() {
+  const origNavigateTo = window.navigateTo;
+  if (origNavigateTo) {
+    window.navigateTo = function(page) {
+      origNavigateTo(page);
+      updateMobileTabBar(page);
+    };
+  }
+  function updateMobileTabBar(page) {
+    document.querySelectorAll('.mobile-tab-item').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.page === page);
+    });
+    // "More" tab is active for pages not in the tab bar
+    const tabPages = ['deals', 'debtfunds', 'portfolio', 'managers'];
+    if (!tabPages.includes(page)) {
+      document.querySelector('.mobile-tab-item[data-page="more"]')?.classList.add('active');
+      tabPages.forEach(p => document.querySelector(`.mobile-tab-item[data-page="${p}"]`)?.classList.remove('active'));
+    }
+  }
+  // Set initial state
+  updateMobileTabBar('deals');
+
+  // iOS: inject collapsible filter toggles
+  if (document.documentElement.classList.contains('cap-ios')) {
+    // Deals page filter bar
+    const dealsFilter = document.querySelector('#page-deals .filter-bar');
+    if (dealsFilter) {
+      const row = document.createElement('div');
+      row.className = 'ios-filter-row';
+      row.innerHTML = `
+        <div style="position:relative;flex:1;min-width:0;">
+          <input type="text" class="filter-input" placeholder="Search deals..."
+            oninput="document.getElementById('filterSearch').value=this.value;applyFilters();"
+            style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+        </div>
+        <button class="ios-filter-toggle" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+        <select style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:var(--font-ui);font-weight:600;flex-shrink:0;" onchange="document.getElementById('filterSort').value=this.value;applyFilters();">
+          <option value="newest">Newest</option>
+          <option value="irr">Highest IRR</option>
+          <option value="min_invest">Lowest Min</option>
+          <option value="az">A-Z</option>
+        </select>
+      `;
+      dealsFilter.insertBefore(row, dealsFilter.firstChild);
+    }
+
+    // Managers page filter toggle
+    const managersContent = document.querySelector('#page-managers .content-area');
+    if (managersContent) {
+      const sidebar = document.getElementById('managersFilterSidebar');
+      if (sidebar) {
+        const toggle = document.createElement('div');
+        toggle.style.cssText = 'padding:10px 0;display:flex;gap:8px;align-items:center;';
+        toggle.innerHTML = `
+          <input type="text" id="managersNameSearchMobile" placeholder="Search managers..."
+            oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();"
+            style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+          <button class="ios-filter-toggle" onclick="this.classList.toggle('open');document.getElementById('managersFilterSidebar').classList.toggle('ios-filters-open');">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filters
+          </button>
+        `;
+        managersContent.insertBefore(toggle, sidebar);
+      }
+    }
+  }
+})();
 </script>
+
+<!-- Mobile Bottom Tab Bar -->
+<div class="mobile-tab-bar">
+  <button class="mobile-tab-item active" data-page="deals" onclick="navigateTo('deals')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Deals</span>
+  </button>
+  <button class="mobile-tab-item" data-page="debtfunds" onclick="navigateTo('debtfunds')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
+    <span>Funds</span>
+  </button>
+  <button class="mobile-tab-item" data-page="portfolio" onclick="navigateTo('portfolio')">
+    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <span>Portfolio</span>
+  </button>
+  <button class="mobile-tab-item" data-page="managers" onclick="navigateTo('managers')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Managers</span>
+  </button>
+  <button class="mobile-tab-item" data-page="more" onclick="navigateTo('more')">
+    <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <span>More</span>
+  </button>
+</div>
 </body>
 </html>
