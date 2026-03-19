@@ -179,6 +179,8 @@ body {
 
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
 .nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+.nav-item-disabled { opacity: 0.4; cursor: default !important; pointer-events: auto; }
+.nav-item-disabled:hover { background: transparent !important; color: inherit !important; }
 .nav-item-promo {
   background: linear-gradient(135deg, rgba(81,190,123,0.15), rgba(81,190,123,0.05)) !important;
   border: 1px solid rgba(81,190,123,0.3);
@@ -3686,22 +3688,24 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       My Buy Box
     </a>
+    <div class="nav-section-label">Research</div>
     <a class="nav-item active" href="#" data-page="deals" onclick="navigateTo('deals'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Live Deals
+      Deal Flow
       <span class="nav-badge" id="dealCountBadge">30</span>
     </a>
     <a class="nav-item" href="#" data-page="debtfunds" onclick="navigateTo('debtfunds'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
-      Debt Fund Explorer
+      Debt Funds
     </a>
     <a class="nav-item" href="#" data-page="managers" onclick="navigateTo('managers'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Investment Managers
+      Operators
     </a>
-    <a class="nav-item" href="#" data-page="assets" onclick="navigateTo('assets'); return false">
+    <a class="nav-item nav-item-disabled" href="#" data-page="assets" id="navAssets" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('assets'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Assets
+      <span style="font-size:9px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;" id="assetsComingSoon">SOON</span>
     </a>
     <div class="nav-section-label">My Investments</div>
     <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
@@ -3729,7 +3733,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
     <div class="nav-section-label" style="margin-top:auto;">Account</div>
     <a class="nav-item" href="#" data-page="dealflow" onclick="navigateTo('dealflow'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      Deal Flow Stats
+      My Stats
     </a>
     <a class="nav-item" href="#" data-page="subscription" onclick="navigateTo('subscription'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -4190,8 +4194,8 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       <div class="topbar-title">Subscription</div>
     </div>
     <div class="sub-page">
-      <div class="settings-page-title">Choose Your Plan</div>
-      <div class="settings-page-desc">From free deal access to full-service capital deployment with Pascal by your side.</div>
+      <div class="settings-page-title">Membership</div>
+      <div class="settings-page-desc">From free deal access to having Pascal in your corner for every investment decision.</div>
       <div class="plan-grid">
         <div class="plan-card">
           <div class="plan-name">Free</div>
@@ -4208,8 +4212,9 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
         </div>
         <div class="plan-card featured">
           <div class="plan-name">Academy</div>
-          <div class="plan-price">$5,000<span>/year</span></div>
-          <div class="plan-desc">Cashflow Academy membership with structured learning, community, and live coaching.</div>
+          <div class="plan-price">$400<span>/month</span></div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:-4px;margin-bottom:12px;">Billed annually at $5,000/year</div>
+          <div class="plan-desc">Your annual mastermind. Someone in your corner for every deal, every question, every decision.</div>
           <ul class="plan-features">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cashflow Academy curriculum</li>
@@ -4219,7 +4224,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority deal alerts &amp; scoring</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full framework &amp; template library</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn">Join Academy</button>
+          <button class="btn-cta btn-cta-primary plan-btn">Join the Academy</button>
         </div>
         <div class="plan-card" style="border-color:var(--teal-deep);background:linear-gradient(180deg,var(--bg-card) 0%,rgba(31,81,89,0.04) 100%);">
           <div class="plan-name" style="color:var(--teal-deep);">Family Office</div>
@@ -4234,7 +4239,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tax &amp; entity structuring guidance</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Portfolio construction &amp; rebalancing</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn" style="background:var(--teal-deep);">Apply Now</button>
+          <a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="btn-cta btn-cta-primary plan-btn" style="background:var(--teal-deep);text-decoration:none;text-align:center;display:block;">Schedule a Call</a>
         </div>
       </div>
     </div>
@@ -5072,13 +5077,8 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Tax Prep</div>
-      <div class="topbar-spacer"></div>
-      <select id="taxYearFilter" class="filter-select" onchange="renderTaxPrep()" style="min-width:120px;font-size:12px;margin-right:10px;">
-        <option value="">All Years</option>
-      </select>
-      <button onclick="showAddTaxDocModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Tax Document</button>
     </div>
-    <div class="content-area" style="padding:24px;max-width:1200px;">
+    <div class="sub-page" style="max-width:1000px;">
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
@@ -9173,12 +9173,12 @@ function initSubscription() {
         btn.className = 'btn-cta btn-cta-secondary plan-btn';
         btn.onclick = null;
       } else {
-        btn.textContent = 'Join Academy';
+        btn.textContent = 'Join the Academy';
         btn.onclick = () => handleSubscribe('academy', 5000);
       }
     } else if (planName === 'family office') {
-      btn.textContent = 'Apply Now';
-      btn.onclick = () => handleSubscribe('family_office', 25000);
+      // Family Office uses a calendar link, not a JS handler
+      // The button is already an <a> tag in the HTML
     }
   });
 }
@@ -11991,6 +11991,13 @@ function isAdmin() {
 function showAdminNav() {
   const adminNav = document.getElementById('adminNav');
   if (adminNav) adminNav.style.display = isAdmin() ? 'block' : 'none';
+  // Enable Assets nav for admins
+  const navAssets = document.getElementById('navAssets');
+  const assetsLabel = document.getElementById('assetsComingSoon');
+  if (navAssets && isAdmin()) {
+    navAssets.classList.remove('nav-item-disabled');
+    if (assetsLabel) assetsLabel.style.display = 'none';
+  }
 }
 
 // --- Local Analytics Storage ---
