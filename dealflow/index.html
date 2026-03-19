@@ -4056,63 +4056,33 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       </button>
       <div class="topbar-title">Investment Managers</div>
     </div>
-    <div class="content-area" style="padding:24px;display:flex;gap:24px;align-items:flex-start;">
-      <!-- Filter Sidebar -->
-      <div id="managersFilterSidebar" style="width:260px;flex-shrink:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:sticky;top:24px;">
-        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Filters</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Use filters to narrow your search.</div>
-
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Search by Name</label>
-          <input type="text" id="managersNameSearch" oninput="renderManagersPage()" placeholder="Search managers..." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</label>
-          <select id="managersAssetFilter" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
-            <option value="">All Asset Classes</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Manager Type</label>
-          <select id="managersTypeFilter" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
-            <option value="">All Types</option>
-            <option value="Operator">Operator</option>
-            <option value="Fund Manager">Fund Manager</option>
-            <option value="Capital Allocator">Capital Allocator</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Minimum Deals</label>
-          <select id="managersMinDeals" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
-            <option value="0">Any</option>
-            <option value="3">3+ deals</option>
-            <option value="5">5+ deals</option>
-            <option value="10">10+ deals</option>
-          </select>
-        </div>
-
-        <div style="margin-bottom:16px;">
-          <label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Sort By</label>
-          <select id="managersSortBy" onchange="renderManagersPage()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-main);box-sizing:border-box;">
-            <option value="deals">Most Deals</option>
-            <option value="name">Name (A-Z)</option>
-            <option value="newest">Newest First</option>
-          </select>
-        </div>
-
-        <div style="display:flex;gap:8px;">
-          <button onclick="document.getElementById('managersNameSearch').value='';document.getElementById('managersAssetFilter').value='';document.getElementById('managersTypeFilter').value='';document.getElementById('managersMinDeals').value='0';document.getElementById('managersSortBy').value='deals';renderManagersPage();" style="flex:1;padding:8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--text-secondary);">Reset Filters</button>
-        </div>
-      </div>
-
-      <!-- Main Content -->
-      <div style="flex:1;min-width:0;">
-        <div id="managersStats" style="margin-bottom:20px;"></div>
-        <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
-      </div>
+    <div class="filter-bar" style="padding:12px 24px;">
+      <input type="text" id="managersNameSearch" oninput="renderManagersPage()" placeholder="Search managers..." style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);min-width:180px;box-sizing:border-box;">
+      <select id="managersAssetFilter" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+        <option value="">All Asset Classes</option>
+      </select>
+      <select id="managersTypeFilter" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+        <option value="">All Types</option>
+        <option value="Operator">Operator</option>
+        <option value="Fund Manager">Fund Manager</option>
+        <option value="Capital Allocator">Capital Allocator</option>
+      </select>
+      <select id="managersMinDeals" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+        <option value="0">Any # Deals</option>
+        <option value="3">3+ deals</option>
+        <option value="5">5+ deals</option>
+        <option value="10">10+ deals</option>
+      </select>
+      <select id="managersSortBy" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+        <option value="deals">Most Deals</option>
+        <option value="name">Name (A-Z)</option>
+        <option value="newest">Newest First</option>
+      </select>
+      <button onclick="document.getElementById('managersNameSearch').value='';document.getElementById('managersAssetFilter').value='';document.getElementById('managersTypeFilter').value='';document.getElementById('managersMinDeals').value='0';document.getElementById('managersSortBy').value='deals';renderManagersPage();" style="padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;">Reset</button>
+    </div>
+    <div class="content-area" style="padding:24px;">
+      <div id="managersStats" style="margin-bottom:20px;"></div>
+      <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
     </div>
