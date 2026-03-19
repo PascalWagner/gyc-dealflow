@@ -8167,10 +8167,11 @@ function renderWizardStep() {
       const target = parseDollar(wizardData.targetCashFlow) || 100000;
       const cap = parseCapitalRange(wizardData._capitalRange);
       const capitalMid = cap.mid > 0 ? cap.mid : Math.round(target / 0.09);
-      const yr1 = Math.round(capitalMid * 0.09);
-      const yr2 = Math.round(yr1 * 1.6);
-      const yr3 = Math.min(target, Math.round(yr1 * 2.2));
-      const yr4 = Math.min(target, Math.round(target * 0.85));
+      const yr1Raw = Math.round(capitalMid * 0.09);
+      const yr1 = Math.min(target, yr1Raw);
+      const yr2 = Math.min(target, Math.round(yr1Raw * 1.4));
+      const yr3 = Math.min(target, Math.round(yr1Raw * 1.8));
+      const yr4 = Math.min(target, Math.round(target * 0.9));
       const yr5 = target;
       html += `<div class="wizard-card-title">Your path to $${target.toLocaleString()}/yr</div>`;
       // Growth curve chart
