@@ -3293,6 +3293,9 @@ html.cap-ios .debt-metric-select-mobile {
 <!-- Main Content -->
 <div class="main">
 
+  <!-- CASHFLOW GAP BAR (persistent across all pages) -->
+  <div id="cashflowGapBar" style="display:none;position:sticky;top:0;z-index:90;background:linear-gradient(135deg,#0f172a,#1e3a3a);padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.1);"></div>
+
   <!-- PAGE: Live Deals -->
   <div class="page active" id="page-deals">
     <div class="topbar">
@@ -5293,6 +5296,7 @@ function renderCreditCard(deal) {
             <div class="metric-value" style="font-size:11px;${deal.mcFoundingYear ? '' : 'color:var(--text-muted);font-weight:600;'}">${deal.mcFoundingYear || 'Coming Soon'}</div>
           </div>
         </div>
+        ${(function(){ var gf = getGapFillPercent(deal); return gf !== null ? '<div style="padding:6px 12px;margin-top:8px;background:rgba(74,222,128,0.08);border-radius:6px;font-size:11px;color:#4ade80;font-weight:600;text-align:center;">Fills ' + Math.min(gf, 100) + '% of your income gap</div>' : ''; })()}
       </div>
       <div class="card-footer">
         <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
@@ -5576,6 +5580,7 @@ function renderCard(deal) {
             <div class="metric-value" style="font-size:11px;color:var(--text-muted);font-weight:600;">Coming Soon</div>
           </div>
         </div>
+        ${(function(){ var gf = getGapFillPercent(deal); return gf !== null ? '<div style="padding:6px 12px;margin-top:8px;background:rgba(74,222,128,0.08);border-radius:6px;font-size:11px;color:#4ade80;font-weight:600;text-align:center;">Fills ' + Math.min(gf, 100) + '% of your income gap</div>' : ''; })()}
       </div>
       <div class="card-footer">
         <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
@@ -6407,6 +6412,8 @@ function navigateTo(page) {
   if (wizOverlay && wizOverlay.classList.contains('active') && page !== 'buybox') {
     closeWizard();
   }
+  // Update cashflow gap bar on every page
+  if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
   // Render page-specific content
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
@@ -6584,9 +6591,7 @@ function renderFollows() {
 
 // ========== AUTH INTEGRATION ==========
 const WEBHOOKS = {
-  buyBoxSync: 'https://hook.us2.make.com/YOUR_BUYBOX_SYNC_WEBHOOK',
-  subscribe:  'https://hook.us2.make.com/YOUR_SUBSCRIBE_WEBHOOK',
-  activity:   'https://hook.us2.make.com/YOUR_ACTIVITY_WEBHOOK'
+  activity: '/api/events'
 };
 
 function getUser() {
@@ -7331,6 +7336,7 @@ function wizardNext() {
     document.getElementById('wizardOverlay').classList.remove('active');
     if (typeof trackActivity === 'function') {
       trackActivity('onboarding_complete', { branch: wizardData._branch, wizardData: JSON.stringify(wizardData).substring(0, 200) });
+      trackActivity('wizard_complete', { branch: wizardData._branch });
     }
     syncBuyBoxToGHL();
     navigateTo('dashboard');
@@ -7883,6 +7889,10 @@ function saveGoalsFromWizard() {
   };
   saveGoals();
   renderGoals();
+  // Fire goals_complete event to GHL
+  const gap = investorGoals.targetIncome - investorGoals.currentIncome;
+  trackActivity('goals_complete', { incomeGoal: investorGoals.targetIncome, incomeGap: gap, capital: investorGoals.capital });
+  renderCashflowGapBar();
 }
 
 function renderGoalsDashboard() {
@@ -8060,6 +8070,69 @@ function renderGoalsDashboard() {
   }
 }
 
+// ========== CASHFLOW GAP PERSISTENT BAR ==========
+function renderCashflowGapBar() {
+  const bar = document.getElementById('cashflowGapBar');
+  if (!bar) return;
+
+  const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  const user = getUser();
+
+  // No goals set — show prompt to set goals
+  if (!goals) {
+    bar.style.display = 'flex';
+    bar.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span style="font-size:12px;color:#94a3b8;font-family:var(--font-ui);">Set your passive income goal to see how each deal gets you closer</span>
+        </div>
+        <button onclick="navigateTo('goals')" style="padding:5px 14px;background:#4ade80;color:#0f172a;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Set Goal &rarr;</button>
+      </div>`;
+    return;
+  }
+
+  const gap = goals.targetIncome - goals.currentIncome;
+  const progress = goals.targetIncome > 0 ? Math.min(100, Math.round((goals.currentIncome / goals.targetIncome) * 100)) : 0;
+
+  // Goals set — show progress bar with gap
+  bar.style.display = 'flex';
+  var ctaHtml = '';
+  if (gap > 0 && user && user.tier === 'explorer') {
+    ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
+  } else if (gap <= 0) {
+    ctaHtml = '<span style="font-size:11px;color:#4ade80;font-weight:700;">Goal reached!</span>';
+  }
+
+  bar.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;">
+        <div style="display:flex;gap:16px;font-size:12px;font-family:var(--font-ui);white-space:nowrap;">
+          <span style="color:#94a3b8;">Goal: <strong style="color:#fff;">$${goals.targetIncome.toLocaleString()}/yr</strong></span>
+          <span style="color:#94a3b8;">Current: <strong style="color:#4ade80;">$${goals.currentIncome.toLocaleString()}/yr</strong></span>
+          <span style="color:#94a3b8;">Gap: <strong style="color:#f59e0b;">$${gap.toLocaleString()}/yr</strong></span>
+        </div>
+        <div style="flex:1;min-width:60px;max-width:200px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,#4ade80,#3b82f6);border-radius:3px;transition:width 0.6s ease;"></div>
+        </div>
+        <span style="font-size:12px;font-weight:800;color:#fff;">${progress}%</span>
+      </div>
+      ${ctaHtml}
+    </div>`;
+}
+
+// Helper: calculate how much of income gap a deal fills
+function getGapFillPercent(deal) {
+  const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  if (!goals) return null;
+  const gap = goals.targetIncome - goals.currentIncome;
+  if (gap <= 0) return null;
+  const dealMin = deal.investmentMinimum || 100000;
+  const dealYield = deal.preferredReturn || 0.08;
+  const annualIncome = dealMin * dealYield;
+  return Math.round((annualIncome / gap) * 100);
+}
+
 // Reusable 3-path component — used on Goals page and Dashboard
 function renderThreePaths(targetIncome, capital, checkSize) {
   var avgCheck = checkSize || 100000;
@@ -8128,7 +8201,23 @@ function renderThreePaths(targetIncome, capital, checkSize) {
   h += '</div>';
   h += '<div style="flex:1;"></div>';
   h += '<div style="margin-top:16px;padding:10px;background:#dbeafe;border-radius:var(--radius-sm);font-size:11px;color:#1e40af;text-align:center;">Pascal guides you step by step</div>';
-  h += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
+  // Social proof
+  h += '<div style="margin-top:12px;padding:10px;background:rgba(59,130,246,0.06);border-radius:var(--radius-sm);font-size:11px;color:var(--text-secondary);text-align:center;line-height:1.5;">';
+  h += '<strong style="color:var(--text-dark);">20+ Academy members</strong> have deployed capital with guidance';
+  h += '</div>';
+  // Cohort countdown
+  h += (function() {
+    var NEXT_COHORT = '2026-04-15';
+    var now = new Date();
+    var cohort = new Date(NEXT_COHORT + 'T00:00:00');
+    var daysLeft = Math.ceil((cohort - now) / (1000 * 60 * 60 * 24));
+    if (daysLeft > 0 && daysLeft <= 30) {
+      var urgencyColor = daysLeft <= 7 ? '#ef4444' : '#3b82f6';
+      return '<div style="margin-top:8px;padding:8px;border:1px dashed ' + urgencyColor + ';border-radius:var(--radius-sm);font-size:11px;color:' + urgencyColor + ';text-align:center;font-weight:700;">Next cohort starts in ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : '') + '</div>';
+    }
+    return '';
+  })();
+  h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'three_paths\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
   h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:#3b82f6;font-weight:700;">$5,000</div>';
   h += '</div>';
 
@@ -8147,7 +8236,11 @@ function renderThreePaths(targetIncome, capital, checkSize) {
   h += '</div>';
   h += '<div style="flex:1;"></div>';
   h += '<div style="margin-top:16px;padding:10px;background:#dcfce7;border-radius:var(--radius-sm);font-size:11px;color:#166534;text-align:center;">One wire. Fully managed by Pascal.</div>';
-  h += '<button onclick="window.open(\'https://growyourcashflow.io/fund\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
+  // Fund social proof
+  h += '<div style="margin-top:12px;padding:10px;background:rgba(74,222,128,0.06);border-radius:var(--radius-sm);font-size:11px;color:var(--text-secondary);text-align:center;line-height:1.5;">';
+  h += '<strong style="color:var(--primary);">28 consecutive distributions</strong><br>$84K+ paid to investors';
+  h += '</div>';
+  h += '<button onclick="trackActivity(\'fund_cta_clicked\',{source:\'three_paths\'});window.open(\'https://growyourcashflow.io/fund\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
   h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--primary);font-weight:700;">$100K minimum</div>';
   h += '</div>';
 
@@ -8156,7 +8249,7 @@ function renderThreePaths(targetIncome, capital, checkSize) {
   // CTA fallback
   h += '<div style="text-align:center;margin-top:20px;">';
   h += '<div style="font-size:12px;color:var(--text-secondary);">Not sure which is right for you?</div>';
-  h += '<a href="https://growyourcashflow.io/call" target="_blank" style="font-size:13px;font-weight:700;color:var(--primary);text-decoration:none;display:inline-block;margin-top:4px;">Book a free Deployment Gameplan Call &rarr;</a>';
+  h += '<a href="https://growyourcashflow.io/call" target="_blank" onclick="trackActivity(\'call_booked\',{source:\'three_paths\'})" style="font-size:13px;font-weight:700;color:var(--primary);text-decoration:none;display:inline-block;margin-top:4px;">Book a free Deployment Gameplan Call &rarr;</a>';
   h += '</div>';
 
   h += '</div>'; // close outer card
@@ -8164,6 +8257,21 @@ function renderThreePaths(targetIncome, capital, checkSize) {
 }
 
 // ========== ACTIVITY TRACKING (GHL SYNC) ==========
+
+// Client-side counters for GHL event pipeline
+function getEventCounters() {
+  return JSON.parse(localStorage.getItem('gycEventCounters') || '{"viewCount":0,"saveCount":0,"sessionCount":0}');
+}
+function setEventCounters(counters) {
+  localStorage.setItem('gycEventCounters', JSON.stringify(counters));
+}
+function incrementCounter(key) {
+  const c = getEventCounters();
+  c[key] = (c[key] || 0) + 1;
+  setEventCounters(c);
+  return c[key];
+}
+
 function trackActivity(action, data) {
   const user = getUser();
   if (!user) return;
@@ -8173,22 +8281,34 @@ function trackActivity(action, data) {
   if (typeof gtag === 'function') {
     gtag('event', action, data || {});
   }
-  // Send to webhook
+  // Send to GHL event pipeline
   try {
     fetch(WEBHOOKS.activity, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, action, data, timestamp: new Date().toISOString() })
+      body: JSON.stringify({ email: user.email, event: action, data: data || {} })
     }).catch(() => {});
   } catch(e) {}
 }
 
-// Track deal views
+// Track deal views (with debounced GHL sync — every 5th view)
 const _origOpenPanel = openPanel;
 openPanel = function(id) {
   _origOpenPanel(id);
   const deal = DEALS.find(d => d.id === id);
-  if (deal) trackActivity('view_deal', { dealId: id, dealName: deal.investmentName, sponsor: deal.managementCompany });
+  if (deal) {
+    const viewCount = incrementCounter('viewCount');
+    // Only sync to GHL every 5th view to avoid hammering API
+    if (viewCount % 5 === 0) {
+      trackActivity('deal_viewed', { dealId: id, dealName: deal.investmentName, sponsor: deal.managementCompany, viewCount: viewCount });
+    } else {
+      // Still track locally + GA4 without GHL call
+      storeAnalyticsEvent('view_deal', { dealId: id, dealName: deal.investmentName, sponsor: deal.managementCompany });
+      if (typeof gtag === 'function') gtag('event', 'view_deal', { dealId: id, dealName: deal.investmentName });
+    }
+    // Trigger conversion CTAs based on views
+    onDealViewed(id, deal);
+  }
 };
 
 // Track saves
@@ -8197,8 +8317,237 @@ toggleSave = function(id) {
   const wasSaved = savedDeals.has(id);
   _origToggleSave(id);
   const deal = DEALS.find(d => d.id === id);
-  if (deal) trackActivity(wasSaved ? 'unsave_deal' : 'save_deal', { dealId: id, dealName: deal.investmentName });
+  if (deal) {
+    if (!wasSaved) {
+      const saveCount = incrementCounter('saveCount');
+      trackActivity('deal_saved', { dealId: id, dealName: deal.investmentName, saveCount: saveCount });
+      // Trigger conversion CTAs based on saves
+      onDealSaved(saveCount);
+    } else {
+      trackActivity('unsave_deal', { dealId: id, dealName: deal.investmentName });
+    }
+  }
 };
+
+// ========== CONVERSION CTA SYSTEM ==========
+
+// CTA state: tracks which CTAs have been shown (persisted across sessions)
+function getCtaState() {
+  return JSON.parse(localStorage.getItem('gycCtaState') || '{}');
+}
+function shouldShowCta(type) {
+  const user = getUser();
+  if (!user || user.tier === 'academy' || user.tier === 'investor') return false;
+  const state = getCtaState();
+  return !state[type];
+}
+function markCtaShown(type) {
+  const state = getCtaState();
+  state[type] = true;
+  localStorage.setItem('gycCtaState', JSON.stringify(state));
+}
+function dismissCta(type) {
+  markCtaShown(type);
+  const el = document.getElementById('cta-' + type);
+  if (el) el.remove();
+}
+
+// ========== PHASE 3: SOFT GATING ==========
+
+// Deal detail view counter (5 per month for explorers)
+function getDetailViewState() {
+  const state = JSON.parse(localStorage.getItem('gycDetailViews') || '{"count":0,"resetMonth":""}');
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  if (state.resetMonth !== currentMonth) {
+    state.count = 0;
+    state.resetMonth = currentMonth;
+    localStorage.setItem('gycDetailViews', JSON.stringify(state));
+  }
+  return state;
+}
+function incrementDetailViews() {
+  const state = getDetailViewState();
+  state.count++;
+  localStorage.setItem('gycDetailViews', JSON.stringify(state));
+  return state.count;
+}
+
+function isGated() {
+  const user = getUser();
+  if (!user) return true;
+  return user.tier === 'explorer';
+}
+
+// Gate overlay for deal.html navigation
+function showDealGateOverlay(dealId) {
+  const deal = DEALS.find(d => d.id === dealId);
+  const dealName = deal ? deal.investmentName : 'this deal';
+  const state = getDetailViewState();
+
+  // Fire tracking event
+  trackActivity('gate_hit', { source: 'detail_limit', dealId: dealId, viewCount: state.count });
+
+  // Show gate modal
+  let overlay = document.getElementById('gateOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'gateOverlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:40px;max-width:480px;width:90%;text-align:center;position:relative;">
+      <button onclick="document.getElementById('gateOverlay').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button>
+      <div style="width:56px;height:56px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:14px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin-bottom:8px;">You've used your 5 free deal views</div>
+      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">
+        Unlock unlimited deal analysis, Pascal's personal scorecard, full DD checklists, and guided deployment with Cashflow Academy.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="trackActivity('academy_cta_clicked',{source:'gate_overlay'});window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Join Cashflow Academy &rarr;</button>
+        <button onclick="trackActivity('call_booked',{source:'gate_overlay'});window.open('https://growyourcashflow.io/call','_blank')" style="width:100%;padding:14px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Book a Free Strategy Call</button>
+      </div>
+      <div style="margin-top:16px;font-size:11px;color:var(--text-muted);">Free views reset monthly. ${5 - Math.min(state.count, 5)} of 5 remaining.</div>
+    </div>`;
+}
+
+// Intercept deal.html navigation for gating
+(function interceptDealNavigation() {
+  document.addEventListener('click', function(e) {
+    // Find closest element with onclick or href pointing to deal.html
+    const target = e.target.closest('[onclick*="deal.html"], a[href*="deal.html"]');
+    if (!target) return;
+
+    if (!isGated()) return; // academy/investor users pass through
+
+    const state = getDetailViewState();
+    const newCount = state.count + 1;
+
+    if (newCount > 5) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Extract deal ID from the URL
+      const match = (target.getAttribute('onclick') || target.getAttribute('href') || '').match(/deal\.html\?id=([^'"&]+)/);
+      const dealId = match ? match[1] : null;
+      showDealGateOverlay(dealId);
+      return false;
+    }
+
+    // Allowed — increment counter
+    incrementDetailViews();
+  }, true); // capture phase to intercept before onclick fires
+})();
+
+// ========== PHASE 3B: GATE PASCAL'S ANALYSIS IN PANEL ==========
+// Wrap renderPanel to blur scorecard/analysis for explorer users
+const _origRenderPanel = renderPanel;
+renderPanel = function(deal) {
+  let html = _origRenderPanel(deal);
+
+  if (isGated()) {
+    // Blur Pascal's scorecard section if present
+    html = html.replace(
+      /(Pascal['']s\s*(?:Score|Analysis|Take|Review)[\s\S]*?)(<\/div>\s*<\/div>)/i,
+      function(match) {
+        return '<div style="position:relative;"><div style="filter:blur(6px);pointer-events:none;opacity:0.5;">' + match + '</div>' +
+          '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;">' +
+          '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 28px;box-shadow:0 4px 20px rgba(0,0,0,0.15);">' +
+          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="margin-bottom:8px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+          '<div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Academy Members Only</div>' +
+          '<div style="font-size:11px;color:var(--text-secondary);">Get Pascal\'s personal deal analysis</div>' +
+          '</div></div></div>';
+      }
+    );
+  }
+
+  return html;
+};
+
+// ========== PHASE 4: BEHAVIORAL CTAs ==========
+
+function onDealViewed(id, deal) {
+  // Fund-type inline CTA
+  if (deal && (deal.assetClass === 'Lending' || deal.assetClass === 'Credit' || deal.dealType === 'Fund')) {
+    if (!sessionStorage.getItem('gycFundCtaShown')) {
+      sessionStorage.setItem('gycFundCtaShown', '1');
+      // Inject fund CTA into the panel after a brief delay
+      setTimeout(function() {
+        const panelContent = document.getElementById('panelContent');
+        if (!panelContent) return;
+        const ctaDiv = document.createElement('div');
+        ctaDiv.id = 'cta-fund_inline';
+        ctaDiv.style.cssText = 'margin:16px;padding:20px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:2px solid var(--primary);border-radius:12px;text-align:center;';
+        ctaDiv.innerHTML = `
+          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">GYC Income Fund invests across deals like this</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">One investment, fully managed. 28 consecutive monthly distributions.</div>
+          <button onclick="trackActivity('fund_cta_clicked',{source:'deal_panel_inline'});window.open('https://growyourcashflow.io/fund','_blank')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Learn More &rarr;</button>`;
+        panelContent.appendChild(ctaDiv);
+      }, 1500);
+    }
+  }
+}
+
+function onDealSaved(saveCount) {
+  // Show bottom banner after 2+ saves
+  if (saveCount >= 2 && shouldShowCta('deals_saved_banner')) {
+    markCtaShown('deals_saved_banner');
+    const banner = document.createElement('div');
+    banner.id = 'cta-deals_saved_banner';
+    banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#0f172a,#1e3a3a);padding:16px 24px;z-index:999;display:flex;align-items:center;justify-content:space-between;gap:16px;animation:slideUp 0.4s ease;';
+    banner.innerHTML = `
+      <div style="flex:1;">
+        <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;">You've saved ${saveCount} deals. Ready to deploy?</div>
+        <div style="font-size:12px;color:#94a3b8;">Book a free strategy call or learn how Academy members deploy in 90 days.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button onclick="trackActivity('call_booked',{source:'deals_saved_banner'});window.open('https://growyourcashflow.io/call','_blank')" style="padding:10px 18px;background:#4ade80;color:#0f172a;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Book a Call</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'deals_saved_banner'});window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Academy &rarr;</button>
+      </div>
+      <button onclick="dismissCta('deals_saved_banner')" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:4px;">&times;</button>`;
+    document.body.appendChild(banner);
+    // Auto-hide after 15 seconds
+    setTimeout(function() {
+      if (document.getElementById('cta-deals_saved_banner')) dismissCta('deals_saved_banner');
+    }, 15000);
+  }
+}
+
+// Returning user modal (3+ sessions)
+function showReturningUserModal() {
+  if (!shouldShowCta('returning_user_modal')) return;
+  markCtaShown('returning_user_modal');
+
+  const modal = document.createElement('div');
+  modal.id = 'cta-returning_user_modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:fadeIn 0.3s ease;';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;padding:40px;max-width:420px;width:90%;text-align:center;position:relative;">
+      <button onclick="dismissCta('returning_user_modal')" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button>
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:28px;">&#128075;</div>
+      <div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin-bottom:8px;">You've been researching</div>
+      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">
+        Most investors spend weeks browsing before taking action. Let's build your deployment plan together.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="trackActivity('call_booked',{source:'returning_user_modal'});window.open('https://growyourcashflow.io/call','_blank');dismissCta('returning_user_modal');" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Book a Free Strategy Call &rarr;</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'returning_user_modal'});window.open('https://growyourcashflow.io/cashflow-academy','_blank');dismissCta('returning_user_modal');" style="width:100%;padding:12px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;">Learn About Cashflow Academy</button>
+        <button onclick="dismissCta('returning_user_modal')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:8px;">Not now</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// Add CSS animations for CTAs
+(function addCtaStyles() {
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  `;
+  document.head.appendChild(style);
+})();
 
 
 // ========== DEBT FUND EXPLORER ==========
@@ -11198,6 +11547,24 @@ initSubscription();
 
 // Track initial page load
 analyticsPageEnter('deals');
+
+// Render cashflow gap bar on initial load
+if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
+
+// ========== SESSION TRACKING ==========
+(function initSessionTracking() {
+  if (sessionStorage.getItem('gycSessionTracked')) return; // Already tracked this session
+  sessionStorage.setItem('gycSessionTracked', '1');
+  const sessionCount = incrementCounter('sessionCount');
+  // Fire event to GHL on 3rd+ session
+  if (sessionCount >= 3) {
+    trackActivity('session_start', { sessionCount: sessionCount });
+  }
+  // Show returning user CTA on 3rd+ session (Phase 4)
+  if (sessionCount >= 3 && shouldShowCta('returning_user_modal')) {
+    setTimeout(() => showReturningUserModal(), 5000);
+  }
+})();
 
 // Handle #onboarding hash from signup
 if (window.location.hash === '#onboarding') {
