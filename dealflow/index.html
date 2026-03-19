@@ -6484,6 +6484,7 @@ function renderPanel(deal) {
             <div style="font-size:12px;color:var(--primary);text-decoration:underline;">${deal.managementCompany}</div>
           </div>
         </a>
+        ${deal.verticalIntegration ? '<div style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:' + (deal.verticalIntegration === 'Yes' || deal.verticalIntegration === true ? 'rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2)' : 'rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.2)') + ';border-radius:6px;font-size:11px;font-weight:600;color:' + (deal.verticalIntegration === 'Yes' || deal.verticalIntegration === true ? 'var(--primary)' : 'var(--text-muted)') + ';"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>' + (deal.verticalIntegration === 'Yes' || deal.verticalIntegration === true ? 'Vertically Integrated' : 'Not Vertically Integrated') + '</div>' : ''}
       </div>
       ${renderPanelNextSteps(deal)}
       <div class="panel-added-date">Added on ${deal.addedDate}</div>

@@ -137,7 +137,8 @@ function transformRecord(rec, mcLookup, peopleLookup) {
     address: f['Property Address'] || '',
     deckUrl: Array.isArray(f['Deck']) && f['Deck'].length > 0 ? f['Deck'][0].url : '',
     parentDealId: Array.isArray(f['Parent Deal']) && f['Parent Deal'].length > 0 ? f['Parent Deal'][0] : null,
-    shareClassLabel: f['Share Class Label'] || null
+    shareClassLabel: f['Share Class Label'] || null,
+    verticalIntegration: f['Vertically Integrated'] || f['Vertical Integration'] || null
   };
 }
 
