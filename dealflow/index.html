@@ -12065,15 +12065,59 @@ function renderDashboard() {
         + '</tr>';
     }).join('');
 
+    // Asset allocation pie data
+    const allocationMap = {};
+    portfolio.forEach(p => {
+      const ac = p.assetClass || 'Other';
+      allocationMap[ac] = (allocationMap[ac] || 0) + (parseFloat(p.amountInvested) || 0);
+    });
+    const allocationEntries = Object.entries(allocationMap).sort((a, b) => b[1] - a[1]);
+    const pieColors = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+
+    // Build SVG pie chart
+    let pieHtml = '';
+    if (allocationEntries.length > 0 && totalInvested > 0) {
+      let cumAngle = 0;
+      let slices = '';
+      let legendItems = '';
+      allocationEntries.forEach(([ac, amount], i) => {
+        const pct = amount / totalInvested;
+        const angle = pct * 360;
+        const color = pieColors[i % pieColors.length];
+        // SVG arc
+        const startAngle = cumAngle * Math.PI / 180;
+        const endAngle = (cumAngle + angle) * Math.PI / 180;
+        const largeArc = angle > 180 ? 1 : 0;
+        const x1 = 80 + 60 * Math.cos(startAngle);
+        const y1 = 80 + 60 * Math.sin(startAngle);
+        const x2 = 80 + 60 * Math.cos(endAngle);
+        const y2 = 80 + 60 * Math.sin(endAngle);
+        if (allocationEntries.length === 1) {
+          slices += '<circle cx="80" cy="80" r="60" fill="' + color + '"/>';
+        } else {
+          slices += '<path d="M80,80 L' + x1 + ',' + y1 + ' A60,60 0 ' + largeArc + ',1 ' + x2 + ',' + y2 + ' Z" fill="' + color + '"/>';
+        }
+        cumAngle += angle;
+        legendItems += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:3px;background:' + color + ';flex-shrink:0;"></div><div style="font-size:12px;color:var(--text-secondary);"><span style="font-weight:700;color:var(--text-dark);">' + Math.round(pct * 100) + '%</span> ' + ac + '</div></div>';
+      });
+      pieHtml = '<div style="flex-shrink:0;width:220px;">'
+        + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Asset Allocation</div>'
+        + '<svg viewBox="0 0 160 160" width="140" height="140" style="display:block;margin:0 auto 12px;">' + slices + '<circle cx="80" cy="80" r="35" fill="var(--bg-card)"/></svg>'
+        + legendItems
+        + '</div>';
+    }
+
     portfolioHtml = '<div class="dash-portfolio">'
       + '<div class="dash-section-header">'
       + '<div class="dash-section-title">Your Portfolio</div>'
       + '<button class="dash-section-link" onclick="navigateTo(\'portfolio\')">View Full Portfolio &rarr;</button>'
       + '</div>'
-      + '<div style="overflow-x:auto;">'
+      + '<div style="display:flex;gap:24px;align-items:flex-start;">'
+      + pieHtml
+      + '<div style="flex:1;overflow-x:auto;">'
       + '<table><thead><tr><th>Investment</th><th>Invested</th><th>Distributions</th><th>Status</th></tr></thead>'
       + '<tbody>' + rows + '</tbody></table></div>'
-      + '</div>';
+      + '</div></div>';
   } else {
     portfolioHtml = '<div class="dash-portfolio">'
       + '<div class="dash-portfolio-empty">'
