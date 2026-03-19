@@ -8992,10 +8992,31 @@ function renderReport() {
   if (d.accreditation) specs.push({ label: 'Accreditation', value: d.accreditation.split(' (')[0].split(' based')[0] });
 
   // Matching deal cards
+  // Build match reason badges helper
+  const userCheckSizeNum = parseDollar(d.checkSize) || 0;
+  const userStrategies = [...(d.strategies || []), ...(d.instruments || [])];
+
   let dealCardsHtml = '';
   if (matchedDeals.length > 0) {
     dealCardsHtml = matchedDeals.map(deal => {
       const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+      // Match reason badges
+      const badges = [];
+      if (deal.assetClass && userAssets.includes(deal.assetClass)) {
+        badges.push(deal.assetClass);
+      }
+      if (deal.strategy && userStrategies.some(s => s && deal.strategy && s.toLowerCase() === deal.strategy.toLowerCase())) {
+        badges.push(deal.strategy);
+      }
+      if (deal.instrument && userStrategies.some(s => s && deal.instrument && s.toLowerCase() === deal.instrument.toLowerCase())) {
+        badges.push(deal.instrument);
+      }
+      if (userCheckSizeNum > 0 && deal.investmentMinimum && deal.investmentMinimum <= userCheckSizeNum) {
+        badges.push('Within budget');
+      }
+      const badgeStyle = 'display:inline-block;padding:2px 8px;background:rgba(81,190,123,0.1);border-radius:100px;font-family:var(--font-ui);font-size:9px;font-weight:600;color:var(--green);margin:2px 3px 0 0;';
+      const badgesHtml = badges.length > 0 ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;">' + badges.map(b => '<span style="' + badgeStyle + '">\u2713 ' + b + '</span>').join('') + '</div>' : '';
+
       return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="navigateTo('deals'); setTimeout(() => openPanel('${deal.id}'), 300);">
         <div style="height:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;position:relative;">
           <span style="font-size:28px;opacity:0.3;">${ph.icon}</span>
@@ -9003,8 +9024,8 @@ function renderReport() {
         </div>
         <div style="padding:14px 16px;">
           <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${deal.investmentName}</div>
-          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${deal.managementCompany || ''}</div>
-          <div style="display:flex;gap:12px;">
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${deal.managementCompany || ''}</div>${badgesHtml}
+          <div style="display:flex;gap:12px;${badges.length > 0 ? 'margin-top:8px;' : ''}">
             ${deal.targetIRR ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">IRR</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--green);">${fmt(deal.targetIRR,'pct')}</span></div>` : ''}
             ${deal.investmentMinimum ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Min</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);">${fmt(deal.investmentMinimum,'money')}</span></div>` : ''}
           </div>
@@ -9088,6 +9109,43 @@ function renderReport() {
             + '</div>';
         }
         return '';
+      })()}
+
+      <!-- Your Path to Goal (cashflow branch only) -->
+      ${(() => {
+        if (branch !== 'cashflow') return '';
+        const goals2b = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+        const hasGoals2b = goals2b && goals2b.targetIncome > 0;
+        const currentIncB = hasGoals2b ? (goals2b.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
+        const targetIncB = hasGoals2b ? goals2b.targetIncome : (parseDollar(d.targetCashFlow) || 0);
+        const gapB = Math.max(0, targetIncB - currentIncB);
+        if (gapB <= 0 || targetIncB <= 0) return '';
+        const checkSizeRaw = d.checkSize || (hasGoals2b ? goals2b.checkSize : 0) || '$100,000';
+        const checkSizeNum = parseDollar(checkSizeRaw) || 100000;
+        // Calculate avg CoC from matching deals or default 8%
+        const matchingForAvg = allDeals.filter(deal => { if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false; return true; });
+        const cocValues = matchingForAvg.map(deal => deal.cashOnCash || 0).filter(v => v > 0);
+        const avgCoC = cocValues.length > 0 ? cocValues.reduce((a,b) => a+b, 0) / cocValues.length : 0.08;
+        const cocPct = Math.round(avgCoC * 100);
+        const annualPerDeal = Math.round(checkSizeNum * avgCoC);
+        const dealsNeededB = Math.ceil(gapB / annualPerDeal);
+        const totalAnnual = dealsNeededB * annualPerDeal;
+        return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;">'
+          + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Your Path to Goal</div>'
+          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">'
+          + 'To close your <strong style="color:var(--text-dark);">$' + gapB.toLocaleString() + '/yr</strong> income gap:'
+          + '</div>'
+          + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">'
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">' + dealsNeededB + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
+          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">&times;</div>'
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">EACH</div></div>'
+          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">@</div>'
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--primary);">~' + cocPct + '%</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">CASH-ON-CASH</div></div>'
+          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">=</div>'
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
+          + '</div>'
+          + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Based on ' + (cocValues.length > 0 ? 'average cash-on-cash from your matching deals' : 'an estimated 8% cash-on-cash return') + '. Actual returns vary by deal.</div>'
+          + '</div>';
       })()}
 
       <!-- What I'm Looking For -->
@@ -12606,12 +12664,53 @@ function renderDashboard() {
       + '</div>';
   }
 
-  // ===== Welcome greeting =====
+  // ===== Contextual Coaching Message =====
   const user = typeof getUser === 'function' ? getUser() : null;
   const firstName = user?.firstName || (user?.name || '').split(' ')[0] || '';
-  const greeting = firstName
-    ? '<div style="margin-bottom:20px;"><div style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin-bottom:4px;">Welcome back, ' + firstName + '</div><div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">Here\'s your investing overview</div></div>'
-    : '';
+  const buyBoxComplete = localStorage.getItem('gycBuyBoxComplete') === 'true';
+
+  let coachMsg = '', coachCta = '', coachCtaAction = '';
+  if (!buyBoxComplete && !branch) {
+    coachMsg = 'Let\'s start by building your Buy Box \u2014 it takes 2 minutes and helps us find deals that match your goals.';
+    coachCta = 'Build My Buy Box'; coachCtaAction = 'openBuyBoxWizard()';
+  } else if (buyBoxComplete && stageCounts.interested === 0 && stageCounts.duediligence === 0 && stageCounts.portfolio === 0) {
+    coachMsg = 'You have ' + matchingCount + ' deal' + (matchingCount !== 1 ? 's' : '') + ' matching your criteria but haven\'t saved any yet. Start by reviewing your top 3 matches.';
+    coachCta = 'Browse Matching Deals'; coachCtaAction = 'navigateTo(\'deals\')';
+  } else if (stageCounts.interested > 0 && stageCounts.duediligence === 0) {
+    coachMsg = 'You\'ve saved ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' \u2014 great start! Pick your strongest one and move it to Due Diligence.';
+    coachCta = 'Review Saved Deals'; coachCtaAction = 'navigateTo(\'deals\')';
+  } else if (stageCounts.duediligence > 0) {
+    coachMsg = 'You have ' + stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' in Due Diligence. Review your DD checklist and get ready for office hours.';
+    coachCta = 'Open DD Checklist'; coachCtaAction = 'navigateTo(\'deals\')';
+  } else if (activeInvestments > 0 && hasGoals) {
+    coachMsg = 'You\'re ' + goalProgress + '% to your income goal with ' + activeInvestments + ' active investment' + (activeInvestments !== 1 ? 's' : '') + '. Keep the momentum going.';
+    coachCta = 'View Portfolio'; coachCtaAction = 'navigateTo(\'portfolio\')';
+  } else if (firstName) {
+    coachMsg = 'Welcome back' + (firstName ? ', ' + firstName : '') + '. Here\'s your investing overview.';
+    coachCta = ''; coachCtaAction = '';
+  }
+
+  const coachingHtml = coachMsg ? '<div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:200px;">'
+    + (firstName ? '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">' + firstName + '\'s next step</div>' : '')
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);line-height:1.5;">' + coachMsg + '</div>'
+    + '</div>'
+    + (coachCta ? '<button onclick="' + coachCtaAction + '" style="flex-shrink:0;padding:10px 22px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">' + coachCta + ' &rarr;</button>' : '')
+    + '</div>' : '';
+
+  // ===== Momentum Metrics Row =====
+  const dealsReviewed = Object.keys(stages).length;
+  const inPipeline = stageCounts.interested + stageCounts.duediligence;
+  const decisionsMade = stageCounts.passed + stageCounts.portfolio;
+  const userCreatedAt = user?.createdAt || localStorage.getItem('gycFirstActivity');
+  const daysActive = userCreatedAt ? Math.max(1, Math.ceil((Date.now() - new Date(userCreatedAt).getTime()) / 86400000)) : (Object.keys(stages).length > 0 ? '-' : '1');
+
+  const momentumRow = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;"><div style="font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:3px;">Deals Reviewed</div><div style="font-family:var(--font-headline);font-size:18px;color:var(--text-secondary);">' + dealsReviewed + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;"><div style="font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:3px;">In Pipeline</div><div style="font-family:var(--font-headline);font-size:18px;color:var(--text-secondary);">' + inPipeline + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;"><div style="font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:3px;">Decisions Made</div><div style="font-family:var(--font-headline);font-size:18px;color:var(--text-secondary);">' + decisionsMade + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;"><div style="font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:3px;">Days Active</div><div style="font-family:var(--font-headline);font-size:18px;color:var(--text-secondary);">' + daysActive + '</div></div>'
+    + '</div>';
 
   // ===== Stats row (compact) =====
   const pipelineCount = stageCounts.interested + stageCounts.duediligence;
@@ -12622,8 +12721,22 @@ function renderDashboard() {
     + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">In Pipeline</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">' + pipelineCount + '</div></div>'
     + '</div>';
 
+  // ===== Fund Nudge for Inactive Users =====
+  let fundNudgeHtml = '';
+  const fundNudgeDismissed = localStorage.getItem('gycFundNudgeDismissed') === 'true';
+  if (!fundNudgeDismissed && buyBoxComplete && inPipeline === 0 && activeInvestments === 0 && portfolio.length === 0) {
+    fundNudgeHtml = '<div id="dashFundNudge" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Not ready to pick individual deals? The GYC Income Fund deploys into the same types of deals you see here \u2014 diversified, passive, and professionally managed.</div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">'
+      + '<a href="https://growyourcashflow.io/income-fund" target="_blank" style="padding:8px 18px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-dark);text-decoration:none;cursor:pointer;white-space:nowrap;">Learn More &rarr;</a>'
+      + '<button onclick="localStorage.setItem(\'gycFundNudgeDismissed\',\'true\');document.getElementById(\'dashFundNudge\').remove();" style="background:none;border:none;font-size:16px;color:var(--text-muted);cursor:pointer;padding:4px;">&times;</button>'
+      + '</div></div>';
+  }
+
   // ===== Render all sections =====
-  container.innerHTML = greeting + heroHtml + statsRow + actionItemsHtml + portfolioHtml;
+  container.innerHTML = coachingHtml + heroHtml + momentumRow + statsRow + actionItemsHtml + portfolioHtml + fundNudgeHtml;
 }
 
 // ========== INCOME / DISTRIBUTION TRACKING ==========
@@ -13872,6 +13985,9 @@ initAuth();
 initViewAs();
 loadDeals(); // Fetches from Airtable, falls back to hardcoded
 initSubscription();
+
+// Track first activity date for "Days Active" metric
+if (!localStorage.getItem('gycFirstActivity')) { localStorage.setItem('gycFirstActivity', new Date().toISOString()); }
 
 // Track initial page load
 analyticsPageEnter('deals');
