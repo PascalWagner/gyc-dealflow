@@ -9628,6 +9628,7 @@ function getCtaState() {
 function shouldShowCta(type) {
   const user = getUser();
   if (!user || user.tier === 'academy' || user.tier === 'investor') return false;
+  if (typeof isAdmin === 'function' && isAdmin()) return false;
   const state = getCtaState();
   return !state[type];
 }
@@ -9665,7 +9666,10 @@ function incrementDetailViews() {
 function isGated() {
   const user = getUser();
   if (!user) return true;
-  return user.tier === 'explorer';
+  // Admin and academy/investor users are never gated
+  if (typeof isAdmin === 'function' && isAdmin()) return false;
+  if (user.tier === 'academy' || user.tier === 'investor') return false;
+  return true;
 }
 
 // Gate overlay for deal.html navigation
