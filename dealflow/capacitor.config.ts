@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'io.growyourcashflow.dealflow',
-  appName: 'GYC Deals',
+  appName: 'Cashflow Academy',
   webDir: 'www',
   server: {
     url: 'https://dealflow-puce.vercel.app',
@@ -32,7 +32,7 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
-    scheme: 'GYC Deals',
+    scheme: 'Cashflow Academy',
   },
 };
 

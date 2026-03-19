@@ -1,9 +1,9 @@
-# GYC Deals — App Store Metadata
+# Cashflow Academy — App Store Metadata
 
 ## App Information
 
-- **App Name:** GYC Deals
-- **Subtitle:** Real Estate Deal Marketplace
+- **App Name:** Cashflow Academy
+- **Subtitle:** Find, Vet & Invest in CRE Deals
 - **Bundle ID:** io.growyourcashflow.dealflow
 - **Primary Category:** Finance
 - **Secondary Category:** Business
@@ -16,25 +16,21 @@
 
 ### Description
 
-GYC Deals is the premier deal marketplace for real estate investors. Browse vetted investment opportunities, track your portfolio, and connect with top sponsors — all in one beautifully designed app.
+Whether you can't find enough deals or you don't know how to vet the ones you find — you're leaving money on the table either way.
 
-**Discover Deals**
-Browse a curated marketplace of real estate investment opportunities including multifamily, self-storage, hospitality, industrial, and more. Filter by asset class, returns, minimum investment, and deal type.
+Cashflow Academy puts a real estate deal marketplace in your pocket. Browse live opportunities across multifamily, self-storage, industrial, hospitality, and more — then actually learn how to evaluate them.
 
-**Smart Buy Box**
-Define your investment criteria with our Buy Box wizard. Set your preferred asset classes, target returns, check size, and deal structure — we'll highlight deals that match your profile.
+Here's what you get:
 
-**Portfolio Tracking**
-Track deals through every stage — from discovery to due diligence to funded. Monitor your investment portfolio with real-time status updates and financial metrics.
+- A deal marketplace updated weekly with live investment opportunities
+- Side-by-side comparisons so you can spot the best risk-adjusted returns in seconds
+- Sponsor profiles with track records, AUM, and portfolio history — so you know who you're betting on before you wire money
+- A Buy Box that filters deals to YOUR criteria — asset class, target returns, check size, deal structure
+- Portfolio tracking from discovery to funded, so nothing falls through the cracks
 
-**Sponsor Profiles**
-Research operators and sponsors with detailed profile pages. Review their track record, portfolio size, founding year, and current offerings before investing.
+Built by an LP who's personally deployed $3.3M across 23+ deals since 2019. This isn't theory. It's the tool I wished I had when I started.
 
-**Property Intelligence**
-Access detailed property data including tax assessments, sale history, owner information, and building features powered by our property research tools.
-
-**Personalized Experience**
-Set investment goals, track tax documentation, explore educational courses, and customize your dashboard with dark mode support.
+Free to browse. Request access to get started.
 
 ### Keywords
 
@@ -42,8 +38,8 @@ real estate investing, deal marketplace, investment deals, multifamily, self sto
 
 ### What's New in This Version
 
-Welcome to GYC Deals! This is our first release bringing the full deal marketplace experience to iOS, including:
-- Curated real estate investment marketplace
+Welcome to Cashflow Academy! This is our first release bringing the full deal marketplace experience to iOS, including:
+- Real estate investment deal marketplace
 - Buy Box investment preference wizard
 - Portfolio tracking with deal stages
 - Sponsor and operator profiles
@@ -69,8 +65,7 @@ https://dealflow-puce.vercel.app/privacy.html
 
 ### Contact Information
 - **First Name:** Pascal
-- **Last Name:** (Your last name)
-- **Phone:** (Your phone number)
+- **Last Name:** Wagner
 - **Email:** pascal@growyourcashflow.io
 
 ### Demo Account (for App Review)
@@ -79,7 +74,7 @@ https://dealflow-puce.vercel.app/privacy.html
 
 ### Notes for Reviewer
 
-GYC Deals is a real estate investment deal marketplace. The app loads content from our web platform at dealflow-jade.vercel.app via Capacitor. Users can browse deals, set investment preferences, and track their portfolio.
+Cashflow Academy is a real estate investment deal marketplace. The app loads content from our web platform at dealflow-puce.vercel.app via Capacitor. Users can browse deals, set investment preferences, and track their portfolio.
 
 To test the app:
 1. Log in with the demo account above
@@ -111,7 +106,6 @@ Same 5 screenshots, landscape or portrait.
 
 ## App Icon
 
-Generate a 1024x1024 App Store icon:
 - Background: #0A1E21 (teal-midnight)
 - Centered text: "GYC" in white, bold
 - Subtle green accent (#51BE7B) as an underline or glow

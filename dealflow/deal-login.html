@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GYC Deals - Sign In</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cashflow Academy - Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,114 +25,79 @@
 
 body {
   font-family: var(--font-body);
-  background: var(--off-white);
-  color: var(--charcoal);
+  background: var(--teal-midnight);
+  color: #fff;
   min-height: 100vh;
-  display: flex;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-/* Left panel */
-.login-hero {
-  width: 480px;
+.login-wrapper {
   min-height: 100vh;
-  background: linear-gradient(165deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
-  padding: 60px 48px;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  position: relative;
-  overflow: hidden;
-}
-.login-hero::after {
-  content: '';
-  position: absolute;
-  top: -30%; right: -40%;
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(81,190,123,0.08) 0%, transparent 60%);
-  border-radius: 50%;
+  padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
 }
 
-.hero-logo {
-  font-family: var(--font-headline);
-  font-size: 28px;
-  color: #fff;
-  margin-bottom: 8px;
-  position: relative;
+/* Header */
+.login-header {
+  text-align: center;
+  padding: 40px 0 24px;
 }
-.hero-kicker {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--accent-green);
-  margin-bottom: 48px;
-  position: relative;
-}
-
-.hero-title {
-  font-family: var(--font-headline);
-  font-size: 36px;
-  color: #fff;
-  line-height: 1.15;
-  margin-bottom: 20px;
-  position: relative;
-}
-.hero-desc {
-  font-family: var(--font-body);
-  font-size: 16px;
-  color: rgba(255,255,255,0.6);
-  line-height: 1.7;
-  margin-bottom: 48px;
-  position: relative;
-}
-
-.hero-stats {
-  display: flex;
-  gap: 32px;
-  position: relative;
-  margin-top: auto;
-}
-.hero-stat-number {
-  font-family: var(--font-ui);
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--accent-green);
-  margin-bottom: 4px;
-}
-.hero-stat-label {
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: rgba(255,255,255,0.45);
-  line-height: 1.4;
-}
-
-/* Right panel */
-.login-form-area {
-  flex: 1;
+.brand-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--teal-deep) 100%);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  margin: 0 auto 16px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+.brand-name {
+  font-family: var(--font-headline);
+  font-size: 26px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.brand-tagline {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent-green);
 }
 
+/* Login card */
 .login-card {
+  background: var(--off-white);
+  border-radius: 20px;
+  padding: 32px 24px;
+  color: var(--charcoal);
   width: 100%;
   max-width: 420px;
+  margin: 0 auto;
 }
 
 .login-card-title {
   font-family: var(--font-headline);
-  font-size: 28px;
+  font-size: 24px;
   color: var(--charcoal);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .login-card-desc {
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 14px;
   color: var(--slate);
-  margin-bottom: 32px;
-  line-height: 1.6;
+  margin-bottom: 24px;
+  line-height: 1.5;
 }
 
 /* Tabs */
@@ -140,7 +105,7 @@ body {
   display: flex;
   gap: 0;
   border-bottom: 2px solid var(--border);
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 .auth-tab {
   padding: 10px 20px;
@@ -162,7 +127,7 @@ body {
 .auth-panel.active { display: block; }
 
 /* Form fields */
-.field { margin-bottom: 18px; }
+.field { margin-bottom: 16px; }
 .field-label {
   font-family: var(--font-ui);
   font-size: 12px;
@@ -175,14 +140,15 @@ body {
 }
 .field-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 16px;
   color: var(--charcoal);
   background: #fff;
   transition: border-color 0.2s;
+  -webkit-appearance: none;
 }
 .field-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(81,190,123,0.1); }
 
@@ -190,26 +156,27 @@ body {
 
 .btn-submit {
   width: 100%;
-  padding: 14px 24px;
+  padding: 16px 24px;
   font-family: var(--font-ui);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .btn-submit-primary {
   background: var(--primary);
   color: #fff;
 }
-.btn-submit-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
+.btn-submit-primary:hover { background: var(--primary-hover); }
+.btn-submit-primary:active { transform: scale(0.98); }
 
 .login-footer {
-  margin-top: 28px;
+  margin-top: 16px;
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--slate);
@@ -217,205 +184,322 @@ body {
   line-height: 1.6;
 }
 
-/* Success / check email state */
+/* Magic link sent state */
 .magic-sent {
   text-align: center;
-  padding: 32px 0;
+  padding: 24px 0;
   display: none;
 }
 .magic-sent.show { display: block; }
 .magic-sent-icon {
-  width: 64px; height: 64px;
+  width: 56px; height: 56px;
   background: var(--mint-bg);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 20px;
-  font-size: 28px;
+  margin: 0 auto 16px;
+  font-size: 24px;
 }
-.magic-sent-title { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--charcoal); margin-bottom: 8px; }
+.magic-sent-title { font-family: var(--font-ui); font-size: 17px; font-weight: 700; color: var(--charcoal); margin-bottom: 8px; }
 .magic-sent-desc { font-family: var(--font-body); font-size: 14px; color: var(--slate); line-height: 1.6; }
 .magic-sent-desc a { color: var(--primary); cursor: pointer; text-decoration: none; font-weight: 600; }
-.magic-sent-desc a:hover { text-decoration: underline; }
 
 /* Verifying state */
 .verifying-state {
   text-align: center;
-  padding: 48px 0;
+  padding: 40px 0;
   display: none;
 }
 .verifying-state.show { display: block; }
 .verifying-spinner {
-  width: 40px; height: 40px;
+  width: 36px; height: 36px;
   border: 3px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .verifying-text { font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: var(--charcoal); }
 
-/* Loading state */
+/* Loading / error */
 .btn-loading { pointer-events: none; opacity: 0.7; }
-
-/* Error state */
 .error-msg { font-family: var(--font-ui); font-size: 12px; color: #D04040; margin-top: 4px; display: none; }
 .error-msg.show { display: block; }
 
-/* Responsive */
-@media (max-width: 900px) {
-  body { flex-direction: column; }
-  .login-hero { width: 100%; min-height: auto; padding: 40px 28px; }
-  .hero-title { font-size: 28px; }
-  .hero-stats { gap: 24px; margin-top: 32px; }
-  .login-form-area { padding: 32px 20px; }
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  padding: 28px 0 16px;
+  margin: 0 auto;
+}
+.stat-item { text-align: center; }
+.stat-number {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent-green);
+}
+.stat-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* Value props */
+.value-props {
+  padding: 8px 0 32px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.value-prop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+}
+.value-prop-icon {
+  width: 32px; height: 32px;
+  background: rgba(81,190,123,0.12);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.value-prop-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.5;
+}
+.value-prop-text strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Footer link */
+.page-footer {
+  text-align: center;
+  padding: 16px 0 24px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+}
+.page-footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+
+/* Desktop layout */
+@media (min-width: 768px) {
+  .login-wrapper {
+    flex-direction: row;
+    align-items: center;
+    padding: 40px;
+    gap: 60px;
+    justify-content: center;
+  }
+  .login-left {
+    max-width: 400px;
+    text-align: left;
+  }
+  .login-left .login-header { text-align: left; padding: 0 0 24px; }
+  .login-left .brand-icon { margin: 0 0 16px; }
+  .login-left .stats-bar { justify-content: flex-start; padding: 24px 0; }
+  .login-left .value-props { padding: 0; }
+  .login-right {
+    max-width: 440px;
+    width: 100%;
+  }
+  .mobile-only { display: none; }
+  .desktop-only { display: block; }
+}
+@media (max-width: 767px) {
+  .desktop-only { display: none; }
+  .mobile-only { display: block; }
+  .login-header { padding: 32px 0 16px; }
+  .brand-name { font-size: 22px; }
+  .login-card { padding: 28px 20px; }
+  .stats-bar { gap: 24px; padding: 20px 0 8px; }
 }
 </style>
 </head>
 <body>
 
-<div class="login-hero">
-  <div class="hero-logo">Grow Your Cashflow</div>
-  <div class="hero-kicker">Deal Database</div>
-  <div class="hero-title">Evaluate private deals with clarity, not guesswork.</div>
-  <div class="hero-desc">Access curated deal flow, build your investment buy box, and get 1:1 guidance from someone who's deployed $3.3M of his own capital across 23+ LP deals.</div>
-  <div class="hero-stats">
-    <div>
-      <div class="hero-stat-number">25+</div>
-      <div class="hero-stat-label">Live deals<br>reviewed</div>
+<div class="login-wrapper">
+  <div class="login-left">
+    <div class="login-header">
+      <div class="brand-icon">CA</div>
+      <div class="brand-name">Cashflow Academy</div>
+      <div class="brand-tagline">Find, Vet & Invest in CRE Deals</div>
     </div>
-    <div>
-      <div class="hero-stat-number">$3.3M</div>
-      <div class="hero-stat-label">Personally<br>invested</div>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-number">838</div>
+        <div class="stat-label">Live deals</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">455</div>
+        <div class="stat-label">Sponsors</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number">19</div>
+        <div class="stat-label">Asset classes</div>
+      </div>
     </div>
-    <div>
-      <div class="hero-stat-number">23</div>
-      <div class="hero-stat-label">LP deals<br>since 2019</div>
+
+    <div class="value-props desktop-only">
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x1F50D;</div>
+        <div class="value-prop-text"><strong>Browse live deals</strong> across multifamily, self-storage, industrial, hospitality & more</div>
+      </div>
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x2705;</div>
+        <div class="value-prop-text"><strong>Build your Buy Box</strong> — set your criteria and we'll match you with the right deals</div>
+      </div>
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x1F4CA;</div>
+        <div class="value-prop-text"><strong>Research sponsors</strong> with track records, AUM, and deal history before you invest</div>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="login-form-area">
-  <div class="login-card">
-    <div class="login-card-title" id="cardTitle">Welcome back</div>
-    <div class="login-card-desc" id="cardDesc">Enter your email and we'll send you a magic link to log in instantly.</div>
+  <div class="login-right">
+    <div class="login-card">
+      <div class="login-card-title" id="cardTitle">Sign in</div>
+      <div class="login-card-desc" id="cardDesc">Access the deal marketplace.</div>
 
-    <!-- Verifying magic link state (shown when URL has token) -->
-    <div class="verifying-state" id="verifyingState">
-      <div class="verifying-spinner"></div>
-      <div class="verifying-text">Verifying your login link...</div>
-    </div>
-
-    <div id="authContent">
-      <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchAuthTab('signin', this)">Sign In</button>
-        <button class="auth-tab" onclick="switchAuthTab('signup', this)">Request Access</button>
+      <div class="verifying-state" id="verifyingState">
+        <div class="verifying-spinner"></div>
+        <div class="verifying-text">Verifying your login link...</div>
       </div>
 
-      <!-- SIGN IN -->
-      <div class="auth-panel active" id="panel-signin">
-        <div id="signinForm">
-          <div class="field">
-            <label class="field-label">Email</label>
-            <input type="email" class="field-input" id="signinEmail" placeholder="you@example.com" onkeydown="if(event.key==='Enter')document.getElementById('signinPassword').focus()">
-          </div>
-          <div class="field" id="passwordField">
-            <label class="field-label">Password</label>
-            <input type="password" class="field-input" id="signinPassword" placeholder="Enter your password" onkeydown="if(event.key==='Enter')handleSignIn()">
-          </div>
-          <div class="error-msg" id="signinError"></div>
-          <button class="btn-submit btn-submit-primary" onclick="handleSignIn()">Sign In</button>
-          <div style="text-align:center;margin-top:12px;">
-            <a style="font-family:var(--font-body);font-size:13px;color:var(--primary);cursor:pointer;text-decoration:none;" onclick="handleMagicLinkRequest()">Or sign in with magic link instead</a>
-          </div>
+      <div id="authContent">
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+          <button class="auth-tab" onclick="switchAuthTab('signup')">Request Access</button>
         </div>
-        <div class="magic-sent" id="signinSent">
-          <div class="magic-sent-icon">&#9993;</div>
-          <div class="magic-sent-title">Check your email</div>
-          <div class="magic-sent-desc">
-            We sent a login link to <strong id="sentEmail"></strong>.<br>
-            Click the link in the email to log in.<br><br>
-            <span style="font-size:12px;color:var(--slate);">Link expires in 15 minutes. Check spam if you don't see it.</span><br>
-            <a onclick="resetSignIn()">Try a different email</a>
-          </div>
-        </div>
-      </div>
 
-      <!-- REQUEST ACCESS (sign up) -->
-      <div class="auth-panel" id="panel-signup">
-        <div id="signupForm">
-          <div class="field-row">
+        <!-- SIGN IN -->
+        <div class="auth-panel active" id="panel-signin">
+          <div id="signinForm">
             <div class="field">
-              <label class="field-label">First Name</label>
-              <input type="text" class="field-input" id="signupFirst" placeholder="First name">
+              <label class="field-label">Email</label>
+              <input type="email" class="field-input" id="signinEmail" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('signinPassword').focus()">
             </div>
-            <div class="field">
-              <label class="field-label">Last Name</label>
-              <input type="text" class="field-input" id="signupLast" placeholder="Last name">
+            <div class="field" id="passwordField">
+              <label class="field-label">Password</label>
+              <input type="password" class="field-input" id="signinPassword" placeholder="Enter your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleSignIn()">
+            </div>
+            <div class="error-msg" id="signinError"></div>
+            <button class="btn-submit btn-submit-primary" onclick="handleSignIn()">Sign In</button>
+            <div style="text-align:center;margin-top:12px;">
+              <a style="font-family:var(--font-body);font-size:13px;color:var(--primary);cursor:pointer;text-decoration:none;" onclick="handleMagicLinkRequest()">Or sign in with magic link instead</a>
             </div>
           </div>
-          <div class="field">
-            <label class="field-label">Email</label>
-            <input type="email" class="field-input" id="signupEmail" placeholder="you@example.com">
-          </div>
-          <div class="field">
-            <label class="field-label">How did you hear about us?</label>
-            <select class="field-input" id="signupSource" style="cursor:pointer">
-              <option value="">Select one...</option>
-              <option value="podcast">Best Ever CRE Podcast</option>
-              <option value="email">Email list</option>
-              <option value="social">Social media</option>
-              <option value="referral">Friend or colleague</option>
-              <option value="search">Google search</option>
-              <option value="academy">Cashflow Academy</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="error-msg" id="signupError"></div>
-          <button class="btn-submit btn-submit-primary" onclick="handleSignUp()">Request Access</button>
-          <div class="login-footer">
-            Already have access? <a style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signin', document.querySelector('.auth-tab'))">Sign in</a>
+          <div class="magic-sent" id="signinSent">
+            <div class="magic-sent-icon">&#9993;</div>
+            <div class="magic-sent-title">Check your email</div>
+            <div class="magic-sent-desc">
+              We sent a login link to <strong id="sentEmail"></strong>.<br>
+              Click the link in the email to log in.<br><br>
+              <span style="font-size:12px;color:var(--slate);">Link expires in 15 minutes. Check spam if you don't see it.</span><br>
+              <a onclick="resetSignIn()">Try a different email</a>
+            </div>
           </div>
         </div>
-        <div class="magic-sent" id="signupSent">
-          <div class="magic-sent-icon">&#10003;</div>
-          <div class="magic-sent-title">You're in!</div>
-          <div class="magic-sent-desc">
-            We sent a login link to <strong id="signupSentEmail"></strong>.<br>
-            Click the link in the email to access your deal dashboard.<br><br>
-            <span style="font-size:12px;color:var(--slate);">Link expires in 15 minutes. Check spam if you don't see it.</span>
+
+        <!-- REQUEST ACCESS -->
+        <div class="auth-panel" id="panel-signup">
+          <div id="signupForm">
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label">First Name</label>
+                <input type="text" class="field-input" id="signupFirst" placeholder="First name" autocomplete="given-name">
+              </div>
+              <div class="field">
+                <label class="field-label">Last Name</label>
+                <input type="text" class="field-input" id="signupLast" placeholder="Last name" autocomplete="family-name">
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label">Email</label>
+              <input type="email" class="field-input" id="signupEmail" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <div class="field">
+              <label class="field-label">How did you hear about us?</label>
+              <select class="field-input" id="signupSource" style="cursor:pointer">
+                <option value="">Select one...</option>
+                <option value="podcast">Best Ever CRE Podcast</option>
+                <option value="email">Email list</option>
+                <option value="social">Social media</option>
+                <option value="referral">Friend or colleague</option>
+                <option value="search">Google search</option>
+                <option value="academy">Cashflow Academy</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="error-msg" id="signupError"></div>
+            <button class="btn-submit btn-submit-primary" onclick="handleSignUp()">Request Access</button>
+            <div class="login-footer">
+              Already have access? <a style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signin')">Sign in</a>
+            </div>
+          </div>
+          <div class="magic-sent" id="signupSent">
+            <div class="magic-sent-icon">&#10003;</div>
+            <div class="magic-sent-title">You're in!</div>
+            <div class="magic-sent-desc">
+              We sent a login link to <strong id="signupSentEmail"></strong>.<br>
+              Click the link in the email to access the deal marketplace.<br><br>
+              <span style="font-size:12px;color:var(--slate);">Link expires in 15 minutes. Check spam if you don't see it.</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <div class="value-props mobile-only">
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x1F50D;</div>
+        <div class="value-prop-text"><strong>Browse live deals</strong> across multifamily, self-storage, industrial & more</div>
+      </div>
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x2705;</div>
+        <div class="value-prop-text"><strong>Build your Buy Box</strong> — set criteria and get matched with deals</div>
+      </div>
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x1F4CA;</div>
+        <div class="value-prop-text"><strong>Research sponsors</strong> with track records and deal history</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <a href="privacy.html">Privacy Policy</a>
   </div>
 </div>
 
 <script>
-// ========== CONFIG ==========
 const WEBHOOKS = {
   magicLink: 'https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv',
   verify:    'https://hook.us2.make.com/iwreofes14twzdn628quljwkjepnjnrb',
   signUp:    'https://hook.us2.make.com/i3nlsj9uq3p7sdvqf0viq0ggilvudwhx'
 };
 
-// ========== MAGIC LINK VERIFICATION (on page load) ==========
 (async function checkMagicLink() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('magic') !== '1') return;
-
-  const email = params.get('email');
-  const ts = params.get('ts');
-  const token = params.get('token');
+  const email = params.get('email'), ts = params.get('ts'), token = params.get('token');
   if (!email || !ts || !token) return;
 
-  // Show verifying state, hide form
   document.getElementById('authContent').style.display = 'none';
   document.getElementById('verifyingState').classList.add('show');
-  document.getElementById('cardTitle').textContent = 'Logging you in...';
-  document.getElementById('cardDesc').textContent = '';
 
   try {
     const resp = await fetch(WEBHOOKS.verify, {
@@ -428,50 +512,38 @@ const WEBHOOKS = {
       const data = await resp.json().catch(() => ({}));
       if (data.success) {
         localStorage.setItem('gycUser', JSON.stringify({
-          email: data.email || email,
-          name: data.name || email.split('@')[0],
-          id: data.contactId || null,
-          token: data.token || null,
-          tier: data.tier || 'explorer',
-          loggedInAt: new Date().toISOString()
+          email: data.email || email, name: data.name || email.split('@')[0],
+          id: data.contactId || null, token: data.token || null,
+          tier: data.tier || 'explorer', loggedInAt: new Date().toISOString()
         }));
-        // Clean URL and redirect
         window.location.href = 'index.html';
         return;
       }
     }
-    // Verification failed
     document.getElementById('verifyingState').classList.remove('show');
     document.getElementById('authContent').style.display = '';
-    document.getElementById('cardTitle').textContent = 'Link expired';
-    document.getElementById('cardDesc').textContent = 'This login link is invalid or has expired. Enter your email below to get a new one.';
-    // Clean URL
     window.history.replaceState({}, '', window.location.pathname);
   } catch(e) {
     document.getElementById('verifyingState').classList.remove('show');
     document.getElementById('authContent').style.display = '';
-    document.getElementById('cardTitle').textContent = 'Something went wrong';
-    document.getElementById('cardDesc').textContent = 'We couldn\'t verify your login link. Please try again.';
     window.history.replaceState({}, '', window.location.pathname);
   }
 })();
 
-// ========== TAB SWITCHING ==========
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
   if (tab === 'signin') {
     document.querySelector('.auth-tab:first-child').classList.add('active');
     document.getElementById('panel-signin').classList.add('active');
-    document.getElementById('cardTitle').textContent = 'Welcome back';
-    document.getElementById('cardDesc').textContent = 'Enter your email and we\'ll send you a magic link to log in instantly.';
+    document.getElementById('cardTitle').textContent = 'Sign in';
+    document.getElementById('cardDesc').textContent = 'Access the deal marketplace.';
   } else {
     document.querySelector('.auth-tab:last-child').classList.add('active');
     document.getElementById('panel-signup').classList.add('active');
-    document.getElementById('cardTitle').textContent = 'Request access';
-    document.getElementById('cardDesc').textContent = 'Get free access to curated deal flow and build your investment buy box.';
+    document.getElementById('cardTitle').textContent = 'Get started';
+    document.getElementById('cardDesc').textContent = 'Free access to the CRE deal marketplace.';
   }
-  // Reset states
   document.getElementById('signinForm').style.display = '';
   document.getElementById('signinSent').classList.remove('show');
   document.getElementById('signupForm').style.display = '';
@@ -479,124 +551,66 @@ function switchAuthTab(tab) {
   document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show'));
 }
 
-// ========== SIGN IN (password-based with magic link fallback) ==========
 async function handleSignIn() {
   const email = document.getElementById('signinEmail').value.trim();
   const password = document.getElementById('signinPassword').value;
-  if (!email) {
-    document.getElementById('signinError').textContent = 'Please enter your email address.';
-    document.getElementById('signinError').classList.add('show');
-    return;
-  }
-  if (!password) {
-    document.getElementById('signinError').textContent = 'Please enter your password.';
-    document.getElementById('signinError').classList.add('show');
-    return;
-  }
-  document.getElementById('signinError').classList.remove('show');
+  if (!email) { showErr('signinError', 'Please enter your email.'); return; }
+  if (!password) { showErr('signinError', 'Please enter your password.'); return; }
+  hideErr('signinError');
 
   const btn = document.querySelector('#signinForm .btn-submit');
-  btn.classList.add('btn-loading');
-  btn.textContent = 'Signing in...';
+  btn.classList.add('btn-loading'); btn.textContent = 'Signing in...';
 
   try {
-    // Try password-based login via serverless API
     const resp = await fetch('/api/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', email, password })
     }).catch(() => null);
 
     if (resp && resp.ok) {
       const data = await resp.json().catch(() => ({}));
-      if (data.success) {
-        localStorage.setItem('gycUser', JSON.stringify({
-          email: data.email || email,
-          name: data.name || email.split('@')[0],
-          id: data.contactId || null,
-          token: data.token || Date.now().toString(36),
-          tier: data.tier || 'explorer',
-          loggedInAt: new Date().toISOString()
-        }));
-        window.location.href = 'index.html';
-        return;
-      } else {
-        document.getElementById('signinError').textContent = data.error || 'Invalid email or password.';
-        document.getElementById('signinError').classList.add('show');
-      }
+      if (data.success) { saveUser(data, email); window.location.href = 'index.html'; return; }
+      showErr('signinError', data.error || 'Invalid email or password.');
     } else {
-      // API not available — fallback: try magic link webhook for contact lookup
       const fallback = await fetch(WEBHOOKS.magicLink, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, directLogin: true })
       }).catch(() => null);
 
       if (fallback && fallback.ok) {
         const data = await fallback.json().catch(() => ({}));
-        if (data.success && data.directLogin) {
-          localStorage.setItem('gycUser', JSON.stringify({
-            email: data.email || email,
-            name: data.name || email.split('@')[0],
-            id: data.contactId || null,
-            token: Date.now().toString(36),
-            tier: data.tier || 'explorer',
-            loggedInAt: new Date().toISOString()
-          }));
-          window.location.href = 'index.html';
-          return;
-        } else if (data.success) {
-          // Magic link sent as fallback
+        if (data.success && data.directLogin) { saveUser(data, email); window.location.href = 'index.html'; return; }
+        if (data.success) {
           document.getElementById('signinForm').style.display = 'none';
           document.getElementById('sentEmail').textContent = email;
-          document.getElementById('signinSent').classList.add('show');
-          return;
+          document.getElementById('signinSent').classList.add('show'); return;
         }
       }
-      document.getElementById('signinError').textContent = 'Unable to sign in. Please check your credentials.';
-      document.getElementById('signinError').classList.add('show');
+      showErr('signinError', 'Unable to sign in. Check your credentials.');
     }
-  } catch(e) {
-    document.getElementById('signinError').textContent = 'Connection error. Please try again.';
-    document.getElementById('signinError').classList.add('show');
-  }
-
-  btn.classList.remove('btn-loading');
-  btn.textContent = 'Sign In';
+  } catch(e) { showErr('signinError', 'Connection error. Try again.'); }
+  btn.classList.remove('btn-loading'); btn.textContent = 'Sign In';
 }
 
-// Magic link fallback
 async function handleMagicLinkRequest() {
   const email = document.getElementById('signinEmail').value.trim();
-  if (!email) {
-    document.getElementById('signinError').textContent = 'Enter your email first, then click magic link.';
-    document.getElementById('signinError').classList.add('show');
-    return;
-  }
-  document.getElementById('signinError').classList.remove('show');
-
+  if (!email) { showErr('signinError', 'Enter your email first.'); return; }
+  hideErr('signinError');
   try {
     const resp = await fetch(WEBHOOKS.magicLink, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email })
     }).catch(() => null);
-
     if (resp && resp.ok) {
       const data = await resp.json().catch(() => ({}));
       if (data.success) {
         document.getElementById('signinForm').style.display = 'none';
         document.getElementById('sentEmail').textContent = email;
-        document.getElementById('signinSent').classList.add('show');
-        return;
+        document.getElementById('signinSent').classList.add('show'); return;
       }
     }
-    document.getElementById('signinError').textContent = 'Unable to send magic link. Try password login.';
-    document.getElementById('signinError').classList.add('show');
-  } catch(e) {
-    document.getElementById('signinError').textContent = 'Connection error.';
-    document.getElementById('signinError').classList.add('show');
-  }
+    showErr('signinError', 'Unable to send link. Try password.');
+  } catch(e) { showErr('signinError', 'Connection error.'); }
 }
 
 function resetSignIn() {
@@ -605,69 +619,53 @@ function resetSignIn() {
   document.getElementById('signinEmail').value = '';
   document.getElementById('signinPassword').value = '';
   const btn = document.querySelector('#signinForm .btn-submit');
-  btn.classList.remove('btn-loading');
-  btn.textContent = 'Sign In';
+  btn.classList.remove('btn-loading'); btn.textContent = 'Sign In';
 }
 
-// ========== SIGN UP (request access + send magic link) ==========
 async function handleSignUp() {
   const first = document.getElementById('signupFirst').value.trim();
   const last = document.getElementById('signupLast').value.trim();
   const email = document.getElementById('signupEmail').value.trim();
   const source = document.getElementById('signupSource').value;
-
-  if (!first || !last || !email) {
-    document.getElementById('signupError').textContent = 'Please fill in your name and email.';
-    document.getElementById('signupError').classList.add('show');
-    return;
-  }
-  document.getElementById('signupError').classList.remove('show');
+  if (!first || !last || !email) { showErr('signupError', 'Fill in your name and email.'); return; }
+  hideErr('signupError');
 
   const btn = document.querySelector('#signupForm .btn-submit');
-  btn.classList.add('btn-loading');
-  btn.textContent = 'Requesting access...';
+  btn.classList.add('btn-loading'); btn.textContent = 'Requesting access...';
 
   try {
     const resp = await fetch(WEBHOOKS.signUp, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ firstName: first, lastName: last, email, source })
     }).catch(() => null);
 
     if (resp && resp.ok) {
       const data = await resp.json().catch(() => ({}));
       if (data.success) {
-        // Now request a magic link for the new user
         await fetch(WEBHOOKS.magicLink, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         }).catch(() => null);
-
         document.getElementById('signupForm').style.display = 'none';
         document.getElementById('signupSentEmail').textContent = email;
-        document.getElementById('signupSent').classList.add('show');
-      } else {
-        document.getElementById('signupError').textContent = data.error || 'Sign up failed. Please try again.';
-        document.getElementById('signupError').classList.add('show');
-        btn.classList.remove('btn-loading');
-        btn.textContent = 'Request Access';
+        document.getElementById('signupSent').classList.add('show'); return;
       }
-    } else {
-      document.getElementById('signupError').textContent = 'Unable to connect. Please try again.';
-      document.getElementById('signupError').classList.add('show');
-      btn.classList.remove('btn-loading');
-      btn.textContent = 'Request Access';
-    }
-  } catch(e) {
-    document.getElementById('signupError').textContent = 'Connection error. Please try again.';
-    document.getElementById('signupError').classList.add('show');
-    btn.classList.remove('btn-loading');
-    btn.textContent = 'Request Access';
-  }
+      showErr('signupError', data.error || 'Sign up failed.');
+    } else { showErr('signupError', 'Unable to connect.'); }
+  } catch(e) { showErr('signupError', 'Connection error.'); }
+  btn.classList.remove('btn-loading'); btn.textContent = 'Request Access';
 }
 
-// ========== REDIRECT IF ALREADY LOGGED IN ==========
+function saveUser(data, email) {
+  localStorage.setItem('gycUser', JSON.stringify({
+    email: data.email || email, name: data.name || email.split('@')[0],
+    id: data.contactId || null, token: data.token || Date.now().toString(36),
+    tier: data.tier || 'explorer', loggedInAt: new Date().toISOString()
+  }));
+}
+function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
+function hideErr(id) { document.getElementById(id).classList.remove('show'); }
+
 const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
 if (user && user.token && !new URLSearchParams(window.location.search).get('magic')) {
   window.location.href = 'index.html';
