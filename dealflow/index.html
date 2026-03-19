@@ -10954,7 +10954,7 @@ function showAddDealModal() {
     </div>
     <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">Can't find a deal? Submit it to the community database. Other investors can help enrich it over time.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
-      <div class="modal-field" style="grid-column:1/-1"><label>Investment Name *</label><input id="addDealName" placeholder="e.g. Sunrise Apartments Fund III"></div>
+      <div class="modal-field" style="grid-column:1/-1;position:relative;"><label>Investment Name *</label><input id="addDealName" placeholder="Search existing deals or enter a new name..." oninput="searchExistingDeals(this.value)"><div id="addDealSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:10;max-height:200px;overflow-y:auto;margin-top:-2px;"></div></div>
       <div class="modal-field"><label>Sponsor / Management Company *</label><input id="addDealSponsor" placeholder="e.g. Acme Capital"></div>
       <div class="modal-field"><label>Asset Class</label><select id="addDealAsset"><option value="">Select...</option>${assetOptions.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>
       <div class="modal-field"><label>Deal Type</label><select id="addDealType"><option value="">Select...</option>${dealTypeOptions.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>
@@ -10971,6 +10971,42 @@ function showAddDealModal() {
   </div>`;
   document.body.appendChild(overlay);
   document.getElementById('addDealName').focus();
+}
+
+function searchExistingDeals(query) {
+  var results = document.getElementById('addDealSearchResults');
+  if (!results) return;
+  if (query.length < 2) { results.style.display = 'none'; return; }
+  var q = query.toLowerCase();
+  var matches = DEALS.filter(function(d) {
+    return (d.investmentName && d.investmentName.toLowerCase().includes(q)) ||
+           (d.managementCompany && d.managementCompany.toLowerCase().includes(q));
+  }).slice(0, 8);
+  if (matches.length === 0) {
+    results.style.display = 'block';
+    results.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);text-align:center;">No existing deals found — you can submit a new one</div>';
+    return;
+  }
+  results.style.display = 'block';
+  results.innerHTML = '<div style="padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);">Existing Deals (' + matches.length + ' matches)</div>' +
+    matches.map(function(d) {
+      return '<div onclick="selectExistingDeal(\'' + d.id + '\')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--text-dark);">' + d.investmentName + '</div>' +
+        '<div style="font-size:11px;color:var(--text-secondary);">' + (d.managementCompany || '') + ' &middot; ' + (d.assetClass || '') + (d.targetIRR ? ' &middot; ' + (d.targetIRR * 100).toFixed(1) + '% IRR' : '') + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function selectExistingDeal(dealId) {
+  var deal = DEALS.find(function(d) { return d.id === dealId; });
+  if (!deal) return;
+  // Close the modal and navigate to the deal
+  closeModal();
+  // Save as interested and open it
+  setDealStage(dealId, 'interested');
+  renderAll();
+  // Open the deal page
+  window.location.href = 'deal.html?id=' + dealId;
 }
 
 function submitNewDeal() {
