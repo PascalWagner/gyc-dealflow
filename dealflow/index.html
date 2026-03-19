@@ -9055,17 +9055,20 @@ function renderReport() {
   container.innerHTML = `
     <div style="max-width:860px;margin:0 auto;padding:24px;">
 
-      <!-- Hero -->
-      <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:40px 36px;margin-bottom:28px;color:#fff;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <span style="font-size:24px;">${bc.icon}</span>
-          <span style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};">${bc.label} Strategy</span>
-        </div>
-        <div style="font-family:var(--font-headline);font-size:32px;color:#fff;margin-bottom:8px;">${bc.headline}</div>
-        <div style="font-family:var(--font-body);font-size:16px;color:rgba(255,255,255,0.65);margin-bottom:24px;max-width:560px;line-height:1.6;">${bc.subtext}</div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <button onclick="openBuyBoxWizard()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Edit My Buy Box</button>
-          <button onclick="navigateTo('deals')" style="padding:12px 28px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Browse ${matchCount} Matching Deals &rarr;</button>
+      <!-- Header -->
+      <div style="margin-bottom:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:8px;">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="display:inline-block;padding:4px 12px;border-radius:100px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:${bc.colorBg};color:${bc.color};border:1px solid ${bc.color}20;">${bc.icon} ${bc.label}</span>
+            </div>
+            <div style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin-bottom:4px;">${bc.headline}</div>
+            <div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.5;max-width:500px;">${bc.subtext}</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button onclick="openBuyBoxWizard()" class="btn-cta btn-cta-primary" style="width:auto;padding:10px 24px;font-size:12px;">Edit My Buy Box</button>
+            <button onclick="navigateTo('deals')" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;">Browse ${matchCount} Matching Deals &rarr;</button>
+          </div>
         </div>
       </div>
 
@@ -9107,12 +9110,12 @@ function renderReport() {
       </div>` : ''}
 
       <!-- Office Hours CTA -->
-      <div style="background:linear-gradient(135deg,${bc.colorBg},var(--bg-card));border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div>
-          <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>
-          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Book 1:1 office hours with Pascal every Thursday 12-1pm ET.</div>
+          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Join live office hours with Pascal every Thursday 12-1pm ET.</div>
         </div>
-        <button onclick="navigateTo('officehours')" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Book Office Hours</button>
+        <button onclick="navigateTo('officehours')" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;">Join Office Hours</button>
       </div>
 
     </div>
