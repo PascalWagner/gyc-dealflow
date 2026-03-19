@@ -3705,7 +3705,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
     <a class="nav-item nav-item-disabled" href="#" data-page="assets" id="navAssets" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('assets'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Assets
-      <span style="font-size:9px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;" id="assetsComingSoon">SOON</span>
+      <span style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;" id="assetsComingSoon">COMING SOON</span>
     </a>
     <div class="nav-section-label">My Investments</div>
     <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
@@ -7660,6 +7660,32 @@ function initAuth() {
     // Populate profile fields if available
     const firstInput = document.querySelector('#stab-profile .profile-input[type="text"]');
     if (firstInput && user.firstName) firstInput.value = user.firstName;
+
+    // If name looks like email prefix (no space, matches email), fetch real name from GHL
+    const emailPrefix = user.email.split('@')[0].toLowerCase();
+    if (!user.id || name.toLowerCase() === emailPrefix) {
+      fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'lookup', email: user.email })
+      }).then(r => r.json()).then(d => {
+        if (d.success && d.name && d.name.toLowerCase() !== emailPrefix) {
+          user.name = d.name;
+          user.id = d.contactId || user.id;
+          user.tier = d.tier || user.tier;
+          if (d.isAdmin) user.isAdmin = true;
+          localStorage.setItem('gycUser', JSON.stringify(user));
+          const n = d.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+          document.getElementById('sidebarName').textContent = n;
+          document.getElementById('sidebarAvatar').textContent = n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
+          // Update dashboard welcome
+          const welcomeEl = document.querySelector('#page-dashboard .settings-page-title, #page-dashboard [style*="font-size:28px"]');
+          if (welcomeEl && welcomeEl.textContent.includes(emailPrefix)) {
+            welcomeEl.textContent = welcomeEl.textContent.replace(new RegExp(emailPrefix, 'i'), n.split(' ')[0]);
+          }
+        }
+      }).catch(() => {});
+    }
 
     // Fetch all user data from Airtable on login
     fetchUserDataFromAirtable(user.email);
