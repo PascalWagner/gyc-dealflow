@@ -3717,13 +3717,15 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       Tax Prep
     </a>
     <div class="nav-section-label">Support</div>
-    <a class="nav-item" href="#" data-page="officehours" onclick="navigateTo('officehours'); return false">
+    <a class="nav-item nav-item-disabled" href="#" data-page="officehours" id="navOfficeHours" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('officehours'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
       Office Hours
+      <span class="nav-coming-soon" id="officeHoursComingSoon" style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;">COMING SOON</span>
     </a>
-    <a class="nav-item" href="#" data-page="academy" onclick="navigateTo('academy'); return false">
+    <a class="nav-item nav-item-disabled" href="#" data-page="academy" id="navAcademy" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('academy'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
       Cash Flow Academy
+      <span class="nav-coming-soon" id="academyComingSoon" style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;">COMING SOON</span>
     </a>
     <div class="nav-section-label">Opportunities</div>
     <a class="nav-item nav-item-promo" href="https://growyourcashflow.io/income-fund" target="_blank">
@@ -12010,15 +12012,22 @@ function isAdmin() {
 }
 
 function showAdminNav() {
+  const admin = isAdmin();
   const adminNav = document.getElementById('adminNav');
-  if (adminNav) adminNav.style.display = isAdmin() ? 'block' : 'none';
-  // Enable Assets nav for admins
-  const navAssets = document.getElementById('navAssets');
-  const assetsLabel = document.getElementById('assetsComingSoon');
-  if (navAssets && isAdmin()) {
-    navAssets.classList.remove('nav-item-disabled');
-    if (assetsLabel) assetsLabel.style.display = 'none';
-  }
+  if (adminNav) adminNav.style.display = admin ? 'block' : 'none';
+  // Enable/disable Coming Soon nav items for admins
+  ['navAssets', 'navOfficeHours', 'navAcademy'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const label = el.querySelector('.nav-coming-soon') || document.getElementById(id.replace('nav', '').toLowerCase() + 'ComingSoon');
+    if (admin) {
+      el.classList.remove('nav-item-disabled');
+      if (label) label.style.display = 'none';
+    } else {
+      el.classList.add('nav-item-disabled');
+      if (label) label.style.display = '';
+    }
+  });
 }
 
 // --- Local Analytics Storage ---
@@ -13442,13 +13451,17 @@ function viewAsUser(email, name, contactId, tier) {
   const sidebarEmailEl2 = document.getElementById('sidebarEmail');
   if (sidebarEmailEl2) sidebarEmailEl2.textContent = email;
 
-  // Gray out Assets for non-admin impersonated users
-  const navAssets = document.getElementById('navAssets');
-  const assetsLabel = document.getElementById('assetsComingSoon');
-  if (navAssets) {
-    navAssets.classList.add('nav-item-disabled');
-    if (assetsLabel) assetsLabel.style.display = '';
-  }
+  // Gray out Coming Soon items for non-admin impersonated users + hide admin nav
+  ['navAssets', 'navOfficeHours', 'navAcademy'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('nav-item-disabled');
+      const label = el.querySelector('.nav-coming-soon') || document.getElementById(id.replace('nav', '').toLowerCase() + 'ComingSoon');
+      if (label) label.style.display = '';
+    }
+  });
+  const adminNav = document.getElementById('adminNav');
+  if (adminNav) adminNav.style.display = 'none';
 
   // Show impersonation indicator
   document.getElementById('viewAsSearch').style.display = 'none';
