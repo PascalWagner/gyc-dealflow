@@ -7410,6 +7410,25 @@ function syncWizardToBuyBox() {
 
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
   if (typeof renderReport === 'function') renderReport();
+
+  // Auto-seed goals from buy box wizard data if no explicit goals set
+  if (!localStorage.getItem('gycGoals') && d._branch) {
+    const branchToType = { cashflow: 'passive_income', tax: 'reduce_taxes', growth: 'build_wealth' };
+    const seededGoals = {
+      type: branchToType[d._branch] || 'passive_income',
+      currentIncome: parseFloat(d.currentCashFlow) || 0,
+      targetIncome: parseFloat(d.targetCashFlow) || 100000,
+      capital: parseFloat(d.growthCapital || d.checkSize) || 500000,
+      checkSize: parseFloat(d.checkSize) || 100000,
+      timeline: 5,
+      taxReduction: parseFloat(d.taxableIncome) || 0,
+      createdAt: new Date().toISOString(),
+      source: 'buy_box_wizard'
+    };
+    localStorage.setItem('gycGoals', JSON.stringify(seededGoals));
+    if (typeof investorGoals !== 'undefined') investorGoals = seededGoals;
+    if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
+  }
 }
 
 async function syncBuyBoxToGHL() {
@@ -8092,8 +8111,10 @@ function renderCashflowGapBar() {
     return;
   }
 
-  // Build goal-type-specific content
-  const goalType = goals.type || 'passive_income';
+  // Determine goal type: explicit goals.type, or infer from buy box branch
+  const buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || '{}');
+  const branchToGoalType = { cashflow: 'passive_income', tax: 'reduce_taxes', growth: 'build_wealth' };
+  const goalType = goals.type || branchToGoalType[buyBox._branch] || 'passive_income';
   var metricsHtml = '';
   var progress = 0;
   var hasGap = true;
@@ -8175,7 +8196,9 @@ function renderCashflowGapBar() {
 function getGapFillPercent(deal) {
   const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
   if (!goals) return null;
-  const goalType = goals.type || 'passive_income';
+  const buyBoxForGap = JSON.parse(localStorage.getItem('gycBuyBox') || '{}');
+  const branchMap = { cashflow: 'passive_income', tax: 'reduce_taxes', growth: 'build_wealth' };
+  const goalType = goals.type || branchMap[buyBoxForGap._branch] || 'passive_income';
   const dealMin = deal.investmentMinimum || 100000;
 
   if (goalType === 'reduce_taxes') {
