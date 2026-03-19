@@ -1325,6 +1325,7 @@ html.dark .credit-chart-legend-divider {
 .deal-stage-btn svg { width: 12px; height: 12px; }
 .deal-stage-btn.stage-interested { background: rgba(59,130,246,0.8); border-color: rgba(59,130,246,0.5); }
 .deal-stage-btn.stage-duediligence { background: rgba(245,158,11,0.8); border-color: rgba(245,158,11,0.5); }
+.deal-stage-btn.stage-ready { background: rgba(232,121,249,0.8); border-color: rgba(232,121,249,0.5); }
 .deal-stage-btn.stage-portfolio { background: rgba(81,190,123,0.8); border-color: rgba(81,190,123,0.5); }
 .deal-stage-btn.stage-passed { background: rgba(107,114,128,0.8); border-color: rgba(107,114,128,0.5); }
 
@@ -1362,11 +1363,17 @@ html.dark .credit-chart-legend-divider {
 .stage-dropdown-item .stage-dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
+.stage-dot-browse { background: var(--text-muted); }
+.stage-dot-saved { background: #3b82f6; }
+.stage-dot-vetting { background: #f59e0b; }
+.stage-dot-ready { background: #e879f9; }
+.stage-dot-invested { background: var(--primary); }
+.stage-dot-passed { background: #6b7280; }
+/* Backward compat CSS */
 .stage-dot-new { background: var(--text-muted); }
 .stage-dot-interested { background: #3b82f6; }
 .stage-dot-duediligence { background: #f59e0b; }
 .stage-dot-portfolio { background: var(--primary); }
-.stage-dot-passed { background: #6b7280; }
 
 /* Legacy compat */
 .saved-badge { display: none; }
@@ -3882,18 +3889,20 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       <div class="topbar-title">Deal Flow</div>
       <!-- Mobile dropdown (visible only on cap-ios) -->
       <select class="topbar-mobile-select" id="dealWorkflowSelect" onchange="switchTab(this.options[this.selectedIndex], true)">
-        <option value="new" selected>New Deals</option>
-        <option value="interested">Interested</option>
-        <option value="duediligence">Due Diligence</option>
-        <option value="portfolio">My Portfolio</option>
+        <option value="browse" selected>Browse</option>
+        <option value="saved">Saved</option>
+        <option value="vetting">Vetting</option>
+        <option value="ready">Ready to Invest</option>
+        <option value="invested">Invested</option>
         <option value="passed">Passed</option>
       </select>
       <!-- Desktop tabs (hidden on cap-ios) -->
       <div class="topbar-tabs" id="dealWorkflowTabs">
-        <button class="topbar-tab active" data-tab="new" onclick="switchTab(this)">New Deals</button>
-        <button class="topbar-tab" data-tab="interested" onclick="switchTab(this)">Interested</button>
-        <button class="topbar-tab" data-tab="duediligence" onclick="switchTab(this)">Due Diligence</button>
-        <button class="topbar-tab" data-tab="portfolio" onclick="switchTab(this)">My Portfolio</button>
+        <button class="topbar-tab active" data-tab="browse" onclick="switchTab(this)">Browse</button>
+        <button class="topbar-tab" data-tab="saved" onclick="switchTab(this)">Saved</button>
+        <button class="topbar-tab" data-tab="vetting" onclick="switchTab(this)">Vetting</button>
+        <button class="topbar-tab" data-tab="ready" onclick="switchTab(this)">Ready to Invest</button>
+        <button class="topbar-tab" data-tab="invested" onclick="switchTab(this)">Invested</button>
         <button class="topbar-tab" data-tab="passed" onclick="switchTab(this)">Passed</button>
       </div>
       <div class="topbar-spacer"></div>
@@ -5259,7 +5268,9 @@ function transformAirtableRecord(rec) {
     avgLoanLTV: rec['Avg Loan LTV'] || rec.fields?.['Avg Loan LTV'] || null,
     location: rec['Location'] || rec.fields?.['Location'] || '',
     address: rec['Property Address'] || rec.fields?.['Property Address'] || '',
-    deckUrl: rec['_deckUrl'] || rec.fields?.['_deckUrl'] || ''
+    deckUrl: rec['_deckUrl'] || rec.fields?.['_deckUrl'] || '',
+    ppmUrl: rec['_ppmUrl'] || rec.fields?.['_ppmUrl'] || '',
+    subAgreementUrl: rec['_subAgreementUrl'] || rec.fields?.['_subAgreementUrl'] || ''
   };
 }
 
@@ -5609,7 +5620,7 @@ function preselectComparison(dealId) {
   DEALS.forEach(function(d) {
     if (d.id !== dealId && comparisonSelection.size < 3) {
       var stage = getDealStage(d.id);
-      if (stage === 'interested' || stage === 'duediligence') {
+      if (stage === 'saved' || stage === 'vetting') {
         comparisonSelection.add(d.id);
       }
     }
@@ -5691,25 +5702,38 @@ function syncTaxDoc(doc) {
 }
 
 // Deal vetting workflow stages
-// Stages: 'new' (default/no stage), 'interested', 'duediligence', 'portfolio'
+// Stages: 'browse' (default/no stage), 'saved', 'vetting', 'ready', 'invested', 'passed'
+// Backward compat mapping from old stage names
+const _stageRenameMap = { 'new': 'browse', 'interested': 'saved', 'duediligence': 'vetting', 'portfolio': 'invested' };
+function _migrateStage(stage) { return _stageRenameMap[stage] || stage; }
 let dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+// Migrate any old stage names in existing data
+(function _migrateAllStages() {
+  let changed = false;
+  Object.keys(dealStages).forEach(id => {
+    const migrated = _migrateStage(dealStages[id]);
+    if (migrated !== dealStages[id]) { dealStages[id] = migrated; changed = true; }
+  });
+  if (changed) localStorage.setItem('gycDealStages', JSON.stringify(dealStages));
+})();
 function saveDealStages() { localStorage.setItem('gycDealStages', JSON.stringify(dealStages)); syncDealStages(dealStages); }
-function getDealStage(id) { return dealStages[id] || 'new'; }
+function getDealStage(id) { return _migrateStage(dealStages[id] || 'browse'); }
 function setDealStage(id, stage) {
-  if (stage === 'new') { delete dealStages[id]; }
+  stage = _migrateStage(stage);
+  if (stage === 'browse') { delete dealStages[id]; }
   else { dealStages[id] = stage; }
   saveDealStages();
   if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
 }
-// Migrate old savedDeals → interested
+// Migrate old savedDeals → saved
 const _oldSaved = JSON.parse(localStorage.getItem('gycSavedDeals') || '[]');
 if (_oldSaved.length > 0) {
-  _oldSaved.forEach(id => { if (!dealStages[id]) dealStages[id] = 'interested'; });
+  _oldSaved.forEach(id => { if (!dealStages[id]) dealStages[id] = 'saved'; });
   saveDealStages();
   localStorage.removeItem('gycSavedDeals');
 }
-let savedDeals = { has(id) { return dealStages[id] && dealStages[id] !== 'new'; }, add(id) { setDealStage(id, 'interested'); }, delete(id) { setDealStage(id, 'new'); } };
-let currentTab = 'new';
+let savedDeals = { has(id) { return dealStages[id] && dealStages[id] !== 'browse'; }, add(id) { setDealStage(id, 'saved'); }, delete(id) { setDealStage(id, 'browse'); } };
+let currentTab = 'browse';
 let currentView = 'grid';
 let tableSortCol = null;
 let tableSortAsc = true;
@@ -5773,12 +5797,15 @@ function statusPillClass(status) {
 }
 
 function stageLabel(stage) {
-  return { new: 'New', interested: 'Interested', duediligence: 'Due Diligence', portfolio: 'Portfolio', passed: 'Passed' }[stage] || 'New';
+  stage = _migrateStage(stage);
+  return { browse: 'Browse', saved: 'Saved', vetting: 'Vetting', ready: 'Ready to Invest', invested: 'Invested', passed: 'Passed' }[stage] || 'Browse';
 }
 function stageBtnClass(stage) {
-  if (stage === 'interested') return 'stage-interested';
-  if (stage === 'duediligence') return 'stage-duediligence';
-  if (stage === 'portfolio') return 'stage-portfolio';
+  stage = _migrateStage(stage);
+  if (stage === 'saved') return 'stage-interested';
+  if (stage === 'vetting') return 'stage-duediligence';
+  if (stage === 'ready') return 'stage-ready';
+  if (stage === 'invested') return 'stage-portfolio';
   if (stage === 'passed') return 'stage-passed';
   return '';
 }
@@ -5786,6 +5813,150 @@ function renderStageBtn(dealId) {
   const stage = getDealStage(dealId);
   const chevron = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>';
   return `<button class="deal-stage-btn ${stageBtnClass(stage)}" onclick="event.stopPropagation(); toggleStageDropdown('${dealId}', this)">${stageLabel(stage)} ${chevron}</button>`;
+}
+
+// Stage-aware action buttons for feed/grid cards
+function renderFeedCardActions(deal, stage, isInterested) {
+  const btnStyle = "flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);transition:all 0.15s;";
+  const divider = '<div style="width:1px;background:var(--border);"></div>';
+  const skipSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  const saveSvg = (filled) => '<svg viewBox="0 0 24 24" fill="' + (filled ? 'var(--green)' : 'none') + '" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+
+  if (currentTab === 'saved') {
+    return `
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="${btnStyle}" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">${skipSvg} Pass</button>
+      ${divider}
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','vetting'); renderAll();" style="${btnStyle}color:var(--green);" onmouseover="this.style.background='rgba(81,190,123,0.1)'" onmouseout="this.style.background='transparent'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Start Vetting
+      </button>`;
+  } else if (currentTab === 'vetting') {
+    return `
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="${btnStyle}" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">${skipSvg} Pass</button>
+      ${divider}
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','ready'); renderAll();" style="${btnStyle}color:var(--green);" onmouseover="this.style.background='rgba(81,190,123,0.1)'" onmouseout="this.style.background='transparent'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>
+        Ready to Invest
+      </button>`;
+  } else if (currentTab === 'ready') {
+    return `
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','vetting'); renderAll();" style="${btnStyle}" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Vetting
+      </button>
+      ${divider}
+      <button onclick="event.stopPropagation(); changeDealStage('${deal.id}','invested');" style="${btnStyle}color:var(--green);" onmouseover="this.style.background='rgba(81,190,123,0.1)'" onmouseout="this.style.background='transparent'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Mark Invested
+      </button>`;
+  } else if (currentTab === 'invested') {
+    return `
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--green);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Tracking
+      </div>`;
+  } else if (currentTab === 'passed') {
+    return `
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','saved'); renderAll();" style="${btnStyle}color:#3b82f6;" onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background='transparent'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Reconsider
+      </button>`;
+  } else {
+    // Browse tab (default)
+    return `
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="${btnStyle}" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">${skipSvg} Skip</button>
+      ${divider}
+      <button onclick="event.stopPropagation(); setDealStage('${deal.id}','saved'); renderAll();" style="${btnStyle}${isInterested ? 'background:rgba(81,190,123,0.1);color:var(--green);' : ''}" onmouseover="this.style.background='rgba(81,190,123,0.1)';this.style.color='var(--green)'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}';this.style.color='${isInterested ? 'var(--green)' : 'var(--text-muted)'}'">${saveSvg(isInterested)} Save</button>`;
+  }
+}
+
+// Stage-specific card extras (income gap, DD progress, CTA, tracking)
+function renderCardStageExtras(deal) {
+  const stage = getDealStage(deal.id);
+  if (stage === 'saved') {
+    // Income gap contribution
+    const wd = getCachedWizardData();
+    const checkSize = wd._checkSize || wd.checkSize || 0;
+    const incomeGap = wd._incomeGap || wd.incomeGap || 0;
+    if (checkSize > 0 && incomeGap > 0) {
+      const annualIncome = (deal.cashOnCash || deal.preferredReturn || 0.08) * checkSize;
+      const fillPct = Math.min(Math.round((annualIncome / incomeGap) * 100), 100);
+      return '<div style="padding:6px 12px;margin-top:8px;background:rgba(74,222,128,0.08);border-radius:6px;font-size:11px;color:#4ade80;font-weight:600;text-align:center;">Fills ' + fillPct + '% of your income gap</div>';
+    }
+    return '';
+  } else if (stage === 'vetting') {
+    // DD checklist progress
+    const checks = JSON.parse(localStorage.getItem('gycDDChecklist_' + deal.id) || '{}');
+    const total = 10;
+    const done = Object.values(checks).filter(Boolean).length;
+    const pct = Math.round((done / total) * 100);
+    const btnLabel = done > 0 ? 'Continue DD (' + done + '/' + total + ')' : 'Start DD Checklist';
+    return '<div style="margin-top:8px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+      '<span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">DD Progress</span>' +
+      '<span style="font-size:10px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + done + '/' + total + '</span></div>' +
+      '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">' +
+      '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:2px;transition:width 0.3s;"></div></div>' +
+      '<a href="deal.html?id=' + deal.id + '" onclick="event.stopPropagation()" style="display:block;margin-top:6px;padding:6px 10px;background:rgba(81,190,123,0.08);border-radius:6px;font-size:11px;font-weight:700;color:var(--primary);text-align:center;text-decoration:none;">' + btnLabel + '</a>' +
+      '</div>';
+  } else if (stage === 'ready') {
+    return '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">' +
+      '<a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" onclick="event.stopPropagation()" style="display:block;padding:8px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:6px;font-size:11px;font-weight:700;color:#3b82f6;text-align:center;text-decoration:none;">Schedule a Review with Pascal</a>' +
+      '</div>';
+  } else if (stage === 'invested') {
+    const inv = (typeof portfolioInvestments !== 'undefined' ? portfolioInvestments : []).find(i => i.dealId === deal.id);
+    const dateStr = inv && inv.investmentDate ? 'Invested ' + inv.investmentDate : '';
+    return '<div style="margin-top:8px;display:flex;align-items:center;gap:6px;">' +
+      '<span style="display:inline-block;padding:3px 10px;background:rgba(81,190,123,0.1);border-radius:100px;font-size:10px;font-weight:700;color:var(--green);">Tracking</span>' +
+      (dateStr ? '<span style="font-size:10px;color:var(--text-muted);">' + dateStr + '</span>' : '') +
+      '</div>';
+  }
+  return '';
+}
+
+// Stage-aware action buttons for grid cards (btn classes)
+function renderGridCardActions(deal, stage, isInterested) {
+  if (currentTab === 'saved') {
+    return `
+      <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Pass
+      </button>
+      <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','vetting'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Start Vetting
+      </button>`;
+  } else if (currentTab === 'vetting') {
+    return `
+      <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Pass
+      </button>
+      <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','ready'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg> Ready to Invest
+      </button>`;
+  } else if (currentTab === 'ready') {
+    return `
+      <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','vetting'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="15 18 9 12 15 6"/></svg> Back to Vetting
+      </button>
+      <button class="btn btn-primary" onclick="event.stopPropagation(); changeDealStage('${deal.id}','invested');" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Mark Invested
+      </button>`;
+  } else if (currentTab === 'invested') {
+    return `<div style="flex:1;text-align:center;padding:10px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--green);">Tracking</div>`;
+  } else if (currentTab === 'passed') {
+    return `
+      <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','saved'); renderAll();" style="gap:4px;width:100%;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Reconsider
+      </button>`;
+  } else {
+    // Browse tab (default)
+    return `
+      <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Skip
+      </button>
+      <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','saved'); renderAll();" style="gap:4px;">
+        <svg viewBox="0 0 24 24" fill="${isInterested ? '#fff' : 'none'}" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> Save
+      </button>`;
+  }
 }
 
 function getAssetPlaceholder(assetClass) {
@@ -5806,7 +5977,7 @@ function getAssetPlaceholder(assetClass) {
 
 function renderFeedCard(deal) {
   const stage = getDealStage(deal.id);
-  const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const isInterested = stage === 'saved' || stage === 'vetting' || stage === 'ready' || stage === 'invested';
   const isPassed = stage === 'passed';
   const isCredit = isCreditFund(deal);
   const hero = isCredit ? getAssetHero('lending') : getAssetHero(deal.assetClass);
@@ -5837,19 +6008,12 @@ function renderFeedCard(deal) {
           ${deal.investmentMinimum ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Minimum</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);line-height:1.2;">${fmt(deal.investmentMinimum, 'money')}</div></div>` : ''}
           ${deal.holdPeriod ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Hold Period</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);line-height:1.2;">${deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs'}</div></div>` : ''}
         </div>
+        ${renderCardStageExtras(deal)}
       </div>
 
-      <!-- Action Buttons -->
+      <!-- Action Buttons (stage-aware) -->
       <div style="display:flex;border-top:1px solid var(--border);">
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);transition:all 0.15s;" onmouseover="this.style.background='var(--border-light)'" onmouseout="this.style.background='transparent'">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          Skip
-        </button>
-        <div style="width:1px;background:var(--border);"></div>
-        <button onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;border:none;background:${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:700;color:${isInterested ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(81,190,123,0.1)';this.style.color='var(--green)'" onmouseout="this.style.background='${isInterested ? 'rgba(81,190,123,0.1)' : 'transparent'}';this.style.color='${isInterested ? 'var(--green)' : 'var(--text-muted)'}'">
-          <svg viewBox="0 0 24 24" fill="${isInterested ? 'var(--green)' : 'none'}" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          Save
-        </button>
+        ${renderFeedCardActions(deal, stage, isInterested)}
       </div>
     </div>`;
 }
@@ -6055,10 +6219,10 @@ function renderCreditCard(deal) {
   }
 
   const stage = getDealStage(deal.id);
-  const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const isInterested = stage === 'saved' || stage === 'vetting' || stage === 'ready' || stage === 'invested';
   const isPassed = stage === 'passed';
 
-  const showCmpCheck = (currentTab === 'interested' || currentTab === 'duediligence');
+  const showCmpCheck = (currentTab === 'saved' || currentTab === 'vetting');
   const html = `
     <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
       ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
@@ -6105,16 +6269,10 @@ function renderCreditCard(deal) {
           </div>
         </div>
         ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
+        ${renderCardStageExtras(deal)}
       </div>
       <div class="card-footer">
-        <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          Skip
-        </button>
-        <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="gap:4px;">
-          <svg viewBox="0 0 24 24" fill="${isInterested ? '#fff' : 'none'}" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          Save
-        </button>
+        ${renderGridCardActions(deal, stage, isInterested)}
       </div>
     </div>
   `;
@@ -6339,12 +6497,12 @@ function renderCard(deal) {
   }
 
   const stage = getDealStage(deal.id);
-  const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
+  const isInterested = stage === 'saved' || stage === 'vetting' || stage === 'ready' || stage === 'invested';
   const hero = getAssetHero(deal.assetClass);
   const strategy = getEquityStrategy(deal);
   const mgr = getManagerTier(deal);
 
-  var showCompareCheck = (currentTab === 'interested' || currentTab === 'duediligence');
+  var showCompareCheck = (currentTab === 'saved' || currentTab === 'vetting');
   return `
     <div class="deal-card" data-id="${deal.id}">
       ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
@@ -6392,16 +6550,10 @@ function renderCard(deal) {
           </div>
         </div>
         ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
+        ${renderCardStageExtras(deal)}
       </div>
       <div class="card-footer">
-        <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          Skip
-        </button>
-        <button class="btn btn-primary" onclick="event.stopPropagation(); setDealStage('${deal.id}','interested'); renderAll();" style="gap:4px;">
-          <svg viewBox="0 0 24 24" fill="${isInterested ? '#fff' : 'none'}" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          Save
-        </button>
+        ${renderGridCardActions(deal, stage, isInterested)}
       </div>
     </div>
   `;
@@ -6442,10 +6594,11 @@ function renderPanel(deal) {
 
   const panelStage = getDealStage(deal.id);
   const panelStageOptions = [
-    { value: 'new', label: 'New', color: 'var(--text-muted)' },
-    { value: 'interested', label: 'Interested', color: '#3b82f6' },
-    { value: 'duediligence', label: 'Due Diligence', color: '#f59e0b' },
-    { value: 'portfolio', label: 'My Portfolio', color: 'var(--primary)' },
+    { value: 'browse', label: 'Browse', color: 'var(--text-muted)' },
+    { value: 'saved', label: 'Saved', color: '#3b82f6' },
+    { value: 'vetting', label: 'Vetting', color: '#f59e0b' },
+    { value: 'ready', label: 'Ready to Invest', color: '#e879f9' },
+    { value: 'invested', label: 'Invested', color: 'var(--primary)' },
     { value: 'passed', label: 'Passed', color: '#6b7280' }
   ];
 
@@ -6476,10 +6629,11 @@ function renderPanel(deal) {
               const lineColor = isCompleted ? mainStages[i].color : 'var(--border)';
               const checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="11" height="11"><polyline points="4 12 10 18 20 6"/></svg>';
               const icons = {
-                new: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><circle cx="12" cy="12" r="4"/></svg>',
-                interested: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.18L12 21z"/></svg>',
-                duediligence: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
-                portfolio: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>'
+                browse: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><circle cx="12" cy="12" r="4"/></svg>',
+                saved: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+                vetting: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
+                ready: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>',
+                invested: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="13" height="13"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
               };
               return `
                 ${i > 0 ? '<div style="flex:1;height:2px;background:' + lineColor + ';transition:background 0.3s;"></div>' : ''}
@@ -6613,19 +6767,34 @@ function renderPanelNextSteps(deal) {
   h += '<a href="deal.html?id=' + deal.id + '" class="btn-cta btn-cta-primary" style="text-decoration:none;text-align:center;">View Deal Page</a>';
   h += deal.deckUrl ? '<a href="' + deal.deckUrl + '" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;text-align:center;">View Deal Deck</a>' : '<button class="btn-cta btn-cta-secondary" style="opacity:0.4;cursor:default;" disabled>No Deck Available</button>';
   h += '</div>';
+  // PPM and Subscription Agreement buttons
+  if (deal.ppmUrl || deal.subAgreementUrl) {
+    h += '<div class="panel-actions" style="padding:0 24px 8px;display:flex;gap:8px;">';
+    if (deal.ppmUrl) {
+      h += '<a href="' + deal.ppmUrl + '" target="_blank" style="flex:1;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-dark);text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>View PPM</a>';
+    }
+    if (deal.subAgreementUrl) {
+      h += '<a href="' + deal.subAgreementUrl + '" target="_blank" style="flex:1;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-dark);text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Subscription Docs</a>';
+    }
+    h += '</div>';
+  }
 
   // Stage-specific next steps
   h += '<div style="padding:16px 24px;">';
   h += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Next Steps</div>';
 
-  if (stage === 'new' || stage === 'interested') {
+  if (stage === 'browse' || stage === 'saved') {
     h += '<div style="display:flex;flex-direction:column;gap:8px;">';
-    h += '<button onclick="trackActivity(\'ppm_requested\',{dealId:\'' + deal.id + '\'});window.open(\'mailto:pascal@growyourcashflow.io?subject=PPM Request: ' + encodeURIComponent(deal.investmentName) + '\',\'_blank\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Request the PPM</button>';
+    if (deal.ppmUrl) {
+      h += '<a href="' + deal.ppmUrl + '" target="_blank" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-dark);text-decoration:none;text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> View the PPM</a>';
+    } else {
+      h += '<button onclick="trackActivity(\'ppm_requested\',{dealId:\'' + deal.id + '\'});window.open(\'mailto:pascal@growyourcashflow.io?subject=PPM Request: ' + encodeURIComponent(deal.investmentName) + '\',\'_blank\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Request the PPM</button>';
+    }
     h += '<button onclick="preselectComparison(\'' + deal.id + '\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Compare with saved deals</button>';
-    h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'duediligence\')" style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Start Due Diligence &rarr;</button>';
+    h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'vetting\')" style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Start Vetting &rarr;</button>';
     h += '</div>';
 
-  } else if (stage === 'duediligence') {
+  } else if (stage === 'vetting') {
     // Shared DD Checklist — community-contributed
     var checks = dealDDChecks[deal.id] || [];
     var details = ddCheckDetails[deal.id] || {};
@@ -6683,10 +6852,18 @@ function renderPanelNextSteps(deal) {
     }
 
     if (checkedCount >= 6) {
-      h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'portfolio\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Ready to Invest &rarr;</button>';
+      h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'ready\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Ready to Invest &rarr;</button>';
     }
 
-  } else if (stage === 'portfolio') {
+  } else if (stage === 'ready') {
+    // Ready to invest — show schedule CTA and mark invested
+    h += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    h += '<a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" style="padding:12px 16px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;color:#3b82f6;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Schedule a Review with Pascal</a>';
+    h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'invested\')" style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Mark as Invested</button>';
+    h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'vetting\')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-muted);text-align:center;">Back to Vetting</button>';
+    h += '</div>';
+
+  } else if (stage === 'invested') {
     h += '<div style="display:flex;flex-direction:column;gap:8px;">';
     h += '<button onclick="showLogDistributionForm(\'' + deal.id + '\',\'' + (deal.investmentName || '').replace(/'/g, "\\'") + '\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Log Distribution</button>';
     h += '<button onclick="closePanel();navigateTo(\'portfolio\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg> View in Portfolio</button>';
@@ -6817,18 +6994,18 @@ function getFilteredDeals() {
       if (!haystack.includes(q)) return false;
     }
     // Filter by workflow stage tab
-    if (currentTab === 'new') {
+    if (currentTab === 'browse') {
       if (dealStages[d.id]) return false;
-    } else if (currentTab === 'interested') {
-      if (getDealStage(d.id) !== 'interested') return false;
-    } else if (currentTab === 'duediligence') {
-      if (getDealStage(d.id) !== 'duediligence') return false;
-    } else if (currentTab === 'portfolio') {
-      if (getDealStage(d.id) !== 'portfolio') return false;
+    } else if (currentTab === 'saved') {
+      if (getDealStage(d.id) !== 'saved') return false;
+    } else if (currentTab === 'vetting') {
+      if (getDealStage(d.id) !== 'vetting') return false;
+    } else if (currentTab === 'ready') {
+      if (getDealStage(d.id) !== 'ready') return false;
+    } else if (currentTab === 'invested') {
+      if (getDealStage(d.id) !== 'invested') return false;
     } else if (currentTab === 'passed') {
       if (getDealStage(d.id) !== 'passed') return false;
-    } else if (currentTab === 'saved') {
-      if (!savedDeals.has(d.id)) return false;
     }
     return true;
   });
@@ -6961,18 +7138,18 @@ function renderTable(deals) {
 
 function updateTabCounts() {
   if (!DEALS || !DEALS.length) return;
-  const counts = { new: 0, interested: 0, duediligence: 0, portfolio: 0, passed: 0 };
+  const counts = { browse: 0, saved: 0, vetting: 0, ready: 0, invested: 0, passed: 0 };
   DEALS.forEach(d => {
     const stage = getDealStage(d.id);
-    if (stage === 'new' || !stage) counts.new++;
+    if (stage === 'browse' || !stage) counts.browse++;
     else counts[stage] = (counts[stage] || 0) + 1;
   });
   document.querySelectorAll('#dealWorkflowTabs .topbar-tab').forEach(tab => {
     const t = tab.dataset.tab;
     const countSpan = tab.querySelector('.tab-count');
     const count = counts[t] || 0;
-    if (t === 'new') {
-      // Don't show count for new deals (it's the default)
+    if (t === 'browse') {
+      // Don't show count for browse (it's the default)
       if (countSpan) countSpan.remove();
     } else if (count > 0) {
       if (countSpan) countSpan.textContent = count;
@@ -7001,8 +7178,8 @@ function renderAll() {
   const table = document.getElementById('tableView');
   const mapContainer = document.getElementById('mapView');
 
-  // Portfolio tab: show portfolio summary view instead of deal cards
-  if (currentTab === 'portfolio') {
+  // Invested tab: show portfolio summary view instead of deal cards
+  if (currentTab === 'invested') {
     table.style.display = 'none';
     mapContainer.style.display = 'none';
     grid.style.display = '';
@@ -7323,9 +7500,9 @@ function renderMapView() {
 }
 
 function toggleSave(id) {
-  // Legacy compat — toggle between new and interested
-  if (getDealStage(id) !== 'new') setDealStage(id, 'new');
-  else setDealStage(id, 'interested');
+  // Legacy compat — toggle between browse and saved
+  if (getDealStage(id) !== 'browse') setDealStage(id, 'browse');
+  else setDealStage(id, 'saved');
   renderAll();
 }
 
@@ -7333,7 +7510,7 @@ function toggleStageDropdown(dealId, btn) {
   // Close any existing dropdowns
   document.querySelectorAll('.stage-dropdown').forEach(d => d.remove());
   const card = btn.closest('.deal-card') || btn.closest('.panel-body');
-  const stages = ['new', 'interested', 'duediligence', 'portfolio', 'passed'];
+  const stages = ['browse', 'saved', 'vetting', 'ready', 'invested', 'passed'];
   const current = getDealStage(dealId);
   const dd = document.createElement('div');
   dd.className = 'stage-dropdown';
@@ -7360,8 +7537,9 @@ function changeDealStage(dealId, newStage) {
   const oldStage = getDealStage(dealId);
   document.querySelectorAll('.stage-dropdown').forEach(d => d.remove());
 
-  if (newStage === 'portfolio' && oldStage !== 'portfolio') {
-    // Moving to portfolio — open the add-to-portfolio modal pre-filled with deal data
+  newStage = _migrateStage(newStage);
+  if (newStage === 'invested' && oldStage !== 'invested') {
+    // Moving to invested — open the add-to-portfolio modal pre-filled with deal data
     const deal = DEALS.find(d => d.id === dealId);
     if (deal) {
       // Check if already in portfolio investments
@@ -7376,8 +7554,8 @@ function changeDealStage(dealId, newStage) {
 
   setDealStage(dealId, newStage);
 
-  // If moving OUT of portfolio, optionally remove from portfolio investments
-  if (oldStage === 'portfolio' && newStage !== 'portfolio') {
+  // If moving OUT of invested, optionally remove from portfolio investments
+  if (oldStage === 'invested' && newStage !== 'invested') {
     const idx = portfolioInvestments.findIndex(i => i.dealId === dealId);
     if (idx >= 0) {
       portfolioInvestments.splice(idx, 1);
@@ -8039,7 +8217,7 @@ function getWizardPlanDeals(branch) {
 if (typeof window._wizardSavedDeals === 'undefined') window._wizardSavedDeals = new Set();
 
 function savePlanDeal(dealId, btnEl) {
-  if (typeof setDealStage === 'function') setDealStage(dealId, 'interested');
+  if (typeof setDealStage === 'function') setDealStage(dealId, 'saved');
   window._wizardSavedDeals.add(dealId);
   // Update button
   btnEl.classList.add('saved');
@@ -8561,7 +8739,7 @@ function renderWizardStep() {
           if (deal.holdPeriod) extraMeta = deal.holdPeriod + ' hold';
         }
         const minInvest = deal.minimumInvestment ? '$' + parseInt(deal.minimumInvestment).toLocaleString() + ' min' : '';
-        const isSaved = typeof getDealStage === 'function' && (getDealStage(deal.id) === 'interested' || getDealStage(deal.id) === 'duediligence');
+        const isSaved = typeof getDealStage === 'function' && (getDealStage(deal.id) === 'saved' || getDealStage(deal.id) === 'vetting');
         const savedClass = isSaved ? ' saved' : '';
         html += `<div class="wizard-plan-deal${savedClass}" id="wizDeal_${deal.id}">
           <div class="wizard-plan-deal-icon" style="background:${ph.bg};">${ph.icon}</div>
@@ -11403,8 +11581,8 @@ function selectExistingDeal(dealId) {
   if (!deal) return;
   // Close the modal and navigate to the deal
   closeModal();
-  // Save as interested and open it
-  setDealStage(dealId, 'interested');
+  // Save as saved and open it
+  setDealStage(dealId, 'saved');
   renderAll();
   // Open the deal page
   window.location.href = 'deal.html?id=' + dealId;
@@ -11700,9 +11878,9 @@ function saveInvestmentFromModal(editId, linkDealId) {
   } else {
     portfolioInvestments.push(data);
   }
-  // If linked to a deal, set its stage to portfolio
+  // If linked to a deal, set its stage to invested
   if (linkDealId) {
-    setDealStage(linkDealId, 'portfolio');
+    setDealStage(linkDealId, 'invested');
   }
   savePortfolio();
 
@@ -12502,7 +12680,7 @@ function renderDashboard() {
         actionDesc = 'Set up your preferences in 60 seconds to get personalized deal flow.';
         actionBtnText = 'Start Wizard \u2192'; actionPage = 'buybox'; break;
       case 'saved_3_deals': {
-        const saved = Object.values(stages).filter(s => s === 'interested').length;
+        const saved = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
         actionIcon = '\uD83D\uDD16'; actionTitle = 'Save ' + (3 - saved) + ' More Deal' + ((3 - saved) !== 1 ? 's' : '');
         actionDesc = 'You\u2019ve saved ' + saved + ' so far. Swipe through deals and save ones that catch your eye.';
         actionBtnText = 'Browse Deals \u2192'; break;
@@ -13891,13 +14069,13 @@ function checkActivationMilestones() {
   }
 
   // 2. Saved 3+ deals (interested stage)
-  const interestedCount = Object.values(stages).filter(s => s === 'interested').length;
+  const interestedCount = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
   if (interestedCount >= 3 && !milestones.saved_3_deals) {
     milestones.saved_3_deals = new Date().toISOString();
   }
 
   // 3. First due diligence
-  const ddCount = Object.values(stages).filter(s => s === 'duediligence').length;
+  const ddCount = Object.values(stages).filter(s => s === 'vetting' || s === 'duediligence').length;
   if (ddCount >= 1 && !milestones.first_dd) {
     milestones.first_dd = new Date().toISOString();
   }
@@ -13915,7 +14093,7 @@ function checkActivationMilestones() {
   }
 
   // 6. First investment
-  const portfolioCount = Object.values(stages).filter(s => s === 'portfolio').length;
+  const portfolioCount = Object.values(stages).filter(s => s === 'invested' || s === 'portfolio').length;
   const manualPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
   if ((portfolioCount >= 1 || manualPortfolio.length >= 1) && !milestones.first_investment) {
     milestones.first_investment = new Date().toISOString();
@@ -13979,7 +14157,7 @@ function renderDashboardMilestoneProgress() {
       actionPage = 'buybox';
       break;
     case 'saved_3_deals': {
-      const saved = Object.values(stages).filter(s => s === 'interested').length;
+      const saved = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
       progressText = 'You\u2019ve saved ' + saved + ' deal' + (saved !== 1 ? 's' : '') + ' so far. Save ' + (3 - saved) + ' more to unlock this milestone.';
       actionText = 'Browse Deals \u2192';
       actionPage = 'deals';
