@@ -6864,6 +6864,7 @@ function renderWizardStep() {
     html += '<div class="wizard-trust"><div class="wizard-trust-avatar">PW</div><div class="wizard-trust-name">Pascal Wagner &middot; Grow Your Cashflow</div></div>';
     html += '<div class="wizard-card-title">What\u2019s your investing goal?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Pick one and we\u2019ll build a personalized plan in under 60 seconds.</div>';
+    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:32px;">Built on $3.3M in personal investments across 23 deals</div>';
     html += '<div class="wizard-goal-cards">';
     const goals = [
       { branch: 'cashflow', title: 'I want passive income', desc: 'Build predictable cash flow from private investments', icon: '\uD83D\uDCB0', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
@@ -6906,6 +6907,14 @@ function renderWizardStep() {
     html += `<div class="wizard-live-calc" id="wizLiveCalc">${calcText}</div>`;
     // Context line below calc
     html += `<div class="wizard-live-calc-context" id="wizLiveCalcCtx">${getTargetContextLine(step, numVal)}</div>`;
+    // Softer follow-up for cashflow
+    if (step.branch === 'cashflow' && numVal > 0) {
+      const capitalNeeded = Math.round(numVal / 0.09);
+      html += `<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;" id="wizSofterCtx">Your first ${capitalNeeded < 500000 ? 'few' : 'several'} investments will get you started \u2014 you don\u2019t need it all at once.</div>`;
+    }
+    // Anchoring hint
+    const anchorHints = { cashflow: 'Most members start by targeting $50\u2013100K/yr.', tax: 'Most members look to offset $100\u2013200K.', growth: 'Most members start with $250K\u2013500K.' };
+    html += `<div style="font-size:13px;color:var(--text-muted);font-style:italic;text-align:center;margin-top:8px;">${anchorHints[step.branch] || ''}</div>`;
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
@@ -6939,7 +6948,7 @@ function renderWizardStep() {
 
   // ===== SCREEN 4: SENTENCE-STYLE CAPITAL + CHECK SIZE =====
   if (step.type === 'sentenceInput') {
-    html += '<div class="wizard-card-title">Almost there.</div>';
+    html += '<div class="wizard-card-title">Two quick questions.</div>';
     html += '<div class="wizard-sentence">';
     html += 'I have about <br>';
     const capitalOptions = ['$50-100K','$100-250K','$250-500K','$500K-1M','$1M+'];
@@ -6960,6 +6969,8 @@ function renderWizardStep() {
     });
     html += '</span>';
     html += '</div>';
+    // Helper text
+    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:4px;margin-bottom:16px;">Most first-time investors start with $25\u201350K per deal.</div>';
     // Reality check
     html += `<div class="wizard-reality-check" id="wizRealityCheck">${getRealityCheckText()}</div>`;
     // Nav
@@ -7026,7 +7037,7 @@ function renderWizardStep() {
         const x = 50 + i * 80;
         const y = 115 - (incomes[i] / maxInc * 85);
         html += `<circle cx="${x}" cy="${y}" r="${i === 0 || i === 1 || i === 5 ? 5 : 3}" fill="#51BE7B"/>`;
-        html += `<text x="${x}" y="132" text-anchor="middle" font-size="10" fill="#8A9AA0" font-family="Plus Jakarta Sans">Yr ${i}</text>`;
+        html += `<text x="${x}" y="132" text-anchor="middle" font-size="10" fill="#8A9AA0" font-family="Plus Jakarta Sans">${i === 0 ? 'Now' : 'Yr ' + i}</text>`;
         if (i === 0 || i === 1 || i === 5) {
           html += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="11" fill="#141413" font-weight="700" font-family="Plus Jakarta Sans">$${Math.round(incomes[i] / 1000)}K</text>`;
         }
@@ -7036,6 +7047,7 @@ function renderWizardStep() {
       // Deployment breakdown
       html += `<div class="wizard-plan-breakdown">Deploy your $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : '...'} across 3\u20135 income deals \u2192 ~$${Math.round(yr1/1000)}K/yr from day one. Reinvest and add capital to reach $${(target/1000).toLocaleString()}K/yr.</div>`;
       html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">These deals match your income goal:</div>';
+      html += '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">Save the ones you want to explore later:</div>';
     } else if (branch === 'tax') {
       const taxable = parseDollar(wizardData.taxableIncome) || 200000;
       const estRate = taxable > 500000 ? 0.37 : (taxable > 200000 ? 0.35 : 0.32);
@@ -7067,6 +7079,7 @@ function renderWizardStep() {
       // Deployment breakdown
       html += `<div class="wizard-plan-breakdown">Deploy $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : '...'} in depreciation-heavy deals \u2192 offset ~$${(depreciation/1000).toLocaleString()}K in taxable income. Estimated tax savings: ~$${saved.toLocaleString()}.</div>`;
       html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">Top depreciation deals for your profile:</div>';
+      html += '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">Save the ones you want to explore later:</div>';
     } else {
       const cap = parseDollar(wizardData.growthCapital) || 500000;
       const doubled = cap * 2;
@@ -7095,6 +7108,7 @@ function renderWizardStep() {
       // Deployment breakdown
       html += `<div class="wizard-plan-breakdown">Deploy $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : (cap/1000).toLocaleString() + 'K'} across 3\u20134 value-add deals \u2192 target 2x over 5 years at ~15% IRR.</div>`;
       html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">These high-growth opportunities match your profile:</div>';
+      html += '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">Save the ones you want to explore later:</div>';
     }
 
     // Deal cards (non-clickable, with save button)
@@ -7108,14 +7122,14 @@ function renderWizardStep() {
         if (branch === 'cashflow') {
           const y = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
           metric = fmt(y, 'pct');
-          metricLabel = deal.preferredReturn ? 'Pref Return' : (deal.cashOnCash ? 'Cash-on-Cash' : 'IRR');
+          metricLabel = deal.preferredReturn ? 'Pref Return' : (deal.cashOnCash ? 'Cash-on-Cash' : 'Target Return');
           if (deal.distributionFrequency) extraMeta = deal.distributionFrequency;
         } else if (branch === 'tax') {
           if (deal.firstYrDepreciation) { metric = deal.firstYrDepreciation; metricLabel = 'Yr1 Depreciation'; }
-          else { metric = fmt(deal.targetIRR, 'pct'); metricLabel = 'IRR'; }
+          else { metric = fmt(deal.targetIRR, 'pct'); metricLabel = 'Target Return'; }
         } else {
           metric = fmt(deal.targetIRR, 'pct');
-          metricLabel = 'IRR';
+          metricLabel = 'Target Return';
           if (deal.holdPeriod) extraMeta = deal.holdPeriod + ' hold';
         }
         const minInvest = deal.minimumInvestment ? '$' + parseInt(deal.minimumInvestment).toLocaleString() + ' min' : '';
@@ -7188,14 +7202,16 @@ function renderWizardStep() {
     html += '<div class="wizard-plan-summary-row"><span>Goal</span><span>' + goalSummary + '</span></div>';
     html += '<div class="wizard-plan-summary-row"><span>Capital</span><span>' + capLabel + ' available</span></div>';
     html += '<div class="wizard-plan-summary-row"><span>Max per deal</span><span>' + checkLabel + '</span></div>';
-    html += '<div class="wizard-plan-summary-row"><span>Deals saved</span><span>' + savedCount + ' of 3 recommended</span></div>';
+    html += '<div class="wizard-plan-summary-row"><span>Deals saved</span><span>' + (savedCount > 0 ? savedCount + ' of 3 recommended' : '<em style="color:var(--text-muted);font-style:italic;">You can save deals from your dashboard</em>') + '</span></div>';
     html += '</div>';
-    // Video placeholder
-    html += '<div class="wizard-video-slot" onclick="">';
-    html += '<div class="wizard-video-play"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><polygon points="8,5 20,12 8,19"/></svg></div>';
-    html += '<div class="wizard-video-title">Watch: How I built $150K/yr in passive income</div>';
-    html += '<div class="wizard-video-duration">3 min</div>';
-    html += '</div>';
+    // Video placeholder — hidden until video URLs are configured
+    // if (false) {
+    // html += '<div class="wizard-video-slot" onclick="">';
+    // html += '<div class="wizard-video-play"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><polygon points="8,5 20,12 8,19"/></svg></div>';
+    // html += '<div class="wizard-video-title">Watch: How I built $150K/yr in passive income</div>';
+    // html += '<div class="wizard-video-duration">3 min</div>';
+    // html += '</div>';
+    // }
     html += '<button class="wizard-btn wizard-btn-next" style="width:100%;margin-top:20px;" onclick="wizardNext()">Go to my dashboard \u2192</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
