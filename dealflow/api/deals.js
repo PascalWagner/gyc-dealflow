@@ -135,7 +135,9 @@ function transformRecord(rec, mcLookup, peopleLookup) {
     avgLoanLTV: f['Avg Loan LTV'] || null,
     location: f['Location'] || '',
     address: f['Property Address'] || '',
-    deckUrl: Array.isArray(f['Deck']) && f['Deck'].length > 0 ? f['Deck'][0].url : ''
+    deckUrl: Array.isArray(f['Deck']) && f['Deck'].length > 0 ? f['Deck'][0].url : '',
+    parentDealId: Array.isArray(f['Parent Deal']) && f['Parent Deal'].length > 0 ? f['Parent Deal'][0] : null,
+    shareClassLabel: f['Share Class Label'] || null
   };
 }
 
@@ -174,6 +176,36 @@ export default async function handler(req, res) {
       .map(rec => transformRecord(rec, mcLookup, peopleLookup))
       .filter(d => d.investmentName);
 
+    // Group share classes under parent deals
+    const parentMap = {};
+    const childIds = new Set();
+
+    for (const deal of deals) {
+      if (deal.parentDealId) {
+        if (!parentMap[deal.parentDealId]) parentMap[deal.parentDealId] = [];
+        parentMap[deal.parentDealId].push({
+          id: deal.id,
+          label: deal.shareClassLabel || deal.investmentName,
+          targetReturn: deal.targetIRR,
+          preferredReturn: deal.preferredReturn,
+          investmentMinimum: deal.investmentMinimum,
+          lockup: deal.holdPeriod,
+          lpGpSplit: deal.lpGpSplit,
+          financials: deal.financials,
+          cashOnCash: deal.cashOnCash
+        });
+        childIds.add(deal.id);
+      }
+    }
+
+    // Attach shareClasses to parent deals and filter out children
+    const groupedDeals = deals
+      .filter(d => !childIds.has(d.id))
+      .map(d => ({
+        ...d,
+        shareClasses: parentMap[d.id] || null
+      }));
+
     // Also return management companies and people as separate arrays
     const managementCompanies = mcRecords.map(rec => {
       const f = rec.fields || {};
@@ -204,10 +236,10 @@ export default async function handler(req, res) {
       };
     });
 
-    console.log(`Returning ${deals.length} deals, ${managementCompanies.length} companies, ${people.length} people`);
+    console.log(`Returning ${groupedDeals.length} deals (${childIds.size} share class children grouped), ${managementCompanies.length} companies, ${people.length} people`);
 
     return res.status(200).json({
-      deals,
+      deals: groupedDeals,
       managementCompanies,
       people,
       meta: {

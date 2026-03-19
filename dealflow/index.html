@@ -2082,12 +2082,10 @@ html.cap-ios .debt-metric-select-mobile {
 .sidebar-logout:hover { color: #fff; }
 .sidebar-logout svg { width: 16px; height: 16px; }
 
-/* ====== BUY BOX WIZARD ====== */
+/* ====== BUY BOX WIZARD (v2 — 5-screen onboarding) ====== */
 .wizard-overlay {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; right: 0; bottom: 0;
   left: var(--sidebar-width);
   background: var(--bg-cream);
   z-index: 500;
@@ -2099,42 +2097,28 @@ html.cap-ios .debt-metric-select-mobile {
 }
 .wizard-overlay.active { display: flex; }
 
+/* Thin progress header */
 .wizard-header {
-  padding: 20px 32px;
+  padding: 0;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
   background: var(--bg-card);
+  position: relative;
 }
-.wizard-logo {
-  font-family: var(--font-headline);
-  font-size: 20px;
-  color: var(--text-dark);
-}
-.wizard-progress-wrap { flex: 1; max-width: 400px; }
 .wizard-progress-bar {
-  height: 6px;
+  height: 4px;
   background: var(--border);
-  border-radius: 3px;
-  overflow: hidden;
+  width: 100%;
 }
 .wizard-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--primary), var(--accent-green));
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-.wizard-step-label {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-top: 4px;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
 }
 .wizard-exit {
-  margin-left: auto;
-  padding: 8px 16px;
+  position: absolute;
+  top: 12px; right: 16px;
+  padding: 6px 14px;
   background: none;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -2144,36 +2128,84 @@ html.cap-ios .debt-metric-select-mobile {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
+  z-index: 2;
 }
 .wizard-exit:hover { border-color: var(--text-dark); color: var(--text-dark); }
+.wizard-exit.hidden { display: none; }
 
 .wizard-body {
   flex: 1;
   overflow-y: auto;
   display: flex;
   justify-content: center;
-  padding: 48px 32px;
+  align-items: flex-start;
+  padding: 48px 24px 80px;
+}
+@media (max-width: 600px) {
+  .wizard-body { padding: 32px 16px 64px; }
 }
 
+/* Slide transitions */
 .wizard-card {
   width: 100%;
-  max-width: 580px;
-  animation: fadeInUp 0.3s ease;
+  max-width: 640px;
+  opacity: 0;
+  transform: translateX(40px);
+  animation: wizSlideIn 0.4s cubic-bezier(.4,0,.2,1) forwards;
 }
+@keyframes wizSlideIn {
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes wizSlideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-40px); }
+}
+.wizard-card.slide-out {
+  animation: wizSlideOut 0.25s ease forwards;
+}
+
 .wizard-card-title {
   font-family: var(--font-headline);
-  font-size: 32px;
+  font-size: 38px;
   color: var(--text-dark);
-  line-height: 1.2;
+  line-height: 1.15;
   margin-bottom: 12px;
+}
+@media (max-width: 600px) {
+  .wizard-card-title { font-size: 28px; }
 }
 .wizard-card-desc {
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text-secondary);
   line-height: 1.7;
+  margin-bottom: 36px;
+}
+
+/* Trust badge (Pascal avatar) */
+.wizard-trust {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 32px;
 }
+.wizard-trust-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal-deep), var(--primary));
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 700;
+}
+.wizard-trust-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Inline nav */
 .wizard-inline-nav {
   display: flex;
   justify-content: center;
@@ -2182,147 +2214,14 @@ html.cap-ios .debt-metric-select-mobile {
   padding-top: 24px;
 }
 
-.wizard-field { margin-bottom: 20px; }
-.wizard-label {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  display: block;
-}
-.wizard-input, .wizard-select {
-  width: 100%;
-  padding: 14px 18px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-family: var(--font-body);
-  font-size: 16px;
-  color: var(--text-dark);
-  background: var(--bg-card);
-  transition: border-color 0.2s;
-}
-.wizard-input:focus, .wizard-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(81,190,123,0.1);
-}
-.wizard-select {
-  appearance: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 16px center;
-  padding-right: 40px;
-}
-.wizard-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-/* Wizard radio/checkbox options */
-.wizard-options { display: flex; flex-direction: column; gap: 10px; }
-.wizard-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 18px;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--bg-card);
-}
-.wizard-option:hover { border-color: var(--primary); background: var(--mint-bg); }
-.wizard-option.selected { border-color: var(--primary); background: var(--mint-bg); }
-.wizard-option-radio {
-  width: 22px; height: 22px;
-  border: 2px solid var(--border);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
-  transition: all 0.2s;
-}
-.wizard-option.selected .wizard-option-radio {
-  border-color: var(--primary);
-  background: var(--primary);
-}
-.wizard-option.selected .wizard-option-radio::after {
-  content: '';
-  width: 8px; height: 8px;
-  background: #fff;
-  border-radius: 50%;
-}
-.wizard-option-check {
-  width: 22px; height: 22px;
-  border: 2px solid var(--border);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px;
-  transition: all 0.2s;
-}
-.wizard-option.selected .wizard-option-check {
-  border-color: var(--primary);
-  background: var(--primary);
-}
-.wizard-option-text {
-  font-family: var(--font-ui);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-dark);
-  line-height: 1.4;
-}
-
-/* Wizard checkbox grid */
-.wizard-check-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.wizard-check-grid .wizard-option { padding: 14px 16px; }
-
-/* Wizard quick guide */
-.wizard-guide {
-  margin-top: 20px;
-  padding: 18px 20px;
-  background: var(--mint-bg);
-  border-radius: 10px;
-  border-left: 3px solid var(--primary);
-}
-.wizard-guide-title {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
-}
-.wizard-guide-item {
-  font-family: var(--font-body);
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 6px;
-}
-.wizard-guide-item strong { color: var(--text-dark); }
-
-.wizard-footer {
-  display: none;
-}
+/* Buttons */
 .wizard-btn {
   padding: 14px 36px;
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  border-radius: 10px;
+  letter-spacing: 0.3px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
@@ -2336,63 +2235,13 @@ html.cap-ios .debt-metric-select-mobile {
 .wizard-btn-next {
   background: var(--primary);
   color: #fff;
-  min-width: 160px;
+  min-width: 200px;
 }
 .wizard-btn-next:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
 .wizard-btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.wizard-footer { display: none; }
 
-/* Onboarding: Welcome hero screens */
-.wizard-welcome {
-  text-align: center;
-  padding: 40px 20px;
-  max-width: 640px;
-  margin: 0 auto;
-}
-.wizard-welcome .wizard-card-title {
-  font-size: 38px;
-  color: #fff;
-  margin-bottom: 16px;
-}
-.wizard-welcome .wizard-card-desc {
-  color: rgba(255,255,255,0.75);
-  font-size: 18px;
-  line-height: 1.7;
-  margin-bottom: 12px;
-}
-.wizard-time-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  border-radius: 100px;
-  background: rgba(81,190,123,0.15);
-  color: var(--accent-green);
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 32px;
-}
-.wizard-welcome-cta {
-  display: inline-block;
-  padding: 16px 48px;
-  background: var(--primary);
-  color: #fff;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  font-weight: 700;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.wizard-welcome-cta:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(81,190,123,0.4); }
-.wizard-body.welcome-bg {
-  background: linear-gradient(135deg, #1F5159, #0A1E21);
-}
-
-/* Onboarding: Goal selection cards */
+/* ===== Screen 0: Goal Selection Cards ===== */
 .wizard-goal-cards {
   display: grid;
   grid-template-columns: 1fr;
@@ -2401,29 +2250,37 @@ html.cap-ios .debt-metric-select-mobile {
 }
 .wizard-goal-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 20px;
-  padding: 24px;
+  padding: 28px 24px;
   border: 2px solid var(--border);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.25s ease;
   background: var(--bg-card);
 }
-.wizard-goal-card:hover { border-color: var(--primary); background: var(--mint-bg); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
-.wizard-goal-card.selected { border-color: var(--primary); background: var(--mint-bg); }
+.wizard-goal-card:hover {
+  border-color: var(--primary);
+  background: var(--mint-bg);
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.wizard-goal-card.selected {
+  border-color: var(--primary);
+  background: var(--mint-bg);
+}
 .wizard-goal-icon {
-  width: 52px; height: 52px;
-  border-radius: 14px;
+  width: 56px; height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 24px;
+  font-size: 28px;
 }
-.wizard-goal-icon.cf { background: rgba(81,190,123,0.12); color: #51BE7B; }
-.wizard-goal-icon.eq { background: rgba(37,99,235,0.1); color: #2563EB; }
-.wizard-goal-icon.tax { background: rgba(207,122,48,0.1); color: #CF7A30; }
+.wizard-goal-icon.cf { background: rgba(81,190,123,0.12); }
+.wizard-goal-icon.eq { background: rgba(37,99,235,0.1); }
+.wizard-goal-icon.tax { background: rgba(207,122,48,0.1); }
 .wizard-goal-info { flex: 1; }
 .wizard-goal-title {
   font-family: var(--font-ui);
@@ -2439,132 +2296,369 @@ html.cap-ios .debt-metric-select-mobile {
   line-height: 1.5;
 }
 
-/* Onboarding: Deal picker */
-.wizard-deal-grid {
+/* ===== Screen 1/2/3: Target Input ===== */
+.wizard-target-input {
+  text-align: center;
+  margin: 20px 0 12px;
+}
+.wizard-target-input input {
+  font-family: var(--font-headline);
+  font-size: 48px;
+  color: var(--text-dark);
+  text-align: center;
+  border: none;
+  border-bottom: 3px solid var(--primary);
+  background: transparent;
+  width: 100%;
+  max-width: 360px;
+  padding: 8px 0;
+  outline: none;
+  transition: border-color 0.2s;
+}
+@media (max-width: 600px) {
+  .wizard-target-input input { font-size: 32px; }
+}
+.wizard-target-input input:focus {
+  border-bottom-color: var(--accent-green);
+}
+.wizard-target-suffix {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Preset chips */
+.wizard-preset-chips {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0 24px;
+  flex-wrap: wrap;
+}
+.wizard-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 100px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.wizard-chip:hover {
+  border-color: var(--primary);
+  background: var(--mint-bg);
+}
+.wizard-chip.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Live calculation */
+.wizard-live-calc {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--primary);
+  padding: 16px 0;
+  min-height: 52px;
+  transition: opacity 0.3s;
+}
+
+/* ===== Screen 4: Sentence-style input ===== */
+.wizard-sentence {
+  font-family: var(--font-body);
+  font-size: 22px;
+  line-height: 2.4;
+  color: var(--text-dark);
+  text-align: center;
+  margin: 24px 0 32px;
+}
+@media (max-width: 600px) {
+  .wizard-sentence { font-size: 18px; line-height: 2.2; }
+}
+.wizard-sentence-chips {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  vertical-align: middle;
+}
+.wizard-sentence-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 100px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.wizard-sentence-chip:hover {
+  border-color: var(--primary);
+  background: var(--mint-bg);
+}
+.wizard-sentence-chip.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ===== Screen 5/6/7: Plan Output ===== */
+.wizard-plan { margin-top: 8px; }
+.wizard-plan-chart {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.wizard-plan-chart svg {
+  width: 100%;
+  display: block;
+}
+.wizard-plan-headline {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.wizard-plan-detail {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+/* Plan deal cards */
+.wizard-plan-deals {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-  max-height: 480px;
-  overflow-y: auto;
-  padding-right: 4px;
+  gap: 10px;
+  margin-bottom: 28px;
 }
-.wizard-deal-card {
+.wizard-plan-deal {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  overflow: hidden;
+  cursor: default;
   transition: all 0.2s;
 }
-.wizard-deal-card:hover { border-color: var(--primary); }
-.wizard-deal-body {
-  padding: 16px 20px;
-}
-.wizard-deal-name {
-  font-family: var(--font-ui);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-dark);
-  margin-bottom: 2px;
-}
-.wizard-deal-sponsor {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-.wizard-deal-metrics {
+.wizard-plan-deal-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
   display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
 }
-.wizard-deal-metric {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.wizard-deal-metric strong {
-  display: block;
-  font-size: 15px;
-  color: var(--text-dark);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.wizard-deal-actions {
-  display: flex;
-  border-top: 1px solid var(--border);
-}
-.wizard-deal-actions button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background: none;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.wizard-deal-actions button:first-child { color: var(--text-muted); border-right: 1px solid var(--border); }
-.wizard-deal-actions button:first-child:hover { background: #FFF3E6; color: var(--orange); }
-.wizard-deal-actions button:last-child { color: var(--primary); }
-.wizard-deal-actions button:last-child:hover { background: var(--mint-bg); }
-.wizard-deal-actions button.actioned { opacity: 0.4; pointer-events: none; }
-.wizard-deal-counter {
-  text-align: center;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 12px;
-}
-.wizard-deal-counter strong { color: var(--primary); }
-.wizard-skip-link {
-  display: block;
-  text-align: center;
-  margin-top: 16px;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-  text-decoration: underline;
-}
-.wizard-skip-link:hover { color: var(--text-dark); }
-
-/* Onboarding: Completion features */
-.wizard-features {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin: 32px 0;
-}
-@media (max-width: 600px) { .wizard-features { grid-template-columns: 1fr; } }
-.wizard-feature {
-  background: rgba(255,255,255,0.08);
-  border-radius: 14px;
-  padding: 24px 20px;
-  text-align: center;
-}
-.wizard-feature-icon {
-  font-size: 28px;
-  margin-bottom: 10px;
-}
-.wizard-feature-title {
+.wizard-plan-deal-info { flex: 1; min-width: 0; }
+.wizard-plan-deal-name {
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wizard-plan-deal-meta {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.wizard-plan-deal-metric {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.wizard-plan-deal-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--mint-bg);
+  color: var(--primary);
+  margin-left: 6px;
+}
+
+/* Plan 3-paths CTA */
+.wizard-plan-paths {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+.wizard-plan-paths-divider {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+.wizard-plan-paths-divider::before,
+.wizard-plan-paths-divider::after {
+  content: '';
+  flex: 1;
+  max-width: 60px;
+  height: 1px;
+  background: var(--border);
+}
+.wizard-plan-paths-label {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+}
+.wizard-plan-paths-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.wizard-plan-path-btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dark);
+}
+.wizard-plan-path-btn:hover {
+  border-color: var(--primary);
+  background: var(--mint-bg);
+  transform: translateY(-1px);
+}
+.wizard-plan-path-btn.primary {
+  background: var(--primary);
   color: #fff;
+  border-color: var(--primary);
+}
+.wizard-plan-path-btn.primary:hover {
+  background: var(--primary-hover);
+}
+
+/* ===== Screen 8: Completion ===== */
+.wizard-completion {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.wizard-completion-check {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  animation: wizCheckPop 0.5s cubic-bezier(.4,0,.2,1) 0.2s both;
+}
+@keyframes wizCheckPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.wizard-video-slot {
+  margin: 28px 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.wizard-video-slot:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-card-hover);
+}
+.wizard-video-play {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.wizard-video-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
   margin-bottom: 4px;
 }
-.wizard-feature-desc {
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: rgba(255,255,255,0.55);
-  line-height: 1.4;
+.wizard-video-duration {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
 }
+
+/* Legacy compat — keep these classes for any existing references */
+.wizard-welcome-cta {
+  display: inline-block;
+  padding: 16px 48px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.wizard-welcome-cta:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(81,190,123,0.4); }
+
+.wizard-body.welcome-bg {
+  background: linear-gradient(135deg, #1F5159, #0A1E21);
+}
+
 /* Section label in wizard */
 .wizard-section-label {
   font-family: var(--font-ui);
@@ -2577,6 +2671,143 @@ html.cap-ios .debt-metric-select-mobile {
   margin-bottom: 10px;
   padding-top: 20px;
   border-top: 1px solid var(--border-light);
+}
+
+/* ===== Wizard Plan Deal: Save button & saved state ===== */
+.wizard-plan-deal.saved {
+  border-left: 3px solid var(--primary);
+  background: rgba(81,190,123,0.04);
+}
+.wizard-plan-deal-save {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.wizard-plan-deal-save:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--mint-bg);
+}
+.wizard-plan-deal-save.saved {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.wizard-plan-deal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wizard-plan-deal-dist {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.wizard-plan-deal-min {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Deployment breakdown */
+.wizard-plan-breakdown {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-dark);
+  line-height: 1.6;
+  padding: 16px 20px;
+  background: var(--bg-cream);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border-left: 3px solid var(--primary);
+}
+
+/* Enhanced 3-path CTA */
+.wizard-plan-paths-label {
+  font-size: 20px !important;
+  margin-bottom: 16px !important;
+}
+.wizard-plan-path-desc {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.3;
+}
+.wizard-plan-path-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 160px;
+}
+
+/* Context line below live calc */
+.wizard-live-calc-context {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* Reality check text */
+.wizard-reality-check {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--primary);
+  text-align: center;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(81,190,123,0.06);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+/* Completion plan summary */
+.wizard-plan-summary {
+  text-align: left;
+  background: var(--bg-cream);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.wizard-plan-summary-title {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.wizard-plan-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-dark);
+  padding: 4px 0;
+}
+.wizard-plan-summary-row span:first-child {
+  color: var(--text-muted);
+}
+.wizard-plan-summary-row span:last-child {
+  font-weight: 600;
 }
 
 /* ====== BUY BOX REPORT (Magazine Style) ====== */
@@ -2866,22 +3097,14 @@ html.cap-ios .debt-metric-select-mobile {
 </head>
 <body>
 
-<!-- Buy Box Wizard Overlay -->
+<!-- Buy Box Wizard Overlay (v2) -->
 <div class="wizard-overlay" id="wizardOverlay">
   <div class="wizard-header">
-    <div class="wizard-logo">Grow Your Cashflow</div>
-    <div class="wizard-progress-wrap">
-      <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="wizardProgress" style="width:5%"></div></div>
-      <div class="wizard-step-label" id="wizardStepLabel">Step 1 of 21</div>
-    </div>
-    <button class="wizard-exit" onclick="closeWizard()">Save &amp; Exit</button>
+    <div class="wizard-progress-bar"><div class="wizard-progress-fill" id="wizardProgress" style="width:0%"></div></div>
+    <button class="wizard-exit hidden" id="wizardExit" onclick="closeWizard()">Save &amp; Exit</button>
   </div>
-  <div class="wizard-body">
+  <div class="wizard-body" id="wizardBody">
     <div class="wizard-card" id="wizardContent"></div>
-  </div>
-  <div class="wizard-footer">
-    <button class="wizard-btn wizard-btn-back" id="wizardBack" onclick="wizardPrev()">Back</button>
-    <button class="wizard-btn wizard-btn-next" id="wizardNext" onclick="wizardNext()">Next</button>
   </div>
 </div>
 
@@ -4435,7 +4658,7 @@ const FALLBACK_DEALS = [
   {id:"rec1HuV",dealNumber:719,investmentName:"Pacific Western Trust Deeds",assetClass:"Lending",dealType:"Syndication",targetIRR:0.10,investmentMinimum:10000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Trust Deeds requiring borrowers with 10+ years of commercial lending experience. Strategies: Land Acquisition, Development, Construction & Tenant Improvement.",distributions:"Monthly",financials:"Audited",availableTo:"Unaccredited",ceo:"Carrie Cook",managementCompany:"Pacific Western Realty Advisors",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
   {id:"rec1dwW",dealNumber:712,investmentName:"Alcova Capital Yield Premium Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,preferredReturn:0.06,investmentMinimum:250000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Commercial real estate lending fund with quarterly distributions and audited financials.",distributions:"Quarterly",financials:"Audited",availableTo:"Accredited",ceo:"Russell Diamond",managementCompany:"Alcova Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:227000000,loanCount:45},
   {id:"rec1pkw",dealNumber:749,investmentName:"Arixa Secured Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending with 15+ year track record, monthly distributions, and audited financials.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Jan Brzeski",managementCompany:"Arixa Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:209000000,loanCount:60,avgLoanLTV:0.65},
-  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615},
+  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615,avgLoanLTV:0.55,shareClasses:[{id:"recRThMoAkKT8BItY",label:"Class A",targetReturn:0.12,lockup:3,investmentMinimum:50000,financials:"Audited"},{id:"rec3wj1FR0mip4iF9",label:"Class B",targetReturn:0.10,lockup:1,investmentMinimum:50000,financials:"Unaudited"},{id:"recguRQt9Vjy74PkF",label:"Class C",targetReturn:0.06,lockup:0.5,investmentMinimum:50000,financials:"Unaudited"}]},
   {id:"rec2gb9",dealNumber:793,investmentName:"Industrial Real Estate Income Trust (BIGi)",assetClass:"Industrial",dealType:"Fund",targetIRR:0.11,preferredReturn:0.05,investmentMinimum:25000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"CRE Industrial single-tenant buildings that generate stable yield with monthly distributions.",distributions:"Monthly",availableTo:"Accredited",ceo:"Jonathan Slager",managementCompany:"Modiv Industrial",strategy:"Core/Stabilized",instrument:"Equity",fundAUM:825000000},
   {id:"rec532e",dealNumber:776,investmentName:"The Private Credit Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.09,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Private credit fund focused on real estate-backed lending with quarterly distributions.",distributions:"Quarterly",availableTo:"Accredited",ceo:"Tait Duryea",managementCompany:"Alpine Note",strategy:"Lending",instrument:"Preferred Equity",debtPosition:"2nd"},
   {id:"rec62hE",dealNumber:770,investmentName:"Income Plus Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.09,preferredReturn:0.06,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"60% preferred equity portfolio in Class A multifamily, Sunbelt & Mountain West (Colorado/Utah). Debt & equity blend.",distributions:"Monthly",availableTo:"Accredited",ceo:"David Scherer",managementCompany:"Origin Investments",strategy:"Lending",instrument:"Equity",fundAUM:500000000,investingGeography:"Sunbelt & Mountain West"}
@@ -5034,6 +5257,7 @@ function renderCreditCard(deal) {
           <span class="credit-badge">${typeLabel}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${auditBadge}
+          ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
         </div>
         ${heroContent}
       </div>
@@ -5315,6 +5539,7 @@ function renderCard(deal) {
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${deal.strategy && deal.strategy !== 'Value-Add' ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
+          ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
         </div>
         <div class="equity-hero-icon">${hero.icon}</div>
         ${deal.targetIRR ? `<div class="equity-hero-irr"><span class="equity-hero-irr-value">${fmt(deal.targetIRR, 'pct')}</span><span class="equity-hero-irr-label">Target IRR</span></div>` : ''}
@@ -6411,18 +6636,18 @@ function logout() {
   window.location.href = 'deal-login.html';
 }
 
-// ========== ONBOARDING WIZARD ENGINE (Branching) ==========
+// ========== ONBOARDING WIZARD ENGINE v2 (5-screen, branching) ==========
 let wizardStep = 0;
-let wizardStepIndex = 0; // index into current step sequence
+let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Step sequence branches based on goal selection
+// New flow: 0=goal, 1=cf target, 2=growth target, 3=tax target, 4=capital+check, 5=plan cf, 6=plan growth, 7=plan tax, 8=done
 const ONBOARDING_FLOW = {
-  common_start: [0, 1, 2],
-  cashflow: [3, 4],
-  growth: [5, 6],
-  tax: [7, 8],
-  common_end: [9, 10]
+  common_start: [0],
+  cashflow: [1, 4, 5],
+  growth: [2, 4, 6],
+  tax: [3, 4, 7],
+  common_end: [8]
 };
 
 function getStepSequence() {
@@ -6430,184 +6655,72 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Welcome', 'About You', 'Your Goal', 'Your Targets', 'Preferences', 'Browse Deals', 'All Set'];
+const PHASE_LABELS = ['Your Goal', 'Income Target', 'Growth Target', 'Tax Target', 'Capital', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
   const step = seq[wizardStepIndex];
-  if (step <= 2) return PHASE_LABELS[step];
-  if (step === 9) return PHASE_LABELS[5];
-  if (step === 10) return PHASE_LABELS[6];
-  return PHASE_LABELS[3 + (wizardStepIndex - 3)];
+  return PHASE_LABELS[step] || '';
 }
 
 const WIZARD_STEPS = [
-  // 0: Welcome (all paths)
-  {
-    title: 'Welcome to Grow Your Cashflow',
-    desc: 'We\'re going to help you organize your investments, analyze your portfolio, and give you dialed-in coaching in our office hours.<br><br>Let\'s build your investment profile so we can match you with the right deals.',
-    type: 'welcome'
-  },
-  // 1: About You (all paths)
-  {
-    title: 'Tell us about yourself',
-    desc: 'We\'ll use this to personalize your experience and match you with the right opportunities.',
-    type: 'mixed',
-    fields: [
-      { key: 'firstName', label: 'First Name', placeholder: 'First name', inputType: 'text' },
-      { key: 'lastName', label: 'Last Name', placeholder: 'Last name', inputType: 'text' }
-    ],
-    radio: { key: 'accreditation', label: 'Accreditation Status', options: [
-      'I\'m not an accredited investor',
-      'I qualify based on net worth (over $1M, excluding primary residence)',
-      'I qualify based on income ($200K+ individually or $300K+ with spouse)',
-      'I qualify in another way (licenses, entities, etc.)'
-    ]}
-  },
-  // 2: Goal Selection (BRANCHING POINT)
-  {
-    title: 'What\'s the primary goal for your next investment?',
-    desc: 'This determines which opportunities we\'ll surface for you. Each path leads to different questions tailored to your strategy.',
-    type: 'goalSelect'
-  },
-  // 3: Cash Flow - Targets
-  {
-    title: 'Let\'s dial in your cash flow needs',
-    desc: 'Understanding your current income and targets helps us recommend the right deals.',
-    type: 'mixed',
-    fields: [
-      { key: 'currentCashFlow', label: 'What is your current annual passive income / cash flow?', placeholder: '$24,000', inputType: 'text' },
-      { key: 'targetCashFlow', label: 'What annual cash flow are you trying to get to?', placeholder: '$120,000', inputType: 'text' },
-      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$50,000', inputType: 'text' }
-    ],
-    guide: {
-      items: [
-        '<strong>Example:</strong> $100K invested at 8% cash-on-cash = $8K/year in distributions',
-        '<strong>Tip:</strong> To reach $120K/year at 8% yield, you\'d need approximately $1.5M deployed'
-      ]
+  // 0: Goal selection (all paths) — auto-advance on tap
+  { type: 'goalSelect' },
+  // 1: Cash flow target
+  { type: 'targetInput', branch: 'cashflow',
+    title: 'How much passive income do you want?',
+    suffix: '/ year',
+    key: 'targetCashFlow',
+    defaultVal: '100000',
+    presets: [25000, 50000, 100000, 200000, 500000],
+    presetLabels: ['$25K','$50K','$100K','$200K','$500K+'],
+    calcFn: function(v) {
+      const mo = Math.round(v / 12).toLocaleString();
+      return 'That\u2019s $' + mo + '/mo in passive income.';
     }
   },
-  // 4: Cash Flow - Preferences
-  {
-    title: 'How do you want your income structured?',
-    desc: 'These preferences help us filter for deals that match your cash flow needs.',
-    type: 'mixed',
-    radio: { key: 'distributions', label: 'How often do you want distributions?', options: ['Monthly', 'Quarterly', 'Annually'] },
-    checks: { key: 'assetClasses', label: 'What types of cash flow investments interest you?', options: [
-      'Private Debt / Credit', 'Multi-Family', 'NNN (Triple Net Lease)', 'Self Storage', 'RV / Mobile Home Parks', 'Hotels / Hospitality'
-    ]},
-    guide: {
-      items: [
-        '<strong>Private Debt/Lending</strong> &rarr; 6-12% yields, predictable monthly/quarterly income, senior-secured',
-        '<strong>Stabilized Multi-Family</strong> &rarr; 5-9% cash yields, long-term hold, inflation protection',
-        '<strong>NNN Leases</strong> &rarr; Passive, credit-tenant backed, predictable income with minimal management'
-      ]
+  // 2: Growth target
+  { type: 'targetInput', branch: 'growth',
+    title: 'How much do you want to invest?',
+    suffix: '',
+    key: 'growthCapital',
+    defaultVal: '500000',
+    presets: [100000, 250000, 500000, 1000000, 2000000],
+    presetLabels: ['$100K','$250K','$500K','$1M','$2M+'],
+    calcFn: function(v) {
+      const doubled = (v * 2);
+      return '$' + v.toLocaleString() + ' \u2192 $' + doubled.toLocaleString() + ' (2x in 5 years \u2248 15% IRR)';
     }
   },
-  // 5: Equity Growth - Targets
-  {
-    title: 'Let\'s define your growth targets',
-    desc: 'Understanding your return expectations helps us match you with the right opportunities.',
-    type: 'mixed',
-    fields: [
-      { key: 'minIRR', label: 'What\'s the minimum total return (IRR) you\'re targeting?', placeholder: '15%', inputType: 'text' },
-      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$100,000', inputType: 'text' }
-    ],
-    radio: { key: 'riskTolerance', label: 'What\'s your risk tolerance?', options: [
-      'Conservative (8-12% IRR target)',
-      'Moderate (12-18% IRR target)',
-      'Aggressive (18%+ IRR target)'
-    ]},
-    guide: {
-      items: [
-        '<strong>Conservative</strong> &rarr; Core/stabilized assets with lower risk',
-        '<strong>Moderate</strong> &rarr; Value-add strategies with proven operators',
-        '<strong>Aggressive</strong> &rarr; Development, opportunistic plays with high upside'
-      ]
+  // 3: Tax target
+  { type: 'targetInput', branch: 'tax',
+    title: 'How much taxable income do you want to offset?',
+    suffix: '',
+    key: 'taxableIncome',
+    defaultVal: '200000',
+    presets: [50000, 100000, 200000, 500000, 1000000],
+    presetLabels: ['$50K','$100K','$200K','$500K','$1M+'],
+    calcFn: function(v) {
+      const saved = Math.round(v * 0.37).toLocaleString();
+      return 'At a 37% bracket, that\u2019s ~$' + saved + ' back in your pocket.';
     }
   },
-  // 6: Equity Growth - Preferences
-  {
-    title: 'What growth strategies interest you?',
-    desc: 'Select the asset classes and strategies that fit your investment thesis.',
-    type: 'mixed',
-    radio: { key: 'lockup', label: 'How long are you willing to hold?', options: [
-      '2-3 years', '3-5 years', '5-7 years', '7+ years'
-    ]},
-    checks: { key: 'assetClasses', label: 'Which asset classes?', options: [
-      'Multi-Family', 'Industrial', 'Hotels / Hospitality', 'Self Storage', 'Short-Term Rentals', 'Mixed-Use', 'Land'
-    ]},
-    guide: {
-      items: [
-        '<strong>Value-Add</strong> &rarr; Buy underperforming assets, improve them, increase NOI. 12-20% IRR typical.',
-        '<strong>Development</strong> &rarr; Ground-up construction. No cash flow during build, big upside at exit.',
-        '<strong>Opportunistic</strong> &rarr; Distressed, turnaround, or high-growth. Highest risk/reward.'
-      ]
-    }
-  },
-  // 7: Tax Optimization - Situation
-  {
-    title: 'Let\'s understand your tax situation',
-    desc: 'Real estate investments can provide significant tax benefits through depreciation, cost segregation, and bonus depreciation.',
-    type: 'mixed',
-    fields: [
-      { key: 'taxableIncome', label: 'What\'s your approximate annual taxable income?', placeholder: '$500,000', inputType: 'text' },
-      { key: 'taxOffset', label: 'How much are you looking to offset in taxes this year?', placeholder: '$100,000', inputType: 'text' }
-    ],
-    radio: { key: 'entity', label: 'What entity will you invest through?', options: [
-      'Personal Name', 'LLC', 'Trust', 'Self-Directed IRA / 401K'
-    ]},
-    guide: {
-      items: [
-        '<strong>Cost Segregation</strong> &rarr; Accelerated depreciation on components of a building (roof, HVAC, etc.)',
-        '<strong>Bonus Depreciation</strong> &rarr; Year-1 write-off of certain building improvements (currently phasing down)',
-        '<strong>Oil & Gas</strong> &rarr; Intangible drilling costs provide immediate deductions against ordinary income'
-      ]
-    }
-  },
-  // 8: Tax Optimization - Preferences
-  {
-    title: 'Which tax strategies interest you?',
-    desc: 'Select the timing and types of investments that align with your tax planning.',
-    type: 'mixed',
-    fields: [
-      { key: 'checkSize', label: 'Maximum check size per investment?', placeholder: '$75,000', inputType: 'text' }
-    ],
-    radio: { key: 'taxTimeline', label: 'When do you need the tax benefit?', options: [
-      'This tax year (immediate)',
-      'Next 1-2 years',
-      'Flexible / long-term planning'
-    ]},
-    checks: { key: 'assetClasses', label: 'Which asset types offer the tax benefits you need?', options: [
-      'Multi-Family', 'Oil & Gas', 'Land', 'Short-Term Rentals', 'Industrial'
-    ]},
-    guide: {
-      items: [
-        '<strong>Multi-Family (Cost Seg)</strong> &rarr; Accelerate depreciation on large apartment buildings for year-1 write-offs',
-        '<strong>Oil & Gas</strong> &rarr; Intangible drilling costs provide immediate 60-80% deductions',
-        '<strong>Short-Term Rentals (REPS)</strong> &rarr; Active participation can unlock passive loss deductions against W2 income'
-      ]
-    }
-  },
-  // 9: Browse Deals (all paths)
-  {
-    title: 'Take a look at what\'s available',
-    desc: 'Here are deals that match your preferences. Mark the ones that interest you \u2014 you can always change your mind later.',
-    type: 'dealPicker'
-  },
-  // 10: All Set (all paths)
-  {
-    title: 'You\'re all set!',
-    desc: 'Your investment profile is locked in. Here\'s what you can do next.',
-    type: 'welcome'
-  }
+  // 4: Capital + check size (sentence-style)
+  { type: 'sentenceInput' },
+  // 5: Plan — cash flow
+  { type: 'planOutput', branch: 'cashflow' },
+  // 6: Plan — growth
+  { type: 'planOutput', branch: 'growth' },
+  // 7: Plan — tax
+  { type: 'planOutput', branch: 'tax' },
+  // 8: Completion
+  { type: 'completion' }
 ];
 
 function openBuyBoxWizard() {
   wizardStepIndex = 0;
   wizardStep = 0;
   wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-  // Pre-fill from user data
   const user = getUser();
   if (user && !wizardData.firstName) {
     wizardData.firstName = user.firstName || (user.name || '').split(' ')[0] || '';
@@ -6621,75 +6734,141 @@ function closeWizard() {
   collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
   document.getElementById('wizardOverlay').classList.remove('active');
-  document.querySelector('.wizard-body').classList.remove('welcome-bg');
-  // Update buy box settings from wizard data
   syncWizardToBuyBox();
   if (localStorage.getItem('gycBuyBoxComplete')) {
     if (typeof renderReport === 'function') renderReport();
   }
 }
 
+// ---- Helper: parse dollar string to number ----
+function parseDollar(s) {
+  if (typeof s === 'number') return s;
+  if (!s) return 0;
+  return parseInt(String(s).replace(/[$,\s]/g, ''), 10) || 0;
+}
+function fmtDollar(n) {
+  if (!n || isNaN(n)) return '$0';
+  return '$' + n.toLocaleString();
+}
+
+// ---- Helper: get curated deals for plan ----
+function getWizardPlanDeals(branch) {
+  const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+  if (allDeals.length === 0) return [];
+  let filtered, sorted;
+  if (branch === 'cashflow') {
+    // Income-oriented: lending, pref return deals, sort by yield
+    filtered = allDeals.filter(d => {
+      const isLending = d.strategy === 'Lending' || d.assetClass === 'Lending' || (d.instrument && d.instrument.toLowerCase().includes('debt'));
+      const hasPref = d.preferredReturn && d.preferredReturn > 0;
+      const hasCash = d.cashOnCash && d.cashOnCash > 0;
+      return isLending || hasPref || hasCash;
+    });
+    sorted = filtered.sort((a, b) => {
+      const yA = a.preferredReturn || a.cashOnCash || a.targetIRR || 0;
+      const yB = b.preferredReturn || b.cashOnCash || b.targetIRR || 0;
+      return yB - yA;
+    });
+  } else if (branch === 'tax') {
+    // Tax: value-add syndications, oil & gas, development, depreciation
+    filtered = allDeals.filter(d => {
+      const hasDep = d.firstYrDepreciation && d.firstYrDepreciation !== '';
+      const isDevOrVA = d.strategy === 'Development' || d.strategy === 'Value-Add';
+      const isOilGas = (d.assetClass || '').toLowerCase().includes('oil') || (d.investmentStrategy || '').toLowerCase().includes('oil');
+      const hasCostSeg = (d.investmentStrategy || '').toLowerCase().includes('depreciation') || (d.investmentStrategy || '').toLowerCase().includes('cost seg');
+      return hasDep || isDevOrVA || isOilGas || hasCostSeg;
+    });
+    sorted = filtered.sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
+  } else {
+    // Growth: high IRR, value-add, development
+    filtered = allDeals.filter(d => {
+      return d.targetIRR && d.targetIRR > 0.12 && (d.strategy === 'Value-Add' || d.strategy === 'Development');
+    });
+    sorted = filtered.sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
+  }
+  if (sorted.length === 0) sorted = allDeals.sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
+  return sorted.slice(0, 3);
+}
+
+// ---- Track saved deals during wizard ----
+if (typeof window._wizardSavedDeals === 'undefined') window._wizardSavedDeals = new Set();
+
+function savePlanDeal(dealId, btnEl) {
+  if (typeof setDealStage === 'function') setDealStage(dealId, 'interested');
+  window._wizardSavedDeals.add(dealId);
+  // Update button
+  btnEl.classList.add('saved');
+  btnEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 2h14a1 1 0 011 1v19.143a.5.5 0 01-.766.424L12 18.03l-7.234 4.536A.5.5 0 014 22.143V3a1 1 0 011-1z"/></svg> Saved';
+  // Update card
+  const card = document.getElementById('wizDeal_' + dealId);
+  if (card) card.classList.add('saved');
+}
+
+// ---- Context line for target input (Screen 2) ----
+function getTargetContextLine(step, val) {
+  if (!val || val <= 0) return '';
+  const branch = step.branch;
+  if (branch === 'cashflow') {
+    const needed = Math.round(val / 0.09);
+    return 'At ~9% average yield, you\u2019ll need ~$' + needed.toLocaleString() + ' deployed to reach this goal.';
+  } else if (branch === 'tax') {
+    return 'Typical depreciation deals offset 60\u201380% of your investment in year one.';
+  } else if (branch === 'growth') {
+    return 'That\u2019s a ~15% annualized return over 5 years.';
+  }
+  return '';
+}
+
+// ---- Reality check text for sentence input (Screen 3) ----
+function getRealityCheckText() {
+  const branch = wizardData._branch || 'cashflow';
+  const cr = wizardData._capitalRange || '';
+  if (!cr) return '';
+  const parts = cr.split('-');
+  const lo = parseInt(parts[0], 10) || 0;
+  const hi = parts[1] ? parseInt(parts[1], 10) : lo;
+  if (lo <= 0) return '';
+  if (branch === 'cashflow') {
+    const yLo = Math.round(lo * 0.08 / 1000);
+    const yHi = Math.round(hi * 0.10 / 1000);
+    return 'With $' + (lo/1000) + '-' + (hi/1000) + 'K, you can start generating $' + yLo + 'K-$' + yHi + 'K/yr immediately.';
+  } else if (branch === 'tax') {
+    const oLo = Math.round(lo * 0.6 / 1000);
+    const oHi = Math.round(hi * 0.8 / 1000);
+    return 'With $' + (lo/1000) + '-' + (hi/1000) + 'K, you could offset $' + oLo + 'K-$' + oHi + 'K in taxable income.';
+  } else if (branch === 'growth') {
+    const mid = Math.round((lo + hi) / 2);
+    const target = mid * 2;
+    return 'With $' + (lo/1000) + '-' + (hi/1000) + 'K deployed at 15% IRR, you\u2019re targeting $' + (target/1000).toLocaleString() + 'K in 5 years.';
+  }
+  return '';
+}
+
+// ---- Render wizard step ----
 function renderWizardStep() {
   const seq = getStepSequence();
   wizardStep = seq[wizardStepIndex];
   const step = WIZARD_STEPS[wizardStep];
   const total = seq.length;
-  const pct = ((wizardStepIndex + 1) / total * 100).toFixed(0);
+  const pct = ((wizardStepIndex) / (total - 1) * 100).toFixed(0);
   document.getElementById('wizardProgress').style.width = pct + '%';
-  document.getElementById('wizardStepLabel').textContent = getPhaseLabel();
-  document.getElementById('wizardBack').style.display = wizardStepIndex === 0 ? 'none' : '';
-  document.getElementById('wizardNext').textContent = wizardStepIndex === total - 1 ? 'Finish' : 'Next';
 
-  // Toggle welcome background
-  const wizBody = document.querySelector('.wizard-body');
-  if (step.type === 'welcome') {
-    wizBody.classList.add('welcome-bg');
-  } else {
-    wizBody.classList.remove('welcome-bg');
-  }
+  // Show/hide exit button (hidden on first screen)
+  const exitBtn = document.getElementById('wizardExit');
+  if (exitBtn) exitBtn.classList.toggle('hidden', wizardStepIndex === 0);
 
   let html = '';
 
-  // ===== WELCOME TYPE =====
-  if (step.type === 'welcome') {
-    html += '<div class="wizard-welcome">';
-    if (wizardStep === 0) {
-      // First welcome screen
-      html += `<div class="wizard-card-title" style="font-size:38px;color:#fff;margin-bottom:16px;">${step.title}</div>`;
-      html += `<div class="wizard-card-desc" style="color:rgba(255,255,255,0.75);font-size:18px;margin-bottom:16px;">${step.desc}</div>`;
-      html += '<div class="wizard-time-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> About 5 minutes</div><br>';
-      html += '<button class="wizard-welcome-cta" onclick="wizardNext()">Get Started</button>';
-    } else {
-      // Completion screen
-      const branch = wizardData._branch || 'cashflow';
-      let summaryText = 'Your preferences are saved and we\'re matching you with deals.';
-      if (branch === 'cashflow') summaryText = 'We\'ve matched you with income-focused deals tailored to your cash flow targets.';
-      else if (branch === 'growth') summaryText = 'We\'ve matched you with growth-oriented deals targeting your return objectives.';
-      else if (branch === 'tax') summaryText = 'We\'ve matched you with deals that offer the tax benefits you\'re looking for.';
-      html += '<div style="font-size:48px;margin-bottom:16px;">&#10003;</div>';
-      html += `<div class="wizard-card-title" style="font-size:38px;color:#fff;margin-bottom:12px;">${step.title}</div>`;
-      html += `<div class="wizard-card-desc" style="color:rgba(255,255,255,0.75);font-size:17px;margin-bottom:8px;">${summaryText}</div>`;
-      html += '<div class="wizard-features">';
-      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128200;</div><div class="wizard-feature-title">Browse Live Deals</div><div class="wizard-feature-desc">Matched to your buy box</div></div>';
-      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128218;</div><div class="wizard-feature-title">Book Office Hours</div><div class="wizard-feature-desc">Get personalized coaching</div></div>';
-      html += '<div class="wizard-feature"><div class="wizard-feature-icon">&#128202;</div><div class="wizard-feature-title">Track Portfolio</div><div class="wizard-feature-desc">Log your investments</div></div>';
-      html += '</div>';
-      html += '<button class="wizard-welcome-cta" onclick="wizardNext()">Go to My Dashboard</button>';
-    }
-    html += '</div>';
-    document.getElementById('wizardContent').innerHTML = html;
-    return;
-  }
-
-  // ===== GOAL SELECT TYPE =====
+  // ===== SCREEN 0: GOAL SELECTION =====
   if (step.type === 'goalSelect') {
-    html += `<div class="wizard-card-title">${step.title}</div>`;
-    html += `<div class="wizard-card-desc">${step.desc}</div>`;
+    html += '<div class="wizard-trust"><div class="wizard-trust-avatar">PW</div><div class="wizard-trust-name">Pascal Wagner &middot; Grow Your Cashflow</div></div>';
+    html += '<div class="wizard-card-title">What\u2019s your investing goal?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Pick one and we\u2019ll build a personalized plan in under 60 seconds.</div>';
     html += '<div class="wizard-goal-cards">';
     const goals = [
-      { branch: 'cashflow', title: 'Cash Flow', desc: 'I want consistent, predictable income from my investments', icon: '&#128176;', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
-      { branch: 'growth', title: 'Equity Growth', desc: 'I want to grow my wealth and diversify outside public markets', icon: '&#128200;', iconClass: 'eq', goalVal: 'Equity Growth (wealth later)' },
-      { branch: 'tax', title: 'Tax Optimization', desc: 'I want to reduce my taxable income using real estate', icon: '&#128737;', iconClass: 'tax', goalVal: 'Tax Optimization (tax shield now)' }
+      { branch: 'cashflow', title: 'I want passive income', desc: 'Build predictable cash flow from private investments', icon: '\uD83D\uDCB0', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
+      { branch: 'tax', title: 'I want to cut my tax bill', desc: 'Use depreciation and write-offs to offset $100K+ in income', icon: '\uD83C\uDFE6', iconClass: 'tax', goalVal: 'Tax Optimization (tax shield now)' },
+      { branch: 'growth', title: 'I want to grow my wealth', desc: '2x or more through value-add and development deals', icon: '\uD83D\uDE80', iconClass: 'eq', goalVal: 'Equity Growth (wealth later)' }
     ];
     goals.forEach(g => {
       const sel = wizardData._branch === g.branch ? 'selected' : '';
@@ -6702,220 +6881,390 @@ function renderWizardStep() {
       </div>`;
     });
     html += '</div>';
-    // Back button only
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 1/2/3: TARGET INPUT =====
+  if (step.type === 'targetInput') {
+    const val = wizardData[step.key] || step.defaultVal;
+    const numVal = parseDollar(val);
+    html += '<div class="wizard-card-title">' + step.title + '</div>';
+    html += '<div class="wizard-target-input">';
+    html += `<input type="text" id="wizTargetInput" value="${fmtDollar(numVal)}" data-key="${step.key}" inputmode="numeric" autocomplete="off">`;
+    if (step.suffix) html += `<div class="wizard-target-suffix">${step.suffix}</div>`;
+    html += '</div>';
+    // Preset chips
+    html += '<div class="wizard-preset-chips">';
+    step.presets.forEach((p, i) => {
+      const sel = numVal === p ? 'selected' : '';
+      html += `<div class="wizard-chip ${sel}" onclick="selectWizardPreset(${p}, '${step.key}')">${step.presetLabels[i]}</div>`;
+    });
+    html += '</div>';
+    // Live calc
+    const calcText = step.calcFn(numVal);
+    html += `<div class="wizard-live-calc" id="wizLiveCalc">${calcText}</div>`;
+    // Context line below calc
+    html += `<div class="wizard-live-calc-context" id="wizLiveCalcCtx">${getTargetContextLine(step, numVal)}</div>`;
+    // Nav
     html += '<div class="wizard-inline-nav">';
-    if (wizardStepIndex > 0) {
-      html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    // Wire up live input
+    const inp = document.getElementById('wizTargetInput');
+    if (inp) {
+      inp.addEventListener('input', function() {
+        const n = parseDollar(this.value);
+        wizardData[step.key] = String(n);
+        const calcEl = document.getElementById('wizLiveCalc');
+        if (calcEl && n > 0) calcEl.textContent = step.calcFn(n);
+        const ctxEl = document.getElementById('wizLiveCalcCtx');
+        if (ctxEl && n > 0) ctxEl.textContent = getTargetContextLine(step, n);
+        // Update chip selection
+        document.querySelectorAll('.wizard-preset-chips .wizard-chip').forEach(c => c.classList.remove('selected'));
+      });
+      inp.addEventListener('blur', function() {
+        const n = parseDollar(this.value);
+        if (n > 0) this.value = fmtDollar(n);
+      });
+      inp.addEventListener('focus', function() {
+        const n = parseDollar(this.value);
+        if (n > 0) this.value = String(n);
+      });
     }
+    return;
+  }
+
+  // ===== SCREEN 4: SENTENCE-STYLE CAPITAL + CHECK SIZE =====
+  if (step.type === 'sentenceInput') {
+    html += '<div class="wizard-card-title">Almost there.</div>';
+    html += '<div class="wizard-sentence">';
+    html += 'I have about <br>';
+    const capitalOptions = ['$50-100K','$100-250K','$250-500K','$500K-1M','$1M+'];
+    const capitalKeys = ['50000-100000','100000-250000','250000-500000','500000-1000000','1000000+'];
+    html += '<span class="wizard-sentence-chips">';
+    capitalOptions.forEach((opt, i) => {
+      const sel = wizardData._capitalRange === capitalKeys[i] ? 'selected' : '';
+      html += `<span class="wizard-sentence-chip ${sel}" onclick="selectSentenceChip(this, '_capitalRange', '${capitalKeys[i]}')">${opt}</span>`;
+    });
+    html += '</span>';
+    html += ' to invest<br>and the most I\u2019d put in one deal is<br>';
+    const checkOptions = ['$25K','$50K','$100K','$200K','$500K+'];
+    const checkKeys = ['25000','50000','100000','200000','500000'];
+    html += '<span class="wizard-sentence-chips">';
+    checkOptions.forEach((opt, i) => {
+      const sel = wizardData.checkSize === checkKeys[i] ? 'selected' : '';
+      html += `<span class="wizard-sentence-chip ${sel}" onclick="selectSentenceChip(this, 'checkSize', '${checkKeys[i]}')">${opt}</span>`;
+    });
+    html += '</span>';
+    html += '</div>';
+    // Reality check
+    html += `<div class="wizard-reality-check" id="wizRealityCheck">${getRealityCheckText()}</div>`;
+    // Nav
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += `<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Show me my plan \u2192</button>`;
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
   }
 
-  // ===== DEAL PICKER TYPE =====
-  if (step.type === 'dealPicker') {
-    // Sync wizard data to buy box so we can filter deals
-    collectWizardInputs();
-    syncWizardToBuyBox();
+  // ===== SCREEN 5/6/7: PLAN OUTPUT =====
+  if (step.type === 'planOutput') {
+    const branch = step.branch;
+    const deals = getWizardPlanDeals(branch);
 
-    html += `<div class="wizard-card-title">${step.title}</div>`;
-    html += `<div class="wizard-card-desc">${step.desc}</div>`;
-
-    // Filter deals using buy box
-    const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
-    const filtered = allDeals.filter(d => {
-      if (buyBox.assetClasses && buyBox.assetClasses.length > 0) {
-        if (!buyBox.assetClasses.includes(d.assetClass)) return false;
+    // Helper to parse capital range like "$250-500K" or "$1M+"
+    function parseCapitalRange(str) {
+      if (!str) return { low: 0, high: 0, mid: 0 };
+      const s = str.replace(/\$/g, '').replace(/\+/g, '');
+      const parts = s.split('-');
+      function parseVal(v) {
+        v = v.trim();
+        if (v.endsWith('M')) return parseFloat(v) * 1000000;
+        if (v.endsWith('K')) return parseFloat(v) * 1000;
+        return parseFloat(v) * 1000; // assume K if no suffix
       }
-      return true;
-    });
-    const toShow = (filtered.length > 0 ? filtered : allDeals).slice(0, 12);
+      const low = parseVal(parts[0]) || 0;
+      const high = parts[1] ? parseVal(parts[1]) : low;
+      return { low, high, mid: Math.round((low + high) / 2) };
+    }
 
-    if (toShow.length === 0) {
-      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);">Deals are loading... You can skip this step and browse deals from your dashboard.</div>';
+    if (branch === 'cashflow') {
+      const target = parseDollar(wizardData.targetCashFlow) || 100000;
+      const cap = parseCapitalRange(wizardData._capitalRange);
+      const capitalMid = cap.mid > 0 ? cap.mid : Math.round(target / 0.09);
+      const yr1 = Math.round(capitalMid * 0.09);
+      const yr2 = Math.round(yr1 * 1.6);
+      const yr3 = Math.min(target, Math.round(yr1 * 2.2));
+      const yr4 = Math.min(target, Math.round(target * 0.85));
+      const yr5 = target;
+      html += `<div class="wizard-card-title">Your path to $${target.toLocaleString()}/yr</div>`;
+      // Growth curve chart
+      html += '<div class="wizard-plan-chart">';
+      html += '<svg viewBox="0 0 500 140" preserveAspectRatio="xMidYMid meet">';
+      // Fill area under curve
+      const incomes = [0, yr1, yr2, yr3, yr4, yr5];
+      const maxInc = yr5;
+      const pts = [];
+      const ptsFill = [];
+      for (let i = 0; i <= 5; i++) {
+        const x = 50 + i * 80;
+        const y = 115 - (incomes[i] / maxInc * 85);
+        pts.push(`${x},${y}`);
+        ptsFill.push(`${x},${y}`);
+      }
+      ptsFill.push(`${50 + 5 * 80},115`);
+      ptsFill.push(`50,115`);
+      html += `<polygon points="${ptsFill.join(' ')}" fill="url(#cfGrad)" opacity="0.3"/>`;
+      html += `<defs><linearGradient id="cfGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#51BE7B"/><stop offset="100%" stop-color="#51BE7B" stop-opacity="0"/></linearGradient></defs>`;
+      html += `<polyline points="${pts.join(' ')}" fill="none" stroke="#51BE7B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+      // Dots + labels at key points
+      for (let i = 0; i <= 5; i++) {
+        const x = 50 + i * 80;
+        const y = 115 - (incomes[i] / maxInc * 85);
+        html += `<circle cx="${x}" cy="${y}" r="${i === 0 || i === 1 || i === 5 ? 5 : 3}" fill="#51BE7B"/>`;
+        html += `<text x="${x}" y="132" text-anchor="middle" font-size="10" fill="#8A9AA0" font-family="Plus Jakarta Sans">Yr ${i}</text>`;
+        if (i === 0 || i === 1 || i === 5) {
+          html += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="11" fill="#141413" font-weight="700" font-family="Plus Jakarta Sans">$${Math.round(incomes[i] / 1000)}K</text>`;
+        }
+      }
+      html += '</svg>';
+      html += '</div>';
+      // Deployment breakdown
+      html += `<div class="wizard-plan-breakdown">Deploy your $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : '...'} across 3\u20135 income deals \u2192 ~$${Math.round(yr1/1000)}K/yr from day one. Reinvest and add capital to reach $${(target/1000).toLocaleString()}K/yr.</div>`;
+      html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">These deals match your income goal:</div>';
+    } else if (branch === 'tax') {
+      const taxable = parseDollar(wizardData.taxableIncome) || 200000;
+      const estRate = taxable > 500000 ? 0.37 : (taxable > 200000 ? 0.35 : 0.32);
+      const currentBill = Math.round(taxable * estRate);
+      const capT = parseCapitalRange(wizardData._capitalRange);
+      const capitalMid = capT.mid > 0 ? capT.mid : Math.round(taxable * 1.5);
+      const depreciation = Math.round(capitalMid * 0.7);
+      const afterBill = Math.max(0, Math.round((taxable - depreciation) * estRate));
+      const saved = currentBill - afterBill;
+      html += `<div class="wizard-card-title">How to offset $${taxable.toLocaleString()} in taxable income</div>`;
+      // Tax savings bar chart
+      html += '<div class="wizard-plan-chart">';
+      html += '<svg viewBox="0 0 500 140" preserveAspectRatio="xMidYMid meet">';
+      const beforeH = 95;
+      const afterH = Math.max(10, Math.round(95 * (afterBill / currentBill)));
+      html += `<rect x="90" y="${115 - beforeH}" width="110" height="${beforeH}" rx="8" fill="#D04040" opacity="0.15"/>`;
+      html += `<rect x="90" y="${115 - beforeH}" width="110" height="${beforeH}" rx="8" fill="none" stroke="#D04040" stroke-width="2"/>`;
+      html += `<text x="145" y="${108 - beforeH}" text-anchor="middle" font-size="14" fill="#D04040" font-weight="800" font-family="Plus Jakarta Sans">$${Math.round(currentBill / 1000)}K</text>`;
+      html += `<text x="145" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">Current Tax Bill</text>`;
+      html += `<rect x="300" y="${115 - afterH}" width="110" height="${afterH}" rx="8" fill="#51BE7B" opacity="0.15"/>`;
+      html += `<rect x="300" y="${115 - afterH}" width="110" height="${afterH}" rx="8" fill="none" stroke="#51BE7B" stroke-width="2"/>`;
+      html += `<text x="355" y="${108 - afterH}" text-anchor="middle" font-size="14" fill="#51BE7B" font-weight="800" font-family="Plus Jakarta Sans">$${Math.round(afterBill / 1000)}K</text>`;
+      html += `<text x="355" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">After Investing</text>`;
+      // Arrow between bars
+      html += '<line x1="210" y1="70" x2="290" y2="70" stroke="#8A9AA0" stroke-width="1.5" stroke-dasharray="4"/>';
+      html += '<polygon points="288,65 298,70 288,75" fill="#8A9AA0"/>';
+      html += '</svg>';
+      html += '</div>';
+      // Deployment breakdown
+      html += `<div class="wizard-plan-breakdown">Deploy $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : '...'} in depreciation-heavy deals \u2192 offset ~$${(depreciation/1000).toLocaleString()}K in taxable income. Estimated tax savings: ~$${saved.toLocaleString()}.</div>`;
+      html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">Top depreciation deals for your profile:</div>';
     } else {
-      html += '<div class="wizard-deal-grid">';
-      toShow.forEach(deal => {
-        const stage = typeof getDealStage === 'function' ? getDealStage(deal.id) : 'new';
-        const isPassed = stage === 'passed';
-        const isInt = stage === 'interested';
+      const cap = parseDollar(wizardData.growthCapital) || 500000;
+      const doubled = cap * 2;
+      const capG = parseCapitalRange(wizardData._capitalRange);
+      const capitalMid = capG.mid > 0 ? capG.mid : cap;
+      html += `<div class="wizard-card-title">Double your $${(cap/1000).toLocaleString()}K in 5 years</div>`;
+      // Growth bar chart — Today vs Goal
+      html += '<div class="wizard-plan-chart">';
+      html += '<svg viewBox="0 0 500 140" preserveAspectRatio="xMidYMid meet">';
+      const todayH = 65;
+      const goalH = 100;
+      html += `<rect x="90" y="${115 - todayH}" width="110" height="${todayH}" rx="8" fill="#2563EB" opacity="0.15"/>`;
+      html += `<rect x="90" y="${115 - todayH}" width="110" height="${todayH}" rx="8" fill="none" stroke="#2563EB" stroke-width="2"/>`;
+      html += `<text x="145" y="${108 - todayH}" text-anchor="middle" font-size="14" fill="#2563EB" font-weight="800" font-family="Plus Jakarta Sans">$${(cap/1000).toLocaleString()}K</text>`;
+      html += `<text x="145" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">Today</text>`;
+      html += `<rect x="300" y="${115 - goalH}" width="110" height="${goalH}" rx="8" fill="#51BE7B" opacity="0.15"/>`;
+      html += `<rect x="300" y="${115 - goalH}" width="110" height="${goalH}" rx="8" fill="none" stroke="#51BE7B" stroke-width="2"/>`;
+      html += `<text x="355" y="${108 - goalH}" text-anchor="middle" font-size="14" fill="#51BE7B" font-weight="800" font-family="Plus Jakarta Sans">$${(doubled/1000).toLocaleString()}K</text>`;
+      html += `<text x="355" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">5 Years</text>`;
+      // Timeline arrow
+      html += '<line x1="210" y1="70" x2="290" y2="55" stroke="#8A9AA0" stroke-width="1.5" stroke-dasharray="4"/>';
+      html += '<polygon points="288,50 298,54 288,58" fill="#8A9AA0"/>';
+      html += '<text x="250" y="48" text-anchor="middle" font-size="10" fill="#8A9AA0" font-family="Plus Jakarta Sans">~15% IRR</text>';
+      html += '</svg>';
+      html += '</div>';
+      // Deployment breakdown
+      html += `<div class="wizard-plan-breakdown">Deploy $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : (cap/1000).toLocaleString() + 'K'} across 3\u20134 value-add deals \u2192 target 2x over 5 years at ~15% IRR.</div>`;
+      html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">These high-growth opportunities match your profile:</div>';
+    }
+
+    // Deal cards (non-clickable, with save button)
+    if (deals.length > 0) {
+      html += '<div class="wizard-plan-deals">';
+      deals.forEach(deal => {
         const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
-        html += `<div class="wizard-deal-card" id="wdeal-${deal.id}" style="${isPassed ? 'opacity:0.4;' : ''}${isInt ? 'border-color:var(--green);' : ''}">
-          <div style="display:flex;align-items:stretch;">
-            <div style="width:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px 0 0 12px;"><span style="font-size:28px;opacity:0.4;">${ph.icon}</span></div>
-            <div class="wizard-deal-body" style="flex:1;padding:14px 16px;">
-              <div class="wizard-deal-name">${deal.investmentName || 'Unnamed Deal'}</div>
-              <div class="wizard-deal-sponsor">${deal.managementCompany || ''} &middot; ${deal.assetClass || ''}</div>
-              <div class="wizard-deal-metrics">
-                ${deal.targetIRR ? `<div class="wizard-deal-metric">IRR<strong style="color:var(--green);">${fmt(deal.targetIRR, 'pct')}</strong></div>` : ''}
-                ${deal.preferredReturn ? `<div class="wizard-deal-metric">Pref<strong>${fmt(deal.preferredReturn, 'pct')}</strong></div>` : ''}
-                ${deal.investmentMinimum ? `<div class="wizard-deal-metric">Min<strong>${fmt(deal.investmentMinimum, 'money')}</strong></div>` : ''}
-                ${deal.holdPeriod ? `<div class="wizard-deal-metric">Hold<strong>${deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yrs'}</strong></div>` : ''}
-              </div>
-            </div>
-            <div style="display:flex;flex-direction:column;border-left:1px solid var(--border);min-width:80px;">
-              <button class="${isPassed ? 'actioned' : ''}" onclick="onboardingDealAction('${deal.id}','passed',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border:none;background:${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:700;color:${isPassed ? 'var(--red)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(208,64,64,0.06)'" onmouseout="this.style.background='${isPassed ? 'rgba(208,64,64,0.06)' : 'transparent'}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>
-              <div style="height:1px;background:var(--border);"></div>
-              <button class="${isInt ? 'actioned' : ''}" onclick="onboardingDealAction('${deal.id}','interested',this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 6px;border:none;background:${isInt ? 'rgba(81,190,123,0.08)' : 'transparent'};cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:700;color:${isInt ? 'var(--green)' : 'var(--text-muted)'};transition:all 0.15s;" onmouseover="this.style.background='rgba(81,190,123,0.08)'" onmouseout="this.style.background='${isInt ? 'rgba(81,190,123,0.08)' : 'transparent'}'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:16px;height:16px;"><polyline points="20 6 9 17 4 12"/></svg>Yes</button>
+        let metric = '';
+        let metricLabel = '';
+        let extraMeta = '';
+        if (branch === 'cashflow') {
+          const y = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
+          metric = fmt(y, 'pct');
+          metricLabel = deal.preferredReturn ? 'Pref Return' : (deal.cashOnCash ? 'Cash-on-Cash' : 'IRR');
+          if (deal.distributionFrequency) extraMeta = deal.distributionFrequency;
+        } else if (branch === 'tax') {
+          if (deal.firstYrDepreciation) { metric = deal.firstYrDepreciation; metricLabel = 'Yr1 Depreciation'; }
+          else { metric = fmt(deal.targetIRR, 'pct'); metricLabel = 'IRR'; }
+        } else {
+          metric = fmt(deal.targetIRR, 'pct');
+          metricLabel = 'IRR';
+          if (deal.holdPeriod) extraMeta = deal.holdPeriod + ' hold';
+        }
+        const minInvest = deal.minimumInvestment ? '$' + parseInt(deal.minimumInvestment).toLocaleString() + ' min' : '';
+        const isSaved = typeof getDealStage === 'function' && (getDealStage(deal.id) === 'interested' || getDealStage(deal.id) === 'duediligence');
+        const savedClass = isSaved ? ' saved' : '';
+        html += `<div class="wizard-plan-deal${savedClass}" id="wizDeal_${deal.id}">
+          <div class="wizard-plan-deal-icon" style="background:${ph.bg};">${ph.icon}</div>
+          <div class="wizard-plan-deal-info">
+            <div class="wizard-plan-deal-name">${deal.investmentName || 'Unnamed'}<span class="wizard-plan-deal-badge">${deal.assetClass || ''}</span></div>
+            <div class="wizard-plan-deal-meta">${deal.managementCompany || ''}</div>
+            <div class="wizard-plan-deal-row">
+              <span class="wizard-plan-deal-metric" style="font-size:15px;">${metric}</span>
+              <span class="wizard-plan-deal-dist">${metricLabel}</span>
+              ${extraMeta ? '<span class="wizard-plan-deal-dist">&middot; ' + extraMeta + '</span>' : ''}
+              ${minInvest ? '<span class="wizard-plan-deal-min">&middot; ' + minInvest + '</span>' : ''}
             </div>
           </div>
+          <button class="wizard-plan-deal-save${isSaved ? ' saved' : ''}" id="wizSave_${deal.id}" onclick="savePlanDeal('${deal.id}', this)">
+            ${isSaved ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 2h14a1 1 0 011 1v19.143a.5.5 0 01-.766.424L12 18.03l-7.234 4.536A.5.5 0 014 22.143V3a1 1 0 011-1z"/></svg> Saved' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h14a1 1 0 011 1v19.143a.5.5 0 01-.766.424L12 18.03l-7.234 4.536A.5.5 0 014 22.143V3a1 1 0 011-1z"/></svg> Save'}
+          </button>
         </div>`;
       });
       html += '</div>';
-      const interested = toShow.filter(d => getDealStage(d.id) === 'interested').length;
-      html += `<div class="wizard-deal-counter"><strong>${interested}</strong> deal${interested !== 1 ? 's' : ''} marked interested</div>`;
     }
-    html += '<div class="wizard-skip-link" onclick="wizardNext()">Skip for now</div>';
 
-    // Nav buttons
+    // 3-paths CTA
+    html += '<div class="wizard-plan-paths">';
+    html += '<div class="wizard-plan-paths-divider">or</div>';
+    html += '<div class="wizard-plan-paths-label">Want help building this?</div>';
+    html += '<div class="wizard-plan-paths-btns">';
+    html += '<div class="wizard-plan-path-btn-wrap"><a class="wizard-plan-path-btn" href="https://growyourcashflow.com/academy" target="_blank">Get coached &mdash; $5K</a><div class="wizard-plan-path-desc">1:1 guidance on your plan</div></div>';
+    html += '<div class="wizard-plan-path-btn-wrap"><a class="wizard-plan-path-btn primary" href="https://growyourcashflow.com/fund" target="_blank">Let Pascal handle it &mdash; $100K min</a><div class="wizard-plan-path-desc">One check, we deploy it across 10+ funds</div></div>';
+    html += '</div>';
+    html += '</div>';
+
+    // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Continue</button>';
+    html += `<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Continue \u2192</button>`;
     html += '</div>';
 
     document.getElementById('wizardContent').innerHTML = html;
     return;
   }
 
-  // ===== STANDARD TYPES (fields, radio, checks, mixed) =====
-  html += `<div class="wizard-card-title">${step.title}</div>`;
-  if (step.desc) html += `<div class="wizard-card-desc">${step.desc}</div>`;
-
-  if (step.type === 'info') {
-    // Just title/desc
-  } else if (step.type === 'fields') {
-    html += step.fields.map(f => {
-      const val = wizardData[f.key] || '';
-      return `<div class="wizard-field">
-        <label class="wizard-label">${f.label}</label>
-        <input class="wizard-input" type="text" data-key="${f.key}" value="${val}" placeholder="${f.placeholder || ''}">
-      </div>`;
-    }).join('');
-  } else if (step.type === 'radio') {
-    const current = wizardData[step.key] || '';
-    html += `<div class="wizard-options">`;
-    html += step.options.map(opt => {
-      const sel = current === opt ? 'selected' : '';
-      return `<div class="wizard-option ${sel}" onclick="selectWizardRadio(this, '${step.key}', '${opt.replace(/'/g, "\\'")}')">
-        <div class="wizard-option-radio"></div>
-        <div class="wizard-option-text">${opt}</div>
-      </div>`;
-    }).join('');
-    html += `</div>`;
-  } else if (step.type === 'checks') {
-    const current = wizardData[step.key] || [];
-    const gridClass = step.grid ? 'wizard-check-grid' : 'wizard-options';
-    html += `<div class="${gridClass}">`;
-    html += step.options.map(opt => {
-      const sel = current.includes(opt) ? 'selected' : '';
-      return `<div class="wizard-option ${sel}" onclick="toggleWizardCheck(this, '${step.key}', '${opt.replace(/'/g, "\\'")}')">
-        <div class="wizard-option-check">${sel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>
-        <div class="wizard-option-text">${opt}</div>
-      </div>`;
-    }).join('');
-    html += `</div>`;
-  } else if (step.type === 'mixed') {
-    if (step.fields) {
-      html += step.fields.map(f => {
-        const val = wizardData[f.key] || '';
-        if (f.inputType === 'select') {
-          let selectHtml = `<div class="wizard-field"><label class="wizard-label">${f.label}</label>`;
-          selectHtml += `<select class="wizard-select" data-key="${f.key}"><option value="">Select one...</option>`;
-          selectHtml += f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
-          selectHtml += `</select></div>`;
-          return selectHtml;
-        }
-        return `<div class="wizard-field">
-          <label class="wizard-label">${f.label}</label>
-          <input class="wizard-input" type="text" data-key="${f.key}" value="${val}" placeholder="${f.placeholder || ''}">
-        </div>`;
-      }).join('');
+  // ===== SCREEN 8: COMPLETION =====
+  if (step.type === 'completion') {
+    html += '<div class="wizard-completion">';
+    html += '<div class="wizard-completion-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
+    html += '<div class="wizard-card-title" style="text-align:center;">Your plan is saved.</div>';
+    html += '<div class="wizard-card-desc" style="text-align:center;">Deals are filtered to match your goal. You can update your preferences anytime in Settings.</div>';
+    // Plan summary
+    const summaryBranch = wizardData._branch || 'cashflow';
+    let goalSummary = '';
+    if (summaryBranch === 'cashflow') {
+      const t = parseDollar(wizardData.targetCashFlow) || 100000;
+      goalSummary = '$' + t.toLocaleString() + '/yr in passive income';
+    } else if (summaryBranch === 'tax') {
+      const t = parseDollar(wizardData.taxableIncome) || 200000;
+      goalSummary = 'Offset $' + t.toLocaleString() + ' in taxable income';
+    } else {
+      const t = parseDollar(wizardData.growthCapital) || 500000;
+      goalSummary = 'Grow $' + t.toLocaleString() + ' to $' + (t * 2).toLocaleString();
     }
-    if (step.radio) {
-      const current = wizardData[step.radio.key] || '';
-      html += `<div class="wizard-section-label">${step.radio.label}</div>`;
-      html += `<div class="wizard-options">`;
-      html += step.radio.options.map(opt => {
-        const sel = current === opt ? 'selected' : '';
-        return `<div class="wizard-option ${sel}" onclick="selectWizardRadio(this, '${step.radio.key}', '${opt.replace(/'/g, "\\'")}')">
-          <div class="wizard-option-radio"></div>
-          <div class="wizard-option-text">${opt}</div>
-        </div>`;
-      }).join('');
-      html += `</div>`;
-    }
-    if (step.checks) {
-      const current = wizardData[step.checks.key] || [];
-      html += `<div class="wizard-section-label">${step.checks.label}</div>`;
-      html += `<div class="wizard-options">`;
-      html += step.checks.options.map(opt => {
-        const sel = current.includes(opt) ? 'selected' : '';
-        return `<div class="wizard-option ${sel}" onclick="toggleWizardCheck(this, '${step.checks.key}', '${opt.replace(/'/g, "\\'")}')">
-          <div class="wizard-option-check">${sel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>
-          <div class="wizard-option-text">${opt}</div>
-        </div>`;
-      }).join('');
-      html += `</div>`;
-    }
+    const capLabel = wizardData._capitalRange || 'Not set';
+    const checkLabel = wizardData.checkSize ? '$' + parseInt(wizardData.checkSize).toLocaleString() : 'Not set';
+    const savedCount = typeof window._wizardSavedDeals !== 'undefined' ? window._wizardSavedDeals.size : 0;
+    html += '<div class="wizard-plan-summary">';
+    html += '<div class="wizard-plan-summary-title">Your Plan Summary</div>';
+    html += '<div class="wizard-plan-summary-row"><span>Goal</span><span>' + goalSummary + '</span></div>';
+    html += '<div class="wizard-plan-summary-row"><span>Capital</span><span>' + capLabel + ' available</span></div>';
+    html += '<div class="wizard-plan-summary-row"><span>Max per deal</span><span>' + checkLabel + '</span></div>';
+    html += '<div class="wizard-plan-summary-row"><span>Deals saved</span><span>' + savedCount + ' of 3 recommended</span></div>';
+    html += '</div>';
+    // Video placeholder
+    html += '<div class="wizard-video-slot" onclick="">';
+    html += '<div class="wizard-video-play"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><polygon points="8,5 20,12 8,19"/></svg></div>';
+    html += '<div class="wizard-video-title">Watch: How I built $150K/yr in passive income</div>';
+    html += '<div class="wizard-video-duration">3 min</div>';
+    html += '</div>';
+    html += '<button class="wizard-btn wizard-btn-next" style="width:100%;margin-top:20px;" onclick="wizardNext()">Go to my dashboard \u2192</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
   }
-
-  // Quick guide
-  if (step.guide) {
-    html += `<div class="wizard-guide"><div class="wizard-guide-title">Quick Guide</div>`;
-    html += step.guide.items.map(i => `<div class="wizard-guide-item">&bull; ${i}</div>`).join('');
-    html += `</div>`;
-  }
-
-  // Inline nav buttons
-  html += '<div class="wizard-inline-nav">';
-  if (wizardStepIndex > 0) {
-    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-  }
-  html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (wizardStepIndex === total - 1 ? 'Finish' : 'Next') + '</button>';
-  html += '</div>';
 
   document.getElementById('wizardContent').innerHTML = html;
 }
 
-// Goal branch selection handler
+// ---- Goal branch selection (auto-advance) ----
 function selectGoalBranch(branch, goalValue) {
   wizardData._branch = branch;
   wizardData.goal = goalValue;
-  // Auto-set strategies based on branch
   if (branch === 'cashflow') {
     wizardData.strategies = wizardData.strategies || ['Lending / Credit'];
     wizardData.instruments = ['Debt (1st Position)'];
+    wizardData.assetClasses = wizardData.assetClasses || ['Private Debt / Credit','Multi-Family'];
   } else if (branch === 'growth') {
     wizardData.strategies = wizardData.strategies || ['Value-Add'];
     wizardData.instruments = ['Equity (2nd Position)'];
+    wizardData.assetClasses = wizardData.assetClasses || ['Multi-Family','Industrial','Self Storage'];
   } else if (branch === 'tax') {
     wizardData.strategies = wizardData.strategies || ['Development', 'Value-Add'];
+    wizardData.assetClasses = wizardData.assetClasses || ['Multi-Family','Oil & Gas','Short-Term Rentals'];
   }
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
   wizardStepIndex++;
   renderWizardStep();
-  document.querySelector('.wizard-body').scrollTop = 0;
+  document.getElementById('wizardBody').scrollTop = 0;
 }
 
-// Deal action handler for onboarding deal picker
+// ---- Preset chip selection ----
+function selectWizardPreset(value, key) {
+  wizardData[key] = String(value);
+  const inp = document.getElementById('wizTargetInput');
+  if (inp) inp.value = fmtDollar(value);
+  // Update chips
+  document.querySelectorAll('.wizard-preset-chips .wizard-chip').forEach(c => c.classList.remove('selected'));
+  event.target.classList.add('selected');
+  // Update live calc
+  const seq = getStepSequence();
+  const step = WIZARD_STEPS[seq[wizardStepIndex]];
+  if (step.calcFn) {
+    const calcEl = document.getElementById('wizLiveCalc');
+    if (calcEl) calcEl.textContent = step.calcFn(value);
+  }
+  // Update context line
+  const ctxEl = document.getElementById('wizLiveCalcCtx');
+  if (ctxEl && step) ctxEl.textContent = getTargetContextLine(step, value);
+}
+
+// ---- Sentence chip selection ----
+function selectSentenceChip(el, key, value) {
+  // Deselect siblings
+  el.parentElement.querySelectorAll('.wizard-sentence-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  wizardData[key] = value;
+  // Update reality check if visible
+  const rc = document.getElementById('wizRealityCheck');
+  if (rc) rc.textContent = getRealityCheckText();
+}
+
+// Deal action handler for onboarding deal picker (kept for legacy compat)
 function onboardingDealAction(dealId, stage, btnEl) {
   if (typeof setDealStage === 'function') setDealStage(dealId, stage);
-  // Update button states visually
   const card = btnEl.closest('.wizard-deal-card');
   if (card) {
-    card.querySelectorAll('.wizard-deal-actions button').forEach(b => b.classList.remove('actioned'));
+    card.querySelectorAll('button').forEach(b => b.classList.remove('actioned'));
     btnEl.classList.add('actioned');
-  }
-  // Update counter
-  const counterEl = document.querySelector('.wizard-deal-counter');
-  if (counterEl) {
-    const allCards = document.querySelectorAll('.wizard-deal-card');
-    let interested = 0;
-    allCards.forEach(c => {
-      const id = c.id.replace('wdeal-', '');
-      if (typeof getDealStage === 'function' && getDealStage(id) === 'interested') interested++;
-    });
-    counterEl.innerHTML = `<strong>${interested}</strong> deal${interested !== 1 ? 's' : ''} marked interested`;
   }
 }
 
@@ -6931,7 +7280,6 @@ function toggleWizardCheck(el, key, value) {
   const idx = wizardData[key].indexOf(value);
   if (idx >= 0) wizardData[key].splice(idx, 1);
   else wizardData[key].push(value);
-  // Update check icon
   const checkEl = el.querySelector('.wizard-option-check');
   if (el.classList.contains('selected')) {
     checkEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -6941,11 +7289,17 @@ function toggleWizardCheck(el, key, value) {
 }
 
 function collectWizardInputs() {
+  // Collect target input if present
+  const ti = document.getElementById('wizTargetInput');
+  if (ti && ti.dataset.key) {
+    wizardData[ti.dataset.key] = String(parseDollar(ti.value));
+  }
+  // Legacy field collection
   document.querySelectorAll('#wizardContent .wizard-input').forEach(inp => {
-    wizardData[inp.dataset.key] = inp.value;
+    if (inp.dataset.key) wizardData[inp.dataset.key] = inp.value;
   });
   document.querySelectorAll('#wizardContent .wizard-select').forEach(sel => {
-    wizardData[sel.dataset.key] = sel.value;
+    if (sel.dataset.key) wizardData[sel.dataset.key] = sel.value;
   });
 }
 
@@ -6955,24 +7309,20 @@ function wizardNext() {
   const seq = getStepSequence();
 
   if (wizardStepIndex >= seq.length - 1) {
-    // Finish — onboarding complete
+    // Finish
     localStorage.setItem('gycBuyBoxComplete', 'true');
     syncWizardToBuyBox();
     document.getElementById('wizardOverlay').classList.remove('active');
-    document.querySelector('.wizard-body').classList.remove('welcome-bg');
-    // Track onboarding completion
     if (typeof trackActivity === 'function') {
       trackActivity('onboarding_complete', { branch: wizardData._branch, wizardData: JSON.stringify(wizardData).substring(0, 200) });
     }
-    // Sync to GHL
     syncBuyBoxToGHL();
-    // Navigate to dashboard (not buy box report)
     navigateTo('dashboard');
     return;
   }
   wizardStepIndex++;
   renderWizardStep();
-  document.querySelector('.wizard-body').scrollTop = 0;
+  document.getElementById('wizardBody').scrollTop = 0;
 }
 
 function wizardPrev() {
@@ -6980,7 +7330,7 @@ function wizardPrev() {
   if (wizardStepIndex > 0) {
     wizardStepIndex--;
     renderWizardStep();
-    document.querySelector('.wizard-body').scrollTop = 0;
+    document.getElementById('wizardBody').scrollTop = 0;
   }
 }
 
@@ -7010,9 +7360,22 @@ function syncWizardToBuyBox() {
   buyBox.irrMin = d.minIRR || buyBox.irrMin;
   buyBox.minInvest = d.checkSize || buyBox.minInvest;
 
+  // Map check size from v2 wizard (stored as raw number string)
+  if (d.checkSize) {
+    const cs = parseInt(d.checkSize, 10);
+    if (cs > 0) buyBox.minInvest = '$' + cs.toLocaleString();
+  }
+  // Map capital range to max invest
+  if (d._capitalRange) {
+    const parts = d._capitalRange.split('-');
+    const upper = parts[1] ? parseInt(parts[1], 10) : parseInt(parts[0].replace('+', ''), 10);
+    if (upper > 0) buyBox.maxInvest = '$' + upper.toLocaleString();
+  }
+
   // Store branch-specific data for dashboard/reporting
   if (d.currentCashFlow) buyBox.currentCashFlow = d.currentCashFlow;
   if (d.targetCashFlow) buyBox.targetCashFlow = d.targetCashFlow;
+  if (d.growthCapital) buyBox.growthCapital = d.growthCapital;
   if (d.taxableIncome) buyBox.taxableIncome = d.taxableIncome;
   if (d.taxOffset) buyBox.taxOffset = d.taxOffset;
   if (d.riskTolerance) buyBox.riskTolerance = d.riskTolerance;

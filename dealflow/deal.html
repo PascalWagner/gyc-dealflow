@@ -722,6 +722,21 @@ body {
 
 }
 
+.deal-header.hero-lending {
+  background: linear-gradient(145deg, #1a2332 0%, #1e3a4a 50%, #1a2f3a 100%);
+}
+.deal-header.hero-lending::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(90deg, rgba(81,190,123,0.03) 0px, rgba(81,190,123,0.03) 1px, transparent 1px, transparent 60px);
+  pointer-events: none;
+}
+
+.deal-header.hero-equity {
+  background: linear-gradient(145deg, #2C3E2D 0%, #1a3a2a 50%, #2a4535 100%);
+}
+
 .deal-header::after {
 
   content: '';
@@ -738,6 +753,26 @@ body {
 
   pointer-events: none;
 
+}
+
+.deal-header.hero-lending::after {
+  background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+}
+
+/* Hero type icon */
+.hero-type-icon {
+  position: absolute;
+  bottom: 20px;
+  right: 24px;
+  opacity: 0.06;
+  z-index: 0;
+}
+.hero-type-icon svg {
+  width: 120px;
+  height: 120px;
+  stroke: #fff;
+  stroke-width: 1;
+  fill: none;
 }
 
 
@@ -869,6 +904,222 @@ body {
 }
 
 
+
+/* ====== JOURNEY BAR ====== */
+
+.journey-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.journey-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 24px;
+  transition: all 0.2s;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.journey-step:hover {
+  background: var(--bg-cream);
+  color: var(--text-dark);
+}
+.journey-step .step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-page);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.journey-step.active .step-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.journey-step.active {
+  color: var(--primary);
+  background: rgba(81,190,123,0.08);
+}
+.journey-step.completed .step-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.journey-step.completed {
+  color: var(--text-dark);
+}
+.journey-connector {
+  width: 32px;
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.journey-connector.done {
+  background: var(--primary);
+}
+
+/* ====== DATA COMPLETENESS ====== */
+
+.data-completeness {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  font-family: var(--font-ui);
+}
+.data-completeness-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+.data-completeness-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.data-completeness-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.data-completeness-fill.high { background: var(--primary); }
+.data-completeness-fill.medium { background: #f59e0b; }
+.data-completeness-fill.low { background: #ef4444; }
+.data-completeness-pct {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-dark);
+  min-width: 36px;
+  text-align: right;
+}
+.data-completeness-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ====== STICKY ACTION BAR ====== */
+
+.sticky-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-width, 240px);
+  right: 0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 100;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+}
+.sticky-action-bar .btn-pass {
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sticky-action-bar .btn-pass:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.sticky-action-bar .btn-stage-select {
+  padding: 10px 20px;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sticky-action-bar .btn-advance {
+  padding: 10px 24px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.sticky-action-bar .btn-advance:hover {
+  background: #3da86a;
+  transform: translateY(-1px);
+}
+.sticky-action-bar .stage-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+}
+/* Add bottom padding to page content so it's not hidden behind sticky bar */
+.deal-page-content {
+  padding-bottom: 80px;
+}
+
+@media (max-width: 768px) {
+  .journey-bar {
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 12px 14px;
+  }
+  .journey-step {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .journey-connector { width: 16px; }
+  .sticky-action-bar {
+    left: 0;
+    padding: 10px 16px;
+  }
+  .data-completeness-hint { display: none; }
+}
 
 /* ====== KEY METRICS STRIP ====== */
 
@@ -1380,7 +1631,471 @@ body {
 
 }
 
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.btn-link:hover {
+  color: var(--text-dark);
+}
 
+.offering-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.offering-available {
+  color: var(--primary);
+}
+.offering-missing {
+  color: var(--text-muted);
+}
+
+/* ====== DECK SUBMIT MODAL ====== */
+
+.deck-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.deck-modal-overlay.visible {
+  opacity: 1;
+}
+.deck-modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.deck-modal h3 {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 8px 0;
+}
+.deck-modal p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+.deck-modal label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.deck-modal input,
+.deck-modal textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  margin-bottom: 16px;
+  background: var(--bg-page);
+  color: var(--text-dark);
+  box-sizing: border-box;
+}
+.deck-modal textarea {
+  height: 80px;
+  resize: vertical;
+}
+.deck-modal input:focus,
+.deck-modal textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.deck-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.deck-modal .btn-cancel {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.deck-modal .btn-submit {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+}
+.deck-modal .btn-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.deck-modal-success {
+  text-align: center;
+  padding: 20px 0;
+}
+.deck-modal-success svg {
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+.deck-modal-success p {
+  font-size: 15px;
+  color: var(--text-dark);
+  font-weight: 600;
+}
+
+/* ====== SHARE CLASS TABLE ====== */
+
+.share-class-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -4px;
+}
+.share-class-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  min-width: 400px;
+}
+.share-class-table th {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--border);
+}
+.share-class-table th:first-child {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.share-class-table td {
+  text-align: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-dark);
+}
+.share-class-table td:first-child {
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.share-class-table tr:last-child td {
+  border-bottom: none;
+}
+.share-class-table td .value-highlight {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+
+
+/* ====== SUPPORTING MATERIALS ====== */
+
+.materials-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.material-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  text-decoration: none;
+  transition: all var(--transition);
+}
+.material-tile:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--bg-cream);
+}
+.material-tile svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.materials-missing {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+.materials-missing button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+/* ====== DD CHECKLIST ====== */
+
+.dd-checklist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.dd-checklist-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+}
+.dd-accordion {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.dd-accordion-section + .dd-accordion-section {
+  border-top: 1px solid var(--border-light);
+}
+.dd-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--bg-page);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.dd-accordion-header:hover {
+  background: var(--bg-cream);
+}
+.dd-accordion-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-accordion-title svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s;
+  color: var(--text-muted);
+}
+.dd-accordion-section.open .dd-accordion-title svg {
+  transform: rotate(90deg);
+}
+.dd-accordion-progress {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+}
+.dd-accordion-body {
+  display: none;
+  padding: 0 18px 18px;
+  background: var(--bg-card);
+}
+.dd-accordion-section.open .dd-accordion-body {
+  display: block;
+}
+.dd-question {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.dd-question:last-child {
+  border-bottom: none;
+}
+.dd-question-text {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.dd-answer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dd-answer-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+.dd-answer-icon.auto {
+  color: var(--primary);
+}
+.dd-answer-icon.user {
+  color: #3b82f6;
+}
+.dd-answer-icon.empty {
+  color: var(--text-muted);
+}
+.dd-answer-text {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-dark);
+  flex: 1;
+}
+.dd-answer-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.dd-answer-badge.auto {
+  background: rgba(81,190,123,0.12);
+  color: var(--primary);
+}
+.dd-answer-badge.user {
+  background: rgba(59,130,246,0.12);
+  color: #3b82f6;
+}
+.dd-answer-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  background: var(--bg-page);
+  color: var(--text-dark);
+  box-sizing: border-box;
+}
+.dd-answer-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Third party perspectives */
+.dd-perspectives {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+.dd-perspectives-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.dd-perspective-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.dd-office-hours {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dd-office-hours-text {
+  font-family: var(--font-ui);
+}
+.dd-office-hours-text strong {
+  font-size: 14px;
+  color: var(--text-dark);
+  display: block;
+  margin-bottom: 2px;
+}
+.dd-office-hours-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.dd-office-hours a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* ====== SOCIAL PROOF ====== */
+
+.deal-social-proof {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 10px;
+}
+.deal-social-proof svg {
+  width: 14px;
+  height: 14px;
+}
 
 /* ====== NOT FOUND ====== */
 
@@ -1878,7 +2593,7 @@ const DEALS = [
 
   {id:"rec1pkw",dealNumber:749,investmentName:"Arixa Secured Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending with 15+ year track record, monthly distributions, and audited financials.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Jan Brzeski",managementCompany:"Arixa Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:209000000,loanCount:60,avgLoanLTV:0.65},
 
-  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615},
+  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615,avgLoanLTV:0.55,shareClasses:[{id:"recRThMoAkKT8BItY",label:"Class A",targetReturn:0.12,lockup:3,investmentMinimum:50000,financials:"Audited"},{id:"rec3wj1FR0mip4iF9",label:"Class B",targetReturn:0.10,lockup:1,investmentMinimum:50000,financials:"Unaudited"},{id:"recguRQt9Vjy74PkF",label:"Class C",targetReturn:0.06,lockup:0.5,investmentMinimum:50000,financials:"Unaudited"}]},
 
   {id:"rec2gb9",dealNumber:793,investmentName:"Industrial Real Estate Income Trust (BIGi)",assetClass:"Industrial",dealType:"Fund",targetIRR:0.11,preferredReturn:0.05,investmentMinimum:25000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"CRE Industrial single-tenant buildings that generate stable yield with monthly distributions.",distributions:"Monthly",availableTo:"Accredited",ceo:"Jonathan Slager",managementCompany:"Modiv Industrial",strategy:"Core/Stabilized",instrument:"Equity",fundAUM:825000000},
 
@@ -1938,6 +2653,333 @@ function statusBadgeClass(status) {
 
   return 'status-closed';
 
+}
+
+function isCreditFund(deal) {
+  var ac = (deal.assetClass || '').toLowerCase();
+  var st = (deal.strategy || '').toLowerCase();
+  var inst = (deal.instrument || '').toLowerCase();
+  var name = (deal.investmentName || '').toLowerCase();
+  if (inst === 'debt') return true;
+  if (st === 'lending') return true;
+  if (ac === 'lending') return true;
+  if (ac.indexOf('credit') >= 0 || ac.indexOf('debt') >= 0) return true;
+  if (name.indexOf('debt fund') >= 0 || name.indexOf('credit fund') >= 0 || name.indexOf('income fund') >= 0) {
+    if (st === 'lending' || inst === 'debt' || inst === 'preferred equity' || deal.debtPosition) return true;
+  }
+  return false;
+}
+
+function creditBadgeLabel(deal) {
+  var ac = (deal.assetClass || '').toLowerCase();
+  if (ac === 'lending') return 'LENDING';
+  if (ac.indexOf('credit') >= 0) return 'CREDIT';
+  var st = (deal.strategy || '').toLowerCase();
+  if (st === 'lending') return 'LENDING';
+  return 'CREDIT';
+}
+
+// ========== DD CHECKLIST TEMPLATES ==========
+
+var DD_CHECKLIST_CREDIT = {
+  label: 'Debt/Credit Fund Template',
+  sections: [
+    { title: 'Firm Basics', questions: [
+      { q: 'What is the management company name?', autoField: 'managementCompany' },
+      { q: 'Who is the CEO or primary decision-maker?', autoField: 'ceo' },
+      { q: 'Who are the key team members beyond the CEO?' },
+      { q: 'When was the firm founded?', autoField: 'mcFoundingYear' },
+      { q: 'How many employees does the management firm have?' },
+      { q: "What is the firm's AUM (assets under management)?", autoField: 'fundAUM', format: 'money' },
+      { q: 'How many funds or vehicles have they launched to date?' },
+      { q: 'Has the manager ever lost investor capital?' },
+      { q: 'Is there a key person succession/backup plan in place?' },
+      { q: 'Are there any pending litigation issues?' }
+    ]},
+    { title: 'Fund Basics', questions: [
+      { q: 'What is the name of the fund?', autoField: 'investmentName' },
+      { q: 'What is the story of the fund?' },
+      { q: "What is the fund's investment strategy?", autoField: 'investmentStrategy' },
+      { q: 'When was the fund founded?' },
+      { q: 'How many investors are in the fund?' },
+      { q: 'What is the max AUM allowed inside this fund?' },
+      { q: 'What is the current AUM of this fund?', autoField: 'fundAUM', format: 'money' },
+      { q: 'What specific asset classes does the fund focus on?', autoField: 'assetClass' },
+      { q: 'How has the fund strategy shifted since inception?' },
+      { q: 'How much does the sponsor co-invest in this fund?' },
+      { q: 'What geographic markets does the fund operate in?', autoField: 'investingGeography' },
+      { q: 'How diversified is the fund by geography?' },
+      { q: 'How diversified is the fund by borrower/loan/project type?' },
+      { q: 'What percentage of the fund is concentrated in any single borrower or project?' }
+    ]},
+    { title: 'Fund Performance & Structure', questions: [
+      { q: 'What is the target IRR?', autoField: 'targetIRR', format: 'pct' },
+      { q: 'What is the preferred return offered?', autoField: 'preferredReturn', format: 'pct' },
+      { q: "What was the fund's return in 2024?" },
+      { q: "What was the fund's return in 2023?" },
+      { q: "What was the fund's return in 2022?" },
+      { q: 'How often are returns distributed?', autoField: 'distributions' },
+      { q: 'What is the current leverage ratio of the fund?' },
+      { q: 'What is the maximum leverage permitted by the fund documents?' },
+      { q: 'What is the fee structure (management, performance, other)?' },
+      { q: 'Is the fund open-ended or closed-ended?' },
+      { q: 'Has the fund experienced any capital calls or pauses in distributions?' }
+    ]},
+    { title: 'Loan Details', questions: [
+      { q: 'How are loans underwritten\u2014what credit criteria are used?' },
+      { q: 'Who on the sponsor team handles acquisitions?' },
+      { q: 'What are the typical borrower profiles?' },
+      { q: 'Are the loans senior secured, mezzanine, or unsecured?', autoField: 'debtPosition' },
+      { q: 'How many loans are currently in the portfolio?', autoField: 'loanCount' },
+      { q: 'What is the average loan size?' },
+      { q: 'What is the average loan term?' },
+      { q: 'Are the loans secured and/or personally guaranteed?' },
+      { q: 'How is downside risk mitigated (personal guarantees, collateral, etc.)?' },
+      { q: 'What happens if the loan defaults or goes into foreclosure?' },
+      { q: 'What is the historical default rate?' },
+      { q: 'What is the average loan-to-value (LTV)?', autoField: 'avgLoanLTV', format: 'pct' },
+      { q: 'What is the maximum LTV allowed in the PPM?' },
+      { q: 'What is the typical interest rate charged to borrowers?' },
+      { q: 'Who services the loans?' },
+      { q: 'What percent of your borrowers are repeat?' }
+    ]},
+    { title: 'Investor Experience', questions: [
+      { q: 'What accreditation status is required?', autoField: 'availableTo' },
+      { q: 'What is the minimum investment?', autoField: 'investmentMinimum', format: 'money' },
+      { q: 'What is the lock-up period?', autoField: 'holdPeriod', format: 'years' },
+      { q: 'What is the redemption policy & cadence?' },
+      { q: 'Does the fund issue K-1s or 1099s?' },
+      { q: 'Are investor earnings taxed as ordinary income, capital gains, or something else?' },
+      { q: 'Is the fund subject to UBIT in a self-directed IRA?' },
+      { q: 'Is there a compounding or DRIP option available?' },
+      { q: 'How frequent are updates provided from management?' },
+      { q: 'Were tax forms sent before April 1st last year?' },
+      { q: 'Are financials audited by a third-party CPA?', autoField: 'financials' },
+      { q: 'What fund administration tools or platforms are used?' },
+      { q: 'How regularly do you update & provide access to a loan tape & fund financials?' }
+    ]},
+    { title: 'External Due Diligence (LP Led)', questions: [
+      { q: 'Do we have a strong relationship with the sponsor?' },
+      { q: 'Were you initially referred to this sponsor from someone you know, like, trust?' },
+      { q: 'Do you know investors that have invested with this operator in the past with positive results?' },
+      { q: 'Does Google search show any negative/positive publicity in past 12 months?' },
+      { q: 'Did background checks on key principals produce any concerns?' },
+      { q: 'Does the sponsor have an InvestClearly profile and are all reviews positive?' },
+      { q: 'Is the sponsor active on LinkedIn or other professional platforms?' },
+      { q: 'What do WE believe the biggest risks in the deal are?' }
+    ]}
+  ]
+};
+
+var DD_CHECKLIST_SYNDICATION = {
+  label: 'Multi-Family Syndication Template',
+  sections: [
+    { title: 'Executive Summary', questions: [
+      { q: 'What is the name of the deal?', autoField: 'investmentName' },
+      { q: 'Minimum Investment', autoField: 'investmentMinimum', format: 'money' },
+      { q: 'Target Hold', autoField: 'holdPeriod', format: 'years' },
+      { q: 'Target IRR', autoField: 'targetIRR', format: 'pct' },
+      { q: 'Target Cash-on-Cash Return', autoField: 'cashOnCash', format: 'pct' },
+      { q: 'Is there a preferred return?', autoField: 'preferredReturn', format: 'pct' },
+      { q: 'Target Equity Multiple', autoField: 'equityMultiple', format: 'multiple' },
+      { q: 'Is this a 506B or 506C?', autoField: 'offeringType' },
+      { q: 'Target Equity Raise', autoField: 'offeringSize', format: 'money' },
+      { q: 'Basic business plan summary', autoField: 'investmentStrategy' }
+    ]},
+    { title: 'Firm Basics', questions: [
+      { q: 'What is the management company name?', autoField: 'managementCompany' },
+      { q: 'When was the firm founded?', autoField: 'mcFoundingYear' },
+      { q: 'Who is the CEO or primary decision-maker?', autoField: 'ceo' },
+      { q: "What is the firm's AUM?", autoField: 'fundAUM', format: 'money' },
+      { q: 'How many units does the firm currently have under management?' },
+      { q: 'How many deals has the sponsor acquired?' },
+      { q: 'How many deals have gone full-cycle?' },
+      { q: 'What is the average IRR of full-cycle deals?' },
+      { q: 'What is the average Equity Multiple of full-cycle deals?' },
+      { q: 'How many employees does the management firm have?' },
+      { q: 'Do we have a strong relationship with the sponsor?' },
+      { q: 'Were you initially referred to this sponsor from someone you know, like, trust?' },
+      { q: 'Do you know investors that have invested with this operator in the past?' },
+      { q: 'Does Google search show any negative/positive publicity?' },
+      { q: 'Does the sponsor have any negative/positive reviews on InvestClearly?' }
+    ]},
+    { title: 'Deal Basics', questions: [
+      { q: 'What is the address of the property?', autoField: 'address' },
+      { q: 'Number of units' },
+      { q: 'When was the property built?' },
+      { q: 'What is the class of the property?' },
+      { q: 'What is the current occupancy?' },
+      { q: 'How does the sponsor plan to grow NOI?' },
+      { q: '% of non-renovated units (value-add potential)' },
+      { q: 'Avg Rating & Reviews of the property' },
+      { q: 'What is the going-in cap rate?' },
+      { q: 'What is the assumed cap rate at sale?' },
+      { q: 'What is the loan size?' },
+      { q: 'Is the interest rate fixed or variable?' },
+      { q: 'What is the interest rate?' },
+      { q: 'What is the combined LTC or LTV?' },
+      { q: 'What is the loan term?' }
+    ]},
+    { title: 'Deal Fees & Economics', questions: [
+      { q: 'What is the LP / GP profit split?', autoField: 'lpGpSplit' },
+      { q: "What is the sponsor's acquisition fee?" },
+      { q: "What is the sponsor's annual Asset Management Fee?" },
+      { q: "What is the sponsor's transaction fee for refi or disposition?" },
+      { q: "What is the sponsor's construction management fee?" },
+      { q: 'What is the property management fee?' },
+      { q: 'Is the sponsor charging a marketing, admin, or other fee?' }
+    ]},
+    { title: 'Deal Details (Asked on Intro Call)', questions: [
+      { q: 'Can you describe your due diligence process to acquire this property?' },
+      { q: 'What major systems will need to be replaced during hold period?' },
+      { q: 'Will onsite staff be retained or new staff brought in?' },
+      { q: 'Will property management be in-house or 3rd party?' },
+      { q: 'What are the annual rent growth assumptions for the 1st 5 years?' },
+      { q: 'What are the annual expense growth assumptions?' },
+      { q: 'What % of the equity raise is set aside as reserves?' },
+      { q: 'What cashflow should I expect in the 1st year?' },
+      { q: 'How much depreciation should I expect in year 1 and 2?', autoField: 'firstYrDepreciation' },
+      { q: 'Is the target IRR dependent on a refinance?' },
+      { q: 'What do you believe the biggest risks in the deal are?' }
+    ]},
+    { title: 'Management Firm Deep Dive', questions: [
+      { q: 'Has the firm ever paused distributions?' },
+      { q: 'Has the firm ever issued a capital call?' },
+      { q: 'Has the firm ever lost investor capital?' },
+      { q: 'What % of your investors are repeat investors?' },
+      { q: 'What date did you get your K-1s out over the last 2 years?' },
+      { q: 'Who would take over management if the CEO passed away?' },
+      { q: 'How much is the firm or the CEO investing in this deal?', autoField: 'sponsorInDeal', format: 'pct' },
+      { q: 'How frequent do you expect to send out email updates?' },
+      { q: 'Have you or are you currently in any litigation?' }
+    ]},
+    { title: 'Post-Research Questions', questions: [
+      { q: 'What do WE believe the biggest risks in the deal are?' },
+      { q: 'Do we believe the sponsor wealthy enough to save the deal if things go wrong?' },
+      { q: 'Did background checks on key principals produce any concerns?' }
+    ]}
+  ]
+};
+
+function getChecklistForDeal(deal) {
+  if (isCreditFund(deal)) return DD_CHECKLIST_CREDIT;
+  return DD_CHECKLIST_SYNDICATION;
+}
+
+function getAutoValue(deal, field, format) {
+  var val = deal[field];
+  if (val === undefined || val === null || val === '' || val === 0) return null;
+  if (format === 'pct') return (val * 100).toFixed(1) + '%';
+  if (format === 'money') return fmt(val, 'money');
+  if (format === 'multiple') return val.toFixed(2) + 'x';
+  if (format === 'years') return val + ' yrs';
+  return String(val);
+}
+
+function loadDDAnswers(dealId) {
+  try {
+    return JSON.parse(localStorage.getItem('gycDDChecklist_' + dealId) || '{}');
+  } catch(e) { return {}; }
+}
+
+function saveDDAnswer(dealId, key, value) {
+  var answers = loadDDAnswers(dealId);
+  if (value) {
+    answers[key] = value;
+  } else {
+    delete answers[key];
+  }
+  localStorage.setItem('gycDDChecklist_' + dealId, JSON.stringify(answers));
+  // Update progress counts
+  updateChecklistProgress();
+}
+
+function updateChecklistProgress() {
+  document.querySelectorAll('.dd-accordion-section').forEach(function(section) {
+    var total = section.querySelectorAll('.dd-question').length;
+    var answered = section.querySelectorAll('.dd-question.answered').length;
+    var badge = section.querySelector('.dd-accordion-progress');
+    if (badge) badge.textContent = answered + '/' + total;
+  });
+}
+
+function toggleAccordion(el) {
+  var section = el.closest('.dd-accordion-section');
+  section.classList.toggle('open');
+}
+
+function getDealStage(dealId) {
+  try {
+    var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+    return stages[dealId] || 'new';
+  } catch(e) { return 'new'; }
+}
+
+function setJourneyStage(dealId, stage) {
+  try {
+    var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+    stages[dealId] = stage;
+    localStorage.setItem('gycDealStages', JSON.stringify(stages));
+  } catch(e) {}
+  // Re-render the journey bar and sticky bar
+  updateJourneyUI(dealId, stage);
+}
+
+function updateJourneyUI(dealId, stage) {
+  var stageOrder = { 'new': 0, 'interested': 1, 'duediligence': 2, 'portfolio': 3 };
+  var idx = stageOrder[stage] || 0;
+
+  // Update journey bar steps
+  var steps = document.querySelectorAll('.journey-step');
+  var connectors = document.querySelectorAll('.journey-connector');
+  var checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
+  steps.forEach(function(step, i) {
+    step.classList.remove('active', 'completed');
+    var dot = step.querySelector('.step-dot');
+    if (i < idx) {
+      step.classList.add('completed');
+      dot.innerHTML = checkIcon;
+    } else if (i === idx) {
+      step.classList.add('active');
+      dot.textContent = String(i + 1);
+    } else {
+      dot.textContent = String(i + 1);
+    }
+  });
+  connectors.forEach(function(c, i) {
+    c.classList.toggle('done', i < idx);
+  });
+
+  // Update sticky bar
+  var stageLabels = { 'new': 'New', 'interested': 'Interested', 'duediligence': 'Due Diligence', 'portfolio': 'Invested', 'passed': 'Passed' };
+  var nextStages = { 'new': 'interested', 'interested': 'duediligence', 'duediligence': 'portfolio' };
+  var nextLabels = { 'new': 'Save to Interested', 'interested': 'Start Due Diligence', 'duediligence': 'Mark as Invested' };
+  var labelEl = document.getElementById('stickyStageLabel');
+  var advBtn = document.getElementById('stickyAdvanceBtn');
+  if (labelEl) labelEl.textContent = stageLabels[stage] || 'New';
+  if (advBtn) {
+    if (nextLabels[stage]) {
+      advBtn.textContent = nextLabels[stage] + ' \u2192';
+      advBtn.style.display = 'flex';
+      advBtn.onclick = function() { setJourneyStage(dealId, nextStages[stage]); };
+    } else {
+      advBtn.style.display = 'none';
+    }
+  }
+}
+
+function handleDDInput(input) {
+  var dealId = input.getAttribute('data-deal-id');
+  var key = input.getAttribute('data-key');
+  var value = input.value.trim();
+  saveDDAnswer(dealId, key, value);
+  if (value) {
+    var questionEl = input.closest('.dd-question');
+    questionEl.classList.add('answered');
+    var answerDiv = input.closest('.dd-answer');
+    answerDiv.innerHTML = '<div class="dd-answer-icon user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="dd-answer-text">' + esc(value) + '</div><span class="dd-answer-badge user">you</span>';
+  }
+  updateChecklistProgress();
 }
 
 
@@ -2072,11 +3114,16 @@ async function renderDeal() {
 
   html += '</div>';
 
-
+  // Wrap all content for bottom padding (sticky bar)
+  html += '<div class="deal-page-content">';
 
   // Header banner
 
-  html += '<div class="deal-header"><div class="deal-header-inner">';
+  var heroClass = isCreditFund(deal) ? ' hero-lending' : ' hero-equity';
+  var heroIcon = isCreditFund(deal)
+    ? '<div class="hero-type-icon"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>'
+    : '<div class="hero-type-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>';
+  html += '<div class="deal-header' + heroClass + '">' + heroIcon + '<div class="deal-header-inner">';
 
   html += '<h1 class="deal-name">' + esc(deal.investmentName) + '</h1>';
 
@@ -2084,7 +3131,11 @@ async function renderDeal() {
 
   html += '<div class="deal-badges">';
 
-  if (deal.assetClass) html += '<span class="deal-badge asset-class">' + esc(deal.assetClass) + '</span>';
+  if (isCreditFund(deal)) {
+    html += '<span class="deal-badge asset-class">' + creditBadgeLabel(deal) + '</span>';
+  } else if (deal.assetClass) {
+    html += '<span class="deal-badge asset-class">' + esc(deal.assetClass) + '</span>';
+  }
 
   if (deal.dealType) html += '<span class="deal-badge deal-type">' + esc(deal.dealType) + '</span>';
 
@@ -2092,29 +3143,136 @@ async function renderDeal() {
 
   html += '</div>';
 
+  // Social proof placeholder (filled async)
+  html += '<div class="deal-social-proof" id="dealSocialProof"></div>';
+
   html += '</div></div>';
 
+  // Journey bar
+  var currentStage = getDealStage(deal.id);
+  var stages = [
+    { key: 'new', label: 'New', num: '1' },
+    { key: 'interested', label: 'Interested', num: '2' },
+    { key: 'duediligence', label: 'Due Diligence', num: '3' },
+    { key: 'portfolio', label: 'Invested', num: '4' }
+  ];
+  var stageOrder = { 'new': 0, 'interested': 1, 'duediligence': 2, 'portfolio': 3 };
+  var currentIdx = stageOrder[currentStage] || 0;
 
-
-  // Key metrics strip
-
-  html += '<div class="metrics-strip">';
-
-  html += metricCard('Target IRR', fmt(deal.targetIRR, 'pct'), true);
-
-  html += metricCard('Equity Multiple', fmt(deal.equityMultiple, 'multiple'), false);
-
-  html += metricCard('Pref Return', fmt(deal.preferredReturn, 'pct'), false);
-
-  html += metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), false);
-
-  html += metricCard('Hold Period', deal.holdPeriod ? deal.holdPeriod + ' yrs' : '---', false);
-
-  html += metricCard('LP/GP Split', deal.lpGpSplit || '---', false);
-
+  html += '<div class="journey-bar" id="journeyBar">';
+  for (var si = 0; si < stages.length; si++) {
+    if (si > 0) html += '<div class="journey-connector' + (si <= currentIdx ? ' done' : '') + '"></div>';
+    var cls = '';
+    if (si < currentIdx) cls = ' completed';
+    else if (si === currentIdx) cls = ' active';
+    var checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
+    html += '<div class="journey-step' + cls + '" data-stage="' + stages[si].key + '" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + stages[si].key + '\')">';
+    html += '<div class="step-dot">' + (si < currentIdx ? checkIcon : stages[si].num) + '</div>';
+    html += stages[si].label + '</div>';
+  }
   html += '</div>';
 
+  // Data completeness score
+  var dcFields = ['targetIRR', 'investmentMinimum', 'holdPeriod', 'investmentStrategy', 'distributions', 'financials', 'availableTo', 'offeringType', 'ceo', 'managementCompany', 'mcWebsite', 'deckUrl', 'investingGeography'];
+  if (isCreditFund(deal)) dcFields.push('fundAUM', 'loanCount', 'avgLoanLTV', 'debtPosition');
+  else dcFields.push('equityMultiple', 'preferredReturn', 'lpGpSplit', 'cashOnCash');
+  var dcFilled = 0;
+  for (var di = 0; di < dcFields.length; di++) {
+    var v = deal[dcFields[di]];
+    if (v !== undefined && v !== null && v !== '' && v !== 0) dcFilled++;
+  }
+  var dcPct = Math.round((dcFilled / dcFields.length) * 100);
+  var dcClass = dcPct >= 60 ? 'high' : dcPct >= 35 ? 'medium' : 'low';
+  var dcHint = dcPct >= 60 ? 'Well researched' : dcPct >= 35 ? 'Needs more data' : 'Early stage \u2014 help fill it in';
+  html += '<div class="data-completeness">';
+  html += '<div class="data-completeness-label">Deal Intel</div>';
+  html += '<div class="data-completeness-bar"><div class="data-completeness-fill ' + dcClass + '" style="width:' + dcPct + '%"></div></div>';
+  html += '<div class="data-completeness-pct">' + dcPct + '%</div>';
+  html += '<div class="data-completeness-hint">' + dcHint + '</div>';
+  html += '</div>';
 
+  // Key metrics strip — only show metrics with real data
+  var metricsToShow = [];
+  if (isCreditFund(deal)) {
+    if (deal.targetIRR) metricsToShow.push(metricCard('Target Yield', fmt(deal.targetIRR, 'pct'), true));
+    if (deal.investmentMinimum) metricsToShow.push(metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), !deal.targetIRR));
+    if (deal.holdPeriod) metricsToShow.push(metricCard('Lockup', deal.holdPeriod + ' yrs', false));
+    if (deal.fundAUM) metricsToShow.push(metricCard('Fund AUM', fmt(deal.fundAUM, 'money'), false));
+    if (deal.loanCount) metricsToShow.push(metricCard('Loan Count', deal.loanCount, false));
+    if (deal.avgLoanLTV) metricsToShow.push(metricCard('Avg LTV', fmt(deal.avgLoanLTV, 'pct'), false));
+  } else {
+    if (deal.targetIRR) metricsToShow.push(metricCard('Target IRR', fmt(deal.targetIRR, 'pct'), true));
+    if (deal.equityMultiple) metricsToShow.push(metricCard('Equity Multiple', fmt(deal.equityMultiple, 'multiple'), !deal.targetIRR));
+    if (deal.preferredReturn) metricsToShow.push(metricCard('Pref Return', fmt(deal.preferredReturn, 'pct'), false));
+    if (deal.investmentMinimum) metricsToShow.push(metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), false));
+    if (deal.holdPeriod) metricsToShow.push(metricCard('Hold Period', deal.holdPeriod + ' yrs', false));
+    if (deal.lpGpSplit) metricsToShow.push(metricCard('LP/GP Split', deal.lpGpSplit, false));
+  }
+  if (metricsToShow.length > 0) {
+    var gridCols = Math.min(metricsToShow.length, 6);
+    html += '<div class="metrics-strip" style="grid-template-columns:repeat(' + gridCols + ',1fr)">';
+    html += metricsToShow.join('');
+    html += '</div>';
+  }
+
+  // Share class comparison table (for multi-class funds)
+  if (deal.shareClasses && deal.shareClasses.length > 0) {
+    html += '<div class="section">';
+    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg><span class="section-title">Share Classes</span></div>';
+    html += '<div class="section-body"><div class="share-class-table-wrap"><table class="share-class-table">';
+
+    // Header row
+    html += '<tr><th></th>';
+    for (var i = 0; i < deal.shareClasses.length; i++) {
+      html += '<th>' + esc(deal.shareClasses[i].label) + '</th>';
+    }
+    html += '</tr>';
+
+    // Target Return row
+    html += '<tr><td>Target Return</td>';
+    for (var i = 0; i < deal.shareClasses.length; i++) {
+      var sc = deal.shareClasses[i];
+      html += '<td><span class="value-highlight">' + esc(fmt(sc.targetReturn, 'pct')) + '</span></td>';
+    }
+    html += '</tr>';
+
+    // Lockup row
+    html += '<tr><td>Lockup</td>';
+    for (var i = 0; i < deal.shareClasses.length; i++) {
+      var sc = deal.shareClasses[i];
+      html += '<td>' + esc(sc.lockup ? sc.lockup + ' yrs' : '---') + '</td>';
+    }
+    html += '</tr>';
+
+    // Min Investment row
+    html += '<tr><td>Min Investment</td>';
+    for (var i = 0; i < deal.shareClasses.length; i++) {
+      var sc = deal.shareClasses[i];
+      html += '<td>' + esc(fmt(sc.investmentMinimum, 'money')) + '</td>';
+    }
+    html += '</tr>';
+
+    // Pref Return row (if any class has it)
+    var anyPref = deal.shareClasses.some(function(sc) { return sc.preferredReturn; });
+    if (anyPref) {
+      html += '<tr><td>Pref Return</td>';
+      for (var i = 0; i < deal.shareClasses.length; i++) {
+        var sc = deal.shareClasses[i];
+        html += '<td>' + esc(fmt(sc.preferredReturn, 'pct')) + '</td>';
+      }
+      html += '</tr>';
+    }
+
+    // Financials row
+    html += '<tr><td>Financials</td>';
+    for (var i = 0; i < deal.shareClasses.length; i++) {
+      var sc = deal.shareClasses[i];
+      html += '<td>' + esc(sc.financials || '---') + '</td>';
+    }
+    html += '</tr>';
+
+    html += '</table></div></div></div>';
+  }
 
   // Overview section
 
@@ -2130,7 +3288,35 @@ async function renderDeal() {
 
   }
 
+  // Supporting Materials section
+  var hasMaterials = deal.deckUrl || deal.mcWebsite || deal.mcInvestClearly || deal.mcLinkedin;
+  html += '<div class="section">';
+  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><span class="section-title">Supporting Materials</span></div>';
+  html += '<div class="section-body"><div class="materials-grid">';
 
+  if (deal.deckUrl) {
+    html += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Investment Deck</a>';
+  }
+  if (deal.mcWebsite) {
+    html += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Sponsor Website</a>';
+  }
+  if (deal.mcInvestClearly) {
+    html += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
+  }
+  if (deal.mcLinkedin) {
+    html += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>CEO LinkedIn</a>';
+  }
+  // SEC EDGAR search link (always available)
+  var secQuery = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
+  html += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + secQuery + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>SEC EDGAR</a>';
+
+  html += '</div>';
+
+  if (!deal.deckUrl) {
+    html += '<div class="materials-missing">Missing materials? <button onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')">Submit a link</button></div>';
+  }
+
+  html += '</div></div>';
 
   // Investment Details section
 
@@ -2141,26 +3327,98 @@ async function renderDeal() {
   html += '<div class="section-body"><div class="details-grid">';
 
   html += detailItem('Distributions', deal.distributions);
-
   html += detailItem('Available To', deal.availableTo);
-
   html += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
-
-  html += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
-
   html += detailItem('Offering Type', deal.offeringType);
 
-  html += detailItem('Objective', deal.investmentObjective);
-
-  html += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
-
-  html += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
+  if (isCreditFund(deal)) {
+    html += detailItem('Debt Position', deal.debtPosition);
+    html += detailItem('Financials', deal.financials);
+    html += detailItem('Objective', deal.investmentObjective);
+    html += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
+  } else {
+    html += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
+    html += detailItem('Objective', deal.investmentObjective);
+    html += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
+    html += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
+  }
 
   html += '</div></div>';
 
   html += '</div>';
 
+  // Deal Research Checklist section
+  var checklist = getChecklistForDeal(deal);
+  var userAnswers = loadDDAnswers(deal.id);
+  var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  var circleSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
+  var chevronSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
 
+  html += '<div class="section">';
+  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span></div>';
+  html += '<div class="section-body">';
+  html += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
+  html += '<div class="dd-accordion">';
+
+  var qIdx = 0;
+  for (var si = 0; si < checklist.sections.length; si++) {
+    var sec = checklist.sections[si];
+    var answered = 0;
+    var sectionHtml = '';
+
+    for (var qi = 0; qi < sec.questions.length; qi++) {
+      var q = sec.questions[qi];
+      var key = 's' + si + 'q' + qi;
+      var autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null;
+      var userVal = userAnswers[key] || '';
+      var isAnswered = !!(autoVal || userVal);
+      if (isAnswered) answered++;
+
+      sectionHtml += '<div class="dd-question' + (isAnswered ? ' answered' : '') + '">';
+      sectionHtml += '<div class="dd-question-text">' + esc(q.q) + '</div>';
+
+      if (autoVal) {
+        sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon auto">' + checkSvg + '</div><div class="dd-answer-text">' + esc(autoVal) + '</div><span class="dd-answer-badge auto">auto</span></div>';
+      } else if (userVal) {
+        sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon user">' + checkSvg + '</div><div class="dd-answer-text">' + esc(userVal) + '</div><span class="dd-answer-badge user">you</span></div>';
+      } else {
+        sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon empty">' + circleSvg + '</div><input class="dd-answer-input" type="text" placeholder="Add your research..." data-deal-id="' + escAttr(deal.id) + '" data-key="' + key + '" onblur="handleDDInput(this)" /></div>';
+      }
+
+      sectionHtml += '</div>';
+      qIdx++;
+    }
+
+    html += '<div class="dd-accordion-section' + (si === 0 ? ' open' : '') + '">';
+    html += '<div class="dd-accordion-header" onclick="toggleAccordion(this)">';
+    html += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + '</div>';
+    html += '<span class="dd-accordion-progress">' + answered + '/' + sec.questions.length + '</span>';
+    html += '</div>';
+    html += '<div class="dd-accordion-body">' + sectionHtml + '</div>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+
+  // Third-party perspectives
+  html += '<div class="dd-perspectives">';
+  html += '<div class="dd-perspectives-title">Third-Party Perspectives</div>';
+  html += '<div class="dd-perspective-links">';
+  if (deal.mcInvestClearly) {
+    html += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
+  }
+  html += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + encodeURIComponent(deal.managementCompany || deal.investmentName || '') + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search SEC EDGAR</a>';
+  html += '<a href="https://checkr.com" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Background Check</a>';
+  html += '</div>';
+
+  // Office Hours CTA
+  html += '<div class="dd-office-hours">';
+  html += '<div class="dd-office-hours-text"><strong>Bring this deal to Office Hours</strong><span>Every Thursday 12\u20131pm ET \u2014 get Pascal\'s take on any deal</span></div>';
+  html += '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener">Join This Week</a>';
+  html += '</div>';
+
+  html += '</div>';
+  html += '</div></div>';
 
   // Deal Summary section
 
@@ -2196,6 +3454,13 @@ async function renderDeal() {
 
     html += '</ul></div></div>';
 
+  }
+
+  // Offering documents indicator
+  if (deal.deckUrl) {
+    html += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-available"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Available</span></div></div>';
+  } else {
+    html += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Not yet sourced</span></div></div>';
   }
 
   html += '</div></div>';
@@ -2260,19 +3525,39 @@ async function renderDeal() {
 
   html += '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
 
-  html += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>View Deal Deck</button>';
+  var deckSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+  if (deal.deckUrl) {
+    html += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'View Deal Deck</a>';
+  } else {
+    html += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
+    html += '<button class="btn-action btn-link" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Submit a Deck Link</button>';
+  }
 
   html += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
 
   html += '</div></div></div>';
 
+  // Close deal-page-content wrapper
+  html += '</div>';
 
+  // Sticky action bar
+  var nextStages = { 'new': 'interested', 'interested': 'duediligence', 'duediligence': 'portfolio' };
+  var nextLabels = { 'new': 'Save to Interested', 'interested': 'Start Due Diligence', 'duediligence': 'Mark as Invested' };
+  var stageLabels = { 'new': 'New', 'interested': 'Interested', 'duediligence': 'Due Diligence', 'portfolio': 'Invested', 'passed': 'Passed' };
+
+  html += '<div class="sticky-action-bar">';
+  html += '<button class="btn-pass" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>';
+  html += '<div class="stage-label">Stage: <strong id="stickyStageLabel">' + (stageLabels[currentStage] || 'New') + '</strong></div>';
+  if (nextLabels[currentStage]) {
+    html += '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + nextStages[currentStage] + '\')">' + nextLabels[currentStage] + ' \u2192</button>';
+  } else {
+    html += '<button class="btn-advance" id="stickyAdvanceBtn" style="display:none"></button>';
+  }
+  html += '</div>';
 
   container.innerHTML = html;
 
   document.body.classList.add('page-loaded');
-
-
 
   // Init map if location exists
 
@@ -2282,6 +3567,31 @@ async function renderDeal() {
 
   }
 
+  // Fetch social proof counts async
+  fetchDealStats(deal.id);
+
+}
+
+async function fetchDealStats(dealId) {
+  var el = document.getElementById('dealSocialProof');
+  if (!el) return;
+  try {
+    var resp = await fetch('/api/deal-stats?dealId=' + encodeURIComponent(dealId));
+    if (!resp.ok) return;
+    var counts = await resp.json();
+    var parts = [];
+    var total = (counts.interested || 0) + (counts.duediligence || 0) + (counts.portfolio || 0);
+    if (total === 0) {
+      el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Be the first to save this deal';
+      return;
+    }
+    if (counts.interested) parts.push(counts.interested + ' investor' + (counts.interested > 1 ? 's' : '') + ' interested');
+    if (counts.duediligence) parts.push(counts.duediligence + ' in due diligence');
+    if (counts.portfolio) parts.push(counts.portfolio + ' invested');
+    el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' + parts.join(' &middot; ');
+  } catch(e) {
+    // Silently fail — social proof is non-critical
+  }
 }
 
 
@@ -2334,7 +3644,113 @@ function esc(str) {
 
 }
 
+function escAttr(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
+
+
+// ========== DECK SUBMIT MODAL ==========
+
+function openDeckSubmitModal(dealId, dealName) {
+  // Remove any existing modal
+  var existing = document.getElementById('deckSubmitOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'deckSubmitOverlay';
+  overlay.className = 'deck-modal-overlay';
+  overlay.innerHTML =
+    '<div class="deck-modal">' +
+      '<h3>Submit a Deck Link</h3>' +
+      '<p>Know where the offering documents are for <strong>' + esc(dealName) + '</strong>? Paste the link below and we\'ll review it.</p>' +
+      '<div id="deckModalForm">' +
+        '<label for="deckUrlInput">Deck URL</label>' +
+        '<input type="url" id="deckUrlInput" placeholder="https://example.com/deck.pdf" />' +
+        '<label for="deckNotesInput">Notes (optional)</label>' +
+        '<textarea id="deckNotesInput" placeholder="e.g. Found on their investor portal, this is the Class A PPM"></textarea>' +
+        '<div class="deck-modal-actions">' +
+          '<button class="btn-cancel" onclick="closeDeckSubmitModal()">Cancel</button>' +
+          '<button class="btn-submit" id="deckSubmitBtn" onclick="submitDeckLink(\'' + escAttr(dealId) + '\', \'' + escAttr(dealName) + '\')">Submit</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="deckModalSuccess" style="display:none;" class="deck-modal-success">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="48" height="48"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+        '<p>Thanks! We\'ll review and add this.</p>' +
+        '<button class="btn-cancel" onclick="closeDeckSubmitModal()" style="margin-top:16px;">Close</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  // Trigger transition
+  requestAnimationFrame(function() { overlay.classList.add('visible'); });
+
+  // Close on overlay click
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeDeckSubmitModal();
+  });
+}
+
+function closeDeckSubmitModal() {
+  var overlay = document.getElementById('deckSubmitOverlay');
+  if (overlay) {
+    overlay.classList.remove('visible');
+    setTimeout(function() { overlay.remove(); }, 200);
+  }
+}
+
+async function submitDeckLink(dealId, dealName) {
+  var urlInput = document.getElementById('deckUrlInput');
+  var notesInput = document.getElementById('deckNotesInput');
+  var submitBtn = document.getElementById('deckSubmitBtn');
+
+  var deckUrl = (urlInput.value || '').trim();
+  if (!deckUrl) {
+    urlInput.style.borderColor = '#e74c3c';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...';
+
+  // Get user info from localStorage (set by auth flow)
+  var userEmail = '';
+  var userName = '';
+  try {
+    var userData = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    userEmail = userData.email || '';
+    userName = userData.name || userData.firstName || '';
+  } catch(e) {}
+
+  try {
+    var resp = await fetch('/api/deck-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dealId: dealId,
+        dealName: dealName,
+        deckUrl: deckUrl,
+        notes: (notesInput.value || '').trim(),
+        userEmail: userEmail,
+        userName: userName
+      })
+    });
+
+    if (resp.ok) {
+      document.getElementById('deckModalForm').style.display = 'none';
+      document.getElementById('deckModalSuccess').style.display = 'block';
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit';
+      alert('Something went wrong. Please try again.');
+    }
+  } catch(e) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit';
+    alert('Network error. Please try again.');
+  }
+}
 
 // ========== INIT ==========
 
