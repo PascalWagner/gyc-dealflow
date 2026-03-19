@@ -11604,6 +11604,9 @@ function renderDashboard() {
     <!-- Deals That Could Help You Get There -->
     <div id="dashboardGoalDeals" style="margin-top:24px;"></div>
 
+    <!-- Income Tracking -->
+    <div id="dashboardIncomeSection" style="margin-top:24px;"></div>
+
     <!-- Three Paths (rendered after goals are loaded) -->
     <div id="dashboardThreePaths" style="margin-top:24px;"></div>
   `;
@@ -11674,6 +11677,9 @@ function renderDashboard() {
     }
   }
 
+  // Render Income Section
+  if (typeof renderIncomeSection === 'function') renderIncomeSection();
+
   // Render Three Paths section on Dashboard
   var threePathsEl = document.getElementById('dashboardThreePaths');
   if (threePathsEl && typeof renderThreePaths === 'function') {
@@ -11698,6 +11704,195 @@ function renderDashboard() {
         });
       }
     } catch (e) { console.log('Dashboard chart error:', e); }
+  }
+}
+
+// ========== INCOME / DISTRIBUTION TRACKING ==========
+let distributions = JSON.parse(localStorage.getItem('gycDistributions') || '[]');
+let incomeChart = null;
+
+function saveDistributions() {
+  localStorage.setItem('gycDistributions', JSON.stringify(distributions));
+}
+function addDistribution(entry) {
+  entry.id = 'dist_' + Date.now();
+  distributions.push(entry);
+  saveDistributions();
+  if (typeof renderIncomeSection === 'function') renderIncomeSection();
+  if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
+}
+function deleteDistribution(id) {
+  distributions = distributions.filter(function(d) { return d.id !== id; });
+  saveDistributions();
+  if (typeof renderIncomeSection === 'function') renderIncomeSection();
+}
+
+function showLogDistributionForm(dealId, investmentName) {
+  var modal = document.getElementById('distFormModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'distFormModal';
+    document.body.appendChild(modal);
+  }
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center;';
+  var today = new Date().toISOString().slice(0, 10);
+  var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  var options = portfolio.map(function(inv) {
+    var sel = inv.investmentName === investmentName ? ' selected' : '';
+    return '<option value="' + (inv.investmentName || '').replace(/"/g, '&quot;') + '"' + sel + '>' + (inv.investmentName || 'Unknown') + '</option>';
+  }).join('');
+  if (!options) options = '<option value="' + (investmentName || '').replace(/"/g, '&quot;') + '">' + (investmentName || 'Investment') + '</option>';
+
+  modal.innerHTML = '<div style="background:var(--bg-card);border-radius:16px;padding:32px;max-width:420px;width:90%;position:relative;">' +
+    '<button onclick="document.getElementById(\'distFormModal\').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted);">&times;</button>' +
+    '<div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);margin-bottom:20px;">Log Distribution</div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px;">' +
+    '<div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Investment</label><select id="distInvestment" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">' + options + '</select></div>' +
+    '<div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Date</label><input id="distDate" type="date" value="' + today + '" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>' +
+    '<div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Amount ($)</label><input id="distAmount" type="number" placeholder="833" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;box-sizing:border-box;"></div>' +
+    '<div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Type</label><select id="distType" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option><option value="special">Special</option></select></div>' +
+    '<button onclick="submitDistributionForm()" style="margin-top:8px;width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Log Distribution</button>' +
+    '</div></div>';
+}
+
+function submitDistributionForm() {
+  var amount = parseFloat(document.getElementById('distAmount').value) || 0;
+  if (amount <= 0) return;
+  addDistribution({
+    investmentName: document.getElementById('distInvestment').value,
+    date: document.getElementById('distDate').value,
+    amount: amount,
+    type: document.getElementById('distType').value,
+    notes: ''
+  });
+  var modal = document.getElementById('distFormModal');
+  if (modal) modal.remove();
+  trackActivity('distribution_logged', { amount: amount });
+}
+
+function renderIncomeSection() {
+  var el = document.getElementById('dashboardIncomeSection');
+  if (!el) return;
+
+  var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+
+  // Calculate metrics from distribution log
+  var totalDist = distributions.reduce(function(s, d) { return s + (d.amount || 0); }, 0);
+  var distCount = distributions.length;
+
+  // Calculate months since first distribution or investment
+  var firstDate = null;
+  distributions.forEach(function(d) { var dt = new Date(d.date); if (!firstDate || dt < firstDate) firstDate = dt; });
+  if (!firstDate) {
+    portfolio.forEach(function(p) { if (p.dateInvested) { var dt = new Date(p.dateInvested); if (!firstDate || dt < firstDate) firstDate = dt; } });
+  }
+  var monthsActive = 1;
+  if (firstDate) {
+    var now = new Date();
+    monthsActive = Math.max(1, (now.getFullYear() - firstDate.getFullYear()) * 12 + (now.getMonth() - firstDate.getMonth()) + 1);
+  }
+
+  var monthlyIncome = distCount > 0 ? Math.round(totalDist / monthsActive) : 0;
+  var annualRate = monthlyIncome * 12;
+  var totalInvested = portfolio.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
+  var yieldOnCost = totalInvested > 0 ? ((totalDist / totalInvested) * 100).toFixed(1) : '0.0';
+
+  // Goal connection
+  var goalHtml = '';
+  if (goals && goals.targetIncome > 0 && goals.type !== 'build_wealth') {
+    var pctOfGoal = Math.round((annualRate / goals.targetIncome) * 100);
+    goalHtml = '<div style="margin-top:16px;padding:16px 20px;background:linear-gradient(135deg,rgba(74,222,128,0.06),rgba(59,130,246,0.06));border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">' +
+      '<div style="font-size:13px;color:var(--text-secondary);">Your investments generate <strong style="color:var(--primary);">$' + annualRate.toLocaleString() + '/yr</strong> — <strong style="color:var(--text-dark);">' + pctOfGoal + '%</strong> of your $' + goals.targetIncome.toLocaleString() + '/yr goal</div>' +
+      '<div style="flex:1;min-width:100px;max-width:200px;height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + Math.min(pctOfGoal, 100) + '%;background:linear-gradient(90deg,var(--primary),#3b82f6);border-radius:3px;"></div></div>' +
+      '</div>';
+  }
+
+  // Aggregate distributions by month for chart
+  var monthlyData = {};
+  distributions.forEach(function(d) {
+    var key = d.date ? d.date.substring(0, 7) : 'unknown';
+    monthlyData[key] = (monthlyData[key] || 0) + (d.amount || 0);
+  });
+  var sortedMonths = Object.keys(monthlyData).sort();
+  var chartLabels = sortedMonths.map(function(m) { var parts = m.split('-'); return parts.length === 2 ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(parts[1]) - 1] + ' ' + parts[0].slice(2) : m; });
+  var chartValues = sortedMonths.map(function(m) { return monthlyData[m]; });
+  var cumulativeValues = [];
+  var running = 0;
+  chartValues.forEach(function(v) { running += v; cumulativeValues.push(running); });
+
+  // Distribution log table
+  var logRows = distributions.slice().sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); }).map(function(d) {
+    return '<tr>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-dark);">' + (d.date || '—') + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-dark);">' + (d.investmentName || '—') + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--primary);">$' + (d.amount || 0).toLocaleString() + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted);">' + (d.type || '—') + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid var(--border);"><button onclick="deleteDistribution(\'' + d.id + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">&times;</button></td>' +
+      '</tr>';
+  }).join('');
+
+  el.innerHTML = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">' +
+    '<div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);">Income Tracker</div>' +
+    '<button onclick="showLogDistributionForm(\'\',\'\')" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Log Distribution</button>' +
+    '</div>' +
+
+    // Summary cards
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px;">' +
+    '<div style="padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Monthly Income</div><div style="font-size:22px;font-weight:800;color:var(--primary);">$' + monthlyIncome.toLocaleString() + '</div></div>' +
+    '<div style="padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Annual Run Rate</div><div style="font-size:22px;font-weight:800;color:var(--text-dark);">$' + annualRate.toLocaleString() + '</div></div>' +
+    '<div style="padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Yield on Cost</div><div style="font-size:22px;font-weight:800;color:var(--text-dark);">' + yieldOnCost + '%</div></div>' +
+    '<div style="padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Received</div><div style="font-size:22px;font-weight:800;color:var(--primary);">$' + totalDist.toLocaleString() + '</div></div>' +
+    '</div>' +
+
+    goalHtml +
+
+    // Chart
+    (chartValues.length > 0 ? '<div style="margin-top:20px;height:200px;"><canvas id="incomeOverTimeChart"></canvas></div>' : '<div style="margin-top:20px;padding:40px;text-align:center;color:var(--text-muted);font-size:13px;background:var(--bg-main);border-radius:var(--radius-sm);">Log your first distribution to see income trends</div>') +
+
+    // Distribution log
+    (distCount > 0 ? '<div style="margin-top:20px;"><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">Distribution Log</div>' +
+    '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">' +
+    '<thead><tr>' +
+    '<th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Date</th>' +
+    '<th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Investment</th>' +
+    '<th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Amount</th>' +
+    '<th style="padding:8px 12px;text-align:left;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Type</th>' +
+    '<th style="padding:8px 12px;border-bottom:2px solid var(--border);width:40px;"></th>' +
+    '</tr></thead><tbody>' + logRows + '</tbody></table></div></div>' : '') +
+
+    '</div>';
+
+  // Render chart
+  if (chartValues.length > 0) {
+    setTimeout(function() {
+      var ctx = document.getElementById('incomeOverTimeChart');
+      if (!ctx) return;
+      if (incomeChart) { try { incomeChart.destroy(); } catch(e) {} }
+      var goalLine = goals && goals.targetIncome ? Math.round(goals.targetIncome / 12) : null;
+      incomeChart = new Chart(ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: chartLabels,
+          datasets: [
+            { label: 'Monthly Income', data: chartValues, backgroundColor: 'rgba(81,190,123,0.6)', borderColor: 'rgba(81,190,123,1)', borderWidth: 1, borderRadius: 4, order: 2 },
+            { label: 'Cumulative', data: cumulativeValues, type: 'line', borderColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#3b82f6', tension: 0.3, yAxisID: 'y1', order: 1 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true, padding: 16 } },
+            annotation: goalLine ? { annotations: { goalLine: { type: 'line', yMin: goalLine, yMax: goalLine, borderColor: '#f59e0b', borderWidth: 2, borderDash: [5, 5], label: { display: true, content: 'Monthly Goal: $' + goalLine.toLocaleString(), position: 'end', font: { size: 10 } } } } } : {}
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: function(v) { return '$' + v.toLocaleString(); }, font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+            y1: { position: 'right', beginAtZero: true, ticks: { callback: function(v) { return '$' + v.toLocaleString(); }, font: { size: 10 } }, grid: { display: false } },
+            x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }, 100);
   }
 }
 
