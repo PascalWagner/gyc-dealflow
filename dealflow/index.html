@@ -3364,6 +3364,237 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
 .dashboard-milestone-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
 .dashboard-milestone-action { padding: 6px 14px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 11px; cursor: pointer; white-space: nowrap; }
 
+/* ===== Dashboard V2 ===== */
+.dash-hero {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-card);
+}
+.dash-hero-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+.dash-hero-progress {
+  height: 12px;
+  background: var(--border-light);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.dash-hero-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #3bba78);
+  border-radius: 6px;
+  transition: width 0.8s ease;
+  min-width: 0;
+}
+.dash-hero-value {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.dash-hero-pct {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.dash-hero-stats {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 16px;
+}
+.dash-hero-action {
+  margin-top: 24px;
+  background: var(--bg-cream);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.dash-hero-action:hover {
+  border-color: var(--primary);
+  background: var(--green-bg);
+}
+.dash-hero-action-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--green-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.dash-hero-action-text {
+  flex: 1;
+}
+.dash-hero-action-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.dash-hero-action-desc {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.dash-hero-action-btn {
+  padding: 7px 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+.dash-hero-action-btn:hover { background: var(--primary-hover); }
+
+.dash-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.dash-section-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.dash-section-link {
+  padding: 5px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.dash-section-link:hover { border-color: var(--primary); color: var(--primary); }
+
+.dash-portfolio {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-card);
+}
+.dash-portfolio table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.dash-portfolio thead th {
+  text-align: left;
+  padding: 10px 12px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+}
+.dash-portfolio thead th:nth-child(2),
+.dash-portfolio thead th:nth-child(3) { text-align: right; }
+.dash-portfolio thead th:nth-child(4) { text-align: center; }
+.dash-portfolio tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--transition);
+}
+.dash-portfolio tbody tr[data-clickable]:hover {
+  background: var(--bg-cream);
+  cursor: pointer;
+}
+.dash-portfolio tbody td { padding: 12px; }
+.dash-portfolio tbody td:nth-child(2),
+.dash-portfolio tbody td:nth-child(3) { text-align: right; font-weight: 600; }
+.dash-portfolio tbody td:nth-child(4) { text-align: center; }
+
+.dash-portfolio-empty {
+  text-align: center;
+  padding: 48px 20px;
+}
+.dash-portfolio-empty svg {
+  width: 40px; height: 40px;
+  margin-bottom: 12px;
+  opacity: 0.35;
+}
+.dash-portfolio-empty-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.dash-portfolio-empty-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.dash-recommended {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-card);
+}
+.dash-recommended-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.dash-recommended-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .dash-hero { padding: 24px; }
+  .dash-hero-value { font-size: 18px; }
+  .dash-hero-action { flex-wrap: wrap; }
+  .dash-hero-action-btn { width: 100%; text-align: center; margin-top: 8px; }
+  .dash-recommended-grid { grid-template-columns: 1fr; }
+}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -7105,7 +7336,8 @@ function navigateTo(page) {
 }
 
 // ========== SETTINGS: BUY BOX ==========
-const BB_ASSET_CLASSES = ['Multi Family','Industrial','Self Storage','Hotels/Hospitality','Lending','RV/Mobile Home Parks','Business / Other','Mixed-Use','Short Term Rental'];
+// Dynamic: pull unique asset classes from actual deals in database
+const BB_ASSET_CLASSES = [...new Set(DEALS.map(d => d.assetClass).filter(Boolean))].sort();
 const BB_STRATEGIES = ['Value-Add','Lending','Development'];
 const BB_DEAL_TYPES = ['Fund','Syndication'];
 const BB_OBJECTIVES = ['Cashflow','Equity Growth','Balanced (Cashflow + Equity)'];
@@ -7883,16 +8115,21 @@ function renderWizardStep() {
 
     // Accreditation
     html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Are you an accredited investor?</div>';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How do you qualify as an accredited investor?</div>';
     var accOptions = [
-      { val: 'yes', label: 'Yes' },
-      { val: 'no', label: 'Not yet' },
-      { val: 'unsure', label: 'Not sure' }
+      { val: 'net_worth', label: 'Net worth over $1M', desc: 'Excluding primary residence' },
+      { val: 'income', label: 'Income over $200K', desc: '$200K individual or $300K with spouse' },
+      { val: 'licensed', label: 'Licensed professional', desc: 'Series 7, 65, 82, or equivalent' },
+      { val: 'entity', label: 'Through an entity', desc: 'LLC, trust, or fund with $5M+ assets' },
+      { val: 'unsure', label: "I'm not sure yet", desc: 'We can help you figure it out' }
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
     accOptions.forEach(function(opt) {
       var isSel = wizardData.accreditation === opt.val;
-      html += '<div onclick="wizardData.accreditation=\'' + opt.val + '\';renderWizardStep();" style="padding:12px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;color:var(--text-dark);background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';">' + opt.label + '</div>';
+      html += '<div onclick="wizardData.accreditation=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      html += '</div>';
     });
     html += '</div></div>';
 
@@ -11693,180 +11930,164 @@ function renderDashboard() {
   const container = document.getElementById('dashboardContent');
   if (!container) return;
 
-  const user = getUser();
-  const userName = user?.name?.split(' ')[0] || 'Investor';
   const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
   const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
   const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
   const deals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+  const wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  const branch = wd._branch;
 
   // Compute metrics
   const totalInvested = portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
   const totalDistributions = portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
   const activeInvestments = portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length;
 
-  // Goal progress
+  // Goal progress (from gycGoals)
   const hasGoals = goals && goals.targetIncome > 0;
-  const goalProgress = hasGoals ? Math.min(100, Math.round(((goals.currentIncome || 0) / goals.targetIncome) * 100)) : 0;
-  const goalGap = hasGoals ? goals.targetIncome - (goals.currentIncome || 0) : 0;
+  const currentIncome = goals?.currentIncome || 0;
+  const targetIncome = hasGoals ? goals.targetIncome : 0;
+  const goalProgress = hasGoals ? Math.min(100, Math.round((currentIncome / targetIncome) * 100)) : 0;
+
+  // Determine goal label from wizard branch or goals data
+  let goalLabel = 'YOUR PASSIVE INCOME GOAL';
+  let goalValueText = '';
+  if (hasGoals) {
+    goalValueText = '$' + currentIncome.toLocaleString() + ' / $' + targetIncome.toLocaleString() + ' per year';
+  } else if (branch === 'cashflow') {
+    const target = parseDollar(wd.targetCashFlow) || 100000;
+    goalLabel = 'PASSIVE INCOME GOAL';
+    goalValueText = '$0 / $' + target.toLocaleString() + ' per year';
+  } else if (branch === 'tax') {
+    const target = parseDollar(wd.taxableIncome) || 200000;
+    goalLabel = 'TAX OFFSET GOAL';
+    goalValueText = '$0 / $' + target.toLocaleString() + ' offset';
+  } else if (branch === 'growth') {
+    const capital = parseDollar(wd.growthCapital) || 500000;
+    goalLabel = 'WEALTH GROWTH GOAL';
+    goalValueText = '$' + capital.toLocaleString() + ' &rarr; $' + (capital * 2).toLocaleString();
+  }
 
   // Stage counts
   const stageCounts = { interested: 0, duediligence: 0, portfolio: 0, passed: 0 };
   Object.values(stages).forEach(s => { if (stageCounts[s] !== undefined) stageCounts[s]++; });
 
-  // Buy box matches
-  const bbMatches = deals.filter(d => {
-    if (stages[d.id]) return false; // Already triaged
-    if (!buyBox || !Object.keys(buyBox).length) return true;
-    if (buyBox.assetClasses?.length && !buyBox.assetClasses.includes(d.assetClass)) return false;
-    return true;
-  }).slice(0, 5);
+  // Get next milestone action
+  const milestones = typeof checkActivationMilestones === 'function' ? checkActivationMilestones() : {};
+  let nextMilestone = null;
+  if (typeof ACTIVATION_MILESTONES !== 'undefined') {
+    for (const m of ACTIVATION_MILESTONES) {
+      if (!milestones[m.id]) { nextMilestone = m; break; }
+    }
+  }
 
-  // New deals needing review (no stage set)
-  const newDealsCount = deals.filter(d => !stages[d.id]).length;
+  // Build next action from milestone
+  let actionIcon = '', actionTitle = '', actionDesc = '', actionBtnText = '', actionPage = 'deals';
+  if (nextMilestone) {
+    switch (nextMilestone.id) {
+      case 'onboarding_complete':
+        actionIcon = '\u2713'; actionTitle = 'Complete Your Investor Profile';
+        actionDesc = 'Set up your preferences in 60 seconds to get personalized deal flow.';
+        actionBtnText = 'Start Wizard \u2192'; actionPage = 'buybox'; break;
+      case 'saved_3_deals': {
+        const saved = Object.values(stages).filter(s => s === 'interested').length;
+        actionIcon = '\uD83D\uDD16'; actionTitle = 'Save ' + (3 - saved) + ' More Deal' + ((3 - saved) !== 1 ? 's' : '');
+        actionDesc = 'You\u2019ve saved ' + saved + ' so far. Swipe through deals and save ones that catch your eye.';
+        actionBtnText = 'Browse Deals \u2192'; break;
+      }
+      case 'first_dd':
+        actionIcon = '\uD83D\uDD0D'; actionTitle = 'Move a Deal to Due Diligence';
+        actionDesc = 'You have ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' saved. Pick one to dive deeper.';
+        actionBtnText = 'Review Saved Deals \u2192'; break;
+      case 'viewed_5_deals': {
+        const vc = parseInt(localStorage.getItem('gycViewCount') || '0');
+        actionIcon = '\uD83D\uDC41'; actionTitle = 'Explore More Deals';
+        actionDesc = 'You\u2019ve viewed ' + vc + ' deal page' + (vc !== 1 ? 's' : '') + '. View ' + (5 - vc) + ' more to unlock this milestone.';
+        actionBtnText = 'Explore Deals \u2192'; break;
+      }
+      case 'booked_office_hours':
+        actionIcon = '\uD83D\uDCC5'; actionTitle = 'Book an Office Hours Session';
+        actionDesc = 'Get your questions answered live with a portfolio strategist.';
+        actionBtnText = 'Book Office Hours \u2192'; break;
+      case 'first_investment':
+        actionIcon = '\uD83D\uDCB0'; actionTitle = 'Track Your First Investment';
+        actionDesc = 'Move a deal to your portfolio or add an existing investment to start tracking.';
+        actionBtnText = 'View Pipeline \u2192'; break;
+      default:
+        actionIcon = '\uD83D\uDE80'; actionTitle = 'Keep Going';
+        actionDesc = 'You\u2019re making great progress.';
+        actionBtnText = 'Explore Deals \u2192';
+    }
+  }
 
-  // Asset class breakdown for portfolio pie
-  const assetBreakdown = {};
-  portfolio.forEach(p => {
-    const cls = p.assetClass || 'Other';
-    assetBreakdown[cls] = (assetBreakdown[cls] || 0) + (parseFloat(p.amountInvested) || 0);
-  });
+  // ===== SECTION 1: Hero Progress Card =====
+  let heroHtml = '';
+  const hasOnboarding = !!branch || hasGoals;
 
-  // Action items
-  const actions = [];
-  if (!hasGoals) actions.push({ icon: '🎯', text: 'Set your investment goals', action: "navigateTo('goals')", priority: 'high' });
-  if (!buyBox || !Object.keys(buyBox).length) actions.push({ icon: '📋', text: 'Complete your Buy Box preferences', action: "navigateTo('buybox')", priority: 'high' });
-  if (newDealsCount > 0) actions.push({ icon: '📬', text: newDealsCount + ' new deal' + (newDealsCount !== 1 ? 's' : '') + ' to review', action: "navigateTo('deals')", priority: 'medium' });
-  if (stageCounts.interested > 0) actions.push({ icon: '🔍', text: stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' marked Interested — ready for due diligence?', action: "navigateTo('deals');setTimeout(()=>switchTab(document.querySelector('[data-tab=\"interested\"]')),100)", priority: 'medium' });
-  if (stageCounts.duediligence > 0) actions.push({ icon: '📑', text: stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' in Due Diligence — time to decide?', action: "navigateTo('deals');setTimeout(()=>switchTab(document.querySelector('[data-tab=\"duediligence\"]')),100)", priority: 'medium' });
-  if (portfolio.length === 0) actions.push({ icon: '💼', text: 'Add your first investment to track your portfolio', action: "navigateTo('portfolio')", priority: 'low' });
+  if (hasOnboarding) {
+    const statsLine = activeInvestments > 0
+      ? activeInvestments + ' active investment' + (activeInvestments !== 1 ? 's' : '') + ' &middot; $' + (totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()) + ' deployed'
+      : 'No investments yet &mdash; start building your portfolio';
 
-  const priorityColors = { high: '#e74c3c', medium: '#f59e0b', low: 'var(--primary)' };
+    heroHtml = '<div class="dash-hero">'
+      + '<div class="dash-hero-label">' + goalLabel + '</div>'
+      + '<div class="dash-hero-progress"><div class="dash-hero-progress-fill" style="width:' + goalProgress + '%;' + (goalProgress > 0 ? 'min-width:6px;' : '') + '"></div></div>'
+      + '<div class="dash-hero-value">' + goalValueText + ' <span class="dash-hero-pct">' + goalProgress + '%</span></div>'
+      + '<div class="dash-hero-stats">' + statsLine + '</div>'
+      + (nextMilestone ? '<div class="dash-hero-action" onclick="navigateTo(\'' + actionPage + '\')">'
+        + '<div class="dash-hero-action-icon">' + actionIcon + '</div>'
+        + '<div class="dash-hero-action-text">'
+        + '<div class="dash-hero-action-title">' + actionTitle + '</div>'
+        + '<div class="dash-hero-action-desc">' + actionDesc + '</div>'
+        + '</div>'
+        + '<button class="dash-hero-action-btn" onclick="event.stopPropagation();navigateTo(\'' + actionPage + '\')">' + actionBtnText + '</button>'
+        + '</div>' : '')
+      + '</div>';
+  } else {
+    // No onboarding — show CTA
+    heroHtml = '<div class="goal-onboarding-cta">'
+      + '<div class="goal-onboarding-cta-text"><strong>Set up your investment plan in 60 seconds</strong><br>Get personalized deal recommendations matched to your goals.</div>'
+      + '<button class="goal-onboarding-cta-btn" onclick="openBuyBoxWizard()">Get Started &rarr;</button>'
+      + '</div>';
+  }
 
-  // Goal-aware progress section (from Buy Box wizard)
-  const goalProgressHtml = renderGoalProgress();
+  // ===== SECTION 2: Portfolio Table =====
+  let portfolioHtml = '';
+  if (portfolio.length > 0) {
+    let rows = portfolio.map(p => {
+      const statusColor = p.status === 'Active' ? 'var(--primary)' : p.status === 'Distributing' ? '#3b82f6' : p.status === 'Exited' ? '#6b7280' : '#f59e0b';
+      const matchedDeal = deals.find(d => d.investmentName && p.investmentName && d.investmentName.toLowerCase().trim() === p.investmentName.toLowerCase().trim());
+      const clickAttr = matchedDeal ? ' data-clickable onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + matchedDeal.id + '\'),200)"' : '';
+      return '<tr' + clickAttr + '>'
+        + '<td><div style="font-weight:700;color:var(--text-dark);">' + p.investmentName + (matchedDeal ? ' <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:12px;height:12px;vertical-align:middle;margin-left:2px;"><polyline points="9 18 15 12 9 6"/></svg>' : '') + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:1px;">' + (p.sponsor || '') + (p.sponsor && p.assetClass ? ' \u00b7 ' : '') + (p.assetClass || '') + '</div></td>'
+        + '<td>$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
+        + '<td style="color:var(--primary);">$' + (parseFloat(p.distributionsReceived) || 0).toLocaleString() + '</td>'
+        + '<td><span style="padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'Active') + '</span></td>'
+        + '</tr>';
+    }).join('');
 
-  // Milestone progress card
-  const milestoneProgressHtml = typeof renderDashboardMilestoneProgress === 'function' ? renderDashboardMilestoneProgress() : '';
+    portfolioHtml = '<div class="dash-portfolio">'
+      + '<div class="dash-section-header">'
+      + '<div class="dash-section-title">Your Portfolio</div>'
+      + '<button class="dash-section-link" onclick="navigateTo(\'portfolio\')">View Full Portfolio &rarr;</button>'
+      + '</div>'
+      + '<div style="overflow-x:auto;">'
+      + '<table><thead><tr><th>Investment</th><th>Invested</th><th>Distributions</th><th>Status</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>'
+      + '</div>';
+  } else {
+    portfolioHtml = '<div class="dash-portfolio">'
+      + '<div class="dash-portfolio-empty">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>'
+      + '<div class="dash-portfolio-empty-title">No investments yet</div>'
+      + '<div class="dash-portfolio-empty-desc">Add investments to track your portfolio here.</div>'
+      + '<button onclick="navigateTo(\'portfolio\')" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>'
+      + '</div></div>';
+  }
 
-  container.innerHTML = `
-    ${goalProgressHtml}
-    ${milestoneProgressHtml}
-    <!-- Greeting + Goal Hero -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
-      <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:32px;color:#fff;">
-        <div style="font-size:14px;opacity:0.8;margin-bottom:4px;">Welcome back,</div>
-        <div style="font-family:var(--font-headline);font-size:28px;font-weight:400;margin-bottom:20px;">${userName}</div>
-        ${hasGoals ? `
-          <div style="font-size:12px;opacity:0.7;margin-bottom:8px;">Your Goal: $${goals.targetIncome.toLocaleString()}/yr passive income in ${goals.timeline} years</div>
-          <div style="height:12px;background:rgba(255,255,255,0.15);border-radius:6px;overflow:hidden;margin-bottom:8px;">
-            <div style="height:100%;width:${goalProgress}%;background:#51BE7B;border-radius:6px;transition:width 0.6s;min-width:${goalProgress > 0 ? '4px' : '0'};"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;opacity:0.7;">
-            <span>$${(goals.currentIncome || 0).toLocaleString()}/yr current</span>
-            <span>${goalProgress}% there</span>
-            <span>$${goalGap.toLocaleString()}/yr to go</span>
-          </div>
-        ` : `
-          <div style="font-size:13px;opacity:0.8;margin-bottom:12px;">You haven't set your investment goals yet.</div>
-          <button onclick="navigateTo('goals')" style="padding:8px 16px;background:#51BE7B;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Set My Goals &rarr;</button>
-        `}
-      </div>
+  // ===== SECTION 3: Recommended Deals =====
+  let recommendedHtml = '';
+  const goalGap = hasGoals ? targetIncome - currentIncome : 0;
 
-      <!-- Action Items -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-        <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Next Steps</div>
-        ${actions.length > 0 ? actions.map(a => `
-          <div onclick="${a.action}" style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);margin-bottom:4px;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background=''">
-            <div style="width:4px;height:28px;border-radius:2px;background:${priorityColors[a.priority]};flex-shrink:0;"></div>
-            <div style="font-size:13px;color:var(--text-dark);line-height:1.4;">${a.text}</div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;margin-left:auto;"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-        `).join('') : '<div style="text-align:center;padding:20px;font-size:13px;color:var(--text-muted);">You\'re all caught up!</div>'}
-      </div>
-    </div>
-
-    <!-- Portfolio Summary Row -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;">
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Invested</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">$${totalInvested.toLocaleString()}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Active Investments</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${activeInvestments}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Distributions</div>
-        <div style="font-size:24px;font-weight:800;color:var(--primary);">$${totalDistributions.toLocaleString()}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Deals in Pipeline</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${stageCounts.interested + stageCounts.duediligence}</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Passed On</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">${stageCounts.passed}</div>
-      </div>
-    </div>
-
-    <!-- Portfolio Chart + Investments Table -->
-    <div style="display:grid;grid-template-columns:${portfolio.length > 0 ? '320px 1fr' : '1fr'};gap:24px;margin-bottom:24px;">
-      ${portfolio.length > 0 ? `
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Asset Allocation</div>
-          <canvas id="dashboardPieChart" style="max-width:240px;margin:0 auto;display:block;"></canvas>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;overflow:hidden;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">My Investments</div>
-            <button onclick="navigateTo('portfolio')" style="padding:4px 12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:10px;cursor:pointer;color:var(--text-secondary);">View Full Portfolio &rarr;</button>
-          </div>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;">
-              <thead><tr style="border-bottom:2px solid var(--border);">
-                <th style="text-align:left;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Investment</th>
-                <th style="text-align:right;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Invested</th>
-                <th style="text-align:right;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Distributions</th>
-                <th style="text-align:center;padding:8px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Status</th>
-              </tr></thead>
-              <tbody>
-                ${portfolio.map(p => {
-                  const statusColor = p.status === 'Active' ? 'var(--primary)' : p.status === 'Distributing' ? '#3b82f6' : p.status === 'Exited' ? '#6b7280' : '#f59e0b';
-                  const matchedDeal = deals.find(d => d.investmentName && p.investmentName && d.investmentName.toLowerCase().trim() === p.investmentName.toLowerCase().trim());
-                  const clickAttr = matchedDeal ? 'onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + matchedDeal.id + '\'),200)" style="border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'"' : 'style="border-bottom:1px solid var(--border);"';
-                  return '<tr ' + clickAttr + '>'
-                    + '<td style="padding:10px 8px;"><div style="font-weight:700;color:var(--text-dark);">' + p.investmentName + (matchedDeal ? ' <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:12px;height:12px;vertical-align:middle;margin-left:4px;"><polyline points="9 18 15 12 9 6"/></svg>' : '') + '</div><div style="font-size:11px;color:var(--text-muted);">' + (p.sponsor || '') + ' · ' + (p.assetClass || '') + '</div></td>'
-                    + '<td style="padding:10px 8px;text-align:right;font-weight:600;">$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
-                    + '<td style="padding:10px 8px;text-align:right;color:var(--primary);font-weight:600;">$' + (parseFloat(p.distributionsReceived) || 0).toLocaleString() + '</td>'
-                    + '<td style="padding:10px 8px;text-align:center;"><span style="padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '22;color:' + statusColor + ';">' + (p.status || 'Active') + '</span></td>'
-                    + '</tr>';
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ` : `
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:40px;text-align:center;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">No investments yet</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Add investments to see your portfolio breakdown here.</div>
-          <button onclick="navigateTo('portfolio')" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Investment</button>
-        </div>
-      `}
-    </div>
-
-    <!-- Deals That Could Help You Get There -->
-    <div id="dashboardGoalDeals" style="margin-top:24px;"></div>
-
-    <!-- Income Tracking -->
-    <div id="dashboardIncomeSection" style="margin-top:24px;"></div>
-
-    <!-- Three Paths (rendered after goals are loaded) -->
-    <div id="dashboardThreePaths" style="margin-top:24px;"></div>
-  `;
-
-  // Render goal-matched deals if user has goals set
   if (hasGoals && goalGap > 0) {
     const annualDeploy = Math.round((goalGap / 0.08) / (parseInt(goals.timeline) || 5));
     const scoredDeals = deals.map(d => {
@@ -11878,10 +12099,10 @@ function renderDashboard() {
       else if (yld >= 0.06) { reasons.push('Solid cash flow at ' + (yld * 100).toFixed(1) + '% yield contributes to passive income'); score += 2; }
       if (irr >= 0.15) { reasons.push('High target return (' + (irr * 100).toFixed(1) + '% IRR) helps grow capital faster'); score += 2; }
       else if (irr >= 0.10) { reasons.push('Competitive ' + (irr * 100).toFixed(1) + '% target IRR for capital growth'); score += 1; }
-      if (d.investmentMinimum && d.investmentMinimum <= 50000 && d.investmentMinimum > 0) { reasons.push('Low minimum ($' + d.investmentMinimum.toLocaleString() + ') — easy to start or diversify'); score += 1; }
+      if (d.investmentMinimum && d.investmentMinimum <= 50000 && d.investmentMinimum > 0) { reasons.push('Low minimum ($' + d.investmentMinimum.toLocaleString() + ') \u2014 easy to start or diversify'); score += 1; }
       else if (d.investmentMinimum && d.investmentMinimum <= 100000 && d.investmentMinimum > 0) { reasons.push('Accessible $' + d.investmentMinimum.toLocaleString() + ' minimum fits typical deal sizing'); score += 0.5; }
       if ((goals.taxReduction || 0) > 0 && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage')) { reasons.push('Real estate depreciation in ' + d.assetClass.toLowerCase() + ' can offset taxable income'); score += 2; }
-      if (d.status === 'Evergreen') { reasons.push('Evergreen fund — invest on your timeline, no rush to deploy'); score += 1; }
+      if (d.status === 'Evergreen') { reasons.push('Evergreen fund \u2014 invest on your timeline, no rush to deploy'); score += 1; }
       if (d.distributions === 'Monthly') { reasons.push('Monthly distributions for steady cash flow'); score += 1; }
       else if (d.distributions === 'Quarterly') { reasons.push('Quarterly distributions'); score += 0.5; }
       if (d.investmentMinimum && d.investmentMinimum > 0 && d.investmentMinimum <= annualDeploy) { score += 0.5; }
@@ -11896,70 +12117,76 @@ function renderDashboard() {
         const topReasons = d._fitReasons.slice(0, 3);
         const yieldVal = d.cashOnCash || d.preferredReturn || 0;
         const annualIncome = d.investmentMinimum ? Math.round(d.investmentMinimum * (yieldVal || (d.targetIRR || 0.08))) : 0;
-        goalDealCards += '<div onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + d.id + '\'),200);" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 4px 12px rgba(81,190,123,0.1)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
+        goalDealCards += '<div onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + d.id + '\'),200);" style="background:var(--bg-cream);border:1px solid var(--border-light);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 4px 12px rgba(81,190,123,0.1)\'" onmouseout="this.style.borderColor=\'var(--border-light)\';this.style.boxShadow=\'none\'">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
           + '<div>'
           + '<div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + d.investmentName + '</div>'
           + '<div style="font-size:11px;color:var(--text-secondary);">' + d.managementCompany + ' &middot; ' + d.assetClass + '</div>'
-          + '</div>'
-          + ''
-          + '</div>'
+          + '</div></div>'
           + '<div style="display:flex;gap:12px;margin-bottom:14px;">'
-          + (d.targetIRR ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Target IRR</div></div>' : '')
-          + (yieldVal ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--primary);">' + (yieldVal * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">' + (d.cashOnCash ? 'Cash-on-Cash' : 'Pref Return') + '</div></div>' : '')
-          + (d.investmentMinimum ? '<div style="padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum.toLocaleString()) + '</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Minimum</div></div>' : '')
+          + (d.targetIRR ? '<div style="padding:8px 12px;background:var(--bg-card);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Target IRR</div></div>' : '')
+          + (yieldVal ? '<div style="padding:8px 12px;background:var(--bg-card);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--primary);">' + (yieldVal * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">' + (d.cashOnCash ? 'Cash-on-Cash' : 'Pref Return') + '</div></div>' : '')
+          + (d.investmentMinimum ? '<div style="padding:8px 12px;background:var(--bg-card);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum.toLocaleString()) + '</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Minimum</div></div>' : '')
           + '</div>'
-          + '<div style="flex:1;border-top:1px solid var(--border);padding-top:12px;">'
+          + '<div style="flex:1;border-top:1px solid var(--border-light);padding-top:12px;">'
           + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Why This Fits Your Plan</div>'
           + topReasons.map(function(r) { return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:5px;font-size:11px;color:var(--text-secondary);line-height:1.5;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;margin-top:2px;"><polyline points="4 12 10 18 20 6"/></svg>' + r + '</div>'; }).join('')
-          + (annualIncome > 0 ? '<div style="margin-top:8px;padding:6px 10px;background:var(--primary);background:linear-gradient(135deg,var(--primary),#3bba78);border-radius:var(--radius-sm);font-size:11px;font-weight:700;color:#fff;text-align:center;">At min investment: ~$' + annualIncome.toLocaleString() + '/yr toward your goal</div>' : '')
-          + '</div>'
-          + '</div>';
+          + (annualIncome > 0 ? '<div style="margin-top:8px;padding:6px 10px;background:linear-gradient(135deg,var(--primary),#3bba78);border-radius:var(--radius-sm);font-size:11px;font-weight:700;color:#fff;text-align:center;">At min investment: ~$' + annualIncome.toLocaleString() + '/yr toward your goal</div>' : '')
+          + '</div></div>';
       });
 
-      const goalDealsEl = document.getElementById('dashboardGoalDeals');
-      if (goalDealsEl) {
-        goalDealsEl.innerHTML = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-          + '<div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deals That Could Help You Get There</div>'
-          + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Matched to your $' + goals.targetIncome.toLocaleString() + '/yr income goal, risk profile, and investment pace</div></div>'
-          + '<button onclick="navigateTo(\'deals\')" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Explore All Deals &rarr;</button>'
-          + '</div>'
-          + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">'
-          + goalDealCards
-          + '</div></div>';
-      }
+      recommendedHtml = '<div class="dash-recommended">'
+        + '<div class="dash-section-header">'
+        + '<div><div class="dash-section-title">Deals That Could Help You Get There</div>'
+        + '<div class="dash-recommended-subtitle">Matched to your $' + goals.targetIncome.toLocaleString() + '/yr income goal</div></div>'
+        + '<button class="dash-section-link" onclick="navigateTo(\'deals\')">Explore All Deals &rarr;</button>'
+        + '</div>'
+        + '<div class="dash-recommended-grid">' + goalDealCards + '</div>'
+        + '</div>';
+    }
+  } else if (branch && !hasGoals) {
+    // Has wizard but no goals — show wizard-based recommendations
+    let filterFn, sortKey;
+    if (branch === 'cashflow') {
+      filterFn = function(d) { return d.assetClass === 'Lending' || d.preferredReturn || d.cashOnCash || (d.investmentObjective && d.investmentObjective.toLowerCase().includes('cashflow')); };
+      sortKey = function(d) { return d.preferredReturn || d.cashOnCash || d.targetIRR || 0; };
+    } else if (branch === 'tax') {
+      filterFn = function(d) { return d.strategy === 'Value-Add' || d.firstYrDepreciation || (d.assetClass && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage' || d.assetClass === 'RV/Mobile Home Parks')); };
+      sortKey = function(d) { return d.targetIRR || 0; };
+    } else {
+      filterFn = function(d) { return (d.targetIRR || 0) >= 0.15; };
+      sortKey = function(d) { return d.targetIRR || 0; };
+    }
+    var recommended = deals.filter(function(d) { return !stages[d.id] && filterFn(d); })
+      .sort(function(a, b) { return sortKey(b) - sortKey(a); }).slice(0, 3);
+
+    if (recommended.length > 0) {
+      var recCards = recommended.map(function(d) {
+        var yld = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
+        var yldLabel = d.preferredReturn ? 'Pref Return' : d.cashOnCash ? 'Cash-on-Cash' : 'Target IRR';
+        return '<div class="goal-deal-card" onclick="navigateTo(\'deals\');setTimeout(function(){openPanel(\'' + d.id + '\')},200);">'
+          + '<div class="goal-deal-card-name">' + (d.investmentName || '') + '</div>'
+          + '<div class="goal-deal-card-manager">' + (d.managementCompany || '') + ' &middot; ' + (d.assetClass || '') + '</div>'
+          + '<div><span class="goal-deal-card-yield">' + (yld * 100).toFixed(1) + '%</span><span class="goal-deal-card-yield-label">' + yldLabel + '</span>'
+          + '<span class="goal-deal-card-link">View &rarr;</span></div></div>';
+      }).join('');
+
+      recommendedHtml = '<div class="dash-recommended">'
+        + '<div class="dash-section-header">'
+        + '<div class="dash-section-title">Recommended for You</div>'
+        + '<button class="dash-section-link" onclick="navigateTo(\'deals\')">Explore All Deals &rarr;</button>'
+        + '</div>'
+        + '<div class="goal-recommended-deals">' + recCards + '</div>'
+        + '</div>';
     }
   }
 
+  // ===== Render all 3 sections =====
+  container.innerHTML = heroHtml + portfolioHtml + recommendedHtml
+    + '<div id="dashboardIncomeSection" style="margin-top:8px;"></div>';
+
   // Render Income Section
   if (typeof renderIncomeSection === 'function') renderIncomeSection();
-
-  // Render Three Paths section on Dashboard
-  var threePathsEl = document.getElementById('dashboardThreePaths');
-  if (threePathsEl && typeof renderThreePaths === 'function') {
-    var tgt = hasGoals ? goals.targetIncome : 100000;
-    var cap = hasGoals ? goals.capital : 500000;
-    var chk = hasGoals && goals.checkSize ? goals.checkSize : 100000;
-    threePathsEl.innerHTML = renderThreePaths(tgt, cap, chk);
-  }
-
-  // Render pie chart if portfolio exists
-  if (portfolio.length > 0 && Object.keys(assetBreakdown).length > 0) {
-    try {
-      const ctx = document.getElementById('dashboardPieChart')?.getContext('2d');
-      if (ctx) {
-        const labels = Object.keys(assetBreakdown);
-        const data = Object.values(assetBreakdown);
-        const colors = ['#51BE7B', '#3b82f6', '#f59e0b', '#e74c3c', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
-        new Chart(ctx, {
-          type: 'doughnut',
-          data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }] },
-          options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } }, cutout: '60%' }
-        });
-      }
-    } catch (e) { console.log('Dashboard chart error:', e); }
-  }
 }
 
 // ========== INCOME / DISTRIBUTION TRACKING ==========
