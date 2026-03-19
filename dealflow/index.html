@@ -9131,21 +9131,43 @@ function renderReport() {
         const annualPerDeal = Math.round(checkSizeNum * avgCoC);
         const dealsNeededB = Math.ceil(gapB / annualPerDeal);
         const totalAnnual = dealsNeededB * annualPerDeal;
+        // Store initial values for interactive calculator
+        window._ptgGap = gapB;
+        window._ptgCheckSize = checkSizeNum;
+        window._ptgCoC = cocPct;
+        window._ptgCoCValues = cocValues;
+
         return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;">'
           + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Your Path to Goal</div>'
           + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">'
           + 'To close your <strong style="color:var(--text-dark);">$' + gapB.toLocaleString() + '/yr</strong> income gap:'
           + '</div>'
           + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">'
-          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">' + dealsNeededB + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
+          // Deals (auto-calculated)
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div id="ptgDeals" style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">' + dealsNeededB + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
           + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">&times;</div>'
-          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">EACH</div></div>'
-          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">@</div>'
-          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--primary);">~' + cocPct + '%</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">CASH-ON-CASH</div></div>'
-          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">=</div>'
-          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div style="font-family:var(--font-headline);font-size:24px;color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
+          // Check size (adjustable)
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:10px 14px;text-align:center;flex:1;min-width:120px;">'
+          + '<div style="display:flex;align-items:center;justify-content:center;gap:6px;">'
+          + '<button onclick="ptgAdjust(\'check\',-25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button>'
+          + '<div id="ptgCheckSize" style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div>'
+          + '<button onclick="ptgAdjust(\'check\',25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button>'
           + '</div>'
-          + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Based on ' + (cocValues.length > 0 ? 'average cash-on-cash from your matching deals' : 'an estimated 8% cash-on-cash return') + '. Actual returns vary by deal.</div>'
+          + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">EACH</div></div>'
+          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">@</div>'
+          // CoC (adjustable)
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:10px 14px;text-align:center;flex:1;min-width:120px;">'
+          + '<div style="display:flex;align-items:center;justify-content:center;gap:6px;">'
+          + '<button onclick="ptgAdjust(\'coc\',-1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button>'
+          + '<div id="ptgCoC" style="font-family:var(--font-headline);font-size:24px;color:var(--primary);">~' + cocPct + '%</div>'
+          + '<button onclick="ptgAdjust(\'coc\',1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button>'
+          + '</div>'
+          + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CASH-ON-CASH</div></div>'
+          + '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-muted);">=</div>'
+          // Total (auto-calculated)
+          + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px 18px;text-align:center;flex:1;min-width:100px;"><div id="ptgTotal" style="font-family:var(--font-headline);font-size:24px;color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
+          + '</div>'
+          + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Adjust your check size and target return to build your plan. ' + (cocValues.length > 0 ? 'Default CoC is based on your matching deals.' : '') + ' Actual returns vary by deal.</div>'
           + '</div>';
       })()}
 
@@ -9200,6 +9222,25 @@ function safeJoin(val) {
   if (Array.isArray(val)) return val.join(', ');
   if (val && typeof val === 'string') return val;
   return '';
+}
+
+// Interactive Path to Goal calculator
+function ptgAdjust(type, delta) {
+  if (type === 'check') {
+    window._ptgCheckSize = Math.max(25000, (window._ptgCheckSize || 100000) + delta);
+  } else if (type === 'coc') {
+    window._ptgCoC = Math.max(1, Math.min(30, (window._ptgCoC || 8) + delta));
+  }
+  const cs = window._ptgCheckSize || 100000;
+  const coc = (window._ptgCoC || 8) / 100;
+  const gap = window._ptgGap || 0;
+  const annual = Math.round(cs * coc);
+  const deals = annual > 0 ? Math.ceil(gap / annual) : 0;
+  const total = deals * annual;
+  document.getElementById('ptgDeals').textContent = deals;
+  document.getElementById('ptgCheckSize').textContent = '$' + cs.toLocaleString();
+  document.getElementById('ptgCoC').textContent = '~' + window._ptgCoC + '%';
+  document.getElementById('ptgTotal').textContent = '$' + total.toLocaleString();
 }
 
 function reportItem(label, value) {
