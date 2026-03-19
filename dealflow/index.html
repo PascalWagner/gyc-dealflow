@@ -13434,17 +13434,26 @@ function viewAsUser(email, name, contactId, tier) {
   // Close dropdown
   document.getElementById('viewAsDropdown').style.display = 'none';
 
-  // Update sidebar display
-  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  // Update sidebar display — capitalize name
+  const capName = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  const initials = capName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('sidebarAvatar').textContent = initials;
-  document.getElementById('sidebarName').textContent = name;
+  document.getElementById('sidebarName').textContent = capName;
   const sidebarEmailEl2 = document.getElementById('sidebarEmail');
   if (sidebarEmailEl2) sidebarEmailEl2.textContent = email;
+
+  // Gray out Assets for non-admin impersonated users
+  const navAssets = document.getElementById('navAssets');
+  const assetsLabel = document.getElementById('assetsComingSoon');
+  if (navAssets) {
+    navAssets.classList.add('nav-item-disabled');
+    if (assetsLabel) assetsLabel.style.display = '';
+  }
 
   // Show impersonation indicator
   document.getElementById('viewAsSearch').style.display = 'none';
   document.getElementById('viewAsImpersonating').style.display = 'block';
-  document.getElementById('viewAsName').textContent = name;
+  document.getElementById('viewAsName').textContent = capName;
   document.getElementById('viewAsEmail').textContent = email;
 
   // Fetch their buy box from GHL
@@ -13479,6 +13488,9 @@ function exitViewAs() {
   // Hide impersonation indicator, show search
   document.getElementById('viewAsImpersonating').style.display = 'none';
   document.getElementById('viewAsSearch').style.display = 'block';
+
+  // Restore Assets access for admin
+  showAdminNav();
 
   adminRealUser = null;
 
