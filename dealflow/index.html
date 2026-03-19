@@ -6649,6 +6649,8 @@ function clearGoalSort() {
 function updateGoalSortIndicator(isGoalSorted) {
   const el = document.getElementById('goalSortIndicator');
   if (!el) return;
+  // Disabled: goal sort indicator hidden for cleaner mobile UI
+  el.style.display = 'none'; return;
   if (!isGoalSorted) { el.style.display = 'none'; return; }
   const wd = getCachedWizardData();
   const branch = wd._branch;
@@ -6662,6 +6664,8 @@ function updateGoalSortIndicator(isGoalSorted) {
 }
 
 function getGoalFitLine(deal) {
+  // Disabled: goal fit lines were inaccurate and confusing
+  return '';
   const wd = getCachedWizardData();
   if (!wd._branch) return '';
   const branch = wd._branch;
@@ -13704,16 +13708,16 @@ fetchBuyBoxFromGHL();
       const row = document.createElement('div');
       row.className = 'ios-filter-row';
       row.innerHTML = `
-        <div style="position:relative;flex:1;min-width:0;">
-          <input type="text" class="filter-input" placeholder="Search deals..."
+        <div style="flex:1;min-width:0;">
+          <input type="text" class="filter-input" placeholder="Search..."
             oninput="document.getElementById('filterSearch').value=this.value;applyFilters();"
-            style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
         </div>
-        <button class="ios-filter-toggle" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+        <button class="ios-filter-toggle" style="flex:1;justify-content:center;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           Filters
         </button>
-        <select style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:var(--font-ui);font-weight:600;flex-shrink:0;" onchange="_goalSortOverridden=true;document.getElementById('filterSort').value=this.value;applyFilters();">
+        <select style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;min-width:0;" onchange="_goalSortOverridden=true;document.getElementById('filterSort').value=this.value;applyFilters();">
           <option value="newest">Newest</option>
           <option value="irr">Highest IRR</option>
           <option value="min_invest">Lowest Min</option>
