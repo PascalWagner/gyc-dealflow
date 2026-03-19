@@ -5296,7 +5296,7 @@ function renderCreditCard(deal) {
             <div class="metric-value" style="font-size:11px;${deal.mcFoundingYear ? '' : 'color:var(--text-muted);font-weight:600;'}">${deal.mcFoundingYear || 'Coming Soon'}</div>
           </div>
         </div>
-        ${(function(){ var gf = getGapFillPercent(deal); return gf !== null ? '<div style="padding:6px 12px;margin-top:8px;background:rgba(74,222,128,0.08);border-radius:6px;font-size:11px;color:#4ade80;font-weight:600;text-align:center;">Fills ' + Math.min(gf, 100) + '% of your income gap</div>' : ''; })()}
+        ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
       </div>
       <div class="card-footer">
         <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
@@ -5580,7 +5580,7 @@ function renderCard(deal) {
             <div class="metric-value" style="font-size:11px;color:var(--text-muted);font-weight:600;">Coming Soon</div>
           </div>
         </div>
-        ${(function(){ var gf = getGapFillPercent(deal); return gf !== null ? '<div style="padding:6px 12px;margin-top:8px;background:rgba(74,222,128,0.08);border-radius:6px;font-size:11px;color:#4ade80;font-weight:600;text-align:center;">Fills ' + Math.min(gf, 100) + '% of your income gap</div>' : ''; })()}
+        ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
       </div>
       <div class="card-footer">
         <button class="btn btn-outline" onclick="event.stopPropagation(); setDealStage('${deal.id}','passed'); renderAll();" style="gap:4px;">
@@ -8085,35 +8085,85 @@ function renderCashflowGapBar() {
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          <span style="font-size:12px;color:#94a3b8;font-family:var(--font-ui);">Set your passive income goal to see how each deal gets you closer</span>
+          <span style="font-size:12px;color:#94a3b8;font-family:var(--font-ui);">Set your investment goal to see how each deal gets you closer</span>
         </div>
         <button onclick="navigateTo('goals')" style="padding:5px 14px;background:#4ade80;color:#0f172a;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Set Goal &rarr;</button>
       </div>`;
     return;
   }
 
-  const gap = goals.targetIncome - goals.currentIncome;
-  const progress = goals.targetIncome > 0 ? Math.min(100, Math.round((goals.currentIncome / goals.targetIncome) * 100)) : 0;
+  // Build goal-type-specific content
+  const goalType = goals.type || 'passive_income';
+  var metricsHtml = '';
+  var progress = 0;
+  var hasGap = true;
+  var gradientColors = '';
+  var icon = '';
 
-  // Goals set — show progress bar with gap
+  if (goalType === 'reduce_taxes') {
+    // TAX REDUCTION: show tax shelter goal
+    const taxTarget = goals.taxReduction || 0;
+    const capitalDeployed = goals.currentIncome || 0; // repurpose as "sheltered so far"
+    const sheltered = Math.round(capitalDeployed * 0.8); // rough depreciation estimate
+    const taxGap = Math.max(0, taxTarget - sheltered);
+    progress = taxTarget > 0 ? Math.min(100, Math.round((sheltered / taxTarget) * 100)) : 0;
+    hasGap = taxGap > 0;
+    gradientColors = '#a78bfa,#7c3aed'; // purple for tax
+    icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+    metricsHtml = `
+      <span style="color:#94a3b8;">${icon} <strong style="color:#a78bfa;margin-left:4px;">Tax Strategy</strong></span>
+      <span style="color:#94a3b8;">Shelter: <strong style="color:#fff;">$${taxTarget.toLocaleString()}/yr</strong></span>
+      <span style="color:#94a3b8;">Covered: <strong style="color:#a78bfa;">$${sheltered.toLocaleString()}</strong></span>
+      <span style="color:#94a3b8;">Gap: <strong style="color:#f59e0b;">$${taxGap.toLocaleString()}</strong></span>`;
+
+  } else if (goalType === 'build_wealth') {
+    // EQUITY GROWTH: show portfolio value / capital deployment
+    const targetPortfolio = Math.round((goals.targetIncome || 100000) / 0.08); // back into portfolio target from income goal
+    const capitalAvailable = goals.capital || 0;
+    const portfolioInv = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+    const deployed = portfolioInv.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
+    const deployGap = Math.max(0, capitalAvailable - deployed);
+    progress = capitalAvailable > 0 ? Math.min(100, Math.round((deployed / capitalAvailable) * 100)) : 0;
+    hasGap = deployGap > 0;
+    gradientColors = '#fbbf24,#f59e0b'; // amber for growth
+    icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+    metricsHtml = `
+      <span style="color:#94a3b8;">${icon} <strong style="color:#fbbf24;margin-left:4px;">Growth Strategy</strong></span>
+      <span style="color:#94a3b8;">Capital: <strong style="color:#fff;">$${capitalAvailable.toLocaleString()}</strong></span>
+      <span style="color:#94a3b8;">Deployed: <strong style="color:#fbbf24;">$${deployed.toLocaleString()}</strong></span>
+      <span style="color:#94a3b8;">Remaining: <strong style="color:#f59e0b;">$${deployGap.toLocaleString()}</strong></span>`;
+
+  } else {
+    // PASSIVE INCOME (default): show income gap
+    const gap = goals.targetIncome - goals.currentIncome;
+    progress = goals.targetIncome > 0 ? Math.min(100, Math.round((goals.currentIncome / goals.targetIncome) * 100)) : 0;
+    hasGap = gap > 0;
+    gradientColors = '#4ade80,#3b82f6'; // green-blue for cashflow
+    icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+    metricsHtml = `
+      <span style="color:#94a3b8;">${icon} <strong style="color:#4ade80;margin-left:4px;">Cashflow</strong></span>
+      <span style="color:#94a3b8;">Goal: <strong style="color:#fff;">$${goals.targetIncome.toLocaleString()}/yr</strong></span>
+      <span style="color:#94a3b8;">Current: <strong style="color:#4ade80;">$${goals.currentIncome.toLocaleString()}/yr</strong></span>
+      <span style="color:#94a3b8;">Gap: <strong style="color:#f59e0b;">$${(gap > 0 ? gap : 0).toLocaleString()}/yr</strong></span>`;
+  }
+
+  // CTA
   bar.style.display = 'flex';
   var ctaHtml = '';
-  if (gap > 0 && user && user.tier === 'explorer') {
+  if (hasGap && user && user.tier === 'explorer') {
     ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
-  } else if (gap <= 0) {
+  } else if (!hasGap) {
     ctaHtml = '<span style="font-size:11px;color:#4ade80;font-weight:700;">Goal reached!</span>';
   }
 
   bar.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px;flex-wrap:wrap;">
       <div style="display:flex;align-items:center;gap:16px;flex:1;min-width:0;">
-        <div style="display:flex;gap:16px;font-size:12px;font-family:var(--font-ui);white-space:nowrap;">
-          <span style="color:#94a3b8;">Goal: <strong style="color:#fff;">$${goals.targetIncome.toLocaleString()}/yr</strong></span>
-          <span style="color:#94a3b8;">Current: <strong style="color:#4ade80;">$${goals.currentIncome.toLocaleString()}/yr</strong></span>
-          <span style="color:#94a3b8;">Gap: <strong style="color:#f59e0b;">$${gap.toLocaleString()}/yr</strong></span>
+        <div style="display:flex;gap:16px;font-size:12px;font-family:var(--font-ui);white-space:nowrap;align-items:center;">
+          ${metricsHtml}
         </div>
         <div style="flex:1;min-width:60px;max-width:200px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
-          <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,#4ade80,#3b82f6);border-radius:3px;transition:width 0.6s ease;"></div>
+          <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,${gradientColors});border-radius:3px;transition:width 0.6s ease;"></div>
         </div>
         <span style="font-size:12px;font-weight:800;color:#fff;">${progress}%</span>
       </div>
@@ -8121,16 +8171,43 @@ function renderCashflowGapBar() {
     </div>`;
 }
 
-// Helper: calculate how much of income gap a deal fills
+// Helper: calculate how a deal contributes to the user's goal
 function getGapFillPercent(deal) {
   const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
   if (!goals) return null;
+  const goalType = goals.type || 'passive_income';
+  const dealMin = deal.investmentMinimum || 100000;
+
+  if (goalType === 'reduce_taxes') {
+    // How much of tax shelter gap this deal could fill via depreciation
+    const taxTarget = goals.taxReduction || 0;
+    if (taxTarget <= 0) return null;
+    // Estimate: real estate deals give ~80% year-1 depreciation via cost seg, others ~20%
+    const isRealEstate = (deal.assetClass || '').match(/multi family|self storage|industrial|hotels|mobile|short term|mixed/i);
+    const depreciationRate = isRealEstate ? 0.60 : 0.15;
+    const taxBenefit = dealMin * depreciationRate;
+    return { percent: Math.round((taxBenefit / taxTarget) * 100), label: 'tax shelter' };
+  }
+
+  if (goalType === 'build_wealth') {
+    // How much of undeployed capital this deal uses
+    const capitalAvailable = goals.capital || 0;
+    const portfolioInv = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+    const deployed = portfolioInv.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
+    const remaining = Math.max(0, capitalAvailable - deployed);
+    if (remaining <= 0) return null;
+    // Show equity multiple potential
+    const multiple = deal.equityMultiple || 2.0;
+    const futureValue = dealMin * multiple;
+    return { percent: Math.round((dealMin / remaining) * 100), label: 'capital to deploy', extra: '$' + Math.round(futureValue).toLocaleString() + ' projected' };
+  }
+
+  // Default: passive income
   const gap = goals.targetIncome - goals.currentIncome;
   if (gap <= 0) return null;
-  const dealMin = deal.investmentMinimum || 100000;
   const dealYield = deal.preferredReturn || 0.08;
   const annualIncome = dealMin * dealYield;
-  return Math.round((annualIncome / gap) * 100);
+  return { percent: Math.round((annualIncome / gap) * 100), label: 'income gap' };
 }
 
 // Reusable 3-path component — used on Goals page and Dashboard
