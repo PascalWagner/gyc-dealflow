@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     // 2. Write to Airtable Deck Submissions table
     const pat = process.env.AIRTABLE_PAT;
-    const deckSubmissionsTableId = process.env.DECK_SUBMISSIONS_TABLE_ID;
+    const deckSubmissionsTableId = process.env.DECK_SUBMISSIONS_TABLE_ID || 'tblXLMqI1TxT9eBQY';
     if (pat && deckSubmissionsTableId) {
       try {
         const airtableResp = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${deckSubmissionsTableId}`, {
@@ -83,14 +83,10 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             records: [{
               fields: {
+                'Deal Name': (dealName || '') + ' — ' + new Date(submittedAt).toLocaleDateString(),
                 'Deal ID': dealId || '',
-                'Deal Name': dealName || '',
-                'Submitted URL': deckUrl,
-                'Notes': notes || '',
-                'Submitted By Email': userEmail || '',
-                'Submitted By Name': userName || '',
-                'Status': 'Pending',
-                'Submitted At': submittedAt
+                'Notes': 'URL: ' + (deckUrl || '') + '\nSubmitted by: ' + (userName || '') + ' (' + (userEmail || '') + ')' + (notes ? '\nNotes: ' + notes : ''),
+                'Submitted By Name': userName || (userEmail || '')
               }
             }]
           })
