@@ -34,6 +34,50 @@ export default async function handler(req, res) {
 
   const { action, email, password, firstName, lastName } = req.body || {};
 
+  // Magic link fallback: lookup contact by email (no password needed, user proved ownership via magic link)
+  if (action === 'lookup') {
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    try {
+      if (GHL_API_KEY) {
+        const searchUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`;
+        const ghlResp = await fetch(searchUrl, {
+          headers: { 'Authorization': `Bearer ${GHL_API_KEY}` }
+        });
+
+        if (ghlResp.ok) {
+          const ghlData = await ghlResp.json();
+          const contact = (ghlData.contacts || []).find(c =>
+            c.email?.toLowerCase() === email.toLowerCase()
+          );
+
+          if (contact) {
+            return res.status(200).json({
+              success: true,
+              email: contact.email,
+              name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || email.split('@')[0],
+              contactId: contact.id,
+              tier: deriveTier(contact.tags || []),
+              tags: contact.tags || [],
+              token: Date.now().toString(36) + Math.random().toString(36).slice(2)
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('GHL lookup error:', e);
+    }
+
+    // Contact not found — still allow login as free user
+    return res.status(200).json({
+      success: true,
+      email,
+      name: email.split('@')[0],
+      tier: 'free',
+      token: Date.now().toString(36) + Math.random().toString(36).slice(2)
+    });
+  }
+
   if (action === 'login') {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });

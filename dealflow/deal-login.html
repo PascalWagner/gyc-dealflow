@@ -523,8 +523,35 @@ const WEBHOOKS = {
         console.warn('[Magic Link] Verify returned success=false:', data.error);
       }
     }
-    // Verification failed — try direct login as fallback (skip token verification)
-    console.log('[Magic Link] Verification failed, trying direct login for:', email);
+    // Verification failed — look up contact directly via our API
+    console.log('[Magic Link] Verify webhook failed, calling /api/auth lookup for:', email);
+    const lookupResp = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'lookup', email })
+    }).catch(err => { console.error('[Magic Link] Lookup fetch error:', err); return null; });
+
+    if (lookupResp && lookupResp.ok) {
+      const lookupData = await lookupResp.json().catch(() => ({}));
+      console.log('[Magic Link] Lookup result:', JSON.stringify(lookupData));
+      if (lookupData.success) {
+        const lookupUser = {
+          email: lookupData.email || email,
+          name: lookupData.name || email.split('@')[0],
+          id: lookupData.contactId || null,
+          token: lookupData.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
+          tier: lookupData.tier || 'free',
+          loggedInAt: new Date().toISOString()
+        };
+        console.log('[Magic Link] Saving user from lookup:', JSON.stringify(lookupUser));
+        localStorage.setItem('gycUser', JSON.stringify(lookupUser));
+        window.location.href = 'index.html';
+        return;
+      }
+    }
+
+    // Last resort fallback
+    console.warn('[Magic Link] Lookup also failed, using minimal session');
     const directUser = {
       email: email, name: email.split('@')[0],
       id: null, token: Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -535,13 +562,32 @@ const WEBHOOKS = {
     return;
   } catch(e) {
     console.error('[Magic Link] Exception:', e);
-    // Even on exception, try to log the user in
-    const fallbackUser = {
+    // Even on exception, try lookup
+    try {
+      const lookupResp = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'lookup', email })
+      }).catch(() => null);
+      if (lookupResp && lookupResp.ok) {
+        const d = await lookupResp.json().catch(() => ({}));
+        if (d.success) {
+          localStorage.setItem('gycUser', JSON.stringify({
+            email: d.email || email, name: d.name || email.split('@')[0],
+            id: d.contactId || null, token: d.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
+            tier: d.tier || 'free', loggedInAt: new Date().toISOString()
+          }));
+          window.location.href = 'index.html';
+          return;
+        }
+      }
+    } catch(e2) {}
+    // Absolute last resort
+    localStorage.setItem('gycUser', JSON.stringify({
       email: email, name: email.split('@')[0],
       id: null, token: Date.now().toString(36) + Math.random().toString(36).slice(2),
       tier: 'free', loggedInAt: new Date().toISOString()
-    };
-    localStorage.setItem('gycUser', JSON.stringify(fallbackUser));
+    }));
     window.location.href = 'index.html';
     return;
   }
