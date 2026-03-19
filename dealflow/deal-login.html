@@ -663,6 +663,17 @@ function saveUser(data, email) {
 function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.add('show'); }
 function hideErr(id) { document.getElementById(id).classList.remove('show'); }
 
+// Auto-login for simulator/testing via URL param
+const autoLogin = new URLSearchParams(window.location.search).get('autoLogin');
+if (autoLogin) {
+  localStorage.setItem('gycUser', JSON.stringify({
+    email: autoLogin, name: autoLogin.split('@')[0],
+    id: null, token: Date.now().toString(36),
+    tier: 'academy', loggedInAt: new Date().toISOString()
+  }));
+  window.location.href = 'index.html';
+}
+
 const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
 if (user && user.token && !new URLSearchParams(window.location.search).get('magic')) {
   window.location.href = 'index.html';
