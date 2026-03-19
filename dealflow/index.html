@@ -7025,12 +7025,8 @@ function changeDealStage(dealId, newStage) {
 }
 
 function openPanel(id) {
-  const deal = DEALS.find(d => d.id === id);
-  if (!deal) return;
-  document.getElementById('panelContent').innerHTML = renderPanel(deal);
-  document.getElementById('detailPanel').classList.add('open');
-  document.getElementById('panelOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  // Navigate directly to deal page instead of side panel
+  window.location.href = 'deal.html?id=' + id;
 }
 
 function closePanel() {
