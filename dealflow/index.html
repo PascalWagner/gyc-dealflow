@@ -3728,10 +3728,10 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       Cash Flow Academy
       <span class="nav-coming-soon" id="academyComingSoon" style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;">COMING SOON</span>
     </a>
-    <div class="nav-section-label">Opportunities</div>
-    <a class="nav-item nav-item-promo" href="https://growyourcashflow.io/income-fund" target="_blank">
+    <a class="nav-item nav-item-disabled" href="https://growyourcashflow.io/income-fund" target="_blank" id="navIncomeFund" onclick="if(this.classList.contains('nav-item-disabled')){event.preventDefault();return false;}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
       GYC Income Fund
+      <span class="nav-coming-soon" style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;">COMING SOON</span>
     </a>
     <div class="nav-section-label" style="margin-top:auto;">Account</div>
     <a class="nav-item" href="#" data-page="subscription" onclick="navigateTo('subscription'); return false">
@@ -12017,7 +12017,7 @@ function showAdminNav() {
   const adminNav = document.getElementById('adminNav');
   if (adminNav) adminNav.style.display = admin ? 'block' : 'none';
   // Enable/disable Coming Soon nav items for admins
-  ['navAssets', 'navOfficeHours', 'navAcademy', 'navTaxPrep'].forEach(id => {
+  ['navAssets', 'navOfficeHours', 'navAcademy', 'navTaxPrep', 'navIncomeFund'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const label = el.querySelector('.nav-coming-soon') || document.getElementById(id.replace('nav', '').toLowerCase() + 'ComingSoon');
