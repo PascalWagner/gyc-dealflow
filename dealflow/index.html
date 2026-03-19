@@ -9278,8 +9278,9 @@ function renderGoalsDashboard() {
   }
 }
 
-// ========== CASHFLOW GAP PERSISTENT BAR ==========
+// ========== CASHFLOW GAP PERSISTENT BAR (DISABLED) ==========
 function renderCashflowGapBar() {
+  return; // Removed — goal progress now shown on dashboard hero card
   const bar = document.getElementById('cashflowGapBar');
   if (!bar) return;
 
