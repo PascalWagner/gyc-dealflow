@@ -13708,17 +13708,16 @@ fetchBuyBoxFromGHL();
     if (dealsFilter) {
       const row = document.createElement('div');
       row.className = 'ios-filter-row';
+      row.style.cssText = 'display:flex!important;width:100%;gap:6px;padding:10px 0;align-items:center;flex-wrap:nowrap!important;';
       row.innerHTML = `
-        <div style="flex:1;min-width:0;">
-          <input type="text" class="filter-input" placeholder="Search..."
-            oninput="document.getElementById('filterSearch').value=this.value;applyFilters();"
-            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
-        </div>
-        <button class="ios-filter-toggle" style="flex:1;justify-content:center;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+        <input type="text" class="filter-input" placeholder="Search..."
+          oninput="document.getElementById('filterSearch').value=this.value;applyFilters();"
+          style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+        <button class="ios-filter-toggle" style="flex:1;min-width:0;justify-content:center;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           Filters
         </button>
-        <select style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;min-width:0;" onchange="_goalSortOverridden=true;document.getElementById('filterSort').value=this.value;applyFilters();">
+        <select style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;" onchange="_goalSortOverridden=true;document.getElementById('filterSort').value=this.value;applyFilters();">
           <option value="newest">Newest</option>
           <option value="irr">Highest IRR</option>
           <option value="min_invest">Lowest Min</option>
