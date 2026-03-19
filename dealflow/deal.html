@@ -3924,21 +3924,28 @@ function openDeckSubmitModal(dealId, dealName) {
   overlay.className = 'deck-modal-overlay';
   overlay.innerHTML =
     '<div class="deck-modal">' +
-      '<h3>Submit a Deck Link</h3>' +
-      '<p>Know where the offering documents are for <strong>' + esc(dealName) + '</strong>? Paste the link below and we\'ll review it.</p>' +
+      '<h3>Submit a Deck</h3>' +
+      '<p>Upload offering documents for <strong>' + esc(dealName) + '</strong> or paste a link.</p>' +
       '<div id="deckModalForm">' +
+        '<div id="deckUploadArea" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:16px;transition:all 0.2s;" onclick="document.getElementById(\'deckFileInput\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--primary)\';this.style.background=\'rgba(81,190,123,0.04)\'" ondragleave="this.style.borderColor=\'var(--border)\';this.style.background=\'transparent\'" ondrop="event.preventDefault();this.style.borderColor=\'var(--border)\';this.style.background=\'transparent\';handleDeckFileDrop(event)">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="32" height="32" style="margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+          '<div id="deckUploadText" style="font-size:14px;font-weight:600;color:var(--text-dark);">Drop a PDF here or click to upload</div>' +
+          '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">PDF, DOC, or PPTX — max 25MB</div>' +
+        '</div>' +
+        '<input type="file" id="deckFileInput" accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx" style="display:none" onchange="handleDeckFileSelect(this)" />' +
+        '<div style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:12px;">— or paste a link —</div>' +
         '<label for="deckUrlInput">Deck URL</label>' +
         '<input type="url" id="deckUrlInput" placeholder="https://example.com/deck.pdf" />' +
         '<label for="deckNotesInput">Notes (optional)</label>' +
         '<textarea id="deckNotesInput" placeholder="e.g. Found on their investor portal, this is the Class A PPM"></textarea>' +
         '<div class="deck-modal-actions">' +
           '<button class="btn-cancel" onclick="closeDeckSubmitModal()">Cancel</button>' +
-          '<button class="btn-submit" id="deckSubmitBtn" onclick="submitDeckLink(\'' + escAttr(dealId) + '\', \'' + escAttr(dealName) + '\')">Submit</button>' +
+          '<button class="btn-submit" id="deckSubmitBtn" onclick="submitDeck(\'' + escAttr(dealId) + '\', \'' + escAttr(dealName) + '\')">Submit</button>' +
         '</div>' +
       '</div>' +
       '<div id="deckModalSuccess" style="display:none;" class="deck-modal-success">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="48" height="48"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
-        '<p>Thanks! We\'ll review and add this.</p>' +
+        '<p id="deckSuccessMsg">Thanks! We\'ll review and add this.</p>' +
         '<button class="btn-cancel" onclick="closeDeckSubmitModal()" style="margin-top:16px;">Close</button>' +
       '</div>' +
     '</div>';
@@ -3961,6 +3968,133 @@ function closeDeckSubmitModal() {
   }
 }
 
+// File upload state
+var _deckFile = null;
+var _deckFileBase64 = null;
+
+function handleDeckFileSelect(input) {
+  if (input.files && input.files[0]) {
+    processDeckFile(input.files[0]);
+  }
+}
+
+function handleDeckFileDrop(event) {
+  var files = event.dataTransfer.files;
+  if (files && files[0]) {
+    processDeckFile(files[0]);
+  }
+}
+
+function processDeckFile(file) {
+  if (file.size > 25 * 1024 * 1024) {
+    alert('File is too large. Maximum size is 25MB.');
+    return;
+  }
+  _deckFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    // Strip the data URL prefix to get pure base64
+    _deckFileBase64 = e.target.result.split(',')[1];
+    // Update UI
+    var uploadText = document.getElementById('deckUploadText');
+    var uploadArea = document.getElementById('deckUploadArea');
+    if (uploadText) uploadText.innerHTML = '<span style="color:var(--primary);font-weight:700;">✓ ' + file.name + '</span><br><span style="font-size:11px;color:var(--text-muted);">' + (file.size / 1024 / 1024).toFixed(1) + ' MB — click to change</span>';
+    if (uploadArea) uploadArea.style.borderColor = 'var(--primary)';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitDeck(dealId, dealName) {
+  var urlInput = document.getElementById('deckUrlInput');
+  var notesInput = document.getElementById('deckNotesInput');
+  var submitBtn = document.getElementById('deckSubmitBtn');
+
+  var deckUrl = (urlInput.value || '').trim();
+  var hasFile = _deckFile && _deckFileBase64;
+
+  if (!deckUrl && !hasFile) {
+    // Highlight both options
+    if (urlInput) urlInput.style.borderColor = '#e74c3c';
+    var uploadArea = document.getElementById('deckUploadArea');
+    if (uploadArea) uploadArea.style.borderColor = '#e74c3c';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = hasFile ? 'Uploading to Google Drive...' : 'Submitting...';
+
+  var userEmail = '';
+  var userName = '';
+  try {
+    var userData = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    userEmail = userData.email || '';
+    userName = userData.name || userData.firstName || '';
+  } catch(e) {}
+
+  try {
+    if (hasFile) {
+      // Upload file to Google Drive via our API
+      var resp = await fetch('/api/deck-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dealId: dealId,
+          dealName: dealName,
+          filedata: _deckFileBase64,
+          filename: _deckFile.name,
+          notes: (notesInput.value || '').trim(),
+          userEmail: userEmail,
+          userName: userName
+        })
+      });
+
+      if (resp.ok) {
+        var data = await resp.json();
+        document.getElementById('deckModalForm').style.display = 'none';
+        var successMsg = document.getElementById('deckSuccessMsg');
+        if (successMsg) successMsg.innerHTML = 'Deck uploaded to Google Drive!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View in Drive →</a>' : '');
+        document.getElementById('deckModalSuccess').style.display = 'block';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+        alert('Upload failed. Please try again.');
+      }
+    } else {
+      // URL-only submission (original flow)
+      var resp = await fetch('/api/deck-submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dealId: dealId,
+          dealName: dealName,
+          deckUrl: deckUrl,
+          notes: (notesInput.value || '').trim(),
+          userEmail: userEmail,
+          userName: userName
+        })
+      });
+
+      if (resp.ok) {
+        document.getElementById('deckModalForm').style.display = 'none';
+        document.getElementById('deckModalSuccess').style.display = 'block';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+        alert('Something went wrong. Please try again.');
+      }
+    }
+  } catch(e) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit';
+    alert('Network error. Please try again.');
+  }
+
+  // Reset file state
+  _deckFile = null;
+  _deckFileBase64 = null;
+}
+
+// Keep old function name for backward compatibility
 async function submitDeckLink(dealId, dealName) {
   var urlInput = document.getElementById('deckUrlInput');
   var notesInput = document.getElementById('deckNotesInput');
