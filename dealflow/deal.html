@@ -3271,53 +3271,7 @@ async function renderDeal() {
 
   let html = '';
 
-
-
-  // Breadcrumb
-
-  html += '<div class="breadcrumb">';
-
-  html += '<a href="index.html">Deals</a>';
-
-  html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-
-  html += '<span>' + esc(deal.investmentName) + '</span>';
-
-  html += '</div>';
-
-  // Wrap all content for bottom padding (sticky bar)
-  html += '<div class="deal-page-content">';
-
-  // Header banner
-
-  var heroClass = isCreditFund(deal) ? ' hero-lending' : ' hero-equity';
-  var heroIcon = isCreditFund(deal)
-    ? '<div class="hero-type-icon"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>'
-    : '<div class="hero-type-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>';
-  html += '<div class="deal-header' + heroClass + '">' + heroIcon + '<div class="deal-header-inner">';
-
-  html += '<h1 class="deal-name">' + esc(deal.investmentName) + '</h1>';
-
-  html += '<div class="deal-company">by <a href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a></div>';
-
-  html += '<div class="deal-badges">';
-
-  if (isCreditFund(deal)) {
-    html += '<span class="deal-badge asset-class">' + creditBadgeLabel(deal) + '</span>';
-  } else if (deal.assetClass) {
-    html += '<span class="deal-badge asset-class">' + esc(deal.assetClass) + '</span>';
-  }
-
-  if (deal.dealType) html += '<span class="deal-badge deal-type">' + esc(deal.dealType) + '</span>';
-
-  if (deal.status) html += '<span class="deal-badge ' + statusBadgeClass(deal.status) + '">' + esc(deal.status) + '</span>';
-
-  html += '</div>';
-
-
-  html += '</div></div>';
-
-  // Journey bar
+  // === Shared variables needed by multiple sections ===
   var currentStage = getDealStage(deal.id);
   var stages = [
     { key: 'new', label: 'New', num: '1' },
@@ -3328,46 +3282,38 @@ async function renderDeal() {
   var stageOrder = { 'new': 0, 'interested': 1, 'duediligence': 2, 'portfolio': 3 };
   var currentIdx = stageOrder[currentStage] || 0;
 
-  html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px;">Your Vetting Pipeline</div>';
-  html += '<div class="journey-bar" id="journeyBar">';
-  for (var si = 0; si < stages.length; si++) {
-    if (si > 0) html += '<div class="journey-connector' + (si <= currentIdx ? ' done' : '') + '"></div>';
-    var cls = '';
-    if (si < currentIdx) cls = ' completed';
-    else if (si === currentIdx) cls = ' active';
-    var checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
-    html += '<div class="journey-step' + cls + '" data-stage="' + stages[si].key + '" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + stages[si].key + '\')" style="cursor:pointer;">';
-    html += '<div class="step-dot">' + (si < currentIdx ? checkIcon : stages[si].num) + '</div>';
-    html += stages[si].label + '</div>';
-  }
-  // Pass step
-  var isPassed = currentStage === 'passed';
-  html += '<div class="journey-connector' + (isPassed ? ' passed' : '') + '"></div>';
-  html += '<div class="journey-step' + (isPassed ? ' passed' : '') + '" data-stage="passed" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')" style="cursor:pointer;">';
-  html += '<div class="step-dot">' + (isPassed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' : '✕') + '</div>';
-  html += 'Pass</div>';
-  html += '</div>';
+  // === Build each section into its own variable ===
 
-  // Data completeness score
-  var dcFields = ['targetIRR', 'investmentMinimum', 'holdPeriod', 'investmentStrategy', 'distributions', 'financials', 'availableTo', 'offeringType', 'ceo', 'managementCompany', 'mcWebsite', 'deckUrl', 'investingGeography'];
-  if (isCreditFund(deal)) dcFields.push('fundAUM', 'loanCount', 'avgLoanLTV', 'debtPosition');
-  else dcFields.push('equityMultiple', 'preferredReturn', 'lpGpSplit', 'cashOnCash');
-  var dcFilled = 0;
-  for (var di = 0; di < dcFields.length; di++) {
-    var v = deal[dcFields[di]];
-    if (v !== undefined && v !== null && v !== '' && v !== 0) dcFilled++;
-  }
-  var dcPct = Math.round((dcFilled / dcFields.length) * 100);
-  var dcClass = dcPct >= 60 ? 'high' : dcPct >= 35 ? 'medium' : 'low';
-  var dcHint = dcPct >= 60 ? 'Well researched' : dcPct >= 35 ? 'Needs more data' : 'Early stage \u2014 help fill it in';
-  html += '<div class="data-completeness">';
-  html += '<div class="data-completeness-label">Deal Intel</div>';
-  html += '<div class="data-completeness-bar"><div class="data-completeness-fill ' + dcClass + '" style="width:' + dcPct + '%"></div></div>';
-  html += '<div class="data-completeness-pct">' + dcPct + '%</div>';
-  html += '<div class="data-completeness-hint">' + dcHint + '</div>';
-  html += '</div>';
+  // --- Breadcrumb ---
+  var breadcrumbHtml = '';
+  breadcrumbHtml += '<div class="breadcrumb">';
+  breadcrumbHtml += '<a href="index.html">Deals</a>';
+  breadcrumbHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  breadcrumbHtml += '<span>' + esc(deal.investmentName) + '</span>';
+  breadcrumbHtml += '</div>';
 
-  // Key metrics strip — only show metrics with real data
+  // --- 1. Hero ---
+  var heroHtml = '';
+  var heroClass = isCreditFund(deal) ? ' hero-lending' : ' hero-equity';
+  var heroIcon = isCreditFund(deal)
+    ? '<div class="hero-type-icon"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>'
+    : '<div class="hero-type-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>';
+  heroHtml += '<div class="deal-header' + heroClass + '">' + heroIcon + '<div class="deal-header-inner">';
+  heroHtml += '<h1 class="deal-name">' + esc(deal.investmentName) + '</h1>';
+  heroHtml += '<div class="deal-company">by <a href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a></div>';
+  heroHtml += '<div class="deal-badges">';
+  if (isCreditFund(deal)) {
+    heroHtml += '<span class="deal-badge asset-class">' + creditBadgeLabel(deal) + '</span>';
+  } else if (deal.assetClass) {
+    heroHtml += '<span class="deal-badge asset-class">' + esc(deal.assetClass) + '</span>';
+  }
+  if (deal.dealType) heroHtml += '<span class="deal-badge deal-type">' + esc(deal.dealType) + '</span>';
+  if (deal.status) heroHtml += '<span class="deal-badge ' + statusBadgeClass(deal.status) + '">' + esc(deal.status) + '</span>';
+  heroHtml += '</div>';
+  heroHtml += '</div></div>';
+
+  // --- 2. Key Metrics Strip ---
+  var metricsHtml = '';
   var metricsToShow = [];
   if (isCreditFund(deal)) {
     if (deal.targetIRR) metricsToShow.push(metricCard('Target Yield', fmt(deal.targetIRR, 'pct'), true));
@@ -3386,172 +3332,193 @@ async function renderDeal() {
   }
   if (metricsToShow.length > 0) {
     var gridCols = Math.min(metricsToShow.length, 6);
-    html += '<div class="metrics-strip" style="grid-template-columns:repeat(' + gridCols + ',1fr)">';
-    html += metricsToShow.join('');
-    html += '</div>';
+    metricsHtml += '<div class="metrics-strip" style="grid-template-columns:repeat(' + gridCols + ',1fr)">';
+    metricsHtml += metricsToShow.join('');
+    metricsHtml += '</div>';
   }
 
-  // Historical returns chart (credit/lending funds only)
+  // --- 3. Sponsor Card ---
+  var sponsorHtml = '';
+  sponsorHtml += '<div class="section">';
+  sponsorHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="section-title">Sponsor</span></div>';
+  sponsorHtml += '<div class="section-body"><div class="sponsor-card">';
+  sponsorHtml += '<div class="sponsor-avatar">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
+  sponsorHtml += '<div class="sponsor-info">';
+  if (deal.ceo) sponsorHtml += '<div class="sponsor-ceo-name">' + esc(deal.ceo) + '</div>';
+  sponsorHtml += '<a class="sponsor-company-link" href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a>';
+  sponsorHtml += '</div></div></div>';
+  sponsorHtml += '</div>';
+
+  // --- 4. Overview ---
+  var overviewHtml = '';
+  if (deal.investmentStrategy) {
+    overviewHtml += '<div class="section">';
+    overviewHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span class="section-title">Overview</span></div>';
+    overviewHtml += '<div class="section-body"><p class="overview-text">' + esc(deal.investmentStrategy) + '</p></div>';
+    overviewHtml += '</div>';
+  }
+
+  // --- 5. Performance Chart + Share Classes ---
+  var chartHtml = '';
   if (isCreditFund(deal) && deal.targetIRR) {
-    html += '<div class="returns-chart-section">';
-    html += '<div class="returns-chart-container"><canvas id="dealReturnsChart"></canvas></div>';
-    html += '<div class="returns-chart-legend">';
-    html += '<span class="returns-chart-legend-item"><span class="returns-chart-legend-line" style="background:rgba(81,190,123,0.7);"></span>' + esc(deal.investmentName || 'Fund') + '</span>';
-    html += '</div>';
-    html += '</div>';
+    chartHtml += '<div class="returns-chart-section">';
+    chartHtml += '<div class="returns-chart-container"><canvas id="dealReturnsChart"></canvas></div>';
+    chartHtml += '<div class="returns-chart-legend">';
+    chartHtml += '<span class="returns-chart-legend-item"><span class="returns-chart-legend-line" style="background:rgba(81,190,123,0.7);"></span>' + esc(deal.investmentName || 'Fund') + '</span>';
+    chartHtml += '</div>';
+    chartHtml += '</div>';
   }
-
-  // Share class comparison table (for multi-class funds)
   if (deal.shareClasses && deal.shareClasses.length > 0) {
-    html += '<div class="section">';
-    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg><span class="section-title">Share Classes</span></div>';
-    html += '<div class="section-body"><div class="share-class-table-wrap"><table class="share-class-table">';
-
-    // Header row
-    html += '<tr><th></th>';
+    chartHtml += '<div class="section">';
+    chartHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg><span class="section-title">Share Classes</span></div>';
+    chartHtml += '<div class="section-body"><div class="share-class-table-wrap"><table class="share-class-table">';
+    chartHtml += '<tr><th></th>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
-      html += '<th>' + esc(deal.shareClasses[i].label) + '</th>';
+      chartHtml += '<th>' + esc(deal.shareClasses[i].label) + '</th>';
     }
-    html += '</tr>';
-
-    // Target Return row
-    html += '<tr><td>Target Return</td>';
+    chartHtml += '</tr>';
+    chartHtml += '<tr><td>Target Return</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      html += '<td><span class="value-highlight">' + esc(fmt(sc.targetReturn, 'pct')) + '</span></td>';
+      chartHtml += '<td><span class="value-highlight">' + esc(fmt(sc.targetReturn, 'pct')) + '</span></td>';
     }
-    html += '</tr>';
-
-    // Lockup row
-    html += '<tr><td>Lockup</td>';
+    chartHtml += '</tr>';
+    chartHtml += '<tr><td>Lockup</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      html += '<td>' + esc(sc.lockup ? sc.lockup + ' yrs' : '---') + '</td>';
+      chartHtml += '<td>' + esc(sc.lockup ? sc.lockup + ' yrs' : '---') + '</td>';
     }
-    html += '</tr>';
-
-    // Min Investment row
-    html += '<tr><td>Min Investment</td>';
+    chartHtml += '</tr>';
+    chartHtml += '<tr><td>Min Investment</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      html += '<td>' + esc(fmt(sc.investmentMinimum, 'money')) + '</td>';
+      chartHtml += '<td>' + esc(fmt(sc.investmentMinimum, 'money')) + '</td>';
     }
-    html += '</tr>';
-
-    // Pref Return row (if any class has it)
+    chartHtml += '</tr>';
     var anyPref = deal.shareClasses.some(function(sc) { return sc.preferredReturn; });
     if (anyPref) {
-      html += '<tr><td>Pref Return</td>';
+      chartHtml += '<tr><td>Pref Return</td>';
       for (var i = 0; i < deal.shareClasses.length; i++) {
         var sc = deal.shareClasses[i];
-        html += '<td>' + esc(fmt(sc.preferredReturn, 'pct')) + '</td>';
+        chartHtml += '<td>' + esc(fmt(sc.preferredReturn, 'pct')) + '</td>';
       }
-      html += '</tr>';
+      chartHtml += '</tr>';
     }
-
-    // Financials row
-    html += '<tr><td>Financials</td>';
+    chartHtml += '<tr><td>Financials</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      html += '<td>' + esc(sc.financials || '---') + '</td>';
+      chartHtml += '<td>' + esc(sc.financials || '---') + '</td>';
     }
-    html += '</tr>';
-
-    html += '</table></div></div></div>';
+    chartHtml += '</tr>';
+    chartHtml += '</table></div></div></div>';
   }
 
-  // Overview section
-
-  if (deal.investmentStrategy) {
-
-    html += '<div class="section">';
-
-    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span class="section-title">Overview</span></div>';
-
-    html += '<div class="section-body"><p class="overview-text">' + esc(deal.investmentStrategy) + '</p></div>';
-
-    html += '</div>';
-
+  // --- 6. Investment Details + Deal Summary + Geography ---
+  var detailsHtml = '';
+  detailsHtml += '<div class="section">';
+  detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="section-title">Investment Details</span></div>';
+  detailsHtml += '<div class="section-body"><div class="details-grid">';
+  detailsHtml += detailItem('Distributions', deal.distributions);
+  detailsHtml += detailItem('Available To', deal.availableTo);
+  detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
+  detailsHtml += detailItem('Offering Type', deal.offeringType);
+  if (isCreditFund(deal)) {
+    detailsHtml += detailItem('Debt Position', deal.debtPosition);
+    detailsHtml += detailItem('Financials', deal.financials);
+    detailsHtml += detailItem('Objective', deal.investmentObjective);
+    detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
+  } else {
+    detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
+    detailsHtml += detailItem('Objective', deal.investmentObjective);
+    detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
+    detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
   }
+  detailsHtml += '</div></div>';
+  detailsHtml += '</div>';
 
-  // Supporting Materials section
-  var hasMaterials = deal.deckUrl || deal.mcWebsite || deal.mcInvestClearly || deal.mcLinkedin;
-  html += '<div class="section">';
-  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><span class="section-title">Supporting Materials</span></div>';
-  html += '<div class="section-body"><div class="materials-grid">';
-
+  // Deal Summary sub-section
+  detailsHtml += '<div class="section">';
+  detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="section-title">Deal Summary</span></div>';
+  detailsHtml += '<div class="section-body">';
+  detailsHtml += summaryRow('Strategy', deal.strategy);
+  detailsHtml += summaryRow('Instrument', deal.instrument);
+  if (deal.debtPosition) detailsHtml += summaryRow('Debt Position', deal.debtPosition);
+  if (deal.financials) detailsHtml += summaryRow('Financials', deal.financials);
+  if (deal.fundAUM) detailsHtml += summaryRow('Fund AUM', fmt(deal.fundAUM, 'money'));
+  if (deal.loanCount) detailsHtml += summaryRow('Loan Count', deal.loanCount);
+  if (deal.avgLoanLTV) detailsHtml += summaryRow('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
+  if (deal.fees && deal.fees.length > 0) {
+    detailsHtml += '<div class="summary-row"><div class="summary-label">Fees</div><div class="summary-value"><ul class="fees-list">';
+    deal.fees.forEach(function(fee) {
+      detailsHtml += '<li>' + esc(fee) + '</li>';
+    });
+    detailsHtml += '</ul></div></div>';
+  }
   if (deal.deckUrl) {
-    html += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Investment Deck</a>';
+    detailsHtml += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-available"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Available</span></div></div>';
+  } else {
+    detailsHtml += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Not yet sourced</span></div></div>';
+  }
+  detailsHtml += '</div></div>';
+
+  // Geography sub-section
+  if (deal.location || deal.investingGeography) {
+    detailsHtml += '<div class="section">';
+    detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="section-title">Geography</span></div>';
+    detailsHtml += '<div class="section-body">';
+    detailsHtml += '<div class="geo-info">';
+    if (deal.location) detailsHtml += '<div class="geo-item"><div class="geo-label">Location</div><div class="geo-value">' + esc(deal.location) + '</div></div>';
+    if (deal.investingGeography) detailsHtml += '<div class="geo-item"><div class="geo-label">Investing Geography</div><div class="geo-value">' + esc(deal.investingGeography) + '</div></div>';
+    detailsHtml += '</div>';
+    if (deal.location) {
+      detailsHtml += '<div class="map-container" id="dealMap"></div>';
+    }
+    detailsHtml += '</div></div>';
+  }
+
+  // --- 7. Supporting Materials ---
+  var materialsHtml = '';
+  var hasMaterials = deal.deckUrl || deal.mcWebsite || deal.mcInvestClearly || deal.mcLinkedin;
+  materialsHtml += '<div class="section">';
+  materialsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><span class="section-title">Supporting Materials</span></div>';
+  materialsHtml += '<div class="section-body"><div class="materials-grid">';
+  if (deal.deckUrl) {
+    materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Investment Deck</a>';
   }
   if (deal.mcWebsite) {
-    html += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Sponsor Website</a>';
+    materialsHtml += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Sponsor Website</a>';
   }
   if (deal.mcInvestClearly) {
-    html += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
+    materialsHtml += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
   }
   if (deal.mcLinkedin) {
-    html += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>CEO LinkedIn</a>';
+    materialsHtml += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>CEO LinkedIn</a>';
   }
-  // SEC EDGAR search link (always available)
   var secQuery = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
-  html += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + secQuery + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>SEC EDGAR</a>';
-
-  html += '</div>';
-
+  materialsHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + secQuery + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>SEC EDGAR</a>';
+  materialsHtml += '</div>';
   if (!deal.deckUrl) {
-    html += '<div class="materials-missing">Missing materials? <button onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')">Submit a link</button></div>';
+    materialsHtml += '<div class="materials-missing">Missing materials? <button onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')">Submit a link</button></div>';
   }
+  materialsHtml += '</div></div>';
 
-  html += '</div></div>';
-
-  // Investment Details section
-
-  html += '<div class="section">';
-
-  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="section-title">Investment Details</span></div>';
-
-  html += '<div class="section-body"><div class="details-grid">';
-
-  html += detailItem('Distributions', deal.distributions);
-  html += detailItem('Available To', deal.availableTo);
-  html += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
-  html += detailItem('Offering Type', deal.offeringType);
-
-  if (isCreditFund(deal)) {
-    html += detailItem('Debt Position', deal.debtPosition);
-    html += detailItem('Financials', deal.financials);
-    html += detailItem('Objective', deal.investmentObjective);
-    html += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
-  } else {
-    html += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
-    html += detailItem('Objective', deal.investmentObjective);
-    html += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
-    html += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
-  }
-
-  html += '</div></div>';
-
-  html += '</div>';
-
-  // Deal Research Checklist section
+  // --- 8. DD Checklist ---
+  var ddHtml = '';
   var checklist = getChecklistForDeal(deal);
   var userAnswers = loadDDAnswers(deal.id);
   var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
   var circleSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>';
   var chevronSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-
-  html += '<div class="section">';
-  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span></div>';
-  html += '<div class="section-body">';
-  html += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
-  html += '<div class="dd-accordion">';
-
+  ddHtml += '<div class="section">';
+  ddHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span></div>';
+  ddHtml += '<div class="section-body">';
+  ddHtml += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
+  ddHtml += '<div class="dd-accordion">';
   var qIdx = 0;
   for (var si = 0; si < checklist.sections.length; si++) {
     var sec = checklist.sections[si];
     var answered = 0;
     var sectionHtml = '';
-
     for (var qi = 0; qi < sec.questions.length; qi++) {
       var q = sec.questions[qi];
       var key = 's' + si + 'q' + qi;
@@ -3559,10 +3526,8 @@ async function renderDeal() {
       var userVal = userAnswers[key] || '';
       var isAnswered = !!(autoVal || userVal);
       if (isAnswered) answered++;
-
       sectionHtml += '<div class="dd-question' + (isAnswered ? ' answered' : '') + '">';
       sectionHtml += '<div class="dd-question-text">' + esc(q.q) + '</div>';
-
       if (autoVal) {
         sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon auto">' + checkSvg + '</div><div class="dd-answer-text">' + esc(autoVal) + '</div><span class="dd-answer-badge auto">auto</span></div>';
       } else if (userVal) {
@@ -3570,175 +3535,101 @@ async function renderDeal() {
       } else {
         sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon empty">' + circleSvg + '</div><input class="dd-answer-input" type="text" placeholder="Add your research..." data-deal-id="' + escAttr(deal.id) + '" data-key="' + key + '" onblur="handleDDInput(this)" /></div>';
       }
-
       sectionHtml += '</div>';
       qIdx++;
     }
-
-    html += '<div class="dd-accordion-section' + (si === 0 ? ' open' : '') + '">';
-    html += '<div class="dd-accordion-header" onclick="toggleAccordion(this)">';
-    html += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + '</div>';
-    html += '<span class="dd-accordion-progress">' + answered + '/' + sec.questions.length + '</span>';
-    html += '</div>';
-    html += '<div class="dd-accordion-body">' + sectionHtml + '</div>';
-    html += '</div>';
+    ddHtml += '<div class="dd-accordion-section' + (si === 0 ? ' open' : '') + '">';
+    ddHtml += '<div class="dd-accordion-header" onclick="toggleAccordion(this)">';
+    ddHtml += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + '</div>';
+    ddHtml += '<span class="dd-accordion-progress">' + answered + '/' + sec.questions.length + '</span>';
+    ddHtml += '</div>';
+    ddHtml += '<div class="dd-accordion-body">' + sectionHtml + '</div>';
+    ddHtml += '</div>';
   }
-
-  html += '</div>';
-
+  ddHtml += '</div>';
   // Third-party perspectives
-  html += '<div class="dd-perspectives">';
-  html += '<div class="dd-perspectives-title">Third-Party Perspectives</div>';
-  html += '<div class="dd-perspective-links">';
+  ddHtml += '<div class="dd-perspectives">';
+  ddHtml += '<div class="dd-perspectives-title">Third-Party Perspectives</div>';
+  ddHtml += '<div class="dd-perspective-links">';
   if (deal.mcInvestClearly) {
-    html += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
+    ddHtml += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
   }
-  html += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + encodeURIComponent(deal.managementCompany || deal.investmentName || '') + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search SEC EDGAR</a>';
-  html += '<a href="https://checkr.com" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Background Check</a>';
-  html += '</div>';
-
+  ddHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + encodeURIComponent(deal.managementCompany || deal.investmentName || '') + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search SEC EDGAR</a>';
+  ddHtml += '<a href="https://checkr.com" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Background Check</a>';
+  ddHtml += '</div>';
   // Office Hours CTA
-  html += '<div class="dd-office-hours">';
-  html += '<div class="dd-office-hours-text"><strong>Bring this deal to Office Hours</strong><span>Every Thursday 12\u20131pm ET \u2014 get Pascal\'s take on any deal</span></div>';
-  html += '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener">Join This Week</a>';
-  html += '</div>';
+  ddHtml += '<div class="dd-office-hours">';
+  ddHtml += '<div class="dd-office-hours-text"><strong>Bring this deal to Office Hours</strong><span>Every Thursday 12\u20131pm ET \u2014 get Pascal\'s take on any deal</span></div>';
+  ddHtml += '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener">Join This Week</a>';
+  ddHtml += '</div>';
+  ddHtml += '</div>';
+  ddHtml += '</div></div>';
 
-  html += '</div>';
-  html += '</div></div>';
-
-  // Deal Summary section
-
-  html += '<div class="section">';
-
-  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="section-title">Deal Summary</span></div>';
-
-  html += '<div class="section-body">';
-
-  html += summaryRow('Strategy', deal.strategy);
-
-  html += summaryRow('Instrument', deal.instrument);
-
-  if (deal.debtPosition) html += summaryRow('Debt Position', deal.debtPosition);
-
-  if (deal.financials) html += summaryRow('Financials', deal.financials);
-
-  if (deal.fundAUM) html += summaryRow('Fund AUM', fmt(deal.fundAUM, 'money'));
-
-  if (deal.loanCount) html += summaryRow('Loan Count', deal.loanCount);
-
-  if (deal.avgLoanLTV) html += summaryRow('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
-
-  if (deal.fees && deal.fees.length > 0) {
-
-    html += '<div class="summary-row"><div class="summary-label">Fees</div><div class="summary-value"><ul class="fees-list">';
-
-    deal.fees.forEach(function(fee) {
-
-      html += '<li>' + esc(fee) + '</li>';
-
-    });
-
-    html += '</ul></div></div>';
-
+  // --- 9. Vetting Pipeline ---
+  var pipelineHtml = '';
+  pipelineHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px;">Your Vetting Pipeline</div>';
+  pipelineHtml += '<div class="journey-bar" id="journeyBar">';
+  for (var si = 0; si < stages.length; si++) {
+    if (si > 0) pipelineHtml += '<div class="journey-connector' + (si <= currentIdx ? ' done' : '') + '"></div>';
+    var cls = '';
+    if (si < currentIdx) cls = ' completed';
+    else if (si === currentIdx) cls = ' active';
+    var checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
+    pipelineHtml += '<div class="journey-step' + cls + '" data-stage="' + stages[si].key + '" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + stages[si].key + '\')" style="cursor:pointer;">';
+    pipelineHtml += '<div class="step-dot">' + (si < currentIdx ? checkIcon : stages[si].num) + '</div>';
+    pipelineHtml += stages[si].label + '</div>';
   }
+  var isPassed = currentStage === 'passed';
+  pipelineHtml += '<div class="journey-connector' + (isPassed ? ' passed' : '') + '"></div>';
+  pipelineHtml += '<div class="journey-step' + (isPassed ? ' passed' : '') + '" data-stage="passed" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')" style="cursor:pointer;">';
+  pipelineHtml += '<div class="step-dot">' + (isPassed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' : '\u2715') + '</div>';
+  pipelineHtml += 'Pass</div>';
+  pipelineHtml += '</div>';
 
-  // Offering documents indicator
-  if (deal.deckUrl) {
-    html += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-available"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Available</span></div></div>';
-  } else {
-    html += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Not yet sourced</span></div></div>';
-  }
-
-  html += '</div></div>';
-
-
-
-  // Geography section
-
-  if (deal.location || deal.investingGeography) {
-
-    html += '<div class="section">';
-
-    html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="section-title">Geography</span></div>';
-
-    html += '<div class="section-body">';
-
-    html += '<div class="geo-info">';
-
-    if (deal.location) html += '<div class="geo-item"><div class="geo-label">Location</div><div class="geo-value">' + esc(deal.location) + '</div></div>';
-
-    if (deal.investingGeography) html += '<div class="geo-item"><div class="geo-label">Investing Geography</div><div class="geo-value">' + esc(deal.investingGeography) + '</div></div>';
-
-    html += '</div>';
-
-    if (deal.location) {
-
-      html += '<div class="map-container" id="dealMap"></div>';
-
-    }
-
-    html += '</div></div>';
-
-  }
-
-
-
-  // Sponsor section
-
-  html += '<div class="section">';
-
-  html += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="section-title">Sponsor</span></div>';
-
-  html += '<div class="section-body"><div class="sponsor-card">';
-
-  html += '<div class="sponsor-avatar">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
-
-  html += '<div class="sponsor-info">';
-
-  if (deal.ceo) html += '<div class="sponsor-ceo-name">' + esc(deal.ceo) + '</div>';
-
-  html += '<a class="sponsor-company-link" href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a>';
-
-  html += '</div></div></div>';
-
-  html += '</div>';
-
-
-
-  // Action buttons
-
-  html += '<div class="section"><div class="section-body"><div class="action-buttons">';
-
-  html += '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
-
+  // --- Action buttons ---
+  var actionsHtml = '';
+  actionsHtml += '<div class="section"><div class="section-body"><div class="action-buttons">';
+  actionsHtml += '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
   var deckSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
   if (deal.deckUrl) {
-    html += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'View Deal Deck</a>';
+    actionsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'View Deal Deck</a>';
   } else {
-    html += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
-    html += '<button class="btn-action btn-link" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Submit a Deck Link</button>';
+    actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
+    actionsHtml += '<button class="btn-action btn-link" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Submit a Deck Link</button>';
   }
+  actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
+  actionsHtml += '</div></div></div>';
 
-  html += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
-
-  html += '</div></div></div>';
-
-  // Close deal-page-content wrapper
-  html += '</div>';
-
-  // Sticky action bar
+  // --- Sticky action bar ---
+  var stickyHtml = '';
   var nextStages = { 'new': 'interested', 'interested': 'duediligence', 'duediligence': 'portfolio' };
   var nextLabels = { 'new': 'Save to Interested', 'interested': 'Start Due Diligence', 'duediligence': 'Mark as Invested' };
   var stageLabels = { 'new': 'New', 'interested': 'Interested', 'duediligence': 'Due Diligence', 'portfolio': 'Invested', 'passed': 'Passed' };
-
-  html += '<div class="sticky-action-bar">';
-  html += '<button class="btn-pass" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>';
+  stickyHtml += '<div class="sticky-action-bar">';
+  stickyHtml += '<button class="btn-pass" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>';
   if (nextLabels[currentStage]) {
-    html += '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + nextStages[currentStage] + '\')">' + nextLabels[currentStage] + ' \u2192</button>';
+    stickyHtml += '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + nextStages[currentStage] + '\')">' + nextLabels[currentStage] + ' \u2192</button>';
   } else {
-    html += '<button class="btn-advance" id="stickyAdvanceBtn" style="display:none"></button>';
+    stickyHtml += '<button class="btn-advance" id="stickyAdvanceBtn" style="display:none"></button>';
   }
-  html += '</div>';
+  stickyHtml += '</div>';
+
+  // === Assemble in new order ===
+  // 1. Hero, 2. Metrics, 3. Sponsor, 4. Overview, 5. Chart, 6. Details, 7. Materials, 8. DD, 9. Pipeline, then actions + sticky
+  html = breadcrumbHtml
+    + '<div class="deal-page-content">'
+    + heroHtml
+    + metricsHtml
+    + sponsorHtml
+    + overviewHtml
+    + chartHtml
+    + detailsHtml
+    + materialsHtml
+    + ddHtml
+    + pipelineHtml
+    + actionsHtml
+    + '</div>'
+    + stickyHtml;
 
   container.innerHTML = html;
 
