@@ -13,7 +13,8 @@
   var hasWebKitBridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge;
   // Also detect if loaded inside a WKWebView (no Safari chrome)
   var isWKWebView = /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent);
-  if (isCapacitor || isStandalone || hasWebKitBridge || isWKWebView) {
+  var isMobileScreen = window.innerWidth <= 767;
+  if (isCapacitor || isStandalone || hasWebKitBridge || isWKWebView || isMobileScreen) {
     document.documentElement.classList.add('cap-ios');
   }
 })();
@@ -1606,20 +1607,24 @@ html.cap-ios .topbar-mobile-select {
   min-width: 0;
   max-width: 160px;
 }
-html.cap-ios .topbar-tabs,
-@media (max-width: 767px) { .topbar-tabs {
+html.cap-ios .topbar-tabs {
   display: none !important;
-}}
+}
+@media (max-width: 767px) {
+  .topbar-tabs { display: none !important; }
+}
 /* View toggle: hide grid + list, keep feed + map only */
 html.cap-ios .topbar-view-toggle .view-btn[data-view="grid"],
 html.cap-ios .topbar-view-toggle .view-btn[data-view="list"] {
   display: none !important;
 }
 html.cap-ios .topbar-spacer { display: none; }
-html.cap-ios .topbar-view-toggle,
-@media (max-width: 767px) { .topbar-view-toggle {
+html.cap-ios .topbar-view-toggle {
   display: none !important;
-}}
+}
+@media (max-width: 767px) {
+  .topbar-view-toggle { display: none !important; }
+}
 
 /* ── Hide elements not needed on iOS / mobile ──────────────── */
 html.cap-ios .mobile-menu-btn { display: none !important; }
