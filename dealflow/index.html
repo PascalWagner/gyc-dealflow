@@ -10058,7 +10058,10 @@ function renderDebtStats(filteredFunds, allFunds) {
   const minYield = yields.length ? Math.min(...yields).toFixed(1) : '—';
   const maxYield = yields.length ? Math.max(...yields).toFixed(1) : '—';
 
-  const ltvs = filteredFunds.filter(f => f.avgLoanLTV).map(f => f.avgLoanLTV * 100);
+  const ltvs = filteredFunds.filter(f => f.avgLoanLTV).map(f => {
+    const v = f.avgLoanLTV;
+    return v > 1 ? v : v * 100; // if already a percentage (>1), use as-is; otherwise convert from decimal
+  });
   const avgLTV = ltvs.length ? (ltvs.reduce((a, b) => a + b, 0) / ltvs.length).toFixed(0) : '—';
   const minLTV = ltvs.length ? Math.min(...ltvs).toFixed(0) : '—';
   const maxLTV = ltvs.length ? Math.max(...ltvs).toFixed(0) : '—';
@@ -10071,18 +10074,42 @@ function renderDebtStats(filteredFunds, allFunds) {
   const fmtMinAUM = minAUM >= 1e9 ? '$' + (minAUM / 1e9).toFixed(1) + 'B' : minAUM >= 1e6 ? '$' + (minAUM / 1e6).toFixed(0) + 'M' : '$' + minAUM.toLocaleString();
   const fmtMaxAUM = maxAUM >= 1e9 ? '$' + (maxAUM / 1e9).toFixed(1) + 'B' : maxAUM >= 1e6 ? '$' + (maxAUM / 1e6).toFixed(0) + 'M' : '$' + maxAUM.toLocaleString();
 
-  document.getElementById('debtFundStats').innerHTML = [
-    { label: 'Total Debt Funds', value: filteredCount + '<span style="color:var(--text-muted);font-size:18px;font-weight:500;"> / ' + totalCount + '</span>', color: 'var(--primary)' },
-    { label: 'Average Yield', value: avgYield + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minYield + '% — Max ' + maxYield + '%</span>', color: 'var(--green)' },
-    { label: 'Average Loan-to-Value', value: avgLTV + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minLTV + '% — Max ' + maxLTV + '%</span>', color: 'var(--orange)' },
-    { label: 'Total AUM', value: fmtAUM, sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">' + fmtMinAUM + ' — ' + fmtMaxAUM + '</span>', color: 'var(--blue)' }
-  ].map(s => `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-      <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
-      <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}</div>
-      ${s.sub ? '<div style="margin-top:4px;">' + s.sub + '</div>' : ''}
-    </div>
-  `).join('');
+  const isIOS = document.documentElement.classList.contains('cap-ios');
+  if (isIOS) {
+    // Compact horizontal stats bar for mobile
+    document.getElementById('debtFundStats').innerHTML = `
+      <div style="display:flex;gap:0;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <div style="flex:1;padding:10px 8px;text-align:center;border-right:1px solid var(--border);">
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--primary);">${filteredCount}</div>
+          <div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);">Funds</div>
+        </div>
+        <div style="flex:1;padding:10px 8px;text-align:center;border-right:1px solid var(--border);">
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--green,#51BE7B);">${avgYield}%</div>
+          <div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);">Avg Yield</div>
+        </div>
+        <div style="flex:1;padding:10px 8px;text-align:center;border-right:1px solid var(--border);">
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--orange,#E67E22);">${avgLTV}%</div>
+          <div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);">Avg LTV</div>
+        </div>
+        <div style="flex:1;padding:10px 8px;text-align:center;">
+          <div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--blue,#3B82F6);">${fmtAUM}</div>
+          <div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);">Total AUM</div>
+        </div>
+      </div>`;
+  } else {
+    document.getElementById('debtFundStats').innerHTML = [
+      { label: 'Total Debt Funds', value: filteredCount + '<span style="color:var(--text-muted);font-size:18px;font-weight:500;"> / ' + totalCount + '</span>', color: 'var(--primary)' },
+      { label: 'Average Yield', value: avgYield + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minYield + '% — Max ' + maxYield + '%</span>', color: 'var(--green)' },
+      { label: 'Average Loan-to-Value', value: avgLTV + '%', sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">Min ' + minLTV + '% — Max ' + maxLTV + '%</span>', color: 'var(--orange)' },
+      { label: 'Total AUM', value: fmtAUM, sub: '<span style="color:var(--text-muted);font-size:12px;font-weight:500;">' + fmtMinAUM + ' — ' + fmtMaxAUM + '</span>', color: 'var(--blue)' }
+    ].map(s => `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+        <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
+        <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:${s.color};">${s.value}</div>
+        ${s.sub ? '<div style="margin-top:4px;">' + s.sub + '</div>' : ''}
+      </div>
+    `).join('');
+  }
 }
 
 function renderDebtChart() {
