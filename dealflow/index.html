@@ -12181,8 +12181,24 @@ function renderDashboard() {
     }
   }
 
-  // ===== Render all 3 sections =====
-  container.innerHTML = heroHtml + portfolioHtml + recommendedHtml
+  // ===== Welcome greeting =====
+  const user = typeof getUser === 'function' ? getUser() : null;
+  const firstName = user?.firstName || (user?.name || '').split(' ')[0] || '';
+  const greeting = firstName
+    ? '<div style="margin-bottom:20px;"><div style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin-bottom:4px;">Welcome back, ' + firstName + '</div><div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">Here\'s your investing overview</div></div>'
+    : '';
+
+  // ===== Stats row (compact) =====
+  const pipelineCount = stageCounts.interested + stageCounts.duediligence;
+  const statsRow = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Invested</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">$' + (totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(1) + 'M' : totalInvested.toLocaleString()) + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Active Investments</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">' + activeInvestments + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Distributions</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--primary);">$' + totalDistributions.toLocaleString() + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">In Pipeline</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">' + pipelineCount + '</div></div>'
+    + '</div>';
+
+  // ===== Render all sections =====
+  container.innerHTML = greeting + heroHtml + statsRow + portfolioHtml + recommendedHtml
     + '<div id="dashboardIncomeSection" style="margin-top:8px;"></div>';
 
   // Render Income Section
