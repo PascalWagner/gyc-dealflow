@@ -10976,6 +10976,15 @@ function showAddDealModal() {
       <div class="modal-field"><label>Min Investment ($)</label><input id="addDealMin" type="number" placeholder="e.g. 50000"></div>
       <div class="modal-field"><label>Location</label><input id="addDealLocation" placeholder="e.g. Tampa, FL"></div>
       <div class="modal-field" style="grid-column:1/-1"><label>Website / Link</label><input id="addDealURL" placeholder="https://..."></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Investment Deck</label>
+        <div id="addDealUploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('addDealFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='rgba(81,190,123,0.04)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='transparent';handleAddDealFileDrop(event)">
+          <div id="addDealUploadText" style="font-size:13px;color:var(--text-muted);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Drop a PDF here or click to upload
+          </div>
+        </div>
+        <input type="file" id="addDealFileInput" accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx" style="display:none" onchange="handleAddDealFileSelect(this)" />
+      </div>
       <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="addDealNotes" rows="2" placeholder="Any additional details..."></textarea></div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:12px;">
@@ -11023,6 +11032,30 @@ function selectExistingDeal(dealId) {
   window.location.href = 'deal.html?id=' + dealId;
 }
 
+// File upload state for Add Deal modal
+var _addDealFile = null;
+var _addDealFileBase64 = null;
+
+function handleAddDealFileSelect(input) {
+  if (input.files && input.files[0]) processAddDealFile(input.files[0]);
+}
+function handleAddDealFileDrop(event) {
+  if (event.dataTransfer.files && event.dataTransfer.files[0]) processAddDealFile(event.dataTransfer.files[0]);
+}
+function processAddDealFile(file) {
+  if (file.size > 25 * 1024 * 1024) { alert('File too large. Max 25MB.'); return; }
+  _addDealFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _addDealFileBase64 = e.target.result.split(',')[1];
+    var el = document.getElementById('addDealUploadText');
+    var area = document.getElementById('addDealUploadArea');
+    if (el) el.innerHTML = '<span style="color:var(--primary);font-weight:700;">✓ ' + file.name + '</span> <span style="font-size:11px;color:var(--text-muted);">(' + (file.size / 1024 / 1024).toFixed(1) + ' MB)</span>';
+    if (area) area.style.borderColor = 'var(--primary)';
+  };
+  reader.readAsDataURL(file);
+}
+
 function submitNewDeal() {
   const name = document.getElementById('addDealName').value.trim();
   const sponsor = document.getElementById('addDealSponsor').value.trim();
@@ -11056,10 +11089,38 @@ function submitNewDeal() {
   userDeals.push(newDeal);
   localStorage.setItem('gycUserDeals', JSON.stringify(userDeals));
 
+  // Upload deck file if one was selected
+  if (_addDealFile && _addDealFileBase64) {
+    const userData = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    fetch('/api/deck-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dealId: newDeal.id,
+        dealName: name,
+        filedata: _addDealFileBase64,
+        filename: _addDealFile.name,
+        notes: document.getElementById('addDealNotes').value || '',
+        userEmail: userData.email || '',
+        userName: userData.name || userData.firstName || ''
+      })
+    }).then(r => r.json()).then(data => {
+      if (data.driveUrl) {
+        newDeal.deckUrl = data.driveUrl;
+        newDeal.mcWebsite = newDeal.mcWebsite || data.driveUrl;
+        localStorage.setItem('gycUserDeals', JSON.stringify(
+          JSON.parse(localStorage.getItem('gycUserDeals') || '[]').map(d => d.id === newDeal.id ? newDeal : d)
+        ));
+      }
+    }).catch(() => {});
+    _addDealFile = null;
+    _addDealFileBase64 = null;
+  }
+
   closeModal();
   renderAll();
   updateDealCount();
-  alert('Deal added! It will appear in your New Deals feed.');
+  alert('Deal added! It will appear in your New Deals feed.' + (_addDealFile ? ' Deck is uploading to Google Drive.' : ''));
 }
 
 function showDealSearchModal() {
