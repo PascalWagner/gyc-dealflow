@@ -983,6 +983,32 @@ body {
 .journey-connector.done {
   background: var(--primary);
 }
+.journey-connector.passed {
+  background: #D04040;
+}
+.journey-step.passed .step-dot {
+  background: #D04040;
+  border-color: #D04040;
+  color: #fff;
+}
+.journey-step.passed {
+  color: #D04040;
+}
+.journey-step:not(.active):not(.completed):not(.passed):hover .step-dot {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.journey-step:not(.active):not(.completed):not(.passed) .step-dot[onclick] {
+  cursor: pointer;
+}
+.journey-step[data-stage="passed"]:not(.passed):hover .step-dot {
+  border-color: #D04040;
+  background: rgba(208,64,64,0.08);
+  color: #D04040;
+}
+.journey-step[data-stage="passed"]:not(.passed):hover {
+  color: #D04040;
+}
 
 /* ====== DATA COMPLETENESS ====== */
 
@@ -3310,13 +3336,16 @@ async function renderDeal() {
     if (si < currentIdx) cls = ' completed';
     else if (si === currentIdx) cls = ' active';
     var checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';
-    html += '<div class="journey-step' + cls + '" data-stage="' + stages[si].key + '">';
+    html += '<div class="journey-step' + cls + '" data-stage="' + stages[si].key + '" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + stages[si].key + '\')" style="cursor:pointer;">';
     html += '<div class="step-dot">' + (si < currentIdx ? checkIcon : stages[si].num) + '</div>';
     html += stages[si].label + '</div>';
   }
-  html += '</div>';
-  html += '<div style="text-align:right;margin-top:8px;">';
-  html += '<button onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);cursor:pointer;text-decoration:underline;">Not interested? Pass this deal</button>';
+  // Pass step
+  var isPassed = currentStage === 'passed';
+  html += '<div class="journey-connector' + (isPassed ? ' passed' : '') + '"></div>';
+  html += '<div class="journey-step' + (isPassed ? ' passed' : '') + '" data-stage="passed" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')" style="cursor:pointer;">';
+  html += '<div class="step-dot">' + (isPassed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' : '✕') + '</div>';
+  html += 'Pass</div>';
   html += '</div>';
 
   // Data completeness score
