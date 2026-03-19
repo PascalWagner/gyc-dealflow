@@ -12242,11 +12242,7 @@ function renderDashboard() {
     + '</div>';
 
   // ===== Render all sections =====
-  container.innerHTML = greeting + heroHtml + statsRow + portfolioHtml + recommendedHtml
-    + '<div id="dashboardIncomeSection" style="margin-top:8px;"></div>';
-
-  // Render Income Section
-  if (typeof renderIncomeSection === 'function') renderIncomeSection();
+  container.innerHTML = greeting + heroHtml + statsRow + portfolioHtml + recommendedHtml;
 }
 
 // ========== INCOME / DISTRIBUTION TRACKING ==========
