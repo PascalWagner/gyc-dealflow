@@ -8979,63 +8979,6 @@ function renderReport() {
     return true;
   }).slice(0, 3);
 
-  // Build progress section based on branch
-  let goalSection = '';
-  if (branch === 'cashflow') {
-    const current = d.currentCashFlow || '$0';
-    const target = d.targetCashFlow || 'Not set';
-    const checkSize = d.checkSize || 'Not set';
-    goalSection = `
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:32px;">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Current Cash Flow</div>
-          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);">${current}</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">per year</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="${bc.color}" stroke-width="2.5" style="width:32px;height:32px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">YOUR GOAL</div>
-        </div>
-        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Target Cash Flow</div>
-          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:${bc.color};">${target}</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">per year</div>
-        </div>
-      </div>`;
-  } else if (branch === 'growth') {
-    const minIRR = d.minIRR || 'Not set';
-    const risk = d.riskTolerance || 'Not set';
-    goalSection = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px;">
-        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Minimum IRR Target</div>
-          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:${bc.color};">${minIRR}</div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Risk Profile</div>
-          <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);">${risk}</div>
-        </div>
-      </div>`;
-  } else {
-    const taxable = d.taxableIncome || 'Not set';
-    const offset = d.taxOffset || 'Not set';
-    goalSection = `
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin-bottom:32px;">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;">Taxable Income</div>
-          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);">${taxable}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="${bc.color}" stroke-width="2.5" style="width:32px;height:32px;"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">OFFSET</div>
-        </div>
-        <div style="background:${bc.colorBg};border:2px solid ${bc.color};border-radius:var(--radius);padding:24px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${bc.color};margin-bottom:8px;">Tax Offset Goal</div>
-          <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:${bc.color};">${offset}</div>
-        </div>
-      </div>`;
-  }
-
   // Build criteria pills
   function pill(label) { return `<span style="display:inline-block;padding:6px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:100px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);margin:3px 4px 3px 0;">${label}</span>`; }
   const assetPills = (d.assetClasses || []).map(pill).join('') || '<span style="color:var(--text-muted);font-size:13px;">All asset classes</span>';
@@ -9088,13 +9031,64 @@ function renderReport() {
         </div>
       </div>
 
-      <!-- Strategy Description -->
-      <div style="margin-bottom:28px;">
-        <div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.5;max-width:560px;">${bc.subtext}</div>
-      </div>
+      <!-- Income Gap -->
+      ${(() => {
+        const goals2 = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+        const hasGoals2 = goals2 && goals2.targetIncome > 0;
+        const currentInc = hasGoals2 ? (goals2.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
+        const targetInc = hasGoals2 ? goals2.targetIncome : (parseDollar(d.targetCashFlow) || 0);
+        const gap = Math.max(0, targetInc - currentInc);
+        const pct = targetInc > 0 ? Math.min(100, Math.round((currentInc / targetInc) * 100)) : 0;
 
-      <!-- Goal Progress Section -->
-      ${goalSection}
+        if (targetInc > 0 && branch === 'cashflow') {
+          return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;">'
+            + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Income Gap</div>'
+            + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'
+            + '<span style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);">$' + currentInc.toLocaleString() + '</span>'
+            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">/yr earning now</span>'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:18px;height:18px;margin:0 4px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
+            + '<span style="font-family:var(--font-headline);font-size:28px;color:' + bc.color + ';">$' + targetInc.toLocaleString() + '</span>'
+            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">/yr goal</span>'
+            + '</div>'
+            + '<div style="height:10px;background:var(--bg-cream);border-radius:99px;overflow:hidden;margin-bottom:10px;">'
+            + '<div style="height:100%;width:' + pct + '%;background:' + bc.color + ';border-radius:99px;transition:width 0.5s;' + (pct > 0 ? 'min-width:6px;' : '') + '"></div>'
+            + '</div>'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+            + '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">' + pct + '% of goal</span>'
+            + (gap > 0 ? '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + bc.color + ';">You need $' + gap.toLocaleString() + ' more/yr</span>' : '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + bc.color + ';">Goal reached!</span>')
+            + '</div>'
+            + '</div>';
+        } else if (branch === 'growth') {
+          const capital = parseDollar(d.growthCapital) || 0;
+          const minIRR2 = d.minIRR || 'Not set';
+          return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;">'
+            + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Growth Target</div>'
+            + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'
+            + '<span style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);">$' + capital.toLocaleString() + '</span>'
+            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">to deploy</span>'
+            + (minIRR2 !== 'Not set' ? '<span style="font-family:var(--font-ui);font-size:14px;color:var(--text-muted);margin-left:8px;">targeting</span><span style="font-family:var(--font-headline);font-size:28px;color:' + bc.color + ';">' + minIRR2 + '</span><span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">IRR+</span>' : '')
+            + '</div>'
+            + '</div>';
+        } else if (branch === 'tax') {
+          const taxable2 = d.taxableIncome || 'Not set';
+          const offset2 = d.taxOffset || 'Not set';
+          const taxNum = parseDollar(taxable2) || 0;
+          const offNum = parseDollar(offset2) || 0;
+          const taxPct = taxNum > 0 && offNum > 0 ? Math.min(100, Math.round((offNum / taxNum) * 100)) : 0;
+          return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;">'
+            + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Tax Offset Target</div>'
+            + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'
+            + '<span style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);">' + taxable2 + '</span>'
+            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">taxable income</span>'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:18px;height:18px;margin:0 4px;"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>'
+            + '<span style="font-family:var(--font-headline);font-size:28px;color:' + bc.color + ';">' + offset2 + '</span>'
+            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">offset goal</span>'
+            + '</div>'
+            + (taxPct > 0 ? '<div style="height:10px;background:var(--bg-cream);border-radius:99px;overflow:hidden;"><div style="height:100%;width:' + taxPct + '%;background:' + bc.color + ';border-radius:99px;min-width:6px;"></div></div>' : '')
+            + '</div>';
+        }
+        return '';
+      })()}
 
       <!-- What I'm Looking For -->
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;">
@@ -12547,101 +12541,69 @@ function renderDashboard() {
       + '</div></div>';
   }
 
-  // ===== SECTION 3: Recommended Deals =====
-  let recommendedHtml = '';
-  const goalGap = hasGoals ? targetIncome - currentIncome : 0;
+  // ===== SECTION 3: Action Items =====
+  let actionItemsHtml = '';
+  const actionItems = [];
 
-  if (hasGoals && goalGap > 0) {
-    const annualDeploy = Math.round((goalGap / 0.08) / (parseInt(goals.timeline) || 5));
-    const scoredDeals = deals.map(d => {
-      const reasons = [];
-      let score = 0;
-      const yld = d.cashOnCash || d.preferredReturn || 0;
-      const irr = d.targetIRR || 0;
-      if (yld >= 0.08) { reasons.push('Strong cash yield (' + (yld * 100).toFixed(1) + '%) accelerates your passive income goal'); score += 3; }
-      else if (yld >= 0.06) { reasons.push('Solid cash flow at ' + (yld * 100).toFixed(1) + '% yield contributes to passive income'); score += 2; }
-      if (irr >= 0.15) { reasons.push('High target return (' + (irr * 100).toFixed(1) + '% IRR) helps grow capital faster'); score += 2; }
-      else if (irr >= 0.10) { reasons.push('Competitive ' + (irr * 100).toFixed(1) + '% target IRR for capital growth'); score += 1; }
-      if (d.investmentMinimum && d.investmentMinimum <= 50000 && d.investmentMinimum > 0) { reasons.push('Low minimum ($' + d.investmentMinimum.toLocaleString() + ') \u2014 easy to start or diversify'); score += 1; }
-      else if (d.investmentMinimum && d.investmentMinimum <= 100000 && d.investmentMinimum > 0) { reasons.push('Accessible $' + d.investmentMinimum.toLocaleString() + ' minimum fits typical deal sizing'); score += 0.5; }
-      if ((goals.taxReduction || 0) > 0 && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage')) { reasons.push('Real estate depreciation in ' + d.assetClass.toLowerCase() + ' can offset taxable income'); score += 2; }
-      if (d.status === 'Evergreen') { reasons.push('Evergreen fund \u2014 invest on your timeline, no rush to deploy'); score += 1; }
-      if (d.distributions === 'Monthly') { reasons.push('Monthly distributions for steady cash flow'); score += 1; }
-      else if (d.distributions === 'Quarterly') { reasons.push('Quarterly distributions'); score += 0.5; }
-      if (d.investmentMinimum && d.investmentMinimum > 0 && d.investmentMinimum <= annualDeploy) { score += 0.5; }
-      return { ...d, _fitReasons: reasons, _fitScore: score };
-    }).filter(d => d._fitScore >= 2 && d._fitReasons.length >= 2)
-      .sort((a, b) => b._fitScore - a._fitScore)
-      .slice(0, 3);
+  // Count matching deals for buy box
+  const wd2 = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  const assetMap2 = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
+  const userAssets2 = (wd2.assetClasses || []).map(function(a) { return assetMap2[a] || a; });
+  const matchingCount = userAssets2.length > 0
+    ? deals.filter(function(deal) { return userAssets2.includes(deal.assetClass); }).length
+    : deals.length;
 
-    if (scoredDeals.length > 0) {
-      let goalDealCards = '';
-      scoredDeals.forEach(d => {
-        const topReasons = d._fitReasons.slice(0, 3);
-        const yieldVal = d.cashOnCash || d.preferredReturn || 0;
-        const annualIncome = d.investmentMinimum ? Math.round(d.investmentMinimum * (yieldVal || (d.targetIRR || 0.08))) : 0;
-        goalDealCards += '<div onclick="navigateTo(\'deals\');setTimeout(()=>openPanel(\'' + d.id + '\'),200);" style="background:var(--bg-cream);border:1px solid var(--border-light);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);display:flex;flex-direction:column;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 4px 12px rgba(81,190,123,0.1)\'" onmouseout="this.style.borderColor=\'var(--border-light)\';this.style.boxShadow=\'none\'">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
-          + '<div>'
-          + '<div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + d.investmentName + '</div>'
-          + '<div style="font-size:11px;color:var(--text-secondary);">' + d.managementCompany + ' &middot; ' + d.assetClass + '</div>'
-          + '</div></div>'
-          + '<div style="display:flex;gap:12px;margin-bottom:14px;">'
-          + (d.targetIRR ? '<div style="padding:8px 12px;background:var(--bg-card);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">' + (d.targetIRR * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Target IRR</div></div>' : '')
-          + (yieldVal ? '<div style="padding:8px 12px;background:var(--bg-card);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--primary);">' + (yieldVal * 100).toFixed(1) + '%</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">' + (d.cashOnCash ? 'Cash-on-Cash' : 'Pref Return') + '</div></div>' : '')
-          + (d.investmentMinimum ? '<div style="padding:8px 12px;background:var(--bg-card);border-radius:var(--radius-sm);text-align:center;flex:1;"><div style="font-size:18px;font-weight:800;color:var(--text-dark);">$' + (d.investmentMinimum >= 1000 ? Math.round(d.investmentMinimum / 1000) + 'K' : d.investmentMinimum.toLocaleString()) + '</div><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--text-muted);">Minimum</div></div>' : '')
-          + '</div>'
-          + '<div style="flex:1;border-top:1px solid var(--border-light);padding-top:12px;">'
-          + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Why This Fits Your Plan</div>'
-          + topReasons.map(function(r) { return '<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:5px;font-size:11px;color:var(--text-secondary);line-height:1.5;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:12px;height:12px;flex-shrink:0;margin-top:2px;"><polyline points="4 12 10 18 20 6"/></svg>' + r + '</div>'; }).join('')
-          + (annualIncome > 0 ? '<div style="margin-top:8px;padding:6px 10px;background:linear-gradient(135deg,var(--primary),#3bba78);border-radius:var(--radius-sm);font-size:11px;font-weight:700;color:#fff;text-align:center;">At min investment: ~$' + annualIncome.toLocaleString() + '/yr toward your goal</div>' : '')
-          + '</div></div>';
-      });
+  if (stageCounts.interested > 0) {
+    actionItems.push({
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:20px;height:20px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+      text: 'You have <strong>' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' saved</strong> — pick one to move to Due Diligence',
+      action: 'navigateTo(\'deals\')',
+      link: 'View Saved Deals'
+    });
+  }
 
-      recommendedHtml = '<div class="dash-recommended">'
-        + '<div class="dash-section-header">'
-        + '<div><div class="dash-section-title">Deals That Could Help You Get There</div>'
-        + '<div class="dash-recommended-subtitle">Matched to your $' + goals.targetIncome.toLocaleString() + '/yr income goal</div></div>'
-        + '<button class="dash-section-link" onclick="navigateTo(\'deals\')">Explore All Deals &rarr;</button>'
-        + '</div>'
-        + '<div class="dash-recommended-grid">' + goalDealCards + '</div>'
+  if (stageCounts.duediligence > 0) {
+    actionItems.push({
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" style="width:20px;height:20px;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
+      text: '<strong>' + stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' in Due Diligence</strong> — review your checklist',
+      action: 'navigateTo(\'deals\')',
+      link: 'Open DD Checklist'
+    });
+  }
+
+  if (matchingCount > 0) {
+    actionItems.push({
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:20px;height:20px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+      text: '<strong>' + matchingCount + ' deal' + (matchingCount !== 1 ? 's' : '') + '</strong> match your buy box',
+      action: 'navigateTo(\'buybox\')',
+      link: 'View Matches'
+    });
+  }
+
+  if (stageCounts.interested === 0 && stageCounts.duediligence === 0) {
+    actionItems.push({
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:20px;height:20px;"><path d="M12 5v14M5 12h14"/></svg>',
+      text: 'Browse deals and save ones that match your criteria',
+      action: 'navigateTo(\'deals\')',
+      link: 'Explore Deals'
+    });
+  }
+
+  if (actionItems.length > 0) {
+    const itemsHtml = actionItems.map(function(item) {
+      return '<div onclick="' + item.action + '" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:var(--bg-cream);display:flex;align-items:center;justify-content:center;">' + item.icon + '</div>'
+        + '<div style="flex:1;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">' + item.text + '</div>'
+        + '<button onclick="event.stopPropagation();' + item.action + '" style="flex-shrink:0;background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;white-space:nowrap;">' + item.link + ' &rarr;</button>'
         + '</div>';
-    }
-  } else if (branch && !hasGoals) {
-    // Has wizard but no goals — show wizard-based recommendations
-    let filterFn, sortKey;
-    if (branch === 'cashflow') {
-      filterFn = function(d) { return d.assetClass === 'Lending' || d.preferredReturn || d.cashOnCash || (d.investmentObjective && d.investmentObjective.toLowerCase().includes('cashflow')); };
-      sortKey = function(d) { return d.preferredReturn || d.cashOnCash || d.targetIRR || 0; };
-    } else if (branch === 'tax') {
-      filterFn = function(d) { return d.strategy === 'Value-Add' || d.firstYrDepreciation || (d.assetClass && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage' || d.assetClass === 'RV/Mobile Home Parks')); };
-      sortKey = function(d) { return d.targetIRR || 0; };
-    } else {
-      filterFn = function(d) { return (d.targetIRR || 0) >= 0.15; };
-      sortKey = function(d) { return d.targetIRR || 0; };
-    }
-    var recommended = deals.filter(function(d) { return !stages[d.id] && filterFn(d); })
-      .sort(function(a, b) { return sortKey(b) - sortKey(a); }).slice(0, 3);
+    }).join('');
 
-    if (recommended.length > 0) {
-      var recCards = recommended.map(function(d) {
-        var yld = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
-        var yldLabel = d.preferredReturn ? 'Pref Return' : d.cashOnCash ? 'Cash-on-Cash' : 'Target IRR';
-        return '<div class="goal-deal-card" onclick="navigateTo(\'deals\');setTimeout(function(){openPanel(\'' + d.id + '\')},200);">'
-          + '<div class="goal-deal-card-name">' + (d.investmentName || '') + '</div>'
-          + '<div class="goal-deal-card-manager">' + (d.managementCompany || '') + ' &middot; ' + (d.assetClass || '') + '</div>'
-          + '<div><span class="goal-deal-card-yield">' + (yld * 100).toFixed(1) + '%</span><span class="goal-deal-card-yield-label">' + yldLabel + '</span>'
-          + '<span class="goal-deal-card-link">View &rarr;</span></div></div>';
-      }).join('');
-
-      recommendedHtml = '<div class="dash-recommended">'
-        + '<div class="dash-section-header">'
-        + '<div class="dash-section-title">Recommended for You</div>'
-        + '<button class="dash-section-link" onclick="navigateTo(\'deals\')">Explore All Deals &rarr;</button>'
-        + '</div>'
-        + '<div class="goal-recommended-deals">' + recCards + '</div>'
-        + '</div>';
-    }
+    actionItemsHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;">'
+      + '<div style="padding:16px 16px 0;margin-bottom:0;">'
+      + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Action Items</div>'
+      + '</div>'
+      + '<div>' + itemsHtml + '</div>'
+      + '</div>';
   }
 
   // ===== Welcome greeting =====
@@ -12661,7 +12623,7 @@ function renderDashboard() {
     + '</div>';
 
   // ===== Render all sections =====
-  container.innerHTML = greeting + heroHtml + statsRow + portfolioHtml + recommendedHtml;
+  container.innerHTML = greeting + heroHtml + statsRow + actionItemsHtml + portfolioHtml;
 }
 
 // ========== INCOME / DISTRIBUTION TRACKING ==========
