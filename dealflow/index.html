@@ -1520,6 +1520,28 @@ html.dark .mobile-tab-bar {
 .topbar-mobile-select {
   display: none;
 }
+@media (max-width: 767px) {
+  .topbar-mobile-select {
+    display: block;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dark);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 28px 6px 10px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23607179' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    cursor: pointer;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 160px;
+  }
+}
 
 /* Safe area: use padding on the topbar itself, not body */
 html.cap-ios body {
@@ -1584,43 +1606,49 @@ html.cap-ios .topbar-mobile-select {
   min-width: 0;
   max-width: 160px;
 }
-html.cap-ios .topbar-tabs {
+html.cap-ios .topbar-tabs,
+@media (max-width: 767px) { .topbar-tabs {
   display: none !important;
-}
+}}
 /* View toggle: hide grid + list, keep feed + map only */
 html.cap-ios .topbar-view-toggle .view-btn[data-view="grid"],
 html.cap-ios .topbar-view-toggle .view-btn[data-view="list"] {
   display: none !important;
 }
 html.cap-ios .topbar-spacer { display: none; }
-html.cap-ios .topbar-view-toggle {
+html.cap-ios .topbar-view-toggle,
+@media (max-width: 767px) { .topbar-view-toggle {
   display: none !important;
+}}
+
+/* ── Hide elements not needed on iOS / mobile ──────────────── */
+html.cap-ios .mobile-menu-btn { display: none !important; }
+/* Hide office hours banner on iOS app and mobile */
+html.cap-ios .office-hours-banner { display: none !important; }
+@media (max-width: 767px) {
+  .office-hours-banner { display: none !important; }
 }
 
-/* ── Hide elements not needed on iOS ──────────────── */
-html.cap-ios .mobile-menu-btn { display: none !important; }
-/* Hide office hours banner entirely on iOS app */
-html.cap-ios .office-hours-banner { display: none !important; }
-
-/* ── Filter bar: collapsed by default on iOS ───────── */
-html.cap-ios .filter-bar {
+/* ── Filter bar: collapsed by default on iOS / mobile ───────── */
+html.cap-ios .filter-bar,
+@media (max-width: 767px) { .filter-bar {
   padding: 0 12px;
   gap: 0;
   flex-wrap: wrap;
   border-bottom: none;
-}
+}}
 /* Compact search + filter toggle row (always visible) */
-html.cap-ios .filter-bar::before {
-  content: none;
-}
-html.cap-ios .ios-filter-row {
+html.cap-ios .filter-bar::before { content: none; }
+html.cap-ios .ios-filter-row,
+@media (max-width: 767px) { .ios-filter-row {
   display: flex !important;
   width: 100%;
   gap: 8px;
   padding: 10px 0;
   align-items: center;
-}
-html.cap-ios .ios-filter-toggle {
+}}
+html.cap-ios .ios-filter-toggle,
+@media (max-width: 767px) { .ios-filter-toggle {
   display: flex !important;
   align-items: center;
   gap: 5px;
@@ -1636,25 +1664,12 @@ html.cap-ios .ios-filter-toggle {
   white-space: nowrap;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
-}
-html.cap-ios .ios-filter-toggle svg {
-  width: 14px;
-  height: 14px;
-  stroke: var(--text-muted);
-  transition: transform 0.2s;
-}
-html.cap-ios .ios-filter-toggle.open svg {
-  transform: rotate(180deg);
-}
-html.cap-ios .ios-filter-toggle.has-active {
-  background: var(--mint-bg);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-html.cap-ios .ios-filter-toggle.has-active svg {
-  stroke: var(--primary);
-}
-/* Hide ALL original filter bar children by default on iOS */
+}}
+html.cap-ios .ios-filter-toggle svg { width: 14px; height: 14px; stroke: var(--text-muted); transition: transform 0.2s; }
+html.cap-ios .ios-filter-toggle.open svg { transform: rotate(180deg); }
+html.cap-ios .ios-filter-toggle.has-active { background: var(--mint-bg); border-color: var(--primary); color: var(--primary); }
+html.cap-ios .ios-filter-toggle.has-active svg { stroke: var(--primary); }
+/* Hide ALL original filter bar children by default on iOS / mobile */
 html.cap-ios .filter-bar > select,
 html.cap-ios .filter-bar > button,
 html.cap-ios .filter-bar > div:not(.ios-filter-row),
@@ -1664,32 +1679,48 @@ html.cap-ios .filter-bar > .filter-clear,
 html.cap-ios .filter-bar > .filter-count {
   display: none !important;
 }
-/* Always show the iOS filter row */
-html.cap-ios .filter-bar > .ios-filter-row {
-  display: flex !important;
+@media (max-width: 767px) {
+  .filter-bar > select,
+  .filter-bar > button,
+  .filter-bar > div:not(.ios-filter-row),
+  .filter-bar > .buybox-toggle,
+  .filter-bar > .buybox-update-btn,
+  .filter-bar > .filter-clear,
+  .filter-bar > .filter-count {
+    display: none !important;
+  }
 }
+/* Always show the iOS/mobile filter row */
+html.cap-ios .filter-bar > .ios-filter-row,
+@media (max-width: 767px) { .filter-bar > .ios-filter-row {
+  display: flex !important;
+}}
 /* Expanded state: show filter selects in a neat 2-col grid */
-html.cap-ios .filter-bar.ios-filters-open > select.filter-select {
+html.cap-ios .filter-bar.ios-filters-open > select.filter-select,
+@media (max-width: 767px) { .filter-bar.ios-filters-open > select.filter-select {
   display: block !important;
   width: calc(50% - 4px) !important;
   min-width: 0 !important;
   flex-shrink: 0;
-}
-html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle {
+}}
+html.cap-ios .filter-bar.ios-filters-open > .buybox-toggle,
+@media (max-width: 767px) { .filter-bar.ios-filters-open > .buybox-toggle {
   display: flex !important;
   width: 100% !important;
-}
-html.cap-ios .filter-bar.ios-filters-open {
+}}
+html.cap-ios .filter-bar.ios-filters-open,
+@media (max-width: 767px) { .filter-bar.ios-filters-open {
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-light);
-}
+}}
 html.cap-ios .filter-bar select,
-html.cap-ios .filter-bar input {
+html.cap-ios .filter-bar input,
+@media (max-width: 767px) { .filter-bar select, .filter-bar input {
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 8px;
-}
+}}
 
 /* ── Managers page: collapsible filters on iOS ─────── */
 html.cap-ios #managersFilterSidebar {
@@ -13659,8 +13690,9 @@ fetchBuyBoxFromGHL();
   // Set initial state
   updateMobileTabBar('deals');
 
-  // iOS: inject collapsible filter toggles
-  if (document.documentElement.classList.contains('cap-ios')) {
+  // iOS / mobile: inject collapsible filter toggles
+  const isMobileView = document.documentElement.classList.contains('cap-ios') || window.innerWidth <= 767;
+  if (isMobileView) {
     // Deals page filter bar
     const dealsFilter = document.querySelector('#page-deals .filter-bar');
     if (dealsFilter) {
