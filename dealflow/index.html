@@ -5114,6 +5114,194 @@ function updateDealCount() {
   if (badge) badge.textContent = DEALS.length;
 }
 
+// ========== DD CHECKLIST DATA ==========
+const DD_CHECKLIST = [
+  'Review PPM / Offering Memorandum',
+  'Verify operator track record',
+  'Check fee structure',
+  'Review financial statements',
+  'Confirm investment minimum & terms',
+  'Verify accreditation requirements',
+  'Review tax implications (K-1 timing, depreciation)',
+  'Schedule call with operator',
+  'Check references / other LPs',
+  'Review subscription documents'
+];
+let dealDDChecks = JSON.parse(localStorage.getItem('gycDealDD') || '{}');
+function saveDealDD() { localStorage.setItem('gycDealDD', JSON.stringify(dealDDChecks)); }
+function toggleDDItem(dealId, index) {
+  if (!dealDDChecks[dealId]) dealDDChecks[dealId] = new Array(DD_CHECKLIST.length).fill(false);
+  dealDDChecks[dealId][index] = !dealDDChecks[dealId][index];
+  saveDealDD();
+  const deal = DEALS.find(d => d.id === dealId);
+  if (deal) document.getElementById('panelContent').innerHTML = renderPanel(deal);
+}
+
+// ========== DEAL COMPARISON ==========
+let comparisonSelection = new Set();
+
+function toggleComparisonSelect(dealId, e) {
+  if (e) e.stopPropagation();
+  if (comparisonSelection.has(dealId)) {
+    comparisonSelection.delete(dealId);
+  } else {
+    if (comparisonSelection.size >= 3) return; // max 3
+    comparisonSelection.add(dealId);
+  }
+  // Update checkbox visuals
+  document.querySelectorAll('.compare-check').forEach(function(el) {
+    el.classList.toggle('selected', comparisonSelection.has(el.dataset.dealId));
+  });
+  updateCompareBar();
+}
+
+function updateCompareBar() {
+  let bar = document.getElementById('compareBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'compareBar';
+    document.body.appendChild(bar);
+  }
+  if (comparisonSelection.size >= 2) {
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#1e3a5f,#1e3a3a);padding:14px 24px;z-index:998;display:flex;align-items:center;justify-content:center;gap:16px;animation:slideUp 0.3s ease;box-shadow:0 -4px 20px rgba(0,0,0,0.3);';
+    bar.innerHTML = '<span style="font-size:13px;color:#94a3b8;font-family:var(--font-ui);">' + comparisonSelection.size + ' deals selected</span>' +
+      '<button onclick="openComparisonView()" style="padding:10px 24px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Compare Now &rarr;</button>' +
+      '<button onclick="comparisonSelection.clear();updateCompareBar();document.querySelectorAll(\'.compare-check\').forEach(function(e){e.classList.remove(\'selected\')});" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;">&times;</button>';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function openComparisonView() {
+  const dealIds = Array.from(comparisonSelection);
+  const deals = dealIds.map(function(id) { return DEALS.find(function(d) { return d.id === id; }); }).filter(Boolean);
+  if (deals.length < 2) return;
+
+  var overlay = document.getElementById('comparisonOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'comparisonOverlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-main);z-index:10001;overflow-y:auto;padding:24px;';
+
+  var h = '<div style="max-width:1000px;margin:0 auto;">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">';
+  h += '<div style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">Deal Comparison</div>';
+  h += '<button onclick="closeComparisonView()" style="padding:8px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);">&times; Close</button>';
+  h += '</div>';
+
+  // Table
+  var cols = deals.length;
+  h += '<div style="overflow-x:auto;">';
+  h += '<table style="width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:13px;">';
+
+  // Header row with deal names
+  h += '<thead><tr><th style="text-align:left;padding:12px;border-bottom:2px solid var(--border);width:180px;color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Metric</th>';
+  deals.forEach(function(d) {
+    h += '<th style="text-align:center;padding:12px;border-bottom:2px solid var(--border);"><div style="font-size:14px;font-weight:700;color:var(--text-dark);">' + d.investmentName + '</div><div style="font-size:11px;color:var(--text-muted);">' + (d.managementCompany || '') + '</div></th>';
+  });
+  h += '</tr></thead><tbody>';
+
+  // Helper to render a row with best highlighting
+  function row(label, values, format, higherIsBetter) {
+    var best = null;
+    var nums = values.map(function(v) { return typeof v === 'number' ? v : null; });
+    nums.forEach(function(n) { if (n !== null && (best === null || (higherIsBetter ? n > best : n < best))) best = n; });
+    var r = '<tr><td style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;">' + label + '</td>';
+    values.forEach(function(v, i) {
+      var isBest = nums[i] !== null && nums[i] === best && nums.filter(function(n) { return n === best; }).length < nums.length;
+      var style = 'padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);font-weight:600;color:var(--text-dark);';
+      if (isBest) style += 'background:rgba(74,222,128,0.1);color:var(--primary);';
+      var display = v === null || v === undefined ? '—' : format === 'pct' ? (v * 100).toFixed(1) + '%' : format === 'money' ? '$' + v.toLocaleString() : format === 'multiple' ? v.toFixed(2) + 'x' : format === 'yr' ? (v < 1 ? Math.round(v * 12) + ' mo' : v + ' yr') : String(v);
+      r += '<td style="' + style + '">' + display + '</td>';
+    });
+    return r + '</tr>';
+  }
+
+  function sectionHeader(title) {
+    return '<tr><td colspan="' + (cols + 1) + '" style="padding:16px 12px 8px;font-weight:800;font-size:12px;color:var(--primary);text-transform:uppercase;letter-spacing:1px;border-bottom:none;">' + title + '</td></tr>';
+  }
+
+  h += sectionHeader('Returns');
+  h += row('Target IRR', deals.map(function(d) { return d.targetIRR; }), 'pct', true);
+  h += row('Pref Return', deals.map(function(d) { return d.preferredReturn; }), 'pct', true);
+  h += row('Equity Multiple', deals.map(function(d) { return d.equityMultiple; }), 'multiple', true);
+  h += row('Cash-on-Cash', deals.map(function(d) { return d.cashOnCash; }), 'pct', true);
+
+  h += sectionHeader('Terms');
+  h += row('Minimum', deals.map(function(d) { return d.investmentMinimum; }), 'money', false);
+  h += row('Hold Period', deals.map(function(d) { return d.holdPeriod; }), 'yr', false);
+
+  // Text rows
+  function textRow(label, values) {
+    var r = '<tr><td style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;">' + label + '</td>';
+    values.forEach(function(v) {
+      r += '<td style="padding:10px 12px;text-align:center;border-bottom:1px solid var(--border);color:var(--text-dark);">' + (v || '—') + '</td>';
+    });
+    return r + '</tr>';
+  }
+
+  h += textRow('Distributions', deals.map(function(d) { return d.distributions; }));
+  h += textRow('Redemption', deals.map(function(d) { return d.redemption; }));
+
+  h += sectionHeader('Structure');
+  h += textRow('Asset Class', deals.map(function(d) { return d.assetClass; }));
+  h += textRow('Strategy', deals.map(function(d) { return d.strategy; }));
+  h += textRow('Deal Type', deals.map(function(d) { return d.dealType; }));
+  h += textRow('Geography', deals.map(function(d) { return d.investingGeography || d.location; }));
+
+  h += sectionHeader('Sponsor');
+  h += textRow('Company', deals.map(function(d) { return d.managementCompany; }));
+  h += textRow('CEO', deals.map(function(d) { return d.ceo; }));
+  h += textRow('Founded', deals.map(function(d) { return d.mcFoundingYear; }));
+
+  // Goal fit
+  h += sectionHeader('Goal Fit');
+  var gapFills = deals.map(function(d) { var gf = getGapFillPercent(d); return gf ? gf.percent : null; });
+  h += row('Gap Fill %', gapFills, null, true);
+  var gapLabels = deals.map(function(d) { var gf = getGapFillPercent(d); return gf ? gf.label : '—'; });
+  h += textRow('Goal Type', gapLabels);
+
+  h += '</tbody></table></div>';
+
+  // Academy CTA
+  var user = getUser();
+  if (user && user.tier === 'explorer') {
+    h += '<div style="margin-top:24px;padding:24px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #3b82f6;border-radius:12px;text-align:center;">';
+    h += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--text-dark);margin-bottom:8px;">Want Pascal to review your picks?</div>';
+    h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Academy members get personalized deal analysis and deployment guidance.</div>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Get Pascal\'s Analysis &rarr;</button>';
+    h += '</div>';
+  }
+
+  h += '</div>';
+  overlay.innerHTML = h;
+}
+
+function closeComparisonView() {
+  var overlay = document.getElementById('comparisonOverlay');
+  if (overlay) overlay.remove();
+  comparisonSelection.clear();
+  updateCompareBar();
+  document.querySelectorAll('.compare-check').forEach(function(el) { el.classList.remove('selected'); });
+}
+
+function preselectComparison(dealId) {
+  comparisonSelection.clear();
+  comparisonSelection.add(dealId);
+  // Add all other interested/DD deals
+  DEALS.forEach(function(d) {
+    if (d.id !== dealId && comparisonSelection.size < 3) {
+      var stage = getDealStage(d.id);
+      if (stage === 'interested' || stage === 'duediligence') {
+        comparisonSelection.add(d.id);
+      }
+    }
+  });
+  if (comparisonSelection.size >= 2) openComparisonView();
+}
+
 // ========== AIRTABLE SYNC LAYER ==========
 const SYNC_API = '/api/userdata';
 function getUserEmail() {
@@ -5555,8 +5743,10 @@ function renderCreditCard(deal) {
   const isInterested = stage === 'interested' || stage === 'duediligence' || stage === 'portfolio';
   const isPassed = stage === 'passed';
 
+  const showCmpCheck = (currentTab === 'interested' || currentTab === 'duediligence');
   const html = `
     <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
+      ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <div class="credit-card-hero" style="position:relative">
         <div class="credit-badges">
           <span class="credit-badge">${typeLabel}</span>
@@ -5839,8 +6029,10 @@ function renderCard(deal) {
   const strategy = getEquityStrategy(deal);
   const mgr = getManagerTier(deal);
 
+  var showCompareCheck = (currentTab === 'interested' || currentTab === 'duediligence');
   return `
     <div class="deal-card" data-id="${deal.id}">
+      ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <div class="equity-card-hero" style="background:${hero.gradient};position:relative;">
         <div class="equity-hero-badges">
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
@@ -6087,13 +6279,90 @@ function renderPanel(deal) {
           </div>
         </a>
       </div>
-      <div class="panel-actions">
-        <a href="deal.html?id=${deal.id}" class="btn-cta btn-cta-primary" style="text-decoration:none;text-align:center;">View Deal Page</a>
-        ${deal.deckUrl ? `<a href="${deal.deckUrl}" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;text-align:center;">View Deal Deck</a>` : `<button class="btn-cta btn-cta-secondary" style="opacity:0.4;cursor:default;" disabled>No Deck Available</button>`}
-      </div>
+      ${renderPanelNextSteps(deal)}
       <div class="panel-added-date">Added on ${deal.addedDate}</div>
     </div>
   `;
+}
+
+// ========== PANEL NEXT STEPS (Stage-Aware) ==========
+function renderPanelNextSteps(deal) {
+  var stage = getDealStage(deal.id);
+  var user = getUser();
+  var isExplorer = user && user.tier === 'explorer';
+  var h = '';
+
+  // Always keep View Deal Page + Deck as primary actions
+  h += '<div class="panel-actions">';
+  h += '<a href="deal.html?id=' + deal.id + '" class="btn-cta btn-cta-primary" style="text-decoration:none;text-align:center;">View Deal Page</a>';
+  h += deal.deckUrl ? '<a href="' + deal.deckUrl + '" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;text-align:center;">View Deal Deck</a>' : '<button class="btn-cta btn-cta-secondary" style="opacity:0.4;cursor:default;" disabled>No Deck Available</button>';
+  h += '</div>';
+
+  // Stage-specific next steps
+  h += '<div style="padding:16px 24px;">';
+  h += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Next Steps</div>';
+
+  if (stage === 'new' || stage === 'interested') {
+    h += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    h += '<button onclick="trackActivity(\'ppm_requested\',{dealId:\'' + deal.id + '\'});window.open(\'mailto:pascal@growyourcashflow.io?subject=PPM Request: ' + encodeURIComponent(deal.investmentName) + '\',\'_blank\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Request the PPM</button>';
+    h += '<button onclick="preselectComparison(\'' + deal.id + '\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Compare with saved deals</button>';
+    h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'duediligence\')" style="padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Start Due Diligence &rarr;</button>';
+    h += '</div>';
+
+  } else if (stage === 'duediligence') {
+    // DD Checklist
+    var checks = dealDDChecks[deal.id] || [];
+    var checkedCount = checks.filter(Boolean).length;
+    var pct = Math.round((checkedCount / DD_CHECKLIST.length) * 100);
+
+    h += '<div style="margin-bottom:12px;">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+    h += '<span style="font-size:12px;color:var(--text-secondary);">' + checkedCount + ' of ' + DD_CHECKLIST.length + ' complete</span>';
+    h += '<span style="font-size:12px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + pct + '%</span>';
+    h += '</div>';
+    h += '<div style="height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;">';
+    h += '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:3px;transition:width 0.3s ease;"></div>';
+    h += '</div></div>';
+
+    h += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    DD_CHECKLIST.forEach(function(item, i) {
+      var checked = checks[i];
+      var gated = isExplorer && i >= 3;
+      if (gated) {
+        h += '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;font-size:12px;color:var(--text-muted);filter:blur(3px);pointer-events:none;user-select:none;"><input type="checkbox" disabled><span>' + item + '</span></label>';
+      } else {
+        h += '<label onclick="toggleDDItem(\'' + deal.id + '\',' + i + ')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:12px;color:' + (checked ? 'var(--primary)' : 'var(--text-dark)') + ';background:' + (checked ? 'rgba(74,222,128,0.06)' : 'transparent') + ';' + (checked ? 'text-decoration:line-through;' : '') + '"><input type="checkbox" ' + (checked ? 'checked' : '') + ' style="pointer-events:none;accent-color:var(--primary);"><span>' + item + '</span></label>';
+      }
+    });
+    h += '</div>';
+
+    if (isExplorer) {
+      h += '<div style="margin-top:8px;padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;text-align:center;">';
+      h += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">Unlock full DD checklist</div>';
+      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
+      h += '</div>';
+    }
+
+    if (checkedCount >= 6) {
+      h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'portfolio\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Ready to Invest &rarr;</button>';
+    }
+
+  } else if (stage === 'portfolio') {
+    h += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    h += '<button onclick="showLogDistributionForm(\'' + deal.id + '\',\'' + (deal.investmentName || '').replace(/'/g, "\\'") + '\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Log Distribution</button>';
+    h += '<button onclick="closePanel();navigateTo(\'portfolio\')" style="padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-dark);text-align:left;display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg> View in Portfolio</button>';
+    h += '</div>';
+  }
+
+  // Universal actions
+  h += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">';
+  h += '<button onclick="trackActivity(\'call_booked\',{dealId:\'' + deal.id + '\',source:\'deal_panel\'});window.open(\'https://growyourcashflow.io/call\',\'_blank\')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);text-align:center;">Book a call about this deal</button>';
+  if (isExplorer) {
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Get Pascal\'s analysis &rarr; Join Academy</button>';
+  }
+  h += '</div></div>';
+
+  return h;
 }
 
 // --- Goal-based sort ---
@@ -6490,6 +6759,9 @@ function switchTab(el, fromSelect) {
     const sel = document.getElementById('dealWorkflowSelect');
     if (sel) sel.value = currentTab;
   }
+  // Clear comparison selection on tab switch
+  comparisonSelection.clear();
+  updateCompareBar();
   renderAll();
 }
 
