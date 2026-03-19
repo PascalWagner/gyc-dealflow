@@ -605,6 +605,33 @@ body {
 }
 
 /* Stats Bar */
+.goal-sort-indicator {
+  padding: 8px 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-light);
+}
+.goal-sort-indicator a {
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: none;
+  font-style: normal;
+  font-weight: 600;
+}
+.goal-sort-indicator a:hover { text-decoration: underline; }
+
+.deal-goal-fit {
+  padding: 0 18px 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
 .stats-bar {
   padding: 12px 32px;
   display: flex;
@@ -3081,6 +3108,201 @@ html.cap-ios .debt-metric-select-mobile {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
+/* Goal Progress Section (Dashboard) */
+.goal-progress-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+}
+.goal-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+.goal-progress-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.goal-progress-value {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+.goal-progress-bar {
+  height: 10px;
+  background: var(--border-light);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.goal-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 5px;
+  transition: width 0.6s ease;
+  min-width: 0;
+}
+.goal-progress-subtext {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.goal-recommended-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+.goal-recommended-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+}
+.goal-recommended-deals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.goal-deal-card {
+  background: var(--bg-cream);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.goal-deal-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(81,190,123,0.1);
+}
+.goal-deal-card-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.goal-deal-card-manager {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.goal-deal-card-yield {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+  display: inline-block;
+}
+.goal-deal-card-yield-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+.goal-deal-card-link {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  float: right;
+  margin-top: 4px;
+}
+.goal-onboarding-cta {
+  background: linear-gradient(135deg, #1F5159, #0A1E21);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-shadow: var(--shadow-card);
+}
+.goal-onboarding-cta-text {
+  color: rgba(255,255,255,0.9);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.goal-onboarding-cta-text strong {
+  color: #fff;
+  font-family: var(--font-ui);
+  font-weight: 700;
+}
+.goal-onboarding-cta-btn {
+  padding: 10px 24px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+.goal-onboarding-cta-btn:hover {
+  background: var(--primary-hover);
+}
+
+/* Portfolio Empty State (goal-aware) */
+.portfolio-empty-goal {
+  text-align: center;
+  padding: 60px 20px;
+}
+.portfolio-empty-goal-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+.portfolio-empty-goal-title {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.portfolio-empty-goal-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+.portfolio-empty-goal-btn {
+  padding: 10px 24px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.portfolio-empty-goal-btn:hover {
+  background: var(--primary-hover);
+}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -3374,7 +3596,7 @@ html.cap-ios .debt-metric-select-mobile {
         <option value="Open to invest">Open to invest</option>
         <option value="Evergreen">Evergreen</option>
       </select>
-      <select class="filter-select" id="filterSort" onchange="applyFilters()">
+      <select class="filter-select" id="filterSort" onchange="_goalSortOverridden=true;applyFilters()">
         <option value="newest">Sort: Newest</option>
         <option value="irr">Sort: Highest IRR</option>
         <option value="min_invest">Sort: Lowest Min Investment</option>
@@ -3392,6 +3614,7 @@ html.cap-ios .debt-metric-select-mobile {
       <div class="filter-count"><span id="visibleCount">30</span> deals</div>
     </div>
     <div class="stats-bar" id="statsBar"></div>
+    <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
     <div class="content-area">
       <div class="card-grid" id="cardGrid"></div>
       <table class="table-view" id="tableView">
@@ -5286,6 +5509,7 @@ function renderCreditCard(deal) {
             <div class="metric-value">${formatDistribution(deal)}</div>
           </div>
         </div>
+        ${getGoalFitLine(deal)}
         <div class="equity-card-info-row">
           <div class="metric">
             <div class="metric-label">Manager Size</div>
@@ -5570,6 +5794,7 @@ function renderCard(deal) {
             <div class="metric-value">${deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—'}</div>
           </div>
         </div>
+        ${getGoalFitLine(deal)}
         <div class="equity-card-info-row">
           <div class="metric">
             <div class="metric-label">Manager Size</div>
@@ -5792,6 +6017,97 @@ function renderPanel(deal) {
   `;
 }
 
+// --- Goal-based sort ---
+let _goalSortOverridden = false; // true when user manually picks a sort
+let _cachedWizardData = null;
+
+function getCachedWizardData() {
+  if (!_cachedWizardData) {
+    _cachedWizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  }
+  return _cachedWizardData;
+}
+function invalidateWizardCache() { _cachedWizardData = null; }
+
+function getGoalYield(deal) {
+  const pr = deal.preferredReturn || 0;
+  const cc = deal.cashOnCash || 0;
+  const irr = deal.targetIRR || 0;
+  // Normalize: values > 1 are already %, values <= 1 are decimals
+  const normalize = v => v > 1 ? v / 100 : v;
+  return normalize(pr) || normalize(cc) || normalize(irr);
+}
+
+function isTaxRelevant(deal) {
+  const ac = (deal.assetClass || '').toLowerCase();
+  const st = (deal.strategy || '').toLowerCase();
+  const inv = (deal.investmentStrategy || '').toLowerCase();
+  if (st === 'value-add' || st.includes('value')) return 'valueadd';
+  if (ac.includes('oil') || ac.includes('gas') || ac.includes('energy')) return 'oilgas';
+  if (inv.includes('depreci') || inv.includes('cost seg') || inv.includes('tax') || inv.includes('1031')) return 'generic';
+  if (ac.includes('multi family') || ac.includes('multifamily') || ac.includes('self storage') || ac.includes('industrial')) return 'generic';
+  return null;
+}
+
+function clearGoalSort() {
+  _goalSortOverridden = true;
+  document.getElementById('filterSort').value = 'newest';
+  applyFilters();
+}
+
+function updateGoalSortIndicator(isGoalSorted) {
+  const el = document.getElementById('goalSortIndicator');
+  if (!el) return;
+  if (!isGoalSorted) { el.style.display = 'none'; return; }
+  const wd = getCachedWizardData();
+  const branch = wd._branch;
+  const labels = {
+    cashflow: 'Sorted for your <strong>income goal</strong>',
+    tax: 'Sorted for your <strong>tax strategy</strong>',
+    growth: 'Sorted for your <strong>growth target</strong>'
+  };
+  el.innerHTML = (labels[branch] || '') + ' &middot; <a onclick="clearGoalSort()">Show default</a>';
+  el.style.display = '';
+}
+
+function getGoalFitLine(deal) {
+  const wd = getCachedWizardData();
+  if (!wd._branch) return '';
+  const branch = wd._branch;
+  const checkSize = 100000;
+
+  if (branch === 'cashflow') {
+    const yld = getGoalYield(deal);
+    if (!yld) return '';
+    const annual = Math.round(yld * checkSize);
+    const target = parseDollar(wd.targetCashFlow) || 100000;
+    return '<div class="deal-goal-fit">&rarr; $' + annual.toLocaleString() + '/yr toward your $' + target.toLocaleString() + ' goal</div>';
+  }
+
+  if (branch === 'tax') {
+    const taxType = isTaxRelevant(deal);
+    if (!taxType) return '';
+    if (taxType === 'valueadd') return '<div class="deal-goal-fit">&rarr; Depreciation-eligible: value-add with cost segregation</div>';
+    if (taxType === 'oilgas') return '<div class="deal-goal-fit">&rarr; Oil &amp; gas: IDCs may offset active W-2 income</div>';
+    return '<div class="deal-goal-fit">&rarr; Tax-advantaged structure</div>';
+  }
+
+  if (branch === 'growth') {
+    if (deal.equityMultiple) {
+      const em = deal.equityMultiple > 1 ? deal.equityMultiple : deal.equityMultiple; // already a multiple
+      const result = Math.round(checkSize * em);
+      return '<div class="deal-goal-fit">&rarr; $' + checkSize.toLocaleString() + ' becomes $' + result.toLocaleString() + ' at ' + em.toFixed(1) + 'x</div>';
+    }
+    if (deal.targetIRR) {
+      const irr = deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100;
+      return '<div class="deal-goal-fit">&rarr; Targeting ' + irr.toFixed(0) + '% annualized return</div>';
+    }
+    return '';
+  }
+
+  return '';
+}
+
 function getFilteredDeals() {
   const ac = document.getElementById('filterAssetClass').value;
   const dt = document.getElementById('filterDealType').value;
@@ -5826,15 +6142,36 @@ function getFilteredDeals() {
     return true;
   });
 
-  // Sort
-  filtered.sort((a, b) => {
-    if (sortBy === 'newest') return new Date(b.addedDate) - new Date(a.addedDate);
-    if (sortBy === 'irr') return (b.targetIRR || 0) - (a.targetIRR || 0);
-    if (sortBy === 'min_invest') return (a.investmentMinimum || 0) - (b.investmentMinimum || 0);
-    if (sortBy === 'az') return (a.investmentName || '').localeCompare(b.investmentName || '');
-    return 0;
-  });
+  // Goal-based default sort: when sort is "newest" (default) and user hasn't overridden
+  const wd = getCachedWizardData();
+  const useGoalSort = sortBy === 'newest' && !_goalSortOverridden && wd._branch;
 
+  if (useGoalSort) {
+    const branch = wd._branch;
+    if (branch === 'cashflow') {
+      filtered.sort((a, b) => getGoalYield(b) - getGoalYield(a));
+    } else if (branch === 'tax') {
+      filtered.sort((a, b) => {
+        const aRel = isTaxRelevant(a) ? 1 : 0;
+        const bRel = isTaxRelevant(b) ? 1 : 0;
+        if (bRel !== aRel) return bRel - aRel;
+        return (b.targetIRR || 0) - (a.targetIRR || 0);
+      });
+    } else if (branch === 'growth') {
+      filtered.sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
+    }
+  } else {
+    // Standard sort
+    filtered.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.addedDate) - new Date(a.addedDate);
+      if (sortBy === 'irr') return (b.targetIRR || 0) - (a.targetIRR || 0);
+      if (sortBy === 'min_invest') return (a.investmentMinimum || 0) - (b.investmentMinimum || 0);
+      if (sortBy === 'az') return (a.investmentName || '').localeCompare(b.investmentName || '');
+      return 0;
+    });
+  }
+
+  updateGoalSortIndicator(useGoalSort);
   return filtered;
 }
 
@@ -6053,6 +6390,7 @@ function clearFilters() {
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterSort').value = 'newest';
   document.getElementById('filterSearch').value = '';
+  _goalSortOverridden = false;
   applyFilters();
 }
 
@@ -9526,6 +9864,39 @@ function renderPortfolio() {
     tableC.style.display = 'none';
     summaryC.style.display = 'none';
     if (chartArea) chartArea.style.display = 'none';
+    // Goal-aware empty state
+    const wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+    const branch = wd._branch;
+    let emptyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;opacity:0.4;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
+    let emptyTitle, emptyDesc, emptyBtnText, emptyBtnAction;
+    if (branch === 'cashflow') {
+      const target = parseDollar(wd.targetCashFlow) || 100000;
+      emptyTitle = "You haven't logged any investments yet";
+      emptyDesc = 'Add your first income deal to start tracking toward $' + target.toLocaleString() + '/yr in passive income.';
+      emptyBtnText = 'Browse Income Deals &rarr;';
+      emptyBtnAction = "navigateTo('deals')";
+    } else if (branch === 'tax') {
+      emptyTitle = "You haven't logged any investments yet";
+      emptyDesc = 'Find deals with depreciation to start offsetting your tax bill.';
+      emptyBtnText = 'Browse Tax-Advantaged Deals &rarr;';
+      emptyBtnAction = "navigateTo('deals')";
+    } else if (branch === 'growth') {
+      emptyTitle = "You haven't logged any investments yet";
+      emptyDesc = 'Find high-return deals to start growing toward your 2x goal.';
+      emptyBtnText = 'Browse Growth Deals &rarr;';
+      emptyBtnAction = "navigateTo('deals')";
+    } else {
+      emptyTitle = 'Track your investments here';
+      emptyDesc = 'Set up your plan first to get personalized recommendations.';
+      emptyBtnText = 'Set Up My Plan &rarr;';
+      emptyBtnAction = 'openBuyBoxWizard()';
+    }
+    empty.innerHTML = '<div class="portfolio-empty-goal">'
+      + '<div class="portfolio-empty-goal-icon">' + emptyIcon + '</div>'
+      + '<div class="portfolio-empty-goal-title">' + emptyTitle + '</div>'
+      + '<div class="portfolio-empty-goal-desc">' + emptyDesc + '</div>'
+      + '<button class="portfolio-empty-goal-btn" onclick="' + emptyBtnAction + '">' + emptyBtnText + '</button>'
+      + '</div>';
   } else {
     empty.style.display = 'none';
     tableC.style.display = 'block';
@@ -10631,6 +11002,81 @@ function clearAnalyticsData() {
 }
 
 // ========== DASHBOARD ==========
+function renderGoalProgress() {
+  const wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  const branch = wd._branch;
+  const deals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+
+  // No onboarding completed
+  if (!branch) {
+    return `<div class="goal-onboarding-cta">
+      <div class="goal-onboarding-cta-text"><strong>Set up your investment plan in 60 seconds</strong><br>Get personalized deal recommendations matched to your goals.</div>
+      <button class="goal-onboarding-cta-btn" onclick="openBuyBoxWizard()">Get Started &rarr;</button>
+    </div>`;
+  }
+
+  let label, valueText, subtext, filterFn, sortKey;
+
+  if (branch === 'cashflow') {
+    const target = parseDollar(wd.targetCashFlow) || 100000;
+    label = 'PASSIVE INCOME GOAL';
+    valueText = '$0 / $' + target.toLocaleString() + ' per year';
+    subtext = 'Add investments to your portfolio to track progress';
+    filterFn = function(d) {
+      return d.assetClass === 'Lending' || d.preferredReturn || d.cashOnCash || (d.investmentObjective && d.investmentObjective.toLowerCase().includes('cashflow'));
+    };
+    sortKey = function(d) { return d.preferredReturn || d.cashOnCash || d.targetIRR || 0; };
+  } else if (branch === 'tax') {
+    const target = parseDollar(wd.taxableIncome) || 200000;
+    label = 'TAX OFFSET GOAL';
+    valueText = '$0 / $' + target.toLocaleString() + ' offset';
+    subtext = 'Add investments to your portfolio to track progress';
+    filterFn = function(d) {
+      return d.strategy === 'Value-Add' || d.firstYrDepreciation || (d.assetClass && (d.assetClass === 'Multi Family' || d.assetClass === 'Self Storage' || d.assetClass === 'RV/Mobile Home Parks'));
+    };
+    sortKey = function(d) { return d.targetIRR || 0; };
+  } else {
+    const capital = parseDollar(wd.growthCapital) || 500000;
+    const goalMultiple = 2;
+    label = 'WEALTH GROWTH GOAL';
+    valueText = '$' + capital.toLocaleString() + ' &rarr; $' + (capital * goalMultiple).toLocaleString();
+    subtext = 'Add investments to your portfolio to track progress';
+    filterFn = function(d) { return (d.targetIRR || 0) >= 0.15; };
+    sortKey = function(d) { return d.targetIRR || 0; };
+  }
+
+  // Get recommended deals (not already triaged)
+  var recommended = deals
+    .filter(function(d) { return !stages[d.id] && filterFn(d); })
+    .sort(function(a, b) { return sortKey(b) - sortKey(a); })
+    .slice(0, 3);
+
+  var cardsHtml = recommended.map(function(d) {
+    var yld = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
+    var yldLabel = d.preferredReturn ? 'Pref Return' : d.cashOnCash ? 'Cash-on-Cash' : 'Target IRR';
+    return '<div class="goal-deal-card" onclick="navigateTo(\'deals\');setTimeout(function(){openPanel(\'' + d.id + '\')},200);">'
+      + '<div class="goal-deal-card-name">' + (d.investmentName || '') + '</div>'
+      + '<div class="goal-deal-card-manager">' + (d.managementCompany || '') + ' &middot; ' + (d.assetClass || '') + '</div>'
+      + '<div><span class="goal-deal-card-yield">' + (yld * 100).toFixed(1) + '%</span><span class="goal-deal-card-yield-label">' + yldLabel + '</span>'
+      + '<span class="goal-deal-card-link">View &rarr;</span></div>'
+      + '</div>';
+  }).join('');
+
+  return '<div class="goal-progress-section">'
+    + '<div class="goal-progress-header">'
+    + '<div class="goal-progress-label">' + label + '</div>'
+    + '<div class="goal-progress-value">' + valueText + '</div>'
+    + '</div>'
+    + '<div class="goal-progress-bar"><div class="goal-progress-fill" style="width:0%"></div></div>'
+    + '<div class="goal-progress-subtext">' + subtext + '</div>'
+    + (recommended.length > 0 ? '<div class="goal-recommended-section">'
+      + '<div class="goal-recommended-title">Recommended for you</div>'
+      + '<div class="goal-recommended-deals">' + cardsHtml + '</div>'
+      + '</div>' : '')
+    + '</div>';
+}
+
 function renderDashboard() {
   const container = document.getElementById('dashboardContent');
   if (!container) return;
@@ -10685,7 +11131,11 @@ function renderDashboard() {
 
   const priorityColors = { high: '#e74c3c', medium: '#f59e0b', low: 'var(--primary)' };
 
+  // Goal-aware progress section (from Buy Box wizard)
+  const goalProgressHtml = renderGoalProgress();
+
   container.innerHTML = `
+    ${goalProgressHtml}
     <!-- Greeting + Goal Hero -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
       <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:32px;color:#fff;">
