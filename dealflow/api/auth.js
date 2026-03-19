@@ -55,8 +55,8 @@ export default async function handler(req, res) {
                 email: contact.email,
                 name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || email.split('@')[0],
                 contactId: contact.id,
-                tier: contact.tags?.includes('academy-member') ? 'academy' :
-                      contact.tags?.includes('investor-member') ? 'investor' : 'explorer',
+                tier: (contact.tags || []).some(t => ['academy-member','bought cashflow academy','cashflow-academy','academy member'].includes(t.toLowerCase())) ? 'academy' :
+                      (contact.tags || []).some(t => ['investor-member','fund-investor','investor member'].includes(t.toLowerCase())) ? 'investor' : 'explorer',
                 token: Date.now().toString(36) + Math.random().toString(36).slice(2)
               });
             }
@@ -84,8 +84,8 @@ export default async function handler(req, res) {
                 email: contact.email,
                 name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || email.split('@')[0],
                 contactId: contact.id,
-                tier: contact.tags?.includes('academy-member') ? 'academy' :
-                      contact.tags?.includes('investor-member') ? 'investor' : 'explorer',
+                tier: (contact.tags || []).some(t => ['academy-member','bought cashflow academy','cashflow-academy','academy member'].includes(t.toLowerCase())) ? 'academy' :
+                      (contact.tags || []).some(t => ['investor-member','fund-investor','investor member'].includes(t.toLowerCase())) ? 'investor' : 'explorer',
                 token: Date.now().toString(36) + Math.random().toString(36).slice(2),
                 passwordSet: true
               });

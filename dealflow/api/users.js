@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         email: c.email || '',
         phone: c.phone || '',
         tags: c.tags || [],
-        tier: c.tags?.includes('academy-member') ? 'academy' : c.tags?.includes('investor-member') ? 'investor' : 'explorer'
+        tier: (c.tags || []).some(t => ['academy-member','bought cashflow academy','cashflow-academy','academy member'].includes((t||'').toLowerCase())) ? 'academy' : (c.tags || []).some(t => ['investor-member','fund-investor','investor member'].includes((t||'').toLowerCase())) ? 'investor' : 'explorer'
       })).filter(c => c.email);
     }
 
