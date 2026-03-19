@@ -3303,6 +3303,67 @@ html.cap-ios .debt-metric-select-mobile {
   background: var(--primary-hover);
 }
 
+/* ===== Case Studies Page ===== */
+.cs-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.cs-stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
+.cs-stat-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+.cs-stat-value { font-family: var(--font-ui); font-size: 28px; font-weight: 800; color: var(--text-dark); }
+.cs-form-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 32px; }
+.cs-form-title { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 20px; }
+.cs-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.cs-form-group { display: flex; flex-direction: column; gap: 4px; }
+.cs-form-group.full { grid-column: 1 / -1; }
+.cs-form-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.cs-form-input, .cs-form-select, .cs-form-textarea { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; color: var(--text-dark); background: var(--bg-cream); transition: border-color var(--transition); }
+.cs-form-input:focus, .cs-form-select:focus, .cs-form-textarea:focus { outline: none; border-color: var(--primary); }
+.cs-form-textarea { min-height: 80px; resize: vertical; }
+.cs-form-btn { padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 13px; cursor: pointer; transition: background var(--transition); }
+.cs-form-btn:hover { background: var(--primary-hover); }
+.cs-timeline-title { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 16px; }
+.cs-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow-card); transition: box-shadow var(--transition); position: relative; }
+.cs-card:hover { box-shadow: var(--shadow-card-hover); }
+.cs-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.cs-badge-first-investment { background: #dcfce7; color: #166534; }
+.cs-badge-hit-income-target { background: #fef3c7; color: #92400e; }
+.cs-badge-tax-savings { background: #dbeafe; color: #1e40af; }
+.cs-badge-academy-win { background: #ede9fe; color: #5b21b6; }
+.cs-badge-fund-investment { background: #bbf7d0; color: #14532d; }
+.cs-badge-milestone { background: #f3f4f6; color: #374151; }
+html.dark .cs-badge-first-investment { background: #052e16; color: #86efac; }
+html.dark .cs-badge-hit-income-target { background: #451a03; color: #fcd34d; }
+html.dark .cs-badge-tax-savings { background: #172554; color: #93c5fd; }
+html.dark .cs-badge-academy-win { background: #2e1065; color: #c4b5fd; }
+html.dark .cs-badge-fund-investment { background: #052e16; color: #4ade80; }
+html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
+.cs-card-date { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.cs-card-summary { font-family: var(--font-body); font-size: 14px; color: var(--text-dark); margin-top: 12px; line-height: 1.6; }
+.cs-card-quote { font-family: var(--font-body); font-size: 13px; font-style: italic; color: var(--text-secondary); margin-top: 10px; padding: 10px 14px; border-left: 3px solid var(--primary); background: var(--green-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.cs-card-amount { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary); margin-top: 10px; }
+.cs-card-delete { position: absolute; bottom: 16px; right: 16px; padding: 4px 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all var(--transition); }
+.cs-card-delete:hover { border-color: var(--red); color: var(--red); }
+
+/* ===== Activation Milestones ===== */
+.milestone-tracker { display: flex; align-items: flex-start; justify-content: center; gap: 0; padding: 24px 0; overflow-x: auto; }
+.milestone-step { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; min-width: 100px; max-width: 160px; }
+.milestone-connector { position: absolute; top: 20px; left: calc(50% + 20px); right: calc(-50% + 20px); height: 3px; background: var(--border); z-index: 0; }
+.milestone-connector.done { background: var(--primary); }
+.milestone-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; z-index: 1; border: 3px solid var(--border); background: var(--bg-card); transition: all 0.3s ease; }
+.milestone-circle.done { border-color: var(--primary); background: var(--primary); color: #fff; }
+.milestone-circle.next { border-color: var(--primary); animation: milestonePulse 2s ease-in-out infinite; }
+.milestone-circle.future { border-color: var(--border); color: var(--text-muted); }
+@keyframes milestonePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(81,190,123,0.4); } 50% { box-shadow: 0 0 0 10px rgba(81,190,123,0); } }
+.milestone-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-dark); text-align: center; margin-top: 8px; line-height: 1.3; }
+.milestone-status { font-family: var(--font-ui); font-size: 9px; font-weight: 700; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.milestone-status.done { color: var(--primary); }
+.milestone-status.next { color: var(--primary); }
+.milestone-status.future { color: var(--text-muted); }
+.dashboard-milestone-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; }
+.dashboard-milestone-icon { width: 40px; height: 40px; border-radius: 50%; background: var(--green-bg); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.dashboard-milestone-info { flex: 1; }
+.dashboard-milestone-title { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
+.dashboard-milestone-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
+.dashboard-milestone-action { padding: 6px 14px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 11px; cursor: pointer; white-space: nowrap; }
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -3410,6 +3471,10 @@ html.cap-ios .debt-metric-select-mobile {
       <a class="nav-item" href="#" data-page="schema" onclick="navigateTo('schema'); return false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
         Database Schema
+      </a>
+      <a class="nav-item" href="#" data-page="casestudies" onclick="navigateTo('casestudies'); return false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Case Studies
       </a>
     </div>
   </nav>
@@ -4518,6 +4583,19 @@ html.cap-ios .debt-metric-select-mobile {
     </div>
   </div>
 
+  <!-- PAGE: Case Studies (Admin) -->
+  <div class="page" id="page-casestudies">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Case Studies & Activation</div>
+    </div>
+    <div class="sub-page" style="max-width:1100px" id="caseStudiesContent">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
   <!-- PAGE: Debt Fund Explorer -->
   <div class="page" id="page-debtfunds">
     <div class="topbar">
@@ -5118,6 +5196,7 @@ function setDealStage(id, stage) {
   if (stage === 'new') { delete dealStages[id]; }
   else { dealStages[id] = stage; }
   saveDealStages();
+  if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
 }
 // Migrate old savedDeals → interested
 const _oldSaved = JSON.parse(localStorage.getItem('gycSavedDeals') || '[]');
@@ -6759,13 +6838,14 @@ function navigateTo(page) {
   if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
   if (page === 'assets') renderAssetsPage();
-  if (page === 'dashboard') renderDashboard();
+  if (page === 'dashboard') { if (typeof checkActivationMilestones === 'function') checkActivationMilestones(); renderDashboard(); }
   if (page === 'goals') renderGoals();
   if (page === 'portfolio') renderPortfolio();
   if (page === 'taxprep') renderTaxPrep();
   if (page === 'analytics') refreshAnalyticsDashboard();
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'schema') renderSchemaPage();
+  if (page === 'casestudies') renderCaseStudies();
   if (page === 'buybox') {
     // Try to render from localStorage first
     renderReport();
@@ -7076,6 +7156,7 @@ function openBuyBoxWizard() {
 function closeWizard() {
   collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  invalidateWizardCache();
   document.getElementById('wizardOverlay').classList.remove('active');
   syncWizardToBuyBox();
   if (localStorage.getItem('gycBuyBoxComplete')) {
@@ -7581,6 +7662,7 @@ function selectGoalBranch(branch, goalValue) {
     wizardData.assetClasses = wizardData.assetClasses || ['Multi-Family','Oil & Gas','Short-Term Rentals'];
   }
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  invalidateWizardCache();
   wizardStepIndex++;
   renderWizardStep();
   document.getElementById('wizardBody').scrollTop = 0;
@@ -7665,6 +7747,7 @@ function collectWizardInputs() {
 function wizardNext() {
   collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  invalidateWizardCache();
   const seq = getStepSequence();
 
   if (wizardStepIndex >= seq.length - 1) {
@@ -7676,6 +7759,7 @@ function wizardNext() {
       trackActivity('onboarding_complete', { branch: wizardData._branch, wizardData: JSON.stringify(wizardData).substring(0, 200) });
       trackActivity('wizard_complete', { branch: wizardData._branch });
     }
+    if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
     syncBuyBoxToGHL();
     navigateTo('dashboard');
     return;
@@ -7823,6 +7907,7 @@ async function fetchBuyBoxFromGHL() {
       if (updated) {
         wizardData = { ...wizardData, ...existing };
         localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+        invalidateWizardCache();
         localStorage.setItem('gycBuyBoxComplete', 'true');
         syncWizardToBuyBox();
         // Re-render the report if we're on the buy box page
@@ -11134,8 +11219,12 @@ function renderDashboard() {
   // Goal-aware progress section (from Buy Box wizard)
   const goalProgressHtml = renderGoalProgress();
 
+  // Milestone progress card
+  const milestoneProgressHtml = typeof renderDashboardMilestoneProgress === 'function' ? renderDashboardMilestoneProgress() : '';
+
   container.innerHTML = `
     ${goalProgressHtml}
+    ${milestoneProgressHtml}
     <!-- Greeting + Goal Hero -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
       <div style="background:linear-gradient(135deg,#1F5159,#0A1E21);border-radius:var(--radius);padding:32px;color:#fff;">
@@ -12088,6 +12177,292 @@ async function submitFeedback() {
   }
 }
 
+// ========== CASE STUDIES ==========
+function renderCaseStudies() {
+  const container = document.getElementById('caseStudiesContent');
+  if (!container) return;
+  const studies = JSON.parse(localStorage.getItem('gycCaseStudies') || '[]');
+
+  // Compute stats
+  const totalCases = studies.length;
+  let capitalDeployed = 0;
+  let academyWins = 0;
+  let fundInvestors = 0;
+  studies.forEach(s => {
+    if (s.amount) {
+      const n = parseFloat(s.amount.replace(/[$,KkMm]/g, ''));
+      if (!isNaN(n)) {
+        let val = n;
+        if (/[Kk]/.test(s.amount)) val = n * 1000;
+        if (/[Mm]/.test(s.amount)) val = n * 1000000;
+        capitalDeployed += val;
+      }
+    }
+    if (s.category === 'Academy Win') academyWins++;
+    if (s.category === 'Fund Investment') fundInvestors++;
+  });
+
+  const categoryBadgeClass = (cat) => {
+    const map = {
+      'First Investment': 'cs-badge-first-investment',
+      'Hit Income Target': 'cs-badge-hit-income-target',
+      'Tax Savings': 'cs-badge-tax-savings',
+      'Academy Win': 'cs-badge-academy-win',
+      'Fund Investment': 'cs-badge-fund-investment',
+      'Milestone': 'cs-badge-milestone'
+    };
+    return map[cat] || 'cs-badge-milestone';
+  };
+
+  const categoryIcon = (cat) => {
+    const map = {
+      'First Investment': '&#x1F3AF;',
+      'Hit Income Target': '&#x1F4B0;',
+      'Tax Savings': '&#x1F4CA;',
+      'Academy Win': '&#x1F393;',
+      'Fund Investment': '&#x1F4B5;',
+      'Milestone': '&#x2B50;'
+    };
+    return map[cat] || '&#x2B50;';
+  };
+
+  const fmtMoney = (n) => {
+    if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+    return '$' + n.toLocaleString();
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // Milestones section
+  const milestonesHtml = renderMilestoneTracker();
+
+  // Build sorted timeline (reverse chronological)
+  const sorted = [...studies].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const timelineHtml = sorted.length === 0
+    ? '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:13px;">No case studies yet. Add your first client win above.</div>'
+    : sorted.map((s, i) => {
+        const d = new Date(s.date + 'T12:00:00');
+        const dateStr = d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        return '<div class="cs-card">'
+          + '<span class="cs-badge ' + categoryBadgeClass(s.category) + '">' + categoryIcon(s.category) + ' ' + s.category + '</span>'
+          + '<div class="cs-card-date">' + dateStr + '</div>'
+          + '<div class="cs-card-summary"><strong>' + (s.clientName || 'Client') + '</strong> &mdash; ' + (s.summary || '') + '</div>'
+          + (s.quote ? '<div class="cs-card-quote">&ldquo;' + s.quote + '&rdquo;</div>' : '')
+          + (s.amount ? '<div class="cs-card-amount">Amount: ' + s.amount + '</div>' : '')
+          + '<button class="cs-card-delete" onclick="deleteCaseStudy(' + i + ')">Delete</button>'
+          + '</div>';
+      }).join('');
+
+  container.innerHTML = ''
+    + '<div class="cs-stats-grid">'
+    + '  <div class="cs-stat-card"><div class="cs-stat-label">Total Cases</div><div class="cs-stat-value">' + totalCases + '</div></div>'
+    + '  <div class="cs-stat-card"><div class="cs-stat-label">Capital Deployed</div><div class="cs-stat-value">' + fmtMoney(capitalDeployed) + '</div></div>'
+    + '  <div class="cs-stat-card"><div class="cs-stat-label">Academy Wins</div><div class="cs-stat-value">' + academyWins + '</div></div>'
+    + '  <div class="cs-stat-card"><div class="cs-stat-label">Fund Investors</div><div class="cs-stat-value">' + fundInvestors + '</div></div>'
+    + '</div>'
+    + milestonesHtml
+    + '<div class="cs-form-card">'
+    + '  <div class="cs-form-title">Client Case Study</div>'
+    + '  <div class="cs-form-row">'
+    + '    <div class="cs-form-group"><label class="cs-form-label">Client Name</label><input type="text" class="cs-form-input" id="csClientName" placeholder="e.g. John D."></div>'
+    + '    <div class="cs-form-group"><label class="cs-form-label">Date</label><input type="date" class="cs-form-input" id="csDate" value="' + today + '"></div>'
+    + '  </div>'
+    + '  <div class="cs-form-row">'
+    + '    <div class="cs-form-group"><label class="cs-form-label">Category</label><select class="cs-form-select" id="csCategory"><option>First Investment</option><option>Hit Income Target</option><option>Tax Savings</option><option>Academy Win</option><option>Fund Investment</option><option>Milestone</option></select></div>'
+    + '    <div class="cs-form-group"><label class="cs-form-label">Amount (optional)</label><input type="text" class="cs-form-input" id="csAmount" placeholder="e.g. $100K invested"></div>'
+    + '  </div>'
+    + '  <div class="cs-form-row">'
+    + '    <div class="cs-form-group full"><label class="cs-form-label">Summary</label><textarea class="cs-form-textarea" id="csSummary" placeholder="What happened? What was the win?"></textarea></div>'
+    + '  </div>'
+    + '  <div class="cs-form-row">'
+    + '    <div class="cs-form-group full"><label class="cs-form-label">Quote (optional)</label><textarea class="cs-form-textarea" id="csQuote" placeholder="Client quote or testimonial"></textarea></div>'
+    + '  </div>'
+    + '  <button class="cs-form-btn" onclick="saveCaseStudy()">Save Case Study</button>'
+    + '</div>'
+    + '<div class="cs-timeline-title">Case Study Timeline</div>'
+    + timelineHtml;
+}
+
+function saveCaseStudy() {
+  const clientName = document.getElementById('csClientName')?.value?.trim();
+  const date = document.getElementById('csDate')?.value;
+  const category = document.getElementById('csCategory')?.value;
+  const summary = document.getElementById('csSummary')?.value?.trim();
+  const quote = document.getElementById('csQuote')?.value?.trim();
+  const amount = document.getElementById('csAmount')?.value?.trim();
+  if (!clientName || !summary) { alert('Please enter a client name and summary.'); return; }
+  const studies = JSON.parse(localStorage.getItem('gycCaseStudies') || '[]');
+  studies.push({ clientName, date: date || new Date().toISOString().split('T')[0], category, summary, quote, amount, createdAt: new Date().toISOString() });
+  localStorage.setItem('gycCaseStudies', JSON.stringify(studies));
+  renderCaseStudies();
+}
+
+function deleteCaseStudy(displayIndex) {
+  if (!confirm('Delete this case study?')) return;
+  const studies = JSON.parse(localStorage.getItem('gycCaseStudies') || '[]');
+  // displayIndex is from sorted (reverse chronological), need to find original index
+  const sorted = [...studies].map((s, i) => ({ ...s, _origIdx: i })).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const origIdx = sorted[displayIndex]?._origIdx;
+  if (origIdx !== undefined) {
+    studies.splice(origIdx, 1);
+    localStorage.setItem('gycCaseStudies', JSON.stringify(studies));
+  }
+  renderCaseStudies();
+}
+
+// ========== ACTIVATION MILESTONES ==========
+const ACTIVATION_MILESTONES = [
+  { id: 'onboarding_complete', label: 'Completed Onboarding', description: 'Finished the 5-screen wizard', icon: '\u2713' },
+  { id: 'saved_3_deals', label: 'Saved 3+ Deals', description: 'Moved 3 or more deals to Interested', icon: '\uD83D\uDD16' },
+  { id: 'first_dd', label: 'First Due Diligence', description: 'Moved a deal to Due Diligence stage', icon: '\uD83D\uDD0D' },
+  { id: 'viewed_5_deals', label: 'Viewed 5+ Deal Pages', description: 'Opened 5 or more deal detail pages', icon: '\uD83D\uDC41' },
+  { id: 'booked_office_hours', label: 'Booked Office Hours', description: 'Clicked to join office hours', icon: '\uD83D\uDCC5' },
+  { id: 'first_investment', label: 'First Investment', description: 'Moved a deal to My Portfolio', icon: '\uD83D\uDCB0' },
+];
+
+function checkActivationMilestones() {
+  const milestones = JSON.parse(localStorage.getItem('gycMilestones') || '{}');
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  const wizardComplete = localStorage.getItem('gycBuyBoxComplete') === 'true';
+  const events = JSON.parse(localStorage.getItem('gycAnalyticsEvents') || '[]');
+
+  // 1. Onboarding complete
+  if (wizardComplete && !milestones.onboarding_complete) {
+    milestones.onboarding_complete = new Date().toISOString();
+  }
+
+  // 2. Saved 3+ deals (interested stage)
+  const interestedCount = Object.values(stages).filter(s => s === 'interested').length;
+  if (interestedCount >= 3 && !milestones.saved_3_deals) {
+    milestones.saved_3_deals = new Date().toISOString();
+  }
+
+  // 3. First due diligence
+  const ddCount = Object.values(stages).filter(s => s === 'duediligence').length;
+  if (ddCount >= 1 && !milestones.first_dd) {
+    milestones.first_dd = new Date().toISOString();
+  }
+
+  // 4. Viewed 5+ deal pages
+  const viewCount = parseInt(localStorage.getItem('gycViewCount') || '0');
+  if (viewCount >= 5 && !milestones.viewed_5_deals) {
+    milestones.viewed_5_deals = new Date().toISOString();
+  }
+
+  // 5. Booked office hours (check activity log)
+  const bookedOH = events.some(e => e.action === 'office_hours_click' || e.action === 'booked_office_hours');
+  if (bookedOH && !milestones.booked_office_hours) {
+    milestones.booked_office_hours = new Date().toISOString();
+  }
+
+  // 6. First investment
+  const portfolioCount = Object.values(stages).filter(s => s === 'portfolio').length;
+  const manualPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  if ((portfolioCount >= 1 || manualPortfolio.length >= 1) && !milestones.first_investment) {
+    milestones.first_investment = new Date().toISOString();
+  }
+
+  localStorage.setItem('gycMilestones', JSON.stringify(milestones));
+  return milestones;
+}
+
+function renderMilestoneTracker() {
+  const milestones = checkActivationMilestones();
+  let foundNext = false;
+
+  let html = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">'
+    + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Your Activation Journey</div>'
+    + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:20px;">Track progress through key investor milestones</div>'
+    + '<div class="milestone-tracker">';
+
+  ACTIVATION_MILESTONES.forEach((m, i) => {
+    const done = !!milestones[m.id];
+    const isNext = !done && !foundNext;
+    if (isNext) foundNext = true;
+    const circleClass = done ? 'done' : isNext ? 'next' : 'future';
+    const statusText = done ? 'Done' : isNext ? 'Next' : '';
+    const statusClass = done ? 'done' : isNext ? 'next' : 'future';
+
+    html += '<div class="milestone-step">';
+    if (i < ACTIVATION_MILESTONES.length - 1) {
+      html += '<div class="milestone-connector' + (done ? ' done' : '') + '"></div>';
+    }
+    html += '<div class="milestone-circle ' + circleClass + '">' + (done ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : m.icon) + '</div>';
+    html += '<div class="milestone-label">' + m.label + '</div>';
+    html += '<div class="milestone-status ' + statusClass + '">' + statusText + '</div>';
+    html += '</div>';
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderDashboardMilestoneProgress() {
+  const milestones = checkActivationMilestones();
+  let nextMilestone = null;
+  for (const m of ACTIVATION_MILESTONES) {
+    if (!milestones[m.id]) { nextMilestone = m; break; }
+  }
+  // If all milestones completed, don't show
+  if (!nextMilestone) return '';
+
+  // Build progress context
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  const viewCount = parseInt(localStorage.getItem('gycViewCount') || '0');
+  let progressText = '';
+  let actionText = 'Get Started';
+  let actionPage = 'deals';
+
+  switch (nextMilestone.id) {
+    case 'onboarding_complete':
+      progressText = 'Complete the onboarding wizard to personalize your deal flow.';
+      actionText = 'Start Wizard \u2192';
+      actionPage = 'buybox';
+      break;
+    case 'saved_3_deals': {
+      const saved = Object.values(stages).filter(s => s === 'interested').length;
+      progressText = 'You\u2019ve saved ' + saved + ' deal' + (saved !== 1 ? 's' : '') + ' so far. Save ' + (3 - saved) + ' more to unlock this milestone.';
+      actionText = 'Browse Deals \u2192';
+      actionPage = 'deals';
+      break;
+    }
+    case 'first_dd':
+      progressText = 'Move a deal to Due Diligence to start your deep dive.';
+      actionText = 'Review Saved Deals \u2192';
+      actionPage = 'deals';
+      break;
+    case 'viewed_5_deals':
+      progressText = 'You\u2019ve viewed ' + viewCount + ' deal page' + (viewCount !== 1 ? 's' : '') + '. View ' + (5 - viewCount) + ' more to unlock.';
+      actionText = 'Explore Deals \u2192';
+      actionPage = 'deals';
+      break;
+    case 'booked_office_hours':
+      progressText = 'Join an office hours session to get your questions answered live.';
+      actionText = 'Book Office Hours \u2192';
+      actionPage = 'deals';
+      break;
+    case 'first_investment':
+      progressText = 'Move a deal to your portfolio to track your first investment.';
+      actionText = 'View Pipeline \u2192';
+      actionPage = 'deals';
+      break;
+  }
+
+  // Completion count
+  const doneCount = ACTIVATION_MILESTONES.filter(m => milestones[m.id]).length;
+  const totalCount = ACTIVATION_MILESTONES.length;
+
+  return '<div class="dashboard-milestone-card">'
+    + '<div class="dashboard-milestone-icon">' + nextMilestone.icon + '</div>'
+    + '<div class="dashboard-milestone-info">'
+    + '  <div class="dashboard-milestone-title">Next Milestone: ' + nextMilestone.label + ' (' + doneCount + '/' + totalCount + ')</div>'
+    + '  <div class="dashboard-milestone-desc">' + progressText + '</div>'
+    + '</div>'
+    + '<button class="dashboard-milestone-action" onclick="navigateTo(\'' + actionPage + '\')">' + actionText + '</button>'
+    + '</div>';
+}
+
 // ========== INIT ==========
 showAdminNav();
 initAuth();
@@ -12175,7 +12550,7 @@ fetchBuyBoxFromGHL();
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           Filters
         </button>
-        <select style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:var(--font-ui);font-weight:600;flex-shrink:0;" onchange="document.getElementById('filterSort').value=this.value;applyFilters();">
+        <select style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:var(--font-ui);font-weight:600;flex-shrink:0;" onchange="_goalSortOverridden=true;document.getElementById('filterSort').value=this.value;applyFilters();">
           <option value="newest">Newest</option>
           <option value="irr">Highest IRR</option>
           <option value="min_invest">Lowest Min</option>
