@@ -11646,6 +11646,9 @@ function filterAcademyCourses(level) {
 const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'pascal@growyourcashflow.io', 'info@pascalwagner.com'];
 
 function isAdmin() {
+  // Check if the real user (or impersonating admin) is an admin
+  const realUser = adminRealUser || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser') ? JSON.parse(sessionStorage.getItem('gycAdminRealUser')) : null);
+  if (realUser && realUser.email && ADMIN_EMAILS.includes(realUser.email.toLowerCase())) return true;
   const user = getUser();
   return user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
 }
