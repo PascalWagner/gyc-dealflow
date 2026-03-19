@@ -1,5 +1,13 @@
 {
   "buildCommand": "",
   "installCommand": "",
-  "framework": null
+  "framework": null,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "s-maxage=0, must-revalidate" }
+      ]
+    }
+  ]
 }
