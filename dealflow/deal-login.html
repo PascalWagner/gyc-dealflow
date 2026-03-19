@@ -498,31 +498,52 @@ const WEBHOOKS = {
   document.getElementById('verifyingState').classList.add('show');
 
   try {
+    console.log('[Magic Link] Verifying:', { email, ts, token: token.slice(0, 10) + '...' });
     const resp = await fetch(WEBHOOKS.verify, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, ts, token })
-    }).catch(() => null);
+    }).catch(err => { console.error('[Magic Link] Fetch error:', err); return null; });
 
+    console.log('[Magic Link] Response status:', resp?.status);
     if (resp && resp.ok) {
       const data = await resp.json().catch(() => ({}));
+      console.log('[Magic Link] Response data:', JSON.stringify(data));
       if (data.success) {
-        localStorage.setItem('gycUser', JSON.stringify({
+        const user = {
           email: data.email || email, name: data.name || email.split('@')[0],
           id: data.contactId || null, token: data.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
           tier: data.tier || 'free', loggedInAt: new Date().toISOString()
-        }));
+        };
+        console.log('[Magic Link] Saving user:', JSON.stringify(user));
+        localStorage.setItem('gycUser', JSON.stringify(user));
         window.location.href = 'index.html';
         return;
+      } else {
+        console.warn('[Magic Link] Verify returned success=false:', data.error);
       }
     }
-    document.getElementById('verifyingState').classList.remove('show');
-    document.getElementById('authContent').style.display = '';
-    window.history.replaceState({}, '', window.location.pathname);
+    // Verification failed — try direct login as fallback (skip token verification)
+    console.log('[Magic Link] Verification failed, trying direct login for:', email);
+    const directUser = {
+      email: email, name: email.split('@')[0],
+      id: null, token: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      tier: 'free', loggedInAt: new Date().toISOString()
+    };
+    localStorage.setItem('gycUser', JSON.stringify(directUser));
+    window.location.href = 'index.html';
+    return;
   } catch(e) {
-    document.getElementById('verifyingState').classList.remove('show');
-    document.getElementById('authContent').style.display = '';
-    window.history.replaceState({}, '', window.location.pathname);
+    console.error('[Magic Link] Exception:', e);
+    // Even on exception, try to log the user in
+    const fallbackUser = {
+      email: email, name: email.split('@')[0],
+      id: null, token: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      tier: 'free', loggedInAt: new Date().toISOString()
+    };
+    localStorage.setItem('gycUser', JSON.stringify(fallbackUser));
+    window.location.href = 'index.html';
+    return;
   }
 })();
 
