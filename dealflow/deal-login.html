@@ -509,7 +509,7 @@ const WEBHOOKS = {
       if (data.success) {
         localStorage.setItem('gycUser', JSON.stringify({
           email: data.email || email, name: data.name || email.split('@')[0],
-          id: data.contactId || null, token: data.token || null,
+          id: data.contactId || null, token: data.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
           tier: data.tier || 'free', loggedInAt: new Date().toISOString()
         }));
         window.location.href = 'index.html';
