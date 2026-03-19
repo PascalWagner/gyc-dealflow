@@ -4,6 +4,18 @@
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
+// Derive user tier from GHL tags
+function deriveTier(tags) {
+  const t = (tags || []).map(s => (s || '').toLowerCase());
+  if (t.includes('dealflow-academy') || t.includes('bought cashflow academy') || t.includes('academy-member') || t.includes('cashflow-academy') || t.includes('academy member'))
+    return 'academy';
+  if (t.includes('dealflow-alumni'))
+    return 'alumni';
+  if (t.includes('investor-member') || t.includes('fund-investor') || t.includes('investor member'))
+    return 'investor';
+  return 'free';
+}
+
 const ADMIN_EMAILS = [
   'pascal@growyourcashflow.com',
   'pascalwagner@gmail.com',
@@ -43,7 +55,7 @@ export default async function handler(req, res) {
         email: c.email || '',
         phone: c.phone || '',
         tags: c.tags || [],
-        tier: (c.tags || []).some(t => ['academy-member','bought cashflow academy','cashflow-academy','academy member'].includes((t||'').toLowerCase())) ? 'academy' : (c.tags || []).some(t => ['investor-member','fund-investor','investor member'].includes((t||'').toLowerCase())) ? 'investor' : 'explorer'
+        tier: deriveTier(c.tags || [])
       })).filter(c => c.email);
     }
 

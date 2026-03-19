@@ -1251,7 +1251,7 @@ function initAuth() {
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     document.getElementById('sidebarAvatar').textContent = initials;
     document.getElementById('sidebarName').textContent = name;
-    document.getElementById('sidebarTier').textContent = (user.tier || 'explorer').charAt(0).toUpperCase() + (user.tier || 'explorer').slice(1);
+    document.getElementById('sidebarTier').textContent = (user.tier || 'free').charAt(0).toUpperCase() + (user.tier || 'free').slice(1);
   }
 }
 

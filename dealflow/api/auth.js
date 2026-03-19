@@ -4,6 +4,18 @@
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
+// Derive user tier from GHL tags
+function deriveTier(tags) {
+  const t = (tags || []).map(s => s.toLowerCase());
+  if (t.includes('dealflow-academy') || t.includes('bought cashflow academy') || t.includes('academy-member') || t.includes('cashflow-academy') || t.includes('academy member'))
+    return 'academy';
+  if (t.includes('dealflow-alumni'))
+    return 'alumni';
+  if (t.includes('investor-member') || t.includes('fund-investor') || t.includes('investor member'))
+    return 'investor';
+  return 'free';
+}
+
 // Simple password hash (SHA-256 via Web Crypto)
 async function hashPassword(password) {
   const encoder = new TextEncoder();
@@ -55,8 +67,7 @@ export default async function handler(req, res) {
                 email: contact.email,
                 name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || email.split('@')[0],
                 contactId: contact.id,
-                tier: (contact.tags || []).some(t => ['academy-member','bought cashflow academy','cashflow-academy','academy member'].includes(t.toLowerCase())) ? 'academy' :
-                      (contact.tags || []).some(t => ['investor-member','fund-investor','investor member'].includes(t.toLowerCase())) ? 'investor' : 'explorer',
+                tier: deriveTier(contact.tags || []),
                 token: Date.now().toString(36) + Math.random().toString(36).slice(2)
               });
             }
@@ -84,8 +95,7 @@ export default async function handler(req, res) {
                 email: contact.email,
                 name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || email.split('@')[0],
                 contactId: contact.id,
-                tier: (contact.tags || []).some(t => ['academy-member','bought cashflow academy','cashflow-academy','academy member'].includes(t.toLowerCase())) ? 'academy' :
-                      (contact.tags || []).some(t => ['investor-member','fund-investor','investor member'].includes(t.toLowerCase())) ? 'investor' : 'explorer',
+                tier: deriveTier(contact.tags || []),
                 token: Date.now().toString(36) + Math.random().toString(36).slice(2),
                 passwordSet: true
               });
@@ -108,7 +118,7 @@ export default async function handler(req, res) {
         success: true,
         email: email,
         name: 'Pascal Wagner',
-        tier: 'academy',
+        tier: 'academy', // admin fallback
         token: Date.now().toString(36) + Math.random().toString(36).slice(2)
       });
     }
@@ -135,7 +145,7 @@ export default async function handler(req, res) {
             firstName,
             lastName,
             email,
-            tags: ['dealflow-user'],
+            tags: ['dealflow-free'],
             customField: { 'dealflow_password_hash': passwordHash }
           })
         });
@@ -147,7 +157,7 @@ export default async function handler(req, res) {
             email,
             name: `${firstName} ${lastName}`,
             contactId: data.contact?.id,
-            tier: 'explorer',
+            tier: 'free',
             token: Date.now().toString(36) + Math.random().toString(36).slice(2)
           });
         }

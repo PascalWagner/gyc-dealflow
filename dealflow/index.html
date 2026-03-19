@@ -4194,8 +4194,8 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       <div class="settings-page-desc">From free deal access to full-service capital deployment with Pascal by your side.</div>
       <div class="plan-grid">
         <div class="plan-card">
-          <div class="plan-name">Explorer</div>
-          <div class="plan-price">Free</div>
+          <div class="plan-name">Free</div>
+          <div class="plan-price">$0</div>
           <div class="plan-desc">Browse live deals, build your buy box, and start evaluating opportunities.</div>
           <ul class="plan-features">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>View all live deals</li>
@@ -4211,7 +4211,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
           <div class="plan-price">$5,000<span>/year</span></div>
           <div class="plan-desc">Cashflow Academy membership with structured learning, community, and live coaching.</div>
           <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Explorer</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cashflow Academy curriculum</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly live office hours with Pascal</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>GP introductions &amp; deal reviews</li>
@@ -4295,7 +4295,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
             <li>&#9744; Deck review request flow</li>
             <li>&#9744; GP introduction request flow</li>
             <li>&#9744; Email notifications for new deals matching buy box</li>
-            <li>&#9744; Role-based access (Explorer vs Investor vs Academy tiers)</li>
+            <li>&#9744; Role-based access (Free vs Academy vs Alumni vs Investor tiers)</li>
           </ul>
         </div>
 
@@ -5383,12 +5383,77 @@ const DD_CHECKLIST = [
   'Check references / other LPs',
   'Review subscription documents'
 ];
-let dealDDChecks = JSON.parse(localStorage.getItem('gycDealDD') || '{}');
-function saveDealDD() { localStorage.setItem('gycDealDD', JSON.stringify(dealDDChecks)); }
+// Time ago helper for DD checklist contributor timestamps
+function getTimeAgo(dateStr) {
+  var diff = Date.now() - new Date(dateStr).getTime();
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  var months = Math.floor(days / 30);
+  return months + 'mo ago';
+}
+
+// Shared DD checklist — stored in Airtable per deal, visible to all users
+let dealDDChecks = {};
+let ddCheckDetails = {}; // { dealId: { "0": { by, name, at }, ... } }
+
+// Fetch shared DD checklist for a deal from Airtable
+async function fetchDealDD(dealId) {
+  try {
+    const resp = await fetch('/api/ddchecklist?dealId=' + encodeURIComponent(dealId));
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.success && data.checklist) {
+        const checks = new Array(DD_CHECKLIST.length).fill(false);
+        const details = {};
+        for (const [key, val] of Object.entries(data.checklist)) {
+          const idx = parseInt(key, 10);
+          if (idx >= 0 && idx < DD_CHECKLIST.length && val.checked) {
+            checks[idx] = true;
+            details[key] = { by: val.by, name: val.name, at: val.at };
+          }
+        }
+        dealDDChecks[dealId] = checks;
+        ddCheckDetails[dealId] = details;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch DD checklist:', e.message);
+  }
+}
+
 function toggleDDItem(dealId, index) {
   if (!dealDDChecks[dealId]) dealDDChecks[dealId] = new Array(DD_CHECKLIST.length).fill(false);
-  dealDDChecks[dealId][index] = !dealDDChecks[dealId][index];
-  saveDealDD();
+  const newState = !dealDDChecks[dealId][index];
+  dealDDChecks[dealId][index] = newState;
+
+  // Sync to Airtable (shared)
+  const user = getUser();
+  fetch('/api/ddchecklist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dealId,
+      itemIndex: index,
+      itemText: DD_CHECKLIST[index] || '',
+      checked: newState,
+      userEmail: user?.email || '',
+      userName: user?.name || ''
+    })
+  }).catch(err => console.warn('DD sync failed:', err.message));
+
+  // Update details locally
+  if (newState) {
+    if (!ddCheckDetails[dealId]) ddCheckDetails[dealId] = {};
+    ddCheckDetails[dealId][String(index)] = { by: user?.email || '', name: user?.name || '', at: new Date().toISOString() };
+  } else {
+    if (ddCheckDetails[dealId]) delete ddCheckDetails[dealId][String(index)];
+  }
+
   const deal = DEALS.find(d => d.id === dealId);
   if (deal) document.getElementById('panelContent').innerHTML = renderPanel(deal);
 }
@@ -5523,7 +5588,7 @@ function openComparisonView() {
 
   // Academy CTA
   var user = getUser();
-  if (user && user.tier === 'explorer') {
+  if (user && user.tier === 'free') {
     h += '<div style="margin-top:24px;padding:24px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #3b82f6;border-radius:12px;text-align:center;">';
     h += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--text-dark);margin-bottom:8px;">Want Pascal to review your picks?</div>';
     h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Academy members get personalized deal analysis and deployment guidance.</div>';
@@ -6546,7 +6611,7 @@ function renderPanel(deal) {
 function renderPanelNextSteps(deal) {
   var stage = getDealStage(deal.id);
   var user = getUser();
-  var isExplorer = user && user.tier === 'explorer';
+  var isExplorer = user && user.tier === 'free';
   var h = '';
 
   // Always keep View Deal Page + Deck as primary actions
@@ -6567,28 +6632,51 @@ function renderPanelNextSteps(deal) {
     h += '</div>';
 
   } else if (stage === 'duediligence') {
-    // DD Checklist
+    // Shared DD Checklist — community-contributed
     var checks = dealDDChecks[deal.id] || [];
+    var details = ddCheckDetails[deal.id] || {};
     var checkedCount = checks.filter(Boolean).length;
     var pct = Math.round((checkedCount / DD_CHECKLIST.length) * 100);
 
+    // Fetch shared DD data if not loaded yet
+    if (!dealDDChecks[deal.id]) {
+      fetchDealDD(deal.id).then(function() {
+        var d = DEALS.find(function(dd) { return dd.id === deal.id; });
+        if (d) document.getElementById('panelContent').innerHTML = renderPanel(d);
+      });
+    }
+
     h += '<div style="margin-bottom:12px;">';
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-    h += '<span style="font-size:12px;color:var(--text-secondary);">' + checkedCount + ' of ' + DD_CHECKLIST.length + ' complete</span>';
+    h += '<div style="display:flex;align-items:center;gap:6px;">';
+    h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    h += '<span style="font-size:12px;color:var(--text-secondary);">Community DD &middot; ' + checkedCount + '/' + DD_CHECKLIST.length + '</span>';
+    h += '</div>';
     h += '<span style="font-size:12px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + pct + '%</span>';
     h += '</div>';
     h += '<div style="height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;">';
     h += '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:3px;transition:width 0.3s ease;"></div>';
-    h += '</div></div>';
+    h += '</div>';
+    h += '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Check items you\'ve completed. Your contributions help other investors.</div>';
+    h += '</div>';
 
     h += '<div style="display:flex;flex-direction:column;gap:4px;">';
     DD_CHECKLIST.forEach(function(item, i) {
       var checked = checks[i];
+      var detail = details[String(i)];
       var gated = isExplorer && i >= 3;
       if (gated) {
         h += '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;font-size:12px;color:var(--text-muted);filter:blur(3px);pointer-events:none;user-select:none;"><input type="checkbox" disabled><span>' + item + '</span></label>';
       } else {
-        h += '<label onclick="toggleDDItem(\'' + deal.id + '\',' + i + ')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:12px;color:' + (checked ? 'var(--primary)' : 'var(--text-dark)') + ';background:' + (checked ? 'rgba(74,222,128,0.06)' : 'transparent') + ';' + (checked ? 'text-decoration:line-through;' : '') + '"><input type="checkbox" ' + (checked ? 'checked' : '') + ' style="pointer-events:none;accent-color:var(--primary);"><span>' + item + '</span></label>';
+        var contributorInfo = '';
+        if (checked && detail && detail.name) {
+          var timeAgo = detail.at ? getTimeAgo(detail.at) : '';
+          contributorInfo = '<div style="font-size:10px;color:var(--text-muted);margin-left:24px;margin-top:1px;">' + (detail.name || detail.by) + (timeAgo ? ' &middot; ' + timeAgo : '') + '</div>';
+        }
+        h += '<div style="border-radius:6px;background:' + (checked ? 'rgba(74,222,128,0.06)' : 'transparent') + ';">';
+        h += '<label onclick="toggleDDItem(\'' + deal.id + '\',' + i + ')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:12px;color:' + (checked ? 'var(--primary)' : 'var(--text-dark)') + ';' + (checked ? 'text-decoration:line-through;' : '') + '"><input type="checkbox" ' + (checked ? 'checked' : '') + ' style="pointer-events:none;accent-color:var(--primary);"><span>' + item + '</span></label>';
+        h += contributorInfo;
+        h += '</div>';
       }
     });
     h += '</div>';
@@ -7572,6 +7660,9 @@ function initAuth() {
     // Populate profile fields if available
     const firstInput = document.querySelector('#stab-profile .profile-input[type="text"]');
     if (firstInput && user.firstName) firstInput.value = user.firstName;
+
+    // Fetch all user data from Airtable on login
+    fetchUserDataFromAirtable(user.email);
   }
   // Check if new user should see wizard
   if (user && user.isNewUser && !localStorage.getItem('gycBuyBoxComplete')) {
@@ -7582,6 +7673,94 @@ function initAuth() {
   }
   // Ensure admin nav is shown after auth resolves
   showAdminNav();
+}
+
+// Fetch deal stages, goals, and portfolio from Airtable and populate localStorage
+async function fetchUserDataFromAirtable(email) {
+  if (!email) return;
+  try {
+    const [stagesResp, goalsResp, portfolioResp] = await Promise.all([
+      fetch(SYNC_API + '?type=stages&email=' + encodeURIComponent(email)).catch(() => null),
+      fetch(SYNC_API + '?type=goals&email=' + encodeURIComponent(email)).catch(() => null),
+      fetch(SYNC_API + '?type=portfolio&email=' + encodeURIComponent(email)).catch(() => null)
+    ]);
+
+    // Merge deal stages from Airtable into localStorage
+    if (stagesResp && stagesResp.ok) {
+      const stagesData = await stagesResp.json().catch(() => ({}));
+      if (stagesData.records && stagesData.records.length > 0) {
+        const localStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+        let merged = false;
+        stagesData.records.forEach(r => {
+          const dealId = r['Deal ID'];
+          const stage = r['Stage'];
+          if (dealId && stage && !localStages[dealId]) {
+            localStages[dealId] = stage;
+            merged = true;
+          }
+        });
+        if (merged) {
+          dealStages = localStages;
+          localStorage.setItem('gycDealStages', JSON.stringify(dealStages));
+          if (typeof renderDeals === 'function') renderDeals();
+        }
+      }
+    }
+
+    // Merge goals from Airtable into localStorage
+    if (goalsResp && goalsResp.ok) {
+      const goalsData = await goalsResp.json().catch(() => ({}));
+      if (goalsData.records && goalsData.records.length > 0) {
+        const serverGoals = goalsData.records[0];
+        if (!localStorage.getItem('gycGoals') || localStorage.getItem('gycGoals') === 'null') {
+          const restored = {
+            goalType: serverGoals['Goal Type'] || 'passive-income',
+            currentIncome: serverGoals['Current Income'] || 0,
+            targetIncome: serverGoals['Target Income'] || 0,
+            capitalAvailable: serverGoals['Capital Available'] || 0,
+            timeline: serverGoals['Timeline'] || '5',
+            taxReduction: serverGoals['Tax Reduction'] || 0
+          };
+          investorGoals = restored;
+          localStorage.setItem('gycGoals', JSON.stringify(restored));
+          if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
+        }
+      }
+    }
+
+    // Merge portfolio from Airtable into localStorage
+    if (portfolioResp && portfolioResp.ok) {
+      const portfolioData = await portfolioResp.json().catch(() => ({}));
+      if (portfolioData.records && portfolioData.records.length > 0) {
+        const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+        if (localPortfolio.length === 0) {
+          const restored = portfolioData.records.map(r => ({
+            dealId: r['Deal ID'] || '',
+            investmentName: r['Investment Name'] || '',
+            sponsor: r['Sponsor'] || '',
+            assetClass: r['Asset Class'] || '',
+            amountInvested: r['Amount Invested'] || 0,
+            dateInvested: r['Date Invested'] || '',
+            status: r['Status'] || 'active',
+            targetIRR: r['Target IRR'] || '',
+            distributionsReceived: r['Distributions Received'] || 0,
+            holdPeriod: r['Hold Period'] || '',
+            investingEntity: r['Investing Entity'] || '',
+            entityInvestedInto: r['Entity Invested Into'] || '',
+            notes: r['Notes'] || '',
+            _airtableId: r.id || undefined
+          }));
+          localStorage.setItem('gycPortfolio', JSON.stringify(restored));
+          if (typeof portfolioInvestments !== 'undefined') portfolioInvestments = restored;
+        }
+      }
+    }
+
+    // Also fetch buy box from GHL
+    if (typeof fetchBuyBoxFromGHL === 'function') fetchBuyBoxFromGHL();
+  } catch(e) {
+    console.warn('Failed to fetch user data from Airtable:', e.message);
+  }
 }
 
 function logout() {
@@ -8973,19 +9152,19 @@ function getMatchingDealCount(d) {
 // ========== SUBSCRIPTION FLOW ==========
 function initSubscription() {
   const user = getUser();
-  const currentTier = user ? (user.tier || 'explorer') : 'explorer';
+  const currentTier = user ? (user.tier || 'free') : 'free';
 
   document.querySelectorAll('.plan-btn').forEach(btn => {
     const card = btn.closest('.plan-card');
     const planName = card.querySelector('.plan-name').textContent.toLowerCase().trim();
 
-    if (planName === currentTier || (planName === 'family office' && currentTier === 'family_office')) {
+    if (planName === currentTier || (planName === 'free' && currentTier === 'free') || (planName === 'family office' && currentTier === 'family_office')) {
       btn.textContent = 'Current Plan';
       btn.className = 'btn-cta btn-cta-secondary plan-btn';
       btn.style.background = '';
       btn.onclick = null;
-    } else if (planName === 'explorer') {
-      btn.textContent = currentTier !== 'explorer' ? 'Included' : 'Current Plan';
+    } else if (planName === 'free') {
+      btn.textContent = currentTier !== 'free' ? 'Included' : 'Current Plan';
       btn.className = 'btn-cta btn-cta-secondary plan-btn';
       btn.onclick = null;
     } else if (planName === 'academy') {
@@ -9057,7 +9236,7 @@ async function handleSubscribe(tier, price) {
       initSubscription();
     }
   } else {
-    user.tier = 'explorer';
+    user.tier = 'free';
     localStorage.setItem('gycUser', JSON.stringify(user));
     initAuth();
     initSubscription();
@@ -9420,7 +9599,7 @@ function renderCashflowGapBar() {
   // CTA
   bar.style.display = 'flex';
   var ctaHtml = '';
-  if (hasGap && user && user.tier === 'explorer') {
+  if (hasGap && user && user.tier === 'free') {
     ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
   } else if (!hasGap) {
     ctaHtml = '<span style="font-size:11px;color:#4ade80;font-weight:700;">Goal reached!</span>';
@@ -9686,7 +9865,7 @@ function getCtaState() {
 }
 function shouldShowCta(type) {
   const user = getUser();
-  if (!user || user.tier === 'academy' || user.tier === 'investor') return false;
+  if (!user || user.tier === 'academy' || user.tier === 'alumni' || user.tier === 'investor') return false;
   if (typeof isAdmin === 'function' && isAdmin()) return false;
   const state = getCtaState();
   return !state[type];
@@ -9704,7 +9883,7 @@ function dismissCta(type) {
 
 // ========== PHASE 3: SOFT GATING ==========
 
-// Deal detail view counter (5 per month for explorers)
+// Deal detail view counter (5 per month for free users)
 function getDetailViewState() {
   const state = JSON.parse(localStorage.getItem('gycDetailViews') || '{"count":0,"resetMonth":""}');
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
@@ -9727,7 +9906,7 @@ function isGated() {
   if (!user) return true;
   // Admin and academy/investor users are never gated
   if (typeof isAdmin === 'function' && isAdmin()) return false;
-  if (user.tier === 'academy' || user.tier === 'investor') return false;
+  if (user.tier === 'academy' || user.tier === 'alumni' || user.tier === 'investor') return false;
   return true;
 }
 
@@ -9794,7 +9973,7 @@ function showDealGateOverlay(dealId) {
 })();
 
 // ========== PHASE 3B: GATE PASCAL'S ANALYSIS IN PANEL ==========
-// Wrap renderPanel to blur scorecard/analysis for explorer users
+// Wrap renderPanel to blur scorecard/analysis for free-tier users
 const _origRenderPanel = renderPanel;
 renderPanel = function(deal) {
   let html = _origRenderPanel(deal);
@@ -13037,7 +13216,7 @@ function renderSchemaPage() {
       { name: 'Email', type: 'text', example: user?.email || '—' },
       { name: 'Name', type: 'text', example: user?.name || '—' },
       { name: 'Password Hash', type: 'text (SHA-256)', example: 'Stored in dealflow_password_hash field' },
-      { name: 'Tier', type: 'tag-based', example: user?.tier || 'explorer' },
+      { name: 'Tier', type: 'tag-based', example: user?.tier || 'free' },
       { name: 'Asset Classes', type: 'text', example: (buyBox?.assetClasses || []).join(', ') || '—' },
       { name: 'Min IRR', type: 'text', example: buyBox?.irrMin || '—' },
       { name: 'Strategies', type: 'text', example: (buyBox?.strategies || []).join(', ') || '—' },
@@ -13150,9 +13329,10 @@ function searchViewAsUsers(query) {
       results.innerHTML = data.contacts.map(c => {
         const initials = c.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const tierBadge = c.tier === 'academy' ? '<span style="font-size:8px;font-weight:700;color:var(--primary);text-transform:uppercase;">Academy</span>'
+          : c.tier === 'alumni' ? '<span style="font-size:8px;font-weight:700;color:#8b5cf6;text-transform:uppercase;">Alumni</span>'
           : c.tier === 'investor' ? '<span style="font-size:8px;font-weight:700;color:#3b82f6;text-transform:uppercase;">Investor</span>'
-          : '<span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Explorer</span>';
-        return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'explorer') + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
+          : '<span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Free</span>';
+        return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'free') + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
           + '<div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">' + initials + '</div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:12px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.name + '</div>'
