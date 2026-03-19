@@ -914,24 +914,26 @@ body {
   justify-content: center;
   gap: 0;
   margin-bottom: 24px;
-  padding: 16px 20px;
+  padding: 14px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 .journey-step {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 24px;
+  gap: 4px;
+  cursor: default;
+  padding: 4px 8px;
+  border-radius: 12px;
   transition: all 0.2s;
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
   white-space: nowrap;
+  text-align: center;
 }
 .journey-step:hover {
   background: var(--bg-cream);
@@ -970,10 +972,13 @@ body {
   color: var(--text-dark);
 }
 .journey-connector {
-  width: 32px;
+  flex: 1;
+  min-width: 12px;
+  max-width: 40px;
   height: 2px;
   background: var(--border);
-  flex-shrink: 0;
+  align-self: center;
+  margin-top: -16px;
 }
 .journey-connector.done {
   background: var(--primary);
