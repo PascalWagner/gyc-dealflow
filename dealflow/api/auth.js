@@ -52,12 +52,16 @@ export default async function handler(req, res) {
           );
 
           if (contact) {
+            const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'info@pascalwagner.com', 'pascal@growyourcashflow.io'];
+            const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+            const tier = isAdmin ? 'academy' : deriveTier(contact.tags || []);
             return res.status(200).json({
               success: true,
               email: contact.email,
               name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || email.split('@')[0],
               contactId: contact.id,
-              tier: deriveTier(contact.tags || []),
+              tier,
+              isAdmin,
               tags: contact.tags || [],
               token: Date.now().toString(36) + Math.random().toString(36).slice(2)
             });
