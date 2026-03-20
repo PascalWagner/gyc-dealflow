@@ -7849,8 +7849,11 @@ function computeMatchScore(deal) {
   const reasons = [];
 
   // Asset class match (weight: 3)
-  const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Multi-Family', 'Lending': 'Multi-Family', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family' };
-  const userAssets = (wd.assetClasses || []).map(function(a) { return assetMap[a] || a; });
+  // Strategy-like wizard values (Private Debt / Credit, Lending, Debt) are filtered out of asset matching
+  // and handled by the strategy match below instead
+  const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
+  const strategyAliases = { 'Private Debt / Credit': true, 'Lending': true, 'Debt': true };
+  const userAssets = (wd.assetClasses || []).filter(function(a) { return !strategyAliases[a]; }).map(function(a) { return assetMap[a] || a; });
   if (userAssets.length > 0) {
     maxScore += 3;
     if (userAssets.includes(deal.assetClass)) { score += 3; reasons.push(deal.assetClass); }
@@ -7873,7 +7876,12 @@ function computeMatchScore(deal) {
   }
 
   // Strategy match (weight: 2)
-  var userStrategies = wd.strategies || [];
+  // Include Lending strategy if user selected debt/credit-related asset classes in the wizard
+  var userStrategies = (wd.strategies || []).slice();
+  var wdAssets = wd.assetClasses || [];
+  if (wdAssets.some(function(a) { return a === 'Private Debt / Credit' || a === 'Lending' || a === 'Debt'; })) {
+    if (userStrategies.indexOf('Lending') === -1) userStrategies.push('Lending');
+  }
   if (userStrategies.length > 0) {
     maxScore += 2;
     if (userStrategies.includes(deal.strategy)) { score += 2; reasons.push(deal.strategy + ' strategy'); }
@@ -10508,7 +10516,7 @@ function getWizardPlanDeals(branch) {
   if (branch === 'cashflow') {
     // Income-oriented: lending, pref return deals, sort by yield
     filtered = allDeals.filter(d => {
-      const isLending = d.strategy === 'Lending' || d.assetClass === 'Lending' || (d.instrument && d.instrument.toLowerCase().includes('debt'));
+      const isLending = d.strategy === 'Lending' || (d.instrument && d.instrument.toLowerCase().includes('debt'));
       const hasPref = d.preferredReturn && d.preferredReturn > 0;
       const hasCash = d.cashOnCash && d.cashOnCash > 0;
       return isLending || hasPref || hasCash;
@@ -11355,9 +11363,6 @@ function syncWizardToBuyBox() {
   const assetMap = {
     'Multi Family': 'Multi-Family',
     'Hotels / Hospitality': 'Hotels/Hospitality',
-    'Private Debt / Credit': 'Multi-Family',
-    'Lending': 'Multi-Family',
-    'Debt': 'Multi-Family',
     'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
     'Short-Term Rentals': 'Short Term Rental',
     'Single Family Homes': 'Single Family',
@@ -11366,9 +11371,16 @@ function syncWizardToBuyBox() {
     'Oil & Gas': 'Oil & Gas / Energy',
     'Retail Shopping Centres': 'Retail'
   };
-  const mappedAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
+  // Strip strategy-like values from asset classes, add them to strategies instead
+  const strategyAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
+  const pureAssets = (d.assetClasses || []).filter(a => !strategyAliases.includes(a));
+  const mappedAssets = pureAssets.map(a => assetMap[a] || a);
   const stratMap = { 'Lending / Credit': 'Lending' };
   const mappedStrats = (d.strategies || []).map(s => stratMap[s] || s);
+  // If user selected debt/credit wizard options, ensure Lending strategy is included
+  if ((d.assetClasses || []).some(a => strategyAliases.includes(a))) {
+    if (!mappedStrats.includes('Lending')) mappedStrats.push('Lending');
+  }
 
   buyBox.assetClasses = [...new Set(mappedAssets)];
   buyBox.strategies = mappedStrats.length > 0 ? mappedStrats : buyBox.strategies;
@@ -11512,9 +11524,12 @@ function renderReport() {
 
   // Get top matching deals
   const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
-  const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Multi-Family', 'Lending': 'Multi-Family', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family' };
-  const userAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
+  const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
+  const _stratAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
+  const userAssets = (d.assetClasses || []).filter(a => !_stratAliases.includes(a)).map(a => assetMap[a] || a);
+  const wantsLending = (d.assetClasses || []).some(a => _stratAliases.includes(a));
   const matchedDeals = allDeals.filter(deal => {
+    if (wantsLending && deal.strategy === 'Lending') return true;
     if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
     const stage = getDealStage(deal.id);
     if (stage === 'passed') return false;
@@ -11804,16 +11819,22 @@ function getMatchingDealCount(d) {
   const assetMap = {
     'Multi Family': 'Multi-Family',
     'Hotels / Hospitality': 'Hotels/Hospitality',
-    'Private Debt / Credit': 'Multi-Family',
-    'Lending': 'Multi-Family',
     'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
     'Short-Term Rentals': 'Short Term Rental',
     'Oil & Gas': 'Oil & Gas / Energy',
-    'SFH': 'Single Family'
+    'SFH': 'Single Family',
+    'Single Family Homes': 'Single Family',
+    'NNN (Triple Net Lease)': 'NNN',
+    'Retail Shopping Centres': 'Retail'
   };
-  const userAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
-  if (userAssets.length === 0) return DEALS.length;
-  return DEALS.filter(deal => userAssets.includes(deal.assetClass)).length;
+  const _sa = ['Private Debt / Credit', 'Lending', 'Debt'];
+  const userAssets = (d.assetClasses || []).filter(a => !_sa.includes(a)).map(a => assetMap[a] || a);
+  const wantsLending = (d.assetClasses || []).some(a => _sa.includes(a));
+  if (userAssets.length === 0 && !wantsLending) return DEALS.length;
+  return DEALS.filter(deal => {
+    if (wantsLending && deal.strategy === 'Lending') return true;
+    return userAssets.length > 0 && userAssets.includes(deal.assetClass);
+  }).length;
 }
 
 // ========== SUBSCRIPTION FLOW ==========
@@ -12678,7 +12699,7 @@ renderPanel = function(deal) {
 
 function onDealViewed(id, deal) {
   // Fund-type inline CTA
-  if (deal && (deal.assetClass === 'Lending' || deal.assetClass === 'Credit' || deal.dealType === 'Fund')) {
+  if (deal && (deal.strategy === 'Lending' || deal.dealType === 'Fund')) {
     if (!sessionStorage.getItem('gycFundCtaShown')) {
       sessionStorage.setItem('gycFundCtaShown', '1');
       // Inject fund CTA into the panel after a brief delay
@@ -12856,8 +12877,7 @@ function generateYearReturn(baseIRR, year) {
 function getDebtFunds() {
   return DEALS.filter(d =>
     d.instrument === 'Debt' ||
-    d.strategy === 'Lending' ||
-    (d.dealType === 'Fund' && d.assetClass === 'Lending')
+    d.strategy === 'Lending'
   );
 }
 
@@ -16836,10 +16856,15 @@ function renderDashboard() {
 
   // Count matching deals for buy box
   const wd2 = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-  const assetMap2 = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
-  const userAssets2 = (wd2.assetClasses || []).map(function(a) { return assetMap2[a] || a; });
-  const matchingCount = userAssets2.length > 0
-    ? deals.filter(function(deal) { return userAssets2.includes(deal.assetClass); }).length
+  const assetMap2 = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
+  const _sa2 = ['Private Debt / Credit', 'Lending', 'Debt'];
+  const userAssets2 = (wd2.assetClasses || []).filter(function(a) { return _sa2.indexOf(a) === -1; }).map(function(a) { return assetMap2[a] || a; });
+  const wantsLending2 = (wd2.assetClasses || []).some(function(a) { return _sa2.indexOf(a) !== -1; });
+  const matchingCount = (userAssets2.length > 0 || wantsLending2)
+    ? deals.filter(function(deal) {
+        if (wantsLending2 && deal.strategy === 'Lending') return true;
+        return userAssets2.length > 0 && userAssets2.includes(deal.assetClass);
+      }).length
     : deals.length;
 
   if (stageCounts.interested > 0) {
@@ -17002,9 +17027,11 @@ function renderDashboard() {
     const incomePct = Math.min(100, Math.round((annualPassiveIncome / goals.targetIncome) * 100));
 
     // Find deals that match the user's buy box and could close the gap
-    const userAssets = (wd.assetClasses || []).map(function(a) {
-      var assetMap = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
-      return assetMap[a] || a;
+    var _sa3 = ['Private Debt / Credit', 'Lending', 'Debt'];
+    var _assetMap3 = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
+    var _wantsLending3 = (wd.assetClasses || []).some(function(a) { return _sa3.indexOf(a) !== -1; });
+    const userAssets = (wd.assetClasses || []).filter(function(a) { return _sa3.indexOf(a) === -1; }).map(function(a) {
+      return _assetMap3[a] || a;
     });
     const userMin = parseDollar(wd.investableCapital) || 0;
     const userMaxMin = userMin > 0 ? userMin * 0.3 : 100000; // typical check size ~30% of investable
@@ -17014,7 +17041,8 @@ function renderDashboard() {
       if (!deal.preferredReturn && !deal.cashOnCash) return false; // must be income-producing
       if (deal.status === 'Closed' || deal.status === 'Inactive') return false;
       if (stages[deal.id] === 'passed') return false; // skip passed deals
-      if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
+      if (_wantsLending3 && deal.strategy === 'Lending') { /* include lending deals */ }
+      else if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
       if (deal.investmentMinimum && userMaxMin > 0 && deal.investmentMinimum > userMaxMin) return false;
       return true;
     }).map(function(deal) {

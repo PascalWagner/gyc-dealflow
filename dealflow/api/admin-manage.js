@@ -69,30 +69,61 @@ async function deleteDeal(supabase, body) {
   const { id } = body;
   if (!id) throw new Error('Missing deal id');
 
-  const { data, error } = await supabase
-    .from('opportunities')
-    .update({ archived: true })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return { data };
+  // Soft-delete: set status to Archived (uses status column which always exists)
+  // If the `archived` boolean column exists (migration 013), also set it
+  const updates = { status: 'Archived' };
+  try {
+    // Try with archived column first
+    const { data, error } = await supabase
+      .from('opportunities')
+      .update({ ...updates, archived: true })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error && error.code === '42703') throw new Error('FALLBACK');
+    if (error) throw error;
+    return { data };
+  } catch (e) {
+    if (e.message !== 'FALLBACK') throw e;
+    // Fallback: archived column doesn't exist yet
+    const { data, error } = await supabase
+      .from('opportunities')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data };
+  }
 }
 
 async function toggleArchive(supabase, body) {
   const { id, archived } = body;
   if (!id) throw new Error('Missing deal id');
 
-  const { data, error } = await supabase
-    .from('opportunities')
-    .update({ archived: archived !== undefined ? archived : true })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return { data };
+  const shouldArchive = archived !== undefined ? archived : true;
+  const updates = { status: shouldArchive ? 'Archived' : 'Active' };
+  try {
+    const { data, error } = await supabase
+      .from('opportunities')
+      .update({ ...updates, archived: shouldArchive })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error && error.code === '42703') throw new Error('FALLBACK');
+    if (error) throw error;
+    return { data };
+  } catch (e) {
+    if (e.message !== 'FALLBACK') throw e;
+    const { data, error } = await supabase
+      .from('opportunities')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return { data };
+  }
 }
 
 // --- Operator actions (management_companies table) ---
