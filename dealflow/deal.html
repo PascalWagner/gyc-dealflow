@@ -5076,32 +5076,42 @@ async function renderDeal() {
   var secFilingHtml = '';
   (function buildSecFiling() {
     if (!deal.secCik && !deal.totalAmountSold && !deal.totalInvestors && !deal.dateOfFirstSale) return;
-    secFilingHtml += '<div class="section">';
-    secFilingHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">SEC Filing</span>';
-    secFilingHtml += '<span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-family:var(--font-ui);font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);padding:3px 10px;border-radius:20px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>SEC Verified</span>';
-    secFilingHtml += '</div><div class="section-body">';
-    secFilingHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:16px;">';
+    var _metricStyle = 'font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);';
+    var _labelStyle = 'font-family:var(--font-ui);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:2px;';
+    secFilingHtml += '<div class="section" style="min-width:0;">';
+    secFilingHtml += '<div class="section-header" style="padding:12px 16px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title" style="font-size:14px;">SEC Filing</span>';
+    secFilingHtml += '<span style="margin-left:auto;display:flex;align-items:center;gap:3px;font-family:var(--font-ui);font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);padding:2px 8px;border-radius:20px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
+    secFilingHtml += '</div><div class="section-body" style="padding:12px 16px 16px;">';
+    // Compact 2x2 metric grid
+    secFilingHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
     if (deal.totalAmountSold) {
-      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">$' + (deal.totalAmountSold >= 1e6 ? (deal.totalAmountSold/1e6).toFixed(1)+'M' : Math.round(deal.totalAmountSold).toLocaleString()) + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Total Sold</div></div>';
-    }
-    if (deal.offeringSize) {
-      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Total Offering</div></div>';
+      secFilingHtml += '<div><div style="' + _metricStyle + '">$' + (deal.totalAmountSold >= 1e6 ? (deal.totalAmountSold/1e6).toFixed(1)+'M' : Math.round(deal.totalAmountSold).toLocaleString()) + '</div><div style="' + _labelStyle + '">Total Sold</div></div>';
     }
     if (deal.totalInvestors) {
-      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">' + deal.totalInvestors + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Investors</div></div>';
+      secFilingHtml += '<div><div style="' + _metricStyle + '">' + deal.totalInvestors + '</div><div style="' + _labelStyle + '">Investors</div></div>';
+    }
+    if (deal.offeringSize) {
+      secFilingHtml += '<div><div style="' + _metricStyle + '">$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</div><div style="' + _labelStyle + '">Offering Size</div></div>';
     }
     if (deal.dateOfFirstSale) {
       var fsd = new Date(deal.dateOfFirstSale);
-      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">' + fsd.toLocaleDateString('en-US',{month:'short',year:'numeric'}) + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">First Sale</div></div>';
+      secFilingHtml += '<div><div style="' + _metricStyle + '">' + fsd.toLocaleDateString('en-US',{month:'short',year:'numeric'}) + '</div><div style="' + _labelStyle + '">Deal Opened</div></div>';
     }
     secFilingHtml += '</div>';
+    // Progress bar
     if (deal.totalAmountSold && deal.offeringSize && deal.offeringSize > 0) {
       var pctSold = Math.min(100, Math.round((deal.totalAmountSold / deal.offeringSize) * 100));
-      secFilingHtml += '<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;"><span>' + pctSold + '% funded</span><span>$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + ' target</span></div>';
-      secFilingHtml += '<div style="height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pctSold + '%;background:var(--primary);border-radius:3px;"></div></div></div>';
+      secFilingHtml += '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-bottom:3px;"><span>' + pctSold + '% funded</span><span>$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</span></div>';
+      secFilingHtml += '<div style="height:5px;background:var(--bg-main);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pctSold + '%;background:var(--primary);border-radius:3px;"></div></div></div>';
     }
+    // Filing date (data freshness)
+    if (deal.dateOfFirstSale) {
+      var _filingAge = Math.round((new Date() - new Date(deal.dateOfFirstSale)) / (1000*60*60*24*30.44));
+      secFilingHtml += '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-bottom:10px;">Data as of Form D filing' + (_filingAge > 0 ? ' (' + _filingAge + ' mo ago)' : '') + '</div>';
+    }
+    // EDGAR link
     if (deal.secCik) {
-      secFilingHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=' + esc(deal.secCik) + '&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View on SEC EDGAR</a>';
+      secFilingHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=' + esc(deal.secCik) + '&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View on SEC EDGAR</a>';
     }
     secFilingHtml += '</div></div>';
   })();
@@ -5868,8 +5878,7 @@ async function renderDeal() {
   if (deal.mcLinkedin) {
     materialsHtml += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>CEO LinkedIn</a>';
   }
-  var secCompany = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
-  materialsHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?company=' + secCompany + '&CIK=&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search SEC EDGAR</a>';
+  // SEC EDGAR link removed — now in dedicated SEC Filing card
   materialsHtml += '</div>';
   materialsHtml += '</div></div>';
 
@@ -6541,15 +6550,14 @@ async function renderDeal() {
     + operatorHtml
     + '</div>'
     + geoMapHtml
-    + secFilingHtml
     + operatorDealsHtml
     // --- Job 5: How does it compare? ---
     + cashFlowHtml
     + feeBenchHtml
     + chartHtml
     + similarHtml
-    // --- Job 6: Supporting materials + thesis/risks ---
-    + materialsHtml
+    // --- Job 6: Supporting materials + SEC filing (side by side) ---
+    + (secFilingHtml ? '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;">' + secFilingHtml + materialsHtml + '</div>' : materialsHtml)
     + thesisHtml
     // --- Job 7: Decide ---
     + memoHtml
