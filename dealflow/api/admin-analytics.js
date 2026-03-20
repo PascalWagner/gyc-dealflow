@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     // 1. Fetch all user deal stages
     const { data: stages, error: stagesErr } = await supabase
       .from('user_deal_stages')
-      .select('deal_id, stage, email, updated_at');
+      .select('deal_id, stage, user_id, updated_at');
 
     if (stagesErr) throw stagesErr;
 
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
 
     for (const rec of (stages || [])) {
       const dealId = rec.deal_id || '';
-      const email = rec.email || '';
+      const userId = rec.user_id || '';
       let stage = (rec.stage || '').toLowerCase();
       stage = STAGE_MAP[stage] || stage;
       const updatedAt = rec.updated_at || '';
@@ -57,17 +57,17 @@ export default async function handler(req, res) {
         }
       }
 
-      // User stats
-      if (email) {
-        if (!userStats[email]) {
-          userStats[email] = { email, saved: 0, vetting: 0, ready: 0, invested: 0, total: 0, lastActive: '' };
+      // User stats (user_id is typically the user's email)
+      if (userId) {
+        if (!userStats[userId]) {
+          userStats[userId] = { email: userId, saved: 0, vetting: 0, ready: 0, invested: 0, total: 0, lastActive: '' };
         }
         if (['saved', 'vetting', 'ready', 'invested'].includes(stage)) {
-          userStats[email][stage]++;
-          userStats[email].total++;
+          userStats[userId][stage]++;
+          userStats[userId].total++;
         }
-        if (updatedAt > userStats[email].lastActive) {
-          userStats[email].lastActive = updatedAt;
+        if (updatedAt > userStats[userId].lastActive) {
+          userStats[userId].lastActive = updatedAt;
         }
       }
 
