@@ -2614,7 +2614,41 @@ body {
 }
 
 /* ====== STRESS TEST SECTION ====== */
-.stress-test-section { padding: 0; }
+.stress-test-section { padding: 24px; position: relative; }
+.stress-test-coming-soon {
+  position: relative;
+}
+.stress-test-coming-soon > .stress-test-content {
+  opacity: 0.3;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(0.5);
+}
+.stress-test-coming-soon > .stress-test-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  text-align: center;
+  padding: 32px 48px;
+  background: rgba(255,255,255,0.92);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+.stress-test-coming-soon > .stress-test-overlay .coming-soon-title {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.stress-test-coming-soon > .stress-test-overlay .coming-soon-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
 .stress-test-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -5005,6 +5039,9 @@ async function renderDeal() {
     stressHtml += '<div class="section">';
     stressHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="section-title">Stress Test Calculator</span></div>';
     stressHtml += '<div class="section-body stress-test-section">';
+    stressHtml += '<div class="stress-test-coming-soon">';
+    stressHtml += '<div class="stress-test-overlay"><div class="coming-soon-title">Coming Soon</div><div class="coming-soon-sub">Interactive stress testing is on the way</div></div>';
+    stressHtml += '<div class="stress-test-content">';
 
     // Base case info
     stressHtml += '<div style="background:linear-gradient(135deg, var(--mint-bg) 0%, #f0fdf4 100%);border:1px solid rgba(81,190,123,0.15);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;font-family:var(--font-ui);">';
@@ -5074,7 +5111,7 @@ async function renderDeal() {
     stressHtml += '</table>';
     stressHtml += '</div>';
 
-    stressHtml += '</div></div>';
+    stressHtml += '</div></div></div></div>'; // close stress-test-content, stress-test-coming-soon, section-body, section
 
     // Store base values as data attributes for the calculator
     stressHtml += '<script id="stressTestData" type="application/json">' + JSON.stringify({
