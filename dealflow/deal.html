@@ -5332,20 +5332,21 @@ async function renderDeal() {
     cashFlowHtml += '<div id="' + uid + '_table">';
     cashFlowHtml += '<table class="cf-table">';
     var _hasCapReturn = rows.some(function(r) { return r.capReturn > 0; });
-    cashFlowHtml += '<tr><th>Year</th><th>Distributions</th><th>% Cash Flow</th>';
-    if (_hasCapReturn) cashFlowHtml += '<th>Capital Return</th>';
-    cashFlowHtml += '<th>Total Cash</th><th>Cumulative</th></tr>';
+    cashFlowHtml += '<tr><th>Year</th><th>Investment</th><th>Distributions</th><th>% Cash Flow</th><th>Capital Back</th><th>Total Cash</th><th>Cumulative</th></tr>';
     var cumAll = 0;
+    var capitalRemaining = investment;
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       cumAll += r.dist + r.capReturn;
+      capitalRemaining -= r.capReturn;
       var cocPct = investment > 0 ? ((r.dist / investment) * 100).toFixed(1) : '0.0';
       var isLast = (i === rows.length - 1);
       cashFlowHtml += '<tr' + (isLast ? ' class="cf-total-row"' : '') + '>';
       cashFlowHtml += '<td>Year ' + r.year + (r.note ? ' <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(' + r.note + ')</span>' : '') + '</td>';
+      cashFlowHtml += '<td>' + (i === 0 ? '$' + Math.round(investment).toLocaleString() : '—') + '</td>';
       cashFlowHtml += '<td class="cf-highlight">$' + Math.round(r.dist).toLocaleString() + '</td>';
       cashFlowHtml += '<td class="cf-highlight">' + cocPct + '%</td>';
-      if (_hasCapReturn) cashFlowHtml += '<td>' + (r.capReturn > 0 ? '$' + Math.round(r.capReturn).toLocaleString() : '—') + '</td>';
+      cashFlowHtml += '<td>' + (r.capReturn > 0 ? '$' + Math.round(r.capReturn).toLocaleString() : '—') + '</td>';
       cashFlowHtml += '<td>$' + Math.round(r.dist + r.capReturn).toLocaleString() + '</td>';
       cashFlowHtml += '<td>$' + Math.round(cumAll).toLocaleString() + '</td>';
       cashFlowHtml += '</tr>';
