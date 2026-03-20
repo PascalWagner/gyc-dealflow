@@ -481,23 +481,156 @@ body {
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  animation: modalFadeIn 0.2s ease;
+}
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .modal-card {
   background: var(--bg-card);
-  border-radius: var(--radius);
+  border-radius: 20px;
   padding: 32px;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+  animation: modalSlideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+html.dark .modal-card { box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
+
+/* Apple-style admin modal */
+.admin-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; position: sticky; top: 0; z-index: 2;
+  background: var(--bg-card); border-bottom: 1px solid var(--border-light);
+}
+.admin-modal-header h2 {
+  font-family: var(--font-ui); font-size: 17px; font-weight: 700;
+  color: var(--text-dark); letter-spacing: -0.2px;
+}
+.admin-modal-close {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: var(--bg-cream); color: var(--text-muted); font-size: 15px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease; line-height: 1;
+}
+.admin-modal-close:hover { background: var(--border); color: var(--text-dark); }
+.admin-modal-body { padding: 8px 24px 24px; }
+.admin-field-section { margin-top: 20px; }
+.admin-field-section:first-child { margin-top: 8px; }
+.admin-section-title {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); padding: 0 0 8px;
+}
+.admin-field-group {
+  background: var(--bg-cream); border-radius: 12px; overflow: hidden;
+}
+html.dark .admin-field-group { background: var(--bg-sidebar-hover); }
+.admin-field-row {
+  display: flex; align-items: center; padding: 0 14px; min-height: 44px;
+  border-bottom: 1px solid var(--border-light);
+}
+html.dark .admin-field-row { border-bottom-color: var(--border); }
+.admin-field-row:last-child { border-bottom: none; }
+.admin-field-label {
+  font-family: var(--font-ui); font-size: 14px; font-weight: 500;
+  color: var(--text-dark); min-width: 140px; flex-shrink: 0; padding: 10px 0;
+}
+.admin-field-input {
+  flex: 1; border: none; background: transparent; padding: 10px 0;
+  font-family: var(--font-body); font-size: 14px; color: var(--text-secondary);
+  text-align: right; outline: none; min-width: 0;
+}
+.admin-field-input::placeholder { color: var(--text-muted); opacity: 0.5; }
+.admin-field-input:focus { color: var(--text-dark); }
+select.admin-field-input { -webkit-appearance: none; appearance: none; cursor: pointer; }
+.admin-modal-footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 24px 20px; position: sticky; bottom: 0; z-index: 2;
+  background: var(--bg-card); border-top: 1px solid var(--border-light);
+}
+.admin-btn {
+  padding: 10px 20px; border: none; border-radius: 10px;
+  font-family: var(--font-ui); font-weight: 600; font-size: 14px;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.admin-btn.primary { background: var(--primary); color: #fff; font-weight: 700; }
+.admin-btn.primary:hover { background: var(--primary-hover); transform: scale(1.02); }
+.admin-btn.primary:active { transform: scale(0.98); }
+.admin-btn.secondary { background: var(--bg-cream); color: var(--text-secondary); }
+.admin-btn.secondary:hover { background: var(--border); color: var(--text-dark); }
+.admin-btn.danger { background: transparent; color: var(--red); }
+.admin-btn.danger:hover { background: #fde8e8; }
+
+/* Apple-style admin table */
+.admin-table-wrap {
+  background: var(--bg-card); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+}
+html.dark .admin-table-wrap { box-shadow: 0 0 0 1px rgba(255,255,255,0.06); }
+.admin-edit-btn {
+  padding: 5px 14px; background: var(--bg-cream); border: none; border-radius: 8px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  cursor: pointer; color: var(--text-secondary); transition: all 0.15s ease;
+}
+.admin-edit-btn:hover { background: var(--border); color: var(--text-dark); }
+
+/* Apple segmented control */
+.admin-seg-ctrl {
+  display: inline-flex; background: var(--bg-cream); border-radius: 10px; padding: 3px; gap: 2px;
+}
+html.dark .admin-seg-ctrl { background: var(--bg-sidebar-hover); }
+.admin-seg {
+  padding: 7px 16px; border-radius: 8px; border: none; background: transparent;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; transition: all 0.2s ease;
+}
+.admin-seg.active {
+  background: var(--bg-card); color: var(--text-dark);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 0 0 0.5px rgba(0,0,0,0.04);
+}
+.admin-seg:hover:not(.active) { color: var(--text-secondary); }
+
+/* Apple search */
+.admin-search-wrap { position: relative; flex: 1; min-width: 200px; }
+.admin-search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.admin-search-input {
+  width: 100%; padding: 10px 14px 10px 38px; border: none; border-radius: 10px;
+  font-family: var(--font-body); font-size: 14px; background: var(--bg-cream);
+  color: var(--text-dark); outline: none; transition: all 0.2s ease;
+}
+html.dark .admin-search-input { background: var(--bg-sidebar-hover); }
+.admin-search-input:focus { box-shadow: 0 0 0 3px rgba(81,190,123,0.2); background: var(--bg-card); }
+.admin-search-input::placeholder { color: var(--text-muted); }
+
+/* Apple pagination */
+.admin-page-btn {
+  padding: 7px 14px; border: none; border-radius: 8px; background: var(--bg-cream);
+  cursor: pointer; font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  color: var(--text-secondary); transition: all 0.15s ease;
+}
+.admin-page-btn:hover:not(:disabled) { background: var(--border); color: var(--text-dark); }
+.admin-page-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Intake wizard steps */
+.intake-step {
+  flex: 1; text-align: center; padding: 8px 4px; border-radius: 8px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700; transition: all 0.2s ease;
+}
+.intake-step.active { background: var(--primary); color: #fff; }
+.intake-step.done { background: var(--green-bg); color: var(--primary); }
+.intake-step.pending { background: var(--bg-cream); color: var(--text-muted); }
 .modal-field {
   margin-bottom: 16px;
 }
@@ -5283,72 +5416,8 @@ const _supa = window.supabase.createClient(
         </div>
       </div>
 
-      <!-- AT A GLANCE -->
-      <div class="if-mg if-mg5" style="margin:24px 0">
-        <div class="if-mc" style="text-align:center"><div class="if-mcl">Targeted Return</div><div class="if-mcv if-green">10%+</div></div>
-        <div class="if-mc" style="text-align:center"><div class="if-mcl">Distributions</div><div class="if-mcv">Monthly</div></div>
-        <div class="if-mc" style="text-align:center"><div class="if-mcl">Minimum</div><div class="if-mcv">$100K</div></div>
-        <div class="if-mc" style="text-align:center"><div class="if-mcl">Commitment</div><div class="if-mcv">3 Years</div></div>
-        <div class="if-mc" style="text-align:center"><div class="if-mcl">GP Co-Invest</div><div class="if-mcv if-green">$400K</div></div>
-      </div>
-
-      <!-- INCOME CALCULATOR -->
-      <div class="if-v2-sh"><div class="if-v2-sh-num">Your Income</div><h2>What does this actually pay me?</h2></div>
-      <div class="if-calc-wrap">
-        <div style="margin-bottom:20px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-            <label style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:rgba(255,255,255,0.7)">If I invest</label>
-            <div style="font-family:var(--font-headline);font-size:28px;color:#fff" id="if-calc-display">$250,000</div>
-          </div>
-          <input type="range" id="if-calc-slider" min="100000" max="2000000" step="25000" value="250000" oninput="updateIfCalc()" style="width:100%;accent-color:#51BE7B;height:4px;background:rgba(81,190,123,0.18);border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer">
-          <div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px"><span>$100K</span><span>$500K</span><span>$1M</span><span>$2M</span></div>
-        </div>
-        <div style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:16px;text-align:center">Based on current net LP yield of <strong style="color:#40E47F">8.0%</strong> annually &middot; Paid monthly to your bank account</div>
-        <div class="if-calc-results">
-          <div class="if-calc-r"><div class="v" id="if-calc-monthly">$1,667</div><div class="l">Deposited monthly</div></div>
-          <div class="if-calc-r"><div class="v" id="if-calc-annual">$20,000</div><div class="l">Annual income (pre-tax)</div></div>
-          <div class="if-calc-r"><div class="v" id="if-calc-3yr">$60,000</div><div class="l">Total over 3 years</div></div>
-        </div>
-      </div>
-
-      <!-- TRACK RECORD STRIP -->
-      <div class="if-track-banner" style="margin-top:28px">
-        <div class="if-track-banner-title">28 Months. Zero Missed Payments.</div>
-        <div class="if-track-banner-sub">$84,455 distributed to LPs since inception &middot; 8.0% net yield &middot; 4 LPs &middot; $552K AUM</div>
-      </div>
-
-      <!-- PORTFOLIO SNAPSHOT -->
-      <div class="if-v2-sh" style="margin-top:28px"><div class="if-v2-sh-num">The Portfolio</div><h2>Where does my money go?</h2></div>
-      <div class="if-chart-card" style="margin-bottom:20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:16px">
-            <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:2px;background:#1F5159"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Allocation %</span></div>
-            <div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:2px;border-radius:1px;background:#32C583"></div><div style="width:6px;height:6px;border-radius:50%;background:#32C583"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Gross Yield %</span></div>
-          </div>
-          <div style="font-family:var(--font-ui);font-size:11px;color:#607179">10 funds &middot; 5 asset classes &middot; 20% max single fund</div>
-        </div>
-        <div style="position:relative;width:100%;height:280px"><canvas id="if-alloc-yield-chart"></canvas></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0 0;border-top:2px solid #1F5159;margin-top:12px">
-          <div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#1F5159">Blended Portfolio</div><div style="font-family:var(--font-ui);font-size:11px;color:#607179">Weighted average across all 10 funds</div></div>
-          <div style="display:flex;gap:24px"><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:600;color:#1F5159;width:50px;text-align:right">100%</div><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:700;color:#32C583;width:50px;text-align:right" id="if-blended-yield">13.6%</div></div>
-        </div>
-      </div>
-      <div id="if-fund-table" style="display:none"></div>
-
-      <!-- SOCIAL PROOF -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:28px 0 20px">
-        <div class="if-testimonial">
-          <div class="if-avatar">TS</div>
-          <div><div class="if-t-name">Tod Spooner</div><div class="if-t-quote">&#8220;14 months in, the deposit shows up every month like clockwork.&#8221;</div></div>
-        </div>
-        <div class="if-testimonial">
-          <div class="if-avatar">MS</div>
-          <div><div class="if-t-name">Matt Sommers</div><div class="if-t-quote">&#8220;I can see exactly where every dollar is. That level of transparency is rare.&#8221;</div></div>
-        </div>
-      </div>
-
       <!-- VIEW FULL DATA ROOM -->
-      <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:32px;text-align:center;color:#fff;position:relative;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:40px 32px;text-align:center;color:#fff;position:relative;overflow:hidden;margin-top:24px">
         <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.05)"></div>
         <div style="position:relative">
           <div style="font-family:var(--font-headline);font-size:22px;margin-bottom:8px">Want the full picture?</div>
@@ -5361,7 +5430,7 @@ const _supa = window.supabase.createClient(
         </div>
       </div>
 
-      <div style="margin-top:16px;font-family:var(--font-ui);font-size:9px;color:var(--text-muted);line-height:1.6;text-align:center;opacity:0.5">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</div>
+      <div style="margin-top:24px;font-family:var(--font-ui);font-size:9px;color:var(--text-muted);line-height:1.6;text-align:center;opacity:0.5">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</div>
 
     </div>
   </div>
