@@ -7,13 +7,14 @@
 //   - Response time: ~50ms vs ~800-1200ms with Airtable
 //   - Caching still works the same way (Vercel edge cache headers)
 
-import { getAdminClient, setCors } from './_supabase.js';
+import { getAdminClient, setCors, rateLimit } from './_supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!rateLimit(req, res)) return;
 
   try {
     const supabase = getAdminClient();

@@ -2,14 +2,13 @@
 // Looks up property details by address using RentCast API
 // Returns: property details, tax history, sale history, owner info
 
+import { setCors } from './_supabase.js';
+
 const RENTCAST_API_KEY = process.env.RENTCAST_API_KEY;
 const RENTCAST_BASE = 'https://api.rentcast.io/v1';
 
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { address, city, state, zipCode, lat, lng, radius } = req.query;

@@ -6,9 +6,7 @@
 //   - Still syncs to GHL on write (so your automations keep working)
 //   - Read is instant (~20ms vs ~500ms from GHL)
 
-import { getAdminClient, getUserClient, setCors } from './_supabase.js';
-
-const GHL_API_KEY = process.env.GHL_API_KEY;
+import { getAdminClient, getUserClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
 
 // GHL field mapping (for sync)
 const GHL_FIELD_MAP = {
@@ -67,15 +65,11 @@ for (const [wiz, col] of Object.entries(WIZARD_TO_COLUMN)) {
 }
 
 async function syncToGhl(email, buyBoxRow) {
-  if (!GHL_API_KEY) return;
-
   try {
-    // Look up GHL contact
-    const resp = await fetch(
-      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`,
-      { headers: { 'Authorization': `Bearer ${GHL_API_KEY}` } }
+    const resp = await ghlFetch(
+      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`
     );
-    if (!resp.ok) return;
+    if (!resp?.ok) return;
 
     const data = await resp.json();
     const contact = (data.contacts || [])[0];
@@ -91,12 +85,8 @@ async function syncToGhl(email, buyBoxRow) {
     }
 
     if (Object.keys(customField).length > 0) {
-      await fetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`, {
+      await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${GHL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ customField })
       });
     }
@@ -108,6 +98,7 @@ async function syncToGhl(email, buyBoxRow) {
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!rateLimit(req, res)) return;
 
   const token = (req.headers.authorization || '').replace('Bearer ', '');
 

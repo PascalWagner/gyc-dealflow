@@ -2,31 +2,26 @@
 // Operator permission tracking + outreach email generation
 // Admin-only endpoint for managing 506(b) compliance
 
-import { getAdminClient, setCors, ADMIN_EMAILS } from './_supabase.js';
+import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
 
-async function verifyAdmin(req) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { authorized: false, error: 'Missing Authorization header' };
-  }
-  const token = authHeader.replace('Bearer ', '');
-  const supabase = getAdminClient();
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return { authorized: false, error: 'Invalid token' };
-  if (!ADMIN_EMAILS.includes(user.email)) return { authorized: false, error: 'Not admin' };
-  return { authorized: true, user };
+// --- Priority score for outreach sorting ---
+function computePriority(row) {
+  const dealScore = (row.deal_count || 0) * 10;
+  const typeScore = row.offering_type === '506b' ? 5 : row.offering_type === 'unknown' ? 3 : 0;
+  const statusScore = row.outreach_status === 'not_contacted' ? 3
+    : row.outreach_status === 'contacted' ? 1
+    : row.outreach_status === 'follow_up' ? 2 : 0;
+  return dealScore + typeScore + statusScore;
 }
 
 // --- List all operators with permission status ---
 async function listOutreach(supabase, params) {
-  const { page = 1, limit = 50, search, status } = params;
-  const offset = (page - 1) * limit;
+  const { page = 1, limit = 50, search, status, sort } = params;
 
-  // Use admin client to query the view
+  // Fetch all (small dataset ~25 operators) for priority sorting
   let query = supabase
     .from('operators_with_permissions')
-    .select('*', { count: 'exact' })
-    .range(offset, offset + limit - 1);
+    .select('*');
 
   if (search) {
     query = query.or(`operator_name.ilike.%${search}%,contact_name.ilike.%${search}%,contact_email.ilike.%${search}%`);
@@ -35,13 +30,24 @@ async function listOutreach(supabase, params) {
     query = query.eq('outreach_status', status);
   }
 
-  // Order: not_contacted first, then contacted, follow_up, denied, approved
-  query = query.order('outreach_status', { ascending: true }).order('operator_name', { ascending: true });
-
-  const { data, error, count } = await query;
+  const { data, error } = await query;
   if (error) throw error;
 
-  return { data: data || [], total: count, page, limit };
+  // Compute priority and sort
+  const rows = (data || []).map(r => ({ ...r, priority: computePriority(r) }));
+  if (sort === 'alpha') {
+    rows.sort((a, b) => (a.operator_name || '').localeCompare(b.operator_name || ''));
+  } else {
+    // Default: priority descending (highest priority first)
+    rows.sort((a, b) => b.priority - a.priority);
+  }
+
+  // Paginate in JS
+  const total = rows.length;
+  const offset = (page - 1) * limit;
+  const paged = rows.slice(offset, offset + limit);
+
+  return { data: paged, total, page, limit };
 }
 
 // --- Get single operator permission record ---
@@ -59,13 +65,20 @@ async function getOutreach(supabase, params) {
   return { data };
 }
 
-// --- Upsert permission record ---
-async function upsertOutreach(supabase, params) {
+// --- Upsert permission record (with auto-logging) ---
+async function upsertOutreach(supabase, params, adminUser) {
   const { managementCompanyId, ...fields } = params;
   if (!managementCompanyId) throw new Error('Missing managementCompanyId');
 
   // Remove non-DB fields
   delete fields.action;
+
+  // Fetch existing record to detect changes
+  const { data: existing } = await supabase
+    .from('operator_permissions')
+    .select('outreach_status, permission_granted')
+    .eq('management_company_id', managementCompanyId)
+    .single();
 
   const record = {
     management_company_id: managementCompanyId,
@@ -87,6 +100,41 @@ async function upsertOutreach(supabase, params) {
     .single();
 
   if (error) throw error;
+
+  // Auto-log status changes
+  const adminEmail = adminUser?.email || 'admin';
+  const oldStatus = existing?.outreach_status || 'not_contacted';
+  const newStatus = fields.outreach_status;
+  if (newStatus && newStatus !== oldStatus) {
+    await supabase.from('operator_interactions').insert({
+      management_company_id: managementCompanyId,
+      interaction_type: 'status_change',
+      note: `Status changed from "${oldStatus}" to "${newStatus}"`,
+      metadata: { old_status: oldStatus, new_status: newStatus },
+      created_by: adminEmail
+    }).catch(() => {}); // Don't fail the upsert if logging fails
+  }
+
+  // Auto-log permission changes
+  const oldPerm = existing?.permission_granted || false;
+  if (fields.permission_granted === true && !oldPerm) {
+    await supabase.from('operator_interactions').insert({
+      management_company_id: managementCompanyId,
+      interaction_type: 'permission_granted',
+      note: fields.permission_scope || 'Permission granted',
+      metadata: { scope: fields.permission_scope, proof: fields.permission_proof_url },
+      created_by: adminEmail
+    }).catch(() => {});
+  } else if (fields.permission_granted === false && oldPerm) {
+    await supabase.from('operator_interactions').insert({
+      management_company_id: managementCompanyId,
+      interaction_type: 'permission_denied',
+      note: 'Permission revoked',
+      metadata: {},
+      created_by: adminEmail
+    }).catch(() => {});
+  }
+
   return { data };
 }
 
@@ -274,6 +322,44 @@ async function seedPermissions(supabase) {
   return { seeded: data.length, message: `Created ${data.length} new permission records` };
 }
 
+// --- Log an interaction ---
+async function logInteraction(supabase, params, adminUser) {
+  const { managementCompanyId, type, note, metadata } = params;
+  if (!managementCompanyId) throw new Error('Missing managementCompanyId');
+  if (!type) throw new Error('Missing interaction type');
+
+  const { data, error } = await supabase
+    .from('operator_interactions')
+    .insert({
+      management_company_id: managementCompanyId,
+      interaction_type: type,
+      note: note || '',
+      metadata: metadata || {},
+      created_by: adminUser?.email || 'admin'
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { data };
+}
+
+// --- List interactions for an operator ---
+async function listInteractions(supabase, params) {
+  const { managementCompanyId, limit = 50 } = params;
+  if (!managementCompanyId) throw new Error('Missing managementCompanyId');
+
+  const { data, error } = await supabase
+    .from('operator_interactions')
+    .select('*')
+    .eq('management_company_id', managementCompanyId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return { data: data || [] };
+}
+
 // --- Action router ---
 const ACTION_MAP = {
   'list': listOutreach,
@@ -283,6 +369,8 @@ const ACTION_MAP = {
   'generate-email': generateEmail,
   'stats': outreachStats,
   'seed': seedPermissions,
+  'log-interaction': logInteraction,
+  'list-interactions': listInteractions,
 };
 
 export default async function handler(req, res) {
@@ -306,7 +394,7 @@ export default async function handler(req, res) {
     }
 
     const supabase = getAdminClient();
-    const result = await actionFn(supabase, params);
+    const result = await actionFn(supabase, params, auth.user);
     return res.status(200).json({ success: true, ...result });
   } catch (err) {
     console.error('Operator outreach error:', err);

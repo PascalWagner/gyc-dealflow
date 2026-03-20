@@ -2,28 +2,7 @@
 // Admin CRUD operations for deals, operators, and users in Supabase
 // Requires JWT auth + email in ADMIN_EMAILS list
 
-import { getAdminClient, setCors, ADMIN_EMAILS } from './_supabase.js';
-
-async function verifyAdmin(req) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { authorized: false, error: 'Missing or invalid Authorization header' };
-  }
-
-  const token = authHeader.replace('Bearer ', '');
-  const supabase = getAdminClient();
-
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
-    return { authorized: false, error: 'Invalid or expired token' };
-  }
-
-  if (!ADMIN_EMAILS.includes(user.email)) {
-    return { authorized: false, error: 'Not authorized as admin' };
-  }
-
-  return { authorized: true, user };
-}
+import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
 
 // --- Deal actions (opportunities table) ---
 
@@ -216,6 +195,146 @@ async function updateUserTier(supabase, body) {
   return { data };
 }
 
+// --- Data Quality ---
+
+const QUALITY_FIELDS = [
+  { key: 'investment_name', label: 'Name' },
+  { key: 'asset_class', label: 'Asset Class' },
+  { key: 'deal_type', label: 'Deal Type' },
+  { key: 'strategy', label: 'Strategy' },
+  { key: 'investment_strategy', label: 'Inv Strategy' },
+  { key: 'target_irr', label: 'Target IRR' },
+  { key: 'preferred_return', label: 'Pref Return' },
+  { key: 'cash_on_cash', label: 'Cash on Cash' },
+  { key: 'investment_minimum', label: 'Minimum' },
+  { key: 'hold_period_years', label: 'Hold Period' },
+  { key: 'offering_type', label: 'Offering Type' },
+  { key: 'offering_size', label: 'Offering Size' },
+  { key: 'distributions', label: 'Distributions' },
+  { key: 'lp_gp_split', label: 'LP/GP Split' },
+  { key: 'fees', label: 'Fees' },
+  { key: 'financials', label: 'Financials' },
+  { key: 'investing_geography', label: 'Geography' },
+  { key: 'instrument', label: 'Instrument' },
+  { key: 'deck_url', label: 'Deck' },
+  { key: 'management_company_id', label: 'Operator' },
+  { key: 'status', label: 'Status' },
+];
+
+function computeQuality(deal) {
+  const missing = [];
+  let filled = 0;
+  for (const f of QUALITY_FIELDS) {
+    const val = deal[f.key];
+    const isFilled = val !== null && val !== undefined && val !== '' && val !== 0 &&
+      !(Array.isArray(val) && val.length === 0);
+    if (isFilled) filled++;
+    else missing.push(f.label);
+  }
+  return {
+    pct: Math.round((filled / QUALITY_FIELDS.length) * 100),
+    missing,
+    hasDeck: !!deal.deck_url,
+    hasPPM: !!deal.ppm_url
+  };
+}
+
+async function listDealsQuality(supabase, body) {
+  const { search } = body;
+
+  let query = supabase
+    .from('opportunities')
+    .select('*, management_company:management_companies(id, operator_name)')
+    .is('parent_deal_id', null)
+    .order('added_date', { ascending: false });
+
+  if (search) {
+    query = query.ilike('investment_name', `%${search}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = (data || []).map(d => {
+    const q = computeQuality(d);
+    return {
+      id: d.id,
+      investment_name: d.investment_name,
+      asset_class: d.asset_class,
+      management_company_name: d.management_company?.operator_name || '—',
+      completeness_pct: q.pct,
+      missing_fields: q.missing,
+      has_deck: q.hasDeck,
+      has_ppm: q.hasPPM,
+      added_date: d.added_date
+    };
+  });
+
+  // Sort by completeness ascending (worst first)
+  rows.sort((a, b) => a.completeness_pct - b.completeness_pct);
+
+  const total = rows.length;
+  const avgPct = total > 0 ? Math.round(rows.reduce((s, r) => s + r.completeness_pct, 0) / total) : 0;
+
+  return {
+    data: rows,
+    total,
+    stats: {
+      total_deals: total,
+      avg_completeness: avgPct,
+      above_80: rows.filter(r => r.completeness_pct >= 80).length,
+      below_50: rows.filter(r => r.completeness_pct < 50).length,
+      no_deck: rows.filter(r => !r.has_deck).length,
+      no_ppm: rows.filter(r => !r.has_ppm).length
+    }
+  };
+}
+
+// --- Deal Intake Wizard ---
+
+async function intakeCreate(supabase, body) {
+  const { deal_data, operator_id, create_operator, operator_data } = body;
+  if (!deal_data) throw new Error('Missing deal_data');
+
+  let mcId = operator_id;
+
+  // Create operator if needed
+  if (create_operator && operator_data) {
+    const opRecord = { operator_name: operator_data.name || operator_data.operator_name };
+    if (operator_data.website) opRecord.website = operator_data.website;
+    if (operator_data.ceo) opRecord.ceo = operator_data.ceo;
+
+    const { data: newOp, error: opErr } = await supabase
+      .from('management_companies')
+      .insert(opRecord)
+      .select()
+      .single();
+    if (opErr) throw opErr;
+    mcId = newOp.id;
+  }
+
+  // Set operator on deal
+  if (mcId) deal_data.management_company_id = mcId;
+
+  // Insert deal
+  const { data: newDeal, error: dealErr } = await supabase
+    .from('opportunities')
+    .insert(deal_data)
+    .select()
+    .single();
+  if (dealErr) throw dealErr;
+
+  // Seed operator permission record
+  if (mcId) {
+    await supabase
+      .from('operator_permissions')
+      .upsert({ management_company_id: mcId }, { onConflict: 'management_company_id' })
+      .catch(() => {}); // Don't fail if already exists
+  }
+
+  return { data: newDeal, operatorId: mcId };
+}
+
 // --- Action router ---
 
 const ACTION_MAP = {
@@ -229,6 +348,8 @@ const ACTION_MAP = {
   'update-operator': updateOperator,
   'list-users': listUsers,
   'update-user-tier': updateUserTier,
+  'list-deals-quality': listDealsQuality,
+  'intake-create': intakeCreate,
 };
 
 export default async function handler(req, res) {

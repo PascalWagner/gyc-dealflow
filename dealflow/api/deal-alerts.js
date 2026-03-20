@@ -1,32 +1,18 @@
 // Vercel Serverless Function: /api/deal-alerts
 // Computes which users should be notified about a new deal based on buy box match
+// MIGRATED: Now reads users + buy box from Supabase instead of GHL
 // DRY RUN ONLY — does NOT send any emails. Returns the match list for admin review.
-// When ready to go live, add email sending logic and enable via env var.
 
-import { ASSET_MAP } from './_supabase.js';
-
-const GHL_API_KEY = process.env.GHL_API_KEY;
-
-// Buy box field keys in GHL
-const FIELD_KEYS = {
-  assetClasses: 'contact.asset_class_preference',
-  checkSize: 'contact.investment_amount',
-  minCashYield: 'contact.minimum_1st_year_cash_on_cash_return',
-  minIRR: 'contact.minimum_total_return_requirement_irr',
-  instruments: 'contact.investing_instrument',
-  lockup: 'contact.lockup_period_tolerance',
-  strategies: 'contact.strategy_preference',
-  goal: 'contact.primary_investment_objective'
-};
-
+import { getAdminClient, ASSET_MAP, setCors } from './_supabase.js';
 
 function matchScore(deal, buyBox) {
   let score = 0;
   let maxScore = 0;
   const reasons = [];
 
-  // Asset class match
-  const userAssets = (buyBox.assetClasses || '').split(',').map(s => s.trim()).filter(Boolean).map(a => ASSET_MAP[a] || a);
+  // Asset class match (weight: 3)
+  const userAssets = (buyBox.asset_classes || '')
+    .split(',').map(s => s.trim()).filter(Boolean).map(a => ASSET_MAP[a] || a);
   if (userAssets.length > 0) {
     maxScore += 3;
     if (userAssets.includes(deal.assetClass)) {
@@ -35,8 +21,8 @@ function matchScore(deal, buyBox) {
     }
   }
 
-  // Yield match
-  const minYield = parseFloat(buyBox.minCashYield) || 0;
+  // Yield match (weight: 2)
+  const minYield = parseFloat(buyBox.min_cash_yield) || 0;
   if (minYield > 0) {
     maxScore += 2;
     const dealYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
@@ -47,8 +33,8 @@ function matchScore(deal, buyBox) {
     }
   }
 
-  // Check size
-  const checkSizeStr = buyBox.checkSize || '';
+  // Check size (weight: 2)
+  const checkSizeStr = buyBox.check_size || '';
   const checkMatch = checkSizeStr.match(/\d+/);
   if (checkMatch) {
     maxScore += 2;
@@ -59,7 +45,7 @@ function matchScore(deal, buyBox) {
     }
   }
 
-  // Strategy
+  // Strategy (weight: 1)
   const userStrategies = (buyBox.strategies || '').split(',').map(s => s.trim()).filter(Boolean);
   if (userStrategies.length > 0) {
     maxScore += 1;
@@ -77,16 +63,10 @@ function matchScore(deal, buyBox) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  if (!GHL_API_KEY) {
-    return res.status(500).json({ error: 'GHL_API_KEY not configured' });
-  }
 
   const { deal } = req.body || {};
   if (!deal || !deal.investmentName) {
@@ -94,44 +74,27 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Fetch all contacts with buy box data from GHL
-    // Use search endpoint with tag filter for users who have completed wizard
-    const searchResp = await fetch('https://rest.gohighlevel.com/v1/contacts/?limit=100&query=wizard-complete', {
-      headers: { 'Authorization': `Bearer ${GHL_API_KEY}` }
-    });
+    const supabase = getAdminClient();
 
-    if (!searchResp.ok) {
-      throw new Error('GHL contacts fetch failed: ' + searchResp.status);
-    }
+    // Fetch users with completed buy boxes from Supabase
+    const { data: buyBoxes, error: bbErr } = await supabase
+      .from('user_buy_box')
+      .select('*, user:user_profiles(email, full_name)')
+      .not('completed_at', 'is', null);
 
-    const searchData = await searchResp.json();
-    const contacts = searchData.contacts || [];
+    if (bbErr) throw bbErr;
 
-    // Score each contact against the deal
+    // Score each user against the deal
     const matches = [];
 
-    for (const contact of contacts) {
-      const customFields = contact.customField || [];
-      const buyBox = {};
+    for (const bb of (buyBoxes || [])) {
+      if (!bb.user?.email) continue;
 
-      // Extract buy box fields from custom fields
-      for (const cf of customFields) {
-        const fieldKey = cf.key || cf.id || '';
-        for (const [appKey, ghlKey] of Object.entries(FIELD_KEYS)) {
-          if (fieldKey === ghlKey) {
-            buyBox[appKey] = cf.value || '';
-          }
-        }
-      }
-
-      // Skip contacts with no buy box data
-      if (Object.keys(buyBox).length === 0) continue;
-
-      const result = matchScore(deal, buyBox);
+      const result = matchScore(deal, bb);
       if (result.score >= 0.5) {
         matches.push({
-          name: [contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.email,
-          email: contact.email,
+          name: bb.user.full_name || bb.user.email,
+          email: bb.user.email,
           matchPct: result.matchPct,
           reasons: result.reasons
         });
@@ -141,14 +104,6 @@ export default async function handler(req, res) {
     // Sort by match score descending
     matches.sort((a, b) => b.matchPct - a.matchPct);
 
-    // ============================================================
-    // DRY RUN: No emails are sent. This is preview-only.
-    // When ready to go live:
-    // 1. Add DEAL_ALERTS_ENABLED=true env var
-    // 2. Add email sending logic using Resend
-    // 3. Track sent alerts to prevent duplicates
-    // ============================================================
-
     return res.status(200).json({
       dryRun: true,
       deal: {
@@ -157,9 +112,9 @@ export default async function handler(req, res) {
         targetIRR: deal.targetIRR,
         minimum: deal.investmentMinimum
       },
-      totalContacts: contacts.length,
+      totalUsers: (buyBoxes || []).length,
       totalMatches: matches.length,
-      matches: matches,
+      matches,
       message: 'DRY RUN — no emails sent. Review matches above before enabling.'
     });
 

@@ -1,27 +1,13 @@
 // Vercel Serverless Function: /api/users
 // Admin-only endpoint to search GHL contacts for user impersonation
 
+import { ADMIN_EMAILS, setCors, deriveTier } from './_supabase.js';
+
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
-// Derive user tier from GHL tags
-function deriveTier(tags) {
-  const t = (tags || []).map(s => (s || '').toLowerCase());
-  if (t.includes('dealflow-academy') || t.includes('bought cashflow academy') || t.includes('academy-member') || t.includes('cashflow-academy') || t.includes('academy member'))
-    return 'academy';
-  if (t.includes('dealflow-alumni'))
-    return 'alumni';
-  if (t.includes('investor-member') || t.includes('fund-investor') || t.includes('investor member'))
-    return 'investor';
-  return 'free';
-}
-
-import { ADMIN_EMAILS } from './_supabase.js';
-
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method !== 'GET') {

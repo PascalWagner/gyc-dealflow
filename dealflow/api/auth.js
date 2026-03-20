@@ -9,35 +9,19 @@
 //   - Still syncs tier from GHL tags (GHL remains the CRM)
 
 import { createClient } from '@supabase/supabase-js';
-import { setCors, ADMIN_EMAILS } from './_supabase.js';
+import { setCors, ADMIN_EMAILS, deriveTier, rateLimit, ghlFetch } from './_supabase.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GHL_API_KEY = process.env.GHL_API_KEY;
 
-// Derive tier from GHL tags (same logic as before)
-function deriveTier(tags) {
-  const t = (tags || []).map(s => s.toLowerCase());
-  if (t.includes('dealflow-academy') || t.includes('bought cashflow academy') || t.includes('academy-member') || t.includes('cashflow-academy') || t.includes('academy member'))
-    return 'academy';
-  if (t.includes('dealflow-alumni'))
-    return 'alumni';
-  if (t.includes('investor-member') || t.includes('fund-investor') || t.includes('investor member'))
-    return 'investor';
-  return 'free';
-}
-
-// Look up GHL contact for tier info
+// Look up GHL contact for tier info (uses ghlFetch with retry)
 async function getGhlTier(email) {
-  if (!GHL_API_KEY) return { tier: 'free', tags: [], contactId: null };
-
   try {
-    const resp = await fetch(
-      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`,
-      { headers: { 'Authorization': `Bearer ${GHL_API_KEY}` } }
+    const resp = await ghlFetch(
+      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`
     );
-    if (!resp.ok) return { tier: 'free', tags: [], contactId: null };
+    if (!resp?.ok) return { tier: 'free', tags: [], contactId: null };
 
     const data = await resp.json();
     const contact = (data.contacts || []).find(c => c.email?.toLowerCase() === email.toLowerCase());
@@ -59,6 +43,7 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!rateLimit(req, res, { maxRequests: 20 })) return; // Stricter limit for auth
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -189,22 +174,14 @@ export default async function handler(req, res) {
         is_admin: false
       }, { onConflict: 'id' });
 
-      // Also create in GHL if configured
-      if (GHL_API_KEY) {
-        try {
-          await fetch('https://rest.gohighlevel.com/v1/contacts/', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${GHL_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              firstName, lastName, email,
-              tags: ['dealflow-free']
-            })
-          });
-        } catch { /* best effort GHL sync */ }
-      }
+      // Also create in GHL (with retry)
+      ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
+        method: 'POST',
+        body: JSON.stringify({
+          firstName, lastName, email,
+          tags: ['dealflow-free']
+        })
+      }).catch(() => {}); // best effort, don't block response
     }
 
     return res.status(200).json({
@@ -213,6 +190,26 @@ export default async function handler(req, res) {
       name: `${firstName} ${lastName}`,
       tier: 'free',
       token: data.session?.access_token || 'confirm-email'
+    });
+  }
+
+  // ── Refresh Token ────────────────────────────────────────────────
+  if (action === 'refresh') {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'refreshToken is required' });
+    }
+
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token: refreshToken });
+    if (error) {
+      return res.status(401).json({ success: false, error: error.message });
+    }
+
+    return res.status(200).json({
+      success: true,
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresAt: data.session.expires_at
     });
   }
 

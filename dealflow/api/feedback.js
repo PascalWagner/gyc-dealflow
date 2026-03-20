@@ -1,11 +1,10 @@
 // Vercel Serverless Function: /api/feedback
 // Receives user feedback and sends it as an email via Resend or Make.com webhook
 
+import { setCors } from './_supabase.js';
+
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method !== 'POST') {

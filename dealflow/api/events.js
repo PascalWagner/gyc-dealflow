@@ -6,9 +6,7 @@
 //   - Still syncs tags + fields to GHL for CRM automations
 //   - You can now run analytics queries on user behavior
 
-import { getAdminClient, setCors } from './_supabase.js';
-
-const GHL_API_KEY = process.env.GHL_API_KEY;
+import { getAdminClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
 
 const EVENT_TAGS = {
   wizard_complete: 'wizard-complete',
@@ -31,22 +29,19 @@ const EVENT_FUNNEL = {
 };
 
 async function syncEventToGhl(email, event, data) {
-  if (!GHL_API_KEY) return { fieldsUpdated: 0, tagsAdded: [] };
-
   try {
-    const resp = await fetch(
-      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`,
-      { headers: { 'Authorization': `Bearer ${GHL_API_KEY}` } }
+    const resp = await ghlFetch(
+      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`
     );
-    if (!resp.ok) return { fieldsUpdated: 0, tagsAdded: [] };
+    if (!resp?.ok) return { fieldsUpdated: 0, tagsAdded: [] };
 
     const ghlData = await resp.json();
     const contact = (ghlData.contacts || [])[0];
     if (!contact) return { fieldsUpdated: 0, tagsAdded: [] };
 
-    const full = await fetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`, {
-      headers: { 'Authorization': `Bearer ${GHL_API_KEY}` }
-    }).then(r => r.json());
+    const fullResp = await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`);
+    if (!fullResp?.ok) return { fieldsUpdated: 0, tagsAdded: [] };
+    const full = await fullResp.json();
 
     const contactData = full.contact || full;
     const existingTags = contactData.tags || [];
@@ -95,12 +90,8 @@ async function syncEventToGhl(email, event, data) {
     if (tagsToAdd.length > 0) updatePayload.tags = [...existingTags, ...tagsToAdd];
 
     if (Object.keys(updatePayload).length > 0) {
-      await fetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`, {
+      await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${contact.id}`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${GHL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(updatePayload)
       });
     }
@@ -116,6 +107,7 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!rateLimit(req, res)) return;
 
   const { email, event, data } = req.body || {};
   if (!email || !event) {
