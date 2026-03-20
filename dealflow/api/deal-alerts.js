@@ -3,6 +3,8 @@
 // DRY RUN ONLY — does NOT send any emails. Returns the match list for admin review.
 // When ready to go live, add email sending logic and enable via env var.
 
+import { ASSET_MAP } from './_supabase.js';
+
 const GHL_API_KEY = process.env.GHL_API_KEY;
 
 // Buy box field keys in GHL
@@ -17,14 +19,6 @@ const FIELD_KEYS = {
   goal: 'contact.primary_investment_objective'
 };
 
-// Asset class name mapping (GHL values → Airtable values)
-const ASSET_MAP = {
-  'Multi-Family': 'Multi Family',
-  'Hotels / Hospitality': 'Hotels/Hospitality',
-  'Private Debt / Credit': 'Lending',
-  'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
-  'Short-Term Rentals': 'Short Term Rental'
-};
 
 function matchScore(deal, buyBox) {
   let score = 0;

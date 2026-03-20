@@ -45,6 +45,15 @@ export const ADMIN_EMAILS = [
   'pascal@growyourcashflow.io'
 ];
 
+// Asset class name mapping (GHL/wizard values → database values)
+export const ASSET_MAP = {
+  'Multi-Family': 'Multi Family',
+  'Hotels / Hospitality': 'Hotels/Hospitality',
+  'Private Debt / Credit': 'Lending',
+  'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
+  'Short-Term Rentals': 'Short Term Rental'
+};
+
 // CORS helper (reused across all endpoints)
 export function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

@@ -206,7 +206,7 @@ pascal@growyourcashflow.com`
   return {
     template,
     operatorName: mc.operator_name,
-    contactEmail: mc.ceo ? null : null, // They'll need to fill in the email
+    contactEmail: null, // User fills in the email manually
     subject: email.subject,
     body: email.body,
     deals: deals || []

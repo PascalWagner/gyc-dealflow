@@ -18,14 +18,7 @@ const GHL_API_KEY = process.env.GHL_API_KEY;
 const AIRTABLE_PAT = process.env.AIRTABLE_PAT;
 const DIGEST_SECRET = process.env.DIGEST_SECRET || '';
 
-// Asset class mapping for matching
-const ASSET_MAP = {
-  'Multi-Family': 'Multi Family',
-  'Hotels / Hospitality': 'Hotels/Hospitality',
-  'Private Debt / Credit': 'Lending',
-  'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
-  'Short-Term Rentals': 'Short Term Rental'
-};
+import { ASSET_MAP } from './_supabase.js';
 
 function matchDealToBuyBox(deal, buyBox) {
   let score = 0;
