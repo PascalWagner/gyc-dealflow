@@ -5547,20 +5547,21 @@ async function renderDeal() {
     cashFlowHtml += '</table>';
     cashFlowHtml += '</div>';
 
-    // Summary strip
-    cashFlowHtml += '<div class="cf-summary">';
-    cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value">$' + Math.round(investment).toLocaleString() + '</div><div class="cf-summary-label">Invested</div></div>';
-    cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value green">$' + Math.round(totalDist).toLocaleString() + '</div><div class="cf-summary-label">Total Distributions</div></div>';
-    cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value">$' + Math.round(totalCash).toLocaleString() + '</div><div class="cf-summary-label">Total Cash Received</div></div>';
+    // Summary strip — aligned under table columns
+    // Table cols: Year | Capital | Distributions | % Cash Flow | Total Cash | Cumulative | Notes
     var avgCoC = years > 0 ? (totalDist / years / investment) * 100 : 0;
-    if (avgCoC > 0) {
-      cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value green">' + avgCoC.toFixed(1) + '%</div><div class="cf-summary-label">Avg CoC</div></div>';
-    }
-    if (deal.targetIRR) {
-      var displayIRR = deal.targetIRR < 1 ? (deal.targetIRR * 100).toFixed(1) : parseFloat(deal.targetIRR).toFixed(1);
-      cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value green">' + displayIRR + '%</div><div class="cf-summary-label">Target IRR</div></div>';
-    }
-    cashFlowHtml += '</div>';
+    var displayIRR = deal.targetIRR ? (deal.targetIRR < 1 ? (deal.targetIRR * 100).toFixed(1) : parseFloat(deal.targetIRR).toFixed(1)) : '';
+    cashFlowHtml += '<table class="cf-table" style="margin-top:0;border-top:2px solid var(--border);">';
+    cashFlowHtml += '<tr>';
+    cashFlowHtml += '<td style="text-align:left;vertical-align:top;padding:14px 12px;border-bottom:none;"><div class="cf-summary-value">$' + Math.round(investment).toLocaleString() + '</div><div class="cf-summary-label">Invested</div></td>';
+    cashFlowHtml += '<td style="border-bottom:none;"></td>';
+    cashFlowHtml += '<td style="text-align:right;vertical-align:top;padding:14px 12px;border-bottom:none;"><div class="cf-summary-value green">$' + Math.round(totalDist).toLocaleString() + '</div><div class="cf-summary-label">Total Distributions</div></td>';
+    cashFlowHtml += '<td style="text-align:right;vertical-align:top;padding:14px 12px;border-bottom:none;">' + (avgCoC > 0 ? '<div class="cf-summary-value green">' + avgCoC.toFixed(1) + '%</div><div class="cf-summary-label">Avg CoC</div>' : '') + '</td>';
+    cashFlowHtml += '<td style="text-align:right;vertical-align:top;padding:14px 12px;border-bottom:none;"><div class="cf-summary-value">$' + Math.round(totalCash).toLocaleString() + '</div><div class="cf-summary-label">Total Cash</div></td>';
+    cashFlowHtml += '<td style="text-align:right;vertical-align:top;padding:14px 12px;border-bottom:none;">' + (displayIRR ? '<div class="cf-summary-value green">' + displayIRR + '%</div><div class="cf-summary-label">Target IRR</div>' : '') + '</td>';
+    cashFlowHtml += '<td style="border-bottom:none;"></td>';
+    cashFlowHtml += '</tr>';
+    cashFlowHtml += '</table>';
 
     cashFlowHtml += '</div></div>';
   })();
@@ -5845,58 +5846,106 @@ async function renderDeal() {
     geoMapHtml += '</div></div>';
   })();
 
-  // --- 6b. Fee & Terms Benchmark vs Peers ---
+  // --- 6b. Fee & Terms Benchmark vs Peers (with distribution bar charts) ---
   var feeBenchHtml = '';
   (function buildFeeBenchmark() {
     var allDeals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+    // Also try sessionStorage if DEALS is empty
+    if (allDeals.length === 0) {
+      try { allDeals = JSON.parse(sessionStorage.getItem('gycDealsCache') || '[]'); } catch(e) {}
+    }
     // Filter peers: same asset class, different deal
     var peers = allDeals.filter(function(d) {
       return d.id !== deal.id && d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
     });
-    if (peers.length < 2) return; // need at least 2 peers for meaningful comparison
+    if (peers.length < 3) return; // need at least 3 peers
 
-    // Compute peer averages
-    function peerAvg(field) {
-      var vals = peers.map(function(d) { return d[field]; }).filter(function(v) { return v != null && v > 0; });
-      return vals.length > 0 ? vals.reduce(function(a, b) { return a + b; }, 0) / vals.length : null;
+    // Helper: get sorted non-null values for a field
+    function peerVals(field) {
+      return peers.map(function(d) { return d[field]; }).filter(function(v) { return v != null && v > 0; }).sort(function(a, b) { return a - b; });
     }
-    function peerMedian(field) {
-      var vals = peers.map(function(d) { return d[field]; }).filter(function(v) { return v != null && v > 0; }).sort(function(a, b) { return a - b; });
-      if (vals.length === 0) return null;
-      var mid = Math.floor(vals.length / 2);
-      return vals.length % 2 !== 0 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+    function median(arr) {
+      if (!arr.length) return null;
+      var mid = Math.floor(arr.length / 2);
+      return arr.length % 2 !== 0 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+    }
+
+    // Build histogram: 8 equal-width buckets, return bar heights + which bucket the deal falls in
+    function makeHistogram(vals, dealVal) {
+      if (vals.length < 3 || dealVal == null) return null;
+      var min = vals[0], max = vals[vals.length - 1];
+      if (min === max) return null;
+      var bucketCount = 8;
+      var range = max - min;
+      var step = range / bucketCount;
+      var buckets = [];
+      for (var b = 0; b < bucketCount; b++) buckets.push(0);
+      for (var i = 0; i < vals.length; i++) {
+        var idx = Math.min(bucketCount - 1, Math.floor((vals[i] - min) / step));
+        buckets[idx]++;
+      }
+      var maxCount = Math.max.apply(null, buckets);
+      var dealBucket = Math.min(bucketCount - 1, Math.floor((dealVal - min) / step));
+      return { buckets: buckets, maxCount: maxCount, dealBucket: dealBucket, min: min, max: max };
+    }
+
+    // Render SVG bar chart (small, inline)
+    function renderBars(hist, good) {
+      if (!hist) return '';
+      var w = 120, h = 36, barW = Math.floor(w / hist.buckets.length) - 2, gap = 2;
+      var svg = '<svg width="' + w + '" height="' + h + '" style="display:block;margin:8px auto 0;">';
+      for (var i = 0; i < hist.buckets.length; i++) {
+        var barH = hist.maxCount > 0 ? Math.max(2, Math.round((hist.buckets[i] / hist.maxCount) * (h - 4))) : 2;
+        var x = i * (barW + gap) + gap;
+        var y = h - barH;
+        var isDeal = (i === hist.dealBucket);
+        var fill = isDeal ? (good ? '#51be7b' : '#f59e0b') : 'rgba(156,163,175,0.25)';
+        svg += '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + barH + '" rx="1.5" fill="' + fill + '"/>';
+      }
+      svg += '</svg>';
+      return svg;
     }
 
     var metrics = [];
-    // Target IRR
-    var peerIRR = peerAvg('targetIRR');
-    if (deal.targetIRR && peerIRR) {
-      var diff = deal.targetIRR - peerIRR;
-      metrics.push({ label: 'Target IRR', dealVal: (deal.targetIRR * 100).toFixed(1) + '%', peerVal: (peerIRR * 100).toFixed(1) + '%', diff: diff, diffLabel: diff >= 0 ? '+' + (diff * 100).toFixed(1) + 'pp' : (diff * 100).toFixed(1) + 'pp', good: diff >= 0 });
+
+    // Target IRR (higher is better)
+    var irrVals = peerVals('targetIRR');
+    var irrMed = median(irrVals);
+    if (deal.targetIRR && irrVals.length >= 3) {
+      var good = deal.targetIRR >= irrMed;
+      metrics.push({ label: 'Target IRR', dealVal: (deal.targetIRR * 100).toFixed(1) + '%', medianVal: (irrMed * 100).toFixed(1) + '%', good: good, hist: makeHistogram(irrVals, deal.targetIRR), count: irrVals.length });
     }
-    // Preferred Return
-    var peerPref = peerAvg('preferredReturn');
-    if (deal.preferredReturn && peerPref) {
-      var diff = deal.preferredReturn - peerPref;
-      metrics.push({ label: 'Pref Return', dealVal: (deal.preferredReturn * 100).toFixed(1) + '%', peerVal: (peerPref * 100).toFixed(1) + '%', diff: diff, diffLabel: diff >= 0 ? '+' + (diff * 100).toFixed(1) + 'pp' : (diff * 100).toFixed(1) + 'pp', good: diff >= 0 });
+
+    // Preferred Return (higher is better)
+    var prefVals = peerVals('preferredReturn');
+    var prefMed = median(prefVals);
+    if (deal.preferredReturn && prefVals.length >= 3) {
+      var good = deal.preferredReturn >= prefMed;
+      metrics.push({ label: 'Pref Return', dealVal: (deal.preferredReturn * 100).toFixed(1) + '%', medianVal: (prefMed * 100).toFixed(1) + '%', good: good, hist: makeHistogram(prefVals, deal.preferredReturn), count: prefVals.length });
     }
-    // Equity Multiple
-    var peerEM = peerAvg('equityMultiple');
-    if (deal.equityMultiple && peerEM) {
-      var diff = deal.equityMultiple - peerEM;
-      metrics.push({ label: 'Equity Multiple', dealVal: deal.equityMultiple.toFixed(2) + 'x', peerVal: peerEM.toFixed(2) + 'x', diff: diff, diffLabel: diff >= 0 ? '+' + diff.toFixed(2) + 'x' : diff.toFixed(2) + 'x', good: diff >= 0 });
+
+    // Equity Multiple (higher is better)
+    var emVals = peerVals('equityMultiple');
+    var emMed = median(emVals);
+    if (deal.equityMultiple && emVals.length >= 3) {
+      var good = deal.equityMultiple >= emMed;
+      metrics.push({ label: 'Equity Multiple', dealVal: deal.equityMultiple.toFixed(2) + 'x', medianVal: emMed.toFixed(2) + 'x', good: good, hist: makeHistogram(emVals, deal.equityMultiple), count: emVals.length });
     }
-    // Minimum Investment (lower is better for accessibility)
-    var peerMin = peerMedian('investmentMinimum');
-    if (deal.investmentMinimum && peerMin) {
-      var diff = deal.investmentMinimum - peerMin;
-      metrics.push({ label: 'Minimum', dealVal: '$' + deal.investmentMinimum.toLocaleString(), peerVal: '$' + Math.round(peerMin).toLocaleString(), diff: diff, diffLabel: diff <= 0 ? '$' + Math.abs(Math.round(diff)).toLocaleString() + ' lower' : '$' + Math.round(diff).toLocaleString() + ' higher', good: diff <= 0 });
+
+    // Minimum Investment (lower is better)
+    var minVals = peerVals('investmentMinimum');
+    var minMed = median(minVals);
+    if (deal.investmentMinimum && minVals.length >= 3) {
+      var good = deal.investmentMinimum <= minMed;
+      metrics.push({ label: 'Minimum', dealVal: '$' + deal.investmentMinimum.toLocaleString(), medianVal: '$' + Math.round(minMed).toLocaleString(), good: good, hist: makeHistogram(minVals, deal.investmentMinimum), count: minVals.length });
     }
-    // Hold Period (shorter can be better but context-dependent)
-    var peerHold = peerAvg('holdPeriod');
-    if (deal.holdPeriod && peerHold) {
-      var diff = deal.holdPeriod - peerHold;
-      metrics.push({ label: 'Hold Period', dealVal: deal.holdPeriod + ' yrs', peerVal: peerHold.toFixed(1) + ' yrs', diff: diff, diffLabel: Math.abs(diff).toFixed(1) + ' yr ' + (diff <= 0 ? 'shorter' : 'longer'), good: diff <= 0 });
+
+    // Hold Period (shorter is generally better)
+    var holdVals = peerVals('holdPeriod');
+    var holdMed = median(holdVals);
+    if (deal.holdPeriod && holdVals.length >= 3) {
+      var good = deal.holdPeriod <= holdMed;
+      metrics.push({ label: 'Hold Period', dealVal: deal.holdPeriod + ' yrs', medianVal: holdMed.toFixed(1) + ' yrs', good: good, hist: makeHistogram(holdVals, deal.holdPeriod), count: holdVals.length });
     }
 
     if (metrics.length === 0) return;
@@ -5904,16 +5953,16 @@ async function renderDeal() {
     feeBenchHtml = '<div class="section">';
     feeBenchHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">How This Deal Compares</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(deal.assetClass) + ' peers</span></div>';
     feeBenchHtml += '<div class="section-body">';
-    feeBenchHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">';
+    feeBenchHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;">';
     metrics.forEach(function(m) {
       var color = m.good ? 'var(--primary)' : '#f59e0b';
       var bgColor = m.good ? 'rgba(81,190,123,0.06)' : 'rgba(245,158,11,0.06)';
-      var arrow = m.good ? '\u2191' : '\u2193';
-      feeBenchHtml += '<div style="background:' + bgColor + ';border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:16px;text-align:center;">'
-        + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">' + m.label + '</div>'
-        + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">' + m.dealVal + '</div>'
-        + '<div style="font-family:var(--font-ui);font-size:11px;color:' + color + ';font-weight:700;margin-top:4px;">' + arrow + ' ' + m.diffLabel + '</div>'
-        + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">Peer avg: ' + m.peerVal + '</div>'
+      feeBenchHtml += '<div style="background:' + bgColor + ';border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:16px 14px;text-align:center;">'
+        + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">' + m.label + '</div>'
+        + '<div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:' + color + ';letter-spacing:-0.5px;">' + m.dealVal + '</div>'
+        + renderBars(m.hist, m.good)
+        + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:6px;">Median: ' + m.medianVal + '</div>'
+        + '<div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);">' + m.count + ' peers with data</div>'
         + '</div>';
     });
     feeBenchHtml += '</div></div></div>';
