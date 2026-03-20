@@ -34,7 +34,9 @@ export default async function handler(req, res) {
           founding_year,
           type,
           asset_classes,
-          total_investors
+          total_investors,
+          hq_city,
+          hq_state
         )
       `)
       .not('investment_name', 'eq', '')
@@ -108,10 +110,14 @@ export default async function handler(req, res) {
       return { isStale: false, reason: null };
     }
 
+    // 506(b) deals cannot be publicly advertised — filter them out unless explicitly requested
+    const include506b = req.query?.include506b === 'true';
+
     // Transform to match existing frontend API contract
     // (so the frontend doesn't need to change yet)
     const deals = allDeals
       .filter(d => !childIds.has(d.id))
+      .filter(d => include506b || !d.is_506b)
       .map(d => {
         const mc = d.management_company || {};
         const staleness = computeStaleness(d);
@@ -136,7 +142,6 @@ export default async function handler(req, res) {
           distributions: d.distributions,
           financials: d.financials,
           availableTo: d.available_to,
-          investmentObjective: d.investment_objective,
           sponsorInDeal: d.sponsor_in_deal_pct,
           ceo: mc.ceo || '',
           managementCompany: mc.operator_name || '',
@@ -164,9 +169,19 @@ export default async function handler(req, res) {
           parentDealId: d.parent_deal_id,
           shareClassLabel: d.share_class_label,
           verticalIntegration: d.vertical_integration,
+          caseStudy: d.case_study || null,
           shareClasses: parentMap[d.id] || null,
           isStale: staleness.isStale,
-          stalenessReason: staleness.reason
+          stalenessReason: staleness.reason,
+          // SEC EDGAR fields
+          secCik: d.sec_cik || '',
+          dateOfFirstSale: d.date_of_first_sale,
+          totalAmountSold: d.total_amount_sold,
+          totalInvestors: d.total_investors,
+          is506b: d.is_506b || false,
+          // Operator HQ
+          mcHqCity: mc.hq_city || '',
+          mcHqState: mc.hq_state || ''
         };
       });
 

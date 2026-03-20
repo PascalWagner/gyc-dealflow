@@ -19,7 +19,8 @@
     "@capacitor/push-notifications": "^6.0.0",
     "@capacitor/splash-screen": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
-    "@supabase/supabase-js": "^2.99.3"
+    "@supabase/supabase-js": "^2.99.3",
+    "fast-xml-parser": "^4.5.4"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",

@@ -9986,7 +9986,6 @@ function initBuyBox() {
   renderCheckboxGrid('bbAssetClasses', BB_ASSET_CLASSES, buyBox.assetClasses);
   renderCheckboxGrid('bbStrategies', BB_STRATEGIES, buyBox.strategies);
   renderCheckboxGrid('bbDealTypes', BB_DEAL_TYPES, buyBox.dealTypes);
-  renderCheckboxGrid('bbObjectives', BB_OBJECTIVES, buyBox.objectives);
   const ids = ['bbIrrMin','bbIrrMax','bbMinInvest','bbMaxInvest','bbHoldMin','bbHoldMax'];
   const keys = ['irrMin','irrMax','minInvest','maxInvest','holdMin','holdMax'];
   ids.forEach((id, i) => {
@@ -10003,7 +10002,6 @@ function saveBuyBox() {
   buyBox.assetClasses = getCheckedValues('bbAssetClasses');
   buyBox.strategies = getCheckedValues('bbStrategies');
   buyBox.dealTypes = getCheckedValues('bbDealTypes');
-  buyBox.objectives = getCheckedValues('bbObjectives');
   buyBox.irrMin = document.getElementById('bbIrrMin').value;
   buyBox.irrMax = document.getElementById('bbIrrMax').value;
   buyBox.minInvest = document.getElementById('bbMinInvest').value;
@@ -10016,7 +10014,7 @@ function saveBuyBox() {
 
 function resetBuyBox() {
   localStorage.removeItem('gycBuyBox');
-  buyBox = { assetClasses: ['Multi-Family','Self Storage','Industrial'], strategies: ['Value-Add','Lending'], dealTypes: ['Fund','Syndication'], objectives: ['Cashflow','Balanced (Cashflow + Equity)'], irrMin: '8%', irrMax: '25%', minInvest: '$25,000', maxInvest: '$250,000', holdMin: '2 years', holdMax: '10 years' };
+  buyBox = { assetClasses: ['Multi-Family','Self Storage','Industrial'], strategies: ['Value-Add','Lending'], dealTypes: ['Fund','Syndication'], irrMin: '8%', irrMax: '25%', minInvest: '$25,000', maxInvest: '$250,000', holdMin: '2 years', holdMax: '10 years' };
   initBuyBox();
   showSaveStatus();
 }
@@ -11374,7 +11372,6 @@ function syncWizardToBuyBox() {
 
   buyBox.assetClasses = [...new Set(mappedAssets)];
   buyBox.strategies = mappedStrats.length > 0 ? mappedStrats : buyBox.strategies;
-  buyBox.objectives = d.goal ? [d.goal.split(' (')[0]] : buyBox.objectives;
   buyBox.irrMin = d.minIRR || buyBox.irrMin;
   buyBox.minInvest = d.checkSize || buyBox.minInvest;
 
@@ -16563,7 +16560,7 @@ function renderGoalProgress() {
     valueText = '$0 / $' + target.toLocaleString() + ' per year';
     subtext = 'Add investments to your portfolio to track progress';
     filterFn = function(d) {
-      return d.assetClass === 'Lending' || d.preferredReturn || d.cashOnCash || (d.investmentObjective && d.investmentObjective.toLowerCase().includes('cashflow'));
+      return d.strategy === 'Lending' || d.preferredReturn || d.cashOnCash;
     };
     sortKey = function(d) { return d.preferredReturn || d.cashOnCash || d.targetIRR || 0; };
   } else if (branch === 'tax') {
@@ -18078,7 +18075,7 @@ function loadUserScopedData(email) {
   // Refresh in-memory state from localStorage
   dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
   portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-  buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || 'null') || { assetClasses: [], strategies: [], dealTypes: [], objectives: [], irrMin: '', irrMax: '', minInvest: '', maxInvest: '', holdMin: '', holdMax: '' };
+  buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || 'null') || { assetClasses: [], strategies: [], dealTypes: [], irrMin: '', irrMax: '', minInvest: '', maxInvest: '', holdMin: '', holdMax: '' };
   wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 }
 

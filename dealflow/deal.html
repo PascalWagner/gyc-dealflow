@@ -5052,29 +5052,55 @@ async function renderDeal() {
   var caseStudyHtml = '';
   (function buildCaseStudy() {
     var cs = deal.caseStudy;
-    if (!cs || !cs.title) return;
+    var isLive = cs && cs.title;
 
-    caseStudyHtml += '<div class="section">';
-    caseStudyHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span class="section-title">Case Study</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">From Pitch Deck</span></div>';
-    caseStudyHtml += '<div class="section-body">';
+    // Sample data when no real case study exists
+    var data;
+    if (isLive) {
+      data = cs;
+    } else if (isCreditFund(deal)) {
+      data = {
+        title: 'Greenfield Housing Partners',
+        overview: 'A $28M bridge loan funded the acquisition and renovation of a 320-unit workforce housing community in a high-demand suburban market.',
+        result: '320 units fully leased within 9 months of renovation. The loan was repaid on schedule, generating a 16.5% net return for fund investors.',
+        metrics: { 'Region': 'Atlanta, GA', 'Property Type': 'Multi-Family; Workforce Housing', 'Loan Amount': '$28M', 'LTV': '68%', 'Loan Duration': '14 Months', 'Net Return': '16.5%' }
+      };
+    } else {
+      data = {
+        title: 'Summit Ridge Apartments',
+        overview: 'Acquired a 240-unit Class B apartment community and executed a $3.8M value-add renovation including unit interiors, amenity upgrades, and operational improvements.',
+        result: 'Achieved 94% occupancy and 32% rent growth within 18 months. Property sold at a 5.1% cap rate, delivering a 2.1x equity multiple to investors.',
+        metrics: { 'Region': 'Phoenix, AZ', 'Property Type': 'Multi-Family; 240 Units', 'Purchase Price': '$32M', 'Renovation Budget': '$3.8M', 'Hold Period': '3 Years', 'Equity Multiple': '2.1x', 'LP IRR': '21%' }
+      };
+    }
+
+    caseStudyHtml += '<div class="section" style="position:relative;">';
+    caseStudyHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span class="section-title">Case Study</span>' + (isLive ? '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">From Pitch Deck</span>' : '') + '</div>';
+
+    // Coming Soon overlay (only when no real data)
+    if (!isLive) {
+      caseStudyHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div><div style="font-size:13px;color:var(--text-secondary);">Real case studies from the pitch deck</div></div>';
+    }
+
+    caseStudyHtml += '<div class="section-body" style="' + (isLive ? '' : 'opacity:0.3;pointer-events:none;user-select:none;filter:grayscale(0.5);') + '">';
 
     // Title
-    caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">' + esc(cs.title) + '</div>';
+    caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">' + esc(data.title) + '</div>';
     caseStudyHtml += '<div style="font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--primary);font-weight:700;margin-bottom:16px;">Example ' + (isCreditFund(deal) ? 'Loan' : 'Investment') + '</div>';
 
     // Two-column: metrics table + overview/result
     caseStudyHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">';
 
     // Left: Metrics table
-    if (cs.metrics && Object.keys(cs.metrics).length > 0) {
+    if (data.metrics && Object.keys(data.metrics).length > 0) {
       caseStudyHtml += '<div>';
       caseStudyHtml += '<table style="width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:13px;">';
-      var keys = Object.keys(cs.metrics);
+      var keys = Object.keys(data.metrics);
       for (var i = 0; i < keys.length; i++) {
         var bgColor = i % 2 === 0 ? 'rgba(81,190,123,0.04)' : 'transparent';
         caseStudyHtml += '<tr style="background:' + bgColor + ';">'
           + '<td style="padding:8px 12px;font-weight:600;color:var(--text-dark);border-bottom:1px solid var(--border);white-space:nowrap;">' + esc(keys[i]) + '</td>'
-          + '<td style="padding:8px 12px;color:var(--text-secondary);border-bottom:1px solid var(--border);">' + esc(cs.metrics[keys[i]]) + '</td>'
+          + '<td style="padding:8px 12px;color:var(--text-secondary);border-bottom:1px solid var(--border);">' + esc(data.metrics[keys[i]]) + '</td>'
           + '</tr>';
       }
       caseStudyHtml += '</table>';
@@ -5083,16 +5109,16 @@ async function renderDeal() {
 
     // Right: Overview + Result
     caseStudyHtml += '<div>';
-    if (cs.overview) {
+    if (data.overview) {
       caseStudyHtml += '<div style="margin-bottom:16px;">';
       caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Overview</div>';
-      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(cs.overview) + '</div>';
+      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(data.overview) + '</div>';
       caseStudyHtml += '</div>';
     }
-    if (cs.result) {
+    if (data.result) {
       caseStudyHtml += '<div>';
       caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Result</div>';
-      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(cs.result) + '</div>';
+      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(data.result) + '</div>';
       caseStudyHtml += '</div>';
     }
     caseStudyHtml += '</div>';
@@ -5405,7 +5431,6 @@ async function renderDeal() {
   } else {
     detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
   }
-  detailsHtml += detailItem('Objective', deal.investmentObjective);
   if (!isCreditFund(deal)) {
     detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
     detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
@@ -6441,7 +6466,6 @@ async function renderDeal() {
     + geoMapHtml
     + secFilingHtml
     + operatorDealsHtml
-    + caseStudyHtml
     // --- Job 5: How does it compare? ---
     + cashFlowHtml
     + feeBenchHtml
@@ -6460,6 +6484,7 @@ async function renderDeal() {
     + gpInsightsHtml
     + noPermissionHtml
     // --- Deep DD (bottom) ---
+    + caseStudyHtml
     + ddHtml
     + stressHtml
     + qaHtml

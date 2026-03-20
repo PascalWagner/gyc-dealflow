@@ -1,11 +1,13 @@
 // Vercel Serverless Function: /api/deal-cleanup
 // AI-assisted deal data cleanup with multi-step enrichment pipeline:
-//   Step 1: Extract from Deck PDF (source of truth)
+//   Step 0: SEC EDGAR Form D lookup (authoritative source of truth)
+//   Step 1: Extract from Deck PDF
 //   Step 2: Extract from PPM PDF (fill remaining gaps)
 //   Step 3: Web search (sponsor website, SEC Edgar, investclearly.com)
 // API fallback chain: Gemini (free tier) → Anthropic → OpenAI
 
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
+import { XMLParser } from 'fast-xml-parser';
 
 // ── Quality fields to track ──────────────────────────────────────────────────
 
@@ -409,6 +411,102 @@ async function enrichDeal(supabase, deal, operatorName) {
       if (v !== null && v !== undefined) tempDeal[k] = v;
     }
     return getMissingFields(tempDeal);
+  }
+
+  // ── Step 0: SEC EDGAR Form D lookup (authoritative) ───────────────────
+  try {
+    const searchName = operatorName || deal.investment_name || '';
+    if (searchName) {
+      const edgarUA = 'GYC Research pascal@growyourcashflow.com';
+      const eftsUrl = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(searchName)}%22&forms=D`;
+      const eftsResp = await fetch(eftsUrl, { headers: { 'User-Agent': edgarUA } });
+      if (eftsResp.ok) {
+        const eftsData = await eftsResp.json();
+        const hits = (eftsData.hits && eftsData.hits.hits) || [];
+        if (hits.length > 0) {
+          // Take the highest-scored (most relevant) filing
+          const best = hits[0]._source;
+          const cik = (best.ciks && best.ciks[0] || '').replace(/^0+/, '');
+          const accession = best.adsh;
+          if (cik && accession) {
+            const accPath = accession.replace(/-/g, '');
+            const xmlUrl = `https://www.sec.gov/Archives/edgar/data/${cik}/${accPath}/primary_doc.xml`;
+            const xmlResp = await fetch(xmlUrl, { headers: { 'User-Agent': edgarUA } });
+            if (xmlResp.ok) {
+              const xmlText = await xmlResp.text();
+              const parser = new XMLParser({
+                ignoreAttributes: true,
+                isArray: (name) => ['relatedPersonInfo', 'item', 'relationship'].includes(name)
+              });
+              const doc = parser.parse(xmlText);
+              const sub = doc.edgarSubmission || doc;
+              const issuer = sub.primaryIssuer || {};
+              const offering = sub.offeringData || {};
+              const amounts = offering.offeringSalesAmounts || {};
+              const exemptions = offering.federalExemptionsExclusions || {};
+              const exemptionItems = Array.isArray(exemptions.item) ? exemptions.item : (exemptions.item ? [exemptions.item] : []);
+              const is506b = exemptionItems.some(e => e === '06b');
+              const is506c = exemptionItems.some(e => e === '06c');
+
+              // Authoritative fields (always set)
+              if (is506b) { allFound.offering_type = '506(b)'; allConfidence.offering_type = 'verified'; }
+              else if (is506c) { allFound.offering_type = '506(c)'; allConfidence.offering_type = 'verified'; }
+              allFound.is_506b = is506b;
+              allFound.sec_cik = cik;
+              if (offering.minimumInvestmentAccepted) { allFound.investment_minimum = parseFloat(offering.minimumInvestmentAccepted); allConfidence.investment_minimum = 'verified'; }
+              if (amounts.totalOfferingAmount) { allFound.offering_size = parseFloat(amounts.totalOfferingAmount); allConfidence.offering_size = 'verified'; }
+              if (amounts.totalAmountSold) { allFound.total_amount_sold = parseFloat(amounts.totalAmountSold); }
+              const investors = offering.investors || {};
+              if (investors.totalNumberAlreadyInvested) { allFound.total_investors = parseInt(investors.totalNumberAlreadyInvested); }
+              const dateOfFirstSale = ((offering.typeOfFiling || {}).dateOfFirstSale || {}).value;
+              if (dateOfFirstSale) { allFound.date_of_first_sale = dateOfFirstSale; }
+
+              // Safe-update fields (only if empty)
+              if (!deal.investment_name && issuer.entityName) { allFound.investment_name = issuer.entityName; allConfidence.investment_name = 'verified'; }
+
+              allSources.push('SEC EDGAR Form D');
+              steps.push(`Step 0 (EDGAR): Found ${best.form} filing for ${(issuer.entityName || searchName)} (CIK ${cik}). ${exemptionItems.map(e => e === '06c' ? '506(c)' : e === '06b' ? '506(b)' : e).join(', ')}, $${(amounts.totalAmountSold || 0).toLocaleString()} sold, ${investors.totalNumberAlreadyInvested || 0} investors.`);
+
+              // Store the filing in sec_filings table
+              try {
+                await supabase.from('sec_filings').upsert({
+                  opportunity_id: deal.id,
+                  management_company_id: deal.management_company_id || null,
+                  cik, accession_number: accession,
+                  filing_type: best.form || 'D',
+                  is_latest_amendment: true,
+                  entity_name: issuer.entityName || '',
+                  entity_type: issuer.entityType || '',
+                  jurisdiction: issuer.jurisdictionOfInc || '',
+                  year_of_inc: (issuer.yearOfInc || {}).value ? parseInt(issuer.yearOfInc.value) : null,
+                  issuer_city: (issuer.issuerAddress || {}).city || '',
+                  issuer_state: (issuer.issuerAddress || {}).stateOrCountry || '',
+                  issuer_zip: (issuer.issuerAddress || {}).zipCode || '',
+                  federal_exemptions: exemptionItems,
+                  date_of_first_sale: dateOfFirstSale || null,
+                  minimum_investment: offering.minimumInvestmentAccepted ? parseFloat(offering.minimumInvestmentAccepted) : null,
+                  total_offering_amount: amounts.totalOfferingAmount ? parseFloat(amounts.totalOfferingAmount) : null,
+                  total_amount_sold: amounts.totalAmountSold ? parseFloat(amounts.totalAmountSold) : null,
+                  total_remaining: amounts.totalRemaining ? parseFloat(amounts.totalRemaining) : null,
+                  total_investors: investors.totalNumberAlreadyInvested ? parseInt(investors.totalNumberAlreadyInvested) : null,
+                  has_non_accredited: !!investors.hasNonAccreditedInvestors,
+                  issuer_size: (offering.issuerSize || {}).revenueRange || '',
+                  industry_group: (offering.industryGroup || {}).industryGroupType || '',
+                  is_equity: !!(offering.typesOfSecuritiesOffered || {}).isEquityType,
+                  is_debt: !!(offering.typesOfSecuritiesOffered || {}).isDebtType,
+                  is_pooled_fund: !!(offering.typesOfSecuritiesOffered || {}).isPooledInvestmentFundType,
+                  raw_xml: xmlText,
+                  edgar_url: xmlUrl
+                }, { onConflict: 'accession_number' });
+              } catch (storeErr) { console.error('EDGAR store error:', storeErr); }
+            }
+          }
+        }
+      }
+    }
+  } catch (edgarErr) {
+    console.error('EDGAR Step 0 error:', edgarErr);
+    steps.push('Step 0 (EDGAR): Error - ' + edgarErr.message);
   }
 
   // ── Step 1: Extract from Deck PDF ──────────────────────────────────────
