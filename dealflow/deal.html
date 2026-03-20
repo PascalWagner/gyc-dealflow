@@ -4749,29 +4749,47 @@ async function renderDeal() {
 
   // --- 2b. Social Proof (loaded async into hero) ---
   var socialProofHtml = '';
-  // Fetch social proof stats
+  // Fetch social proof stats + named investors
   (function loadDealSocialProof() {
     fetch('/api/deal-stats?dealId=' + encodeURIComponent(deal.id))
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(stats) {
         if (!stats) return;
-        // Map legacy stage names
         var saved = stats.interested || stats.saved || 0;
         var vetting = stats.duediligence || stats.vetting || 0;
         var invested = stats.portfolio || stats.invested || 0;
         var total = saved + vetting + invested;
-        if (total === 0) return;
+        var namedInvestors = stats.namedInvestors || [];
+        var namedWatchers = stats.namedWatchers || [];
+        if (total === 0 && namedInvestors.length === 0) return;
         var el = document.getElementById('dealSocialProof');
         if (!el) return;
         var parts = [];
         var eyeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
         var ddSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>';
         var investSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
-        parts.push(eyeSvg + ' <strong>' + total + '</strong> investors watching');
+        var peopleSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>';
+        if (total > 0) parts.push(eyeSvg + ' <strong>' + total + '</strong> GYC member' + (total !== 1 ? 's' : '') + ' watching');
         if (vetting > 0) parts.push(ddSvg + ' <strong>' + vetting + '</strong> in due diligence');
         if (invested > 0) parts.push(investSvg + ' <strong>' + invested + '</strong> invested');
         el.innerHTML = parts.join('<span style="opacity:0.3;margin:0 6px;">|</span>');
         el.style.display = 'flex';
+
+        // Named investors section (below stats in hero)
+        if (namedInvestors.length > 0 || namedWatchers.length > 0) {
+          var namesEl = document.createElement('div');
+          namesEl.className = 'deal-social-proof';
+          namesEl.innerHTML = peopleSvg + ' ';
+          var nameParts = [];
+          if (namedInvestors.length > 0) {
+            nameParts.push('<strong>' + esc(namedInvestors.join('</strong>, <strong>')) + '</strong> invested');
+          }
+          if (namedWatchers.length > 0) {
+            nameParts.push('<strong>' + esc(namedWatchers.join('</strong>, <strong>')) + '</strong> ' + (namedWatchers.length === 1 ? 'is' : 'are') + ' watching');
+          }
+          namesEl.innerHTML += nameParts.join('<span style="opacity:0.3;margin:0 6px;">·</span>');
+          el.parentNode.insertBefore(namesEl, el.nextSibling);
+        }
       })
       .catch(function() {});
   })();
@@ -5151,43 +5169,56 @@ async function renderDeal() {
   // --- SEC Filing ---
   var secFilingHtml = '';
   (function buildSecFiling() {
-    if (!deal.secCik && !deal.totalAmountSold && !deal.totalInvestors && !deal.dateOfFirstSale) return;
+    var _hasSec = deal.secCik || deal.totalAmountSold || deal.totalInvestors || deal.dateOfFirstSale;
     var _metricStyle = 'font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);';
     var _labelStyle = 'font-family:var(--font-ui);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:2px;';
     secFilingHtml += '<div class="section" style="min-width:0;">';
     secFilingHtml += '<div class="section-header" style="padding:12px 16px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title" style="font-size:14px;">SEC Filing</span>';
-    secFilingHtml += '<span style="margin-left:auto;display:flex;align-items:center;gap:3px;font-family:var(--font-ui);font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);padding:2px 8px;border-radius:20px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
+    if (_hasSec) {
+      secFilingHtml += '<span style="margin-left:auto;display:flex;align-items:center;gap:3px;font-family:var(--font-ui);font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);padding:2px 8px;border-radius:20px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
+    } else {
+      secFilingHtml += '<span style="margin-left:auto;display:flex;align-items:center;gap:3px;font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);background:rgba(156,163,175,0.1);padding:2px 8px;border-radius:20px;">No Match</span>';
+    }
     secFilingHtml += '</div><div class="section-body" style="padding:12px 16px 16px;">';
-    // Compact 2x2 metric grid
-    secFilingHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
-    if (deal.totalAmountSold) {
-      secFilingHtml += '<div><div style="' + _metricStyle + '">$' + (deal.totalAmountSold >= 1e6 ? (deal.totalAmountSold/1e6).toFixed(1)+'M' : Math.round(deal.totalAmountSold).toLocaleString()) + '</div><div style="' + _labelStyle + '">Total Sold</div></div>';
-    }
-    if (deal.totalInvestors) {
-      secFilingHtml += '<div><div style="' + _metricStyle + '">' + deal.totalInvestors + '</div><div style="' + _labelStyle + '">Investors</div></div>';
-    }
-    if (deal.offeringSize) {
-      secFilingHtml += '<div><div style="' + _metricStyle + '">$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</div><div style="' + _labelStyle + '">Offering Size</div></div>';
-    }
-    if (deal.dateOfFirstSale) {
-      var fsd = new Date(deal.dateOfFirstSale);
-      secFilingHtml += '<div><div style="' + _metricStyle + '">' + fsd.toLocaleDateString('en-US',{month:'short',year:'numeric'}) + '</div><div style="' + _labelStyle + '">Deal Opened</div></div>';
-    }
-    secFilingHtml += '</div>';
-    // Progress bar
-    if (deal.totalAmountSold && deal.offeringSize && deal.offeringSize > 0) {
-      var pctSold = Math.min(100, Math.round((deal.totalAmountSold / deal.offeringSize) * 100));
-      secFilingHtml += '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-bottom:3px;"><span>' + pctSold + '% funded</span><span>$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</span></div>';
-      secFilingHtml += '<div style="height:5px;background:var(--bg-main);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pctSold + '%;background:var(--primary);border-radius:3px;"></div></div></div>';
-    }
-    // Filing date (data freshness)
-    if (deal.dateOfFirstSale) {
-      var _filingAge = Math.round((new Date() - new Date(deal.dateOfFirstSale)) / (1000*60*60*24*30.44));
-      secFilingHtml += '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-bottom:10px;">Data as of Form D filing' + (_filingAge > 0 ? ' (' + _filingAge + ' mo ago)' : '') + '</div>';
-    }
-    // EDGAR link
-    if (deal.secCik) {
-      secFilingHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=' + esc(deal.secCik) + '&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View on SEC EDGAR</a>';
+    if (_hasSec) {
+      // Compact 2x2 metric grid
+      secFilingHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
+      if (deal.totalAmountSold) {
+        secFilingHtml += '<div><div style="' + _metricStyle + '">$' + (deal.totalAmountSold >= 1e6 ? (deal.totalAmountSold/1e6).toFixed(1)+'M' : Math.round(deal.totalAmountSold).toLocaleString()) + '</div><div style="' + _labelStyle + '">Total Sold</div></div>';
+      }
+      if (deal.totalInvestors) {
+        secFilingHtml += '<div><div style="' + _metricStyle + '">' + deal.totalInvestors + '</div><div style="' + _labelStyle + '">Investors</div></div>';
+      }
+      if (deal.offeringSize) {
+        secFilingHtml += '<div><div style="' + _metricStyle + '">$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</div><div style="' + _labelStyle + '">Offering Size</div></div>';
+      }
+      if (deal.dateOfFirstSale) {
+        var fsd = new Date(deal.dateOfFirstSale);
+        secFilingHtml += '<div><div style="' + _metricStyle + '">' + fsd.toLocaleDateString('en-US',{month:'short',year:'numeric'}) + '</div><div style="' + _labelStyle + '">Deal Opened</div></div>';
+      }
+      secFilingHtml += '</div>';
+      // Progress bar
+      if (deal.totalAmountSold && deal.offeringSize && deal.offeringSize > 0) {
+        var pctSold = Math.min(100, Math.round((deal.totalAmountSold / deal.offeringSize) * 100));
+        secFilingHtml += '<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-bottom:3px;"><span>' + pctSold + '% funded</span><span>$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</span></div>';
+        secFilingHtml += '<div style="height:5px;background:var(--bg-main);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pctSold + '%;background:var(--primary);border-radius:3px;"></div></div></div>';
+      }
+      // Filing date (data freshness)
+      if (deal.dateOfFirstSale) {
+        var _filingAge = Math.round((new Date() - new Date(deal.dateOfFirstSale)) / (1000*60*60*24*30.44));
+        secFilingHtml += '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-bottom:10px;">Data as of Form D filing' + (_filingAge > 0 ? ' (' + _filingAge + ' mo ago)' : '') + '</div>';
+      }
+      // EDGAR link
+      if (deal.secCik) {
+        secFilingHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=' + esc(deal.secCik) + '&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View on SEC EDGAR</a>';
+      }
+    } else {
+      // No SEC filing found — empty state
+      secFilingHtml += '<div style="text-align:center;padding:8px 0;">';
+      secFilingHtml += '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="opacity:0.4;margin-bottom:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      secFilingHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">No SEC Form D match found</div>';
+      secFilingHtml += '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);line-height:1.5;">We couldn\u2019t match this deal to a filing on EDGAR. This may mean the offering hasn\u2019t filed yet, uses a different entity name, or is exempt from filing.</div>';
+      secFilingHtml += '</div>';
     }
     secFilingHtml += '</div></div>';
   })();
@@ -5379,70 +5410,74 @@ async function renderDeal() {
     cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
     cashFlowHtml += '</div>';
 
-    // --- Chart view (SVG line chart) ---
-    // Build cumulative cash data for the line
-    var cumCashPts = []; // cumulative total cash received
-    var distPts = [];    // annual distributions
-    var cumSum = 0;
+    // --- Chart view (compact annual bar chart) ---
+    var annualCash = [];
+    var hasCapReturn = false;
     for (var i = 0; i < rows.length; i++) {
-      var r = rows[i];
-      cumSum += r.dist + r.capReturn;
-      cumCashPts.push(cumSum);
-      distPts.push(r.dist);
+      annualCash.push({ year: rows[i].year, dist: rows[i].dist, capReturn: rows[i].capReturn, total: rows[i].dist + rows[i].capReturn });
+      if (rows[i].capReturn > 0) hasCapReturn = true;
     }
-    var maxCum = Math.max.apply(null, cumCashPts) || 1;
-    var svgW = 560, svgH = 140, padL = 50, padR = 20, padT = 16, padB = 24;
-    var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+    var maxAnnual = Math.max.apply(null, annualCash.map(function(a) { return a.total; })) || 1;
     var n = rows.length;
+    var svgW = 560, svgH = 110, padL = 44, padR = 12, padT = 22, padB = 20;
+    var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+    var barGap = Math.max(4, plotW * 0.08 / n);
+    var barW = Math.min(40, (plotW - barGap * (n + 1)) / n);
+    var barGroupW = barW + barGap;
+    var totalBarsW = barGroupW * n - barGap;
+    var barOffsetX = padL + (plotW - totalBarsW) / 2;
 
-    // Scale helpers
-    function xPos(idx) { return padL + (n > 1 ? (idx / (n - 1)) * plotW : plotW / 2); }
-    function yPos(val) { return padT + plotH - (val / maxCum) * plotH; }
+    function bX(idx) { return barOffsetX + idx * barGroupW; }
+    function bH(val) { return (val / maxAnnual) * plotH; }
+    function bY(val) { return padT + plotH - bH(val); }
 
     cashFlowHtml += '<div id="' + uid + '_chart" style="display:none;">';
-    cashFlowHtml += '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;height:auto;overflow:visible;" xmlns="http://www.w3.org/2000/svg">';
+    cashFlowHtml += '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;max-width:560px;height:auto;overflow:visible;" xmlns="http://www.w3.org/2000/svg">';
 
-    // Grid lines
-    var gridSteps = 4;
-    for (var g = 0; g <= gridSteps; g++) {
-      var gy = padT + (g / gridSteps) * plotH;
-      var gVal = maxCum * (1 - g / gridSteps);
-      cashFlowHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (svgW - padR) + '" y2="' + gy + '" stroke="#e5e7eb" stroke-width="1"/>';
-      cashFlowHtml += '<text x="' + (padL - 6) + '" y="' + (gy + 4) + '" text-anchor="end" fill="#9ca3af" font-family="var(--font-ui)" font-size="10">$' + Math.round(gVal / 1000) + 'K</text>';
+    // Subtle horizontal grid
+    var gridVals = [Math.round(maxAnnual * 0.5), maxAnnual];
+    for (var g = 0; g < gridVals.length; g++) {
+      var gy = bY(gridVals[g]);
+      cashFlowHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (svgW - padR) + '" y2="' + gy + '" stroke="#f0f0f0" stroke-width="1"/>';
+      cashFlowHtml += '<text x="' + (padL - 5) + '" y="' + (gy + 3) + '" text-anchor="end" fill="#b0b0b0" font-family="var(--font-ui)" font-size="9">$' + Math.round(gridVals[g] / 1000) + 'K</text>';
     }
 
-    // X-axis labels
+    // Baseline
+    cashFlowHtml += '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (svgW - padR) + '" y2="' + (padT + plotH) + '" stroke="#e5e7eb" stroke-width="1"/>';
+
+    // Bars + labels
     for (var i = 0; i < n; i++) {
-      cashFlowHtml += '<text x="' + xPos(i) + '" y="' + (svgH - 6) + '" text-anchor="middle" fill="#9ca3af" font-family="var(--font-ui)" font-size="10">Yr ' + rows[i].year + '</text>';
-    }
+      var ac = annualCash[i];
+      var x = bX(i);
+      var distH = bH(ac.dist);
+      var capH = bH(ac.capReturn);
 
-    // Area fill under cumulative line
-    var areaPath = 'M' + xPos(0) + ',' + yPos(cumCashPts[0]);
-    for (var i = 1; i < n; i++) areaPath += ' L' + xPos(i) + ',' + yPos(cumCashPts[i]);
-    areaPath += ' L' + xPos(n - 1) + ',' + (padT + plotH) + ' L' + xPos(0) + ',' + (padT + plotH) + ' Z';
-    cashFlowHtml += '<path d="' + areaPath + '" fill="rgba(81,190,123,0.08)"/>';
+      // Distribution bar (green)
+      if (ac.dist > 0) {
+        var dy = padT + plotH - distH - capH;
+        cashFlowHtml += '<rect x="' + x + '" y="' + dy + '" width="' + barW + '" height="' + distH + '" rx="2" fill="#51be7b" opacity="0.85"/>';
+      }
+      // Capital return bar (stacked, darker)
+      if (ac.capReturn > 0) {
+        var cy = padT + plotH - capH;
+        cashFlowHtml += '<rect x="' + x + '" y="' + cy + '" width="' + barW + '" height="' + capH + '" rx="2" fill="#2d8a54"/>';
+      }
 
-    // Cumulative cash line
-    var linePath = 'M' + xPos(0) + ',' + yPos(cumCashPts[0]);
-    for (var i = 1; i < n; i++) linePath += ' L' + xPos(i) + ',' + yPos(cumCashPts[i]);
-    cashFlowHtml += '<path d="' + linePath + '" fill="none" stroke="#51be7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+      // Value label above bar
+      var labelVal = ac.total >= 1000 ? '$' + Math.round(ac.total / 1000) + 'K' : '$' + Math.round(ac.total);
+      var labelY = bY(ac.total) - 5;
+      cashFlowHtml += '<text x="' + (x + barW / 2) + '" y="' + labelY + '" text-anchor="middle" fill="#374151" font-family="var(--font-ui)" font-size="9" font-weight="600">' + labelVal + '</text>';
 
-    // Investment baseline
-    cashFlowHtml += '<line x1="' + padL + '" y1="' + yPos(investment) + '" x2="' + (svgW - padR) + '" y2="' + yPos(investment) + '" stroke="#51be7b" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>';
-    cashFlowHtml += '<text x="' + (svgW - padR + 4) + '" y="' + (yPos(investment) + 3) + '" fill="#9ca3af" font-family="var(--font-ui)" font-size="9">Invested</text>';
-
-    // Data points with value labels
-    for (var i = 0; i < n; i++) {
-      var cx = xPos(i), cy = yPos(cumCashPts[i]);
-      cashFlowHtml += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="#fff" stroke="#51be7b" stroke-width="2"/>';
-      cashFlowHtml += '<text x="' + cx + '" y="' + (cy - 10) + '" text-anchor="middle" fill="#1f2937" font-family="var(--font-ui)" font-size="10" font-weight="600">$' + Math.round(cumCashPts[i] / 1000) + 'K</text>';
+      // Year label below
+      cashFlowHtml += '<text x="' + (x + barW / 2) + '" y="' + (svgH - 5) + '" text-anchor="middle" fill="#9ca3af" font-family="var(--font-ui)" font-size="9">' + ac.year + '</text>';
     }
 
     cashFlowHtml += '</svg>';
-    cashFlowHtml += '<div class="cf-legend">';
-    cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:var(--primary);"></div>Cumulative Cash Received</div>';
-    if (rows.some(function(r) { return r.capReturn > 0; })) {
-      cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:rgba(81,190,123,0.25);border:1px dashed rgba(81,190,123,0.5);"></div>Invested Capital</div>';
+    // Compact legend
+    cashFlowHtml += '<div style="display:flex;gap:12px;margin-top:4px;justify-content:flex-end;">';
+    cashFlowHtml += '<span style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#51be7b;display:inline-block;"></span>Distributions</span>';
+    if (hasCapReturn) {
+      cashFlowHtml += '<span style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#2d8a54;display:inline-block;"></span>Capital Return</span>';
     }
     cashFlowHtml += '</div>';
     cashFlowHtml += '</div>';
@@ -5779,9 +5814,13 @@ async function renderDeal() {
     if (allDeals.length === 0) {
       try { allDeals = JSON.parse(sessionStorage.getItem('gycDealsCache') || '[]'); } catch(e) {}
     }
-    // Filter peers: same asset class, different deal
+    // Filter peers: lending funds vs other lending funds, else same asset class
+    var _isCredit = isCreditFund(deal);
+    var peerLabel = _isCredit ? 'Lending' : (deal.assetClass || 'Similar');
     var peers = allDeals.filter(function(d) {
-      return d.id !== deal.id && d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
+      if (d.id === deal.id) return false;
+      if (_isCredit) return isCreditFund(d);
+      return d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
     });
     if (peers.length < 3) return; // need at least 3 peers
 
@@ -5876,7 +5915,7 @@ async function renderDeal() {
     if (metrics.length === 0) return;
 
     feeBenchHtml = '<div class="section">';
-    feeBenchHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">How This Deal Compares</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(deal.assetClass) + ' peers</span></div>';
+    feeBenchHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">How This Deal Compares</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span></div>';
     feeBenchHtml += '<div class="section-body">';
     feeBenchHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;">';
     metrics.forEach(function(m) {
@@ -5968,15 +6007,7 @@ async function renderDeal() {
       materialsHtml += '<div class="material-tile-locked">' + _subIcon + 'Subscription Docs<span class="lock-badge">Academy</span></div>';
     }
   }
-  if (deal.mcWebsite) {
-    materialsHtml += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Sponsor Website</a>';
-  }
-  if (deal.mcInvestClearly) {
-    materialsHtml += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
-  }
-  if (deal.mcLinkedin) {
-    materialsHtml += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>CEO LinkedIn</a>';
-  }
+  // Sponsor Website, CEO LinkedIn, and InvestClearly Reviews moved to About the Operator card
   // SEC EDGAR link removed — now in dedicated SEC Filing card
   materialsHtml += '</div>';
   materialsHtml += '</div></div>';
@@ -6495,9 +6526,11 @@ async function renderDeal() {
       .filter(function(d) { return d.id !== deal.id && d.investmentName; })
       .map(function(d) {
         var score = 0;
-        if (d.assetClass && d.assetClass === deal.assetClass) score += 3;
+        var _simIsCredit = isCreditFund(deal);
+        if (_simIsCredit && isCreditFund(d)) score += 5; // lending funds compare vs other lending funds
+        else if (d.assetClass && d.assetClass === deal.assetClass) score += 3;
         if (d.dealType && d.dealType === deal.dealType) score += 2;
-        if (d.strategy && d.strategy === deal.strategy) score += 2;
+        if (!_simIsCredit && d.strategy && d.strategy === deal.strategy) score += 2;
         var dealYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
         var dYield = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
         if (dealYield > 0 && dYield > 0 && Math.abs(dealYield - dYield) < 0.03) score += 1;
@@ -6601,7 +6634,7 @@ async function renderDeal() {
       + '</div>';
 
     similarHtml = '<div class="section">'
-      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">Similar Deals</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + scored.length + ' comparable ' + esc(deal.assetClass || '') + ' deals</span></div>'
+      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">Similar Deals</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + scored.length + ' comparable ' + esc(isCreditFund(deal) ? 'Lending' : (deal.assetClass || '')) + ' deals</span></div>'
       + '<div class="section-body">' + tableHtml + legendHtml + '</div>'
       + '</div>';
   })();
