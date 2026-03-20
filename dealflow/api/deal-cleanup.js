@@ -1,8 +1,13 @@
 // Vercel Serverless Function: /api/deal-cleanup
-// AI-assisted deal data cleanup: searches the web for missing deal information
-// Processes deals one at a time, returning suggested field values for admin review
+// AI-assisted deal data cleanup with multi-step enrichment pipeline:
+//   Step 1: Extract from Deck PDF (source of truth)
+//   Step 2: Extract from PPM PDF (fill remaining gaps)
+//   Step 3: Web search (sponsor website, SEC Edgar, investclearly.com)
+// API fallback chain: Gemini (free tier) → Anthropic → OpenAI
 
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
+
+// ── Quality fields to track ──────────────────────────────────────────────────
 
 const QUALITY_FIELDS = [
   { key: 'investment_name', label: 'Name' },
@@ -43,21 +48,307 @@ function getCompletenessPercent(deal) {
   return Math.round(((QUALITY_FIELDS.length - missing.length) / QUALITY_FIELDS.length) * 100);
 }
 
-// Build a search-friendly prompt for Claude with web search
-function buildEnrichmentPrompt(deal, operatorName, missingFields) {
-  const missingList = missingFields.map(f => `- ${f.label} (database field: ${f.key})`).join('\n');
+// ── PDF text extraction (same as deck-upload.js) ─────────────────────────────
+
+function extractTextFromPdfBuffer(buffer) {
+  const raw = buffer.toString('latin1');
+  const textChunks = [];
+
+  // Method 1: Extract text between BT (Begin Text) and ET (End Text) operators
+  const btEtRegex = /BT\s([\s\S]*?)ET/g;
+  let match;
+  while ((match = btEtRegex.exec(raw)) !== null) {
+    const parenStrings = match[1].match(/\(([^)]*)\)/g);
+    if (parenStrings) {
+      for (const s of parenStrings) {
+        const cleaned = s.slice(1, -1)
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')')
+          .replace(/\\\\/g, '\\');
+        if (cleaned.trim()) textChunks.push(cleaned);
+      }
+    }
+  }
+
+  // Method 2: Fallback for text-heavy PDFs
+  if (textChunks.join('').length < 500) {
+    const readableRegex = /[\x20-\x7E]{10,}/g;
+    let readMatch;
+    while ((readMatch = readableRegex.exec(raw)) !== null) {
+      const chunk = readMatch[0].trim();
+      if (chunk && !/^[A-Fa-f0-9\s]+$/.test(chunk) && !/^[\/\[\]<>{}]+$/.test(chunk)) {
+        textChunks.push(chunk);
+      }
+    }
+  }
+
+  return textChunks.join(' ').substring(0, 50000);
+}
+
+// ── Extraction prompt (matches deal-enrich.js format) ────────────────────────
+
+const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this document text. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
+
+{
+  "investmentName": "Full name of the fund or investment",
+  "managementCompany": "Name of the sponsor / management company",
+  "assetClass": "One of: Lending, Multi Family, Self Storage, Industrial, Hotels/Hospitality, RV/Mobile Home Parks, Short Term Rental, Mixed Use, Office, Retail, Oil & Gas, Other",
+  "dealType": "One of: Fund, Syndication, Direct, REIT",
+  "strategy": "One of: Core, Core-Plus, Value-Add, Opportunistic, Development, Lending, Distressed",
+  "investmentStrategy": "2-3 sentence LP-facing summary of the investment strategy",
+  "targetIRR": "Target IRR as decimal (e.g. 0.15 for 15%)",
+  "preferredReturn": "Preferred return as decimal (e.g. 0.08 for 8%)",
+  "cashOnCash": "Cash on cash return as decimal if mentioned",
+  "equityMultiple": "Target equity multiple (e.g. 2.0)",
+  "investmentMinimum": "Minimum investment in dollars (number only)",
+  "holdPeriod": "Hold period / lockup in years (number only)",
+  "offeringSize": "Total offering size in dollars (number only)",
+  "offeringType": "506(b) or 506(c)",
+  "distributions": "Monthly, Quarterly, Annual, or None",
+  "lpGpSplit": "e.g. 80/20",
+  "fees": "Full fee structure description",
+  "financials": "Audited or Unaudited",
+  "investingGeography": "Geographic focus",
+  "instrument": "Debt, Equity, Preferred Equity, or Hybrid",
+  "status": "One of: open, closed, coming_soon, evergreen, fully_funded, completed"
+}
+
+IMPORTANT:
+- For percentages, convert to decimals (15% → 0.15)
+- For dollar amounts, return raw numbers (no $ or commas)
+- If a field clearly doesn't apply to this deal type, use null
+- Be precise — only extract what's explicitly stated, don't infer`;
+
+// Map AI extraction keys → Supabase column names
+const FIELD_MAP = {
+  investmentName:      'investment_name',
+  assetClass:          'asset_class',
+  dealType:            'deal_type',
+  strategy:            'strategy',
+  investmentStrategy:  'investment_strategy',
+  targetIRR:           'target_irr',
+  preferredReturn:     'preferred_return',
+  cashOnCash:          'cash_on_cash',
+  equityMultiple:      'equity_multiple',
+  investmentMinimum:   'investment_minimum',
+  holdPeriod:          'hold_period_years',
+  offeringSize:        'offering_size',
+  offeringType:        'offering_type',
+  distributions:       'distributions',
+  lpGpSplit:           'lp_gp_split',
+  fees:                'fees',
+  financials:          'financials',
+  investingGeography:  'investing_geography',
+  instrument:          'instrument',
+  status:              'status',
+};
+
+// ── AI API abstraction with fallback chain ───────────────────────────────────
+
+async function callAI(prompt, { webSearch = false } = {}) {
+  const apis = [];
+
+  // Gemini (free tier — try first)
+  if (process.env.GEMINI_API_KEY) {
+    apis.push({ name: 'gemini', fn: () => callGemini(prompt, webSearch) });
+  }
+  // Anthropic (fallback)
+  if (process.env.ANTHROPIC_API_KEY) {
+    apis.push({ name: 'anthropic', fn: () => callAnthropic(prompt, webSearch) });
+  }
+  // OpenAI (fallback)
+  if (process.env.OPENAI_API_KEY) {
+    apis.push({ name: 'openai', fn: () => callOpenAI(prompt) });
+  }
+
+  if (apis.length === 0) {
+    throw new Error('No AI API keys configured (need GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY)');
+  }
+
+  const errors = [];
+  for (const api of apis) {
+    try {
+      const result = await api.fn();
+      return { ...result, api_used: api.name };
+    } catch (err) {
+      console.warn(`${api.name} API failed:`, err.message);
+      errors.push(`${api.name}: ${err.message}`);
+    }
+  }
+
+  throw new Error('All AI APIs failed: ' + errors.join(' | '));
+}
+
+async function callGemini(prompt, webSearch) {
+  const key = process.env.GEMINI_API_KEY;
+  const model = 'gemini-2.0-flash';
+
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 4000 },
+  };
+
+  // Gemini supports grounding with Google Search
+  if (webSearch) {
+    body.tools = [{ googleSearch: {} }];
+  }
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    }
+  );
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`Gemini ${resp.status}: ${errText.substring(0, 300)}`);
+  }
+
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts
+    ?.filter(p => p.text)
+    ?.map(p => p.text)
+    ?.join('') || '';
+
+  return { text };
+}
+
+async function callAnthropic(prompt, webSearch) {
+  const key = process.env.ANTHROPIC_API_KEY;
+
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4000,
+    messages: [{ role: 'user', content: prompt }]
+  };
+
+  if (webSearch) {
+    body.tools = [{
+      type: 'web_search_20250305',
+      name: 'web_search',
+      max_uses: 5
+    }];
+  }
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`Anthropic ${resp.status}: ${errText.substring(0, 300)}`);
+  }
+
+  const data = await resp.json();
+  let text = '';
+  for (const block of (data.content || [])) {
+    if (block.type === 'text') text += block.text;
+  }
+
+  return { text };
+}
+
+async function callOpenAI(prompt) {
+  const key = process.env.OPENAI_API_KEY;
+
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${key}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      max_tokens: 4000,
+      temperature: 0.1,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`OpenAI ${resp.status}: ${errText.substring(0, 300)}`);
+  }
+
+  const data = await resp.json();
+  const text = data.choices?.[0]?.message?.content || '';
+
+  return { text };
+}
+
+// ── Parse JSON from AI response ──────────────────────────────────────────────
+
+function parseAIResponse(text) {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return null;
+  }
+}
+
+// Map extracted camelCase fields → snake_case DB fields
+function mapToDbFields(extracted) {
+  const mapped = {};
+  for (const [jsonKey, dbCol] of Object.entries(FIELD_MAP)) {
+    const val = extracted[jsonKey];
+    if (val !== null && val !== undefined) {
+      if (dbCol === 'fees' && typeof val === 'string') {
+        mapped[dbCol] = [val];
+      } else {
+        mapped[dbCol] = val;
+      }
+    }
+  }
+  // Also handle snake_case keys directly (from web search prompt)
+  for (const f of QUALITY_FIELDS) {
+    if (extracted[f.key] !== undefined && extracted[f.key] !== null && !mapped[f.key]) {
+      if (f.key === 'fees' && typeof extracted[f.key] === 'string') {
+        mapped[f.key] = [extracted[f.key]];
+      } else {
+        mapped[f.key] = extracted[f.key];
+      }
+    }
+  }
+  return mapped;
+}
+
+// ── Download PDF from Supabase Storage ───────────────────────────────────────
+
+async function downloadPdf(supabase, url) {
+  // The deck_url / ppm_url is a signed Supabase storage URL
+  // Download the raw bytes
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`PDF download failed: ${resp.status}`);
+  const arrayBuf = await resp.arrayBuffer();
+  return Buffer.from(arrayBuf);
+}
+
+// ── Build web search prompt ──────────────────────────────────────────────────
+
+function buildWebSearchPrompt(deal, operatorName, missingFields) {
+  const missingList = missingFields.map(f => `- ${f.label} (field: ${f.key})`).join('\n');
 
   const knownInfo = [];
   if (deal.investment_name) knownInfo.push(`Fund/Deal Name: ${deal.investment_name}`);
   if (operatorName && operatorName !== '—') knownInfo.push(`Operator/Sponsor: ${operatorName}`);
   if (deal.asset_class) knownInfo.push(`Asset Class: ${deal.asset_class}`);
   if (deal.deal_type) knownInfo.push(`Deal Type: ${deal.deal_type}`);
-  if (deal.location) knownInfo.push(`Location: ${deal.location}`);
-  if (deal.target_irr) knownInfo.push(`Target IRR: ${deal.target_irr}`);
   if (deal.offering_type) knownInfo.push(`Offering Type: ${deal.offering_type}`);
-  if (deal.investment_strategy) knownInfo.push(`Strategy: ${deal.investment_strategy}`);
 
-  return `You are a real estate investment research analyst. I need you to search the web for information about this real estate private placement deal and fill in any missing data fields.
+  return `You are a real estate investment research analyst. Search the web for information about this private placement deal and fill in the missing data fields.
 
 KNOWN INFORMATION:
 ${knownInfo.join('\n')}
@@ -65,11 +356,10 @@ ${knownInfo.join('\n')}
 MISSING FIELDS TO FIND:
 ${missingList}
 
-INSTRUCTIONS:
-1. Search for "${deal.investment_name}" ${operatorName && operatorName !== '—' ? `by "${operatorName}"` : ''} to find offering details, SEC filings, investor presentations, or fund marketing materials.
-2. Look for SEC EDGAR filings (Form D), CrowdStreet listings, RealCrowd listings, or the sponsor's own website.
-3. For each missing field, provide the value if you can find it with reasonable confidence.
-4. Return ONLY valid JSON with the exact database field keys listed below.
+SEARCH INSTRUCTIONS:
+1. Search for "${deal.investment_name}" ${operatorName && operatorName !== '—' ? `by "${operatorName}"` : ''}
+2. Check: sponsor's website, SEC EDGAR Form D filings, CrowdStreet, RealCrowd, investclearly.com
+3. For each missing field, provide the value if found with reasonable confidence
 
 FIELD FORMAT RULES:
 - target_irr, preferred_return, cash_on_cash: decimal (0.15 for 15%)
@@ -82,35 +372,166 @@ FIELD FORMAT RULES:
 - distributions: One of: Monthly, Quarterly, Annual, None
 - instrument: One of: Debt, Equity, Preferred Equity, Hybrid
 - financials: Audited or Unaudited
-- fees: Full fee structure as string (e.g. "2% management fee, 20% promote above 8% pref")
+- fees: Full fee structure as string
 - lp_gp_split: e.g. "80/20"
 - investing_geography: Geographic focus area
 - investment_strategy: 2-3 sentence LP-facing summary
 - status: One of: open, closed, coming_soon, evergreen, fully_funded, completed
 
-Return JSON like:
+Return ONLY valid JSON:
 {
-  "found_fields": {
-    "field_key": "value",
-    ...
-  },
-  "confidence": {
-    "field_key": "high|medium|low",
-    ...
-  },
-  "sources": ["url or description of where info was found"],
-  "notes": "Any relevant context about the search results"
+  "found_fields": { "field_key": "value" },
+  "confidence": { "field_key": "high|medium|low" },
+  "sources": ["url or description"],
+  "notes": "context about search results"
 }
 
-Only include fields you actually found information for. Use null for fields you searched for but couldn't find. Be conservative — only include data you're confident about.`;
+Only include fields you actually found. Be conservative.`;
 }
+
+// ── Multi-step enrichment pipeline ───────────────────────────────────────────
+
+async function enrichDeal(supabase, deal, operatorName) {
+  const missingFields = getMissingFields(deal);
+  if (missingFields.length === 0) {
+    return { found_fields: {}, confidence: {}, sources: [], steps: [], notes: 'Already 100% complete' };
+  }
+
+  const allFound = {};
+  const allConfidence = {};
+  const allSources = [];
+  const steps = [];
+
+  // Helper: which fields are still missing after merging found data
+  function stillMissing() {
+    const tempDeal = { ...deal };
+    for (const [k, v] of Object.entries(allFound)) {
+      if (v !== null && v !== undefined) tempDeal[k] = v;
+    }
+    return getMissingFields(tempDeal);
+  }
+
+  // ── Step 1: Extract from Deck PDF ──────────────────────────────────────
+  if (deal.deck_url) {
+    try {
+      const pdfBuffer = await downloadPdf(supabase, deal.deck_url);
+      const pdfText = extractTextFromPdfBuffer(pdfBuffer);
+
+      if (pdfText && pdfText.length >= 100) {
+        const result = await callAI(EXTRACTION_PROMPT + '\n\nDOCUMENT TEXT:\n' + pdfText);
+        const extracted = parseAIResponse(result.text);
+
+        if (extracted) {
+          const mapped = mapToDbFields(extracted);
+          let deckFieldCount = 0;
+          for (const [k, v] of Object.entries(mapped)) {
+            if (v !== null && v !== undefined && !allFound[k]) {
+              allFound[k] = v;
+              allConfidence[k] = 'high';
+              deckFieldCount++;
+            }
+          }
+          steps.push({ step: 'deck_pdf', fields_found: deckFieldCount, api: result.api_used });
+          allSources.push('Deck PDF');
+        } else {
+          steps.push({ step: 'deck_pdf', fields_found: 0, note: 'Could not parse AI response' });
+        }
+      } else {
+        steps.push({ step: 'deck_pdf', fields_found: 0, note: 'Insufficient text extracted' });
+      }
+    } catch (err) {
+      steps.push({ step: 'deck_pdf', fields_found: 0, error: err.message });
+    }
+  } else {
+    steps.push({ step: 'deck_pdf', fields_found: 0, note: 'No deck uploaded' });
+  }
+
+  // ── Step 2: Extract from PPM PDF (only if still missing fields) ────────
+  const afterDeck = stillMissing();
+  if (afterDeck.length > 0 && deal.ppm_url) {
+    try {
+      const pdfBuffer = await downloadPdf(supabase, deal.ppm_url);
+      const pdfText = extractTextFromPdfBuffer(pdfBuffer);
+
+      if (pdfText && pdfText.length >= 100) {
+        const result = await callAI(EXTRACTION_PROMPT + '\n\nDOCUMENT TEXT:\n' + pdfText);
+        const extracted = parseAIResponse(result.text);
+
+        if (extracted) {
+          const mapped = mapToDbFields(extracted);
+          let ppmFieldCount = 0;
+          for (const [k, v] of Object.entries(mapped)) {
+            if (v !== null && v !== undefined && !allFound[k]) {
+              allFound[k] = v;
+              allConfidence[k] = 'high';
+              ppmFieldCount++;
+            }
+          }
+          steps.push({ step: 'ppm_pdf', fields_found: ppmFieldCount, api: result.api_used });
+          allSources.push('PPM Document');
+        } else {
+          steps.push({ step: 'ppm_pdf', fields_found: 0, note: 'Could not parse AI response' });
+        }
+      } else {
+        steps.push({ step: 'ppm_pdf', fields_found: 0, note: 'Insufficient text extracted' });
+      }
+    } catch (err) {
+      steps.push({ step: 'ppm_pdf', fields_found: 0, error: err.message });
+    }
+  } else if (afterDeck.length === 0) {
+    steps.push({ step: 'ppm_pdf', fields_found: 0, note: 'All fields already found from deck' });
+  } else {
+    steps.push({ step: 'ppm_pdf', fields_found: 0, note: 'No PPM uploaded' });
+  }
+
+  // ── Step 3: Web search for remaining missing fields ────────────────────
+  const afterPpm = stillMissing();
+  if (afterPpm.length > 0 && deal.investment_name) {
+    try {
+      const prompt = buildWebSearchPrompt(deal, operatorName, afterPpm);
+      const result = await callAI(prompt, { webSearch: true });
+      const parsed = parseAIResponse(result.text);
+
+      if (parsed) {
+        const foundFields = parsed.found_fields || parsed;
+        let webFieldCount = 0;
+        for (const [k, v] of Object.entries(foundFields)) {
+          if (v !== null && v !== undefined && !allFound[k]) {
+            allFound[k] = v;
+            allConfidence[k] = parsed.confidence?.[k] || 'medium';
+            webFieldCount++;
+          }
+        }
+        if (parsed.sources) allSources.push(...parsed.sources);
+        steps.push({ step: 'web_search', fields_found: webFieldCount, api: result.api_used });
+      } else {
+        steps.push({ step: 'web_search', fields_found: 0, note: 'Could not parse search results' });
+      }
+    } catch (err) {
+      steps.push({ step: 'web_search', fields_found: 0, error: err.message });
+    }
+  } else if (afterPpm.length === 0) {
+    steps.push({ step: 'web_search', fields_found: 0, note: 'All fields already found' });
+  } else {
+    steps.push({ step: 'web_search', fields_found: 0, note: 'No deal name for search' });
+  }
+
+  return {
+    found_fields: allFound,
+    confidence: allConfidence,
+    sources: allSources,
+    steps,
+    notes: `Pipeline complete: ${Object.keys(allFound).length} fields found across ${steps.filter(s => s.fields_found > 0).length} steps`
+  };
+}
+
+// ── Main handler ─────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Verify admin
   const auth = await verifyAdmin(req);
   if (!auth.authorized) {
     return res.status(403).json({ success: false, error: auth.error });
@@ -131,7 +552,6 @@ export default async function handler(req, res) {
 
       if (error) throw error;
 
-      // Compute completeness and sort worst-first, filter out 100% complete
       const queue = (data || [])
         .map(d => {
           const missing = getMissingFields(d);
@@ -163,17 +583,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Action: enrich a single deal
+    // Action: enrich a single deal via multi-step pipeline
     if (action === 'enrich-deal') {
-      const anthropicKey = process.env.ANTHROPIC_API_KEY;
-      if (!anthropicKey) {
-        return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
-      }
-
       const { dealId } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
 
-      // Fetch the full deal record
       const { data: deal, error: dealErr } = await supabase
         .from('opportunities')
         .select('*, management_company:management_companies(id, operator_name)')
@@ -193,78 +607,22 @@ export default async function handler(req, res) {
           deal_id: dealId,
           message: 'Deal is already 100% complete',
           found_fields: {},
+          steps: [],
           current_data: deal
         });
       }
 
-      // Call Claude with web search to find missing data
-      const prompt = buildEnrichmentPrompt(deal, operatorName, missingFields);
-
-      const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': anthropicKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4000,
-          tools: [{
-            type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 5
-          }],
-          messages: [{
-            role: 'user',
-            content: prompt
-          }]
-        })
-      });
-
-      if (!claudeResp.ok) {
-        const errText = await claudeResp.text();
-        throw new Error('Claude API error: ' + claudeResp.status + ' ' + errText);
-      }
-
-      const claudeData = await claudeResp.json();
-
-      // Extract the text response (may be after tool use blocks)
-      let responseText = '';
-      for (const block of (claudeData.content || [])) {
-        if (block.type === 'text') {
-          responseText += block.text;
-        }
-      }
-
-      // Parse JSON from response
-      let enrichResult;
-      try {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('No JSON found in response');
-        enrichResult = JSON.parse(jsonMatch[0]);
-      } catch (parseErr) {
-        return res.status(200).json({
-          success: true,
-          deal_id: dealId,
-          found_fields: {},
-          confidence: {},
-          sources: [],
-          notes: 'AI search completed but could not find structured data for this deal.',
-          raw_response: responseText.substring(0, 1000),
-          current_data: deal,
-          operator_name: operatorName,
-          missing_fields: missingFields.map(f => ({ key: f.key, label: f.label }))
-        });
-      }
+      // Run the multi-step enrichment pipeline
+      const result = await enrichDeal(supabase, deal, operatorName);
 
       return res.status(200).json({
         success: true,
         deal_id: dealId,
-        found_fields: enrichResult.found_fields || {},
-        confidence: enrichResult.confidence || {},
-        sources: enrichResult.sources || [],
-        notes: enrichResult.notes || '',
+        found_fields: result.found_fields,
+        confidence: result.confidence,
+        sources: result.sources,
+        steps: result.steps,
+        notes: result.notes,
         current_data: deal,
         operator_name: operatorName,
         missing_fields: missingFields.map(f => ({ key: f.key, label: f.label }))
@@ -279,7 +637,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No updates to apply' });
       }
 
-      // Sanitize updates - only allow known fields
       const allowedFields = QUALITY_FIELDS.map(f => f.key).concat([
         'equity_multiple', 'location', 'property_address',
         'available_to', 'debt_position', 'fund_aum',

@@ -15370,9 +15370,10 @@ async function cleanupEnrichDeal() {
   if (existingContent) {
     existingContent.innerHTML = '<div style="text-align:center;padding:30px;">' +
       '<div class="loading-spinner" style="margin:0 auto 12px;"></div>' +
-      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:4px;">Searching the web...</div>' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:4px;">Enriching deal data...</div>' +
       '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Looking for information about ' + (deal.investment_name || 'this deal') + '</div>' +
-      '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:12px;">This may take 15-30 seconds</div></div>';
+      '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:12px;">Step 1: Deck PDF → Step 2: PPM → Step 3: Web Search</div>' +
+      '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;">This may take 30-60 seconds</div></div>';
   }
 
   // Disable footer buttons
@@ -15407,6 +15408,28 @@ function cleanupRenderResults() {
   var foundKeys = Object.keys(foundFields).filter(function(k) { return foundFields[k] !== null && foundFields[k] !== undefined; });
 
   var html = '<div id="cleanupContent">';
+
+  // Pipeline steps summary
+  var steps = r.steps || [];
+  if (steps.length > 0) {
+    var stepLabels = { deck_pdf: 'Deck PDF', ppm_pdf: 'PPM', web_search: 'Web Search' };
+    html += '<div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap;">';
+    html += steps.map(function(s) {
+      var label = stepLabels[s.step] || s.step;
+      var found = s.fields_found || 0;
+      var color = found > 0 ? 'var(--primary)' : 'var(--text-muted)';
+      var bg = found > 0 ? 'var(--green-bg)' : 'var(--bg-cream)';
+      var icon = found > 0 ? '&#10003;' : (s.error ? '&#10007;' : '—');
+      var detail = found > 0 ? found + ' fields' : (s.note || s.error || 'no data');
+      if (detail.length > 30) detail = detail.substring(0, 28) + '…';
+      return '<div style="flex:1;min-width:100px;padding:8px 10px;background:' + bg + ';border-radius:8px;text-align:center;">' +
+        '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:' + color + ';">' + icon + ' ' + label + '</div>' +
+        '<div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);margin-top:2px;">' + detail + '</div>' +
+        (s.api ? '<div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);margin-top:1px;">via ' + s.api + '</div>' : '') +
+        '</div>';
+    }).join('');
+    html += '</div>';
+  }
 
   // Sources
   if (sources.length > 0) {
