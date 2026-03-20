@@ -1033,10 +1033,52 @@ html.dark .academy-gate-cta {
 .compare-empty-preview-vals { display:flex; gap:16px; flex:1; }
 .compare-empty-preview-val { flex:1; text-align:center; padding:4px 0; background:var(--bg-card); border-radius:4px; color:var(--text-dark); font-weight:500; }
 
+/* Compare remove button in headers */
+.compare-remove-btn {
+  position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--border); background:var(--bg-hover); cursor:pointer;
+  font-size:14px; line-height:1; color:var(--text-muted); display:flex; align-items:center;
+  justify-content:center; transition:all 0.15s; padding:0;
+}
+.compare-remove-btn:hover { background:#fee2e2; color:#ef4444; border-color:#fca5a5; }
+.compare-table .deal-header { position:relative; }
+.compare-clear-link { color:var(--text-muted); font-weight:500; text-decoration:none; margin-left:8px; font-size:11px; }
+.compare-clear-link:hover { color:#ef4444; text-decoration:underline; }
+.compare-empty-steps { display:flex; gap:24px; justify-content:center; margin:20px auto; max-width:500px; }
+.compare-empty-step { display:flex; align-items:center; gap:8px; font-size:13px; font-family:var(--font-ui); color:var(--text-dark); }
+.compare-empty-step-num { width:24px; height:24px; border-radius:50%; background:var(--primary); color:#fff; font-weight:700; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.compare-empty-step-text { text-align:left; }
+.compare-empty-step-text a { color:var(--primary); font-weight:600; text-decoration:none; }
+.compare-empty-step-text a:hover { text-decoration:underline; }
+.compare-floating-cta { position:fixed; bottom:24px; right:24px; z-index:9999; }
+.compare-floating-cta button {
+  display:flex; align-items:center; gap:8px; padding:12px 20px; border:none; border-radius:var(--radius);
+  background:var(--primary); color:#fff; font-family:var(--font-ui); font-size:13px; font-weight:700;
+  cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.2); transition:all 0.2s;
+}
+.compare-floating-cta button:hover { transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.25); }
+.compare-charts { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+.compare-chart-card {
+  background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px; text-align:center;
+}
+.compare-chart-card.full-width { grid-column:1 / -1; }
+.compare-chart-title { font-family:var(--font-ui); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:12px; }
+.compare-chart-legend { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:10px; font-family:var(--font-ui); font-size:11px; }
+.compare-chart-legend-item { display:flex; align-items:center; gap:4px; }
+.compare-chart-legend-swatch { width:10px; height:10px; border-radius:2px; }
+
+@media (max-width:768px) {
+  .compare-charts { grid-template-columns:1fr; }
+  .compare-empty-steps { flex-direction:column; align-items:center; gap:12px; }
+  .compare-floating-cta { bottom:16px; right:16px; }
+}
+
 @media print {
   .compare-search-wrap, .compare-chips-section, .compare-count,
   .compare-action-btn, .compare-notes-ta,
-  .sidebar, .topbar, .compare-empty { display:none !important; }
+  .sidebar, .topbar, .compare-empty, .compare-charts,
+  .compare-floating-cta, .compare-remove-btn { display:none !important; }
   .main { margin-left:0 !important; }
   .compare-table-wrap { border:none; box-shadow:none; }
   .compare-table { font-size:11px; }
@@ -4236,80 +4278,154 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
 }
 
 /* ── Income Fund Page ── */
-.if-hero{background:linear-gradient(135deg,#0a1e21 0%,#1a3a3f 50%,#0d2b1f 100%);border-radius:var(--radius);padding:48px 40px;margin-bottom:28px;color:#fff;position:relative;overflow:hidden}
-.if-hero .circle1{position:absolute;top:-30px;right:-30px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.08)}
-.if-hero .circle2{position:absolute;bottom:-50px;left:-50px;width:250px;height:250px;border-radius:50%;background:rgba(81,190,123,0.05)}
-.if-hero-inner{position:relative;z-index:1}
-.if-badge{display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(81,190,123,0.2);color:var(--green);font-family:var(--font-ui);font-size:11px;font-weight:700;margin-bottom:16px;letter-spacing:0.5px}
-.if-hero h1{font-family:var(--font-ui);font-size:32px;font-weight:800;margin:0 0 6px 0}
-.if-hero-sub{font-family:var(--font-body);font-size:16px;opacity:0.85;margin:0 0 8px 0;max-width:650px}
-.if-hero-stats{display:flex;gap:32px;margin-top:20px;flex-wrap:wrap}
+/* Color vars scoped to income fund */
+.if-page{--gp:#51BE7B;--td:#1F5159;--tn:#0A1E21;--ga:#40E47F;--gs:#32C583;--gh:#45A86C;--mb:#E7F5F0;--sl:#607179;--bd:rgba(31,81,89,0.13);--bdl:rgba(31,81,89,0.07);--fm:'SF Mono','Fira Mono',Consolas,monospace}
+
+/* Hero */
+.if-hero{background:linear-gradient(135deg,#0A1E21 0%,#1A4A3F 100%);border-radius:var(--radius);padding:64px 24px;text-align:center;color:#fff;margin-bottom:0}
+.if-hero h1{font-family:var(--font-headline);font-size:42px;color:#fff;margin-bottom:12px;letter-spacing:-0.5px;line-height:1.15}
+.if-hero h1 span{color:var(--gp)}
+.if-hero-sub{font-family:var(--font-body);font-size:20px;color:rgba(255,255,255,0.85);max-width:600px;margin:12px auto 28px;line-height:1.65}
+.if-hero-stats{display:flex;justify-content:center;gap:40px;margin-top:36px;flex-wrap:wrap}
 .if-hero-stat{text-align:center}
-.if-hero-stat .val{font-family:var(--font-ui);font-size:28px;font-weight:800;color:#51BE7B}
-.if-hero-stat .lbl{font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
-.if-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
-.if-metric{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
-.if-metric .label{font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:4px}
-.if-metric .value{font-family:var(--font-ui);font-size:26px;font-weight:800}
-.if-metric .sub{font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-top:2px}
-.if-section-title{font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin:32px 0 6px 0}
-.if-section-sub{font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:16px}
-.if-calc{background:linear-gradient(135deg,#0a1e21,#1a3a3f);border-radius:var(--radius);padding:28px 32px;margin-bottom:28px;color:#fff}
-.if-calc-results{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
-.if-calc-r{text-align:center;background:rgba(255,255,255,0.08);border-radius:var(--radius);padding:16px}
-.if-calc-r .v{font-family:var(--font-ui);font-size:24px;font-weight:800;color:#51BE7B}
-.if-calc-r .l{font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.55);margin-top:4px}
-.if-fund-row{display:grid;grid-template-columns:1fr 80px 70px 80px 90px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-ui);font-size:13px}
-.if-fund-row:nth-child(even){background:var(--bg-body)}
-.if-fund-row .name{font-weight:600;color:var(--text-dark)}
-.if-fund-row .strat{font-size:11px;color:var(--text-muted);margin-top:1px}
-.if-fund-row .num{text-align:right;font-family:'SF Mono','Fira Mono',monospace;font-size:12px;color:var(--text-secondary)}
-.if-fund-row .num.green{color:var(--green);font-weight:700}
-.if-fund-header{display:grid;grid-template-columns:1fr 80px 70px 80px 90px;padding:8px 14px;background:#0a1e21;border-radius:var(--radius) var(--radius) 0 0;color:rgba(255,255,255,0.45);font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
-.if-fund-header span{text-align:right}
-.if-fund-header span:first-child{text-align:left}
-.if-risk-dot{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700}
-.if-track-banner{background:linear-gradient(135deg,#51BE7B,#3a9d6a);border-radius:var(--radius);padding:24px 32px;margin-bottom:20px;text-align:center;color:#fff}
-.if-track-banner h3{font-family:var(--font-ui);font-size:24px;font-weight:800;margin:0}
-.if-track-banner p{font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.8);margin:6px 0 0 0}
-.if-yr-table{width:100%;border-collapse:collapse;font-size:13px}
-.if-yr-table thead tr{background:#0a1e21}
-.if-yr-table th{padding:10px 14px;font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.45);text-align:right}
-.if-yr-table th:first-child{text-align:left}
-.if-yr-table td{padding:10px 14px;text-align:right;font-family:'SF Mono','Fira Mono',monospace;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border)}
-.if-yr-table td:first-child{text-align:left;font-family:var(--font-ui);font-weight:600;color:var(--text-dark)}
-.if-testimonial{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;gap:16px;align-items:flex-start}
-.if-testimonial .avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#e7f5f0,rgba(31,81,89,0.15));display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:16px;font-weight:700;color:#1F5159;flex-shrink:0}
-.if-testimonial .quote{font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.65;font-style:italic}
-.if-testimonial .name{font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px}
-.if-testimonial .role{font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--green);margin-bottom:6px}
-.if-manager{background:#0a1e21;border-radius:var(--radius);padding:24px 28px;color:#fff;display:flex;gap:20px;align-items:flex-start}
-.if-manager .photo{flex-shrink:0;width:80px;height:80px;border-radius:50%;border:2px solid #51BE7B;background:#1a3a3f;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:22px;font-weight:700;color:#51BE7B}
-.if-cta-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;margin-top:32px}
-.if-fit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px}
-.if-fit-col{padding:0 24px}
-.if-fit-col:first-child{border-right:1px solid rgba(255,255,255,0.1)}
-.if-fit-item{display:flex;align-items:flex-start;gap:8px;font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.5;margin-bottom:8px}
-.if-compare-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
-.if-compare-table thead tr{background:#0a1e21}
-.if-compare-table th{padding:10px 14px;font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.45);text-align:center}
+.if-hero-stat .val{font-family:var(--font-headline);font-size:32px;color:var(--gp);line-height:1}
+.if-hero-stat .lbl{font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px;letter-spacing:0.5px;text-transform:uppercase}
+
+/* Section nav (sticky within .sub-page) */
+.if-section-nav{position:sticky;top:0;z-index:90;background:rgba(250,249,245,0.95);backdrop-filter:blur(8px);border-bottom:1px solid rgba(31,81,89,0.07);padding:0;margin:0 -24px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.if-section-nav::-webkit-scrollbar{display:none}
+.if-section-nav-inner{display:flex;gap:0;justify-content:center}
+.if-section-nav a{font-family:var(--font-ui);font-size:12px;font-weight:600;color:#607179;text-decoration:none;padding:12px 16px;white-space:nowrap;border-bottom:2px solid transparent;transition:all 0.15s}
+.if-section-nav a:hover{color:#1F5159}
+.if-section-nav a.if-active{color:#1F5159;border-bottom-color:#51BE7B}
+html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
+
+/* V2 Section headers */
+.if-v2-sh{margin-bottom:24px}
+.if-v2-sh-num{font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#51BE7B;margin-bottom:6px}
+.if-v2-sh h2{font-family:var(--font-headline);font-size:28px;color:#1F5159;letter-spacing:-0.3px;line-height:1.2}
+.if-v2-sh p{font-family:var(--font-body);font-size:14px;color:#607179;line-height:1.7;margin-top:8px;max-width:640px}
+
+/* V2 section wrapper */
+.if-v2-section{padding:48px 0}
+
+/* Highlight grid */
+.if-hl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.if-hl-card{background:var(--bg-card);border-radius:var(--radius);padding:18px 14px;border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07);text-align:center}
+.if-hl-val{font-family:var(--font-headline);font-size:22px;color:#1F5159;margin-bottom:4px;line-height:1}
+.if-hl-label{font-family:var(--font-ui);font-size:11px;color:#607179;font-weight:500}
+
+/* Metric cards */
+.if-mg{display:grid;gap:12px;margin-bottom:18px}
+.if-mg3{grid-template-columns:repeat(3,1fr)}
+.if-mg4{grid-template-columns:repeat(4,1fr)}
+.if-mc{background:var(--bg-card);border-radius:var(--radius);padding:14px 16px;border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07)}
+.if-mc.if-accent{border-left:3px solid #51BE7B}
+.if-mcl{font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#607179;margin-bottom:5px}
+.if-mcv{font-family:var(--font-headline);font-size:20px;color:#1F5159;line-height:1}
+.if-mcv.if-green{color:#32C583}
+.if-mcs{font-family:var(--font-ui);font-size:11px;color:#607179;margin-top:3px}
+
+/* Calculator */
+.if-calc-wrap{background:linear-gradient(135deg,#1F5159 0%,#1A5A4A 100%);border-radius:var(--radius);padding:28px 32px;color:#fff}
+.if-calc-results{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.if-calc-r{background:rgba(255,255,255,0.1);border-radius:var(--radius);padding:18px 16px;text-align:center}
+.if-calc-r .v{font-family:var(--font-headline);font-size:28px;color:#40E47F;line-height:1;margin-bottom:4px}
+.if-calc-r .l{font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);font-weight:600;text-transform:uppercase;letter-spacing:1px}
+
+/* Comparison table */
+.if-compare-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.if-compare-table thead tr{background:#0A1E21}
+.if-compare-table th{padding:9px 11px;text-align:center;font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.4);white-space:nowrap}
 .if-compare-table th:first-child{text-align:left}
-.if-compare-table th.hl{color:#51BE7B;background:rgba(81,190,123,0.18)}
-.if-compare-table td{padding:10px 14px;text-align:center;font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border)}
-.if-compare-table td:first-child{text-align:left;font-weight:600;color:var(--text-dark)}
-.if-compare-table td.hl{background:rgba(81,190,123,0.04);font-weight:600;color:var(--text-dark)}
+.if-compare-table th.if-act{color:#40E47F!important;background:rgba(81,190,123,0.18)!important}
+.if-compare-table td{padding:8px 11px;text-align:center;font-family:'SF Mono','Fira Mono',Consolas,monospace;font-size:12px;color:#607179;border-bottom:1px solid rgba(31,81,89,0.07)}
+.if-compare-table td:first-child{text-align:left;font-family:var(--font-ui);font-size:12.5px;color:var(--text-dark)}
+.if-compare-table td.if-act{background:rgba(81,190,123,0.04)!important;font-weight:600!important;color:#1F5159!important}
+
+/* Track record banner */
+.if-track-banner{background:linear-gradient(135deg,#51BE7B,#3a9d6a);border-radius:var(--radius);padding:24px 32px;margin-bottom:20px;text-align:center;color:#fff}
+.if-track-banner-title{font-family:var(--font-headline);font-size:26px}
+.if-track-banner-sub{font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.8);margin-top:6px}
+
+/* Year table */
+.if-yr-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.if-yr-table thead tr{background:#0A1E21}
+.if-yr-table th{padding:9px 11px;text-align:right;font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.4);white-space:nowrap}
+.if-yr-table th:first-child{text-align:left}
+.if-yr-table td{padding:8px 11px;text-align:right;font-family:'SF Mono','Fira Mono',Consolas,monospace;font-size:12px;color:#607179;border-bottom:1px solid rgba(31,81,89,0.07)}
+.if-yr-table td:first-child{text-align:left;font-family:var(--font-ui);font-size:12.5px;color:var(--text-dark)}
+
+/* Chart card */
+.if-chart-card{background:var(--bg-card);border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);padding:20px 22px;box-shadow:0 2px 12px rgba(10,30,33,0.07)}
+
+/* Testimonial cards */
+.if-testimonial{background:var(--bg-card);border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07);padding:20px 24px;display:flex;gap:16px;align-items:flex-start}
+.if-testimonial .if-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#E7F5F0,rgba(31,81,89,0.15));display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:18px;color:#1F5159;flex-shrink:0}
+.if-testimonial .if-t-name{font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px}
+.if-testimonial .if-t-role{font-family:var(--font-ui);font-size:10px;font-weight:600;color:#51BE7B;margin-bottom:6px}
+.if-testimonial .if-t-quote{font-family:var(--font-body);font-size:13px;color:#607179;line-height:1.65;font-style:italic}
+
+/* Manager bio */
+.if-manager{background:#0A1E21;border-radius:var(--radius);padding:24px 28px;color:#fff;display:flex;gap:20px;align-items:flex-start}
+.if-manager .if-photo{flex-shrink:0;width:80px;height:80px;border-radius:50%;border:2px solid #51BE7B;background:#1F5159;display:flex;align-items:center;justify-content:center;font-family:var(--font-headline);font-size:24px;color:#51BE7B}
+
+/* Accordion */
+.if-acc{border-bottom:1px solid rgba(31,81,89,0.07)}
+.if-acc:last-child{border-bottom:none}
+.if-acc-header{display:flex;justify-content:space-between;align-items:center;padding:14px 0;cursor:pointer;gap:12px}
+.if-acc-header h3{font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);margin:0}
+.if-acc-body{display:none;padding:0 0 14px;font-family:var(--font-body);font-size:13px;color:#607179;line-height:1.7}
+.if-tag{font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:3px 10px;border-radius:12px;white-space:nowrap}
+.if-tag-mod{background:#fff3cd;color:#856404}
+.if-tag-low{background:#E7F5F0;color:#45A86C}
+.if-chevron{font-size:10px;color:#607179;transition:transform 0.2s}
+
+/* CTA section */
+.if-cta-section{background:linear-gradient(135deg,#0A1E21 0%,#1A4A3F 100%);border-radius:var(--radius);padding:56px 24px;text-align:center;margin-top:24px}
+.if-cta-section h2{font-family:var(--font-headline);font-size:32px;color:#fff;margin-bottom:10px}
+.if-cta-section p{font-family:var(--font-body);font-size:15px;color:rgba(255,255,255,0.6);margin-bottom:24px;max-width:480px;margin-left:auto;margin-right:auto}
+
+/* Fit grid */
+.if-fit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.if-fit-col-left{padding-right:28px}
+.if-fit-col-right{border-left:1px solid rgba(255,255,255,0.1);padding-left:28px}
+.if-fit-item{display:flex;align-items:flex-start;gap:8px;font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.5;margin-bottom:8px}
+
+/* Section label */
+.if-sec-lbl{font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#32C583;margin-bottom:10px}
+
+/* Responsive */
 @media(max-width:768px){
-  .if-hero{padding:28px 20px}
-  .if-hero h1{font-size:24px}
-  .if-hero-stats{gap:20px}
-  .if-calc-results{grid-template-columns:1fr}
-  .if-fund-row,.if-fund-header{grid-template-columns:1fr 60px 55px 60px 70px;font-size:11px}
-  .if-fund-header{font-size:8px}
+  .if-hero{padding:40px 16px}
+  .if-hero h1{font-size:28px}
+  .if-hero-stats{gap:24px}
+  .if-hero-stat .val{font-size:24px}
+  .if-hero-stat .lbl{font-size:10px}
+  .if-v2-section{padding:32px 0}
+  .if-section-nav a{padding:10px 12px;font-size:11px}
+  .if-calc-results{grid-template-columns:1fr!important}
+  .if-calc-r .v{font-size:22px}
+  .if-calc-wrap{padding:20px 16px!important}
+  .if-hl-grid{grid-template-columns:repeat(3,1fr)}
+  .if-mg3,.if-mg4{grid-template-columns:1fr 1fr}
   .if-fit-grid{grid-template-columns:1fr}
-  .if-fit-col{padding:0}
-  .if-fit-col:first-child{border-right:none;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;margin-bottom:12px}
+  .if-fit-col-left{padding-right:0;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1)}
+  .if-fit-col-right{border-left:none;padding-left:0}
   .if-testimonial{flex-direction:column;gap:10px}
   .if-manager{flex-direction:column;align-items:center;text-align:center}
+  .if-cta-section{padding:36px 16px!important}
+  .if-cta-section h2{font-size:24px!important}
+}
+@media(max-width:480px){
+  .if-hero{padding:32px 12px}
+  .if-hero h1{font-size:24px}
+  .if-hero-stats{flex-direction:column;gap:16px}
+  .if-hero-stat .val{font-size:22px}
+  .if-section-nav a{padding:8px 10px;font-size:10px}
+  .if-v2-section{padding:24px 0}
+  .if-hl-grid{grid-template-columns:1fr 1fr}
+  .if-mg3,.if-mg4{grid-template-columns:1fr}
 }
 
 /* ========== BUY BOX REPORT RESPONSIVE ========== */
@@ -4405,7 +4521,7 @@ const _supa = window.supabase.createClient(
     <a class="nav-item active" href="#" data-page="deals" onclick="navigateTo('deals'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       Deal Flow
-      <span class="nav-badge" id="dealCountBadge">30</span>
+      <span class="nav-badge" id="dealCountBadge"></span>
     </a>
     <a class="nav-item" href="#" data-page="debtfunds" onclick="navigateTo('debtfunds'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
@@ -4698,7 +4814,7 @@ const _supa = window.supabase.createClient(
       </label>
       <button class="filter-clear" onclick="clearFilters()">Clear Filters</button>
       <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
-      <div class="filter-count"><span id="visibleCount">30</span> deals</div>
+      <div class="filter-count"><span id="visibleCount">0</span> deals</div>
     </div>
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
@@ -5022,7 +5138,7 @@ const _supa = window.supabase.createClient(
             <li>&#9744; Add server-side password hashing (store hash in GHL custom field or notes)</li>
             <li>&#9744; Password reset managed from GHL</li>
             <li>&#9744; Wire up remaining webhooks (buyBoxSync, subscribe, activity)</li>
-            <li>&#9744; Live deal data from Airtable via Make.com instead of embedded JSON</li>
+            <li>&#9745; Live deal data from Supabase API (migrated from Airtable)</li>
             <li>&#9744; Subscription/payment integration (Stripe)</li>
             <li>&#9744; Deck review request flow</li>
             <li>&#9744; GP introduction request flow</li>
@@ -5103,203 +5219,315 @@ const _supa = window.supabase.createClient(
   </div>
 
   <!-- PAGE: GYC Income Fund -->
-  <div class="page" id="page-incomefund">
+  <div class="page if-page" id="page-incomefund">
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">GYC Income Fund</div>
     </div>
-    <div class="sub-page" style="max-width:1060px">
-      <!-- HERO -->
-      <div class="if-hero">
-        <div class="circle1"></div>
-        <div class="circle2"></div>
-        <div class="if-hero-inner">
-          <div class="if-badge">NOW ACCEPTING INVESTORS &middot; REG D 506(c)</div>
-          <h1>Build a monthly income stream you can actually live on.</h1>
-          <p class="if-hero-sub"><strong style="color:#fff">$1,667/mo per $250K invested.</strong> One investment. 10 funds. Monthly deposits. We did the vetting so you don't have to.</p>
-          <div class="if-hero-stats">
-            <div class="if-hero-stat"><div class="val">8.0%</div><div class="lbl">Net LP Yield</div></div>
-            <div class="if-hero-stat"><div class="val">10</div><div class="lbl">Funds &middot; One Portfolio</div></div>
-            <div class="if-hero-stat"><div class="val">28 mo</div><div class="lbl">Zero Missed Payments</div></div>
-            <div class="if-hero-stat"><div class="val">$84K+</div><div class="lbl">Distributed to LPs</div></div>
-          </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px">
-            <a href="https://growyourcashflow.io/introcall" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:14px 32px;">Book a Call with Pascal</a>
-          </div>
+    <div class="sub-page" style="max-width:960px">
+
+      <!-- 1. HERO -->
+      <div class="if-hero" id="if-the-offer">
+        <h1>Build a <span style="color:#51BE7B">monthly income stream</span><br>you can actually live on.</h1>
+        <p class="if-hero-sub"><strong style="color:#fff">$1,667/mo per $250K invested.</strong> One investment. 10 funds. Monthly deposits. We did the vetting so you don&#8217;t have to.</p>
+        <div class="if-hero-stats">
+          <div class="if-hero-stat"><div class="val">8.0%</div><div class="lbl">Paid to You Today</div><div style="font-family:var(--font-ui);font-size:10px;color:#40E47F;margin-top:4px;font-weight:600">Targeting 10%+ at scale</div></div>
+          <div class="if-hero-stat"><div class="val">10</div><div class="lbl">Funds<br>One Portfolio</div></div>
+          <div class="if-hero-stat"><div class="val">28 mo</div><div class="lbl">Zero Missed Payments</div></div>
         </div>
       </div>
 
-      <!-- KEY METRICS -->
-      <div class="if-metrics">
-        <div class="if-metric"><div class="label">Minimum Investment</div><div class="value" style="color:var(--text-dark)">$100K</div><div class="sub">Accredited Investors Only</div></div>
-        <div class="if-metric"><div class="label">Commitment</div><div class="value" style="color:var(--text-dark)">3 Years</div><div class="sub">The premium that earns you 10%+</div></div>
-        <div class="if-metric"><div class="label">Distributions</div><div class="value" style="color:var(--green)">Monthly</div><div class="sub">Deposited to your bank</div></div>
-        <div class="if-metric"><div class="label">GP Co-Invest</div><div class="value" style="color:var(--green)">$400K</div><div class="sub">Pascal invests alongside you</div></div>
-        <div class="if-metric"><div class="label">Structure</div><div class="value" style="color:#1F5159">Fund of Funds</div><div class="sub">You invest once. We manage 10.</div></div>
-      </div>
-
-      <!-- INCOME CALCULATOR -->
-      <div class="if-section-title">What does this actually pay me?</div>
-      <p class="if-section-sub">Monthly distributions, deposited directly. Slide to your investment amount.</p>
-      <div class="if-calc">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-          <label style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:rgba(255,255,255,0.7)">If I invest</label>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:#fff" id="if-calc-display">$250,000</div>
-        </div>
-        <input type="range" id="if-calc-slider" min="100000" max="2000000" step="25000" value="250000" oninput="updateIfCalc()" style="width:100%;accent-color:#51BE7B;height:4px;background:rgba(81,190,123,0.18);border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer">
-        <div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px"><span>$100K</span><span>$500K</span><span>$1M</span><span>$2M</span></div>
-        <div style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);margin:12px 0 0;text-align:center">Based on current net LP yield of <strong style="color:#51BE7B">8.0%</strong> annually</div>
-        <div class="if-calc-results">
-          <div class="if-calc-r"><div class="v" id="if-calc-monthly">$1,667</div><div class="l">Deposited monthly</div></div>
-          <div class="if-calc-r"><div class="v" id="if-calc-annual">$20,000</div><div class="l">Annual income (pre-tax)</div></div>
-          <div class="if-calc-r"><div class="v" id="if-calc-3yr">$60,000</div><div class="l">Total over 3 years</div></div>
-        </div>
-        <div style="margin-top:16px;background:rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);text-align:center;line-height:1.8">
-          After the 3-year lockup, you may redeem your principal with 90 days' notice &mdash; or keep it invested.<br>
-          These distributions are <strong style="color:rgba(255,255,255,0.8)">income on top of your investment</strong>, not a drawdown of it.
+      <!-- 2. SECTION NAV -->
+      <div class="if-section-nav">
+        <div class="if-section-nav-inner">
+          <a href="#if-the-offer" class="if-active" onclick="event.preventDefault();document.getElementById('if-the-offer').scrollIntoView({behavior:'smooth',block:'start'})">The Offer</a>
+          <a href="#if-your-income" onclick="event.preventDefault();document.getElementById('if-your-income').scrollIntoView({behavior:'smooth',block:'start'})">Your Income</a>
+          <a href="#if-the-portfolio" onclick="event.preventDefault();document.getElementById('if-the-portfolio').scrollIntoView({behavior:'smooth',block:'start'})">The Portfolio</a>
+          <a href="#if-track-record" onclick="event.preventDefault();document.getElementById('if-track-record').scrollIntoView({behavior:'smooth',block:'start'})">Track Record</a>
+          <a href="#if-investors" onclick="event.preventDefault();document.getElementById('if-investors').scrollIntoView({behavior:'smooth',block:'start'})">Investors</a>
+          <a href="#if-risks" onclick="event.preventDefault();document.getElementById('if-risks').scrollIntoView({behavior:'smooth',block:'start'})">Risks</a>
+          <a href="#if-next-steps" onclick="event.preventDefault();document.getElementById('if-next-steps').scrollIntoView({behavior:'smooth',block:'start'})">Next Steps</a>
         </div>
       </div>
 
-      <!-- COMPARISON TABLE -->
-      <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--green);margin-bottom:10px">What $250K earns across different vehicles</div>
-      <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:28px">
-        <table class="if-compare-table">
-          <thead><tr><th style="text-align:left"></th><th>Savings</th><th>Money Market</th><th>S&amp;P 500</th><th class="hl">GYC Income Fund</th></tr></thead>
-          <tbody>
-            <tr><td>Annual yield</td><td>0.5%</td><td>4.5%</td><td>~10% (avg)</td><td class="hl">8&ndash;10%+</td></tr>
-            <tr><td>Monthly income</td><td>$104</td><td>$938</td><td>$0*</td><td class="hl">$1,667+</td></tr>
-            <tr><td>Predictable?</td><td>Yes</td><td>Yes</td><td>No</td><td class="hl">Yes</td></tr>
-            <tr><td>Monthly deposits?</td><td>No</td><td>Varies</td><td>No</td><td class="hl">Yes</td></tr>
-            <tr><td>Diversified?</td><td>N/A</td><td>N/A</td><td>500 stocks</td><td class="hl">10 private funds</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- IS THIS THE RIGHT FIT? -->
-      <div style="background:linear-gradient(135deg,#0a1e21 0%,#0d3840 100%);border-radius:var(--radius);padding:24px 28px;margin-bottom:28px;color:#fff;position:relative;overflow:hidden">
-        <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.05)"></div>
-        <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;margin-bottom:16px;position:relative">Is this the right fit?</div>
-        <div class="if-fit-grid" style="position:relative">
-          <div class="if-fit-col">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#51BE7B;margin-bottom:10px">Built for you if</div>
-            <div class="if-fit-item"><span style="color:#51BE7B;font-weight:700;flex-shrink:0">&#10003;</span> You're transitioning into retirement and need recurring income</div>
-            <div class="if-fit-item"><span style="color:#51BE7B;font-weight:700;flex-shrink:0">&#10003;</span> You just had an exit and want cash flow immediately</div>
-            <div class="if-fit-item"><span style="color:#51BE7B;font-weight:700;flex-shrink:0">&#10003;</span> You're building a family office and want diversified, hands-off income</div>
-            <div class="if-fit-item"><span style="color:#51BE7B;font-weight:700;flex-shrink:0">&#10003;</span> You want risk spread across 10 funds, not concentrated in one bet</div>
-          </div>
-          <div class="if-fit-col">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,120,120,0.8);margin-bottom:10px">Not the right fit if</div>
-            <div class="if-fit-item"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0">&#10007;</span> You need access to your capital within 3 years</div>
-            <div class="if-fit-item"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0">&#10007;</span> You're looking for massive upside or 50%+ returns</div>
-            <div class="if-fit-item"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0">&#10007;</span> You want a short-term parking spot for cash</div>
-            <div class="if-fit-item"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0">&#10007;</span> You're not an accredited investor</div>
+      <!-- 3. THE OFFER -->
+      <div class="if-v2-section" id="if-sec-the-offer">
+        <div class="if-v2-sh"><div class="if-v2-sh-num">The Offer</div><h2>What is the GYC Income Fund?</h2><p>A private credit fund-of-funds targeting accredited investors seeking consistent monthly income backed by collateralized lending.</p></div>
+        <div class="if-hl-grid">
+          <div class="if-hl-card"><div class="if-hl-val">10%+</div><div class="if-hl-label">Targeted annual return</div></div>
+          <div class="if-hl-card"><div class="if-hl-val">Monthly</div><div class="if-hl-label">Cash distributions</div></div>
+          <div class="if-hl-card"><div class="if-hl-val">10 Funds</div><div class="if-hl-label">Diversified portfolio</div></div>
+          <div class="if-hl-card"><div class="if-hl-val">1 K-1</div><div class="if-hl-label">One tax document. Not ten.</div></div>
+          <div class="if-hl-card"><div class="if-hl-val">1st Position</div><div class="if-hl-label">Your money gets paid back first</div></div>
+        </div>
+        <div class="if-mg if-mg4" style="margin-bottom:20px">
+          <div class="if-mc"><div class="if-mcl">Minimum investment</div><div class="if-mcv">$100,000</div><div class="if-mcs">Built for serious capital, not retail</div></div>
+          <div class="if-mc"><div class="if-mcl">Commitment</div><div class="if-mcv">3 Years</div><div class="if-mcs">The premium that earns you 10%+</div></div>
+          <div class="if-mc"><div class="if-mcl">Manager</div><div class="if-mcv">Pascal Wagner</div><div class="if-mcs">$400K of his own money invested alongside yours</div></div>
+          <div class="if-mc"><div class="if-mcl">Structure</div><div class="if-mcv">Fund of Funds</div><div class="if-mcs">You invest once. We manage 10 relationships.</div></div>
+        </div>
+        <!-- Is this the right fit? -->
+        <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:24px 28px;margin-top:4px;color:#fff;position:relative;overflow:hidden">
+          <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.05)"></div>
+          <div style="font-family:var(--font-headline);font-size:18px;margin-bottom:16px;position:relative">Is this the right fit?</div>
+          <div class="if-fit-grid" style="position:relative">
+            <div class="if-fit-col-left">
+              <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#40E47F;margin-bottom:10px">Built for you if</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You&#8217;re transitioning into retirement and need recurring income to live on</div>
+                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You just had an exit and want cash flow immediately</div>
+                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You&#8217;re building a family office and want diversified, hands-off income</div>
+                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You want risk spread across 10 funds, not concentrated in one bet</div>
+              </div>
+            </div>
+            <div class="if-fit-col-right">
+              <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,120,120,0.8);margin-bottom:10px">Not the right fit if</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You need access to your capital within 3 years</div>
+                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You&#8217;re looking for massive upside or 50%+ returns</div>
+                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You want a short-term parking spot for cash</div>
+                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You&#8217;re not an accredited investor</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- PORTFOLIO -->
-      <div class="if-section-title">Where does my money actually go?</div>
-      <p class="if-section-sub">Your capital is spread across 10 independent lending funds. No single fund holds more than 20%.</p>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
-        <div class="if-metric"><div class="label">Asset Classes</div><div class="value" style="color:var(--text-dark)">5</div><div class="sub">CRE, Resi, Aviation, Healthcare, Notes</div></div>
-        <div class="if-metric"><div class="label">Avg Fund Age</div><div class="value" style="color:var(--text-dark)">6 yrs</div><div class="sub">Oldest: 2014</div></div>
-        <div class="if-metric"><div class="label">Max Single Fund</div><div class="value" style="color:var(--text-dark)">20%</div><div class="sub">No concentration risk</div></div>
-      </div>
-      <div style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:16px">
-        <div class="if-fund-header"><span>Fund</span><span>Alloc</span><span>Risk</span><span>Yield</span><span style="text-align:right">Strategy</span></div>
-        <div id="if-fund-table"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;margin-bottom:28px;align-items:start">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center">
-          <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Allocation by Fund</div>
-          <canvas id="if-alloc-pie" width="220" height="220" style="max-width:100%"></canvas>
-          <div id="if-alloc-legend" style="margin-top:12px;text-align:left"></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
-          <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Yield by Fund</div>
-          <canvas id="if-yield-chart" height="260"></canvas>
-        </div>
-      </div>
-
-      <!-- TRACK RECORD -->
-      <div class="if-section-title">Has this actually worked?</div>
-      <div class="if-track-banner"><h3>28 Months. Zero Missed Payments.</h3><p>Every distribution paid on time since the first LP in January 2024.</p></div>
-      <div class="if-metrics" style="margin-bottom:20px">
-        <div class="if-metric"><div class="label">Net LP Yield</div><div class="value" style="color:var(--green)">8.0%</div><div class="sub">Annualized, net of all fees</div></div>
-        <div class="if-metric"><div class="label">Total Distributions</div><div class="value" style="color:var(--text-dark)">$84,455</div><div class="sub">Paid to LPs since inception</div></div>
-        <div class="if-metric"><div class="label">Current AUM</div><div class="value" style="color:var(--text-dark)">$552K</div><div class="sub">4 LPs</div></div>
-        <div class="if-metric"><div class="label">Monthly per $250K</div><div class="value" style="color:var(--green)">$1,667</div><div class="sub">At current 8% net yield</div></div>
-      </div>
-      <div style="border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:20px">
-        <table class="if-yr-table">
-          <thead><tr><th style="text-align:left">Year</th><th>End AUM</th><th>LPs</th><th>LP Distributions</th><th>Net LP Yield</th></tr></thead>
-          <tbody>
-            <tr><td>2023 <span style="font-size:10px;color:var(--text-muted)">(Nov&ndash;Dec setup)</span></td><td>$400K</td><td>1</td><td style="color:var(--text-muted)">&mdash;</td><td style="color:var(--text-muted)">First dist. Jan 2024</td></tr>
-            <tr><td>2024</td><td>$550K</td><td>4</td><td>$5,000</td><td style="color:var(--green);font-weight:700">8.0%</td></tr>
-            <tr><td>2025</td><td>$550K</td><td>4</td><td>$17,333</td><td style="color:var(--green);font-weight:700">8.0%</td></tr>
-            <tr><td>2026 <span style="font-size:10px;color:var(--text-muted)">(YTD)</span></td><td>$552K</td><td>4</td><td>$55,511</td><td style="color:var(--green);font-weight:700">8.0%</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
-          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:14px">Monthly Earnings vs. LP Distributions</div>
-          <canvas id="if-monthly-chart" height="220"></canvas>
-          <div style="display:flex;gap:16px;margin-top:10px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted)"><span><span style="display:inline-block;width:12px;height:3px;background:#51BE7B;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Gross earnings</span><span><span style="display:inline-block;width:12px;height:3px;background:#1F5159;border-radius:2px;vertical-align:middle;margin-right:4px"></span>LP distribution</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
-            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark)">Total Cash Paid to Investors</div>
-            <div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--green)">$84,455</div>
-          </div>
-          <canvas id="if-cumulative-chart" height="220"></canvas>
-        </div>
-      </div>
-
-      <!-- INVESTORS -->
-      <div class="if-section-title">What our investors are saying</div>
-      <p class="if-section-sub">A small fund on purpose &mdash; capped at 99 LPs and $10M.</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-        <div class="if-testimonial"><div class="avatar">TS</div><div><div class="name">Tod Spooner</div><div class="quote">"I was looking for something outside the stock market that could actually generate monthly income. 14 months in, the deposit shows up every month like clockwork."</div></div></div>
-        <div class="if-testimonial"><div class="avatar">GW</div><div><div class="name">Gabriela Wagner</div><div class="role">Pascal's mother &mdash; the reason this fund exists</div><div class="quote">"After my husband passed, Pascal built this so I'd have income I could count on every month without worrying about the stock market."</div></div></div>
-        <div class="if-testimonial"><div class="avatar">PL</div><div><div class="name">Philip Lima</div><div class="quote">"I spent months trying to vet private credit funds on my own. GYC did the work I didn't have time for. Now I get one deposit every month and one K-1 at tax time."</div></div></div>
-        <div class="if-testimonial"><div class="avatar">MS</div><div><div class="name">Matt Sommers</div><div class="quote">"I can see exactly where every dollar is and what it's earning. Pascal sends updates I actually read. That level of transparency is rare in this space."</div></div></div>
-      </div>
-      <!-- Invest Clearly -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:28px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <div style="background:#0a1e21;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#51BE7B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#51BE7B" stroke-width="2"/></svg><span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#fff;letter-spacing:0.5px">INVEST CLEARLY</span></div>
-          <div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase">Verified Third-Party Review</div><div style="display:flex;align-items:center;gap:4px;margin-top:2px"><span style="color:#F5A623;font-size:14px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--green)">5.00</span></div></div>
-        </div>
-        <div style="background:var(--bg-body);border-radius:8px;padding:14px 18px;border:1px solid var(--border)"><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px">"Great debt fund and communication"</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7">Invested in the debt fund which was a lower entry point. Solid communication with consistent distributions. Pascal is easy to work with. Will be investing more soon.</div></div>
-      </div>
-
-      <!-- FUND MANAGER -->
-      <div class="if-section-title">Who manages your capital</div>
-      <div class="if-manager" style="margin-bottom:28px">
-        <div class="photo">PW</div>
-        <div>
-          <div style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#51BE7B;margin-bottom:6px">Fund Manager &middot; CEO</div>
-          <div style="font-family:var(--font-ui);font-size:20px;font-weight:800;margin-bottom:8px">Pascal Wagner</div>
-          <div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.75);line-height:1.7;margin-bottom:12px">Founder and managing member of GYC Income Fund. Real estate investor, fund operator, and host of Grow Your Cashflow &mdash; helping accredited investors build passive income through private credit and fund-of-funds investing. Pascal invests $400K of his own capital alongside LPs in every fund.</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <a href="https://www.linkedin.com/in/pascalwagner/" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">LinkedIn</a>
-            <a href="https://www.youtube.com/@PascalWagner" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">YouTube</a>
-            <a href="mailto:pascal@growyourcashflow.io" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">Email</a>
+      <!-- 4. YOUR INCOME -->
+      <div class="if-v2-section" id="if-your-income">
+        <div class="if-v2-sh"><div class="if-v2-sh-num">Your Income</div><h2>What does this actually pay me?</h2><p>Monthly distributions, deposited directly. Here&#8217;s what it looks like at different investment levels.</p></div>
+        <!-- How it works explanation -->
+        <div style="background:#E7F5F0;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;border-left:4px solid #51BE7B">
+          <div style="font-family:var(--font-body);font-size:14px;color:#1F5159;line-height:1.7">
+            <strong>Slide to your investment amount. See your monthly deposit.</strong> Currently paying <strong style="color:#32C583">8.0% net annually</strong>, with 10%+ projected at scale.
           </div>
         </div>
-      </div>
+        <!-- Calculator -->
+        <div class="if-calc-wrap">
+          <div style="margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+              <label style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:rgba(255,255,255,0.7)">If I invest</label>
+              <div style="font-family:var(--font-headline);font-size:28px;color:#fff" id="if-calc-display">$250,000</div>
+            </div>
+            <input type="range" id="if-calc-slider" min="100000" max="2000000" step="25000" value="250000" oninput="updateIfCalc()" style="width:100%;accent-color:#51BE7B;height:4px;background:rgba(81,190,123,0.18);border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer">
+            <div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px"><span>$100K</span><span>$500K</span><span>$1M</span><span>$2M</span></div>
+          </div>
+          <div style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:16px;text-align:center">Based on current net LP yield of <strong style="color:#40E47F">8.0%</strong> annually &middot; Paid monthly to your bank account</div>
+          <div class="if-calc-results">
+            <div class="if-calc-r"><div class="v" id="if-calc-monthly">$1,667</div><div class="l">Deposited monthly</div></div>
+            <div class="if-calc-r"><div class="v" id="if-calc-annual">$20,000</div><div class="l">Annual income (pre-tax)</div></div>
+            <div class="if-calc-r"><div class="v" id="if-calc-3yr">$60,000</div><div class="l">Total over 3 years</div></div>
+          </div>
+          <div style="margin-top:16px;background:rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);text-align:center;line-height:1.8">
+            After the 3-year lockup, you may redeem your principal with 90 days&#8217; notice &#8212; or keep it invested.<br>
+            These distributions are <strong style="color:rgba(255,255,255,0.8)">income on top of your investment</strong>, not a drawdown of it.
+          </div>
+        </div>
 
-      <!-- CTA -->
-      <div class="if-cta-box">
-        <h3 style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);margin:0 0 8px 0">Ready to Start Earning Monthly Income?</h3>
-        <p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin:0 0 20px 0">Schedule a call with Pascal to learn more about the GYC Income Fund and see if it's the right fit for your portfolio.</p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-          <a href="https://growyourcashflow.io/introcall" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:14px 32px;">Book a Call</a>
+        <!-- Comparison table -->
+        <div style="margin-top:24px">
+          <div class="if-sec-lbl">What $250K earns across different vehicles</div>
+          <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07)">
+            <table class="if-compare-table" style="min-width:640px">
+              <thead><tr><th style="text-align:left"></th><th style="text-align:center">Savings Account</th><th style="text-align:center">Money Market</th><th style="text-align:center">S&amp;P 500</th><th class="if-act" style="text-align:center">GYC Income Fund</th></tr></thead>
+              <tbody>
+                <tr><td>Annual yield</td><td style="text-align:center">0.5%</td><td style="text-align:center">4.5%</td><td style="text-align:center">~10% (avg)</td><td class="if-act" style="text-align:center">8&#8211;10%+</td></tr>
+                <tr><td>Monthly income</td><td style="text-align:center">$104</td><td style="text-align:center">$938</td><td style="text-align:center">$0*</td><td class="if-act" style="text-align:center">$1,667+</td></tr>
+                <tr><td>Predictable?</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td class="if-act" style="text-align:center">Yes</td></tr>
+                <tr><td>Monthly deposits?</td><td style="text-align:center">No</td><td style="text-align:center">Varies</td><td style="text-align:center">No</td><td class="if-act" style="text-align:center">Yes</td></tr>
+                <tr><td>FDIC insured?</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td class="if-act" style="text-align:center">No</td></tr>
+                <tr><td>Diversified?</td><td style="text-align:center">N/A</td><td style="text-align:center">N/A</td><td style="text-align:center">500 stocks</td><td class="if-act" style="text-align:center">10 private funds</td></tr>
+                <tr><td>Effort required</td><td style="text-align:center">None</td><td style="text-align:center">None</td><td style="text-align:center">Moderate</td><td class="if-act" style="text-align:center">None</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- S&P callout -->
+          <div style="background:#0A1E21;border-radius:8px;padding:12px 16px;margin-top:10px;color:#fff">
+            <div style="font-family:var(--font-body);font-size:13px;line-height:1.7"><strong style="color:#40E47F">The S&amp;P averages 10% a year but pays you $0 per month.</strong> You have to sell shares to eat. GYC deposits income to your bank account every month &#8212; without touching your principal.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.4);margin-top:8px">This is not an apples-to-apples comparison. GYC is a private, illiquid investment with a 3-year commitment. But for investors who don&#8217;t need immediate access to their capital, the income difference is significant.</div>
+          </div>
+        </div>
+        <!-- Mid-page CTA -->
+        <div style="background:linear-gradient(135deg,#51BE7B,#3a9d6a);border-radius:var(--radius);padding:24px 32px;margin-top:24px;text-align:center">
+          <div style="font-family:var(--font-headline);font-size:20px;color:#fff;margin-bottom:8px">Ready to start collecting monthly income?</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.8);margin-bottom:16px">If you&#8217;ve seen enough, book an intro call. If not, keep scrolling &#8212; there&#8217;s a lot more detail below.</div>
+          <a href="https://growyourcashflow.io/introcall" target="_blank" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;padding:12px 28px;border-radius:24px;background:#fff;color:#1F5159;text-decoration:none;transition:all 0.15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">&#9742; Book a call</a>
         </div>
       </div>
+
+      <!-- 5. THE PORTFOLIO -->
+      <div class="if-v2-section" id="if-the-portfolio">
+        <div class="if-v2-sh"><div class="if-v2-sh-num">The Portfolio</div><h2>Where does my money actually go?</h2><p>Your capital is spread across 10 independent lending funds. No single fund holds more than 20% of the portfolio.</p></div>
+        <!-- GP Co-Invest banner -->
+        <div style="background:#0A1E21;border-radius:var(--radius);padding:18px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#51BE7B;margin-bottom:4px">GP Co-Invest</div>
+            <div style="font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.8)">Pascal has <strong style="color:#fff">$400,000</strong> of his own money in this fund. He eats his own cooking.</div>
+          </div>
+          <div style="font-family:var(--font-headline);font-size:32px;color:#40E47F;flex-shrink:0;margin-left:20px">$400K</div>
+        </div>
+        <div class="if-mg if-mg3" style="margin-bottom:18px">
+          <div class="if-mc"><div class="if-mcl">Asset classes</div><div class="if-mcv">5</div><div class="if-mcs">CRE, Resi, Aviation, Healthcare, Notes</div></div>
+          <div class="if-mc"><div class="if-mcl">Avg fund age</div><div class="if-mcv">6 yrs</div><div class="if-mcs">Oldest: 2014</div></div>
+          <div class="if-mc"><div class="if-mcl">Max single fund</div><div class="if-mcv">20%</div><div class="if-mcs">No concentration risk</div></div>
+        </div>
+        <!-- Fund Allocation & Yield chart -->
+        <div class="if-sec-lbl" style="margin-bottom:8px">Fund Allocation &amp; Yield</div>
+        <div class="if-chart-card" style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:16px">
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:2px;background:#1F5159"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Allocation %</span></div>
+              <div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:2px;border-radius:1px;background:#32C583"></div><div style="width:6px;height:6px;border-radius:50%;background:#32C583"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Gross Yield %</span></div>
+            </div>
+          </div>
+          <div style="position:relative;width:100%;height:280px"><canvas id="if-alloc-yield-chart"></canvas></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0 0;border-top:2px solid #1F5159;margin-top:12px">
+            <div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#1F5159">Blended Portfolio</div><div style="font-family:var(--font-ui);font-size:11px;color:#607179">Weighted average across all 10 funds</div></div>
+            <div style="display:flex;gap:24px"><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:600;color:#1F5159;width:50px;text-align:right">100%</div><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:700;color:#32C583;width:50px;text-align:right" id="if-blended-yield">13.6%</div></div>
+          </div>
+        </div>
+        <!-- Hidden fund table container for backward compat -->
+        <div id="if-fund-table" style="display:none"></div>
+      </div>
+
+      <!-- 6. TRACK RECORD -->
+      <div class="if-v2-section" id="if-track-record">
+        <div class="if-v2-sh"><div class="if-v2-sh-num">Track Record</div><h2>Has this actually worked?</h2></div>
+        <div class="if-track-banner">
+          <div class="if-track-banner-title">28 Months. Zero Missed Payments.</div>
+          <div class="if-track-banner-sub">Every distribution paid on time since GYC&#8217;s first LP in January 2024.</div>
+        </div>
+        <div class="if-mg if-mg4" style="margin-bottom:20px">
+          <div class="if-mc if-accent"><div class="if-mcl">Net LP Yield</div><div class="if-mcv if-green">8.0%</div><div class="if-mcs">Annualized, net of all fees</div></div>
+          <div class="if-mc"><div class="if-mcl">Total Distributions</div><div class="if-mcv">$84,455</div><div class="if-mcs">Paid to LPs since inception</div></div>
+          <div class="if-mc"><div class="if-mcl">Current AUM</div><div class="if-mcv">$552K</div><div class="if-mcs">4 LPs</div></div>
+          <div class="if-mc"><div class="if-mcl">Monthly per $250K</div><div class="if-mcv if-green">$1,667</div><div class="if-mcs">At current 8% net yield</div></div>
+        </div>
+        <!-- Year-by-year table -->
+        <div class="if-sec-lbl" style="margin-bottom:8px">Year-by-year performance</div>
+        <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);margin-bottom:22px">
+          <table class="if-yr-table" style="min-width:500px">
+            <thead><tr><th style="text-align:left">Year</th><th>End-of-Year AUM</th><th>LPs</th><th>LP Distributions</th><th>Net LP Yield</th></tr></thead>
+            <tbody>
+              <tr><td>2023 <span style="font-size:10px;color:#607179">(Nov&#8211;Dec setup)</span></td><td>$400K</td><td>1</td><td style="color:#607179">&#8212;</td><td style="color:#607179">First dist. Jan 2024</td></tr>
+              <tr><td>2024</td><td>$550K</td><td>4</td><td>$5,000</td><td style="color:#32C583;font-weight:700">8.0%</td></tr>
+              <tr><td>2025</td><td>$550K</td><td>4</td><td>$17,333</td><td style="color:#32C583;font-weight:700">8.0%</td></tr>
+              <tr><td>2026 <span style="font-size:10px;color:#607179">(YTD)</span></td><td>$552K</td><td>4</td><td>$55,511</td><td style="color:#32C583;font-weight:700">8.0%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Charts -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px">
+          <div class="if-chart-card">
+            <div style="font-family:var(--font-headline);font-size:17px;color:var(--text-dark);margin-bottom:14px">What the fund earns vs. what you keep</div>
+            <div style="position:relative;width:100%;height:240px"><canvas id="if-monthly-chart"></canvas></div>
+            <div style="display:flex;gap:16px;margin-top:10px;font-family:var(--font-ui);font-size:11px;color:#607179"><span><span style="display:inline-block;width:12px;height:3px;background:#51BE7B;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Gross return</span><span><span style="display:inline-block;width:12px;height:3px;background:#1F5159;border-radius:2px;vertical-align:middle;margin-right:4px"></span>LP net return</span></div>
+          </div>
+          <div class="if-chart-card">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
+              <div style="font-family:var(--font-headline);font-size:17px;color:var(--text-dark)">Total cash paid to investors</div>
+              <div style="font-family:var(--font-headline);font-size:20px;color:#32C583">$84,455</div>
+            </div>
+            <div style="position:relative;width:100%;height:240px"><canvas id="if-cumulative-chart"></canvas></div>
+          </div>
+        </div>
+        <!-- Fund Manager bio -->
+        <div style="margin-top:24px">
+          <div class="if-sec-lbl" style="margin-bottom:8px">Who manages your capital</div>
+          <div class="if-manager">
+            <div class="if-photo">PW</div>
+            <div>
+              <div style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#51BE7B;margin-bottom:6px">Fund Manager &middot; CEO</div>
+              <div style="font-family:var(--font-headline);font-size:20px;margin-bottom:8px">Pascal Wagner</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.75);line-height:1.7;margin-bottom:12px">Founder and managing member of GYC Income Fund. Real estate investor, fund operator, and host of Grow Your Cashflow &#8212; helping accredited investors build passive income through private credit and fund-of-funds investing. Pascal invests his own capital alongside LPs in every fund.</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <a href="https://www.linkedin.com/in/pascalwagner/" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">LinkedIn</a>
+                <a href="https://www.youtube.com/@PascalWagner" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">YouTube</a>
+                <a href="mailto:pascal@growyourcashflow.io" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">Email</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. INVESTORS -->
+      <div class="if-v2-section" id="if-investors">
+        <div class="if-v2-sh"><div class="if-v2-sh-num">Investors</div><h2>What our investors are saying</h2><p>A small fund on purpose &#8212; capped at 99 LPs and $10M. Here&#8217;s what our earliest investors have to say.</p></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="if-testimonial">
+            <div class="if-avatar">TS</div>
+            <div><div class="if-t-name">Tod Spooner</div><div class="if-t-quote">&#8220;I was looking for something outside the stock market that could actually generate monthly income. 14 months in, the deposit shows up every month like clockwork.&#8221;</div></div>
+          </div>
+          <div class="if-testimonial">
+            <div class="if-avatar">GW</div>
+            <div><div class="if-t-name">Gabriela Wagner</div><div class="if-t-role">Pascal&#8217;s mother &#8212; the reason this fund exists</div><div class="if-t-quote">&#8220;After my husband passed, Pascal built this so I&#8217;d have income I could count on every month without worrying about the stock market.&#8221;</div></div>
+          </div>
+          <div class="if-testimonial">
+            <div class="if-avatar">PL</div>
+            <div><div class="if-t-name">Philip Lima</div><div class="if-t-quote">&#8220;I spent months trying to vet private credit funds on my own. GYC did the work I didn&#8217;t have time for. Now I get one deposit every month and one K-1 at tax time.&#8221;</div></div>
+          </div>
+          <div class="if-testimonial">
+            <div class="if-avatar">MS</div>
+            <div><div class="if-t-name">Matt Sommers</div><div class="if-t-quote">&#8220;I can see exactly where every dollar is and what it&#8217;s earning. Pascal sends updates I actually read. That level of transparency is rare in this space.&#8221;</div></div>
+          </div>
+        </div>
+        <!-- Invest Clearly -->
+        <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07);padding:24px 28px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="background:#0A1E21;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#51BE7B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#51BE7B" stroke-width="2"/></svg><span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#fff;letter-spacing:0.5px">INVEST CLEARLY</span></div>
+              <div>
+                <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179;letter-spacing:1px;text-transform:uppercase">Verified Third-Party Review</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><span style="color:#F5A623;font-size:14px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:700;color:#32C583">5.00</span><span style="font-family:var(--font-ui);font-size:11px;color:#607179">(1 review)</span></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#51BE7B;background:#E7F5F0;padding:4px 10px;border-radius:10px">Claimed Profile</span>
+              <span style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#32C583;background:rgba(50,197,131,0.1);padding:4px 10px;border-radius:10px">Actively Raising</span>
+            </div>
+          </div>
+          <div style="background:var(--bg-cream);border-radius:8px;padding:16px 20px;border:1px solid rgba(31,81,89,0.07)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#51BE7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#51BE7B" stroke-width="1.5"/></svg>
+              <span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark)">Verified Investor</span>
+              <span style="font-family:var(--font-ui);font-size:11px;color:#607179">&middot; July 17, 2025</span>
+            </div>
+            <div style="font-family:var(--font-headline);font-size:16px;color:var(--text-dark);margin-bottom:8px">&#8220;Great debt fund and communication&#8221;</div>
+            <div style="font-family:var(--font-body);font-size:13px;color:#607179;line-height:1.7">Invested in the debt fund which was a lower entry point that directly with DLP. Solid communication with consistent distributions. Pascal is easy to work with and communication is great. Will be investing more soon.</div>
+          </div>
+          <div style="margin-top:12px;text-align:right">
+            <a href="https://www.investclearly.com/sponsor/grow-your-cashflow" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;display:inline-flex;align-items:center;gap:4px" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Invest Clearly &#8594;</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. RISKS -->
+      <div class="if-v2-section" id="if-risks">
+        <div class="if-v2-sh"><div class="if-v2-sh-num">Risks</div><h2>What could go wrong?</h2><p>We don&#8217;t hide risk. Here are the real trade-offs of investing in GYC, in plain English.</p></div>
+        <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07);overflow:hidden">
+          <div style="padding:0 24px">
+            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#128274; 3-year commitment &#8212; and that&#8217;s by design</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-mod">Trade-off</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">The 3-year commitment is what gives you access to these private credit returns. If these funds were liquid, they wouldn&#8217;t pay 10%+. The lockup is the premium &#8212; it&#8217;s the reason this yield exists. After 3 years, quarterly partial or full redemptions are available with 90 days&#8217; notice.</div></div>
+            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#128200; Interest rates could compress yields</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-mod">Moderate</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">6 of our 10 funds (65% of allocation) have some sensitivity to interest rates. Our 3 rate-independent funds provide meaningful insulation.</div></div>
+            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#9888;&#65039; An underlying fund could fail</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-low">Unlikely</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">Every fund is audited, with multi-year track records. No single fund holds more than 20%. For principal to be at material risk, 3+ funds would need to fail simultaneously.</div></div>
+            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#128101; You&#8217;re trusting Pascal to manage this</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-low">Operator risk</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">Full bank statement transparency, GP co-invests alongside LPs, open calendar for any LP to schedule a review.</div></div>
+            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#10060; Returns depend on 10 fund managers performing</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-mod">Reality</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">8&#8211;10% is a target, not a promise. Your income comes from 10 independent fund managers each running their own lending operations. If any of them underperform, it affects the blended yield. LP distributions are paid before GP carry, giving you first priority on income.</div></div>
+          </div>
+        </div>
+        <div style="background:#E7F5F0;border-radius:var(--radius);padding:14px 18px;margin-top:16px"><p style="margin:0;font-family:var(--font-body);font-size:13px;color:#1F5159;line-height:1.65"><strong>Bottom line:</strong> We don&#8217;t guarantee returns. But our structure is designed to absorb market stress: 10 independent managers, all first-position, all audited, diversified across 5 asset classes.</p></div>
+      </div>
+
+      <!-- 9. NEXT STEPS CTA -->
+      <div class="if-cta-section" id="if-next-steps">
+        <h2>Ready to start collecting monthly income?</h2>
+        <p>Book an intro call with Pascal. We&#8217;ll walk you through the fund, answer your questions, and tell you honestly if it&#8217;s a fit. If it&#8217;s not, we&#8217;ll say so.</p>
+        <div style="font-family:var(--font-ui);font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:20px;letter-spacing:0.3px">Limited to <strong style="color:#40E47F">99 investors</strong> and <strong style="color:#40E47F">$10M total AUM</strong>. 4 spots filled.</div>
+        <a href="https://growyourcashflow.io/introcall" target="_blank" style="font-family:var(--font-ui);font-size:15px;font-weight:700;padding:14px 36px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">&#9742; Book a call</a>
+        <div style="margin-top:20px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.4)">Or email <a href="mailto:pascal@growyourcashflow.io" style="color:#51BE7B">pascal@growyourcashflow.io</a></div>
+        <div style="margin-top:32px;max-width:600px;margin-left:auto;margin-right:auto;font-family:var(--font-ui);font-size:9px;color:rgba(255,255,255,0.15);line-height:1.6;text-align:center">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only. GYC Income Fund &middot; Grow Your Cashflow LLC &middot; growyourcashflow.com</div>
+      </div>
+
     </div>
   </div>
 
@@ -5720,8 +5948,10 @@ const _supa = window.supabase.createClient(
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add New
         </button>
+        <button id="adminQualityToggle" onclick="adminToggleQuality()" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;">Data Quality</button>
         <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);" id="adminResultCount"></div>
       </div>
+      <div id="adminQualityStats" style="display:none;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;"></div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
@@ -5772,14 +6002,13 @@ const _supa = window.supabase.createClient(
           <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
             <thead>
               <tr style="border-bottom:2px solid var(--border);background:var(--bg-cream);">
+                <th style="text-align:center;padding:10px 8px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:50px;">Pri</th>
                 <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Operator</th>
-                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deals</th>
+                <th style="text-align:center;padding:10px 8px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:50px;">Deals</th>
                 <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Status</th>
                 <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Contact</th>
                 <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Permission</th>
-                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Offering</th>
-                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Sharing</th>
-                <th style="width:120px;padding:10px 12px;"></th>
+                <th style="width:200px;padding:10px 12px;"></th>
               </tr>
             </thead>
             <tbody id="outreachTableBody"></tbody>
@@ -5975,6 +6204,7 @@ const _supa = window.supabase.createClient(
     <div class="content-area" style="padding:20px 24px;">
       <div id="compareSearchContainer"></div>
       <div id="compareChipsContainer"></div>
+      <div id="compareChartsContainer"></div>
       <div id="compareTableContainer"></div>
     </div>
   </div>
@@ -6927,6 +7157,7 @@ function showToast(msg) {
 function renderComparePage() {
   var searchEl = document.getElementById('compareSearchContainer');
   var chipsEl = document.getElementById('compareChipsContainer');
+  var chartsEl = document.getElementById('compareChartsContainer');
   var tableEl = document.getElementById('compareTableContainer');
   if (!chipsEl || !tableEl || !searchEl) return;
 
@@ -6988,11 +7219,20 @@ function renderComparePage() {
     });
   }
   chipsHtml += '</div></div>';
-  chipsHtml += '<div class="compare-count">' + compareIds.length + '/4 selected</div>';
-  chipsEl.innerHTML = chipsHtml;
 
   // --- Resolve deals ---
   var deals = compareIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
+
+  // Prune stale IDs that didn't resolve to actual deals
+  if (deals.length !== compareIds.length) {
+    compareIds = deals.map(function(d) { return d.id; });
+    saveCompareDeals(compareIds);
+  }
+
+  chipsHtml += '<div class="compare-count">' + deals.length + '/4 selected' +
+    (deals.length > 0 ? ' <a href="#" onclick="clearCompareDeals();return false;" class="compare-clear-link">Clear all</a>' : '') +
+    '</div>';
+  chipsEl.innerHTML = chipsHtml;
 
   // --- Empty State ---
   if (deals.length < 2) {
@@ -7001,8 +7241,13 @@ function renderComparePage() {
       '<div class="compare-empty-title">Compare deals side by side</div>' +
       '<div class="compare-empty-sub">' +
         (deals.length === 0
-          ? 'Save 2+ deals from Deal Flow, then come back here to compare them. Use the search above to find any deal, or click pipeline chips to quickly add saved deals.'
-          : 'Select one more deal to start comparing. Search above or click a pipeline chip.') +
+          ? 'Add at least 2 deals to get started.'
+          : 'Add one more deal to start comparing.') +
+      '</div>' +
+      '<div class="compare-empty-steps">' +
+        '<div class="compare-empty-step"><div class="compare-empty-step-num">1</div><div class="compare-empty-step-text">Browse deals in <a href="#" onclick="navigateTo(\'dealflow\');return false;">Deal Flow</a></div></div>' +
+        '<div class="compare-empty-step"><div class="compare-empty-step-num">2</div><div class="compare-empty-step-text">Click the + button on any card</div></div>' +
+        '<div class="compare-empty-step"><div class="compare-empty-step-num">3</div><div class="compare-empty-step-text">Come back here to compare</div></div>' +
       '</div>' +
       '<button class="compare-empty-cta" onclick="navigateTo(\'dealflow\')">Browse Deals \u2192</button>' +
       '<div class="compare-empty-preview">' +
@@ -7012,6 +7257,7 @@ function renderComparePage() {
         '<div class="compare-empty-preview-row"><div class="compare-empty-preview-label">Match Score</div><div class="compare-empty-preview-vals"><div class="compare-empty-preview-val">4/5</div><div class="compare-empty-preview-val">3/5</div><div class="compare-empty-preview-val">5/5</div></div></div>' +
       '</div>' +
       '</div>';
+    if (chartsEl) chartsEl.innerHTML = '';
     return;
   }
 
@@ -7036,6 +7282,7 @@ function renderComparePage() {
       '</div>' +
       renderAcademyGateCTA('compare_page', 'Unlock Deal Comparison', 'Compare deals side by side with buy box fit scoring, risk analysis, and Pascal\'s insights.') +
     '</div>';
+    if (chartsEl) chartsEl.innerHTML = '';
     return;
   }
 
@@ -7110,6 +7357,7 @@ function renderComparePage() {
   h += '<thead><tr><th class="col-label"></th>';
   deals.forEach(function(d, i) {
     h += '<th class="deal-header ' + colClass(i) + '">';
+    h += '<button class="compare-remove-btn" onclick="toggleCompareAdd(\'' + d.id + '\')" title="Remove from compare">&times;</button>';
     h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
     h += '<div class="deal-header-name">' + d.investmentName + '</div>';
     h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
@@ -7300,6 +7548,254 @@ function renderComparePage() {
 
   h += '</tbody></table></div>';
   tableEl.innerHTML = h;
+
+  // Render visual charts
+  if (chartsEl) renderCompareCharts(chartsEl, deals, matchScores);
+}
+
+// --- Compare Charts ---
+function renderCompareCharts(container, deals, matchScores) {
+  var COLORS = ['#51be7b', '#3b82f6', '#f59e0b', '#ef4444'];
+
+  // Legend HTML
+  var legendHtml = '<div class="compare-chart-legend">';
+  deals.forEach(function(d, i) {
+    legendHtml += '<div class="compare-chart-legend-item"><div class="compare-chart-legend-swatch" style="background:' + COLORS[i] + ';"></div>' + d.investmentName + '</div>';
+  });
+  legendHtml += '</div>';
+
+  var html = '<div class="compare-charts">';
+
+  // Radar chart
+  html += '<div class="compare-chart-card"><div class="compare-chart-title">Deal Profile</div>';
+  html += '<canvas id="compareRadarCanvas" width="320" height="320"></canvas>';
+  html += legendHtml + '</div>';
+
+  // Bar chart
+  html += '<div class="compare-chart-card"><div class="compare-chart-title">Key Metrics</div>';
+  html += '<canvas id="compareBarCanvas" width="320" height="280"></canvas>';
+  html += legendHtml + '</div>';
+
+  // Income projection (full width)
+  html += '<div class="compare-chart-card full-width"><div class="compare-chart-title">Projected Annual Income (at minimum investment)</div>';
+  html += '<canvas id="compareIncomeCanvas" width="700" height="180"></canvas>';
+  html += legendHtml + '</div>';
+
+  html += '</div>';
+  container.innerHTML = html;
+
+  // Draw after DOM insert
+  setTimeout(function() {
+    drawRadarChart(document.getElementById('compareRadarCanvas'), deals, matchScores, COLORS);
+    drawBarChart(document.getElementById('compareBarCanvas'), deals, COLORS);
+    drawIncomeChart(document.getElementById('compareIncomeCanvas'), deals, COLORS);
+  }, 0);
+}
+
+function drawRadarChart(canvas, deals, matchScores, COLORS) {
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  var cx = w / 2, cy = h / 2;
+  var r = Math.min(w, h) / 2 - 40;
+
+  var labels = ['Return', 'Cash Yield', 'Safety', 'Liquidity', 'Match'];
+  var n = labels.length;
+  var angleStep = (2 * Math.PI) / n;
+  var startAngle = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Background rings
+  for (var ring = 1; ring <= 4; ring++) {
+    var rr = (r * ring) / 4;
+    ctx.beginPath();
+    for (var j = 0; j <= n; j++) {
+      var a = startAngle + j * angleStep;
+      var px = cx + rr * Math.cos(a);
+      var py = cy + rr * Math.sin(a);
+      if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axis lines + labels
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'center';
+  for (var j = 0; j < n; j++) {
+    var a = startAngle + j * angleStep;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+    ctx.stroke();
+    var lx = cx + (r + 18) * Math.cos(a);
+    var ly = cy + (r + 18) * Math.sin(a);
+    ctx.fillText(labels[j], lx, ly + 4);
+  }
+
+  // Normalize values
+  function normalize(val, mx) { return Math.min(Math.max((val || 0) / mx, 0), 1); }
+
+  deals.forEach(function(d, di) {
+    var irr = typeof d.targetIRR === 'number' ? (d.targetIRR > 1 ? d.targetIRR : d.targetIRR * 100) : 0;
+    var coc = typeof d.cashOnCash === 'number' ? (d.cashOnCash > 1 ? d.cashOnCash : d.cashOnCash * 100) : 0;
+    var ltv = typeof d.avgLoanLTV === 'number' ? (d.avgLoanLTV > 1 ? d.avgLoanLTV : d.avgLoanLTV * 100) : 50;
+    var hold = d.holdPeriod || 5;
+    var ms = matchScores[di] ? matchScores[di].score / matchScores[di].max : 0;
+
+    var values = [
+      normalize(irr, 30),
+      normalize(coc, 15),
+      normalize(100 - ltv, 100),
+      normalize(Math.max(10 - hold, 0), 10),
+      ms
+    ];
+
+    ctx.beginPath();
+    for (var j = 0; j <= n; j++) {
+      var idx = j % n;
+      var a = startAngle + idx * angleStep;
+      var pr = r * values[idx];
+      var px = cx + pr * Math.cos(a);
+      var py = cy + pr * Math.sin(a);
+      if (j === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = COLORS[di] + '22';
+    ctx.fill();
+    ctx.strokeStyle = COLORS[di];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Dots
+    for (var j = 0; j < n; j++) {
+      var a = startAngle + j * angleStep;
+      var pr = r * values[j];
+      ctx.beginPath();
+      ctx.arc(cx + pr * Math.cos(a), cy + pr * Math.sin(a), 3, 0, 2 * Math.PI);
+      ctx.fillStyle = COLORS[di];
+      ctx.fill();
+    }
+  });
+}
+
+function drawBarChart(canvas, deals, COLORS) {
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  var metrics = [
+    { label: 'Target IRR', key: 'targetIRR', pct: true, max: 30 },
+    { label: 'Pref Return', key: 'preferredReturn', pct: true, max: 15 },
+    { label: 'Cash-on-Cash', key: 'cashOnCash', pct: true, max: 15 },
+    { label: 'Hold (yrs)', key: 'holdPeriod', pct: false, max: 10 }
+  ];
+
+  var leftPad = 80, rightPad = 50, topPad = 10, bottomPad = 10;
+  var chartW = w - leftPad - rightPad;
+  var groupH = (h - topPad - bottomPad) / metrics.length;
+  var barH = Math.min(Math.floor((groupH - 8) / deals.length), 14);
+
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textBaseline = 'middle';
+
+  metrics.forEach(function(m, mi) {
+    var groupY = topPad + mi * groupH;
+    var labelY = groupY + groupH / 2;
+
+    ctx.fillStyle = '#666';
+    ctx.textAlign = 'right';
+    ctx.fillText(m.label, leftPad - 8, labelY);
+
+    deals.forEach(function(d, di) {
+      var raw = d[m.key] || 0;
+      var val = typeof raw === 'number' ? (m.pct && raw <= 1 ? raw * 100 : raw) : 0;
+      var barW = Math.max((val / m.max) * chartW, 2);
+      var by = groupY + 4 + di * (barH + 2);
+
+      ctx.fillStyle = COLORS[di];
+      ctx.beginPath();
+      ctx.roundRect(leftPad, by, barW, barH, 3);
+      ctx.fill();
+
+      ctx.fillStyle = '#333';
+      ctx.textAlign = 'left';
+      ctx.fillText(m.pct ? val.toFixed(1) + '%' : val.toFixed(1), leftPad + barW + 4, by + barH / 2);
+    });
+  });
+}
+
+function drawIncomeChart(canvas, deals, COLORS) {
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  var goals = null;
+  try { goals = JSON.parse(localStorage.getItem('gycGoals') || 'null'); } catch(e) {}
+  var incomeGoal = goals ? (goals.monthlyTarget || goals.annualTarget / 12 || 0) * 12 : 0;
+
+  var leftPad = 140, rightPad = 60, topPad = 10, bottomPad = 20;
+  var chartW = w - leftPad - rightPad;
+  var barH = Math.min(Math.floor((h - topPad - bottomPad - 20) / deals.length), 28);
+
+  // Calculate annual income for each deal
+  var incomes = deals.map(function(d) {
+    var min = d.investmentMinimum || 100000;
+    var yld = d.preferredReturn || d.cashOnCash || 0;
+    if (yld > 1) yld = yld / 100;
+    return min * yld;
+  });
+
+  var maxIncome = Math.max.apply(null, incomes.concat([incomeGoal || 1]));
+
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textBaseline = 'middle';
+
+  deals.forEach(function(d, di) {
+    var by = topPad + di * (barH + 6);
+    var income = incomes[di];
+    var barW = Math.min(Math.max((income / maxIncome) * chartW, 2), chartW * 0.85);
+
+    // Deal name label
+    ctx.fillStyle = '#666';
+    ctx.textAlign = 'right';
+    var name = d.investmentName.length > 20 ? d.investmentName.substring(0, 18) + '...' : d.investmentName;
+    ctx.fillText(name, leftPad - 8, by + barH / 2);
+
+    // Bar
+    ctx.fillStyle = COLORS[di];
+    ctx.beginPath();
+    ctx.roundRect(leftPad, by, barW, barH, 4);
+    ctx.fill();
+
+    // Value label
+    ctx.fillStyle = '#333';
+    ctx.textAlign = 'left';
+    ctx.fillText('$' + Math.round(income).toLocaleString() + '/yr', leftPad + barW + 6, by + barH / 2);
+  });
+
+  // Goal line
+  if (incomeGoal > 0) {
+    var goalX = leftPad + (incomeGoal / maxIncome) * chartW;
+    ctx.beginPath();
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(goalX, topPad - 4);
+    ctx.lineTo(goalX, topPad + deals.length * (barH + 6));
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ef4444';
+    ctx.textAlign = 'center';
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('Goal: $' + Math.round(incomeGoal).toLocaleString() + '/yr', goalX, topPad + deals.length * (barH + 6) + 12);
+  }
 }
 
 // Auto-save compare notes to localStorage
@@ -9807,7 +10303,7 @@ function initAuth() {
   obs.observe(sb, { attributes: true, attributeFilter: ['class'] });
 })();
 
-// Fetch deal stages, goals, and portfolio from Airtable and populate localStorage
+// Fetch deal stages, goals, and portfolio from Supabase and populate localStorage
 async function fetchUserDataFromSupabase(email) {
   if (!email) return;
   try {
@@ -9891,7 +10387,7 @@ async function fetchUserDataFromSupabase(email) {
     // Also fetch buy box from GHL
     if (typeof fetchBuyBoxFromGHL === 'function') fetchBuyBoxFromGHL();
   } catch(e) {
-    console.warn('Failed to fetch user data from Airtable:', e.message);
+    console.warn('Failed to fetch user data:', e.message);
   }
 }
 
@@ -12056,6 +12552,8 @@ function incrementCounter(key) {
 function trackActivity(action, data) {
   const user = getUser();
   if (!user) return;
+  // Don't log events when admin is impersonating another user
+  if (typeof isImpersonating === 'function' && isImpersonating()) return;
   // Attach content ref if present (tracks which content drove this action)
   const ref = getContentRef();
   const enrichedData = { ...(data || {}), ...(ref ? { contentRef: ref } : {}) };
@@ -12084,7 +12582,7 @@ const _origOpenPanel = openPanel;
 openPanel = function(id) {
   _origOpenPanel(id);
   const deal = DEALS.find(d => d.id === id);
-  if (deal) {
+  if (deal && !(typeof isImpersonating === 'function' && isImpersonating())) {
     const viewCount = incrementCounter('viewCount');
     // Only sync to GHL every 5th view to avoid hammering API
     if (viewCount % 5 === 0) {
@@ -12105,7 +12603,7 @@ toggleSave = function(id) {
   const wasSaved = savedDeals.has(id);
   _origToggleSave(id);
   const deal = DEALS.find(d => d.id === id);
-  if (deal) {
+  if (deal && !(typeof isImpersonating === 'function' && isImpersonating())) {
     if (!wasSaved) {
       const saveCount = incrementCounter('saveCount');
       trackActivity('deal_saved', { dealId: id, dealName: deal.investmentName, saveCount: saveCount });
@@ -14374,13 +14872,19 @@ function filterAcademyCourses(level) {
 let _adminTab = 'deals';
 let _adminPage = 1;
 let _adminSearchTimer = null;
+let _adminQualityMode = false;
 
 function adminShowTab(tab, btn) {
   _adminTab = tab;
   _adminPage = 1;
+  _adminQualityMode = false;
   document.getElementById('adminSearch').value = '';
   document.querySelectorAll('#page-admin-manage .topbar-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  var qBtn = document.getElementById('adminQualityToggle');
+  if (qBtn) { qBtn.style.display = tab === 'deals' ? '' : 'none'; qBtn.style.background = 'transparent'; qBtn.style.color = 'var(--text-secondary)'; }
+  var qStats = document.getElementById('adminQualityStats');
+  if (qStats) qStats.style.display = 'none';
   adminLoadData();
 }
 
@@ -14393,6 +14897,15 @@ async function adminLoadData() {
   const user = getUser();
   if (!user || !isAdmin()) return;
   const search = document.getElementById('adminSearch')?.value?.trim() || '';
+  if (_adminQualityMode && _adminTab === 'deals') {
+    try {
+      const resp = await fetch('/api/admin-manage', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token }, body: JSON.stringify({ action: 'list-deals-quality', search: search }) });
+      const result = await resp.json();
+      if (!result.success) { console.error('Quality load error:', result.error); return; }
+      adminRenderQualityView(result.data, result.stats);
+    } catch (e) { console.error('Quality load failed:', e); }
+    return;
+  }
   try {
     const resp = await fetch('/api/admin-manage', {
       method: 'POST',
@@ -14559,6 +15072,7 @@ async function adminToggleArchive(id, archived) {
 }
 
 function adminCreateNew() {
+  if (_adminTab === 'deals') { intakeShowWizard(); return; }
   const row = {};
   if (_adminTab === 'deals') {
     row.investment_name = ''; row.asset_class = ''; row.deal_type = ''; row.target_irr = '';
@@ -14603,6 +15117,27 @@ adminSaveEdit = async function(id) {
     return _origAdminSaveEdit(id);
   }
 };
+
+// ========== DATA QUALITY DASHBOARD ==========
+function adminToggleQuality(){_adminQualityMode=!_adminQualityMode;var b=document.getElementById('adminQualityToggle');if(b){b.style.background=_adminQualityMode?'var(--primary)':'transparent';b.style.color=_adminQualityMode?'#fff':'var(--text-secondary)';}var q=document.getElementById('adminQualityStats');if(q)q.style.display=_adminQualityMode?'grid':'none';var p=document.getElementById('adminPagination');if(p)p.style.display=_adminQualityMode?'none':'flex';adminLoadData();}
+function adminRenderQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' deals';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Deals',stats.total_deals)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Deck',stats.no_deck,stats.no_deck>0?'var(--orange)':'var(--primary)')+sc('No PPM',stats.no_ppm,stats.no_ppm>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;';head.innerHTML='<th style="'+thS+'">Deal Name</th><th style="'+thS+'">Operator</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="'+thS+'text-align:center;width:50px;">Deck</th><th style="'+thS+'text-align:center;width:50px;">PPM</th><th style="width:60px;padding:10px 12px;"></th>';var chk='<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';var xm='<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:8px;background:'+barBg+';border-radius:4px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:4px;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 6px;background:var(--bg-cream);border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:10px 12px;border-bottom:1px solid var(--border);';return'<tr onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.investment_name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.management_company_name||'\u2014')+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:center;">'+(r.has_deck?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_ppm?chk:xm)+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No deals found</td></tr>';}
+
+// ========== DEAL INTAKE WIZARD ==========
+var _intakeStep=1,_intakeData={},_intakeOperators=[];
+function intakeShowWizard(){_intakeStep=1;_intakeData={};_intakeOperators=[];var ov=document.createElement('div');ov.className='modal-overlay';ov.id='intakeWizardModal';ov.onclick=function(e){if(e.target===ov)ov.remove();};ov.innerHTML='<div class="modal-card" style="max-width:680px;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">New Deal Intake</div><button onclick="document.getElementById(\'intakeWizardModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button></div><div id="intakeSteps" style="display:flex;gap:4px;margin-bottom:20px;"></div><div id="intakeBody"></div><div id="intakeFooter" style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;"></div></div>';document.body.appendChild(ov);intakeLoadOperators();intakeRenderStep();}
+async function intakeLoadOperators(){var user=getUser();try{var resp=await fetch('/api/admin-manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify({action:'list-operators',page:1,limit:500})});var result=await resp.json();if(result.success)_intakeOperators=result.data||[];}catch(e){console.warn('Failed to load operators:',e);}}
+function intakeRenderStep(){var stepsEl=document.getElementById('intakeSteps'),body=document.getElementById('intakeBody'),footer=document.getElementById('intakeFooter');if(!stepsEl||!body||!footer)return;var labels=['Upload & Extract','Review Fields','Link Operator','Publish'];stepsEl.innerHTML=labels.map(function(l,i){var n=i+1,active=n===_intakeStep,done=n<_intakeStep;var bg=active?'var(--primary)':done?'var(--green-bg)':'var(--bg-cream)';var col=active?'#fff':done?'var(--primary)':'var(--text-muted)';return'<div style="flex:1;text-align:center;padding:8px 4px;border-radius:var(--radius-sm);background:'+bg+';font-family:var(--font-ui);font-size:11px;font-weight:700;color:'+col+';">'+n+'. '+l+'</div>';}).join('');if(_intakeStep===1)intakeRenderStep1(body,footer);else if(_intakeStep===2)intakeRenderStep2(body,footer);else if(_intakeStep===3)intakeRenderStep3(body,footer);else if(_intakeStep===4)intakeRenderStep4(body,footer);}
+function intakeRenderStep1(body,footer){body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Paste PPM or offering text</div><textarea id="intakePPMText" placeholder="Paste the full PPM text, offering summary, or deal deck content here..." style="width:100%;min-height:200px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;background:var(--bg-card);"></textarea><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:8px;">AI will extract deal fields automatically. You can also skip and fill manually.</div>';footer.innerHTML='<button onclick="intakeSkipExtract()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Skip (Fill Manually)</button><button onclick="intakeExtract()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Extract with AI</button>';}
+function intakeSkipExtract(){_intakeData={};_intakeStep=2;intakeRenderStep();}
+async function intakeExtract(){var text=document.getElementById('intakePPMText')?.value?.trim();if(!text){alert('Please paste some text first');return;}var btn=document.querySelector('#intakeFooter button:last-child');if(btn){btn.disabled=true;btn.textContent='Extracting...';}var user=getUser();try{var resp=await fetch('/api/deal-enrich',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify({text:text,mode:'extract'})});var result=await resp.json();if(result.success&&result.data)_intakeData=result.data;else{console.warn('Extraction returned no data:',result);_intakeData={};}}catch(e){console.error('Extract failed:',e);_intakeData={};}_intakeStep=2;intakeRenderStep();}
+function intakeRenderStep2(body,footer){var d=_intakeData;var fields=[{key:'investment_name',label:'Deal Name',val:d.investmentName||d.investment_name||''},{key:'asset_class',label:'Asset Class',val:d.assetClass||d.asset_class||'',type:'select',opts:['Lending','Multi Family','Self Storage','Industrial','Hotels/Hospitality','RV/Mobile Home Parks','Short Term Rental','Mixed Use','Office','Retail','Oil & Gas','Other']},{key:'deal_type',label:'Deal Type',val:d.dealType||d.deal_type||'',type:'select',opts:['Fund','Syndication','Direct','REIT']},{key:'strategy',label:'Strategy',val:d.strategy||''},{key:'investment_strategy',label:'Investment Strategy',val:d.investmentStrategy||d.investment_strategy||'',type:'textarea'},{key:'target_irr',label:'Target IRR',val:d.targetIRR||d.target_irr||''},{key:'preferred_return',label:'Preferred Return',val:d.preferredReturn||d.preferred_return||''},{key:'cash_on_cash',label:'Cash on Cash',val:d.cashOnCash||d.cash_on_cash||''},{key:'investment_minimum',label:'Minimum Investment ($)',val:d.investmentMinimum||d.investment_minimum||''},{key:'hold_period_years',label:'Hold Period (years)',val:d.holdPeriod||d.hold_period_years||''},{key:'offering_size',label:'Offering Size ($)',val:d.offeringSize||d.offering_size||''},{key:'offering_type',label:'Offering Type',val:d.offeringType||d.offering_type||'',type:'select',opts:['506(b)','506(c)','Reg A','Reg D']},{key:'distributions',label:'Distributions',val:d.distributions||'',type:'select',opts:['Monthly','Quarterly','Annual','None']},{key:'lp_gp_split',label:'LP/GP Split',val:d.lpGpSplit||d.lp_gp_split||''},{key:'fees',label:'Fees',val:d.fees||''},{key:'deck_url',label:'Deck URL',val:d.deck_url||''},{key:'status',label:'Status',val:d.status||'open',type:'select',opts:['open','closed','coming_soon']}];var fieldsHtml=fields.map(function(f){var isEmpty=!f.val;var hl=isEmpty?'border-color:var(--orange);':'';var inp;if(f.type==='select'){inp='<select class="field-input intake-field" data-key="'+f.key+'" style="padding:8px 12px;font-size:13px;'+hl+'"><option value="">--</option>'+f.opts.map(function(o){return'<option value="'+o+'"'+(f.val===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';}else if(f.type==='textarea'){inp='<textarea class="field-input intake-field" data-key="'+f.key+'" style="padding:8px 12px;font-size:13px;min-height:60px;resize:vertical;'+hl+'">'+(f.val||'')+'</textarea>';}else{inp='<input type="text" class="field-input intake-field" data-key="'+f.key+'" value="'+String(f.val).replace(/"/g,'&quot;')+'" style="padding:8px 12px;font-size:13px;'+hl+'">';}return'<div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">'+f.label+(isEmpty?' <span style="color:var(--orange);font-size:9px;">MISSING</span>':'')+'</label>'+inp+'</div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Review & Edit Fields</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:12px;">Fields highlighted in orange are empty. Fill as many as you can.</div><div style="max-height:400px;overflow-y:auto;padding-right:8px;">'+fieldsHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=1;intakeRenderStep()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Back</button><button onclick="intakeSaveStep2()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Next: Link Operator</button>';}
+function intakeSaveStep2(){var fields=document.querySelectorAll('.intake-field');var deal={};fields.forEach(function(f){deal[f.dataset.key]=f.value===''?null:f.value;});_intakeData.deal_fields=deal;_intakeStep=3;intakeRenderStep();}
+function intakeRenderStep3(body,footer){var opOpts=_intakeOperators.map(function(o){return'<option value="'+o.id+'">'+(o.name||o.operator_name)+'</option>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Link to Operator</div><div style="margin-bottom:16px;"><label class="field-label" style="font-size:11px;">Select Existing Operator</label><select id="intakeOperatorSelect" class="field-input" onchange="intakeToggleNewOp()" style="padding:8px 12px;font-size:13px;"><option value="">-- Select --</option>'+opOpts+'<option value="__new__">+ Create New Operator</option></select></div><div id="intakeNewOpFields" style="display:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;background:var(--bg-cream);"><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-secondary);">New Operator Details</div><div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">Operator Name</label><input type="text" id="intakeNewOpName" class="field-input" style="padding:8px 12px;font-size:13px;" value="'+((_intakeData.managementCompany||'')+'').replace(/"/g,'&quot;')+'"></div><div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">Website</label><input type="text" id="intakeNewOpWebsite" class="field-input" style="padding:8px 12px;font-size:13px;"></div><div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">CEO / Managing Partner</label><input type="text" id="intakeNewOpCeo" class="field-input" style="padding:8px 12px;font-size:13px;" value="'+((_intakeData.ceo||'')+'').replace(/"/g,'&quot;')+'"></div></div>';setTimeout(function(){if(_intakeData.managementCompany){var sel=document.getElementById('intakeOperatorSelect');if(sel){var match=_intakeOperators.find(function(o){return(o.name||o.operator_name||'').toLowerCase()===_intakeData.managementCompany.toLowerCase();});if(match)sel.value=match.id;else{sel.value='__new__';intakeToggleNewOp();}}}},0);footer.innerHTML='<button onclick="_intakeStep=2;intakeRenderStep()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Back</button><button onclick="intakeSaveStep3()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Next: Review & Publish</button>';}
+function intakeToggleNewOp(){var sel=document.getElementById('intakeOperatorSelect');var flds=document.getElementById('intakeNewOpFields');if(flds)flds.style.display=sel&&sel.value==='__new__'?'block':'none';}
+function intakeSaveStep3(){var sel=document.getElementById('intakeOperatorSelect');var val=sel?sel.value:'';if(val==='__new__'){_intakeData.create_operator=true;_intakeData.operator_data={name:document.getElementById('intakeNewOpName')?.value||'',website:document.getElementById('intakeNewOpWebsite')?.value||'',ceo:document.getElementById('intakeNewOpCeo')?.value||''};_intakeData.operator_id=null;}else{_intakeData.create_operator=false;_intakeData.operator_id=val||null;_intakeData.operator_data=null;}_intakeStep=4;intakeRenderStep();}
+function intakeRenderStep4(body,footer){var d=_intakeData.deal_fields||{};var opName=_intakeData.create_operator?(_intakeData.operator_data?.name||'New operator'):(_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.name||_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.operator_name||'None');var sRows=[['Deal Name',d.investment_name||'\u2014'],['Asset Class',d.asset_class||'\u2014'],['Deal Type',d.deal_type||'\u2014'],['Target IRR',d.target_irr||'\u2014'],['Minimum',d.investment_minimum?'$'+Number(d.investment_minimum).toLocaleString():'\u2014'],['Operator',opName+(_intakeData.create_operator?' (NEW)':'')],['Status',d.status||'open']];var sHtml=sRows.map(function(r){return'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light);"><span style="color:var(--text-muted);font-size:12px;">'+r[0]+'</span><span style="font-weight:600;font-size:12px;">'+r[1]+'</span></div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Review & Publish</div><div style="background:var(--bg-cream);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;">'+sHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=3;intakeRenderStep()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Back</button><button onclick="intakePublish()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Publish Deal</button>';}
+async function intakePublish(){var user=getUser();var btn=document.querySelector('#intakeFooter button:last-child');if(btn){btn.disabled=true;btn.textContent='Publishing...';}var payload={action:'intake-create',deal_data:_intakeData.deal_fields||{},operator_id:_intakeData.operator_id||null,create_operator:!!_intakeData.create_operator,operator_data:_intakeData.operator_data||null};try{var resp=await fetch('/api/admin-manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify(payload)});var result=await resp.json();if(result.success){document.getElementById('intakeWizardModal')?.remove();adminLoadData();}else{alert('Publish failed: '+(result.error||'Unknown error'));if(btn){btn.disabled=false;btn.textContent='Publish Deal';}}}catch(e){alert('Publish failed: '+e.message);if(btn){btn.disabled=false;btn.textContent='Publish Deal';}}}
+
 
 // Auto-load admin data when navigating to the page
 const _origNavigateTo = typeof navigateTo === 'function' ? navigateTo : null;
@@ -14687,8 +15222,13 @@ function outreachRenderTable(rows, total) {
     if (row.can_show_metrics) sharing.push('Metrics');
     if (row.can_show_deck) sharing.push('Deck');
     if (row.can_show_ppm) sharing.push('PPM');
+    const pri = row.priority || 0;
+    const priColor = pri >= 30 ? '#ef4444' : pri >= 15 ? '#f59e0b' : '#6b7280';
 
     return `<tr style="cursor:pointer;" onmouseover="this.style.background='var(--bg-cream)'" onmouseout="this.style.background=''">
+      <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:center;">
+        <span style="display:inline-block;min-width:28px;padding:2px 6px;border-radius:10px;font-size:12px;font-weight:800;font-family:var(--font-ui);color:${priColor};background:${priColor}11;">${pri}</span>
+      </td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);">
         <div style="font-weight:700;color:var(--text-dark);">${row.operator_name || '—'}</div>
         <div style="font-size:11px;color:var(--text-muted);">${row.ceo || ''}</div>
@@ -14706,12 +15246,14 @@ function outreachRenderTable(rows, total) {
           ? '<span style="color:#10b981;font-weight:700;">Granted</span>' + (row.permission_date ? '<div style="font-size:10px;color:var(--text-muted);">' + new Date(row.permission_date).toLocaleDateString() + '</div>' : '')
           : '<span style="color:var(--text-muted);">—</span>'}
       </td>
-      <td style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;text-transform:uppercase;font-weight:600;color:var(--text-secondary);">${row.offering_type && row.offering_type !== 'unknown' ? row.offering_type : '—'}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:11px;">${sharing.length ? sharing.join(', ') : '—'}</td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;">
-        <div style="display:flex;gap:6px;justify-content:flex-end;">
-          <button onclick="outreachShowEmail('${row.id}')" style="padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);" title="Generate email">Email</button>
-          <button onclick="outreachEdit('${row.id}')" style="padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button>
+        <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;">
+          ${row.outreach_status === 'not_contacted' ? '<button onclick="event.stopPropagation();outreachQuickAction(\'' + row.id + '\',\'contacted\',\'email\')" style="padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;">Contact</button>' : ''}
+          ${row.outreach_status === 'contacted' ? '<button onclick="event.stopPropagation();outreachQuickAction(\'' + row.id + '\',\'follow_up\',null)" style="padding:3px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;">Follow Up</button>' : ''}
+          ${row.outreach_status !== 'approved' && row.outreach_status !== 'denied' ? '<button onclick="event.stopPropagation();outreachQuickApprove(\'' + row.id + '\')" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;">Approve</button>' : ''}
+          <button onclick="event.stopPropagation();outreachQuickLog(\'' + row.id + '\',\'' + (row.operator_name || '').replace(/'/g, "\\'") + '\')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Log</button>
+          <button onclick="event.stopPropagation();outreachShowEmail('${row.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Email</button>
+          <button onclick="event.stopPropagation();outreachEdit('${row.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button>
         </div>
       </td>
     </tr>`;
@@ -14729,6 +15271,63 @@ function outreachRenderTable(rows, total) {
       '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);">Page ' + _outreachPage + ' of ' + totalPages + '</span>' +
       '<button onclick="outreachPage(' + (_outreachPage + 1) + ')" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;font-family:var(--font-ui);font-size:12px;"' + (_outreachPage >= totalPages ? ' disabled style="opacity:0.3"' : '') + '>Next &rarr;</button>';
   } else if (pag) { pag.innerHTML = ''; }
+}
+
+// Quick action helpers
+async function outreachQuickAction(mcId, status, method) {
+  const user = getUser();
+  await fetch('/api/operator-outreach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify({ action: 'upsert', managementCompanyId: mcId, outreach_status: status, outreach_method: method })
+  });
+  outreachLoadData(); outreachLoadStats();
+}
+
+async function outreachQuickApprove(mcId) {
+  const user = getUser();
+  await fetch('/api/operator-outreach', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify({ action: 'upsert', managementCompanyId: mcId, outreach_status: 'approved', permission_granted: true, can_show_metrics: true, can_show_deck: true })
+  });
+  outreachLoadData(); outreachLoadStats();
+}
+
+function outreachQuickLog(mcId, operatorName) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'outreachLogModal';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  const typeOptions = ['note', 'call', 'meeting', 'email_sent', 'reply_received'];
+  overlay.innerHTML = `<div class="modal-card" style="max-width:440px;">
+    <div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);margin-bottom:16px;">Log Interaction — ${operatorName}</div>
+    <div class="field" style="margin-bottom:10px;"><label class="field-label" style="font-size:11px;">Type</label>
+      <select id="ql_type" class="field-input" style="padding:8px 12px;font-size:13px;">
+        ${typeOptions.map(t => `<option value="${t}">${t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>`).join('')}
+      </select></div>
+    <div class="field" style="margin-bottom:16px;"><label class="field-label" style="font-size:11px;">Note</label>
+      <textarea id="ql_note" class="field-input" rows="3" style="padding:8px 12px;font-size:13px;resize:vertical;" placeholder="What happened?"></textarea></div>
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button onclick="document.getElementById('outreachLogModal').remove()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
+      <button onclick="outreachSubmitLog('${mcId}')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Log</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function outreachSubmitLog(mcId) {
+  const user = getUser();
+  const type = document.getElementById('ql_type').value;
+  const note = document.getElementById('ql_note').value;
+  try {
+    await fetch('/api/operator-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'log-interaction', managementCompanyId: mcId, type, note })
+    });
+    document.getElementById('outreachLogModal')?.remove();
+  } catch (e) { alert('Log failed: ' + e.message); }
 }
 
 function outreachPage(p) { _outreachPage = p; outreachLoadData(); }
@@ -14820,8 +15419,21 @@ function outreachShowEditModal(data, mcId) {
         <input type="checkbox" id="oe_updates" ${data.send_performance_updates ? 'checked' : ''}> Performance Updates</label>
     </div>
 
-    <div class="field" style="margin-bottom:16px;"><label class="field-label" style="font-size:11px;">Notes</label>
-      <textarea id="oe_notes" class="field-input" rows="3" style="padding:8px 12px;font-size:13px;resize:vertical;">${data.permission_notes || ''}</textarea></div>
+    <div class="field" style="margin-bottom:16px;"><label class="field-label" style="font-size:11px;">Pinned Notes</label>
+      <textarea id="oe_notes" class="field-input" rows="2" style="padding:8px 12px;font-size:13px;resize:vertical;">${data.permission_notes || ''}</textarea></div>
+
+    <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Interaction History</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <select id="oe_log_type" class="field-input" style="padding:6px 10px;font-size:12px;flex:0 0 auto;">
+        <option value="note">Note</option><option value="call">Call</option><option value="meeting">Meeting</option>
+        <option value="email_sent">Email Sent</option><option value="reply_received">Reply Received</option>
+      </select>
+      <input type="text" id="oe_log_note" class="field-input" placeholder="What happened?" style="padding:6px 10px;font-size:12px;flex:1;">
+      <button onclick="outreachLogFromModal('${mcId}')" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Log</button>
+    </div>
+    <div id="oe_timeline" style="max-height:200px;overflow-y:auto;margin-bottom:16px;">
+      <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">Loading interactions...</div>
+    </div>
 
     <div style="display:flex;gap:12px;position:sticky;bottom:0;background:var(--bg-card);padding-top:8px;border-top:1px solid var(--border);">
       <button onclick="outreachShowEmail('${mcId}')" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Generate Email</button>
@@ -14831,6 +15443,71 @@ function outreachShowEditModal(data, mcId) {
     </div>
   </div>`;
   document.body.appendChild(overlay);
+  // Load interaction timeline
+  outreachLoadTimeline(mcId);
+}
+
+const _interactionIcons = {
+  email_sent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
+  call: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>',
+  meeting: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
+  reply_received: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>',
+  permission_granted: '<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" width="12" height="12"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  permission_denied: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+  status_change: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>',
+  note: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+};
+
+async function outreachLoadTimeline(mcId) {
+  const user = getUser();
+  const el = document.getElementById('oe_timeline');
+  if (!el) return;
+  try {
+    const resp = await fetch('/api/operator-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'list-interactions', managementCompanyId: mcId })
+    });
+    const result = await resp.json();
+    if (!result.success || !result.data.length) {
+      el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;font-family:var(--font-ui);">No interactions logged yet</div>';
+      return;
+    }
+    el.innerHTML = result.data.map(i => {
+      const icon = _interactionIcons[i.interaction_type] || _interactionIcons.note;
+      const typeLabel = i.interaction_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const date = new Date(i.created_at);
+      const timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="flex:0 0 24px;width:24px;height:24px;border-radius:50%;background:var(--bg-cream);display:flex;align-items:center;justify-content:center;margin-top:2px;">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">
+            <span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);">${typeLabel}</span>
+            <span style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);white-space:nowrap;">${timeStr}</span>
+          </div>
+          ${i.note ? '<div style="font-size:12px;color:var(--text-secondary);margin-top:2px;line-height:1.4;">' + i.note + '</div>' : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">Failed to load interactions</div>';
+  }
+}
+
+async function outreachLogFromModal(mcId) {
+  const user = getUser();
+  const type = document.getElementById('oe_log_type').value;
+  const note = document.getElementById('oe_log_note').value;
+  if (!note.trim()) { alert('Please enter a note'); return; }
+  try {
+    await fetch('/api/operator-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'log-interaction', managementCompanyId: mcId, type, note })
+    });
+    document.getElementById('oe_log_note').value = '';
+    outreachLoadTimeline(mcId);
+  } catch (e) { alert('Log failed: ' + e.message); }
 }
 
 async function outreachSave(mcId) {
@@ -14956,10 +15633,17 @@ function outreachCopyEmail() {
 async function outreachMarkContacted(mcId) {
   const user = getUser();
   try {
+    // Update status (auto-logs status_change via API)
     await fetch('/api/operator-outreach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
       body: JSON.stringify({ action: 'upsert', managementCompanyId: mcId, outreach_status: 'contacted', outreach_method: 'email' })
+    });
+    // Log the email as an interaction
+    await fetch('/api/operator-outreach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'log-interaction', managementCompanyId: mcId, type: 'email_sent', note: 'Outreach email copied and sent', metadata: {} })
     });
     document.getElementById('outreachEmailModal')?.remove();
     outreachLoadData();
@@ -14986,6 +15670,10 @@ async function outreachSeedNew() {
 
 // ========== ADMIN & ANALYTICS ==========
 const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'pascal@growyourcashflow.io', 'info@pascalwagner.com'];
+
+function isImpersonating() {
+  return !!(adminRealUser || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser')));
+}
 
 function isAdmin() {
   // Check if the real user (or impersonating admin) is an admin
@@ -15024,6 +15712,8 @@ function getAnalyticsEvents() {
 }
 
 function storeAnalyticsEvent(action, data) {
+  // Don't store analytics when admin is impersonating another user
+  if (typeof isImpersonating === 'function' && isImpersonating()) return null;
   const user = getUser();
   const evt = {
     action: action,
@@ -15057,6 +15747,7 @@ let _analyticsPageEnterTime = Date.now();
 function analyticsPageEnter(page) {
   _analyticsCurrentPage = page;
   _analyticsPageEnterTime = Date.now();
+  if (typeof isImpersonating === 'function' && isImpersonating()) return;
   incrementPageView(page);
   storeAnalyticsEvent('page_view', { page: page });
 }
@@ -17513,6 +18204,7 @@ if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
 // ========== SESSION TRACKING ==========
 (function initSessionTracking() {
   if (sessionStorage.getItem('gycSessionTracked')) return; // Already tracked this session
+  if (typeof isImpersonating === 'function' && isImpersonating()) return; // Don't track admin impersonation sessions
   sessionStorage.setItem('gycSessionTracked', '1');
   const sessionCount = incrementCounter('sessionCount');
   // Fire event to GHL on 3rd+ session
@@ -17660,95 +18352,125 @@ function updateIfCalc() {
   document.getElementById('if-calc-3yr').textContent = fmt(yr3);
 }
 
-let ifPieChart = null, ifYieldChart = null, ifMonthlyChart = null, ifCumChart = null;
+let ifAllocYieldChart = null, ifMonthlyChart = null, ifCumChart = null;
+
+// Accordion toggle for Income Fund risks
+function toggleIfAcc(header) {
+  var body = header.nextElementSibling;
+  var chev = header.querySelector('.if-chevron');
+  if (body.style.display === 'block') {
+    body.style.display = 'none';
+    if (chev) chev.style.transform = '';
+  } else {
+    body.style.display = 'block';
+    if (chev) chev.style.transform = 'rotate(-180deg)';
+  }
+}
 
 function renderIncomeFund() {
+  // Section nav active state tracking via IntersectionObserver
+  var ifSections = document.querySelectorAll('#page-incomefund .if-hero, #page-incomefund .if-v2-section, #page-incomefund .if-cta-section');
+  var ifNavLinks = document.querySelectorAll('.if-section-nav a');
+  if (ifSections.length && ifNavLinks.length && typeof IntersectionObserver !== 'undefined') {
+    var ifObs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var id = entry.target.id;
+          ifNavLinks.forEach(function(a) {
+            a.classList.remove('if-active');
+            if (a.getAttribute('href') === '#' + id) a.classList.add('if-active');
+          });
+        }
+      });
+    }, {rootMargin: '-40% 0px -55% 0px'});
+    ifSections.forEach(function(s) { if (s.id) ifObs.observe(s); });
+  }
+
   // Fund table
-  const tbl = document.getElementById('if-fund-table');
+  var tbl = document.getElementById('if-fund-table');
   if (tbl) {
-    tbl.innerHTML = IF_FUNDS.sort((a,b) => b.ret - a.ret).map((f, i) => {
-      const rCol = f.risk >= 6 ? '#856404' : '#45A86C';
-      const rBg = f.risk >= 6 ? '#fff3cd' : '#e7f5f0';
-      return `<div class="if-fund-row">
-        <div><div class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${IF_COLORS[IF_FUNDS.indexOf(f)]};margin-right:6px"></span>${f.name}</div></div>
-        <div class="num">${f.alloc}%</div>
-        <div class="num"><span class="if-risk-dot" style="color:${rCol};background:${rBg}">${f.risk}</span></div>
-        <div class="num green">${(f.ret*100).toFixed(1)}%</div>
-        <div class="num" style="text-align:right;font-family:var(--font-ui);font-size:11px">${f.strat}</div>
-      </div>`;
+    tbl.innerHTML = IF_FUNDS.sort(function(a,b) { return b.ret - a.ret; }).map(function(f, i) {
+      var rCol = f.risk >= 6 ? '#856404' : '#45A86C';
+      var rBg = f.risk >= 6 ? '#fff3cd' : '#e7f5f0';
+      return '<div class="if-fund-row">' +
+        '<div><div class="name"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + IF_COLORS[IF_FUNDS.indexOf(f)] + ';margin-right:6px"></span>' + f.name + '</div></div>' +
+        '<div class="num">' + f.alloc + '%</div>' +
+        '<div class="num"><span class="if-risk-dot" style="color:' + rCol + ';background:' + rBg + '">' + f.risk + '</span></div>' +
+        '<div class="num green">' + (f.ret*100).toFixed(1) + '%</div>' +
+        '<div class="num" style="text-align:right;font-family:var(--font-ui);font-size:11px">' + f.strat + '</div>' +
+      '</div>';
     }).join('');
   }
 
-  // Allocation pie chart
-  const pieEl = document.getElementById('if-alloc-pie');
-  if (pieEl && typeof Chart !== 'undefined') {
-    if (ifPieChart) { ifPieChart.destroy(); ifPieChart = null; }
-    ifPieChart = new Chart(pieEl, {
-      type: 'doughnut',
-      data: {
-        labels: IF_FUNDS.map(f => f.name.split(' ').slice(0,2).join(' ')),
-        datasets: [{data: IF_FUNDS.map(f => f.alloc), backgroundColor: IF_COLORS, borderWidth: 2, borderColor: '#fff'}]
-      },
-      options: {responsive: true, maintainAspectRatio: true, plugins: {legend: {display: false}}, cutout: '55%'}
-    });
-    const legend = document.getElementById('if-alloc-legend');
-    if (legend) legend.innerHTML = IF_FUNDS.map((f,i) => `<div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-family:var(--font-ui);font-size:10px;color:var(--text-muted)"><div style="width:8px;height:8px;border-radius:50%;background:${IF_COLORS[i]};flex-shrink:0"></div>${f.name.split(' ').slice(0,2).join(' ')}: <strong style="color:var(--text-dark)">${f.alloc}%</strong></div>`).join('');
-  }
-
-  // Yield bar chart
-  const yieldEl = document.getElementById('if-yield-chart');
-  if (yieldEl && typeof Chart !== 'undefined') {
-    if (ifYieldChart) { ifYieldChart.destroy(); ifYieldChart = null; }
-    const sorted = [...IF_FUNDS].sort((a,b) => b.ret - a.ret);
-    ifYieldChart = new Chart(yieldEl, {
+  // Combined Allocation + Yield bar/line chart
+  var allocYieldEl = document.getElementById('if-alloc-yield-chart');
+  if (allocYieldEl && typeof Chart !== 'undefined') {
+    if (ifAllocYieldChart) { ifAllocYieldChart.destroy(); ifAllocYieldChart = null; }
+    var labels = IF_FUNDS.map(function(f) { return f.name.split(' ').slice(0, 2).join(' '); });
+    var allocData = IF_FUNDS.map(function(f) { return f.alloc; });
+    var yieldData = IF_FUNDS.map(function(f) { return +(f.ret * 100).toFixed(1); });
+    var blended = IF_FUNDS.reduce(function(s, f) { return s + f.alloc * f.ret; }, 0) / 100;
+    var blendedEl = document.getElementById('if-blended-yield');
+    if (blendedEl) blendedEl.textContent = (blended * 100).toFixed(1) + '%';
+    ifAllocYieldChart = new Chart(allocYieldEl, {
       type: 'bar',
       data: {
-        labels: sorted.map(f => f.name.split(' ').slice(0,2).join(' ')),
-        datasets: [{data: sorted.map(f => (f.ret*100).toFixed(1)), backgroundColor: sorted.map(f => IF_COLORS[IF_FUNDS.indexOf(f)] + 'CC'), borderRadius: 4}]
+        labels: labels,
+        datasets: [
+          { label: 'Allocation %', data: allocData, backgroundColor: '#1F5159', borderRadius: 4, barPercentage: 0.6, order: 2, yAxisID: 'y' },
+          { label: 'Gross Yield %', data: yieldData, type: 'line', borderColor: '#32C583', backgroundColor: '#32C583', pointBackgroundColor: '#32C583', pointRadius: 4, pointHoverRadius: 6, borderWidth: 2, tension: 0.3, fill: false, order: 1, yAxisID: 'y1' }
+        ]
       },
       options: {
-        responsive: true, indexAxis: 'y',
-        plugins: {legend: {display: false}, tooltip: {callbacks: {label: ctx => ctx.raw + '%'}}},
-        scales: {x: {beginAtZero: true, ticks: {callback: v => v + '%'}}, y: {ticks: {font: {size: 10}}}}
+        responsive: true, maintainAspectRatio: false,
+        interaction: {mode: 'index', intersect: false},
+        plugins: { legend: {display: false}, tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw + '%'; } } } },
+        scales: {
+          x: { ticks: {font: {size: 9, family: 'Plus Jakarta Sans'}, color: '#607179', maxRotation: 45}, grid: {display: false} },
+          y: { position: 'left', beginAtZero: true, max: 25, ticks: {callback: function(v) { return v + '%'; }, font: {size: 10}, color: '#607179'}, grid: {color: 'rgba(31,81,89,0.07)'} },
+          y1: { position: 'right', beginAtZero: true, max: 25, ticks: {callback: function(v) { return v + '%'; }, font: {size: 10}, color: '#32C583'}, grid: {drawOnChartArea: false} }
+        }
       }
     });
   }
 
   // Monthly earnings vs distributions chart
-  const moEl = document.getElementById('if-monthly-chart');
+  var moEl = document.getElementById('if-monthly-chart');
   if (moEl && typeof Chart !== 'undefined') {
     if (ifMonthlyChart) { ifMonthlyChart.destroy(); ifMonthlyChart = null; }
     ifMonthlyChart = new Chart(moEl, {
       type: 'line',
       data: {
-        labels: IF_MONTHLY_DIST.map(d => d.label),
+        labels: IF_MONTHLY_DIST.map(function(d) { return d.label; }),
         datasets: [
-          {label: 'Gross Earnings', data: IF_MONTHLY_DIST.map(d => d.earnings), borderColor: '#51BE7B', backgroundColor: 'rgba(81,190,123,0.1)', fill: true, tension: 0.3, pointRadius: 2},
-          {label: 'LP Distribution', data: IF_MONTHLY_DIST.map(d => d.lp_dist), borderColor: '#1F5159', backgroundColor: 'rgba(31,81,89,0.08)', fill: true, tension: 0.3, pointRadius: 2}
+          {label: 'Gross Earnings', data: IF_MONTHLY_DIST.map(function(d) { return d.earnings; }), borderColor: '#51BE7B', backgroundColor: 'rgba(81,190,123,0.1)', fill: true, tension: 0.3, pointRadius: 2},
+          {label: 'LP Distribution', data: IF_MONTHLY_DIST.map(function(d) { return d.lp_dist; }), borderColor: '#1F5159', backgroundColor: 'rgba(31,81,89,0.08)', fill: true, tension: 0.3, pointRadius: 2}
         ]
       },
       options: {
-        responsive: true, plugins: {legend: {display: false}},
-        scales: {x: {ticks: {maxTicksLimit: 8, font: {size: 9}}}, y: {ticks: {callback: v => '$' + (v/1000).toFixed(1) + 'K'}}}
+        responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {display: false}},
+        scales: {x: {ticks: {maxTicksLimit: 8, font: {size: 9}}}, y: {ticks: {callback: function(v) { return '$' + (v/1000).toFixed(1) + 'K'; }}}}
       }
     });
   }
 
   // Cumulative distributions chart
-  const cumEl = document.getElementById('if-cumulative-chart');
+  var cumEl = document.getElementById('if-cumulative-chart');
   if (cumEl && typeof Chart !== 'undefined') {
     if (ifCumChart) { ifCumChart.destroy(); ifCumChart = null; }
-    let running = 0;
-    const cumData = IF_MONTHLY_DIST.map(d => { running += d.lp_dist; return running; });
+    var running = 0;
+    var cumData = IF_MONTHLY_DIST.map(function(d) { running += d.lp_dist; return running; });
     ifCumChart = new Chart(cumEl, {
       type: 'bar',
       data: {
-        labels: IF_MONTHLY_DIST.map(d => d.label),
+        labels: IF_MONTHLY_DIST.map(function(d) { return d.label; }),
         datasets: [{data: cumData, backgroundColor: '#51BE7B33', borderColor: '#51BE7B', borderWidth: 1.5, borderRadius: 2}]
       },
       options: {
-        responsive: true, plugins: {legend: {display: false}},
-        scales: {x: {ticks: {maxTicksLimit: 8, font: {size: 9}}}, y: {ticks: {callback: v => '$' + (v/1000).toFixed(0) + 'K'}}}
+        responsive: true, maintainAspectRatio: false,
+        plugins: {legend: {display: false}},
+        scales: {x: {ticks: {maxTicksLimit: 8, font: {size: 9}}}, y: {ticks: {callback: function(v) { return '$' + (v/1000).toFixed(0) + 'K'; }}}}
       }
     });
   }
