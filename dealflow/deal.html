@@ -5073,14 +5073,7 @@ async function renderDeal() {
     });
     detailsHtml += '</ul></div></div>';
   }
-  var _hasValidDeck = deal.deckUrl && deal.deckUrl.indexOf('airtableusercontent.com') < 0 && deal.deckUrl.indexOf('dl.airtable.com') < 0;
-  if (_hasValidDeck) {
-    detailsHtml += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-available"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Available</span></div></div>';
-  } else if (deal.deckUrl && !_hasValidDeck) {
-    detailsHtml += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status" style="color:#f59e0b;"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Link expired</span></div></div>';
-  } else {
-    detailsHtml += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Not yet sourced</span></div></div>';
-  }
+  // Offering Documents row removed — covered in Supporting Materials card
   // Geography rows (merged into deal terms)
   if (deal.location) detailsHtml += '<div class="summary-row"><div class="summary-label">Location</div><div class="summary-value">' + esc(deal.location) + '</div></div>';
   if (deal.investingGeography && deal.investingGeography !== deal.location) detailsHtml += '<div class="summary-row"><div class="summary-label">Investing Geography</div><div class="summary-value">' + esc(deal.investingGeography) + '</div></div>';
@@ -5918,30 +5911,29 @@ async function renderDeal() {
     + (goalImpactHtml ? '<div style="margin-bottom:16px;">' + goalImpactHtml + '</div>' : '')
     // --- Job 3: Deal terms (moved up for quick scanning) ---
     + detailsHtml
-    // --- Job 4: What am I investing in? ---
-    + overviewHtml
-    // --- Job 5: Who's behind this? ---
+    // --- Job 4: Who's behind this? ---
     + operatorHtml
     + operatorDealsHtml
-    + thesisHtml
-    // --- Job 6: How does it compare? ---
+    // --- Job 5: How does it compare? ---
     + feeBenchHtml
     + chartHtml
     + similarHtml
-    // --- Job 7: Supporting materials + DD ---
+    // --- Job 6: Supporting materials + thesis/risks ---
     + materialsHtml
-    + ddHtml
-    + stressHtml
-    + qaHtml
-    // --- Job 8: Decide ---
+    + thesisHtml
+    // --- Job 7: Decide ---
     + memoHtml
     + buyBoxHtml
     + officeHoursHtml
     + fundNudgeHtml
-    // --- Admin (very bottom, with padding) ---
+    // --- Admin ---
     + '<div style="margin-top:24px;"></div>'
     + gpInsightsHtml
     + noPermissionHtml
+    // --- Deep DD (bottom) ---
+    + ddHtml
+    + stressHtml
+    + qaHtml
     + '</div>'
     + stickyHtml;
 
