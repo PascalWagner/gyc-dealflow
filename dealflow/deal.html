@@ -651,6 +651,9 @@ body {
 
 }
 
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
 .skeleton-header { height: 180px; margin-bottom: 24px; }
 
 .skeleton-stats { height: 80px; margin-bottom: 24px; }
@@ -868,6 +871,13 @@ body {
   .hero-right { flex-direction: row; align-items: center; gap: 12px; text-align: left; }
   .hero-operator-photo { width: 48px; height: 48px; font-size: 18px; }
   .hero-metrics { gap: 16px; }
+}
+@media (max-width: 900px) {
+  .deal-page-content > div[style*="grid-template-columns: 2fr 1fr"],
+  .deal-page-content > div[style*="grid-template-columns:2fr 1fr"] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
 }
 
 .deal-name {
@@ -3289,21 +3299,51 @@ body {
 
 <script>
 
-// ========== AUTH GATE ==========
+// ========== AUTH GATE (soft — page visible to all, actions gated) ==========
 
-(function enforceAuth() {
+// Login prompt modal for non-logged-in users
+function showLoginPrompt(actionLabel) {
+  // Remove existing modal if any
+  var existing = document.getElementById('loginPromptModal');
+  if (existing) existing.remove();
 
-  const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+  var overlay = document.createElement('div');
+  overlay.id = 'loginPromptModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
-  if (!user || !user.token || user.token === 'local-session') {
+  var msg = actionLabel
+    ? 'Create a free account to ' + actionLabel + ' and track your deal research.'
+    : 'Create a free account to save deals, run due diligence, and track your vetting pipeline.';
 
-    localStorage.removeItem('gycUser');
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;animation:slideUp 0.25s ease;">'
+    + '<div style="width:56px;height:56px;background:linear-gradient(135deg,#51be7b,#3da86a);border-radius:14px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>'
+    + '<div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Sign Up Free</div>'
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:24px;">' + msg + '</div>'
+    + '<a href="deal-login.html" style="display:block;padding:14px 24px;background:var(--primary);color:#fff;border-radius:10px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;margin-bottom:10px;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Create Free Account</a>'
+    + '<a href="deal-login.html" style="display:block;font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);text-decoration:none;">Already have an account? <span style="color:var(--primary);font-weight:700;">Log in</span></a>'
+    + '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-light);display:flex;justify-content:center;gap:20px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
+    + '<span style="display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>100% free</span>'
+    + '<span style="display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>No credit card</span>'
+    + '<span style="display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Magic link login</span>'
+    + '</div>'
+    + '</div>';
 
-    window.location.href = 'deal-login.html';
+  document.body.appendChild(overlay);
+}
 
-  }
+// Returns true if user is logged in, shows login prompt and returns false otherwise
+function requireAuth(actionLabel) {
+  var user = getUser();
+  if (user && user.token && user.token !== 'local-session') return true;
+  showLoginPrompt(actionLabel);
+  return false;
+}
 
-})();
+function isLoggedIn() {
+  var user = getUser();
+  return !!(user && user.token && user.token !== 'local-session');
+}
 
 
 
@@ -3368,6 +3408,10 @@ function initAuth() {
 
     userEl.style.display = 'flex';
 
+  } else {
+    // Show sign-in prompt for non-logged-in users
+    userEl.innerHTML = '<a href="deal-login.html" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--primary);border-radius:8px;text-decoration:none;color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:700;width:100%;box-sizing:border-box;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Sign Up / Log In</a>';
+    userEl.style.display = 'flex';
   }
 
 }
@@ -3657,6 +3701,7 @@ function loadDDAnswers(dealId) {
 
 // Investment Memo save/print
 function saveMemoField(dealId, field, value) {
+  if (!requireAuth('save your investment notes')) return;
   var memo = {};
   try { memo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
   memo[field] = value;
@@ -3789,6 +3834,7 @@ function printMemo(dealId) {
 }
 
 function saveDDAnswer(dealId, key, value) {
+  if (!requireAuth('save your due diligence answers')) return;
   var answers = loadDDAnswers(dealId);
   if (value) {
     answers[key] = value;
@@ -3847,6 +3893,7 @@ function getDealStage(dealId) {
 }
 
 function setJourneyStage(dealId, stage) {
+  if (!requireAuth('save this deal to your pipeline')) return;
   try {
     var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
     stages[dealId] = stage;
@@ -4177,6 +4224,7 @@ function getRelativeTime(dateStr) {
 }
 
 function submitDealQuestion(dealId, dealName) {
+  if (!requireAuth('submit a question about this deal')) return;
   var textarea = document.getElementById('qaNewQuestion');
   if (!textarea) return;
   var question = textarea.value.trim();
@@ -4232,6 +4280,7 @@ function submitDealAnswer(recordId) {
 }
 
 function upvoteQuestion(recordId, btn) {
+  if (!requireAuth('upvote questions')) return;
   var upvoted = JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]');
   if (upvoted.includes(recordId)) return;
   upvoted.push(recordId);
@@ -5073,12 +5122,169 @@ async function renderDeal() {
     });
     detailsHtml += '</ul></div></div>';
   }
-  // Offering Documents row removed — covered in Supporting Materials card
-  // Geography rows (merged into deal terms)
-  if (deal.location) detailsHtml += '<div class="summary-row"><div class="summary-label">Location</div><div class="summary-value">' + esc(deal.location) + '</div></div>';
-  if (deal.investingGeography && deal.investingGeography !== deal.location) detailsHtml += '<div class="summary-row"><div class="summary-label">Investing Geography</div><div class="summary-value">' + esc(deal.investingGeography) + '</div></div>';
-  if (deal.address) detailsHtml += '<div class="summary-row"><div class="summary-label">Property Address</div><div class="summary-value">' + esc(deal.address) + '</div></div>';
+  // Geography moved to dedicated map card
   detailsHtml += '</div></div>';
+
+  // --- 6a. Investing Geography Map ---
+  var geoMapHtml = '';
+  (function buildGeoMap() {
+    var geoText = (deal.investingGeography || '') + ' ' + (deal.location || '');
+    if (!geoText.trim()) return;
+
+    // State name/abbreviation → abbreviation mapping
+    var stateMap = {
+      'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
+      'colorado':'CO','connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA',
+      'hawaii':'HI','idaho':'ID','illinois':'IL','indiana':'IN','iowa':'IA',
+      'kansas':'KS','kentucky':'KY','louisiana':'LA','maine':'ME','maryland':'MD',
+      'massachusetts':'MA','michigan':'MI','minnesota':'MN','mississippi':'MS','missouri':'MO',
+      'montana':'MT','nebraska':'NE','nevada':'NV','new hampshire':'NH','new jersey':'NJ',
+      'new mexico':'NM','new york':'NY','north carolina':'NC','north dakota':'ND','ohio':'OH',
+      'oklahoma':'OK','oregon':'OR','pennsylvania':'PA','rhode island':'RI','south carolina':'SC',
+      'south dakota':'SD','tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT',
+      'virginia':'VA','washington':'WA','west virginia':'WV','wisconsin':'WI','wyoming':'WY',
+      'al':'AL','ak':'AK','az':'AZ','ar':'AR','ca':'CA','co':'CO','ct':'CT','de':'DE',
+      'fl':'FL','ga':'GA','hi':'HI','id':'ID','il':'IL','in':'IN','ia':'IA','ks':'KS',
+      'ky':'KY','la':'LA','me':'ME','md':'MD','ma':'MA','mi':'MI','mn':'MN','ms':'MS',
+      'mo':'MO','mt':'MT','ne':'NE','nv':'NV','nh':'NH','nj':'NJ','nm':'NM','ny':'NY',
+      'nc':'NC','nd':'ND','oh':'OH','ok':'OK','or':'OR','pa':'PA','ri':'RI','sc':'SC',
+      'sd':'SD','tn':'TN','tx':'TX','ut':'UT','vt':'VT','va':'VA','wa':'WA','wv':'WV',
+      'wi':'WI','wy':'WY'
+    };
+
+    // Region keywords
+    var regions = {
+      'nationwide': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
+      'national': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
+      'southeast': ['FL','GA','SC','NC','VA','TN','AL','MS','LA','AR','KY','WV'],
+      'southwest': ['TX','AZ','NM','OK','NV'],
+      'northeast': ['NY','NJ','CT','MA','PA','ME','NH','VT','RI','DE','MD'],
+      'midwest': ['OH','MI','IN','IL','WI','MN','IA','MO','KS','NE','SD','ND'],
+      'west coast': ['CA','OR','WA'],
+      'pacific northwest': ['OR','WA','ID'],
+      'sun belt': ['FL','GA','SC','NC','TX','AZ','NM','NV','CA','TN','AL','LA'],
+      'east coast': ['FL','GA','SC','NC','VA','MD','DE','NJ','NY','CT','RI','MA','NH','ME']
+    };
+
+    var lower = geoText.toLowerCase();
+    var matched = {};
+
+    // Check regions first
+    for (var rk in regions) {
+      if (lower.indexOf(rk) >= 0) {
+        regions[rk].forEach(function(s) { matched[s] = true; });
+      }
+    }
+
+    // Check individual states
+    for (var sk in stateMap) {
+      if (sk.length > 2) {
+        // full state name — use word boundary check
+        var re = new RegExp('\\b' + sk + '\\b', 'i');
+        if (re.test(geoText)) matched[stateMap[sk]] = true;
+      }
+    }
+    // Check abbreviations (2-letter, uppercase in text)
+    var abbrRe = /\b([A-Z]{2})\b/g;
+    var abbrMatch;
+    while ((abbrMatch = abbrRe.exec(geoText)) !== null) {
+      var ab = abbrMatch[1].toLowerCase();
+      if (stateMap[ab]) matched[stateMap[ab]] = true;
+    }
+
+    var highlightedStates = Object.keys(matched);
+    var isNationwide = highlightedStates.length > 40;
+
+    // State SVG paths (simplified US map)
+    var statePaths = {
+      'AL': 'M628,396 L628,440 L616,456 L622,462 L634,446 L640,396Z',
+      'AK': 'M161,456 L119,464 L100,482 L108,498 L140,498 L180,480 L176,462Z',
+      'AZ': 'M205,370 L195,430 L210,450 L250,450 L258,370Z',
+      'AR': 'M550,388 L550,430 L600,430 L600,388Z',
+      'CA': 'M120,260 L108,340 L118,400 L148,430 L170,420 L185,370 L172,290 L148,250Z',
+      'CO': 'M280,290 L280,340 L350,340 L350,290Z',
+      'CT': 'M810,205 L810,222 L830,218 L830,202Z',
+      'DE': 'M780,272 L776,290 L788,290 L790,272Z',
+      'FL': 'M640,446 L640,480 L670,520 L688,540 L700,530 L690,480 L710,460 L700,440 L660,440Z',
+      'GA': 'M660,380 L640,396 L640,446 L700,440 L700,400 L680,380Z',
+      'HI': 'M270,490 L260,506 L278,510 L290,498Z',
+      'ID': 'M210,160 L198,240 L230,260 L246,220 L234,170Z',
+      'IL': 'M580,260 L570,340 L590,356 L608,340 L608,270 L594,255Z',
+      'IN': 'M610,260 L608,340 L636,340 L638,265Z',
+      'IA': 'M500,240 L500,290 L570,290 L570,240Z',
+      'KS': 'M390,310 L390,360 L490,360 L490,310Z',
+      'KY': 'M600,328 L600,360 L680,340 L690,320 L640,310Z',
+      'LA': 'M540,430 L540,475 L580,490 L590,470 L600,430Z',
+      'ME': 'M830,120 L822,174 L842,180 L852,150 L840,120Z',
+      'MD': 'M728,268 L720,290 L780,290 L790,272 L770,264Z',
+      'MA': 'M820,190 L820,204 L850,200 L848,186Z',
+      'MI': 'M590,170 L580,230 L610,250 L640,230 L650,180 L630,160Z',
+      'MN': 'M470,140 L468,230 L530,230 L530,160 L510,140Z',
+      'MS': 'M590,390 L588,446 L628,446 L628,390Z',
+      'MO': 'M500,300 L490,370 L560,380 L570,340 L570,290 L510,290Z',
+      'MT': 'M240,130 L238,190 L350,190 L350,140 L300,120Z',
+      'NE': 'M370,260 L360,300 L490,310 L490,260Z',
+      'NV': 'M170,240 L165,340 L210,370 L218,280 L200,240Z',
+      'NH': 'M822,148 L818,188 L830,190 L832,150Z',
+      'NJ': 'M790,230 L784,270 L796,280 L800,240Z',
+      'NM': 'M260,370 L250,450 L340,450 L340,370Z',
+      'NY': 'M740,172 L730,226 L790,230 L810,205 L800,180 L760,168Z',
+      'NC': 'M660,340 L660,370 L770,350 L780,330 L720,310Z',
+      'ND': 'M370,140 L370,190 L470,190 L470,140Z',
+      'OH': 'M640,250 L636,310 L690,320 L700,268 L680,248Z',
+      'OK': 'M370,360 L370,410 L500,410 L500,360Z',
+      'OR': 'M120,160 L118,230 L190,240 L210,200 L190,160Z',
+      'PA': 'M700,220 L695,265 L780,268 L790,230 L740,220Z',
+      'RI': 'M832,204 L830,216 L840,214 L840,202Z',
+      'SC': 'M680,370 L670,400 L720,400 L740,370Z',
+      'SD': 'M370,190 L370,250 L470,250 L470,190Z',
+      'TN': 'M580,350 L580,380 L690,360 L690,330Z',
+      'TX': 'M310,400 L290,510 L400,520 L440,470 L500,440 L500,400Z',
+      'UT': 'M220,250 L218,330 L280,340 L280,260 L252,250Z',
+      'VT': 'M802,148 L798,190 L818,192 L820,150Z',
+      'VA': 'M680,290 L670,330 L770,330 L780,300 L740,280Z',
+      'WA': 'M140,110 L138,170 L210,170 L210,130 L180,108Z',
+      'WV': 'M690,280 L680,320 L700,340 L720,310 L710,280Z',
+      'WI': 'M530,160 L520,235 L580,240 L590,180 L570,155Z',
+      'WY': 'M260,190 L258,260 L350,260 L350,200 L300,190Z'
+    };
+
+    geoMapHtml += '<div class="section" style="margin-top:20px;">';
+    geoMapHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="section-title">Investing Geography</span></div>';
+    geoMapHtml += '<div class="section-body">';
+
+    // SVG map
+    geoMapHtml += '<div style="position:relative;width:100%;max-width:600px;margin:0 auto;">';
+    geoMapHtml += '<svg viewBox="80 100 800 440" style="width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">';
+
+    for (var st in statePaths) {
+      var isHighlighted = matched[st];
+      var fillColor = isHighlighted ? 'rgba(81,190,123,0.5)' : 'rgba(200,210,205,0.3)';
+      var strokeColor = isHighlighted ? 'rgba(81,190,123,0.8)' : 'rgba(180,190,185,0.4)';
+      var strokeWidth = isHighlighted ? '1.5' : '0.5';
+      geoMapHtml += '<path d="' + statePaths[st] + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '">';
+      geoMapHtml += '<title>' + st + '</title></path>';
+    }
+
+    geoMapHtml += '</svg></div>';
+
+    // Label underneath
+    var geoLabel = deal.investingGeography || deal.location || '';
+    geoMapHtml += '<div style="text-align:center;margin-top:12px;">';
+    if (highlightedStates.length > 0) {
+      geoMapHtml += '<span style="display:inline-block;padding:4px 12px;background:rgba(81,190,123,0.08);border:1px solid rgba(81,190,123,0.2);border-radius:20px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);">';
+      geoMapHtml += isNationwide ? 'Nationwide' : esc(geoLabel);
+      geoMapHtml += '</span>';
+    } else {
+      geoMapHtml += '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">' + esc(geoLabel) + '</span>';
+    }
+    if (deal.address) {
+      geoMapHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:6px;">' + esc(deal.address) + '</div>';
+    }
+    geoMapHtml += '</div>';
+
+    geoMapHtml += '</div></div>';
+  })();
 
   // --- 6b. Fee & Terms Benchmark vs Peers ---
   var feeBenchHtml = '';
@@ -5909,10 +6115,12 @@ async function renderDeal() {
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
     + (goalImpactHtml ? '<div style="margin-bottom:16px;">' + goalImpactHtml + '</div>' : '')
-    // --- Job 3: Deal terms (moved up for quick scanning) ---
+    // --- Job 3: Deal terms + operator (two-column) ---
+    + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">'
     + detailsHtml
-    // --- Job 4: Who's behind this? ---
     + operatorHtml
+    + '</div>'
+    + geoMapHtml
     + operatorDealsHtml
     // --- Job 5: How does it compare? ---
     + feeBenchHtml
@@ -6232,6 +6440,7 @@ function initDealReturnsChart(deal) {
 // ========== DECK SUBMIT MODAL ==========
 
 function openDeckSubmitModal(dealId, dealName, defaultDocType) {
+  if (!requireAuth('submit a document')) return;
   // Remove any existing modal
   var existing = document.getElementById('deckSubmitOverlay');
   if (existing) existing.remove();
