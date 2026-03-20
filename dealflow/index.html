@@ -14037,74 +14037,102 @@ function processAddDealPPMFile(file) {
   reader.readAsDataURL(file);
 }
 
-function submitNewDeal() {
+async function submitNewDeal() {
   const name = document.getElementById('addDealName').value.trim();
   const sponsor = document.getElementById('addDealSponsor').value.trim();
+  const website = document.getElementById('addDealURL').value.trim();
   if (!name || !sponsor) { alert('Please enter at least the investment name and sponsor.'); return; }
 
-  // Create a local deal object and add to DEALS
-  const newDeal = {
-    id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-    dealNumber: 0,
-    investmentName: name,
-    managementCompany: sponsor,
-    assetClass: '',
-    dealType: '',
-    targetIRR: null,
-    investmentMinimum: 0,
-    location: '',
-    status: 'Open to invest',
-    addedDate: new Date().toISOString().split('T')[0],
-    equityMultiple: null, preferredReturn: null, holdPeriod: null, offeringType: '', offeringSize: null,
-    investingGeography: '', investmentStrategy: '', distributions: '', financials: '', availableTo: '',
-    investmentObjective: '', sponsorInDeal: null, ceo: '', managementCompanyId: '',
-    mcWebsite: document.getElementById('addDealURL').value || '', mcFoundingYear: null, mcType: '', mcLinkedin: '',
-    mcInvestClearly: '', mcTotalInvestors: null, fees: [], firstYrDepreciation: '', strategy: '',
-    instrument: '', cashOnCash: null, debtPosition: '', fundAUM: null, loanCount: null, avgLoanLTV: null,
-    lpGpSplit: '', userSubmitted: true
-  };
+  const userData = JSON.parse(localStorage.getItem('gycUser') || '{}');
 
-  DEALS.unshift(newDeal);
-  // Persist user-submitted deals
-  const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
-  userDeals.push(newDeal);
-  localStorage.setItem('gycUserDeals', JSON.stringify(userDeals));
+  // Show loading state on submit button
+  const submitBtn = document.querySelector('#addDealModal .modal-card button[onclick="submitNewDeal()"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
 
-  // Upload deck file if one was selected
-  if (_addDealFile && _addDealFileBase64) {
-    const userData = JSON.parse(localStorage.getItem('gycUser') || '{}');
-    fetch('/api/deck-upload', {
+  try {
+    // 1. Create the deal + operator in Supabase via intake-create API
+    const createResp = await fetch('/api/admin-manage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        dealId: newDeal.id,
-        dealName: name,
-        filedata: _addDealFileBase64,
-        filename: _addDealFile.name,
-        notes: '',
-        userEmail: userData.email || '',
-        userName: userData.name || userData.firstName || ''
+        action: 'intake-create',
+        create_operator: true,
+        operator_data: { name: sponsor, website: website || '' },
+        deal_data: {
+          investment_name: name,
+          mc_website: website || null,
+          status: 'Open to invest',
+          added_date: new Date().toISOString().split('T')[0],
+          user_submitted: true
+        }
       })
-    }).then(r => r.json()).then(data => {
-      if (data.driveUrl) {
-        newDeal.deckUrl = data.driveUrl;
-        newDeal.mcWebsite = newDeal.mcWebsite || data.driveUrl;
-        localStorage.setItem('gycUserDeals', JSON.stringify(
-          JSON.parse(localStorage.getItem('gycUserDeals') || '[]').map(d => d.id === newDeal.id ? newDeal : d)
-        ));
-      }
-    }).catch(() => {});
-    _addDealFile = null;
-    _addDealFileBase64 = null;
-  }
-  _addDealPPMFile = null;
-  _addDealPPMFileBase64 = null;
+    });
+    const createData = await createResp.json();
+    const dealId = createData.data && createData.data.id;
 
-  closeModal();
-  renderAll();
-  updateDealCount();
-  setDealStage(newDeal.id, 'saved');
-  window.location.href = 'deal.html?id=' + newDeal.id;
+    if (!dealId) throw new Error('Failed to create deal in database');
+
+    // 2. Upload deck file if one was selected
+    if (_addDealFile && _addDealFileBase64) {
+      fetch('/api/deck-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dealId: dealId,
+          dealName: name,
+          filedata: _addDealFileBase64,
+          filename: _addDealFile.name,
+          notes: '',
+          userEmail: userData.email || '',
+          userName: userData.name || userData.firstName || ''
+        })
+      }).catch(() => {});
+      _addDealFile = null;
+      _addDealFileBase64 = null;
+    }
+
+    // 3. Upload PPM file if one was selected
+    if (_addDealPPMFile && _addDealPPMFileBase64) {
+      fetch('/api/deck-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dealId: dealId,
+          dealName: name + ' - PPM',
+          filedata: _addDealPPMFileBase64,
+          filename: _addDealPPMFile.name,
+          notes: 'PPM document',
+          userEmail: userData.email || '',
+          userName: userData.name || userData.firstName || ''
+        })
+      }).catch(() => {});
+      _addDealPPMFile = null;
+      _addDealPPMFileBase64 = null;
+    }
+
+    closeModal();
+    setDealStage(dealId, 'saved');
+    window.location.href = 'deal.html?id=' + dealId;
+
+  } catch (err) {
+    console.error('Submit deal error:', err);
+    // Fallback: save locally if API fails
+    const fallbackId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    const newDeal = {
+      id: fallbackId, investmentName: name, managementCompany: sponsor,
+      mcWebsite: website, status: 'Open to invest', addedDate: new Date().toISOString().split('T')[0],
+      userSubmitted: true
+    };
+    DEALS.unshift(newDeal);
+    const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+    userDeals.push(newDeal);
+    localStorage.setItem('gycUserDeals', JSON.stringify(userDeals));
+    closeModal();
+    setDealStage(fallbackId, 'saved');
+    window.location.href = 'deal.html?id=' + fallbackId;
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Deal'; }
+  }
 }
 
 function showDealSearchModal() {
