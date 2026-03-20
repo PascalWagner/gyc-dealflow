@@ -5100,11 +5100,6 @@ async function renderDeal() {
       operatorHtml += '</div>';
     }
 
-    // View operator profile link
-    operatorHtml += '<a href="' + _opUrl + '" style="display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background=\'var(--border-light)\'" onmouseout="this.style.background=\'var(--bg-cream)\'">';
-    operatorHtml += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-    operatorHtml += 'View Operator Profile <span style="font-size:14px;">\u2192</span></a>';
-
     operatorHtml += '</div></div>'; // close operator-details, operator-profile
     operatorHtml += '</div></div>'; // close section-body, section
   })();
@@ -5311,68 +5306,7 @@ async function renderDeal() {
   }
 
   // --- 4b. Impact on Your Goal ---
-  var goalImpactHtml = '';
-  (function buildGoalImpact() {
-    var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-    var wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-    if (!goals && !wd._branch) return;
-    var branchMap = { cashflow: 'passive_income', tax: 'reduce_taxes', growth: 'build_wealth' };
-    var goalType = (goals && goals.type) || branchMap[wd._branch] || 'passive_income';
-    var dealMin = deal.investmentMinimum || 100000;
-    var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-    var currentInvested = portfolio.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
-
-    if (goalType === 'passive_income' && goals && goals.targetIncome) {
-      var gap = goals.targetIncome - (goals.currentIncome || 0);
-      if (gap <= 0) return;
-      var dealYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0.08;
-      if (dealYield > 1) dealYield = dealYield / 100;
-      var annualIncome = dealMin * dealYield;
-      var currentProgress = goals.targetIncome > 0 ? Math.round(((goals.currentIncome || 0) / goals.targetIncome) * 100) : 0;
-      var afterProgress = Math.min(100, Math.round(((goals.currentIncome + annualIncome) / goals.targetIncome) * 100));
-      var fillPct = Math.min(100, Math.round((annualIncome / gap) * 100));
-
-      goalImpactHtml += '<div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:16px;">';
-      goalImpactHtml += '<div style="flex-shrink:0;width:48px;height:48px;border-radius:50%;background:rgba(74,222,128,0.12);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
-      goalImpactHtml += '<div style="flex:1;min-width:0;">';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">$' + Math.round(annualIncome).toLocaleString() + '/yr potential income</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:2px;">' + fmt(dealYield, 'pct') + ' yield on ' + fmt(dealMin, 'money') + '</div>';
-      // Compact progress bar
-      goalImpactHtml += '<div style="margin-top:8px;height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;position:relative;">';
-      goalImpactHtml += '<div style="position:absolute;height:100%;width:' + afterProgress + '%;background:rgba(74,222,128,0.25);border-radius:3px;"></div>';
-      goalImpactHtml += '<div style="position:absolute;height:100%;width:' + currentProgress + '%;background:#4ade80;border-radius:3px;"></div>';
-      goalImpactHtml += '</div>';
-      goalImpactHtml += '</div></div>';
-
-    } else if (goalType === 'reduce_taxes' && goals && goals.taxReduction > 0) {
-      var isRealEstate = (deal.assetClass || '').match(/multi family|self storage|industrial|hotels|mobile|short term|mixed/i);
-      var depRate = isRealEstate ? 0.60 : 0.15;
-      var taxBenefit = dealMin * depRate;
-      var fillPctTax = Math.min(100, Math.round((taxBenefit / goals.taxReduction) * 100));
-
-      goalImpactHtml += '<div style="background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.15);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:16px;">';
-      goalImpactHtml += '<div style="flex-shrink:0;width:48px;height:48px;border-radius:50%;background:rgba(167,139,250,0.12);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
-      goalImpactHtml += '<div style="flex:1;min-width:0;">';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">$' + Math.round(taxBenefit).toLocaleString() + ' estimated tax shelter</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:2px;">Covers ' + fillPctTax + '% of your tax goal &middot; ~' + Math.round(depRate * 100) + '% depreciation on ' + fmt(dealMin, 'money') + '</div>';
-      goalImpactHtml += '</div></div>';
-
-    } else if (goalType === 'build_wealth' && goals && goals.capital > 0) {
-      var deployed = currentInvested;
-      var remaining = Math.max(0, goals.capital - deployed);
-      if (remaining <= 0) return;
-      var multiple = deal.equityMultiple || 2.0;
-      var futureValue = dealMin * multiple;
-      var capitalPct = Math.min(100, Math.round((dealMin / remaining) * 100));
-
-      goalImpactHtml += '<div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:16px;">';
-      goalImpactHtml += '<div style="flex-shrink:0;width:48px;height:48px;border-radius:50%;background:rgba(251,191,36,0.12);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
-      goalImpactHtml += '<div style="flex:1;min-width:0;">';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">$' + Math.round(futureValue).toLocaleString() + ' projected at exit</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:2px;">Deploys ' + capitalPct + '% of available capital &middot; ' + fmt(multiple, 'multiple') + ' multiple on ' + fmt(dealMin, 'money') + '</div>';
-      goalImpactHtml += '</div></div>';
-    }
-  })();
+  // Goal impact section removed
 
   // --- Projected LP Cash Flow ---
   var cashFlowHtml = '';
@@ -6708,7 +6642,6 @@ async function renderDeal() {
     + complianceBannerHtml
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
-    + (goalImpactHtml ? '<div style="margin-bottom:16px;">' + goalImpactHtml + '</div>' : '')
     // --- Job 3: Deal terms + operator (two-column) ---
     + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:stretch;">'
     + detailsHtml
@@ -6721,12 +6654,12 @@ async function renderDeal() {
     + feeBenchHtml
     + chartHtml
     + similarHtml
-    // --- Job 6: Supporting materials + SEC filing (side by side) ---
-    + (secFilingHtml ? '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;">' + secFilingHtml + materialsHtml + '</div>' : materialsHtml)
+    // --- Job 6: SEC filing + Buy Box (1/3 + 2/3), Supporting Materials full width ---
+    + (secFilingHtml || buyBoxHtml ? '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;">' + secFilingHtml + buyBoxHtml + '</div>' : '')
+    + materialsHtml
     + thesisHtml
     // --- Job 7: Decide ---
     + memoHtml
-    + buyBoxHtml
     + officeHoursHtml
     + fundNudgeHtml
     // --- Admin ---
