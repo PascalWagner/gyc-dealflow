@@ -5097,79 +5097,100 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="sub-page" style="max-width:860px">
       <div class="settings-page-title">Development Status</div>
-      <div class="settings-page-desc">Internal notes for picking up where we left off. Last updated: March 16, 2026.</div>
+      <div class="settings-page-desc">Internal notes for picking up where we left off. Last updated: March 20, 2026.</div>
 
       <div style="display:flex;flex-direction:column;gap:24px;">
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#22c55e;margin-bottom:12px;">Working</h3>
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#10003; Sign In via email+password (GHL contact lookup via Make.com webhook)</li>
-            <li>&#10003; Sign Up creates GHL contact with <code>dealflow-user</code> tag (via <code>highlevel:createAContact</code> module)</li>
-            <li>&#10003; Duplicate sign-up returns friendly error</li>
+            <li>&#10003; Auth via Supabase (email+password, JWT tokens, auto-refresh every 50 min)</li>
+            <li>&#10003; Sign Up creates Supabase user + GHL contact with tier tags</li>
+            <li>&#10003; GHL tier lookup on login (dealflow-free / dealflow-academy / dealflow-alumni)</li>
             <li>&#10003; Auth gate on dashboard (redirects to login if no valid session)</li>
-            <li>&#10003; Logout clears localStorage session</li>
-            <li>&#10003; Live deal data rendered from embedded JSON (~30+ deals)</li>
-            <li>&#10003; Deal filtering, search, grid/list views</li>
-            <li>&#10003; Buy Box builder & scoring</li>
-            <li>&#10003; GP directory with follow/unfollow</li>
-            <li>&#10003; Deployed to <code>dealflow.growyourcashflow.io</code> via Vercel</li>
+            <li>&#10003; Live deal data from Supabase <code>opportunities</code> + <code>management_companies</code> tables</li>
+            <li>&#10003; Deal filtering, search, grid/list views, deal detail page with fee benchmarks</li>
+            <li>&#10003; Buy Box wizard &rarr; Supabase <code>user_buy_box</code> + GHL contact custom fields</li>
+            <li>&#10003; GP/Sponsor directory with profiles, track record, follow/unfollow</li>
+            <li>&#10003; Deal Q&amp;A system (Supabase <code>deal_qa</code> table)</li>
+            <li>&#10003; Deck upload &rarr; Supabase Storage (<code>deal-decks</code> bucket) + auto-enrichment via Claude</li>
+            <li>&#10003; User data sync: localStorage (primary) &harr; Supabase (persistent backup)</li>
+            <li>&#10003; Social proof: deal stage counts via <code>deal_stage_counts</code> view</li>
+            <li>&#10003; Admin analytics dashboard (hot deals, funnel, top users)</li>
+            <li>&#10003; Income Goal Bridge on dashboard (distribution-based progress tracking)</li>
+            <li>&#10003; Deployed to <code>dealflow.growyourcashflow.io</code> via Vercel (auto-deploy on push to main)</li>
             <li>&#10003; Code on GitHub: <code>git@github.com:PascalWagner/gyc-dealflow.git</code></li>
           </ul>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:12px;">Not Working / Known Issues</h3>
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:12px;">Known Issues</h3>
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#10007; Magic link sign-in (webhook not built yet &mdash; needs GHL email integration)</li>
-            <li>&#10007; Forgot password flow (webhook not built)</li>
-            <li>&#10007; No server-side password validation &mdash; sign-in only checks if email exists as a GHL contact, any password works</li>
-            <li>&#10007; Make.com Data Store modules don't work via API (fields resolve empty) &mdash; abandoned in favor of GHL-only approach</li>
-            <li>&#10007; GHL <code>highlevel:universal</code> POST body broken (sends <code>[object Object]</code>) &mdash; use dedicated modules like <code>createAContact</code> instead</li>
-            <li>&#10007; Session token is a timestamp, not cryptographically secure</li>
+            <li>&#10007; GHL goals sync is one-directional &mdash; wizard goal syncs TO GHL, but <code>user_goals</code> table (target income, capital, etc.) does not sync to GHL custom fields</li>
+            <li>&#10007; No bidirectional GHL &harr; Supabase sync &mdash; GHL contact updates don't flow back to Supabase</li>
+            <li>&#10007; Magic link sign-in not built yet</li>
+            <li>&#10007; Forgot password flow not built</li>
+            <li>&#10007; Weekly digest email (kill-switched off, needs migration from old Airtable version)</li>
           </ul>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#3b82f6;margin-bottom:12px;">Still To Do</h3>
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#9744; Build magic link flow: Make.com webhook &rarr; GHL email send &rarr; token-based login</li>
-            <li>&#9744; Build forgot password flow via GHL</li>
-            <li>&#9744; Add server-side password hashing (store hash in GHL custom field or notes)</li>
-            <li>&#9744; Password reset managed from GHL</li>
-            <li>&#9744; Wire up remaining webhooks (buyBoxSync, subscribe, activity)</li>
-            <li>&#9745; Live deal data from Supabase API</li>
+            <li>&#9744; GHL &harr; Supabase bidirectional goals sync (target income, capital, timeline &rarr; GHL custom fields)</li>
+            <li>&#9744; Build magic link / forgot password flow via Supabase Auth</li>
             <li>&#9744; Subscription/payment integration (Stripe)</li>
             <li>&#9744; Deck review request flow</li>
             <li>&#9744; GP introduction request flow</li>
             <li>&#9744; Email notifications for new deals matching buy box</li>
-            <li>&#9744; Role-based access (Free vs Academy vs Alumni vs Investor tiers)</li>
+            <li>&#9744; Weekly digest email (re-enable with Supabase backend)</li>
+            <li>&#9744; Clean up <code>_airtable_backup/</code> folder (migration complete, safe to delete)</li>
           </ul>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Architecture / Key IDs</h3>
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Architecture</h3>
           <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Make.com Org</td><td style="padding:6px 0;">5180916 / Team 1371669</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GHL Connection</td><td style="padding:6px 0;">5330930 (Location OAuth, uid: iSHPUTCApON4k5MPXH7Q)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign In Scenario</td><td style="padding:6px 0;">4423229 &mdash; Webhook 2019643</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign In Webhook</td><td style="padding:6px 0;"><code>https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv</code></td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign Up Scenario</td><td style="padding:6px 0;">4423231 &mdash; Webhook 2019644</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Sign Up Webhook</td><td style="padding:6px 0;"><code>https://hook.us2.make.com/i3nlsj9uq3p7sdvqf0viq0ggilvudwhx</code></td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GHL Scopes</td><td style="padding:6px 0;">contacts.readonly, contacts.write, opportunities.read/write, users.read/write, locations.readonly, + more</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Database</td><td style="padding:6px 0;">Supabase (PostgreSQL) &mdash; 12 tables + 2 views</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">File Storage</td><td style="padding:6px 0;">Supabase Storage (<code>deal-decks</code> bucket, signed URLs)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Auth</td><td style="padding:6px 0;">Supabase Auth (JWT) + GHL tier lookup</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">CRM</td><td style="padding:6px 0;">GoHighLevel (contacts, tags, buy box custom fields)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">AI Enrichment</td><td style="padding:6px 0;">Claude API (deck/PPM text extraction &rarr; deal field mapping)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Email</td><td style="padding:6px 0;">Resend (deck submission notifications)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Automations</td><td style="padding:6px 0;">Make.com (Org 5180916 / Team 1371669) &mdash; deal processing pipelines</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Hosting</td><td style="padding:6px 0;">Vercel (serverless functions + static)</td></tr>
             <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GitHub</td><td style="padding:6px 0;">git@github.com:PascalWagner/gyc-dealflow.git</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Vercel Domain</td><td style="padding:6px 0;">dealflow.growyourcashflow.io</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Domain</td><td style="padding:6px 0;">dealflow.growyourcashflow.io</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Supabase Project</td><td style="padding:6px 0;">gyc-dealflow (ID: nntzqyufmtypfjpusflm)</td></tr>
           </table>
         </div>
 
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">Lessons Learned</h3>
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Data Sync Architecture</h3>
+          <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px 8px 0;font-weight:700;">Data</td><td style="padding:8px 4px;font-weight:700;">Primary</td><td style="padding:8px 4px;font-weight:700;">Sync Target</td><td style="padding:8px 0;font-weight:700;">Direction</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Deal Stages</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Portfolio</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Goals</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Tax Docs</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Buy Box</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">GHL custom fields</td><td style="padding:6px 0;">Supabase &rarr; GHL</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Deals</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">&mdash;</td><td style="padding:6px 0;">Server only</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Sponsors</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">&mdash;</td><td style="padding:6px 0;">Server only</td></tr>
+            <tr><td style="padding:6px 12px 6px 0;">Auth/Tier</td><td style="padding:6px 4px;">Supabase Auth</td><td style="padding:6px 4px;">GHL tags</td><td style="padding:6px 0;">GHL &rarr; Supabase (on login)</td></tr>
+          </table>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.6;">
+            <strong>Local-first pattern:</strong> User changes save to localStorage instantly, then fire-and-forget sync to Supabase. On login, Supabase data merges into localStorage (fills gaps, never overwrites).
+          </p>
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">Migration Notes (March 2026)</h3>
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:disc;padding-left:20px;">
-            <li>Make.com Data Store modules created via API have a bug &mdash; field interfaces don't resolve, outputs are always empty. Must use the UI to configure data store modules.</li>
-            <li>Make.com <code>highlevel:universal</code> module with <code>body</code> type <code>any</code> serializes objects as <code>[object Object]</code> instead of JSON. Use dedicated GHL modules (<code>createAContact</code>, <code>searchContacts</code>) instead.</li>
-            <li><code>first(array).property</code> doesn't work in Make.com templates. Use <code>get(first(array); "property")</code> instead.</li>
-            <li>Webhook UDT must be set as a data structure integer ID, not an inline array spec.</li>
-            <li>Make.com <code>if()</code> with escaped quotes in JSON strings produces garbled output. Keep response bodies simple.</li>
+            <li>Full migration from Airtable &rarr; Supabase completed March 19-20, 2026</li>
+            <li>All API endpoints now query Supabase exclusively &mdash; zero Airtable dependencies remain</li>
+            <li>Old Airtable code archived in <code>_airtable_backup/</code> (safe to delete)</li>
+            <li>Make.com still used for deal processing automations (GDrive &rarr; enrichment pipeline)</li>
+            <li>Deck/PPM files stored in Supabase Storage <code>deal-decks</code> bucket (signed URLs, 1-year expiry)</li>
           </ul>
         </div>
 
@@ -5948,8 +5969,11 @@ const _supa = window.supabase.createClient(
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add New
         </button>
-        <button id="adminQualityToggle" onclick="adminToggleQuality()" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;">Data Quality</button>
+        <button id="adminQualityToggle" onclick="adminToggleQuality()" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;" title="Audit deal completeness — find missing fields, decks, and PPMs">&#x2705; Quality Audit</button>
         <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);" id="adminResultCount"></div>
+      </div>
+      <div id="adminQualityBanner" style="display:none;padding:12px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">
+        <strong style="color:var(--text-dark);">Quality Audit Mode</strong> — Shows how complete each deal listing is. Deals are sorted worst-first so you can fix the biggest gaps. Green = 80%+, Yellow = 50-80%, Red = below 50%.
       </div>
       <div id="adminQualityStats" style="display:none;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;"></div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
@@ -7245,11 +7269,11 @@ function renderComparePage() {
           : 'Add one more deal to start comparing.') +
       '</div>' +
       '<div class="compare-empty-steps">' +
-        '<div class="compare-empty-step"><div class="compare-empty-step-num">1</div><div class="compare-empty-step-text">Browse deals in <a href="#" onclick="navigateTo(\'dealflow\');return false;">Deal Flow</a></div></div>' +
+        '<div class="compare-empty-step"><div class="compare-empty-step-num">1</div><div class="compare-empty-step-text">Browse deals in <a href="#" onclick="navigateTo(\'deals\');return false;">Deal Flow</a></div></div>' +
         '<div class="compare-empty-step"><div class="compare-empty-step-num">2</div><div class="compare-empty-step-text">Click the + button on any card</div></div>' +
         '<div class="compare-empty-step"><div class="compare-empty-step-num">3</div><div class="compare-empty-step-text">Come back here to compare</div></div>' +
       '</div>' +
-      '<button class="compare-empty-cta" onclick="navigateTo(\'dealflow\')">Browse Deals \u2192</button>' +
+      '<button class="compare-empty-cta" onclick="navigateTo(\'deals\')">Browse Deals \u2192</button>' +
       '<div class="compare-empty-preview">' +
         '<div class="compare-empty-preview-title">What you\'ll see</div>' +
         '<div class="compare-empty-preview-row"><div class="compare-empty-preview-label">Target IRR</div><div class="compare-empty-preview-vals"><div class="compare-empty-preview-val">15.2%</div><div class="compare-empty-preview-val">18.7%</div><div class="compare-empty-preview-val">12.0%</div></div></div>' +
@@ -7365,8 +7389,8 @@ function renderComparePage() {
   });
   h += '</tr></thead><tbody>';
 
-  // --- Best Match Row ---
-  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Best Match</td>';
+  // --- Buy Box Fit ---
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Buy Box Fit</td>';
   deals.forEach(function(d, i) {
     var ms = matchScores[i];
     var isBest = highlightBest && bestMatchIndices.indexOf(i) >= 0 && bestMatchIndices.length < deals.length;
@@ -7375,83 +7399,30 @@ function renderComparePage() {
       h += '<span style="color:var(--text-muted);font-size:11px;">Set Buy Box first</span>';
     } else {
       h += '<span style="font-weight:700;font-size:14px;color:' + (isBest ? 'var(--primary)' : 'var(--text-dark)') + ';">' + ms.score + '/' + ms.max + '</span>';
-      h += '<span style="font-size:11px;color:var(--text-muted);"> match</span>';
       h += '<div class="compare-match-bar"><div class="compare-match-bar-fill" style="width:' + Math.round((ms.score / ms.max) * 100) + '%;' + (isBest ? 'background:var(--primary);' : '') + '"></div></div>';
-      if (isBest) h += '<div style="font-size:10px;font-weight:700;color:var(--primary);margin-top:3px;">BEST MATCH</div>';
+      if (isBest) h += '<div style="font-size:10px;font-weight:700;color:var(--primary);margin-top:3px;">BEST FIT</div>';
     }
     h += '</td>';
   });
   h += '</tr>';
 
-  // Overview
-  h += cmpSection('Overview');
-  h += cmpTextRow('Deal Name', deals.map(function(d) { return d.investmentName; }));
-  h += cmpTextRow('Sponsor', deals.map(function(d) { return d.managementCompany; }));
-  h += cmpTextRow('Asset Class', deals.map(function(d) { return d.assetClass; }));
-  h += cmpTextRow('Deal Type', deals.map(function(d) { return d.dealType; }));
-  h += cmpTextRow('Geography', deals.map(function(d) { return d.investingGeography || d.location; }));
-
   // Returns
   h += cmpSection('Returns');
   h += cmpRow('Target IRR', deals.map(function(d) { return d.targetIRR; }), 'pct', true);
-  h += cmpRow('Cash-on-Cash', deals.map(function(d) { return d.cashOnCash; }), 'pct', true);
   h += cmpRow('Preferred Return', deals.map(function(d) { return d.preferredReturn; }), 'pct', true);
+  h += cmpRow('Cash-on-Cash', deals.map(function(d) { return d.cashOnCash; }), 'pct', true);
   h += cmpRow('Equity Multiple', deals.map(function(d) { return d.equityMultiple; }), 'multiple', true);
   h += cmpTextRow('Distributions', deals.map(function(d) { return d.distributions; }));
 
-  // Investment Terms
-  h += cmpSection('Investment Terms');
-  h += cmpRow('Minimum Investment', deals.map(function(d) { return d.investmentMinimum; }), 'money', false);
+  // Terms
+  h += cmpSection('Terms');
+  h += cmpRow('Minimum', deals.map(function(d) { return d.investmentMinimum; }), 'money', false);
   h += cmpRow('Hold Period', deals.map(function(d) { return d.holdPeriod; }), 'yr', false);
-  h += cmpRow('Offering Size', deals.map(function(d) { return d.offeringSize; }), 'money', false);
-  h += cmpTextRow('Offering Type', deals.map(function(d) { return d.offeringType; }));
-
-  // Risk Metrics
-  h += cmpSection('Risk Metrics');
-  h += cmpRow('Sponsor AUM', deals.map(function(d) { return d.fundAUM; }), 'money', true);
-  h += cmpTextRow('Track Record', deals.map(function(d) { return d.fullCycleDeals ? d.fullCycleDeals + ' full-cycle deals' : null; }));
   h += cmpRow('Sponsor Co-Invest', deals.map(function(d) { return d.sponsorInDeal; }), 'pct', true);
-  h += cmpRow('LTV / Leverage', deals.map(function(d) { return d.avgLoanLTV || d.leverage; }), 'pct', false);
+  h += cmpRow('Leverage', deals.map(function(d) { return d.avgLoanLTV || d.leverage; }), 'pct', false);
 
-  // Your Analysis
-  h += cmpSection('Your Analysis');
-
-  // Income Gap Fill — enhanced with dollar amount
-  h += '<tr><td class="col-label">Income Gap Fill</td>';
-  deals.forEach(function(d, i) {
-    var gf = getGapFillPercent(d);
-    if (!gf) {
-      h += '<td class="' + colClass(i) + '"><span style="color:var(--text-muted);">\u2014</span></td>';
-    } else {
-      var dealMin = d.investmentMinimum || 100000;
-      var dealYield = d.preferredReturn || 0.08;
-      var yieldNum = dealYield > 1 ? dealYield / 100 : dealYield;
-      var annualIncome = dealMin * yieldNum;
-      h += '<td class="' + colClass(i) + '">';
-      h += '<div style="font-weight:700;color:var(--primary);font-size:14px;">' + gf.percent + '%</div>';
-      h += '<div style="font-size:11px;color:var(--text-muted);">Fills $' + Math.round(annualIncome).toLocaleString() + '/yr (' + gf.percent + '% of ' + gf.label + ')</div>';
-      h += '</td>';
-    }
-  });
-  h += '</tr>';
-
-  // Deals needed to close gap
-  h += '<tr><td class="col-label">Deals Needed</td>';
-  deals.forEach(function(d, i) {
-    var gf = getGapFillPercent(d);
-    if (!gf || gf.percent <= 0) {
-      h += '<td class="' + colClass(i) + '"><span style="color:var(--text-muted);">\u2014</span></td>';
-    } else {
-      var needed = Math.ceil(100 / gf.percent);
-      h += '<td class="' + colClass(i) + '">';
-      h += '<span style="font-weight:700;">' + needed + '</span>';
-      h += '<span style="font-size:11px;color:var(--text-muted);"> at this rate to close gap</span>';
-      h += '</td>';
-    }
-  });
-  h += '</tr>';
-
-  // Portfolio Fit
+  // Fit
+  h += cmpSection('Fit');
   h += '<tr><td class="col-label">Portfolio Fit</td>';
   deals.forEach(function(d, i) {
     var ac = d.assetClass || '';
@@ -7475,45 +7446,8 @@ function renderComparePage() {
     h += '</td>';
   });
   h += '</tr>';
+  h += cmpTextRow('Geography', deals.map(function(d) { return d.investingGeography || d.location; }));
 
-  // DD Progress
-  h += '<tr><td class="col-label">DD Progress</td>';
-  deals.forEach(function(d, i) {
-    var checks = {};
-    try { checks = JSON.parse(localStorage.getItem('gycDDChecklist_' + d.id) || '{}'); } catch(e) {}
-    var done = Object.values(checks).filter(Boolean).length;
-    var total = 65;
-    var pct = Math.min(Math.round((done / total) * 100), 100);
-    var barColor = pct >= 60 ? 'var(--primary)' : 'var(--text-muted)';
-    var cell = done > 0
-      ? '<div style="text-align:center;"><span style="font-weight:700;color:' + barColor + ';">' + pct + '%</span><span style="font-size:11px;color:var(--text-muted);"> (' + done + '/' + total + ')</span>' +
-        '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:' + pct + '%;background:var(--primary);border-radius:2px;"></div></div></div>'
-      : '<span style="color:var(--text-muted);">\u2014</span>';
-    h += '<td class="' + colClass(i) + '">' + cell + '</td>';
-  });
-  h += '</tr>';
-
-  // Stage
-  h += '<tr><td class="col-label">Your Stage</td>';
-  deals.forEach(function(d, i) {
-    var stage = getDealStage(d.id);
-    var colors = {saved:'var(--blue)',vetting:'var(--orange)',ready:'var(--green)',invested:'var(--green)',passed:'var(--red)',browse:'var(--text-muted)'};
-    var labels = {saved:'Saved',vetting:'Vetting',ready:'Ready',invested:'Invested',passed:'Passed',browse:'Browse'};
-    h += '<td class="' + colClass(i) + '"><span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:' + (colors[stage] || 'var(--text-muted)') + '22;color:' + (colors[stage] || 'var(--text-muted)') + ';">' + (labels[stage] || stage) + '</span></td>';
-  });
-  h += '</tr>';
-
-  // Buy Box Match
-  h += '<tr><td class="col-label">Buy Box Match</td>';
-  deals.forEach(function(d, i) {
-    if (!bb || !bb.assetClasses || bb.assetClasses.length === 0) {
-      h += '<td class="' + colClass(i) + '"><span style="color:var(--text-muted);">\u2014</span></td>';
-    } else {
-      var match = bb.assetClasses.indexOf(d.assetClass) >= 0;
-      h += '<td class="' + colClass(i) + '"><span style="font-weight:700;color:' + (match ? 'var(--green)' : 'var(--text-muted)') + ';">' + (match ? 'Yes' : 'No') + '</span></td>';
-    }
-  });
-  h += '</tr>';
 
   // --- Your Notes ---
   h += cmpSection('Your Notes');
@@ -7566,19 +7500,14 @@ function renderCompareCharts(container, deals, matchScores) {
 
   var html = '<div class="compare-charts">';
 
-  // Radar chart
+  // Radar chart (full width)
   html += '<div class="compare-chart-card"><div class="compare-chart-title">Deal Profile</div>';
-  html += '<canvas id="compareRadarCanvas" width="320" height="320"></canvas>';
+  html += '<canvas id="compareRadarCanvas" width="400" height="340"></canvas>';
   html += legendHtml + '</div>';
 
-  // Bar chart
-  html += '<div class="compare-chart-card"><div class="compare-chart-title">Key Metrics</div>';
-  html += '<canvas id="compareBarCanvas" width="320" height="280"></canvas>';
-  html += legendHtml + '</div>';
-
-  // Income projection (full width)
-  html += '<div class="compare-chart-card full-width"><div class="compare-chart-title">Projected Annual Income (at minimum investment)</div>';
-  html += '<canvas id="compareIncomeCanvas" width="700" height="180"></canvas>';
+  // Income projection
+  html += '<div class="compare-chart-card"><div class="compare-chart-title">Projected Income (at minimum)</div>';
+  html += '<canvas id="compareIncomeCanvas" width="400" height="200"></canvas>';
   html += legendHtml + '</div>';
 
   html += '</div>';
@@ -7587,7 +7516,6 @@ function renderCompareCharts(container, deals, matchScores) {
   // Draw after DOM insert
   setTimeout(function() {
     drawRadarChart(document.getElementById('compareRadarCanvas'), deals, matchScores, COLORS);
-    drawBarChart(document.getElementById('compareBarCanvas'), deals, COLORS);
     drawIncomeChart(document.getElementById('compareIncomeCanvas'), deals, COLORS);
   }, 0);
 }
@@ -7811,13 +7739,20 @@ const SYNC_API = '/api/userdata';
 function getUserEmail() {
   try { return JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e) { return ''; }
 }
+function getUserToken() {
+  try { return JSON.parse(localStorage.getItem('gycUser') || '{}').token || ''; } catch(e) { return ''; }
+}
 // Fire-and-forget sync to backend
 function syncToBackend(type, data) {
   const email = getUserEmail();
-  if (!email) return;
+  const token = getUserToken();
+  if (!email || !token) return;
   fetch(SYNC_API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
     body: JSON.stringify({ type, email, data })
   }).catch(err => console.warn('Sync failed for ' + type + ':', err.message));
 }
@@ -10306,11 +10241,14 @@ function initAuth() {
 // Fetch deal stages, goals, and portfolio from Supabase and populate localStorage
 async function fetchUserDataFromSupabase(email) {
   if (!email) return;
+  const token = getUserToken();
+  if (!token) return;
+  const authHeaders = { 'Authorization': 'Bearer ' + token };
   try {
     const [stagesResp, goalsResp, portfolioResp] = await Promise.all([
-      fetch(SYNC_API + '?type=stages&email=' + encodeURIComponent(email)).catch(() => null),
-      fetch(SYNC_API + '?type=goals&email=' + encodeURIComponent(email)).catch(() => null),
-      fetch(SYNC_API + '?type=portfolio&email=' + encodeURIComponent(email)).catch(() => null)
+      fetch(SYNC_API + '?type=stages', { headers: authHeaders }).catch(() => null),
+      fetch(SYNC_API + '?type=goals', { headers: authHeaders }).catch(() => null),
+      fetch(SYNC_API + '?type=portfolio', { headers: authHeaders }).catch(() => null)
     ]);
 
     // Merge deal stages from Supabase into localStorage
@@ -10320,8 +10258,8 @@ async function fetchUserDataFromSupabase(email) {
         const localStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
         let merged = false;
         stagesData.records.forEach(r => {
-          const dealId = r['Deal ID'];
-          const stage = r['Stage'];
+          const dealId = r.deal_id;
+          const stage = r.stage;
           if (dealId && stage && !localStages[dealId]) {
             localStages[dealId] = stage;
             merged = true;
@@ -10342,12 +10280,12 @@ async function fetchUserDataFromSupabase(email) {
         const serverGoals = goalsData.records[0];
         if (!localStorage.getItem('gycGoals') || localStorage.getItem('gycGoals') === 'null') {
           const restored = {
-            goalType: serverGoals['Goal Type'] || 'passive-income',
-            currentIncome: serverGoals['Current Income'] || 0,
-            targetIncome: serverGoals['Target Income'] || 0,
-            capitalAvailable: serverGoals['Capital Available'] || 0,
-            timeline: serverGoals['Timeline'] || '5',
-            taxReduction: serverGoals['Tax Reduction'] || 0
+            goalType: serverGoals.goal_type || 'passive-income',
+            currentIncome: serverGoals.current_income || 0,
+            targetIncome: serverGoals.target_income || 0,
+            capitalAvailable: serverGoals.capital_available || 0,
+            timeline: serverGoals.timeline || '5',
+            taxReduction: serverGoals.tax_reduction || 0
           };
           investorGoals = restored;
           localStorage.setItem('gycGoals', JSON.stringify(restored));
@@ -10363,19 +10301,19 @@ async function fetchUserDataFromSupabase(email) {
         const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
         if (localPortfolio.length === 0) {
           const restored = portfolioData.records.map(r => ({
-            dealId: r['Deal ID'] || '',
-            investmentName: r['Investment Name'] || '',
-            sponsor: r['Sponsor'] || '',
-            assetClass: r['Asset Class'] || '',
-            amountInvested: r['Amount Invested'] || 0,
-            dateInvested: r['Date Invested'] || '',
-            status: r['Status'] || 'active',
-            targetIRR: r['Target IRR'] || '',
-            distributionsReceived: r['Distributions Received'] || 0,
-            holdPeriod: r['Hold Period'] || '',
-            investingEntity: r['Investing Entity'] || '',
-            entityInvestedInto: r['Entity Invested Into'] || '',
-            notes: r['Notes'] || '',
+            dealId: r.deal_id || '',
+            investmentName: r.investment_name || '',
+            sponsor: r.sponsor || '',
+            assetClass: r.asset_class || '',
+            amountInvested: r.amount_invested || 0,
+            dateInvested: r.date_invested || '',
+            status: r.status || 'active',
+            targetIRR: r.target_irr || '',
+            distributionsReceived: r.distributions_received || 0,
+            holdPeriod: r.hold_period || '',
+            investingEntity: r.investing_entity || '',
+            entityInvestedInto: r.entity_invested_into || '',
+            notes: r.notes || '',
             _recordId: r.id || undefined
           }));
           localStorage.setItem('gycPortfolio', JSON.stringify(restored));
@@ -14885,6 +14823,8 @@ function adminShowTab(tab, btn) {
   if (qBtn) { qBtn.style.display = tab === 'deals' ? '' : 'none'; qBtn.style.background = 'transparent'; qBtn.style.color = 'var(--text-secondary)'; }
   var qStats = document.getElementById('adminQualityStats');
   if (qStats) qStats.style.display = 'none';
+  var qBanner = document.getElementById('adminQualityBanner');
+  if (qBanner) qBanner.style.display = 'none';
   adminLoadData();
 }
 
@@ -14895,15 +14835,15 @@ function adminSearchDebounce() {
 
 async function adminLoadData() {
   const user = getUser();
-  if (!user || !isAdmin()) return;
+  if (!user || !isAdmin()) { adminRenderEmptyState('Sign in as admin to manage data'); return; }
   const search = document.getElementById('adminSearch')?.value?.trim() || '';
   if (_adminQualityMode && _adminTab === 'deals') {
     try {
       const resp = await fetch('/api/admin-manage', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token }, body: JSON.stringify({ action: 'list-deals-quality', search: search }) });
       const result = await resp.json();
-      if (!result.success) { console.error('Quality load error:', result.error); return; }
+      if (!result.success) { adminRenderEmptyState('Failed to load: ' + (result.error || 'Unknown error')); return; }
       adminRenderQualityView(result.data, result.stats);
-    } catch (e) { console.error('Quality load failed:', e); }
+    } catch (e) { adminRenderEmptyState('Could not connect to database'); }
     return;
   }
   try {
@@ -14913,9 +14853,23 @@ async function adminLoadData() {
       body: JSON.stringify({ action: 'list-' + _adminTab, page: _adminPage, limit: 25, search })
     });
     const result = await resp.json();
-    if (!result.success) { console.error('Admin load error:', result.error); return; }
+    if (!result.success) { adminRenderEmptyState('Load failed: ' + (result.error || 'Unknown error')); return; }
     adminRenderTable(result.data, result.total);
-  } catch (e) { console.error('Admin load failed:', e); }
+  } catch (e) { adminRenderEmptyState('Could not connect to database'); }
+}
+
+function adminRenderEmptyState(msg) {
+  var body = document.getElementById('adminTableBody');
+  var head = document.querySelector('#adminTableHead tr');
+  var countEl = document.getElementById('adminResultCount');
+  if (countEl) countEl.textContent = '';
+  if (head) head.innerHTML = '';
+  var tabLabel = _adminTab === 'deals' ? 'deals' : _adminTab === 'operators' ? 'operators' : 'users';
+  if (body) body.innerHTML = '<tr><td style="padding:60px 20px;text-align:center;">' +
+    '<div style="font-size:32px;margin-bottom:12px;opacity:0.3;">' + (_adminTab === 'deals' ? '\uD83D\uDCC8' : _adminTab === 'operators' ? '\uD83C\uDFE2' : '\uD83D\uDC65') + '</div>' +
+    '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">' + (msg || 'No ' + tabLabel + ' found') + '</div>' +
+    '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto;">Data loads from Supabase on the live deploy. If you are on the live site, check your admin credentials.</div>' +
+    '</td></tr>';
 }
 
 function adminRenderTable(rows, total) {
@@ -14973,7 +14927,12 @@ function adminRenderTable(rows, total) {
   }).join('');
 
   if (rows.length === 0) {
-    body.innerHTML = '<tr><td colspan="' + (cols.length + 1) + '" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No records found</td></tr>';
+    var emptyMsg = _adminTab === 'deals' ? 'No deals match your search. Try a different keyword or click "Add New" to create one.'
+      : _adminTab === 'operators' ? 'No operators match your search. Operators are created automatically when adding deals.'
+      : 'No users match your search.';
+    body.innerHTML = '<tr><td colspan="' + (cols.length + 1) + '" style="padding:60px 20px;text-align:center;font-family:var(--font-ui);">' +
+      '<div style="font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">No ' + (_adminTab === 'deals' ? 'deals' : _adminTab === 'operators' ? 'operators' : 'users') + ' found</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto;">' + emptyMsg + '</div></td></tr>';
   }
 
   // Pagination
@@ -15119,7 +15078,7 @@ adminSaveEdit = async function(id) {
 };
 
 // ========== DATA QUALITY DASHBOARD ==========
-function adminToggleQuality(){_adminQualityMode=!_adminQualityMode;var b=document.getElementById('adminQualityToggle');if(b){b.style.background=_adminQualityMode?'var(--primary)':'transparent';b.style.color=_adminQualityMode?'#fff':'var(--text-secondary)';}var q=document.getElementById('adminQualityStats');if(q)q.style.display=_adminQualityMode?'grid':'none';var p=document.getElementById('adminPagination');if(p)p.style.display=_adminQualityMode?'none':'flex';adminLoadData();}
+function adminToggleQuality(){_adminQualityMode=!_adminQualityMode;var b=document.getElementById('adminQualityToggle');if(b){b.style.background=_adminQualityMode?'var(--primary)':'transparent';b.style.color=_adminQualityMode?'#fff':'var(--text-secondary)';}var q=document.getElementById('adminQualityStats');if(q)q.style.display=_adminQualityMode?'grid':'none';var bn=document.getElementById('adminQualityBanner');if(bn)bn.style.display=_adminQualityMode?'block':'none';var p=document.getElementById('adminPagination');if(p)p.style.display=_adminQualityMode?'none':'flex';adminLoadData();}
 function adminRenderQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' deals';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Deals',stats.total_deals)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Deck',stats.no_deck,stats.no_deck>0?'var(--orange)':'var(--primary)')+sc('No PPM',stats.no_ppm,stats.no_ppm>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;';head.innerHTML='<th style="'+thS+'">Deal Name</th><th style="'+thS+'">Operator</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="'+thS+'text-align:center;width:50px;">Deck</th><th style="'+thS+'text-align:center;width:50px;">PPM</th><th style="width:60px;padding:10px 12px;"></th>';var chk='<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';var xm='<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:8px;background:'+barBg+';border-radius:4px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:4px;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 6px;background:var(--bg-cream);border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:10px 12px;border-bottom:1px solid var(--border);';return'<tr onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.investment_name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.management_company_name||'\u2014')+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:center;">'+(r.has_deck?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_ppm?chk:xm)+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No deals found</td></tr>';}
 
 // ========== DEAL INTAKE WIZARD ==========
@@ -17283,7 +17242,7 @@ function renderSchemaPage() {
       { name: 'created_at', type: 'timestamptz', example: 'Also synced to GHL tags/fields' }
     ], 'Append-only log')}
 
-    ${tableCard('User Goals', 'persistent', 'Supabase · user_goals + localStorage', [
+    ${tableCard('User Goals', 'persistent', 'Supabase · user_goals (local-first sync)', [
       { name: 'user_id', type: 'uuid (FK)', example: '' },
       { name: 'goal_type', type: 'enum', example: goals?.type || '' },
       { name: 'current_income', type: 'numeric', example: goals ? '$' + (goals.currentIncome || 0).toLocaleString() : '' },
@@ -17293,7 +17252,7 @@ function renderSchemaPage() {
       { name: 'tax_reduction', type: 'numeric', example: goals ? '$' + (goals.taxReduction || 0).toLocaleString() : '' }
     ], goals ? 1 : 0)}
 
-    ${tableCard('User Portfolio', 'persistent', 'Supabase · user_portfolio + localStorage', [
+    ${tableCard('User Portfolio', 'persistent', 'Supabase · user_portfolio (local-first sync)', [
       { name: 'user_id', type: 'uuid (FK)', example: '' },
       { name: 'investment_name', type: 'text', example: portfolio[0]?.investmentName || '' },
       { name: 'sponsor', type: 'text', example: portfolio[0]?.sponsor || '' },
