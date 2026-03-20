@@ -35,6 +35,13 @@
       "runtimeArgs": ["-m", "http.server", "8771", "-d", "/Users/pascalwagner/AI/dealflow"],
       "port": 8771,
       "autoPort": true
+    },
+    {
+      "name": "FB Ads",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8772", "-d", "/Users/pascalwagner/AI/fb-ads"],
+      "port": 8772,
+      "autoPort": true
     }
   ]
 }

@@ -1377,6 +1377,63 @@ function renderSponsor(data) {
     '<div class="detail-item"><div class="detail-label">' + d.label + '</div><div class="detail-value">' + escHtml(String(d.value)) + '</div></div>'
   ).join('');
 
+  // Track Record & Trust Signals
+  (function buildTrackRecord() {
+    var trackSection = document.getElementById('trackRecordSection');
+    var trackBody = document.getElementById('trackRecordBody');
+    if (!trackSection || !trackBody) return;
+
+    var signals = [];
+    var yearsInBiz = s.yearsInBusiness || (s.foundingYear ? new Date().getFullYear() - s.foundingYear : null);
+
+    if (yearsInBiz && yearsInBiz > 0) {
+      signals.push({ icon: '\u{1F3E2}', label: 'Years in Business', value: yearsInBiz + ' years', detail: 'Founded ' + s.foundingYear });
+    }
+    if (deals.length > 0) {
+      signals.push({ icon: '\u{1F4CA}', label: 'Total Offerings', value: deals.length + ' deals', detail: 'Across ' + [...new Set(deals.map(function(d) { return d.assetClass; }).filter(Boolean))].length + ' asset classes' });
+    }
+    if (s.totalAUM) {
+      signals.push({ icon: '\u{1F4B0}', label: 'Total AUM', value: '$' + (s.totalAUM >= 1e9 ? (s.totalAUM / 1e9).toFixed(1) + 'B' : s.totalAUM >= 1e6 ? (s.totalAUM / 1e6).toFixed(0) + 'M' : s.totalAUM.toLocaleString()), detail: 'Assets under management' });
+    }
+    if (s.totalInvestors) {
+      signals.push({ icon: '\u{1F465}', label: 'Investor Base', value: s.totalInvestors.toLocaleString(), detail: 'Total investors' });
+    }
+
+    // Deal consistency: how many years have they been adding new deals?
+    var dealYears = [...new Set(deals.map(function(d) { return d.addedDate ? d.addedDate.substring(0, 4) : null; }).filter(Boolean))];
+    if (dealYears.length > 1) {
+      signals.push({ icon: '\u{1F504}', label: 'Active Since', value: dealYears.sort()[0] + ' - Present', detail: dealYears.length + ' years of offerings' });
+    }
+
+    // Average metrics across deals
+    var irrVals = deals.map(function(d) { return d.targetIRR; }).filter(function(v) { return v != null && v > 0; });
+    var prefVals = deals.map(function(d) { return d.prefReturn; }).filter(function(v) { return v != null && v > 0; });
+
+    if (irrVals.length >= 2) {
+      var avgIrr = irrVals.reduce(function(a, b) { return a + b; }, 0) / irrVals.length;
+      signals.push({ icon: '\u{1F4C8}', label: 'Avg Target IRR', value: (avgIrr * 100).toFixed(1) + '%', detail: 'Across ' + irrVals.length + ' deals' });
+    }
+    if (prefVals.length >= 2) {
+      var avgPref = prefVals.reduce(function(a, b) { return a + b; }, 0) / prefVals.length;
+      signals.push({ icon: '\u{2705}', label: 'Avg Preferred Return', value: (avgPref * 100).toFixed(1) + '%', detail: 'Across ' + prefVals.length + ' deals' });
+    }
+
+    if (signals.length === 0) return;
+
+    trackSection.style.display = 'block';
+    trackBody.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">'
+      + signals.map(function(sig) {
+        return '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;display:flex;align-items:flex-start;gap:12px;">'
+          + '<div style="font-size:24px;flex-shrink:0;line-height:1;">' + sig.icon + '</div>'
+          + '<div>'
+          + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px;">' + sig.label + '</div>'
+          + '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">' + sig.value + '</div>'
+          + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + sig.detail + '</div>'
+          + '</div></div>';
+      }).join('')
+      + '</div>';
+  })();
+
   // Deals
   const dealsGrid = document.getElementById('dealsGrid');
   const dealsEmpty = document.getElementById('dealsEmpty');

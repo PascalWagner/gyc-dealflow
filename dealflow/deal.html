@@ -4480,6 +4480,80 @@ async function renderDeal() {
     detailsHtml += '</div></div>';
   }
 
+  // --- 6b. Fee & Terms Benchmark vs Peers ---
+  var feeBenchHtml = '';
+  (function buildFeeBenchmark() {
+    var allDeals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+    // Filter peers: same asset class, different deal
+    var peers = allDeals.filter(function(d) {
+      return d.id !== deal.id && d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
+    });
+    if (peers.length < 2) return; // need at least 2 peers for meaningful comparison
+
+    // Compute peer averages
+    function peerAvg(field) {
+      var vals = peers.map(function(d) { return d[field]; }).filter(function(v) { return v != null && v > 0; });
+      return vals.length > 0 ? vals.reduce(function(a, b) { return a + b; }, 0) / vals.length : null;
+    }
+    function peerMedian(field) {
+      var vals = peers.map(function(d) { return d[field]; }).filter(function(v) { return v != null && v > 0; }).sort(function(a, b) { return a - b; });
+      if (vals.length === 0) return null;
+      var mid = Math.floor(vals.length / 2);
+      return vals.length % 2 !== 0 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+    }
+
+    var metrics = [];
+    // Target IRR
+    var peerIRR = peerAvg('targetIRR');
+    if (deal.targetIRR && peerIRR) {
+      var diff = deal.targetIRR - peerIRR;
+      metrics.push({ label: 'Target IRR', dealVal: (deal.targetIRR * 100).toFixed(1) + '%', peerVal: (peerIRR * 100).toFixed(1) + '%', diff: diff, diffLabel: diff >= 0 ? '+' + (diff * 100).toFixed(1) + 'pp' : (diff * 100).toFixed(1) + 'pp', good: diff >= 0 });
+    }
+    // Preferred Return
+    var peerPref = peerAvg('preferredReturn');
+    if (deal.preferredReturn && peerPref) {
+      var diff = deal.preferredReturn - peerPref;
+      metrics.push({ label: 'Pref Return', dealVal: (deal.preferredReturn * 100).toFixed(1) + '%', peerVal: (peerPref * 100).toFixed(1) + '%', diff: diff, diffLabel: diff >= 0 ? '+' + (diff * 100).toFixed(1) + 'pp' : (diff * 100).toFixed(1) + 'pp', good: diff >= 0 });
+    }
+    // Equity Multiple
+    var peerEM = peerAvg('equityMultiple');
+    if (deal.equityMultiple && peerEM) {
+      var diff = deal.equityMultiple - peerEM;
+      metrics.push({ label: 'Equity Multiple', dealVal: deal.equityMultiple.toFixed(2) + 'x', peerVal: peerEM.toFixed(2) + 'x', diff: diff, diffLabel: diff >= 0 ? '+' + diff.toFixed(2) + 'x' : diff.toFixed(2) + 'x', good: diff >= 0 });
+    }
+    // Minimum Investment (lower is better for accessibility)
+    var peerMin = peerMedian('investmentMinimum');
+    if (deal.investmentMinimum && peerMin) {
+      var diff = deal.investmentMinimum - peerMin;
+      metrics.push({ label: 'Minimum', dealVal: '$' + deal.investmentMinimum.toLocaleString(), peerVal: '$' + Math.round(peerMin).toLocaleString(), diff: diff, diffLabel: diff <= 0 ? '$' + Math.abs(Math.round(diff)).toLocaleString() + ' lower' : '$' + Math.round(diff).toLocaleString() + ' higher', good: diff <= 0 });
+    }
+    // Hold Period (shorter can be better but context-dependent)
+    var peerHold = peerAvg('holdPeriod');
+    if (deal.holdPeriod && peerHold) {
+      var diff = deal.holdPeriod - peerHold;
+      metrics.push({ label: 'Hold Period', dealVal: deal.holdPeriod + ' yrs', peerVal: peerHold.toFixed(1) + ' yrs', diff: diff, diffLabel: Math.abs(diff).toFixed(1) + ' yr ' + (diff <= 0 ? 'shorter' : 'longer'), good: diff <= 0 });
+    }
+
+    if (metrics.length === 0) return;
+
+    feeBenchHtml = '<div class="section">';
+    feeBenchHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">How This Deal Compares</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(deal.assetClass) + ' peers</span></div>';
+    feeBenchHtml += '<div class="section-body">';
+    feeBenchHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">';
+    metrics.forEach(function(m) {
+      var color = m.good ? 'var(--primary)' : '#f59e0b';
+      var bgColor = m.good ? 'rgba(81,190,123,0.06)' : 'rgba(245,158,11,0.06)';
+      var arrow = m.good ? '\u2191' : '\u2193';
+      feeBenchHtml += '<div style="background:' + bgColor + ';border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:16px;text-align:center;">'
+        + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">' + m.label + '</div>'
+        + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">' + m.dealVal + '</div>'
+        + '<div style="font-family:var(--font-ui);font-size:11px;color:' + color + ';font-weight:700;margin-top:4px;">' + arrow + ' ' + m.diffLabel + '</div>'
+        + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">Peer avg: ' + m.peerVal + '</div>'
+        + '</div>';
+    });
+    feeBenchHtml += '</div></div></div>';
+  })();
+
   // --- 7. Supporting Materials ---
   var materialsHtml = '';
   var hasMaterials = deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl || deal.mcWebsite || deal.mcInvestClearly || deal.mcLinkedin;
@@ -5109,6 +5183,7 @@ async function renderDeal() {
     + thesisHtml
     + goalImpactHtml
     + detailsHtml
+    + feeBenchHtml
     + chartHtml
     + materialsHtml
     + ddHtml
@@ -5125,6 +5200,11 @@ async function renderDeal() {
   container.innerHTML = html;
 
   document.body.classList.add('page-loaded');
+
+  // Load memo from database (merges with localStorage)
+  if (typeof loadMemoFromDb === 'function') {
+    loadMemoFromDb(deal.id);
+  }
 
   // Fetch shared DD data from Airtable and merge community answers
   (function() {
