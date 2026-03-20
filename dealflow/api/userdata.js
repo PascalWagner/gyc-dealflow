@@ -278,9 +278,30 @@ async function handleGet(req, res, supabase, user) {
 
 async function handlePost(req, res, supabase, user) {
   const { type, data } = req.body;
+
+  // Special case: profile updates (user_profiles table)
+  if (type === 'profile') {
+    const allowed = ['share_portfolio', 'full_name'];
+    const fields = {};
+    for (const key of allowed) {
+      if (data[key] !== undefined) fields[key] = data[key];
+    }
+    if (Object.keys(fields).length === 0) {
+      return res.status(400).json({ error: 'No valid profile fields to update' });
+    }
+    const { data: updated, error } = await supabase
+      .from('user_profiles')
+      .update(fields)
+      .eq('id', user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
+  }
+
   const table = TABLE_MAP[type];
   if (!table) {
-    return res.status(400).json({ error: `Invalid type. Must be one of: ${Object.keys(TABLE_MAP).join(', ')}` });
+    return res.status(400).json({ error: `Invalid type. Must be one of: profile, ${Object.keys(TABLE_MAP).join(', ')}` });
   }
   if (!data || typeof data !== 'object') {
     return res.status(400).json({ error: 'Data object is required' });

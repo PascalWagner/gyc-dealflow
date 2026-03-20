@@ -1,10 +1,5 @@
 // Vercel Serverless Function: /api/deal-stats via Supabase
-// REPLACES: deal-stats.js (Airtable version)
-//
-// What changed:
-//   - Uses the deal_stage_counts VIEW (single indexed query)
-//   - No pagination needed
-//   - ~10x faster
+// Returns anonymous stage counts + names of investors who opted into sharing
 
 import { getAdminClient, setCors } from './_supabase.js';
 
@@ -22,18 +17,59 @@ export default async function handler(req, res) {
   try {
     const supabase = getAdminClient();
 
+    // 1. Anonymous stage counts (existing view)
     const { data, error } = await supabase
       .from('deal_stage_counts')
       .select('*')
       .eq('deal_id', dealId)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+    if (error && error.code !== 'PGRST116') throw error;
+
+    // 2. Named investors who opted into sharing (portfolio stage only)
+    const { data: publicInvestors } = await supabase
+      .from('user_deal_stages')
+      .select('user_id, stage, user_profiles!inner(full_name, share_portfolio)')
+      .eq('deal_id', dealId)
+      .eq('user_profiles.share_portfolio', true);
+
+    // Build named lists by stage
+    const namedInvestors = [];
+    const namedWatchers = [];
+    if (publicInvestors) {
+      for (const row of publicInvestors) {
+        const name = row.user_profiles?.full_name;
+        if (!name) continue;
+        if (row.stage === 'portfolio') {
+          namedInvestors.push(name);
+        } else {
+          namedWatchers.push(name);
+        }
+      }
+    }
+
+    // Also check user_portfolio for invested users who opted in
+    const { data: portfolioInvestors } = await supabase
+      .from('user_portfolio')
+      .select('user_id, user_profiles!inner(full_name, share_portfolio)')
+      .eq('deal_id', dealId)
+      .eq('user_profiles.share_portfolio', true);
+
+    if (portfolioInvestors) {
+      for (const row of portfolioInvestors) {
+        const name = row.user_profiles?.full_name;
+        if (name && !namedInvestors.includes(name)) {
+          namedInvestors.push(name);
+        }
+      }
+    }
 
     return res.status(200).json({
       interested: data?.interested || 0,
       duediligence: data?.duediligence || 0,
-      portfolio: data?.portfolio || 0
+      portfolio: data?.portfolio || 0,
+      namedInvestors,
+      namedWatchers
     });
   } catch (err) {
     console.error('Deal stats error:', err);
