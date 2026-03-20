@@ -48,6 +48,8 @@ export default async function handler(req, res) {
           by: f['Checked By Email'] || '',
           name: f['Checked By Name'] || '',
           at: f['Checked At'] || '',
+          answer: f['Answer'] || '',
+          source: f['Source'] || '',
           recordId: rec.id
         };
       }
@@ -60,7 +62,7 @@ export default async function handler(req, res) {
 
   // POST: Check or uncheck a checklist item
   if (req.method === 'POST') {
-    const { dealId, itemIndex, itemText, checked, userEmail, userName } = req.body || {};
+    const { dealId, itemIndex, itemText, checked, userEmail, userName, answer, source } = req.body || {};
     if (!dealId || itemIndex === undefined) {
       return res.status(400).json({ error: 'dealId and itemIndex are required' });
     }
@@ -68,7 +70,7 @@ export default async function handler(req, res) {
     try {
       if (checked) {
         // Check: find existing row or create new one
-        const formula = `AND({Deal ID}='${escapeFormula(dealId)}',{Item Index}=${itemIndex})`;
+        const formula = `AND({Deal ID}='${escapeFormula(dealId)}',{Item Index}='${escapeFormula(String(itemIndex))}')`;
         const searchUrl = new URL(`${AIRTABLE_API}/${encodeURIComponent(DD_TABLE)}`);
         searchUrl.searchParams.set('filterByFormula', formula);
 
@@ -89,7 +91,9 @@ export default async function handler(req, res) {
                 fields: {
                   'Checked By Email': userEmail || '',
                   'Checked By Name': userName || '',
-                  'Checked At': new Date().toISOString()
+                  'Checked At': new Date().toISOString(),
+                  'Answer': answer || '',
+                  'Source': source || 'user'
                 }
               }]
             })
@@ -107,7 +111,9 @@ export default async function handler(req, res) {
                   'Item Text': itemText || '',
                   'Checked By Email': userEmail || '',
                   'Checked By Name': userName || '',
-                  'Checked At': new Date().toISOString()
+                  'Checked At': new Date().toISOString(),
+                  'Answer': answer || '',
+                  'Source': source || 'user'
                 }
               }]
             })
@@ -115,7 +121,7 @@ export default async function handler(req, res) {
         }
       } else {
         // Uncheck: delete the row
-        const formula = `AND({Deal ID}='${escapeFormula(dealId)}',{Item Index}=${itemIndex})`;
+        const formula = `AND({Deal ID}='${escapeFormula(dealId)}',{Item Index}='${escapeFormula(String(itemIndex))}')`;
         const searchUrl = new URL(`${AIRTABLE_API}/${encodeURIComponent(DD_TABLE)}`);
         searchUrl.searchParams.set('filterByFormula', formula);
 

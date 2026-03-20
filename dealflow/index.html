@@ -800,6 +800,51 @@ html.dark .card-match-badge.red { background: #2E1515; }
   color: var(--text-dark);
 }
 
+.card-social-proof {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 18px 2px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.card-social-proof .sp-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-social-proof .sp-item svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.6;
+}
+.card-social-proof .sp-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.4;
+}
+.deal-freshness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  letter-spacing: 0.3px;
+}
+.deal-freshness-badge.verified {
+  background: rgba(74,222,128,0.1);
+  color: #4ade80;
+}
+.deal-freshness-badge.unverified {
+  background: rgba(251,191,36,0.08);
+  color: #fbbf24;
+}
 .card-footer {
   padding: 12px 18px 16px;
   display: flex;
@@ -5376,6 +5421,88 @@ function updateDealCount() {
   if (badge) badge.textContent = DEALS.length;
 }
 
+// ========== SOCIAL PROOF: BULK DEAL STATS ==========
+let dealSocialStats = {};
+async function loadDealStats() {
+  const cached = sessionStorage.getItem('gycDealStatsBulk');
+  const cacheTime = sessionStorage.getItem('gycDealStatsBulkTime');
+  const CACHE_TTL = 5 * 60 * 1000;
+  if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
+    try { dealSocialStats = JSON.parse(cached); return; } catch(e) {}
+  }
+  try {
+    const resp = await fetch('/api/deal-stats-bulk');
+    if (!resp.ok) throw new Error('stats fetch failed');
+    const data = await resp.json();
+    dealSocialStats = data.stats || {};
+    sessionStorage.setItem('gycDealStatsBulk', JSON.stringify(dealSocialStats));
+    sessionStorage.setItem('gycDealStatsBulkTime', String(Date.now()));
+    renderAll();
+  } catch(e) {
+    console.warn('Deal stats load failed:', e.message);
+  }
+}
+// Load stats in background after initial render
+setTimeout(loadDealStats, 500);
+
+function renderSocialProof(dealId) {
+  const stats = dealSocialStats[dealId];
+  if (!stats) return '';
+  const total = (stats.saved || 0) + (stats.vetting || 0) + (stats.ready || 0) + (stats.invested || 0);
+  if (total === 0) return '';
+  const parts = [];
+  const eyeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ddSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>';
+  const investSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
+  if (total > 0) parts.push('<span class="sp-item">' + eyeSvg + total + ' watching</span>');
+  var ddCount = (stats.vetting || 0) + (stats.ready || 0);
+  if (ddCount > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + ddSvg + ddCount + ' in DD</span>');
+  if ((stats.invested || 0) > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + investSvg + stats.invested + ' invested</span>');
+  return '<div class="card-social-proof">' + parts.join('') + '</div>';
+}
+
+// ========== REF TRACKING (Content → Deal Attribution) ==========
+(function captureRefParam() {
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get('ref');
+  if (ref) {
+    sessionStorage.setItem('gycContentRef', ref);
+    // Clean URL without reload
+    const url = new URL(window.location);
+    url.searchParams.delete('ref');
+    window.history.replaceState({}, '', url.toString());
+  }
+})();
+function getContentRef() {
+  return sessionStorage.getItem('gycContentRef') || null;
+}
+
+// ========== DEAL FRESHNESS BADGE ==========
+function renderFreshnessBadge(deal) {
+  // Check data completeness
+  var fields = [deal.investmentStrategy, deal.targetIRR || deal.cashOnCash, deal.investmentMinimum, deal.holdPeriod, deal.managementCompany, deal.offeringType, deal.status];
+  var filled = fields.filter(function(f) { return f && f !== '' && f !== 0; }).length;
+  var score = Math.round((filled / fields.length) * 100);
+  // Check if PPM exists (strong verification signal)
+  var hasPPM = !!deal.ppmUrl;
+  if (hasPPM && score >= 70) {
+    return '<span class="deal-freshness-badge verified"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
+  }
+  if (score < 50) {
+    return '<span class="deal-freshness-badge unverified">Limited Data</span>';
+  }
+  return '';
+}
+
+// ========== BUY BOX MATCH BADGE ==========
+function renderMatchBadge(deal) {
+  var info = matchBadgeInfo(deal);
+  if (!info.text) return '';
+  var bg = info.cls === 'green' ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.08)';
+  var color = info.cls === 'green' ? '#4ade80' : '#fbbf24';
+  return '<span class="deal-freshness-badge" style="background:' + bg + ';color:' + color + ';">' + info.text + '</span>';
+}
+
 // ========== DD CHECKLIST DATA ==========
 const DD_CHECKLIST = [
   'Review PPM / Offering Memorandum',
@@ -5772,23 +5899,80 @@ function fmt(val, type) {
 }
 
 function computeMatchScore(deal) {
-  const fields = ['targetIRR','equityMultiple','preferredReturn','investmentStrategy','offeringType','distributions','cashOnCash','fees'];
-  let populated = 0;
-  for (const f of fields) {
-    const v = deal[f];
-    if (v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)) {
-      populated++;
+  const wd = getCachedWizardData();
+  if (!wd || !wd._branch) {
+    // Fallback: data completeness score
+    const fields = ['targetIRR','equityMultiple','preferredReturn','investmentStrategy','offeringType','distributions','cashOnCash','fees'];
+    let populated = 0;
+    for (const f of fields) {
+      const v = deal[f];
+      if (v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)) populated++;
     }
+    return { score: populated / fields.length, reasons: [] };
   }
-  return populated / fields.length;
+
+  let score = 0;
+  let maxScore = 0;
+  const reasons = [];
+
+  // Asset class match (weight: 3)
+  const assetMap = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
+  const userAssets = (wd.assetClasses || []).map(function(a) { return assetMap[a] || a; });
+  if (userAssets.length > 0) {
+    maxScore += 3;
+    if (userAssets.includes(deal.assetClass)) { score += 3; reasons.push(deal.assetClass); }
+  }
+
+  // Check size match (weight: 2)
+  if (wd.checkSize) {
+    maxScore += 2;
+    var checkMap = { '$25K': 25000, '$50K': 50000, '$100K': 100000, '$250K': 250000, '$500K+': 500000 };
+    var userCheck = checkMap[wd.checkSize] || parseInt(String(wd.checkSize).replace(/[^0-9]/g, '')) || 100000;
+    if (deal.investmentMinimum && deal.investmentMinimum <= userCheck * 1.5) { score += 2; reasons.push('Fits check size'); }
+  }
+
+  // Yield/return match for cashflow branch (weight: 2)
+  if (wd._branch === 'cashflow' && wd.minCashYield) {
+    maxScore += 2;
+    var minYield = parseFloat(wd.minCashYield) / 100;
+    var dealYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
+    if (dealYield >= minYield) { score += 2; reasons.push('Meets yield target'); }
+  }
+
+  // Strategy match (weight: 2)
+  var userStrategies = wd.strategies || [];
+  if (userStrategies.length > 0) {
+    maxScore += 2;
+    if (userStrategies.includes(deal.strategy)) { score += 2; reasons.push(deal.strategy + ' strategy'); }
+  }
+
+  // Instrument match (weight: 1)
+  var userInstruments = wd.instruments || [];
+  if (userInstruments.length > 0) {
+    maxScore += 1;
+    if (userInstruments.includes(deal.instrument)) { score += 1; }
+  }
+
+  // Lockup tolerance (weight: 1)
+  if (wd.lockup) {
+    maxScore += 1;
+    var lockupMap = { 'None': 0, '6 months': 0.5, '1 year': 1, '2–3 years': 3, '5+ years': 5 };
+    var maxLockup = lockupMap[wd.lockup] || 5;
+    if (deal.holdPeriod && deal.holdPeriod <= maxLockup) { score += 1; }
+  }
+
+  var ratio = maxScore > 0 ? score / maxScore : 0;
+  return { score: ratio, reasons: reasons };
 }
 
 function matchBadgeInfo(deal) {
-  const ratio = computeMatchScore(deal);
-  if (ratio >= 0.9) return { text: '100% MATCH', cls: 'green' };
-  if (ratio >= 0.7) return { text: 'STRONG MATCH', cls: 'green' };
-  if (ratio >= 0.5) return { text: 'PARTIAL MATCH', cls: 'orange' };
-  return { text: 'LOW DATA', cls: 'red' };
+  const result = computeMatchScore(deal);
+  const ratio = typeof result === 'object' ? result.score : result;
+  const reasons = typeof result === 'object' ? result.reasons : [];
+  if (ratio >= 0.8) return { text: 'STRONG MATCH', cls: 'green', reasons: reasons };
+  if (ratio >= 0.5) return { text: 'GOOD MATCH', cls: 'green', reasons: reasons };
+  if (ratio >= 0.3) return { text: 'PARTIAL', cls: 'orange', reasons: reasons };
+  return { text: '', cls: '', reasons: [] };
 }
 
 function statusPillClass(status) {
@@ -5888,14 +6072,14 @@ function renderCardStageExtras(deal) {
   } else if (stage === 'vetting') {
     // DD checklist progress
     const checks = JSON.parse(localStorage.getItem('gycDDChecklist_' + deal.id) || '{}');
-    const total = 10;
     const done = Object.values(checks).filter(Boolean).length;
-    const pct = Math.round((done / total) * 100);
-    const btnLabel = done > 0 ? 'Continue DD (' + done + '/' + total + ')' : 'Start DD Checklist';
+    const total = 65;
+    const pct = Math.min(Math.round((done / total) * 100), 100);
+    const btnLabel = done > 0 ? 'Continue DD (' + done + ' items reviewed)' : 'Start DD Checklist';
     return '<div style="margin-top:8px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
       '<span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">DD Progress</span>' +
-      '<span style="font-size:10px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + done + '/' + total + '</span></div>' +
+      '<span style="font-size:10px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + done + ' of ~' + total + '</span></div>' +
       '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">' +
       '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:2px;transition:width 0.3s;"></div></div>' +
       '<a href="deal.html?id=' + deal.id + '" onclick="event.stopPropagation()" style="display:block;margin-top:6px;padding:6px 10px;background:rgba(81,190,123,0.08);border-radius:6px;font-size:11px;font-weight:700;color:var(--primary);text-align:center;text-decoration:none;">' + btnLabel + '</a>' +
@@ -6233,6 +6417,8 @@ function renderCreditCard(deal) {
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${auditBadge}
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
+          ${renderFreshnessBadge(deal)}
+          ${renderMatchBadge(deal)}
         </div>
         ${heroContent}
       </div>
@@ -6272,6 +6458,7 @@ function renderCreditCard(deal) {
         ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
         ${renderCardStageExtras(deal)}
       </div>
+      ${renderSocialProof(deal.id)}
       <div class="card-footer">
         ${renderGridCardActions(deal, stage, isInterested)}
       </div>
@@ -6513,6 +6700,8 @@ function renderCard(deal) {
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${deal.strategy && deal.strategy !== 'Value-Add' ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
+          ${renderFreshnessBadge(deal)}
+          ${renderMatchBadge(deal)}
         </div>
         <div class="equity-hero-icon">${hero.icon}</div>
         ${deal.targetIRR ? `<div class="equity-hero-irr"><span class="equity-hero-irr-value">${fmt(deal.targetIRR, 'pct')}</span><span class="equity-hero-irr-label">Target IRR</span></div>` : ''}
@@ -6553,6 +6742,7 @@ function renderCard(deal) {
         ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
         ${renderCardStageExtras(deal)}
       </div>
+      ${renderSocialProof(deal.id)}
       <div class="card-footer">
         ${renderGridCardActions(deal, stage, isInterested)}
       </div>
@@ -10135,18 +10325,21 @@ function incrementCounter(key) {
 function trackActivity(action, data) {
   const user = getUser();
   if (!user) return;
+  // Attach content ref if present (tracks which content drove this action)
+  const ref = getContentRef();
+  const enrichedData = { ...(data || {}), ...(ref ? { contentRef: ref } : {}) };
   // Store locally for analytics dashboard
-  storeAnalyticsEvent(action, data);
+  storeAnalyticsEvent(action, enrichedData);
   // Fire GA4 event
   if (typeof gtag === 'function') {
-    gtag('event', action, data || {});
+    gtag('event', action, enrichedData);
   }
   // Send to GHL event pipeline
   try {
     fetch(WEBHOOKS.activity, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, event: action, data: data || {} })
+      body: JSON.stringify({ email: user.email, event: action, data: enrichedData })
     }).catch(() => {});
   } catch(e) {}
 }
@@ -12991,8 +13184,70 @@ function renderDashboard() {
       + '</div></div>';
   }
 
+  // ===== SECTION: DD History =====
+  let ddHistoryHtml = '';
+  (function buildDDHistory() {
+    // Scan localStorage for all DD checklist entries
+    const ddDeals = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('gycDDChecklist_')) {
+        const dealId = key.replace('gycDDChecklist_', '');
+        try {
+          const answers = JSON.parse(localStorage.getItem(key) || '{}');
+          const answerCount = Object.keys(answers).length;
+          if (answerCount > 0) {
+            const deal = deals.find(function(d) { return d.id === dealId; });
+            const stage = stages[dealId] || 'browse';
+            ddDeals.push({
+              dealId: dealId,
+              name: deal ? deal.investmentName : dealId,
+              sponsor: deal ? (deal.managementCompany || '') : '',
+              assetClass: deal ? (deal.assetClass || '') : '',
+              answeredCount: answerCount,
+              stage: stage
+            });
+          }
+        } catch(e) {}
+      }
+    }
+    if (ddDeals.length === 0) return;
+
+    // Sort by answer count descending (most researched first)
+    ddDeals.sort(function(a, b) { return b.answeredCount - a.answeredCount; });
+
+    const stageLabels = { browse: 'Browsing', saved: 'Saved', vetting: 'In DD', ready: 'Ready', invested: 'Invested', passed: 'Passed' };
+    const stageColors = { browse: '#6b7280', saved: '#f59e0b', vetting: '#3b82f6', ready: '#4ade80', invested: 'var(--primary)', passed: '#6b7280' };
+
+    const rows = ddDeals.slice(0, 5).map(function(d) {
+      const stageLabel = stageLabels[d.stage] || d.stage;
+      const stageColor = stageColors[d.stage] || 'var(--text-muted)';
+      return '<div onclick="window.location.href=\'deal.html?id=' + d.dealId + '\'" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.08);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="width:18px;height:18px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + d.name + '</div>'
+        + '<div style="font-size:11px;color:var(--text-muted);margin-top:1px;">' + d.sponsor + (d.assetClass ? ' \u00b7 ' + d.assetClass : '') + '</div>'
+        + '</div>'
+        + '<div style="flex-shrink:0;text-align:right;">'
+        + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:#3b82f6;">' + d.answeredCount + ' items</div>'
+        + '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + stageColor + '18;color:' + stageColor + ';">' + stageLabel + '</span>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    ddHistoryHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:20px;">'
+      + '<div style="padding:16px 16px 0;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+      + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Your Research History</div>'
+      + '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);">' + ddDeals.length + ' deal' + (ddDeals.length !== 1 ? 's' : '') + ' researched</div>'
+      + '</div></div>'
+      + '<div>' + rows + '</div>'
+      + (ddDeals.length > 5 ? '<div style="padding:12px 16px;text-align:center;"><button onclick="navigateTo(\'deals\')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;">View all ' + ddDeals.length + ' researched deals &rarr;</button></div>' : '')
+      + '</div>';
+  })();
+
   // ===== Render all sections =====
-  container.innerHTML = coachingHtml + heroHtml + momentumRow + statsRow + actionItemsHtml + portfolioHtml + fundNudgeHtml;
+  container.innerHTML = coachingHtml + heroHtml + momentumRow + statsRow + actionItemsHtml + portfolioHtml + ddHistoryHtml + fundNudgeHtml;
 }
 
 // ========== INCOME / DISTRIBUTION TRACKING ==========
@@ -13390,12 +13645,18 @@ function renderDealFlowPage() {
       '</div>' +
     '</div>' +
 
+    // User Engagement Section (loaded async from admin API)
+    '<div id="adminEngagementSection" style="margin-bottom:20px;"></div>' +
+
     // Value prop footer
     '<div style="background:linear-gradient(135deg,#2C3E2D,#3D5A3E);border-radius:10px;padding:24px;color:#fff;text-align:center;margin-bottom:20px;">' +
       '<div style="font-size:18px;font-weight:800;margin-bottom:8px;">This database can\'t be rebuilt overnight.</div>' +
       '<div style="font-size:13px;opacity:0.85;">With ' + totalDeals + ' deals tracked, ' + Object.keys(assetClasses).length + ' asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>' +
     '</div>' +
   '</div>';
+
+  // Load user engagement analytics (admin only)
+  loadAdminEngagement();
 
   // Render charts
   setTimeout(function() {
@@ -13484,6 +13745,85 @@ function renderDealFlowPage() {
       }
     } catch(e) { console.warn('Asset pie error:', e); }
   }, 100);
+}
+
+// ========== ADMIN ENGAGEMENT ANALYTICS ==========
+function loadAdminEngagement() {
+  var container = document.getElementById('adminEngagementSection');
+  if (!container) return;
+  fetch('/api/admin-analytics')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.summary) return;
+      var s = data.summary;
+
+      // Summary cards
+      var html = '<h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">User Engagement</h3>';
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;">';
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Active Users</div><div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + s.totalUsers + '</div></div>';
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Users in DD</div><div style="font-size:28px;font-weight:800;color:#3b82f6;">' + s.usersInDD + '</div></div>';
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Users Invested</div><div style="font-size:28px;font-weight:800;color:var(--primary);">' + s.usersInvested + '</div></div>';
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Total Actions</div><div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + s.totalRecords + '</div></div>';
+      html += '</div>';
+
+      // Funnel bar
+      var funnelStages = [
+        { label: 'Saved', count: s.funnel.saved || 0, color: '#f59e0b' },
+        { label: 'Vetting', count: s.funnel.vetting || 0, color: '#3b82f6' },
+        { label: 'Ready', count: s.funnel.ready || 0, color: '#8b5cf6' },
+        { label: 'Invested', count: s.funnel.invested || 0, color: 'var(--primary)' },
+        { label: 'Passed', count: s.funnel.passed || 0, color: '#6b7280' }
+      ];
+      var maxFunnel = Math.max.apply(null, funnelStages.map(function(f) { return f.count; })) || 1;
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">';
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">';
+      html += '<h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">User Pipeline Funnel</h3>';
+      funnelStages.forEach(function(f) {
+        var pct = Math.round((f.count / maxFunnel) * 100);
+        html += '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;"><span>' + f.label + '</span><span>' + f.count + '</span></div>';
+        html += '<div style="height:8px;background:var(--bg-main);border-radius:4px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:' + f.color + ';border-radius:4px;"></div></div></div>';
+      });
+      html += '</div>';
+
+      // Hot deals table
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">';
+      html += '<h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Hottest Deals</h3>';
+      html += '<div style="max-height:280px;overflow-y:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">';
+      html += '<thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:6px 8px;">Deal</th><th style="text-align:center;padding:6px 4px;">Saved</th><th style="text-align:center;padding:6px 4px;">DD</th><th style="text-align:center;padding:6px 4px;">Invested</th><th style="text-align:right;padding:6px 8px;">Total</th></tr></thead><tbody>';
+      (data.hotDeals || []).forEach(function(d) {
+        html += '<tr style="border-bottom:1px solid var(--border);">';
+        html += '<td style="padding:6px 8px;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + d.name + '</td>';
+        html += '<td style="padding:6px 4px;text-align:center;color:#f59e0b;font-weight:700;">' + d.saved + '</td>';
+        html += '<td style="padding:6px 4px;text-align:center;color:#3b82f6;font-weight:700;">' + (d.vetting + d.ready) + '</td>';
+        html += '<td style="padding:6px 4px;text-align:center;color:var(--primary);font-weight:700;">' + d.invested + '</td>';
+        html += '<td style="padding:6px 8px;text-align:right;font-weight:800;">' + d.total + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table></div></div></div>';
+
+      // Top users table
+      if (data.topUsers && data.topUsers.length > 0) {
+        html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">';
+        html += '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Most Engaged Users</h3>';
+        html += '<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Users with the most deal pipeline activity — prioritize for coaching outreach</p>';
+        html += '<div style="max-height:400px;overflow-y:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">';
+        html += '<thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:6px 8px;">Email</th><th style="text-align:center;padding:6px 4px;">Saved</th><th style="text-align:center;padding:6px 4px;">DD</th><th style="text-align:center;padding:6px 4px;">Invested</th><th style="text-align:right;padding:6px 8px;">Last Active</th></tr></thead><tbody>';
+        data.topUsers.forEach(function(u) {
+          var lastActive = u.lastActive ? new Date(u.lastActive).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '--';
+          html += '<tr style="border-bottom:1px solid var(--border);">';
+          html += '<td style="padding:6px 8px;font-weight:600;">' + u.email + '</td>';
+          html += '<td style="padding:6px 4px;text-align:center;color:#f59e0b;font-weight:700;">' + u.saved + '</td>';
+          html += '<td style="padding:6px 4px;text-align:center;color:#3b82f6;font-weight:700;">' + (u.vetting + u.ready) + '</td>';
+          html += '<td style="padding:6px 4px;text-align:center;color:var(--primary);font-weight:700;">' + u.invested + '</td>';
+          html += '<td style="padding:6px 8px;text-align:right;color:var(--text-muted);">' + lastActive + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div></div>';
+      }
+
+      container.innerHTML = html;
+    })
+    .catch(function(e) { console.warn('Admin analytics load failed:', e.message); });
 }
 
 // ========== DATABASE SCHEMA PAGE ==========
