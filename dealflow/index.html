@@ -8127,7 +8127,7 @@ function renderFeedCard(deal) {
       <div style="padding:16px 20px 12px;cursor:pointer;" onclick="window.location.href='deal.html?id=${deal.id}'">
         <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;line-height:1.3;cursor:pointer;">${deal.investmentName}</div>
         <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:12px;">
-          ${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}
+          ${deal.managementCompany || 'Unknown'}${deal.location ? ' &middot; ' + deal.location : ''}
         </div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;">
           ${deal.targetIRR ? `<div><div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</div><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--green);line-height:1.2;">${fmt(deal.targetIRR, 'pct')}</div></div>` : ''}
@@ -8412,7 +8412,7 @@ function renderCreditCard(deal) {
       </div>
       <div class="credit-card-body" onclick="window.location.href='deal.html?id=${deal.id}'" style="cursor:pointer;flex:1;">
         <div class="credit-card-title">${deal.investmentName}</div>
-        <div class="credit-card-manager">${deal.managementCompany || ''}</div>
+        <div class="credit-card-manager">${deal.managementCompany || 'Unknown'}</div>
         <div class="credit-card-strategy">${strategy}</div>
         ${buildHighlightPills(deal)}
         <div class="credit-card-metrics">
@@ -10394,7 +10394,7 @@ const ASSET_CLASS_OPTIONS = {
     icon: '\uD83D\uDCE6', label: 'Self Storage',
     cashflow: { fit: 'good', why: 'Recession-resistant with 8\u201312% cash-on-cash returns' },
     tax: { fit: 'good', why: 'Depreciation benefits similar to multi-family' },
-    growth: { fit: 'great', why: 'Highest appreciation potential in commercial RE — 20%+ IRRs common' }
+    growth: { fit: 'great', why: 'Highest appreciation potential in commercial RE \u2014 20%+ IRRs common' }
   },
   'Industrial': {
     icon: '\uD83C\uDFED', label: 'Industrial',
@@ -10402,35 +10402,47 @@ const ASSET_CLASS_OPTIONS = {
     tax: { fit: 'okay', why: 'Standard depreciation benefits, less aggressive than residential' },
     growth: { fit: 'good', why: 'E-commerce tailwinds driving strong appreciation' }
   },
-  'Hotels / Hospitality': {
-    icon: '\uD83C\uDFE8', label: 'Hotels',
+  'Hotels/Hospitality': {
+    icon: '\uD83C\uDFE8', label: 'Hotels / Hospitality',
     cashflow: { fit: 'okay', why: 'Higher yields possible but more volatile than other asset classes' },
     tax: { fit: 'good', why: 'Accelerated depreciation on FF&E (furniture, fixtures)' },
     growth: { fit: 'good', why: 'Turnaround plays can deliver outsized returns' }
   },
-  'Lending': {
-    icon: '\uD83D\uDCB5', label: 'Private Lending',
-    cashflow: { fit: 'great', why: 'Most consistent income \u2014 8\u201314% yields paid monthly or quarterly' },
-    tax: { fit: 'poor', why: 'Interest income is taxed as ordinary income, no depreciation' },
-    growth: { fit: 'poor', why: 'Returns are capped at the interest rate \u2014 no appreciation upside' }
+  'Single Family': {
+    icon: '\uD83C\uDFE1', label: 'Single Family',
+    cashflow: { fit: 'good', why: 'Rental income and build-to-rent strategies provide steady cash flow' },
+    tax: { fit: 'good', why: 'Depreciation and interest deductions on residential properties' },
+    growth: { fit: 'good', why: 'Appreciation in growing suburban markets' }
   },
-  'RV / Mobile Home Parks': {
+  'RV/Mobile Home Parks': {
     icon: '\uD83C\uDFD5\uFE0F', label: 'Mobile Home Parks',
     cashflow: { fit: 'good', why: 'Low vacancy, sticky tenants, 8\u201312% cash yields' },
     tax: { fit: 'good', why: 'Land improvements and infrastructure eligible for accelerated depreciation' },
     growth: { fit: 'great', why: 'Highest cap rate compression in RE \u2014 25%+ IRRs in value-add plays' }
   },
-  'Business / Other': {
-    icon: '\uD83C\uDF3F', label: 'Alternative Assets',
-    cashflow: { fit: 'good', why: 'Equipment leasing, royalties, receivables \u2014 diversified income' },
-    tax: { fit: 'okay', why: 'Varies by asset type \u2014 oil & gas has major deductions' },
-    growth: { fit: 'okay', why: 'Niche opportunities with less competition' }
+  'Retail': {
+    icon: '\uD83D\uDECD\uFE0F', label: 'Retail',
+    cashflow: { fit: 'good', why: 'NNN leases and percentage rent provide predictable income' },
+    tax: { fit: 'okay', why: 'Standard commercial depreciation schedules' },
+    growth: { fit: 'okay', why: 'Location-dependent \u2014 strong in neighborhood retail' }
   },
-  'Oil & Gas': {
-    icon: '\u26FD', label: 'Oil & Gas',
+  'Medical Receivables': {
+    icon: '\uD83C\uDFE5', label: 'Medical Receivables',
+    cashflow: { fit: 'great', why: 'Short-duration receivables with 8\u201312% yields' },
+    tax: { fit: 'poor', why: 'Interest income taxed as ordinary income' },
+    growth: { fit: 'poor', why: 'Returns capped \u2014 income-focused, not appreciation' }
+  },
+  'Oil & Gas / Energy': {
+    icon: '\u26FD', label: 'Oil & Gas / Energy',
     cashflow: { fit: 'okay', why: 'Royalties and working interests can produce income' },
     tax: { fit: 'great', why: 'Intangible drilling costs can deduct 60\u2013100% of investment in year 1' },
     growth: { fit: 'okay', why: 'Commodity-linked returns \u2014 higher risk, higher reward' }
+  },
+  'Business / Other': {
+    icon: '\uD83C\uDF3F', label: 'Alternative / Other',
+    cashflow: { fit: 'good', why: 'Equipment leasing, royalties, private credit \u2014 diversified income' },
+    tax: { fit: 'okay', why: 'Varies by asset type' },
+    growth: { fit: 'okay', why: 'Niche opportunities with less competition' }
   }
 };
 

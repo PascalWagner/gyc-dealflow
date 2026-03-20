@@ -4574,7 +4574,7 @@ async function renderDeal() {
 
   // Right column: operator photo + name
   heroHtml += '<div class="hero-right">';
-  var _opName = deal.ceo || deal.managementCompany || '';
+  var _opName = deal.ceo || deal.managementCompany || 'Unknown';
   if (deal.ceoPhotoUrl) {
     heroHtml += '<div class="hero-operator-photo"><img src="' + escAttr(deal.ceoPhotoUrl) + '" alt="' + escAttr(_opName) + '" onerror="this.parentElement.textContent=\'' + getInitials(_opName) + '\';"></div>';
   } else {
@@ -4582,9 +4582,9 @@ async function renderDeal() {
   }
   if (deal.ceo) {
     heroHtml += '<div class="hero-operator-name">' + esc(deal.ceo) + '</div>';
-    heroHtml += '<div class="hero-operator-title">' + esc(deal.managementCompany || '') + '</div>';
+    heroHtml += '<div class="hero-operator-title">' + esc(deal.managementCompany || 'Unknown') + '</div>';
   } else {
-    heroHtml += '<div class="hero-operator-name">' + esc(deal.managementCompany || '') + '</div>';
+    heroHtml += '<div class="hero-operator-name">' + esc(deal.managementCompany || 'Unknown') + '</div>';
   }
   heroHtml += '</div>'; // close hero-right
 
