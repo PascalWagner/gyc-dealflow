@@ -64,18 +64,15 @@ const FIELD_MAP = {
 };
 
 // GHL custom field mapping for goals → CRM sync
-// GHL custom field mapping for goals
 // Verified against actual GHL custom fields (March 20, 2026)
-// Fields that exist:  primary_investment_objective, current_monthly_passive_income,
-//                     monthly_passive_income_goal, deployable_capital
-// Fields to create:   investment_timeline, tax_reduction_target, income_gap
+// All fields exist in GHL under Contact > Buy Box / Intro Call folders
 const GHL_GOALS_FIELD_MAP = {
-  goal_type: 'contact.primary_investment_objective',          // "Primary Investment Goal" (exists)
-  current_income: 'contact.current_monthly_passive_income',   // "Current Annual Passive Income" (exists)
-  target_income: 'contact.monthly_passive_income_goal',       // "Annual Passive Income Goal" (exists)
-  capital_available: 'contact.deployable_capital',            // "Deployable Capital" (exists, but SINGLE_OPTIONS with ranges)
-  timeline: 'contact.investment_timeline',                    // NEEDS TO BE CREATED in GHL
-  tax_reduction: 'contact.tax_reduction_target'               // NEEDS TO BE CREATED in GHL
+  goal_type: 'contact.primary_investment_objective',          // "Primary Investment Goal"
+  current_income: 'contact.current_monthly_passive_income',   // "Current Annual Passive Income"
+  target_income: 'contact.monthly_passive_income_goal',       // "Annual Passive Income Goal"
+  capital_available: 'contact.deployable_capital',            // "Deployable Capital" (SINGLE_OPTIONS — use capitalToRange())
+  timeline: 'contact.investment_timeline',                    // "Investment Timeline" (Number)
+  tax_reduction: 'contact.tax_reduction_target'               // "Tax Reduction Target" (Monetary)
 };
 
 // Convert numeric capital to GHL SINGLE_OPTIONS range label
