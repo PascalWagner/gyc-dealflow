@@ -573,6 +573,16 @@ select.admin-field-input { -webkit-appearance: none; appearance: none; cursor: p
 .admin-btn.danger { background: transparent; color: var(--red); }
 .admin-btn.danger:hover { background: #fde8e8; }
 
+/* Loading spinner */
+.loading-spinner {
+  width: 28px; height: 28px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Apple-style admin table */
 .admin-table-wrap {
   background: var(--bg-card); border-radius: 14px; overflow: hidden;
@@ -5855,6 +5865,10 @@ const _supa = window.supabase.createClient(
           Add New
         </button>
         <button id="adminQualityToggle" onclick="adminToggleQuality()" class="admin-btn secondary" style="font-size:12px;white-space:nowrap;" title="Audit deal completeness">Quality Audit</button>
+        <button id="adminCleanupBtn" onclick="cleanupStart()" class="admin-btn secondary" style="font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:5px;" title="AI-powered data cleanup — enrich deals one by one">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Data Cleanup
+        </button>
         <span id="adminResultCount" style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);font-weight:500;"></span>
       </div>
       <div id="adminQualityBanner" style="display:none;padding:14px 18px;background:var(--bg-cream);border-radius:12px;margin-bottom:16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">
@@ -5895,9 +5909,12 @@ const _supa = window.supabase.createClient(
         </div>
         <select id="outreachStatusFilter" onchange="outreachLoadData()" style="padding:10px 28px 10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
           <option value="all">All Statuses</option>
-          <option value="not_contacted">Not Contacted</option>
+          <option value="backlog">Backlog</option>
+          <option value="researching">Researching</option>
+          <option value="ready_to_contact">Ready to Contact</option>
           <option value="contacted">Contacted</option>
           <option value="follow_up">Follow Up</option>
+          <option value="in_discussion">In Discussion</option>
           <option value="approved">Approved</option>
           <option value="denied">Denied</option>
         </select>
@@ -7707,7 +7724,7 @@ function syncGoals(goals) {
     'Goal Type': goals.goalType || 'passive-income',
     'Current Income': goals.currentIncome || 0,
     'Target Income': goals.targetIncome || 0,
-    'Capital Available': goals.capitalAvailable || 0,
+    'Capital Available': goals.capitalAvailable || goals.capital || '',
     'Timeline': goals.timeline || '5',
     'Tax Reduction': goals.taxReduction || 0
   });
@@ -10219,7 +10236,7 @@ async function fetchUserDataFromSupabase(email) {
             goalType: serverGoals.goal_type || 'passive-income',
             currentIncome: serverGoals.current_income || 0,
             targetIncome: serverGoals.target_income || 0,
-            capitalAvailable: serverGoals.capital_available || 0,
+            capitalAvailable: serverGoals.capital_available || '',
             timeline: serverGoals.timeline || '5',
             taxReduction: serverGoals.tax_reduction || 0
           };
@@ -11389,7 +11406,7 @@ function syncWizardToBuyBox() {
       type: branchToType[d._branch] || 'passive_income',
       currentIncome: parseFloat(d.currentCashFlow) || 0,
       targetIncome: parseFloat(d.targetCashFlow) || 100000,
-      capital: parseFloat(d.growthCapital || d.checkSize) || 500000,
+      capital: numberToCapitalLabel(parseFloat(d.growthCapital || d.checkSize) || 500000),
       checkSize: parseFloat(d.checkSize) || 100000,
       timeline: 5,
       taxReduction: parseFloat(d.taxableIncome) || 0,
@@ -11863,6 +11880,22 @@ async function handleSubscribe(tier, price) {
 }
 
 // ========== MY GOALS ==========
+// Convert range label to midpoint number for calculations
+function capitalLabelToNumber(label) {
+  if (!label || typeof label !== 'string') return 0;
+  var map = { '<$100k': 50000, '$100k - $249k': 175000, '$249k - $499k': 375000, '$500k - $999k': 750000, '$1M+': 2000000 };
+  return map[label] || parseFloat(label) || 0;
+}
+// Convert a numeric amount to the nearest range label
+function numberToCapitalLabel(num) {
+  var n = Number(num);
+  if (!n || isNaN(n)) return '<$100k';
+  if (n < 100000) return '<$100k';
+  if (n < 250000) return '$100k - $249k';
+  if (n < 500000) return '$249k - $499k';
+  if (n < 1000000) return '$500k - $999k';
+  return '$1M+';
+}
 let investorGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
 
 function saveGoals() { localStorage.setItem('gycGoals', JSON.stringify(investorGoals)); syncGoals(investorGoals); }
@@ -11910,8 +11943,14 @@ function renderGoalsWizard() {
         </div>
 
         <div class="modal-field" style="margin-bottom:20px;">
-          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Capital Available to Invest ($)</label>
-          <input id="goalCapital" type="number" value="500000" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;box-sizing:border-box;">
+          <label style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;display:block;">Capital Available to Invest</label>
+          <select id="goalCapital" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;">
+            <option value="&lt;$100k">&lt;$100k</option>
+            <option value="$100k - $249k">$100k - $249k</option>
+            <option value="$249k - $499k">$249k - $499k</option>
+            <option value="$500k - $999k" selected>$500k - $999k</option>
+            <option value="$1M+">$1M+</option>
+          </select>
         </div>
 
         <div class="modal-field" style="margin-bottom:20px;">
@@ -11946,7 +11985,7 @@ function saveGoalsFromWizard() {
     type: document.getElementById('goalType').value,
     currentIncome: parseFloat(document.getElementById('goalCurrentIncome').value) || 0,
     targetIncome: parseFloat(document.getElementById('goalTargetIncome').value) || 100000,
-    capital: parseFloat(document.getElementById('goalCapital').value) || 0,
+    capital: document.getElementById('goalCapital').value || '$500k - $999k',
     checkSize: parseFloat(document.getElementById('goalCheckSize').value) || 100000,
     timeline: parseInt(document.getElementById('goalTimeline').value) || 5,
     taxReduction: parseFloat(document.getElementById('goalTaxReduction').value) || 0,
@@ -12191,7 +12230,8 @@ function renderCashflowGapBar() {
   } else if (goalType === 'build_wealth') {
     // EQUITY GROWTH: show portfolio value / capital deployment
     const targetPortfolio = Math.round((goals.targetIncome || 100000) / 0.08); // back into portfolio target from income goal
-    const capitalAvailable = goals.capital || 0;
+    const capitalLabel = goals.capital || goals.capitalAvailable || '';
+    const capitalAvailable = capitalLabelToNumber(capitalLabel);
     const portfolioInv = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
     const deployed = portfolioInv.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
     const deployGap = Math.max(0, capitalAvailable - deployed);
@@ -12201,7 +12241,7 @@ function renderCashflowGapBar() {
     icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
     metricsHtml = `
       <span style="color:#94a3b8;">${icon} <strong style="color:#fbbf24;margin-left:4px;">Growth Strategy</strong></span>
-      <span style="color:#94a3b8;">Capital: <strong style="color:#fff;">$${capitalAvailable.toLocaleString()}</strong></span>
+      <span style="color:#94a3b8;">Capital: <strong style="color:#fff;">${capitalLabel || 'Not set'}</strong></span>
       <span style="color:#94a3b8;">Deployed: <strong style="color:#fbbf24;">$${deployed.toLocaleString()}</strong></span>
       <span style="color:#94a3b8;">Remaining: <strong style="color:#f59e0b;">$${deployGap.toLocaleString()}</strong></span>`;
 
@@ -12265,7 +12305,7 @@ function getGapFillPercent(deal) {
 
   if (goalType === 'build_wealth') {
     // How much of undeployed capital this deal uses
-    const capitalAvailable = goals.capital || 0;
+    const capitalAvailable = capitalLabelToNumber(goals.capital || goals.capitalAvailable || '');
     const portfolioInv = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
     const deployed = portfolioInv.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
     const remaining = Math.max(0, capitalAvailable - deployed);
@@ -14757,6 +14797,8 @@ function adminShowTab(tab, btn) {
   if (btn) btn.classList.add('active');
   var qBtn = document.getElementById('adminQualityToggle');
   if (qBtn) { qBtn.style.display = (tab === 'deals' || tab === 'operators') ? '' : 'none'; qBtn.style.background = ''; qBtn.style.color = ''; qBtn.classList.remove('primary'); qBtn.classList.add('secondary'); }
+  var cBtn = document.getElementById('adminCleanupBtn');
+  if (cBtn) cBtn.style.display = tab === 'deals' ? '' : 'none';
   var qStats = document.getElementById('adminQualityStats');
   if (qStats) qStats.style.display = 'none';
   var qBanner = document.getElementById('adminQualityBanner');
@@ -15166,6 +15208,352 @@ function adminRenderQualityView(rows,stats){var countEl=document.getElementById(
 // ========== OPERATOR QUALITY AUDIT ==========
 function adminRenderOperatorQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' operators';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 0 0 1px rgba(0,0,0,0.03);"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.3px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Operators',stats.total_operators)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Website',stats.no_website,stats.no_website>0?'var(--orange)':'var(--primary)')+sc('No LinkedIn',stats.no_linkedin,stats.no_linkedin>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);';head.innerHTML='<th style="'+thS+'">Operator</th><th style="'+thS+'">Type</th><th style="'+thS+'text-align:center;width:60px;">Deals</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="'+thS+'text-align:center;width:50px;">Web</th><th style="'+thS+'text-align:center;width:50px;">LI</th><th style="width:60px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';var chk='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';var xm='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fde8e8;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:'+barBg+';border-radius:3px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:3px;transition:width 0.3s ease;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:12px 16px;border-bottom:1px solid var(--border-light);';var dealBadge=r.deal_count>0?'<span style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;border-radius:12px;background:var(--green-bg);font-size:12px;font-weight:700;color:var(--primary);padding:0 6px;">'+r.deal_count+'</span>':'<span style="color:var(--text-muted);opacity:0.4;">0</span>';return'<tr style="transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.type||'\u2014')+'</td><td style="'+tdS+'text-align:center;">'+dealBadge+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:center;">'+(r.has_website?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_linkedin?chk:xm)+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" class="admin-edit-btn">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No operators found</td></tr>';}
 
+// ========== DATA CLEANUP WIZARD ==========
+var _cleanupQueue = [], _cleanupIdx = 0, _cleanupEnriching = false, _cleanupResult = null, _cleanupProcessed = 0, _cleanupUpdated = 0;
+
+async function cleanupStart() {
+  // Show the cleanup modal and load the queue
+  var ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'cleanupModal';
+  ov.onclick = function(e) { if (e.target === ov && !_cleanupEnriching) ov.remove(); };
+  ov.innerHTML = '<div class="modal-card" style="max-width:780px;max-height:90vh;overflow-y:auto;padding:0;">' +
+    '<div class="admin-modal-header"><h2>Data Cleanup</h2>' +
+    '<button class="admin-modal-close" onclick="cleanupClose()">&#x2715;</button></div>' +
+    '<div id="cleanupBody" style="padding:24px;"><div style="text-align:center;padding:40px;"><div class="loading-spinner" style="margin:0 auto 12px;"></div><div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">Loading deal queue...</div></div></div>' +
+    '<div id="cleanupFooter" class="admin-modal-footer" style="display:none;"></div></div>';
+  document.body.appendChild(ov);
+
+  // Fetch the queue
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/deal-cleanup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'get-queue' })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Failed to load queue');
+    _cleanupQueue = result.queue || [];
+    _cleanupIdx = 0;
+    _cleanupProcessed = 0;
+    _cleanupUpdated = 0;
+    _cleanupResult = null;
+    cleanupRenderQueue(result.stats);
+  } catch (e) {
+    document.getElementById('cleanupBody').innerHTML =
+      '<div style="text-align:center;padding:40px;font-family:var(--font-ui);color:var(--red);">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function cleanupClose() {
+  if (_cleanupEnriching) { if (!confirm('AI enrichment is in progress. Close anyway?')) return; }
+  document.getElementById('cleanupModal')?.remove();
+  _cleanupEnriching = false;
+  if (_cleanupUpdated > 0) adminLoadData(); // Refresh the table if we made changes
+}
+
+function cleanupRenderQueue(stats) {
+  var body = document.getElementById('cleanupBody');
+  var footer = document.getElementById('cleanupFooter');
+
+  var sc = function(label, val, color) {
+    return '<div style="background:var(--bg-cream);border-radius:10px;padding:14px;text-align:center;">' +
+      '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:' + (color || 'var(--text-dark)') + ';">' + val + '</div>' +
+      '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;">' + label + '</div></div>';
+  };
+
+  var statsHtml = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">' +
+    sc('Incomplete', stats.total_incomplete) +
+    sc('Below 50%', stats.below_50, 'var(--red)') +
+    sc('50-80%', stats.between_50_80, 'var(--orange)') +
+    sc('Above 80%', stats.above_80, 'var(--primary)') +
+    '</div>';
+
+  var listHtml = _cleanupQueue.slice(0, 20).map(function(d, i) {
+    var color = d.completeness_pct >= 80 ? 'var(--primary)' : d.completeness_pct >= 50 ? 'var(--orange)' : 'var(--red)';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:background 0.1s;" ' +
+      'onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'" onclick="cleanupJumpTo(' + i + ')">' +
+      '<span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);width:24px;">' + (i + 1) + '</span>' +
+      '<span style="flex:1;font-family:var(--font-body);font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (d.investment_name || '—') + '</span>' +
+      '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + d.operator_name + '</span>' +
+      '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + color + ';min-width:36px;text-align:right;">' + d.completeness_pct + '%</span>' +
+      '<span style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">' + d.missing_count + ' missing</span>' +
+      '</div>';
+  }).join('');
+
+  if (_cleanupQueue.length > 20) {
+    listHtml += '<div style="padding:10px 14px;text-align:center;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">+ ' + (_cleanupQueue.length - 20) + ' more deals</div>';
+  }
+
+  body.innerHTML = '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;margin-bottom:4px;">AI Data Cleanup</div>' +
+    '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">' +
+    'Process deals one by one. AI will search the web for missing information about each deal, then you review and approve the suggestions before saving.</div>' +
+    statsHtml +
+    '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:350px;overflow-y:auto;">' +
+    listHtml + '</div>';
+
+  footer.style.display = 'flex';
+  footer.innerHTML = '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">' + _cleanupQueue.length + ' deals to process</div>' +
+    '<div style="flex:1;"></div>' +
+    '<button class="admin-btn secondary" onclick="cleanupClose()">Cancel</button>' +
+    '<button class="admin-btn primary" onclick="cleanupJumpTo(0)" ' + (_cleanupQueue.length === 0 ? 'disabled' : '') + '>Start Processing</button>';
+}
+
+function cleanupJumpTo(idx) {
+  _cleanupIdx = idx;
+  _cleanupResult = null;
+  cleanupRenderDeal();
+}
+
+function cleanupRenderDeal() {
+  var body = document.getElementById('cleanupBody');
+  var footer = document.getElementById('cleanupFooter');
+  var deal = _cleanupQueue[_cleanupIdx];
+  if (!deal) { cleanupRenderComplete(); return; }
+
+  var color = deal.completeness_pct >= 80 ? 'var(--primary)' : deal.completeness_pct >= 50 ? 'var(--orange)' : 'var(--red)';
+  var barBg = deal.completeness_pct >= 80 ? 'var(--green-bg)' : deal.completeness_pct >= 50 ? 'var(--orange-bg)' : '#fde8e8';
+
+  var progressHtml = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">' +
+    '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);">Deal ' + (_cleanupIdx + 1) + ' of ' + _cleanupQueue.length + '</span>' +
+    '<div style="flex:1;height:4px;background:var(--border-light);border-radius:2px;overflow:hidden;"><div style="width:' + Math.round(((_cleanupIdx + 1) / _cleanupQueue.length) * 100) + '%;height:100%;background:var(--primary);border-radius:2px;"></div></div>' +
+    '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">' + _cleanupProcessed + ' processed, ' + _cleanupUpdated + ' updated</span></div>';
+
+  var dealHeader = '<div style="background:var(--bg-cream);border-radius:12px;padding:16px;margin-bottom:16px;">' +
+    '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;margin-bottom:6px;">' + (deal.investment_name || '—') + '</div>' +
+    '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+    '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);">' + deal.operator_name + '</span>' +
+    (deal.asset_class ? '<span style="font-family:var(--font-ui);font-size:11px;padding:2px 8px;background:var(--bg-card);border-radius:6px;color:var(--text-muted);">' + deal.asset_class + '</span>' : '') +
+    '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:120px;">' +
+    '<div style="flex:1;height:5px;background:' + barBg + ';border-radius:3px;overflow:hidden;"><div style="width:' + deal.completeness_pct + '%;height:100%;background:' + color + ';border-radius:3px;"></div></div>' +
+    '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + color + ';">' + deal.completeness_pct + '%</span></div></div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">' +
+    deal.missing_fields.map(function(f) { return '<span style="display:inline-block;padding:2px 8px;background:var(--bg-card);border-radius:6px;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">' + f + '</span>'; }).join('') +
+    '</div></div>';
+
+  var contentHtml = '';
+  if (_cleanupResult) {
+    contentHtml = cleanupRenderResults();
+  } else {
+    contentHtml = '<div id="cleanupContent" style="text-align:center;padding:30px;">' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:8px;">Ready to search</div>' +
+      '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;">AI will search the web for ' + deal.missing_count + ' missing fields.</div>' +
+      '<button class="admin-btn primary" onclick="cleanupEnrichDeal()" style="padding:12px 28px;font-size:14px;">Search & Enrich</button></div>';
+  }
+
+  body.innerHTML = progressHtml + dealHeader + contentHtml;
+
+  footer.style.display = 'flex';
+  if (_cleanupResult) {
+    var hasChecked = document.querySelectorAll('#cleanupBody .cleanup-field-check:checked').length > 0;
+    footer.innerHTML = '<button class="admin-btn secondary" onclick="cleanupSkip()">Skip Deal</button>' +
+      '<div style="flex:1;"></div>' +
+      '<button class="admin-btn secondary" onclick="cleanupPrev()" ' + (_cleanupIdx <= 0 ? 'disabled' : '') + '>Previous</button>' +
+      '<button class="admin-btn primary" id="cleanupApplyBtn" onclick="cleanupApply()">Apply Selected & Next</button>';
+  } else {
+    footer.innerHTML = '<button class="admin-btn secondary" onclick="cleanupSkip()">Skip Deal</button>' +
+      '<div style="flex:1;"></div>' +
+      '<button class="admin-btn secondary" onclick="cleanupPrev()" ' + (_cleanupIdx <= 0 ? 'disabled' : '') + '>Previous</button>' +
+      '<button class="admin-btn primary" onclick="cleanupEnrichDeal()">Search & Enrich</button>';
+  }
+}
+
+async function cleanupEnrichDeal() {
+  var deal = _cleanupQueue[_cleanupIdx];
+  if (!deal) return;
+  _cleanupEnriching = true;
+
+  var contentEl = document.getElementById('cleanupContent') || document.getElementById('cleanupBody');
+  // Find or create a content area
+  var existingContent = document.getElementById('cleanupContent');
+  if (existingContent) {
+    existingContent.innerHTML = '<div style="text-align:center;padding:30px;">' +
+      '<div class="loading-spinner" style="margin:0 auto 12px;"></div>' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:4px;">Searching the web...</div>' +
+      '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Looking for information about ' + (deal.investment_name || 'this deal') + '</div>' +
+      '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:12px;">This may take 15-30 seconds</div></div>';
+  }
+
+  // Disable footer buttons
+  document.querySelectorAll('#cleanupFooter button').forEach(function(b) { b.disabled = true; });
+
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/deal-cleanup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'enrich-deal', dealId: deal.id })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Enrichment failed');
+    _cleanupResult = result;
+  } catch (e) {
+    _cleanupResult = { found_fields: {}, notes: 'Error: ' + e.message, sources: [], confidence: {}, missing_fields: deal.missing_fields.map(function(f) { return { key: f, label: f }; }) };
+  }
+
+  _cleanupEnriching = false;
+  cleanupRenderDeal();
+}
+
+function cleanupRenderResults() {
+  var r = _cleanupResult;
+  if (!r) return '';
+
+  var foundFields = r.found_fields || {};
+  var confidence = r.confidence || {};
+  var sources = r.sources || [];
+  var missingFields = r.missing_fields || [];
+  var foundKeys = Object.keys(foundFields).filter(function(k) { return foundFields[k] !== null && foundFields[k] !== undefined; });
+
+  var html = '<div id="cleanupContent">';
+
+  // Sources
+  if (sources.length > 0) {
+    html += '<div style="margin-bottom:12px;padding:10px 14px;background:var(--bg-cream);border-radius:8px;">' +
+      '<div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Sources</div>' +
+      sources.map(function(s) {
+        if (s.startsWith('http')) return '<a href="' + s + '" target="_blank" style="font-family:var(--font-body);font-size:12px;color:var(--primary);text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + s + '</a>';
+        return '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);">' + s + '</div>';
+      }).join('') + '</div>';
+  }
+
+  // Notes
+  if (r.notes) {
+    html += '<div style="margin-bottom:12px;font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">' + r.notes + '</div>';
+  }
+
+  if (foundKeys.length === 0) {
+    html += '<div style="text-align:center;padding:24px;background:var(--bg-cream);border-radius:10px;">' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">No data found</div>' +
+      '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">AI could not find information for the missing fields. You can skip to the next deal or manually edit.</div></div>';
+  } else {
+    html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text-dark);">Found ' + foundKeys.length + ' field' + (foundKeys.length !== 1 ? 's' : '') + ' — review and select which to apply:</div>';
+    html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">';
+    html += foundKeys.map(function(key) {
+      var val = foundFields[key];
+      var conf = confidence[key] || 'medium';
+      var confColor = conf === 'high' ? 'var(--primary)' : conf === 'medium' ? 'var(--orange)' : 'var(--red)';
+      var confBg = conf === 'high' ? 'var(--green-bg)' : conf === 'medium' ? 'var(--orange-bg)' : '#fde8e8';
+      var label = adminFieldLabel(key);
+      var displayVal = val;
+      if (typeof val === 'number') {
+        if (key === 'target_irr' || key === 'preferred_return' || key === 'cash_on_cash') displayVal = (val * 100).toFixed(2) + '%';
+        else if (key === 'investment_minimum' || key === 'offering_size' || key === 'fund_aum') displayVal = '$' + Number(val).toLocaleString();
+      }
+
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border-light);">' +
+        '<input type="checkbox" class="cleanup-field-check" data-key="' + key + '" data-value=\'' + JSON.stringify(val).replace(/'/g, '&#39;') + '\' checked style="width:18px;height:18px;accent-color:var(--primary);cursor:pointer;">' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">' + label + '</div>' +
+        '<input type="text" class="cleanup-field-val admin-field-input" data-key="' + key + '" value="' + String(displayVal).replace(/"/g, '&quot;') + '" style="width:100%;margin-top:4px;font-size:13px;padding:6px 10px;">' +
+        '</div>' +
+        '<span style="display:inline-flex;padding:2px 8px;border-radius:6px;background:' + confBg + ';font-family:var(--font-ui);font-size:10px;font-weight:700;color:' + confColor + ';text-transform:uppercase;white-space:nowrap;">' + conf + '</span></div>';
+    }).join('');
+    html += '</div>';
+  }
+
+  // Still-missing fields
+  var stillMissing = missingFields.filter(function(f) { return !foundKeys.includes(f.key); });
+  if (stillMissing.length > 0) {
+    html += '<div style="margin-top:12px;"><div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Still Missing (' + stillMissing.length + ')</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;">' +
+      stillMissing.map(function(f) { return '<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">' + f.label + '</span>'; }).join('') +
+      '</div></div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function cleanupSkip() {
+  _cleanupProcessed++;
+  _cleanupIdx++;
+  _cleanupResult = null;
+  if (_cleanupIdx >= _cleanupQueue.length) { cleanupRenderComplete(); return; }
+  cleanupRenderDeal();
+}
+
+function cleanupPrev() {
+  if (_cleanupIdx > 0) { _cleanupIdx--; _cleanupResult = null; cleanupRenderDeal(); }
+}
+
+async function cleanupApply() {
+  var deal = _cleanupQueue[_cleanupIdx];
+  if (!deal) return;
+
+  // Gather selected fields
+  var updates = {};
+  var checks = document.querySelectorAll('#cleanupBody .cleanup-field-check:checked');
+  checks.forEach(function(cb) {
+    var key = cb.dataset.key;
+    try { var rawVal = JSON.parse(cb.dataset.value); } catch(e) { var rawVal = cb.dataset.value; }
+    // Check if user edited the displayed value
+    var inputEl = document.querySelector('#cleanupBody .cleanup-field-val[data-key="' + key + '"]');
+    if (inputEl) {
+      var editedVal = inputEl.value.trim();
+      // Parse back percentages and dollar amounts
+      if ((key === 'target_irr' || key === 'preferred_return' || key === 'cash_on_cash') && editedVal.endsWith('%')) {
+        updates[key] = parseFloat(editedVal) / 100;
+      } else if ((key === 'investment_minimum' || key === 'offering_size' || key === 'fund_aum') && editedVal.startsWith('$')) {
+        updates[key] = parseFloat(editedVal.replace(/[$,]/g, ''));
+      } else if (!isNaN(Number(editedVal)) && editedVal !== '' && (key === 'target_irr' || key === 'preferred_return' || key === 'cash_on_cash' || key === 'hold_period_years' || key === 'equity_multiple' || key === 'investment_minimum' || key === 'offering_size' || key === 'fund_aum')) {
+        updates[key] = Number(editedVal);
+      } else {
+        updates[key] = editedVal || rawVal;
+      }
+    } else {
+      updates[key] = rawVal;
+    }
+  });
+
+  if (Object.keys(updates).length === 0) {
+    cleanupSkip();
+    return;
+  }
+
+  // Apply the updates
+  var applyBtn = document.getElementById('cleanupApplyBtn');
+  if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = 'Saving...'; }
+
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/deal-cleanup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'apply-enrichment', dealId: deal.id, updates: updates })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Save failed');
+    _cleanupUpdated++;
+  } catch (e) {
+    alert('Failed to save: ' + e.message);
+    if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = 'Apply Selected & Next'; }
+    return;
+  }
+
+  _cleanupProcessed++;
+  _cleanupIdx++;
+  _cleanupResult = null;
+  if (_cleanupIdx >= _cleanupQueue.length) { cleanupRenderComplete(); return; }
+  cleanupRenderDeal();
+}
+
+function cleanupRenderComplete() {
+  var body = document.getElementById('cleanupBody');
+  var footer = document.getElementById('cleanupFooter');
+
+  body.innerHTML = '<div style="text-align:center;padding:50px 20px;">' +
+    '<div style="font-size:40px;margin-bottom:12px;">&#x2705;</div>' +
+    '<div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">Cleanup Complete</div>' +
+    '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">' +
+    'Processed <strong>' + _cleanupProcessed + '</strong> deal' + (_cleanupProcessed !== 1 ? 's' : '') + ', ' +
+    'updated <strong>' + _cleanupUpdated + '</strong> deal' + (_cleanupUpdated !== 1 ? 's' : '') + ' with new data.</div>' +
+    '</div>';
+
+  footer.innerHTML = '<div style="flex:1;"></div><button class="admin-btn primary" onclick="cleanupClose()">Done</button>';
+}
+
 // ========== DEAL INTAKE WIZARD ==========
 var _intakeStep=1,_intakeData={},_intakeOperators=[];
 function intakeShowWizard(){_intakeStep=1;_intakeData={};_intakeOperators=[];var ov=document.createElement('div');ov.className='modal-overlay';ov.id='intakeWizardModal';ov.onclick=function(e){if(e.target===ov)ov.remove();};ov.innerHTML='<div class="modal-card" style="max-width:680px;max-height:85vh;overflow-y:auto;padding:0;"><div class="admin-modal-header"><h2>New Deal Intake</h2><button class="admin-modal-close" onclick="document.getElementById(\'intakeWizardModal\').remove()">&#x2715;</button></div><div style="padding:20px 24px 0;"><div id="intakeSteps" style="display:flex;gap:3px;margin-bottom:0;"></div></div><div id="intakeBody" style="padding:20px 24px;"></div><div id="intakeFooter" class="admin-modal-footer" style="justify-content:flex-end;"></div></div>';document.body.appendChild(ov);intakeLoadOperators();intakeRenderStep();}
@@ -15214,11 +15602,13 @@ async function outreachLoadStats() {
     const s = result.stats;
     const el = document.getElementById('outreachStats');
     if (!el) return;
+    const preOutreach = (s.backlog || 0) + (s.researching || 0) + (s.ready_to_contact || 0);
+    const inProgress = (s.contacted || 0) + (s.follow_up || 0) + (s.in_discussion || 0);
     el.innerHTML = [
       { label: 'Total Operators', value: s.total, color: 'var(--text-dark)' },
-      { label: 'Not Contacted', value: s.not_contacted, color: '#ef4444' },
-      { label: 'Contacted', value: s.contacted, color: '#f59e0b' },
-      { label: 'Follow Up', value: s.follow_up, color: '#8b5cf6' },
+      { label: 'Pre-Outreach', value: preOutreach, color: '#3b82f6' },
+      { label: 'Ready to Contact', value: s.ready_to_contact || 0, color: '#0ea5e9' },
+      { label: 'In Progress', value: inProgress, color: '#f59e0b' },
       { label: 'Approved', value: s.approved, color: '#10b981' },
       { label: 'Denied', value: s.denied, color: '#6b7280' },
       { label: 'Approval Rate', value: s.permission_rate + '%', color: 'var(--primary)' },
@@ -15248,9 +15638,12 @@ async function outreachLoadData() {
 }
 
 const _outreachStatusColors = {
-  not_contacted: { bg: '#fef2f2', text: '#ef4444', label: 'Not Contacted' },
+  backlog: { bg: '#f1f5f9', text: '#64748b', label: 'Backlog' },
+  researching: { bg: '#eff6ff', text: '#3b82f6', label: 'Researching' },
+  ready_to_contact: { bg: '#ecfeff', text: '#0ea5e9', label: 'Ready' },
   contacted: { bg: '#fffbeb', text: '#f59e0b', label: 'Contacted' },
   follow_up: { bg: '#f5f3ff', text: '#8b5cf6', label: 'Follow Up' },
+  in_discussion: { bg: '#fdf4ff', text: '#d946ef', label: 'In Discussion' },
   approved: { bg: '#ecfdf5', text: '#10b981', label: 'Approved' },
   denied: { bg: '#f9fafb', text: '#6b7280', label: 'Denied' }
 };
@@ -15261,25 +15654,36 @@ function outreachRenderTable(rows, total) {
   if (countEl) countEl.textContent = (total || rows.length) + ' operators';
 
   body.innerHTML = rows.map(row => {
-    const st = _outreachStatusColors[row.outreach_status] || _outreachStatusColors.not_contacted;
-    const sharing = [];
-    if (row.can_show_metrics) sharing.push('Metrics');
-    if (row.can_show_deck) sharing.push('Deck');
-    if (row.can_show_ppm) sharing.push('PPM');
+    const st = _outreachStatusColors[row.outreach_status] || _outreachStatusColors.backlog;
     const pri = row.priority || 0;
     const priColor = pri >= 30 ? '#ef4444' : pri >= 15 ? '#f59e0b' : '#6b7280';
+    const assets = (row.asset_classes || []).join(', ');
+    const escapedName = (row.operator_name || '').replace(/'/g, "\\'");
+    const status = row.outreach_status;
 
-    return `<tr style="cursor:pointer;" onmouseover="this.style.background='var(--bg-cream)'" onmouseout="this.style.background=''">
+    // Stage-appropriate primary action button
+    let primaryBtn = '';
+    const btnStyle = 'padding:3px 8px;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;';
+    if (status === 'backlog') primaryBtn = `<button onclick="event.stopPropagation();outreachQuickAction('${row.id}','researching',null)" style="${btnStyle}background:#3b82f6;">Research</button>`;
+    else if (status === 'researching') primaryBtn = `<button onclick="event.stopPropagation();outreachQuickAction('${row.id}','ready_to_contact',null)" style="${btnStyle}background:#0ea5e9;">Mark Ready</button>`;
+    else if (status === 'ready_to_contact') primaryBtn = `<button onclick="event.stopPropagation();outreachQuickAction('${row.id}','contacted','email')" style="${btnStyle}background:#f59e0b;">Contacted</button>`;
+    else if (status === 'contacted') primaryBtn = `<button onclick="event.stopPropagation();outreachQuickAction('${row.id}','follow_up',null)" style="${btnStyle}background:#8b5cf6;">Follow Up</button>`;
+    else if (status === 'follow_up') primaryBtn = `<button onclick="event.stopPropagation();outreachQuickAction('${row.id}','in_discussion',null)" style="${btnStyle}background:#d946ef;">In Discussion</button>`;
+    else if (status === 'in_discussion') primaryBtn = `<button onclick="event.stopPropagation();outreachQuickApprove('${row.id}')" style="${btnStyle}background:#10b981;">Approve</button>`;
+
+    return `<tr style="cursor:pointer;" onclick="outreachEdit('${row.id}')" onmouseover="this.style.background='var(--bg-cream)'" onmouseout="this.style.background=''">
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:center;">
         <span style="display:inline-block;min-width:28px;padding:2px 6px;border-radius:10px;font-size:12px;font-weight:800;font-family:var(--font-ui);color:${priColor};background:${priColor}11;">${pri}</span>
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);">
         <div style="font-weight:700;color:var(--text-dark);">${row.operator_name || '—'}</div>
         <div style="font-size:11px;color:var(--text-muted);">${row.ceo || ''}</div>
+        ${row.website ? '<div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">' + row.website.replace(/^https?:\\/\\//, '') + '</div>' : ''}
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:center;font-weight:600;">${row.deal_count || 0}</td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);">
         <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${st.bg};color:${st.text};">${st.label}</span>
+        ${assets ? '<div style="font-size:10px;color:var(--text-muted);margin-top:3px;">' + assets + '</div>' : ''}
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;">
         ${row.contact_name ? '<div>' + row.contact_name + '</div>' : ''}
@@ -15292,11 +15696,8 @@ function outreachRenderTable(rows, total) {
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;">
         <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap;">
-          ${row.outreach_status === 'not_contacted' ? '<button onclick="event.stopPropagation();outreachQuickAction(\'' + row.id + '\',\'contacted\',\'email\')" style="padding:3px 8px;background:#f59e0b;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;">Contact</button>' : ''}
-          ${row.outreach_status === 'contacted' ? '<button onclick="event.stopPropagation();outreachQuickAction(\'' + row.id + '\',\'follow_up\',null)" style="padding:3px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;">Follow Up</button>' : ''}
-          ${row.outreach_status !== 'approved' && row.outreach_status !== 'denied' ? '<button onclick="event.stopPropagation();outreachQuickApprove(\'' + row.id + '\')" style="padding:3px 8px;background:#10b981;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;">Approve</button>' : ''}
-          <button onclick="event.stopPropagation();outreachQuickLog(\'' + row.id + '\',\'' + (row.operator_name || '').replace(/'/g, "\\'") + '\')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Log</button>
-          <button onclick="event.stopPropagation();outreachShowEmail('${row.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Email</button>
+          ${primaryBtn}
+          <button onclick="event.stopPropagation();outreachQuickLog('${row.id}','${escapedName}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Log</button>
           <button onclick="event.stopPropagation();outreachEdit('${row.id}')" style="padding:3px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button>
         </div>
       </td>
@@ -15395,7 +15796,7 @@ function outreachShowEditModal(data, mcId) {
   overlay.id = 'outreachEditModal';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
-  const statusOptions = ['not_contacted', 'contacted', 'follow_up', 'approved', 'denied'];
+  const statusOptions = ['backlog', 'researching', 'ready_to_contact', 'contacted', 'follow_up', 'in_discussion', 'approved', 'denied'];
   const methodOptions = ['', 'email', 'phone', 'linkedin', 'in_person'];
   const offeringOptions = ['unknown', '506b', '506c', 'reg_a', 'reg_d'];
 
@@ -15469,7 +15870,7 @@ function outreachShowEditModal(data, mcId) {
     <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Interaction History</div>
     <div style="display:flex;gap:8px;margin-bottom:12px;">
       <select id="oe_log_type" class="field-input" style="padding:6px 10px;font-size:12px;flex:0 0 auto;">
-        <option value="note">Note</option><option value="call">Call</option><option value="meeting">Meeting</option>
+        <option value="note">Note</option><option value="research_note">Research Note</option><option value="call">Call</option><option value="meeting">Meeting</option>
         <option value="email_sent">Email Sent</option><option value="reply_received">Reply Received</option>
       </select>
       <input type="text" id="oe_log_note" class="field-input" placeholder="What happened?" style="padding:6px 10px;font-size:12px;flex:1;">
@@ -15499,7 +15900,8 @@ const _interactionIcons = {
   permission_granted: '<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" width="12" height="12"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
   permission_denied: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
   status_change: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>',
-  note: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+  note: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  research_note: '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" width="12" height="12"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
 };
 
 async function outreachLoadTimeline(mcId) {
