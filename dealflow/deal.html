@@ -4400,11 +4400,6 @@ async function renderDeal() {
 
   // --- Breadcrumb ---
   var breadcrumbHtml = '';
-  breadcrumbHtml += '<div class="breadcrumb">';
-  breadcrumbHtml += '<a href="index.html">Deals</a>';
-  breadcrumbHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-  breadcrumbHtml += '<span>' + esc(deal.investmentName) + '</span>';
-  breadcrumbHtml += '</div>';
 
   // --- 1. Hero ---
   var heroHtml = '';
@@ -4475,6 +4470,14 @@ async function renderDeal() {
   }
   heroHtml += '</div>';
 
+  // Overview sentence in hero
+  if (deal.investmentStrategy) {
+    var _heroStrat = deal.investmentStrategy;
+    var _heroDot = _heroStrat.indexOf('. ');
+    var _heroSummary = _heroDot > 0 ? _heroStrat.substring(0, _heroDot + 1) : (_heroStrat.length > 200 ? _heroStrat.substring(0, 200) + '...' : _heroStrat);
+    heroHtml += '<div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5;margin-top:12px;max-width:560px;">' + esc(_heroSummary) + '</div>';
+  }
+
   heroHtml += '<div id="dealSocialProof" class="hero-social-proof"></div>';
   heroHtml += '</div>'; // close hero-left
 
@@ -4529,11 +4532,14 @@ async function renderDeal() {
       complianceBannerHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + permColor + ';">' + permLabel + '</span>';
       complianceBannerHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">Operator has not granted permission to share this deal\'s confidential materials.</span></div></div>';
     }
-  } else if (_compIsAdmin && !deal.operatorPermission) {
-    complianceBannerHtml += '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">';
-    complianceBannerHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-    complianceBannerHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#ef4444;">No Permission Record</span>';
-    complianceBannerHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">No outreach has been logged for this operator.</span></div></div>';
+  }
+  // No Permission Record — shown at the very bottom (admin only)
+  var noPermissionHtml = '';
+  if (_compIsAdmin && !deal.operatorPermission) {
+    noPermissionHtml += '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:14px 20px;margin-top:16px;display:flex;align-items:center;gap:10px;">';
+    noPermissionHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+    noPermissionHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#ef4444;">No Permission Record</span>';
+    noPermissionHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">No outreach has been logged for this operator.</span></div></div>';
   }
 
   // --- 2. Key Metrics Strip ---
@@ -4935,27 +4941,17 @@ async function renderDeal() {
       var afterProgress = Math.min(100, Math.round(((goals.currentIncome + annualIncome) / goals.targetIncome) * 100));
       var fillPct = Math.min(100, Math.round((annualIncome / gap) * 100));
 
-      goalImpactHtml += '<div class="section">';
-      goalImpactHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="section-title">Impact on Your Goal</span></div>';
-      goalImpactHtml += '<div class="section-body">';
-      goalImpactHtml += '<div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:var(--radius);padding:20px;">';
-      // Income this deal generates
-      goalImpactHtml += '<div style="text-align:center;margin-bottom:16px;">';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">This deal could generate</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:#4ade80;">$' + Math.round(annualIncome).toLocaleString() + '<span style="font-size:14px;font-weight:600;color:var(--text-muted);">/yr</span></div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);margin-top:4px;">at ' + fmt(dealYield, 'pct') + ' yield on ' + fmt(dealMin, 'money') + ' minimum</div>';
+      goalImpactHtml += '<div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:16px;">';
+      goalImpactHtml += '<div style="flex-shrink:0;width:48px;height:48px;border-radius:50%;background:rgba(74,222,128,0.12);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
+      goalImpactHtml += '<div style="flex:1;min-width:0;">';
+      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">$' + Math.round(annualIncome).toLocaleString() + '/yr potential income</div>';
+      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:2px;">' + fmt(dealYield, 'pct') + ' yield on ' + fmt(dealMin, 'money') + '</div>';
+      // Compact progress bar
+      goalImpactHtml += '<div style="margin-top:8px;height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;position:relative;">';
+      goalImpactHtml += '<div style="position:absolute;height:100%;width:' + afterProgress + '%;background:rgba(74,222,128,0.25);border-radius:3px;"></div>';
+      goalImpactHtml += '<div style="position:absolute;height:100%;width:' + currentProgress + '%;background:#4ade80;border-radius:3px;"></div>';
       goalImpactHtml += '</div>';
-      // Progress bar: before → after
-      goalImpactHtml += '<div style="margin-bottom:12px;">';
-      goalImpactHtml += '<div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:6px;"><span>Progress to $' + goals.targetIncome.toLocaleString() + '/yr goal</span><span>' + currentProgress + '% → ' + afterProgress + '%</span></div>';
-      goalImpactHtml += '<div style="height:12px;background:var(--bg-main);border-radius:6px;overflow:hidden;position:relative;">';
-      goalImpactHtml += '<div style="position:absolute;height:100%;width:' + afterProgress + '%;background:rgba(74,222,128,0.25);border-radius:6px;"></div>';
-      goalImpactHtml += '<div style="position:absolute;height:100%;width:' + currentProgress + '%;background:linear-gradient(90deg,#4ade80,#3bba78);border-radius:6px;"></div>';
-      goalImpactHtml += '</div>';
-      goalImpactHtml += '</div>';
-      // Fill percentage
-      goalImpactHtml += '<div style="text-align:center;font-family:var(--font-ui);font-size:13px;font-weight:700;color:#4ade80;">Fills ' + fillPct + '% of your remaining $' + Math.round(gap).toLocaleString() + '/yr income gap</div>';
-      goalImpactHtml += '</div></div></div>';
+      goalImpactHtml += '</div></div>';
 
     } else if (goalType === 'reduce_taxes' && goals && goals.taxReduction > 0) {
       var isRealEstate = (deal.assetClass || '').match(/multi family|self storage|industrial|hotels|mobile|short term|mixed/i);
@@ -4963,15 +4959,12 @@ async function renderDeal() {
       var taxBenefit = dealMin * depRate;
       var fillPctTax = Math.min(100, Math.round((taxBenefit / goals.taxReduction) * 100));
 
-      goalImpactHtml += '<div class="section">';
-      goalImpactHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="section-title">Impact on Your Goal</span></div>';
-      goalImpactHtml += '<div class="section-body">';
-      goalImpactHtml += '<div style="background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.15);border-radius:var(--radius);padding:20px;text-align:center;">';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Estimated tax shelter</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:#a78bfa;">$' + Math.round(taxBenefit).toLocaleString() + '</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);margin-top:4px;">via ~' + Math.round(depRate * 100) + '% depreciation on ' + fmt(dealMin, 'money') + '</div>';
-      goalImpactHtml += '<div style="margin-top:12px;font-family:var(--font-ui);font-size:13px;font-weight:700;color:#a78bfa;">Covers ' + fillPctTax + '% of your $' + goals.taxReduction.toLocaleString() + ' tax reduction goal</div>';
-      goalImpactHtml += '</div></div></div>';
+      goalImpactHtml += '<div style="background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.15);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:16px;">';
+      goalImpactHtml += '<div style="flex-shrink:0;width:48px;height:48px;border-radius:50%;background:rgba(167,139,250,0.12);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
+      goalImpactHtml += '<div style="flex:1;min-width:0;">';
+      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">$' + Math.round(taxBenefit).toLocaleString() + ' estimated tax shelter</div>';
+      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:2px;">Covers ' + fillPctTax + '% of your tax goal &middot; ~' + Math.round(depRate * 100) + '% depreciation on ' + fmt(dealMin, 'money') + '</div>';
+      goalImpactHtml += '</div></div>';
 
     } else if (goalType === 'build_wealth' && goals && goals.capital > 0) {
       var deployed = currentInvested;
@@ -4981,15 +4974,12 @@ async function renderDeal() {
       var futureValue = dealMin * multiple;
       var capitalPct = Math.min(100, Math.round((dealMin / remaining) * 100));
 
-      goalImpactHtml += '<div class="section">';
-      goalImpactHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="section-title">Impact on Your Goal</span></div>';
-      goalImpactHtml += '<div class="section-body">';
-      goalImpactHtml += '<div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);border-radius:var(--radius);padding:20px;text-align:center;">';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Projected value at exit</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:#fbbf24;">$' + Math.round(futureValue).toLocaleString() + '</div>';
-      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);margin-top:4px;">' + fmt(multiple, 'multiple') + ' equity multiple on ' + fmt(dealMin, 'money') + '</div>';
-      goalImpactHtml += '<div style="margin-top:12px;font-family:var(--font-ui);font-size:13px;font-weight:700;color:#fbbf24;">Deploys ' + capitalPct + '% of your $' + remaining.toLocaleString() + ' available capital</div>';
-      goalImpactHtml += '</div></div></div>';
+      goalImpactHtml += '<div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);border-radius:var(--radius);padding:14px 18px;display:flex;align-items:center;gap:16px;">';
+      goalImpactHtml += '<div style="flex-shrink:0;width:48px;height:48px;border-radius:50%;background:rgba(251,191,36,0.12);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>';
+      goalImpactHtml += '<div style="flex:1;min-width:0;">';
+      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">$' + Math.round(futureValue).toLocaleString() + ' projected at exit</div>';
+      goalImpactHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:2px;">Deploys ' + capitalPct + '% of available capital &middot; ' + fmt(multiple, 'multiple') + ' multiple on ' + fmt(dealMin, 'money') + '</div>';
+      goalImpactHtml += '</div></div>';
     }
   })();
 
@@ -5091,23 +5081,11 @@ async function renderDeal() {
   } else {
     detailsHtml += '<div class="summary-row"><div class="summary-label">Offering Documents</div><div class="summary-value"><span class="offering-status offering-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> Not yet sourced</span></div></div>';
   }
+  // Geography rows (merged into deal terms)
+  if (deal.location) detailsHtml += '<div class="summary-row"><div class="summary-label">Location</div><div class="summary-value">' + esc(deal.location) + '</div></div>';
+  if (deal.investingGeography && deal.investingGeography !== deal.location) detailsHtml += '<div class="summary-row"><div class="summary-label">Investing Geography</div><div class="summary-value">' + esc(deal.investingGeography) + '</div></div>';
+  if (deal.address) detailsHtml += '<div class="summary-row"><div class="summary-label">Property Address</div><div class="summary-value">' + esc(deal.address) + '</div></div>';
   detailsHtml += '</div></div>';
-
-  // Geography sub-section
-  if (deal.location || deal.investingGeography) {
-    detailsHtml += '<div class="section">';
-    detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="section-title">Geography</span></div>';
-    detailsHtml += '<div class="section-body">';
-    detailsHtml += '<div class="geo-info">';
-    if (deal.address) detailsHtml += '<div class="geo-item"><div class="geo-label">Property Address</div><div class="geo-value">' + esc(deal.address) + '</div></div>';
-    if (deal.location) detailsHtml += '<div class="geo-item"><div class="geo-label">Location</div><div class="geo-value">' + esc(deal.location) + '</div></div>';
-    if (deal.investingGeography && deal.investingGeography !== deal.location) detailsHtml += '<div class="geo-item"><div class="geo-label">Investing Geography</div><div class="geo-value">' + esc(deal.investingGeography) + '</div></div>';
-    detailsHtml += '</div>';
-    if (deal.location || deal.address) {
-      detailsHtml += '<div class="map-container" id="dealMap"></div>';
-    }
-    detailsHtml += '</div></div>';
-  }
 
   // --- 6b. Fee & Terms Benchmark vs Peers ---
   var feeBenchHtml = '';
@@ -5297,10 +5275,13 @@ async function renderDeal() {
   var ddRingColor = ddPct < 33 ? '#f87171' : ddPct < 66 ? '#fbbf24' : '#4ade80';
   var ddRingDash = (ddPct / 100) * 251.2;
   var ddRingSvg = '<svg width="36" height="36" viewBox="0 0 80 80" style="margin-left:auto;flex-shrink:0;"><circle cx="40" cy="40" r="35" fill="none" stroke="var(--border)" stroke-width="6"/><circle cx="40" cy="40" r="35" fill="none" stroke="' + ddRingColor + '" stroke-width="6" stroke-dasharray="' + ddRingDash + ' 251.2" stroke-dashoffset="0" transform="rotate(-90 40 40)" stroke-linecap="round"/><text x="40" y="44" text-anchor="middle" font-size="18" font-weight="700" fill="' + ddRingColor + '" font-family="var(--font-ui)">' + ddPct + '%</text></svg>';
-  ddHtml += '<div class="section">';
+  ddHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   ddHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span>' + ddRingSvg + '</div>';
-  ddHtml += '<div class="section-body">';
-  ddHtml += '<button class="gp-agenda-btn" onclick="generateGPCallAgenda(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Generate GP Call Agenda</button>';
+  // Coming Soon overlay
+  ddHtml += '<div style="position:absolute;inset:0;top:60px;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);">';
+  ddHtml += '<div style="text-align:center;"><div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Interactive due diligence checklists are on the way</div></div>';
+  ddHtml += '</div>';
+  ddHtml += '<div class="section-body" style="opacity:0.3;pointer-events:none;filter:grayscale(0.5);">';
   ddHtml += '<div id="gpAgendaPanel"></div>';
   ddHtml += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
   ddHtml += '<div class="dd-accordion">';
@@ -5334,7 +5315,7 @@ async function renderDeal() {
       qIdx++;
     }
     var isSectionLocked = !isPaidUser && si >= 2;
-    ddHtml += '<div class="dd-accordion-section' + (si === 0 ? ' open' : '') + '">';
+    ddHtml += '<div class="dd-accordion-section">';
     if (isSectionLocked) {
       ddHtml += '<div class="dd-accordion-header" onclick="toggleAccordion(this)" style="opacity:0.5;cursor:pointer;">';
       ddHtml += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + ' <span style="display:inline-block;padding:1px 6px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:8px;font-size:9px;font-weight:700;color:#fff;margin-left:6px;vertical-align:middle;">ACADEMY</span></div>';
@@ -5360,17 +5341,6 @@ async function renderDeal() {
     ddHtml += '<button class="gate-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy \u2192</button>';
     ddHtml += '</div>';
   }
-  // Third-party perspectives
-  ddHtml += '<div class="dd-perspectives">';
-  ddHtml += '<div class="dd-perspectives-title">Third-Party Perspectives</div>';
-  ddHtml += '<div class="dd-perspective-links">';
-  if (deal.mcInvestClearly) {
-    ddHtml += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>InvestClearly Reviews</a>';
-  }
-  ddHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + encodeURIComponent(deal.managementCompany || deal.investmentName || '') + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search SEC EDGAR</a>';
-  ddHtml += '<a href="https://checkr.com" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Background Check</a>';
-  ddHtml += '</div>';
-  ddHtml += '</div>';
   ddHtml += '</div></div>';
 
   // --- 8c. Q&A Section ---
@@ -5939,17 +5909,17 @@ async function renderDeal() {
   // Job 6: How does it compare? → Job 7: Deep DD → Job 8: Decide
   html = breadcrumbHtml
     + '<div class="deal-page-content">'
-    // --- Job 1: Quick assessment (hero has metrics + operator built in) ---
+    // --- Job 1: Quick assessment (hero has overview sentence + metrics + operator) ---
     + heroHtml
     + archivedBannerHtml
     + complianceBannerHtml
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
-    // --- Job 3: Does this fit me? ---
-    + buyBoxHtml
+    + (goalImpactHtml ? '<div style="margin-bottom:16px;">' + goalImpactHtml + '</div>' : '')
+    // --- Job 3: Deal terms (moved up for quick scanning) ---
+    + detailsHtml
     // --- Job 4: What am I investing in? ---
     + overviewHtml
-    + detailsHtml
     // --- Job 5: Who's behind this? ---
     + operatorHtml
     + operatorDealsHtml
@@ -5957,19 +5927,21 @@ async function renderDeal() {
     // --- Job 6: How does it compare? ---
     + feeBenchHtml
     + chartHtml
-    + goalImpactHtml
-    // --- Job 7: Deep DD ---
+    + similarHtml
+    // --- Job 7: Supporting materials + DD ---
     + materialsHtml
     + ddHtml
     + stressHtml
     + qaHtml
     // --- Job 8: Decide ---
     + memoHtml
+    + buyBoxHtml
     + officeHoursHtml
-    + similarHtml
     + fundNudgeHtml
-    // --- Admin (very bottom) ---
+    // --- Admin (very bottom, with padding) ---
+    + '<div style="margin-top:24px;"></div>'
     + gpInsightsHtml
+    + noPermissionHtml
     + '</div>'
     + stickyHtml;
 
