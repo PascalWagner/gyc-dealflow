@@ -786,9 +786,89 @@ body {
 
   z-index: 1;
 
+  display: flex;
+  gap: 32px;
+  align-items: center;
+  justify-content: space-between;
+
+}
+.hero-left { flex: 1; min-width: 0; }
+.hero-right {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.hero-operator-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  color: rgba(255,255,255,0.9);
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+.hero-operator-photo img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.hero-operator-name {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.hero-operator-title {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+}
+.hero-metrics {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.hero-metric {
+  display: flex;
+  flex-direction: column;
+}
+.hero-metric-value {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.hero-metric-value.highlight { color: var(--accent-green); }
+.hero-metric-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
 }
 
-
+@media (max-width: 768px) {
+  .deal-header-inner { flex-direction: column; align-items: flex-start; }
+  .hero-right { flex-direction: row; align-items: center; gap: 12px; text-align: left; }
+  .hero-operator-photo { width: 48px; height: 48px; font-size: 18px; }
+  .hero-metrics { gap: 16px; }
+}
 
 .deal-name {
 
@@ -4338,14 +4418,9 @@ async function renderDeal() {
     heroIcon = ''; // hide generic icon when we have a real photo
   }
   heroHtml += '<div class="deal-header' + heroClass + '"' + heroStyle + '>' + heroIcon + '<div class="deal-header-inner">';
+  heroHtml += '<div class="hero-left">';
   heroHtml += '<h1 class="deal-name">' + esc(deal.investmentName) + '</h1>';
   heroHtml += '<div class="deal-company">by <a href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany || '') + '">' + esc(deal.managementCompany || 'Unknown') + '</a></div>';
-  if (deal.ceo) {
-    heroHtml += '<div class="hero-sponsor" style="display:flex;align-items:center;gap:8px;margin-top:8px;">';
-    heroHtml += '<div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:rgba(255,255,255,0.8);">' + getInitials(deal.ceo) + '</div>';
-    heroHtml += '<span style="font-size:13px;color:rgba(255,255,255,0.7);">' + esc(deal.ceo) + '</span>';
-    heroHtml += '</div>';
-  }
   heroHtml += '<div class="deal-badges">';
   if (isCreditFund(deal)) {
     heroHtml += '<span class="deal-badge asset-class">' + creditBadgeLabel(deal) + '</span>';
@@ -4383,8 +4458,43 @@ async function renderDeal() {
     }
   }
   heroHtml += '</div>';
+
+  // Inline metrics in hero
+  heroHtml += '<div class="hero-metrics">';
+  if (isCreditFund(deal)) {
+    if (deal.targetIRR) heroHtml += '<div class="hero-metric"><div class="hero-metric-value highlight">' + fmt(deal.targetIRR, 'pct') + '</div><div class="hero-metric-label">Target Yield</div></div>';
+    if (deal.investmentMinimum) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + fmt(deal.investmentMinimum, 'money') + '</div><div class="hero-metric-label">Min Investment</div></div>';
+    if (deal.holdPeriod) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div><div class="hero-metric-label">Lockup</div></div>';
+    if (deal.fundAUM) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + fmt(deal.fundAUM, 'money') + '</div><div class="hero-metric-label">Fund AUM</div></div>';
+  } else {
+    if (deal.targetIRR) heroHtml += '<div class="hero-metric"><div class="hero-metric-value highlight">' + fmt(deal.targetIRR, 'pct') + '</div><div class="hero-metric-label">Target IRR</div></div>';
+    if (deal.equityMultiple) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + fmt(deal.equityMultiple, 'multiple') + '</div><div class="hero-metric-label">Equity Multiple</div></div>';
+    if (deal.preferredReturn) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + fmt(deal.preferredReturn, 'pct') + '</div><div class="hero-metric-label">Pref Return</div></div>';
+    if (deal.investmentMinimum) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + fmt(deal.investmentMinimum, 'money') + '</div><div class="hero-metric-label">Min Investment</div></div>';
+    if (deal.holdPeriod) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div><div class="hero-metric-label">Hold Period</div></div>';
+  }
+  heroHtml += '</div>';
+
   heroHtml += '<div id="dealSocialProof" class="hero-social-proof"></div>';
-  heroHtml += '</div></div>';
+  heroHtml += '</div>'; // close hero-left
+
+  // Right column: operator photo + name
+  heroHtml += '<div class="hero-right">';
+  var _opName = deal.ceo || deal.managementCompany || '';
+  if (deal.ceoPhotoUrl) {
+    heroHtml += '<div class="hero-operator-photo"><img src="' + escAttr(deal.ceoPhotoUrl) + '" alt="' + escAttr(_opName) + '" onerror="this.parentElement.textContent=\'' + getInitials(_opName) + '\';"></div>';
+  } else {
+    heroHtml += '<div class="hero-operator-photo">' + getInitials(_opName) + '</div>';
+  }
+  if (deal.ceo) {
+    heroHtml += '<div class="hero-operator-name">' + esc(deal.ceo) + '</div>';
+    heroHtml += '<div class="hero-operator-title">' + esc(deal.managementCompany || '') + '</div>';
+  } else {
+    heroHtml += '<div class="hero-operator-name">' + esc(deal.managementCompany || '') + '</div>';
+  }
+  heroHtml += '</div>'; // close hero-right
+
+  heroHtml += '</div></div>'; // close deal-header-inner, deal-header
 
   // Archived deal warning banner
   var archivedBannerHtml = '';
@@ -5265,8 +5375,12 @@ async function renderDeal() {
 
   // --- 8c. Q&A Section ---
   var qaHtml = '';
-  qaHtml += '<div class="section">';
+  qaHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
+  // Coming Soon overlay
+  qaHtml += '<div style="position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">';
+  qaHtml += '<div style="text-align:center;padding:24px;"><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">Coming Soon</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Community Q&A is on the way</div></div>';
+  qaHtml += '</div>';
   qaHtml += '<div class="section-body">';
   qaHtml += '<div id="dealQAList" style="margin-bottom:16px;"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading questions...</div></div>';
   if (isPaidUser) {
@@ -5756,43 +5870,43 @@ async function renderDeal() {
   }
   stickyHtml += '</div>';
 
-  // === Assemble in new order (JTBD redesign v2) ===
-  // 1. At-a-glance → 2. Understand → 3. Evaluate operator → 4. Fit my criteria
-  // 5. Expert opinion → 6. Terms & details → 7. Deep DD → 8. Decide → 9. Explore more
+  // === Assemble (JTBD redesign v3) ===
+  // Job 1: Quick assessment → Job 2: Where am I? → Job 3: Does it fit?
+  // Job 4: What am I investing in? → Job 5: Who's behind this?
+  // Job 6: How does it compare? → Job 7: Deep DD → Job 8: Decide
   html = breadcrumbHtml
     + '<div class="deal-page-content">'
+    // --- Job 1: Quick assessment (hero has metrics + operator built in) ---
     + heroHtml
     + archivedBannerHtml
     + complianceBannerHtml
-    + metricsHtml
-    // --- Understand the opportunity ---
+    // --- Job 2: Where am I with this deal? ---
+    + pipelineHtml
+    // --- Job 3: Does this fit me? ---
+    + buyBoxHtml
+    // --- Job 4: What am I investing in? ---
     + overviewHtml
-    + thesisHtml
-    // --- Who's behind this? ---
+    + detailsHtml
+    // --- Job 5: Who's behind this? ---
     + operatorHtml
     + operatorDealsHtml
-    // --- Does it fit me? ---
-    + buyBoxHtml
-    + goalImpactHtml
-    // --- Expert opinion ---
-    + pascalTakeHtml
-    // --- Deal specifics ---
-    + detailsHtml
+    + thesisHtml
+    // --- Job 6: How does it compare? ---
     + feeBenchHtml
     + chartHtml
-    // --- Due diligence ---
+    + goalImpactHtml
+    // --- Job 7: Deep DD ---
     + materialsHtml
     + ddHtml
-    + qaHtml
     + stressHtml
-    // --- Decision ---
+    + qaHtml
+    // --- Job 8: Decide ---
     + memoHtml
-    + pipelineHtml
     + officeHoursHtml
-    + gpInsightsHtml
-    // --- Explore more ---
     + similarHtml
     + fundNudgeHtml
+    // --- Admin (very bottom) ---
+    + gpInsightsHtml
     + '</div>'
     + stickyHtml;
 
