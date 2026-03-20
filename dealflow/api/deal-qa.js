@@ -1,48 +1,17 @@
-// Vercel Serverless Function: /api/deal-qa
+// Vercel Serverless Function: /api/deal-qa via Supabase
+// REPLACES: deal-qa.js (Airtable version)
 // Per-deal Q&A system — investors submit questions, Pascal answers
 // GET: fetch Q&A for a deal
-// POST: submit a question or answer
+// POST: submit a question, answer, or upvote
 
-const AIRTABLE_BASE_ID = 'appKfcBhhpFJZ28is';
-const TABLE_NAME = 'Deal Q&A';
-
-async function fetchRecords(pat, filterFormula) {
-  const records = [];
-  let offset = null;
-  do {
-    const url = new URL(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`);
-    url.searchParams.set('pageSize', '100');
-    if (filterFormula) url.searchParams.set('filterByFormula', filterFormula);
-    url.searchParams.set('sort[0][field]', 'Created At');
-    url.searchParams.set('sort[0][direction]', 'desc');
-    if (offset) url.searchParams.set('offset', offset);
-
-    const response = await fetch(url.toString(), {
-      headers: { 'Authorization': `Bearer ${pat}` }
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Airtable error ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
-    records.push(...(data.records || []));
-    offset = data.offset || null;
-  } while (offset);
-
-  return records;
-}
+import { getAdminClient, setCors } from './_supabase.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const pat = process.env.AIRTABLE_PAT;
-  if (!pat) return res.status(500).json({ error: 'AIRTABLE_PAT not set' });
+  const supabase = getAdminClient();
 
   // GET: Fetch Q&A for a deal
   if (req.method === 'GET') {
@@ -50,25 +19,27 @@ export default async function handler(req, res) {
     if (!dealId) return res.status(400).json({ error: 'dealId required' });
 
     try {
-      const formula = `{Deal ID}='${dealId.replace(/'/g, "\\'")}'`;
-      const records = await fetchRecords(pat, formula);
+      const { data, error } = await supabase
+        .from('deal_qa')
+        .select('*')
+        .eq('deal_id', dealId)
+        .order('created_at', { ascending: false });
 
-      const questions = records.map(r => {
-        const f = r.fields || {};
-        return {
-          id: r.id,
-          question: f['Question'] || '',
-          askedBy: f['Asked By Name'] || 'Anonymous',
-          askedAt: f['Created At'] || '',
-          answer: f['Answer'] || null,
-          answeredBy: f['Answered By'] || null,
-          answeredAt: f['Answered At'] || null,
-          upvotes: parseInt(f['Upvotes'] || '0'),
-          status: f['Status'] || 'pending'
-        };
-      });
+      if (error) throw error;
 
-      // Sort: answered first (most recent), then pending
+      const questions = (data || []).map(r => ({
+        id: r.id,
+        question: r.question || '',
+        askedBy: r.asked_by_name || 'Anonymous',
+        askedAt: r.created_at || '',
+        answer: r.answer || null,
+        answeredBy: r.answered_by || null,
+        answeredAt: r.answered_at || null,
+        upvotes: r.upvotes || 0,
+        status: r.status || 'pending'
+      }));
+
+      // Sort: answered first, then pending
       questions.sort((a, b) => {
         if (a.answer && !b.answer) return -1;
         if (!a.answer && b.answer) return 1;
@@ -83,7 +54,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // POST: Submit a question or answer
+  // POST: Submit a question, answer, or upvote
   if (req.method === 'POST') {
     const { dealId, dealName, question, answer, recordId, userEmail, userName, action } = req.body || {};
 
@@ -94,35 +65,22 @@ export default async function handler(req, res) {
       }
 
       try {
-        const resp = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            records: [{
-              fields: {
-                'Deal ID': dealId,
-                'Deal Name': dealName || '',
-                'Question': question,
-                'Asked By Email': userEmail || '',
-                'Asked By Name': userName || 'Anonymous',
-                'Created At': new Date().toISOString(),
-                'Status': 'pending',
-                'Upvotes': '0'
-              }
-            }]
+        const { data, error } = await supabase
+          .from('deal_qa')
+          .insert({
+            deal_id: dealId,
+            deal_name: dealName || '',
+            question,
+            asked_by_email: userEmail || '',
+            asked_by_name: userName || 'Anonymous',
+            status: 'pending',
+            upvotes: 0
           })
-        });
+          .select('id')
+          .single();
 
-        if (!resp.ok) throw new Error('Airtable create failed: ' + await resp.text());
-        const data = await resp.json();
-
-        // Note: Email notifications intentionally disabled.
-        // Q&A questions are stored in Airtable — review there.
-
-        return res.status(200).json({ success: true, recordId: data.records[0].id });
+        if (error) throw error;
+        return res.status(200).json({ success: true, recordId: data.id });
       } catch (err) {
         console.error('Q&A submit error:', err);
         return res.status(500).json({ error: 'Failed to submit question' });
@@ -136,26 +94,18 @@ export default async function handler(req, res) {
       }
 
       try {
-        const resp = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            records: [{
-              id: recordId,
-              fields: {
-                'Answer': answer,
-                'Answered By': userName || 'Pascal',
-                'Answered At': new Date().toISOString(),
-                'Status': 'answered'
-              }
-            }]
+        const { error } = await supabase
+          .from('deal_qa')
+          .update({
+            answer,
+            answered_by: userName || 'Pascal',
+            answered_at: new Date().toISOString(),
+            status: 'answered',
+            updated_at: new Date().toISOString()
           })
-        });
+          .eq('id', recordId);
 
-        if (!resp.ok) throw new Error('Airtable update failed: ' + await resp.text());
+        if (error) throw error;
         return res.status(200).json({ success: true });
       } catch (err) {
         console.error('Q&A answer error:', err);
@@ -168,30 +118,23 @@ export default async function handler(req, res) {
       if (!recordId) return res.status(400).json({ error: 'recordId required' });
 
       try {
-        // Fetch current upvote count
-        const getResp = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}/${recordId}`, {
-          headers: { 'Authorization': `Bearer ${pat}` }
-        });
-        if (!getResp.ok) throw new Error('Fetch failed');
-        const current = await getResp.json();
-        const currentVotes = parseInt((current.fields || {})['Upvotes'] || '0');
+        // Use RPC or manual increment
+        const { data: current, error: fetchErr } = await supabase
+          .from('deal_qa')
+          .select('upvotes')
+          .eq('id', recordId)
+          .single();
 
-        const resp = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(TABLE_NAME)}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            records: [{
-              id: recordId,
-              fields: { 'Upvotes': String(currentVotes + 1) }
-            }]
-          })
-        });
+        if (fetchErr) throw fetchErr;
 
-        if (!resp.ok) throw new Error('Upvote failed');
-        return res.status(200).json({ success: true, upvotes: currentVotes + 1 });
+        const newVotes = (current?.upvotes || 0) + 1;
+        const { error: updateErr } = await supabase
+          .from('deal_qa')
+          .update({ upvotes: newVotes, updated_at: new Date().toISOString() })
+          .eq('id', recordId);
+
+        if (updateErr) throw updateErr;
+        return res.status(200).json({ success: true, upvotes: newVotes });
       } catch (err) {
         return res.status(500).json({ error: 'Failed to upvote' });
       }

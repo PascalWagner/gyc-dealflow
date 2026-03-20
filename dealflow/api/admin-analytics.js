@@ -1,79 +1,50 @@
-// Vercel Serverless Function: /api/admin-analytics
+// Vercel Serverless Function: /api/admin-analytics via Supabase
+// REPLACES: admin-analytics.js (Airtable version)
 // Returns aggregated user engagement data for admin dashboard
 // Shows: hot deals, user funnel, engagement cohorts, top engaged users
 
-const AIRTABLE_BASE_ID = 'appKfcBhhpFJZ28is';
+import { getAdminClient, setCors } from './_supabase.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const pat = process.env.AIRTABLE_PAT;
-  if (!pat) {
-    return res.status(500).json({ error: 'AIRTABLE_PAT not set' });
-  }
-
   try {
-    // Fetch ALL User Deal Stages records
-    const records = [];
-    let offset = null;
+    const supabase = getAdminClient();
 
-    do {
-      const url = new URL(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent('User Deal Stages')}`);
-      url.searchParams.set('pageSize', '100');
-      url.searchParams.append('fields[]', 'Deal ID');
-      url.searchParams.append('fields[]', 'Stage');
-      url.searchParams.append('fields[]', 'Email');
-      url.searchParams.append('fields[]', 'Updated At');
-      if (offset) url.searchParams.set('offset', offset);
+    // 1. Fetch all user deal stages
+    const { data: stages, error: stagesErr } = await supabase
+      .from('user_deal_stages')
+      .select('deal_id, stage, email, updated_at');
 
-      const response = await fetch(url.toString(), {
-        headers: { 'Authorization': `Bearer ${pat}` }
-      });
-      if (!response.ok) throw new Error('Airtable error ' + response.status);
+    if (stagesErr) throw stagesErr;
 
-      const data = await response.json();
-      records.push(...(data.records || []));
-      offset = data.offset || null;
-    } while (offset);
+    // 2. Fetch deal names for resolution
+    const { data: deals, error: dealsErr } = await supabase
+      .from('opportunities')
+      .select('id, investment_name');
 
-    // Also fetch deals for name resolution
-    const dealsUrl = new URL(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblXFNpOvL0Ub5tVt`);
-    dealsUrl.searchParams.set('pageSize', '100');
-    dealsUrl.searchParams.append('fields[]', 'Investment Name / Address');
+    if (dealsErr) throw dealsErr;
 
-    const dealsResp = await fetch(dealsUrl.toString(), {
-      headers: { 'Authorization': `Bearer ${pat}` }
-    });
-    const dealsData = dealsResp.ok ? await dealsResp.json() : { records: [] };
     const dealNames = {};
-    (dealsData.records || []).forEach(r => {
-      dealNames[r.id] = (r.fields || {})['Investment Name / Address'] || r.id;
-    });
+    (deals || []).forEach(d => { dealNames[d.id] = d.investment_name || d.id; });
 
     // Normalize stages
     const STAGE_MAP = { interested: 'saved', duediligence: 'vetting', portfolio: 'invested' };
 
-    // === Aggregate ===
-
-    // 1. Per-deal engagement (hot deals)
+    // Aggregate
     const dealStats = {};
-    // 2. Per-user engagement
     const userStats = {};
-    // 3. Funnel counts
     const funnel = { saved: 0, vetting: 0, ready: 0, invested: 0, passed: 0 };
 
-    for (const rec of records) {
-      const f = rec.fields || {};
-      const dealId = f['Deal ID'] || '';
-      const email = f['Email'] || '';
-      let stage = (f['Stage'] || '').toLowerCase();
+    for (const rec of (stages || [])) {
+      const dealId = rec.deal_id || '';
+      const email = rec.email || '';
+      let stage = (rec.stage || '').toLowerCase();
       stage = STAGE_MAP[stage] || stage;
-      const updatedAt = f['Updated At'] || '';
+      const updatedAt = rec.updated_at || '';
 
       // Deal stats
       if (dealId) {
@@ -109,7 +80,7 @@ export default async function handler(req, res) {
       .sort((a, b) => b.total - a.total)
       .slice(0, 15);
 
-    // Top engaged users (sorted by total actions)
+    // Top engaged users
     const topUsers = Object.values(userStats)
       .sort((a, b) => b.total - a.total)
       .slice(0, 20)
@@ -123,14 +94,13 @@ export default async function handler(req, res) {
         lastActive: u.lastActive
       }));
 
-    // Unique users with engagement
     const totalUsers = Object.keys(userStats).length;
     const usersInDD = Object.values(userStats).filter(u => u.vetting > 0 || u.ready > 0).length;
     const usersInvested = Object.values(userStats).filter(u => u.invested > 0).length;
 
     return res.status(200).json({
       summary: {
-        totalRecords: records.length,
+        totalRecords: (stages || []).length,
         totalUsers,
         usersInDD,
         usersInvested,

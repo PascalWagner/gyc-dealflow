@@ -1,20 +1,15 @@
-// Vercel Serverless Function: /api/deck-submit
+// Vercel Serverless Function: /api/deck-submit via Supabase
+// REPLACES: deck-submit.js (Airtable version)
 // Receives user-submitted deck links and:
 // 1. Sends notification email via Resend
-// 2. Creates a record in the Deck Submissions Airtable table
+// 2. Creates a record in the Supabase deck_submissions table
 
-const AIRTABLE_BASE_ID = 'appKfcBhhpFJZ28is';
+import { getAdminClient, setCors } from './_supabase.js';
 
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { dealId, dealName, deckUrl, notes, userEmail, userName } = req.body;
@@ -23,9 +18,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Deck URL is required' });
     }
 
-    const submittedAt = new Date().toISOString();
+    const supabase = getAdminClient();
     let emailSent = false;
-    let airtableCreated = false;
 
     // 1. Send notification email via Resend
     const resendKey = process.env.RESEND_API_KEY;
@@ -39,11 +33,9 @@ export default async function handler(req, res) {
             <table style="width:100%;font-size:13px;margin-bottom:16px;">
               <tr><td style="color:#6b7280;padding:4px 8px;width:120px;">Submitted By:</td><td><strong>${userName || 'Unknown'}</strong> (${userEmail || 'N/A'})</td></tr>
               <tr><td style="color:#6b7280;padding:4px 8px;">Deal:</td><td><strong>${dealName || 'Unknown'}</strong></td></tr>
-              <tr><td style="color:#6b7280;padding:4px 8px;">Deal ID:</td><td>${dealId || 'N/A'}</td></tr>
               <tr><td style="color:#6b7280;padding:4px 8px;">Submitted URL:</td><td><a href="${deckUrl}" style="color:#2C3E2D;">${deckUrl}</a></td></tr>
-              <tr><td style="color:#6b7280;padding:4px 8px;">Time:</td><td>${new Date(submittedAt).toLocaleString('en-US', { timeZone: 'America/New_York' })}</td></tr>
             </table>
-            ${notes ? `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:16px;margin-bottom:16px;"><p style="margin:0 0 4px 0;font-size:12px;color:#6b7280;">Notes:</p><p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-wrap;">${notes}</p></div>` : ''}
+            ${notes ? `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:16px;"><p style="margin:0 0 4px 0;font-size:12px;color:#6b7280;">Notes:</p><p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-wrap;">${notes}</p></div>` : ''}
           </div>
         </div>
       `;
@@ -69,40 +61,29 @@ export default async function handler(req, res) {
       }
     }
 
-    // 2. Write to Airtable Deck Submissions table
-    const pat = process.env.AIRTABLE_PAT;
-    const deckSubmissionsTableId = process.env.DECK_SUBMISSIONS_TABLE_ID || 'tblXLMqI1TxT9eBQY';
-    if (pat && deckSubmissionsTableId) {
-      try {
-        const airtableResp = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${deckSubmissionsTableId}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            records: [{
-              fields: {
-                'Deal Name': (dealName || '') + ' — ' + new Date(submittedAt).toLocaleDateString(),
-                'Deal ID': dealId || '',
-                'Notes': 'URL: ' + (deckUrl || '') + '\nSubmitted by: ' + (userName || '') + ' (' + (userEmail || '') + ')' + (notes ? '\nNotes: ' + notes : ''),
-                'Submitted By Name': userName || (userEmail || '')
-              }
-            }]
-          })
-        });
-        airtableCreated = airtableResp.ok;
-        if (!airtableResp.ok) {
-          const errText = await airtableResp.text();
-          console.warn('Airtable create failed:', errText);
-        }
-      } catch (e) {
-        console.warn('Airtable write failed:', e.message);
-      }
+    // 2. Write to Supabase deck_submissions table
+    const { error: insertErr } = await supabase.from('deck_submissions').insert({
+      deal_id: dealId || null,
+      deal_name: dealName || '',
+      deck_url: deckUrl,
+      notes: notes || '',
+      submitted_by_email: userEmail || '',
+      submitted_by_name: userName || ''
+    });
+
+    if (insertErr) {
+      console.warn('Supabase insert failed:', insertErr.message);
     }
 
-    console.log('Deck submission received:', { dealId, dealName, deckUrl, emailSent, airtableCreated });
-    return res.status(200).json({ success: true, emailSent, airtableCreated });
+    // 3. Update deal record with deck URL if provided
+    if (dealId && deckUrl) {
+      await supabase
+        .from('opportunities')
+        .update({ deck_url: deckUrl })
+        .eq('id', dealId);
+    }
+
+    return res.status(200).json({ success: true, emailSent, supabaseCreated: !insertErr });
 
   } catch (error) {
     console.error('Deck submit error:', error);
