@@ -82,7 +82,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { dealId, dealName, filedata, filename, notes, userEmail, userName } = req.body;
+    const { dealId, dealName, filedata, filename, notes, userEmail, userName, docType } = req.body;
 
     if (!filedata || !filename) {
       return res.status(400).json({ error: 'File data and filename are required' });
@@ -110,12 +110,13 @@ export default async function handler(req, res) {
 
     const deckUrl = urlData?.signedUrl || '';
 
-    // 2. Update the deal record with the deck URL
+    // 2. Update the deal record with the URL (deck_url or ppm_url based on docType)
     let dealUpdated = false;
     if (dealId && deckUrl) {
+      const urlField = docType === 'ppm' ? 'ppm_url' : 'deck_url';
       const { error: updateErr } = await supabase
         .from('opportunities')
-        .update({ deck_url: deckUrl })
+        .update({ [urlField]: deckUrl })
         .eq('id', dealId);
       dealUpdated = !updateErr;
     }

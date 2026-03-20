@@ -4884,8 +4884,11 @@ async function renderDeal() {
   var secQuery = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
   materialsHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + secQuery + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>SEC EDGAR</a>';
   materialsHtml += '</div>';
-  if (!deal.deckUrl) {
-    materialsHtml += '<div class="materials-missing">Missing materials? <button onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')">Submit a link</button></div>';
+  if (!deal.deckUrl || !deal.ppmUrl) {
+    var missingItems = [];
+    if (!deal.deckUrl) missingItems.push('deck');
+    if (!deal.ppmUrl) missingItems.push('PPM');
+    materialsHtml += '<div class="materials-missing">Missing ' + missingItems.join(' or ') + '? <button onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')">Upload documents</button></div>';
   }
   materialsHtml += '</div></div>';
 
@@ -5810,9 +5813,14 @@ function openDeckSubmitModal(dealId, dealName) {
   overlay.className = 'deck-modal-overlay';
   overlay.innerHTML =
     '<div class="deck-modal">' +
-      '<h3>Submit a Deck</h3>' +
+      '<h3>Upload Documents</h3>' +
       '<p>Upload offering documents for <strong>' + esc(dealName) + '</strong> or paste a link.</p>' +
       '<div id="deckModalForm">' +
+        '<label for="deckDocType">Document Type</label>' +
+        '<select id="deckDocType" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;margin-bottom:12px;font-family:var(--font-body);">' +
+          '<option value="deck">Investment Deck</option>' +
+          '<option value="ppm">PPM (Private Placement Memorandum)</option>' +
+        '</select>' +
         '<div id="deckUploadArea" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:16px;transition:all 0.2s;" onclick="document.getElementById(\'deckFileInput\').click()" ondragover="event.preventDefault();this.style.borderColor=\'var(--primary)\';this.style.background=\'rgba(81,190,123,0.04)\'" ondragleave="this.style.borderColor=\'var(--border)\';this.style.background=\'transparent\'" ondrop="event.preventDefault();this.style.borderColor=\'var(--border)\';this.style.background=\'transparent\';handleDeckFileDrop(event)">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="32" height="32" style="margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
           '<div id="deckUploadText" style="font-size:14px;font-weight:600;color:var(--text-dark);">Drop a PDF here or click to upload</div>' +
@@ -5820,10 +5828,10 @@ function openDeckSubmitModal(dealId, dealName) {
         '</div>' +
         '<input type="file" id="deckFileInput" accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx" style="display:none" onchange="handleDeckFileSelect(this)" />' +
         '<div style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:12px;">— or paste a link —</div>' +
-        '<label for="deckUrlInput">Deck URL</label>' +
+        '<label for="deckUrlInput">Document URL</label>' +
         '<input type="url" id="deckUrlInput" placeholder="https://example.com/deck.pdf" />' +
         '<label for="deckNotesInput">Notes (optional)</label>' +
-        '<textarea id="deckNotesInput" placeholder="e.g. Found on their investor portal, this is the Class A PPM"></textarea>' +
+        '<textarea id="deckNotesInput" placeholder="e.g. Found on their investor portal"></textarea>' +
         '<div class="deck-modal-actions">' +
           '<button class="btn-cancel" onclick="closeDeckSubmitModal()">Cancel</button>' +
           '<button class="btn-submit" id="deckSubmitBtn" onclick="submitDeck(\'' + escAttr(dealId) + '\', \'' + escAttr(dealName) + '\')">Submit</button>' +
@@ -5894,12 +5902,14 @@ async function submitDeck(dealId, dealName) {
   var urlInput = document.getElementById('deckUrlInput');
   var notesInput = document.getElementById('deckNotesInput');
   var submitBtn = document.getElementById('deckSubmitBtn');
+  var docTypeSelect = document.getElementById('deckDocType');
+  var docType = docTypeSelect ? docTypeSelect.value : 'deck';
+  var docLabel = docType === 'ppm' ? 'PPM' : 'Deck';
 
   var deckUrl = (urlInput.value || '').trim();
   var hasFile = _deckFile && _deckFileBase64;
 
   if (!deckUrl && !hasFile) {
-    // Highlight both options
     if (urlInput) urlInput.style.borderColor = '#e74c3c';
     var uploadArea = document.getElementById('deckUploadArea');
     if (uploadArea) uploadArea.style.borderColor = '#e74c3c';
@@ -5907,7 +5917,7 @@ async function submitDeck(dealId, dealName) {
   }
 
   submitBtn.disabled = true;
-  submitBtn.textContent = hasFile ? 'Uploading to Google Drive...' : 'Submitting...';
+  submitBtn.textContent = hasFile ? 'Uploading...' : 'Submitting...';
 
   var userEmail = '';
   var userName = '';
@@ -5919,18 +5929,18 @@ async function submitDeck(dealId, dealName) {
 
   try {
     if (hasFile) {
-      // Upload file to Google Drive via our API
       var resp = await fetch('/api/deck-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           dealId: dealId,
-          dealName: dealName,
+          dealName: docType === 'ppm' ? dealName + ' - PPM' : dealName,
           filedata: _deckFileBase64,
           filename: _deckFile.name,
-          notes: (notesInput.value || '').trim(),
+          notes: (notesInput.value || '').trim() + (docType === 'ppm' ? ' [PPM document]' : ''),
           userEmail: userEmail,
-          userName: userName
+          userName: userName,
+          docType: docType
         })
       });
 
@@ -5938,7 +5948,7 @@ async function submitDeck(dealId, dealName) {
         var data = await resp.json();
         document.getElementById('deckModalForm').style.display = 'none';
         var successMsg = document.getElementById('deckSuccessMsg');
-        if (successMsg) successMsg.innerHTML = 'Deck uploaded to Google Drive!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View in Drive →</a>' : '');
+        if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '');
         document.getElementById('deckModalSuccess').style.display = 'block';
       } else {
         submitBtn.disabled = false;
@@ -5946,7 +5956,6 @@ async function submitDeck(dealId, dealName) {
         alert('Upload failed. Please try again.');
       }
     } else {
-      // URL-only submission (original flow)
       var resp = await fetch('/api/deck-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5954,9 +5963,10 @@ async function submitDeck(dealId, dealName) {
           dealId: dealId,
           dealName: dealName,
           deckUrl: deckUrl,
-          notes: (notesInput.value || '').trim(),
+          notes: (notesInput.value || '').trim() + (docType === 'ppm' ? ' [PPM document]' : ''),
           userEmail: userEmail,
-          userName: userName
+          userName: userName,
+          docType: docType
         })
       });
 
@@ -5975,7 +5985,6 @@ async function submitDeck(dealId, dealName) {
     alert('Network error. Please try again.');
   }
 
-  // Reset file state
   _deckFile = null;
   _deckFileBase64 = null;
 }
