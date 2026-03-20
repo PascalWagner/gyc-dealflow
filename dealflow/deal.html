@@ -5465,6 +5465,9 @@ async function renderDeal() {
     var regions = {
       'nationwide': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
       'national': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
+      'usa': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
+      'united states': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
+      'all states': Object.keys(stateMap).filter(function(k){return k.length===2;}).map(function(k){return k.toUpperCase();}),
       'southeast': ['FL','GA','SC','NC','VA','TN','AL','MS','LA','AR','KY','WV'],
       'southwest': ['TX','AZ','NM','OK','NV'],
       'northeast': ['NY','NJ','CT','MA','PA','ME','NH','VT','RI','DE','MD'],
@@ -5564,15 +5567,15 @@ async function renderDeal() {
     geoMapHtml += '<div class="section-body">';
 
     // SVG map — continental US only (AK/HI don't render well at this scale)
-    geoMapHtml += '<div style="position:relative;width:100%;max-width:640px;margin:0 auto;">';
-    geoMapHtml += '<svg viewBox="200 45 1030 500" style="width:100%;height:auto;" xmlns="http://www.w3.org/2000/svg">';
+    geoMapHtml += '<div style="position:relative;width:100%;max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(244,247,245,0.6) 0%,rgba(238,243,240,0.3) 100%);border-radius:12px;padding:20px 16px 12px;">';
+    geoMapHtml += '<svg viewBox="200 45 1030 500" style="width:100%;height:auto;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.06));" xmlns="http://www.w3.org/2000/svg">';
 
     for (var st in statePaths) {
       if (st === 'AK' || st === 'HI') continue; // Skip non-continental states
       var isHighlighted = matched[st];
-      var fillColor = isHighlighted ? 'rgba(81,190,123,0.45)' : 'rgba(215,222,218,0.4)';
-      var strokeColor = isHighlighted ? 'rgba(81,190,123,0.9)' : 'rgba(190,200,195,0.6)';
-      var strokeWidth = isHighlighted ? '2' : '0.75';
+      var fillColor = isHighlighted ? 'rgba(56,168,105,0.55)' : '#e8edea';
+      var strokeColor = isHighlighted ? 'rgba(42,140,82,0.85)' : '#c8d0cc';
+      var strokeWidth = isHighlighted ? '2.5' : '1';
       geoMapHtml += '<path d="' + statePaths[st] + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '" stroke-linejoin="round">';
       geoMapHtml += '<title>' + st + '</title></path>';
     }
