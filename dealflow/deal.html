@@ -2473,6 +2473,234 @@ body {
 
 }
 
+/* ====== STRESS TEST SECTION ====== */
+.stress-test-section { padding: 0; }
+.stress-test-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .stress-test-grid { grid-template-columns: 1fr; }
+}
+.stress-input-group { margin-bottom: 16px; }
+.stress-input-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.stress-input-value {
+  font-weight: 700;
+  color: var(--text-dark);
+  font-size: 13px;
+}
+.stress-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+.stress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.stress-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+}
+.stress-number-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  background: var(--bg-card);
+}
+.stress-number-input:focus { outline: none; border-color: var(--primary); }
+.stress-outputs {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.stress-output-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.stress-output-item:last-child { border-bottom: none; }
+.stress-output-label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.stress-output-value {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.stress-output-value.positive { color: var(--green); }
+.stress-output-value.negative { color: var(--red); }
+
+/* Scenario comparison table */
+.scenario-table-wrap { overflow-x: auto; margin-top: 24px; }
+.scenario-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+.scenario-table th {
+  padding: 10px 16px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border);
+}
+.scenario-table th:first-child { text-align: left; }
+.scenario-table th.bear { color: var(--red); }
+.scenario-table th.base { color: var(--primary); }
+.scenario-table th.bull { color: var(--blue); }
+.scenario-table td {
+  padding: 10px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 500;
+}
+.scenario-table td:first-child {
+  text-align: left;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+.scenario-table td.bear { color: var(--red); font-weight: 700; }
+.scenario-table td.base { color: var(--text-dark); font-weight: 700; }
+.scenario-table td.bull { color: var(--blue); font-weight: 700; }
+.scenario-table tr:last-child td { border-bottom: none; }
+
+/* ====== GP CALL AGENDA ====== */
+.gp-agenda-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-bottom: 16px;
+}
+.gp-agenda-btn:hover { border-color: var(--primary); color: var(--primary); }
+.gp-agenda-btn svg { width: 14px; height: 14px; }
+.gp-agenda-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+.gp-agenda-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.gp-agenda-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.gp-agenda-date {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.gp-agenda-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.gp-agenda-copy:hover { background: var(--primary-hover); }
+.gp-agenda-copy svg { width: 14px; height: 14px; }
+.gp-agenda-section-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+.gp-agenda-question {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding: 4px 0 4px 20px;
+  position: relative;
+  line-height: 1.6;
+}
+.gp-agenda-question::before {
+  content: '\u25A1';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+.gp-agenda-empty {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+}
+
 </style>
 
 </head>
@@ -3079,11 +3307,16 @@ function toggleAccordion(el) {
   section.classList.toggle('open');
 }
 
+function mapStageName(stage) {
+  var legacyMap = { 'new': 'browse', 'interested': 'saved', 'duediligence': 'vetting', 'portfolio': 'invested' };
+  return legacyMap[stage] || stage;
+}
+
 function getDealStage(dealId) {
   try {
     var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-    return stages[dealId] || 'new';
-  } catch(e) { return 'new'; }
+    return mapStageName(stages[dealId] || 'new');
+  } catch(e) { return 'browse'; }
 }
 
 function setJourneyStage(dealId, stage) {
@@ -3097,7 +3330,9 @@ function setJourneyStage(dealId, stage) {
 }
 
 function updateJourneyUI(dealId, stage) {
-  var stageOrder = { 'new': 0, 'interested': 1, 'duediligence': 2, 'portfolio': 3 };
+  // Map legacy stage names to new names
+  stage = mapStageName(stage);
+  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'ready': 3, 'invested': 4 };
   var idx = stageOrder[stage] || 0;
 
   // Update journey bar steps
@@ -3122,12 +3357,12 @@ function updateJourneyUI(dealId, stage) {
   });
 
   // Update sticky bar
-  var stageLabels = { 'new': 'New', 'interested': 'Interested', 'duediligence': 'Due Diligence', 'portfolio': 'Invested', 'passed': 'Passed' };
-  var nextStages = { 'new': 'interested', 'interested': 'duediligence', 'duediligence': 'portfolio' };
-  var nextLabels = { 'new': 'Save to Interested', 'interested': 'Start Due Diligence', 'duediligence': 'Mark as Invested' };
+  var stageLabels = { 'browse': 'Browse', 'saved': 'Saved', 'vetting': 'Vetting', 'ready': 'Ready to Invest', 'invested': 'Invested', 'passed': 'Passed' };
+  var nextStages = { 'browse': 'saved', 'saved': 'vetting', 'vetting': 'ready', 'ready': 'invested' };
+  var nextLabels = { 'browse': 'Save Deal', 'saved': 'Start Vetting', 'vetting': 'Mark Ready to Invest', 'ready': 'Mark as Invested' };
   var labelEl = document.getElementById('stickyStageLabel');
   var advBtn = document.getElementById('stickyAdvanceBtn');
-  if (labelEl) labelEl.textContent = stageLabels[stage] || 'New';
+  if (labelEl) labelEl.textContent = stageLabels[stage] || 'Browse';
   if (advBtn) {
     if (nextLabels[stage]) {
       advBtn.textContent = nextLabels[stage] + ' \u2192';
@@ -3274,12 +3509,13 @@ async function renderDeal() {
   // === Shared variables needed by multiple sections ===
   var currentStage = getDealStage(deal.id);
   var stages = [
-    { key: 'new', label: 'New', num: '1' },
-    { key: 'interested', label: 'Interested', num: '2' },
-    { key: 'duediligence', label: 'Due Diligence', num: '3' },
-    { key: 'portfolio', label: 'Invested', num: '4' }
+    { key: 'browse', label: 'Browse', num: '1' },
+    { key: 'saved', label: 'Saved', num: '2' },
+    { key: 'vetting', label: 'Vetting', num: '3' },
+    { key: 'ready', label: 'Ready to Invest', num: '4' },
+    { key: 'invested', label: 'Invested', num: '5' }
   ];
-  var stageOrder = { 'new': 0, 'interested': 1, 'duediligence': 2, 'portfolio': 3 };
+  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'ready': 3, 'invested': 4 };
   var currentIdx = stageOrder[currentStage] || 0;
 
   // === Build each section into its own variable ===
@@ -3518,6 +3754,8 @@ async function renderDeal() {
   ddHtml += '<div class="section">';
   ddHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span></div>';
   ddHtml += '<div class="section-body">';
+  ddHtml += '<button class="gp-agenda-btn" onclick="generateGPCallAgenda(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Generate GP Call Agenda</button>';
+  ddHtml += '<div id="gpAgendaPanel"></div>';
   ddHtml += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
   ddHtml += '<div class="dd-accordion">';
   var qIdx = 0;
@@ -3571,6 +3809,102 @@ async function renderDeal() {
   ddHtml += '</div>';
   ddHtml += '</div></div>';
 
+  // --- 8b. Stress Test Calculator ---
+  var stressHtml = '';
+  if (!isCreditFund(deal)) {
+    var stBaseIRR = deal.targetIRR || 0.15;
+    var stBaseCoC = deal.cashOnCash || 0.08;
+    var stBaseEM = deal.equityMultiple || 2.0;
+    var stBasePref = deal.preferredReturn || 0.08;
+    var stBaseHold = deal.holdPeriod || 5;
+    var stBaseMin = deal.investmentMinimum || 50000;
+    var stBaseExitCap = 0.06; // sensible default
+    var stBaseVacancy = 0.05;
+
+    stressHtml += '<div class="section">';
+    stressHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="section-title">Stress Test Calculator</span></div>';
+    stressHtml += '<div class="section-body stress-test-section">';
+
+    // Base case info
+    stressHtml += '<div style="background:var(--mint-bg);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;font-family:var(--font-ui);font-size:12px;color:var(--teal-deep);">';
+    stressHtml += '<strong>Base Case from Deal Data:</strong> ';
+    stressHtml += 'IRR ' + fmt(stBaseIRR, 'pct') + ' &middot; ';
+    stressHtml += 'CoC ' + fmt(stBaseCoC, 'pct') + ' &middot; ';
+    stressHtml += 'EM ' + stBaseEM.toFixed(2) + 'x &middot; ';
+    stressHtml += 'Hold ' + stBaseHold + ' yrs';
+    stressHtml += '</div>';
+
+    stressHtml += '<div class="stress-test-grid">';
+
+    // Left column: inputs
+    stressHtml += '<div>';
+    stressHtml += '<div class="stress-input-group">';
+    stressHtml += '<div class="stress-input-label">Investment Amount <span class="stress-input-value" id="stInvestDisplay">$' + stBaseMin.toLocaleString() + '</span></div>';
+    stressHtml += '<input type="number" class="stress-number-input" id="stInvestAmount" value="' + stBaseMin + '" min="5000" step="5000" oninput="recalcStressTest()">';
+    stressHtml += '</div>';
+
+    stressHtml += '<div class="stress-input-group">';
+    stressHtml += '<div class="stress-input-label">Annual Rent Growth <span class="stress-input-value" id="stRentGrowthDisplay">3.0%</span></div>';
+    stressHtml += '<input type="range" class="stress-slider" id="stRentGrowth" min="0" max="8" step="0.5" value="3" oninput="recalcStressTest()">';
+    stressHtml += '</div>';
+
+    stressHtml += '<div class="stress-input-group">';
+    stressHtml += '<div class="stress-input-label">Exit Cap Rate <span class="stress-input-value" id="stExitCapDisplay">6.00%</span></div>';
+    stressHtml += '<input type="range" class="stress-slider" id="stExitCap" min="4" max="10" step="0.25" value="6" oninput="recalcStressTest()">';
+    stressHtml += '</div>';
+
+    stressHtml += '<div class="stress-input-group">';
+    stressHtml += '<div class="stress-input-label">Vacancy Rate <span class="stress-input-value" id="stVacancyDisplay">5%</span></div>';
+    stressHtml += '<input type="range" class="stress-slider" id="stVacancy" min="0" max="20" step="1" value="5" oninput="recalcStressTest()">';
+    stressHtml += '</div>';
+
+    stressHtml += '<div class="stress-input-group">';
+    stressHtml += '<div class="stress-input-label">Interest Rate <span class="stress-input-value" id="stInterestDisplay">6.00%</span></div>';
+    stressHtml += '<input type="range" class="stress-slider" id="stInterest" min="3" max="10" step="0.25" value="6" oninput="recalcStressTest()">';
+    stressHtml += '</div>';
+
+    stressHtml += '<div class="stress-input-group">';
+    stressHtml += '<div class="stress-input-label">Hold Period <span class="stress-input-value" id="stHoldDisplay">' + stBaseHold + ' yrs</span></div>';
+    stressHtml += '<input type="range" class="stress-slider" id="stHold" min="3" max="10" step="1" value="' + stBaseHold + '" oninput="recalcStressTest()">';
+    stressHtml += '</div>';
+
+    stressHtml += '</div>';
+
+    // Right column: outputs
+    stressHtml += '<div class="stress-outputs">';
+    stressHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Projected Returns</div>';
+    stressHtml += '<div class="stress-output-item"><span class="stress-output-label">Annual Cash Flow</span><span class="stress-output-value" id="stOutCashFlow">--</span></div>';
+    stressHtml += '<div class="stress-output-item"><span class="stress-output-label">Total Distributions</span><span class="stress-output-value" id="stOutDistributions">--</span></div>';
+    stressHtml += '<div class="stress-output-item"><span class="stress-output-label">Projected Sale Proceeds</span><span class="stress-output-value" id="stOutSaleProceeds">--</span></div>';
+    stressHtml += '<div class="stress-output-item"><span class="stress-output-label">Total Return</span><span class="stress-output-value" id="stOutTotalReturn">--</span></div>';
+    stressHtml += '<div class="stress-output-item"><span class="stress-output-label">Projected IRR</span><span class="stress-output-value" id="stOutIRR">--</span></div>';
+    stressHtml += '<div class="stress-output-item"><span class="stress-output-label">Equity Multiple</span><span class="stress-output-value" id="stOutEM">--</span></div>';
+    stressHtml += '</div>';
+
+    stressHtml += '</div>'; // close grid
+
+    // Scenario comparison table
+    stressHtml += '<div class="scenario-table-wrap">';
+    stressHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;margin-top:8px;">Scenario Comparison</div>';
+    stressHtml += '<table class="scenario-table" id="scenarioTable">';
+    stressHtml += '<thead><tr><th></th><th class="bear">Bear Case</th><th class="base">Base Case</th><th class="bull">Bull Case</th></tr></thead>';
+    stressHtml += '<tbody id="scenarioBody"></tbody>';
+    stressHtml += '</table>';
+    stressHtml += '</div>';
+
+    stressHtml += '</div></div>';
+
+    // Store base values as data attributes for the calculator
+    stressHtml += '<script id="stressTestData" type="application/json">' + JSON.stringify({
+      baseCoC: stBaseCoC,
+      baseEM: stBaseEM,
+      baseIRR: stBaseIRR,
+      baseHold: stBaseHold,
+      baseExitCap: stBaseExitCap,
+      baseVacancy: stBaseVacancy
+    }) + '</' + 'script>';
+  }
+
   // --- 9. Vetting Pipeline ---
   var pipelineHtml = '';
   pipelineHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px;">Your Vetting Pipeline</div>';
@@ -3614,9 +3948,9 @@ async function renderDeal() {
 
   // --- Sticky action bar ---
   var stickyHtml = '';
-  var nextStages = { 'new': 'interested', 'interested': 'duediligence', 'duediligence': 'portfolio' };
-  var nextLabels = { 'new': 'Save to Interested', 'interested': 'Start Due Diligence', 'duediligence': 'Mark as Invested' };
-  var stageLabels = { 'new': 'New', 'interested': 'Interested', 'duediligence': 'Due Diligence', 'portfolio': 'Invested', 'passed': 'Passed' };
+  var nextStages = { 'browse': 'saved', 'saved': 'vetting', 'vetting': 'ready', 'ready': 'invested' };
+  var nextLabels = { 'browse': 'Save Deal', 'saved': 'Start Vetting', 'vetting': 'Mark Ready to Invest', 'ready': 'Mark as Invested' };
+  var stageLabels = { 'browse': 'Browse', 'saved': 'Saved', 'vetting': 'Vetting', 'ready': 'Ready to Invest', 'invested': 'Invested', 'passed': 'Passed' };
   stickyHtml += '<div class="sticky-action-bar">';
   stickyHtml += '<button class="btn-pass" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>';
   if (nextLabels[currentStage]) {
@@ -3638,6 +3972,7 @@ async function renderDeal() {
     + detailsHtml
     + materialsHtml
     + ddHtml
+    + stressHtml
     + pipelineHtml
     + actionsHtml
     + '</div>'
@@ -4081,11 +4416,202 @@ async function submitDeckLink(dealId, dealName) {
   }
 }
 
+// ========== STRESS TEST CALCULATOR ==========
+
+function recalcStressTest() {
+  var dataEl = document.getElementById('stressTestData');
+  if (!dataEl) return;
+  var base = JSON.parse(dataEl.textContent);
+
+  var investAmount = parseFloat(document.getElementById('stInvestAmount').value) || 50000;
+  var rentGrowth = parseFloat(document.getElementById('stRentGrowth').value) / 100;
+  var exitCap = parseFloat(document.getElementById('stExitCap').value) / 100;
+  var vacancy = parseFloat(document.getElementById('stVacancy').value) / 100;
+  var interest = parseFloat(document.getElementById('stInterest').value) / 100;
+  var hold = parseFloat(document.getElementById('stHold').value);
+
+  // Update display labels
+  document.getElementById('stInvestDisplay').textContent = '$' + investAmount.toLocaleString();
+  document.getElementById('stRentGrowthDisplay').textContent = (rentGrowth * 100).toFixed(1) + '%';
+  document.getElementById('stExitCapDisplay').textContent = (exitCap * 100).toFixed(2) + '%';
+  document.getElementById('stVacancyDisplay').textContent = (vacancy * 100).toFixed(0) + '%';
+  document.getElementById('stInterestDisplay').textContent = (interest * 100).toFixed(2) + '%';
+  document.getElementById('stHoldDisplay').textContent = hold + ' yrs';
+
+  var result = calcStressScenario(base, investAmount, rentGrowth, exitCap, vacancy, interest, hold);
+
+  document.getElementById('stOutCashFlow').textContent = '$' + Math.round(result.annualCashFlow).toLocaleString();
+  document.getElementById('stOutDistributions').textContent = '$' + Math.round(result.totalDistributions).toLocaleString();
+  document.getElementById('stOutSaleProceeds').textContent = '$' + Math.round(result.saleProceeds).toLocaleString();
+  document.getElementById('stOutTotalReturn').textContent = '$' + Math.round(result.totalReturn).toLocaleString();
+
+  var irrEl = document.getElementById('stOutIRR');
+  irrEl.textContent = (result.projectedIRR * 100).toFixed(1) + '%';
+  irrEl.className = 'stress-output-value' + (result.projectedIRR >= base.baseIRR ? ' positive' : result.projectedIRR < base.baseIRR * 0.7 ? ' negative' : '');
+
+  var emEl = document.getElementById('stOutEM');
+  emEl.textContent = result.equityMultiple.toFixed(2) + 'x';
+  emEl.className = 'stress-output-value' + (result.equityMultiple >= base.baseEM ? ' positive' : result.equityMultiple < 1.0 ? ' negative' : '');
+
+  // Scenario comparison
+  var bear = calcStressScenario(base, investAmount, Math.max(0, rentGrowth - 0.02), exitCap + 0.01, Math.min(0.2, vacancy + 0.05), interest, hold);
+  var bull = calcStressScenario(base, investAmount, rentGrowth + 0.01, Math.max(0.04, exitCap - 0.005), Math.max(0, vacancy - 0.02), interest, hold);
+
+  var tbody = document.getElementById('scenarioBody');
+  if (tbody) {
+    tbody.innerHTML =
+      '<tr><td>Annual Cash Flow</td><td class="bear">$' + Math.round(bear.annualCashFlow).toLocaleString() + '</td><td class="base">$' + Math.round(result.annualCashFlow).toLocaleString() + '</td><td class="bull">$' + Math.round(bull.annualCashFlow).toLocaleString() + '</td></tr>' +
+      '<tr><td>Total Distributions</td><td class="bear">$' + Math.round(bear.totalDistributions).toLocaleString() + '</td><td class="base">$' + Math.round(result.totalDistributions).toLocaleString() + '</td><td class="bull">$' + Math.round(bull.totalDistributions).toLocaleString() + '</td></tr>' +
+      '<tr><td>Sale Proceeds</td><td class="bear">$' + Math.round(bear.saleProceeds).toLocaleString() + '</td><td class="base">$' + Math.round(result.saleProceeds).toLocaleString() + '</td><td class="bull">$' + Math.round(bull.saleProceeds).toLocaleString() + '</td></tr>' +
+      '<tr><td>Total Return</td><td class="bear">$' + Math.round(bear.totalReturn).toLocaleString() + '</td><td class="base">$' + Math.round(result.totalReturn).toLocaleString() + '</td><td class="bull">$' + Math.round(bull.totalReturn).toLocaleString() + '</td></tr>' +
+      '<tr><td>Projected IRR</td><td class="bear">' + (bear.projectedIRR * 100).toFixed(1) + '%</td><td class="base">' + (result.projectedIRR * 100).toFixed(1) + '%</td><td class="bull">' + (bull.projectedIRR * 100).toFixed(1) + '%</td></tr>' +
+      '<tr><td>Equity Multiple</td><td class="bear">' + bear.equityMultiple.toFixed(2) + 'x</td><td class="base">' + result.equityMultiple.toFixed(2) + 'x</td><td class="bull">' + bull.equityMultiple.toFixed(2) + 'x</td></tr>';
+  }
+}
+
+function calcStressScenario(base, investAmount, rentGrowth, exitCap, vacancy, interest, hold) {
+  // Adjusted cash-on-cash based on rent growth and vacancy vs base assumptions
+  var adjustedCoC = base.baseCoC * (1 + rentGrowth - vacancy) / (1 + base.baseVacancy);
+  adjustedCoC = Math.max(0, adjustedCoC);
+
+  var annualCashFlow = investAmount * adjustedCoC;
+  var totalDistributions = annualCashFlow * hold;
+
+  // Exit value scales inversely with cap rate change
+  var capRateEffect = base.baseExitCap / exitCap;
+  var projectedEM = base.baseEM * capRateEffect * (hold / base.baseHold);
+  var saleProceeds = investAmount * Math.max(0, projectedEM - 1);
+
+  var totalReturn = totalDistributions + saleProceeds;
+  var equityMultiple = (investAmount + totalReturn) / investAmount;
+
+  // Simplified IRR approximation: annualized return
+  var projectedIRR = hold > 0 ? (Math.pow(equityMultiple, 1 / hold) - 1) : 0;
+
+  return {
+    annualCashFlow: annualCashFlow,
+    totalDistributions: totalDistributions,
+    saleProceeds: saleProceeds,
+    totalReturn: totalReturn,
+    equityMultiple: equityMultiple,
+    projectedIRR: projectedIRR
+  };
+}
+
+// ========== GP CALL AGENDA GENERATOR ==========
+
+function generateGPCallAgenda(dealId, dealName) {
+  var panel = document.getElementById('gpAgendaPanel');
+  if (!panel) return;
+
+  // If already visible, toggle off
+  if (panel.innerHTML) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  var deal = DEALS.find(function(d) { return d.id === dealId; });
+  if (!deal) return;
+
+  var checklist = getChecklistForDeal(deal);
+  var userAnswers = loadDDAnswers(dealId);
+
+  // Sections to exclude from GP call (these are LP's own research)
+  var excludeSections = ['External Due Diligence (LP Led)', 'Post-Research Questions'];
+
+  var agendaSections = [];
+  var totalQuestions = 0;
+
+  for (var si = 0; si < checklist.sections.length; si++) {
+    var sec = checklist.sections[si];
+    // Skip excluded sections
+    if (excludeSections.indexOf(sec.title) >= 0) continue;
+
+    var unanswered = [];
+    for (var qi = 0; qi < sec.questions.length; qi++) {
+      var q = sec.questions[qi];
+      var key = 's' + si + 'q' + qi;
+      var autoVal = q.autoField ? getAutoValue(deal, q.autoField, q.format) : null;
+      var userVal = userAnswers[key] || '';
+
+      // Only include questions that are NOT auto-filled and NOT answered
+      if (!autoVal && !userVal) {
+        unanswered.push(q.q);
+      }
+    }
+
+    if (unanswered.length > 0) {
+      agendaSections.push({ title: sec.title, questions: unanswered });
+      totalQuestions += unanswered.length;
+    }
+  }
+
+  if (totalQuestions === 0) {
+    panel.innerHTML = '<div class="gp-agenda-panel"><div class="gp-agenda-empty">All questions have been answered. No agenda items needed for a GP call.</div></div>';
+    return;
+  }
+
+  var today = new Date();
+  var dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  var html = '<div class="gp-agenda-panel">';
+  html += '<div class="gp-agenda-header"><div><div class="gp-agenda-title">GP Call Agenda &mdash; ' + esc(dealName) + '</div><div class="gp-agenda-date">Generated ' + esc(dateStr) + ' &middot; ' + totalQuestions + ' questions</div></div>';
+  html += '<button class="gp-agenda-copy" onclick="copyGPAgenda(\'' + escAttr(dealId) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy to Clipboard</button>';
+  html += '</div>';
+
+  for (var i = 0; i < agendaSections.length; i++) {
+    html += '<div class="gp-agenda-section-title">' + esc(agendaSections[i].title) + '</div>';
+    for (var j = 0; j < agendaSections[i].questions.length; j++) {
+      html += '<div class="gp-agenda-question">' + esc(agendaSections[i].questions[j]) + '</div>';
+    }
+  }
+
+  html += '</div>';
+  panel.innerHTML = html;
+
+  // Store for clipboard
+  panel._agendaText = buildAgendaPlainText(dealName, dateStr, agendaSections);
+}
+
+function buildAgendaPlainText(dealName, dateStr, sections) {
+  var text = 'GP Call Agenda \u2014 ' + dealName + '\n';
+  text += 'Generated ' + dateStr + '\n\n';
+  for (var i = 0; i < sections.length; i++) {
+    text += sections[i].title + ':\n';
+    for (var j = 0; j < sections[i].questions.length; j++) {
+      text += '\u25A1 ' + sections[i].questions[j] + '\n';
+    }
+    text += '\n';
+  }
+  return text;
+}
+
+function copyGPAgenda(dealId) {
+  var panel = document.getElementById('gpAgendaPanel');
+  if (!panel || !panel._agendaText) return;
+
+  navigator.clipboard.writeText(panel._agendaText).then(function() {
+    var btn = panel.querySelector('.gp-agenda-copy');
+    if (btn) {
+      var orig = btn.innerHTML;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Copied!';
+      setTimeout(function() { btn.innerHTML = orig; }, 2000);
+    }
+  });
+}
+
 // ========== INIT ==========
 
 initAuth();
 
 renderDeal();
+
+// Init stress test calculator after render
+setTimeout(function() {
+  if (document.getElementById('stressTestData')) {
+    recalcStressTest();
+  }
+}, 100);
 
 </script>
 
