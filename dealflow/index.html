@@ -7806,7 +7806,7 @@ function saveCompareNote(textarea) {
   localStorage.setItem('gycCompareNotes', JSON.stringify(notes));
 }
 
-// ========== AIRTABLE SYNC LAYER ==========
+// ========== SUPABASE SYNC LAYER ==========
 const SYNC_API = '/api/userdata';
 function getUserEmail() {
   try { return JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e) { return ''; }
@@ -7857,7 +7857,7 @@ function syncPortfolioItem(item) {
     'Investing Entity': item.investingEntity || '',
     'Entity Invested Into': item.entityInvestedInto || '',
     'Notes': item.notes || '',
-    _recordId: item._airtableId || undefined
+    _recordId: item._recordId || undefined
   });
 }
 // Sync a single tax doc
@@ -7875,7 +7875,7 @@ function syncTaxDoc(doc) {
     'Contact Email': doc.contactEmail || '',
     'Contact Phone': doc.contactPhone || '',
     'Notes': doc.notes || '',
-    _recordId: doc._airtableId || undefined
+    _recordId: doc._recordId || undefined
   });
 }
 
@@ -10376,7 +10376,7 @@ async function fetchUserDataFromSupabase(email) {
             investingEntity: r['Investing Entity'] || '',
             entityInvestedInto: r['Entity Invested Into'] || '',
             notes: r['Notes'] || '',
-            _airtableId: r.id || undefined
+            _recordId: r.id || undefined
           }));
           localStorage.setItem('gycPortfolio', JSON.stringify(restored));
           if (typeof portfolioInvestments !== 'undefined') portfolioInvestments = restored;
@@ -17198,7 +17198,7 @@ function renderSchemaPage() {
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Data Sources</div>
         <div style="font-size:24px;font-weight:800;color:var(--text-dark);">2</div>
-        <div style="font-size:10px;color:var(--text-muted);">Airtable, GoHighLevel</div>
+        <div style="font-size:10px;color:var(--text-muted);">Supabase, GoHighLevel</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Tables</div>
@@ -17206,9 +17206,9 @@ function renderSchemaPage() {
         <div style="font-size:10px;color:var(--text-muted);">All synced to backend</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">Airtable</div>
-        <div style="font-size:24px;font-weight:800;color:#51BE7B;">6</div>
-        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies + 4 User Tables</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">Supabase</div>
+        <div style="font-size:24px;font-weight:800;color:#51BE7B;">12</div>
+        <div style="font-size:10px;color:var(--text-muted);">Deals, Companies, Q&A + User Tables</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;margin-bottom:4px;">GoHighLevel</div>
@@ -17217,7 +17217,7 @@ function renderSchemaPage() {
       </div>
     </div>
 
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;padding-left:4px;">Persistent Backend (Airtable + GHL)</div>
+    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;padding-left:4px;">Persistent Backend (Supabase + GHL)</div>
 
     ${tableCard('Opportunities (Deals)', 'persistent', 'Airtable · tblXFNpOvL0Ub5tVt', [
       { name: 'Deal #', type: 'number', example: dealsCount + ' deals loaded' },

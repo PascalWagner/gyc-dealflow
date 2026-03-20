@@ -111,13 +111,13 @@ export default async function handler(req, res) {
     const deckUrl = urlData?.signedUrl || '';
 
     // 2. Update the deal record with the deck URL
-    let airtableUpdated = false;
+    let dealUpdated = false;
     if (dealId && deckUrl) {
       const { error: updateErr } = await supabase
         .from('opportunities')
         .update({ deck_url: deckUrl })
         .eq('id', dealId);
-      airtableUpdated = !updateErr;
+      dealUpdated = !updateErr;
     }
 
     // 3. Log to deck_submissions table
@@ -175,7 +175,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       driveUrl: deckUrl,      // keeping same field name for frontend compat
-      airtableUpdated,
+      dealUpdated,
       enriched,
       enrichedFields,
       ...(enrichmentError ? { enrichmentError } : {})

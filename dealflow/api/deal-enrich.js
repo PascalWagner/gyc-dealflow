@@ -1,8 +1,10 @@
 // Vercel Serverless Function: /api/deal-enrich
 // AI-assisted deal enrichment: accepts PPM text and uses Claude to extract structured deal fields
 // Returns pre-filled deal record for human review
+//
+// MIGRATED: Now writes to Supabase instead of Airtable
 
-const AIRTABLE_BASE_ID = 'appKfcBhhpFJZ28is';
+import { getAdminClient, setCors } from './_supabase.js';
 
 const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this PPM/offering document text. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
 
@@ -42,11 +44,35 @@ IMPORTANT:
 - If a field clearly doesn't apply to this deal type, use null
 - Be precise — only extract what's explicitly stated, don't infer`;
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Map Claude extraction keys → Supabase column names
+const SUPABASE_FIELD_MAP = {
+  investmentName:      'investment_name',
+  assetClass:          'asset_class',
+  dealType:            'deal_type',
+  strategy:            'strategy',
+  investmentStrategy:  'investment_strategy',
+  targetIRR:           'target_irr',
+  preferredReturn:     'preferred_return',
+  cashOnCash:          'cash_on_cash',
+  equityMultiple:      'equity_multiple',
+  investmentMinimum:   'investment_minimum',
+  holdPeriod:          'hold_period_years',
+  offeringSize:        'offering_size',
+  offeringType:        'offering_type',
+  availableTo:         'available_to',
+  distributions:       'distributions',
+  lpGpSplit:           'lp_gp_split',
+  fees:                'fees',
+  financials:          'financials',
+  investingGeography:  'investing_geography',
+  instrument:          'instrument',
+  debtPosition:        'debt_position',
+  fundAUM:             'fund_aum',
+  sponsorCoinvest:     'sponsor_in_deal_pct',
+};
 
+export default async function handler(req, res) {
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -103,62 +129,64 @@ export default async function handler(req, res) {
       });
     }
 
-    // If dealId provided, save AI extraction alongside human-review flag
-    const pat = process.env.AIRTABLE_PAT;
-    if (pat && dealId) {
+    // If dealId provided, save to Supabase (only update empty fields)
+    if (dealId) {
       try {
-        // Build Airtable field updates from extracted data
-        const fieldMap = {
-          investmentStrategy: 'Investment Strategy',
-          targetIRR: 'Target IRR',
-          preferredReturn: 'Preferred Return',
-          cashOnCash: 'Cash on Cash Return',
-          equityMultiple: 'Equity Multiple',
-          investmentMinimum: 'Investment Minimum',
-          holdPeriod: 'Min Hold Period (Yrs)',
-          offeringSize: 'Offering Size',
-          offeringType: 'Offering Type',
-          distributions: 'Distributions',
-          lpGpSplit: 'Class A - LP/GP Split',
-          fees: 'Fees',
-          financials: 'Financials',
-          investingGeography: 'Investing Geography',
-          instrument: 'Instrument',
-          debtPosition: 'Debt Position',
-          fundAUM: 'Fund AUM',
-          sponsorCoinvest: '% Sponsor In The Deal'
-        };
+        const supabase = getAdminClient();
 
-        const airtableFields = {};
-        for (const [jsonKey, atKey] of Object.entries(fieldMap)) {
-          if (extracted[jsonKey] !== null && extracted[jsonKey] !== undefined) {
-            airtableFields[atKey] = extracted[jsonKey];
+        // Build Supabase update from extracted fields
+        const supabaseUpdate = {};
+        const fieldsFound = [];
+
+        for (const [jsonKey, dbCol] of Object.entries(SUPABASE_FIELD_MAP)) {
+          const val = extracted[jsonKey];
+          if (val !== null && val !== undefined) {
+            if (dbCol === 'fees' && typeof val === 'string') {
+              supabaseUpdate[dbCol] = [val];
+            } else {
+              supabaseUpdate[dbCol] = val;
+            }
+            fieldsFound.push(dbCol);
           }
         }
 
-        // Only update if we extracted meaningful data
-        if (Object.keys(airtableFields).length > 0) {
-          // Add AI enrichment metadata
-          airtableFields['Notes'] = 'AI-enriched on ' + new Date().toISOString().split('T')[0] + ' by ' + (userEmail || 'system') + '. Fields extracted: ' + Object.keys(airtableFields).join(', ') + '. PENDING HUMAN REVIEW.';
+        if (fieldsFound.length > 0) {
+          // Fetch current record to avoid overwriting human edits
+          const { data: currentDeal } = await supabase
+            .from('opportunities')
+            .select('*')
+            .eq('id', dealId)
+            .single();
 
-          const updateResp = await fetch(
-            `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblXFNpOvL0Ub5tVt/${dealId}`,
-            {
-              method: 'PATCH',
-              headers: {
-                'Authorization': `Bearer ${pat}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ fields: airtableFields })
+          const safeUpdate = {};
+          for (const [col, val] of Object.entries(supabaseUpdate)) {
+            const current = currentDeal?.[col];
+            const isEmpty = current === null
+              || current === undefined
+              || current === ''
+              || current === 0
+              || (Array.isArray(current) && current.length === 0);
+
+            if (isEmpty) {
+              safeUpdate[col] = val;
             }
-          );
+          }
 
-          if (!updateResp.ok) {
-            console.warn('Airtable update failed:', await updateResp.text());
+          if (Object.keys(safeUpdate).length > 0) {
+            safeUpdate.updated_at = new Date().toISOString();
+
+            const { error: updateErr } = await supabase
+              .from('opportunities')
+              .update(safeUpdate)
+              .eq('id', dealId);
+
+            if (updateErr) {
+              console.warn('Supabase enrichment update failed:', updateErr.message);
+            }
           }
         }
       } catch (e) {
-        console.warn('Airtable enrichment save error:', e.message);
+        console.warn('Enrichment save error:', e.message);
       }
     }
 

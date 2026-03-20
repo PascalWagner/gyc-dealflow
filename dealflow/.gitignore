@@ -8,3 +8,4 @@ DerivedData/
 .env.supabase
 .env.local
 .env
+_airtable_backup/

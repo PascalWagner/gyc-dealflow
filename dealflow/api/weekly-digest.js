@@ -2,9 +2,11 @@
 // Generates weekly deal digest email content for each user based on buy box match
 // Designed to be triggered by Make.com on a weekly schedule (e.g., every Monday 9am ET)
 //
+// MIGRATED: Now reads deals from Supabase and users from user_profiles (with GHL fallback for buy box)
+//
 // Flow:
 //   1. Make.com triggers POST /api/weekly-digest
-//   2. This endpoint fetches new deals from Airtable (added in last 7 days)
+//   2. This endpoint fetches new deals from Supabase (added in last 7 days)
 //   3. For each user with a buy box, computes match scores
 //   4. Returns formatted digest data per user
 //   5. Make.com iterates results and sends emails via GHL/SendGrid/etc.
@@ -13,12 +15,10 @@
 //   POST { dryRun: true }  → preview mode, no side effects
 //   POST { dryRun: false } → returns full digest data for Make.com to send
 
-const AIRTABLE_BASE_ID = 'appKfcBhhpFJZ28is';
-const GHL_API_KEY = process.env.GHL_API_KEY;
-const AIRTABLE_PAT = process.env.AIRTABLE_PAT;
-const DIGEST_SECRET = process.env.DIGEST_SECRET || '';
+import { getAdminClient, setCors, ASSET_MAP } from './_supabase.js';
 
-import { ASSET_MAP } from './_supabase.js';
+const GHL_API_KEY = process.env.GHL_API_KEY;
+const DIGEST_SECRET = process.env.DIGEST_SECRET || '';
 
 function matchDealToBuyBox(deal, buyBox) {
   let score = 0;
@@ -33,9 +33,9 @@ function matchDealToBuyBox(deal, buyBox) {
     .map(a => ASSET_MAP[a] || a);
   if (userAssets.length > 0) {
     maxScore += 3;
-    if (userAssets.includes(deal.assetClass)) {
+    if (userAssets.includes(deal.asset_class)) {
       score += 3;
-      reasons.push(deal.assetClass + ' matches your buy box');
+      reasons.push(deal.asset_class + ' matches your buy box');
     }
   }
 
@@ -43,7 +43,7 @@ function matchDealToBuyBox(deal, buyBox) {
   const minYield = parseFloat(buyBox.minCashYield) || 0;
   if (minYield > 0) {
     maxScore += 2;
-    const dealYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
+    const dealYield = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
     const yieldPct = dealYield > 1 ? dealYield : dealYield * 100;
     if (yieldPct >= minYield) {
       score += 2;
@@ -57,9 +57,9 @@ function matchDealToBuyBox(deal, buyBox) {
   if (checkMatch) {
     maxScore += 2;
     const userCheck = parseInt(checkMatch[0]) * 1000;
-    if (deal.investmentMinimum && deal.investmentMinimum <= userCheck * 1.5) {
+    if (deal.investment_minimum && deal.investment_minimum <= userCheck * 1.5) {
       score += 2;
-      reasons.push('$' + (deal.investmentMinimum / 1000) + 'K minimum fits your budget');
+      reasons.push('$' + (deal.investment_minimum / 1000) + 'K minimum fits your budget');
     }
   }
 
@@ -70,9 +70,9 @@ function matchDealToBuyBox(deal, buyBox) {
     .filter(Boolean);
   if (userStrategies.length > 0) {
     maxScore += 1;
-    if (userStrategies.includes(deal.investmentStrategy)) {
+    if (userStrategies.includes(deal.investment_strategy)) {
       score += 1;
-      reasons.push(deal.investmentStrategy + ' strategy');
+      reasons.push(deal.investment_strategy + ' strategy');
     }
   }
 
@@ -83,126 +83,59 @@ function matchDealToBuyBox(deal, buyBox) {
   };
 }
 
-async function fetchRecentDeals(daysBack = 7) {
-  if (!AIRTABLE_PAT) throw new Error('AIRTABLE_PAT not set');
-
+async function fetchRecentDeals(supabase, daysBack = 7) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-  const cutoffISO = cutoffDate.toISOString().split('T')[0];
+  const cutoffISO = cutoffDate.toISOString();
 
-  const records = [];
-  let offset = null;
-  let pages = 0;
-  const MAX_PAGES = 20;
+  const { data, error } = await supabase
+    .from('opportunities')
+    .select(`
+      id, investment_name, asset_class, investment_strategy,
+      target_irr, cash_on_cash, preferred_return, investment_minimum,
+      hold_period_years, status, distributions, deck_url,
+      management_company:management_companies ( operator_name )
+    `)
+    .gte('added_date', cutoffISO.split('T')[0])
+    .not('investment_name', 'eq', '')
+    .order('added_date', { ascending: false });
 
-  do {
-    const url = new URL(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent('Opportunities')}`);
-    url.searchParams.set('pageSize', '100');
-    url.searchParams.set('filterByFormula', `IS_AFTER({Created}, '${cutoffISO}')`);
-    if (offset) url.searchParams.set('offset', offset);
-
-    const response = await fetch(url.toString(), {
-      headers: { 'Authorization': `Bearer ${AIRTABLE_PAT}` }
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Airtable error ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json();
-    records.push(...(data.records || []));
-    offset = data.offset || null;
-    pages++;
-  } while (offset && pages < MAX_PAGES);
-
-  return records.map(rec => {
-    const f = rec.fields || {};
-    return {
-      id: rec.id,
-      investmentName: f['Investment Name'] || f['Name'] || '',
-      assetClass: f['Asset Class'] || '',
-      investmentStrategy: f['Investment Strategy'] || '',
-      targetIRR: f['Target IRR'] || 0,
-      cashOnCash: f['Cash on Cash'] || 0,
-      preferredReturn: f['Preferred Return'] || 0,
-      investmentMinimum: f['Investment Minimum'] || 0,
-      holdPeriod: f['Hold Period'] || '',
-      managementCompany: f['Management Company'] || '',
-      status: f['Status'] || '',
-      distributions: f['Distributions'] || '',
-      deckUrl: f['Deck URL'] || ''
-    };
-  });
+  if (error) throw error;
+  return (data || []).map(d => ({
+    ...d,
+    managementCompany: d.management_company?.operator_name || ''
+  }));
 }
 
-async function fetchUsersWithBuyBox() {
-  if (!GHL_API_KEY) throw new Error('GHL_API_KEY not set');
+async function fetchUsersWithBuyBox(supabase) {
+  // Get users from Supabase user_profiles
+  const { data: profiles, error } = await supabase
+    .from('user_profiles')
+    .select('id, email, full_name, tier, buy_box_data')
+    .not('email', 'is', null);
 
-  // Fetch contacts with dealflow tags
-  const allContacts = [];
-  let page = 1;
-  let hasMore = true;
+  if (error) throw error;
 
-  while (hasMore && page <= 10) {
-    const resp = await fetch(
-      `https://rest.gohighlevel.com/v1/contacts/?limit=100&page=${page}`,
-      { headers: { 'Authorization': `Bearer ${GHL_API_KEY}` } }
-    );
-
-    if (!resp.ok) break;
-    const data = await resp.json();
-    const contacts = data.contacts || [];
-    allContacts.push(...contacts);
-    hasMore = contacts.length === 100;
-    page++;
-  }
-
-  // Filter to users with dealflow tags and extract buy box
-  return allContacts
-    .filter(c => {
-      const tags = (c.tags || []).map(t => t.toLowerCase());
-      return tags.some(t =>
-        t === 'dealflow-free' || t === 'dealflow-academy' || t === 'dealflow-alumni' ||
-        t === 'bought cashflow academy' || t === 'academy-member' || t === 'subscriber'
-      );
-    })
-    .map(c => {
-      const customFields = c.customField || [];
-      const buyBox = {};
-
-      const FIELD_KEYS = {
-        assetClasses: 'contact.asset_class_preference',
-        checkSize: 'contact.investment_amount',
-        minCashYield: 'contact.minimum_1st_year_cash_on_cash_return',
-        minIRR: 'contact.minimum_total_return_requirement_irr',
-        strategies: 'contact.strategy_preference'
-      };
-
-      for (const cf of customFields) {
-        const fieldKey = cf.key || cf.id || '';
-        for (const [appKey, ghlKey] of Object.entries(FIELD_KEYS)) {
-          if (fieldKey === ghlKey) buyBox[appKey] = cf.value || '';
-        }
-      }
-
-      const tags = (c.tags || []).map(t => t.toLowerCase());
-      let tier = 'free';
-      if (tags.includes('dealflow-academy') || tags.includes('bought cashflow academy') || tags.includes('academy-member'))
-        tier = 'academy';
-      else if (tags.includes('dealflow-alumni'))
-        tier = 'alumni';
-
+  return (profiles || [])
+    .filter(p => p.email)
+    .map(p => {
+      const buyBox = p.buy_box_data || {};
+      const firstName = (p.full_name || p.email.split('@')[0]).split(' ')[0] || 'there';
       return {
-        email: c.email,
-        name: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.email?.split('@')[0] || 'Investor',
-        firstName: c.firstName || c.email?.split('@')[0] || 'there',
-        tier,
-        buyBox,
+        email: p.email,
+        name: p.full_name || p.email.split('@')[0],
+        firstName,
+        tier: p.tier || 'free',
+        buyBox: {
+          assetClasses: buyBox.assetClasses || buyBox.asset_classes || '',
+          checkSize: buyBox.checkSize || buyBox.check_size || '',
+          minCashYield: buyBox.minCashYield || buyBox.min_cash_yield || '',
+          minIRR: buyBox.minIRR || buyBox.min_irr || '',
+          strategies: buyBox.strategies || ''
+        },
         hasBuyBox: Object.keys(buyBox).length > 0
       };
-    })
-    .filter(u => u.email);
+    });
 }
 
 function generateEmailContent(user, matchedDeals, allNewDeals) {
@@ -237,23 +170,23 @@ function generateEmailContent(user, matchedDeals, allNewDeals) {
 
     for (const match of topMatches) {
       const deal = match.deal;
-      const yieldVal = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
-      const yieldStr = yieldVal > 0 ? (yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1)) + '%' : '—';
-      const minStr = deal.investmentMinimum ? '$' + (deal.investmentMinimum / 1000).toFixed(0) + 'K' : '—';
+      const yieldVal = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
+      const yieldStr = yieldVal > 0 ? (yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1)) + '%' : '\u2014';
+      const minStr = deal.investment_minimum ? '$' + (deal.investment_minimum / 1000).toFixed(0) + 'K' : '\u2014';
 
       html += `
         <div style="border: 1px solid #DDE5E8; border-radius: 8px; padding: 16px; margin-bottom: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-weight: 700; font-size: 14px; color: #141413;">${deal.investmentName}</div>
-              <div style="font-size: 12px; color: #607179;">${deal.managementCompany || deal.assetClass}</div>
+              <div style="font-weight: 700; font-size: 14px; color: #141413;">${deal.investment_name}</div>
+              <div style="font-size: 12px; color: #607179;">${deal.managementCompany || deal.asset_class}</div>
             </div>
             <div style="background: rgba(81,190,123,0.1); color: #51BE7B; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 20px;">${match.matchPct}% match</div>
           </div>
           <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: #607179;">
             <span>Yield: <strong style="color: #141413;">${yieldStr}</strong></span>
             <span>Min: <strong style="color: #141413;">${minStr}</strong></span>
-            <span>${deal.assetClass}</span>
+            <span>${deal.asset_class}</span>
           </div>
           ${match.reasons.length > 0 ? '<div style="font-size: 11px; color: #51BE7B; margin-top: 6px;">' + match.reasons[0] + '</div>' : ''}
         </div>`;
@@ -271,8 +204,8 @@ function generateEmailContent(user, matchedDeals, allNewDeals) {
     for (const deal of otherDeals) {
       html += `
         <div style="padding: 8px 0; border-bottom: 1px solid #EDF1F2; font-size: 13px;">
-          <span style="font-weight: 600; color: #141413;">${deal.investmentName}</span>
-          <span style="color: #607179;"> · ${deal.assetClass}</span>
+          <span style="font-weight: 600; color: #141413;">${deal.investment_name}</span>
+          <span style="color: #607179;"> \u00b7 ${deal.asset_class}</span>
         </div>`;
     }
 
@@ -291,7 +224,7 @@ function generateEmailContent(user, matchedDeals, allNewDeals) {
       <div style="margin-top: 24px; padding: 16px; background: #EFF6FF; border-radius: 8px; text-align: center;">
         <div style="font-weight: 700; font-size: 13px; color: #141413; margin-bottom: 4px;">Want Pascal's analysis on these deals?</div>
         <div style="font-size: 12px; color: #607179; margin-bottom: 10px;">Academy members get DD checklists, stress tests, and guided deployment.</div>
-        <a href="https://growyourcashflow.io/cashflow-academy" style="font-weight: 700; font-size: 12px; color: #3b82f6; text-decoration: none;">Learn more →</a>
+        <a href="https://growyourcashflow.io/cashflow-academy" style="font-weight: 700; font-size: 12px; color: #3b82f6; text-decoration: none;">Learn more \u2192</a>
       </div>`;
   }
 
@@ -306,10 +239,7 @@ function generateEmailContent(user, matchedDeals, allNewDeals) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
@@ -319,10 +249,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // KILL SWITCH: Emails are OFF until Pascal sets env var
-  //   DIGEST_ENABLED=true  in Vercel → Settings → Environment Variables
-  // ══════════════════════════════════════════════════════════════
+  // Kill switch: Emails are OFF until Pascal sets env var
+  //   DIGEST_ENABLED=true in Vercel → Settings → Environment Variables
   const DIGEST_ENABLED = process.env.DIGEST_ENABLED === 'true';
   if (!DIGEST_ENABLED) {
     return res.status(200).json({
@@ -334,8 +262,10 @@ export default async function handler(req, res) {
   const { dryRun = true, daysBack = 7 } = req.body || {};
 
   try {
-    // 1. Fetch new deals
-    const newDeals = await fetchRecentDeals(daysBack);
+    const supabase = getAdminClient();
+
+    // 1. Fetch new deals from Supabase
+    const newDeals = await fetchRecentDeals(supabase, daysBack);
     if (newDeals.length === 0) {
       return res.status(200).json({
         message: 'No new deals in the last ' + daysBack + ' days',
@@ -345,8 +275,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Fetch users with buy boxes
-    const users = await fetchUsersWithBuyBox();
+    // 2. Fetch users with buy boxes from Supabase
+    const users = await fetchUsersWithBuyBox(supabase);
 
     // 3. Compute matches for each user
     const digests = [];
@@ -381,7 +311,7 @@ export default async function handler(req, res) {
         html: dryRun ? undefined : html,
         matchCount: matchedDeals.length,
         topMatch: matchedDeals.length > 0 ? {
-          dealName: matchedDeals.sort((a, b) => b.matchPct - a.matchPct)[0].deal.investmentName,
+          dealName: matchedDeals.sort((a, b) => b.matchPct - a.matchPct)[0].deal.investment_name,
           matchPct: matchedDeals.sort((a, b) => b.matchPct - a.matchPct)[0].matchPct
         } : null
       });
