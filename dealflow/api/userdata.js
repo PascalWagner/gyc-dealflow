@@ -64,11 +64,14 @@ const FIELD_MAP = {
 };
 
 // GHL custom field mapping for goals → CRM sync
+// GHL custom field mapping for goals
+// NOTE: contact.investment_amount is reserved for buy box check_size (per-deal amount)
+//       contact.total_capital_available is a separate field for total capital
 const GHL_GOALS_FIELD_MAP = {
   goal_type: 'contact.primary_investment_objective',
   current_income: 'contact.current_passive_income',
   target_income: 'contact.income_goal',
-  capital_available: 'contact.investment_amount',
+  capital_available: 'contact.total_capital_available',
   timeline: 'contact.investment_timeline',
   tax_reduction: 'contact.tax_reduction_target'
 };
@@ -188,7 +191,7 @@ async function handleGet(req, res, supabase, user) {
 
           const goalType = cf['contact.primary_investment_objective'] || cf['primary_investment_objective'];
           const targetIncome = cf['contact.income_goal'] || cf['income_goal'];
-          const capitalAvailable = cf['contact.investment_amount'] || cf['investment_amount'];
+          const capitalAvailable = cf['contact.total_capital_available'] || cf['total_capital_available'] || cf['contact.investment_amount'] || cf['investment_amount'];
           const timeline = cf['contact.investment_timeline'] || cf['investment_timeline'];
 
           if (goalType || targetIncome || capitalAvailable) {
