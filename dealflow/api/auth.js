@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     // Use site URL for redirect (Vercel sets this, fallback to prod)
-    const siteUrl = process.env.SITE_URL || 'https://growyourcashflow.com/dealflow';
+    const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: siteUrl + '/deal-login.html' }
