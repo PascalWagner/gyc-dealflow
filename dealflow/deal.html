@@ -5783,7 +5783,7 @@ async function renderDeal() {
     memoHtml += '</div></div>';
   }
 
-  // --- Similar Deals Section ---
+  // --- Similar Deals Comparison Table ---
   var similarHtml = '';
   (function buildSimilarDeals() {
     var allDeals = [];
@@ -5798,51 +5798,114 @@ async function renderDeal() {
       .filter(function(d) { return d.id !== deal.id && d.investmentName; })
       .map(function(d) {
         var score = 0;
-        // Same asset class = strong signal
         if (d.assetClass && d.assetClass === deal.assetClass) score += 3;
-        // Same deal type
         if (d.dealType && d.dealType === deal.dealType) score += 2;
-        // Same strategy
         if (d.strategy && d.strategy === deal.strategy) score += 2;
-        // Similar yield range (within 3% of each other)
         var dealYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
         var dYield = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
         if (dealYield > 0 && dYield > 0 && Math.abs(dealYield - dYield) < 0.03) score += 1;
-        // Similar minimum (within 2x)
         if (deal.investmentMinimum && d.investmentMinimum) {
           var ratio = d.investmentMinimum / deal.investmentMinimum;
           if (ratio >= 0.5 && ratio <= 2) score += 1;
         }
-        // Same management company = strong signal
         if (d.managementCompany && d.managementCompany === deal.managementCompany) score += 2;
         return { deal: d, score: score };
       })
       .filter(function(s) { return s.score >= 3; })
       .sort(function(a, b) { return b.score - a.score; })
-      .slice(0, 3);
+      .slice(0, 8);
 
     if (scored.length === 0) return;
 
-    var cards = scored.map(function(s) {
+    // Compute averages from peers for color coding
+    var peers = scored.map(function(s) { return s.deal; });
+    function pAvg(field) {
+      var vals = peers.map(function(d) { return d[field]; }).filter(function(v) { return v != null && v > 0; });
+      return vals.length > 0 ? vals.reduce(function(a, b) { return a + b; }, 0) / vals.length : null;
+    }
+    var avgIRR = pAvg('targetIRR');
+    var avgPref = pAvg('preferredReturn');
+    var avgEM = pAvg('equityMultiple');
+    var avgMin = pAvg('investmentMinimum');
+    var avgHold = pAvg('holdPeriod');
+    var avgSize = pAvg('offeringSize');
+
+    // Color cell helper: green if better, red if worse, neutral if no comparison
+    // higherIsBetter: true for IRR/pref/EM, false for minimum/hold
+    function cellColor(val, avg, higherIsBetter) {
+      if (!val || !avg) return '';
+      if (higherIsBetter) {
+        if (val > avg * 1.02) return 'background:rgba(74,222,128,0.12);';
+        if (val < avg * 0.98) return 'background:rgba(248,113,113,0.12);';
+      } else {
+        if (val < avg * 0.98) return 'background:rgba(74,222,128,0.12);';
+        if (val > avg * 1.02) return 'background:rgba(248,113,113,0.12);';
+      }
+      return '';
+    }
+
+    // Determine pipeline stage for each deal
+    function getStageLabel(d) {
+      var stage = typeof getDealStage === 'function' ? getDealStage(d.id) : null;
+      if (!stage || stage === 'browse') return '';
+      var labels = { saved: 'SAVED', vetting: 'VETTING', ready: 'READY', invested: 'INVESTED', passed: 'PASSED' };
+      var colors = { saved: '#3b82f6', vetting: '#f59e0b', ready: '#22c55e', invested: '#22c55e', passed: '#6b7280' };
+      return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:' + (colors[stage] || '#6b7280') + ';color:#fff;margin-top:2px;">' + (labels[stage] || '') + '</span>';
+    }
+
+    var thStyle = 'padding:10px 12px;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;text-align:right;white-space:nowrap;border-bottom:2px solid var(--border);';
+    var tdStyle = 'padding:10px 12px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);text-align:right;border-bottom:1px solid var(--border-light);';
+
+    var tableHtml = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+    tableHtml += '<table style="width:100%;border-collapse:collapse;min-width:700px;">';
+
+    // Header
+    tableHtml += '<thead><tr>';
+    tableHtml += '<th style="' + thStyle + 'text-align:left;min-width:180px;">Deal Name</th>';
+    tableHtml += '<th style="' + thStyle + '">Target IRR</th>';
+    tableHtml += '<th style="' + thStyle + '">Pref Return</th>';
+    tableHtml += '<th style="' + thStyle + '">Eq Multiple</th>';
+    tableHtml += '<th style="' + thStyle + '">Minimum</th>';
+    tableHtml += '<th style="' + thStyle + '">Hold Period</th>';
+    tableHtml += '<th style="' + thStyle + '">Offering Size</th>';
+    tableHtml += '</tr></thead>';
+
+    // Current deal row (highlighted)
+    tableHtml += '<tbody>';
+    tableHtml += '<tr style="background:rgba(81,190,123,0.06);">';
+    tableHtml += '<td style="' + tdStyle + 'text-align:left;font-weight:800;color:var(--primary);"><div>' + esc(deal.investmentName) + '</div><div style="font-size:11px;font-weight:500;color:var(--text-muted);">' + esc(deal.managementCompany || '') + '</div><span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:var(--primary);color:#fff;margin-top:2px;">THIS DEAL</span></td>';
+    tableHtml += '<td style="' + tdStyle + cellColor(deal.targetIRR, avgIRR, true) + '">' + (deal.targetIRR ? (deal.targetIRR * 100).toFixed(1) + '%' : '—') + '</td>';
+    tableHtml += '<td style="' + tdStyle + cellColor(deal.preferredReturn, avgPref, true) + '">' + (deal.preferredReturn ? (deal.preferredReturn * 100).toFixed(1) + '%' : '—') + '</td>';
+    tableHtml += '<td style="' + tdStyle + cellColor(deal.equityMultiple, avgEM, true) + '">' + (deal.equityMultiple ? deal.equityMultiple.toFixed(2) + 'x' : '—') + '</td>';
+    tableHtml += '<td style="' + tdStyle + cellColor(deal.investmentMinimum, avgMin, false) + '">' + (deal.investmentMinimum ? '$' + deal.investmentMinimum.toLocaleString() : '—') + '</td>';
+    tableHtml += '<td style="' + tdStyle + cellColor(deal.holdPeriod, avgHold, false) + '">' + (deal.holdPeriod ? deal.holdPeriod + ' Yrs' : '—') + '</td>';
+    tableHtml += '<td style="' + tdStyle + '">' + (deal.offeringSize ? '$' + (deal.offeringSize >= 1000000 ? (deal.offeringSize / 1000000).toFixed(0) + 'mm' : deal.offeringSize.toLocaleString()) : '—') + '</td>';
+    tableHtml += '</tr>';
+
+    // Peer rows
+    scored.forEach(function(s) {
       var d = s.deal;
-      var yld = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
-      var yldLabel = d.preferredReturn ? 'Pref' : d.cashOnCash ? 'CoC' : 'IRR';
-      var reasons = [];
-      if (d.assetClass === deal.assetClass) reasons.push(d.assetClass);
-      if (d.strategy === deal.strategy && d.strategy) reasons.push(d.strategy);
-      if (d.managementCompany === deal.managementCompany) reasons.push('Same sponsor');
-      return '<a href="deal.html?id=' + d.id + '" style="display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-decoration:none;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow=\'var(--shadow-card-hover)\'" onmouseout="this.style.boxShadow=\'none\'">'
-        + '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">' + esc(d.investmentName) + '</div>'
-        + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">' + esc(d.managementCompany || '') + '</div>'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-        + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + reasons.map(function(r) { return '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(81,190,123,0.1);color:var(--primary);">' + esc(r) + '</span>'; }).join('') + '</div>'
-        + (yld > 0 ? '<div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--primary);">' + fmt(yld, 'pct') + ' <span style="font-size:10px;font-weight:600;color:var(--text-muted);">' + yldLabel + '</span></div>' : '')
-        + '</div></a>';
-    }).join('');
+      var stageLabel = getStageLabel(d);
+      tableHtml += '<tr style="transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'">';
+      tableHtml += '<td style="' + tdStyle + 'text-align:left;cursor:pointer;" onclick="window.location.href=\'deal.html?id=' + d.id + '\'"><div style="color:var(--text-dark);">' + esc(d.investmentName) + '</div><div style="font-size:11px;font-weight:500;color:var(--text-muted);">' + esc(d.managementCompany || '') + '</div>' + stageLabel + '</td>';
+      tableHtml += '<td style="' + tdStyle + cellColor(d.targetIRR, avgIRR, true) + '">' + (d.targetIRR ? (d.targetIRR * 100).toFixed(1) + '%' : '—') + '</td>';
+      tableHtml += '<td style="' + tdStyle + cellColor(d.preferredReturn, avgPref, true) + '">' + (d.preferredReturn ? (d.preferredReturn * 100).toFixed(1) + '%' : '—') + '</td>';
+      tableHtml += '<td style="' + tdStyle + cellColor(d.equityMultiple, avgEM, true) + '">' + (d.equityMultiple ? d.equityMultiple.toFixed(2) + 'x' : '—') + '</td>';
+      tableHtml += '<td style="' + tdStyle + cellColor(d.investmentMinimum, avgMin, false) + '">' + (d.investmentMinimum ? '$' + d.investmentMinimum.toLocaleString() : '—') + '</td>';
+      tableHtml += '<td style="' + tdStyle + cellColor(d.holdPeriod, avgHold, false) + '">' + (d.holdPeriod ? d.holdPeriod + ' Yrs' : '—') + '</td>';
+      tableHtml += '<td style="' + tdStyle + '">' + (d.offeringSize ? '$' + (d.offeringSize >= 1000000 ? (d.offeringSize / 1000000).toFixed(0) + 'mm' : d.offeringSize.toLocaleString()) : '—') + '</td>';
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table></div>';
+
+    var legendHtml = '<div style="display:flex;gap:16px;margin-top:12px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
+      + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:rgba(74,222,128,0.2);"></span>Better than average</span>'
+      + '<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.2);"></span>Below average</span>'
+      + '</div>';
 
     similarHtml = '<div class="section">'
-      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg><span class="section-title">Similar Deals</span></div>'
-      + '<div class="section-body"><div style="display:grid;gap:12px;">' + cards + '</div></div>'
+      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">Similar Deals</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + scored.length + ' comparable ' + esc(deal.assetClass || '') + ' deals</span></div>'
+      + '<div class="section-body">' + tableHtml + legendHtml + '</div>'
       + '</div>';
   })();
 
