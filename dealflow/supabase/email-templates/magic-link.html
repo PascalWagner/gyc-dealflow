@@ -1,5 +1,6 @@
 <!-- Supabase Magic Link Email Template -->
 <!-- Paste this into: Supabase Dashboard > Authentication > Email Templates > Magic Link -->
+<!-- Subject: Your GYC Dealflow Login Link -->
 <!-- Variables: {{ .ConfirmationURL }}, {{ .Email }} -->
 
 <div style="max-width:520px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
@@ -9,16 +10,17 @@
   </div>
   <div style="background:#ffffff;padding:36px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
     <p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;line-height:1.6;">Hi,</p>
-    <p style="font-size:16px;color:#1a1a1a;margin:0 0 28px;line-height:1.6;">Click below to log in to your deal database:</p>
+    <p style="font-size:16px;color:#1a1a1a;margin:0 0 8px;line-height:1.6;">Your secure login link is ready. Click below to access your deal database.</p>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 28px;line-height:1.5;">838 deals across 19 asset classes from 455 sponsors &mdash; updated daily.</p>
     <div style="text-align:center;margin:0 0 28px;">
       <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#1F5159;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">Log In to Dealflow</a>
     </div>
     <p style="font-size:13px;color:#6b7280;margin:0;text-align:center;line-height:1.5;">
       <em>This link expires in 15 minutes.</em><br>
-      If you didn't request this, ignore this email.
+      If you didn't request this, you can safely ignore this email.
     </p>
   </div>
   <div style="background:#f9fafb;padding:16px 24px;text-align:center;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:none;">
-    <p style="font-size:11px;color:#9ca3af;margin:0;">Grow Your Cashflow &middot; growyourcashflow.com</p>
+    <p style="font-size:11px;color:#9ca3af;margin:0;">Grow Your Cashflow &middot; growyourcashflow.io</p>
   </div>
 </div>
