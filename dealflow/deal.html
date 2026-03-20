@@ -3437,6 +3437,152 @@ function handleDDInput(input) {
 
 
 
+// ========== DEAL Q&A ==========
+
+function loadDealQA(dealId) {
+  var container = document.getElementById('dealQAList');
+  if (!container) return;
+  fetch('/api/deal-qa?dealId=' + encodeURIComponent(dealId))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.questions || data.questions.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No questions yet. Be the first to ask!</div>';
+        return;
+      }
+      var user = typeof getUser === 'function' ? getUser() : null;
+      var isAdmin = user && user.isAdmin;
+      var upvoted = JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]');
+      var html = data.questions.map(function(q) {
+        var hasUpvoted = upvoted.includes(q.id);
+        var timeAgo = q.askedAt ? getRelativeTime(q.askedAt) : '';
+        var answerHtml = '';
+        if (q.answer) {
+          answerHtml = '<div style="margin-top:12px;padding:12px 16px;background:rgba(81,190,123,0.06);border-left:3px solid var(--primary);border-radius:0 var(--radius-sm) var(--radius-sm) 0;">'
+            + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+            + '<div style="width:24px;height:24px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:10px;font-weight:800;">PW</div>'
+            + '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + esc(q.answeredBy || 'Pascal') + '</span>'
+            + (q.answeredAt ? '<span style="font-size:11px;color:var(--text-muted);">' + getRelativeTime(q.answeredAt) + '</span>' : '')
+            + '</div>'
+            + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.6;">' + esc(q.answer) + '</div>'
+            + '</div>';
+        } else if (isAdmin) {
+          answerHtml = '<div style="margin-top:8px;">'
+            + '<textarea id="qaAnswer_' + q.id + '" rows="2" placeholder="Write your answer..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:12px;resize:vertical;box-sizing:border-box;"></textarea>'
+            + '<button onclick="submitDealAnswer(\'' + q.id + '\')" style="margin-top:4px;padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Answer</button>'
+            + '</div>';
+        } else {
+          answerHtml = '<div style="margin-top:8px;font-size:12px;color:var(--text-muted);font-style:italic;">Awaiting response from Pascal</div>';
+        }
+        return '<div style="padding:16px 0;border-bottom:1px solid var(--border-light);">'
+          + '<div style="display:flex;gap:12px;">'
+          + '<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;">'
+          + '<button onclick="upvoteQuestion(\'' + q.id + '\', this)" style="background:none;border:none;cursor:' + (hasUpvoted ? 'default' : 'pointer') + ';padding:2px;color:' + (hasUpvoted ? 'var(--primary)' : 'var(--text-muted)') + ';"><svg viewBox="0 0 24 24" fill="' + (hasUpvoted ? 'var(--primary)' : 'none') + '" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>'
+          + '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + (q.upvotes > 0 ? 'var(--text-dark)' : 'var(--text-muted)') + ';">' + q.upvotes + '</span>'
+          + '</div>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);line-height:1.5;">' + esc(q.question) + '</div>'
+          + '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">' + esc(q.askedBy) + (timeAgo ? ' \u00b7 ' + timeAgo : '') + '</div>'
+          + answerHtml
+          + '</div></div></div>';
+      }).join('');
+      container.innerHTML = html;
+    })
+    .catch(function() {
+      container.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">No questions yet. Be the first to ask!</div>';
+    });
+}
+
+function getRelativeTime(dateStr) {
+  var diff = Date.now() - new Date(dateStr).getTime();
+  var mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  var hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  var days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  var months = Math.floor(days / 30);
+  return months + 'mo ago';
+}
+
+function submitDealQuestion(dealId, dealName) {
+  var textarea = document.getElementById('qaNewQuestion');
+  if (!textarea) return;
+  var question = textarea.value.trim();
+  if (!question) { alert('Please enter a question.'); return; }
+  var user = typeof getUser === 'function' ? getUser() : null;
+  fetch('/api/deal-qa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'ask',
+      dealId: dealId,
+      dealName: dealName,
+      question: question,
+      userEmail: user ? user.email : '',
+      userName: user ? user.name : 'Anonymous'
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      textarea.value = '';
+      loadDealQA(dealId);
+    } else {
+      alert('Failed to submit question: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(function() { alert('Failed to submit question. Please try again.'); });
+}
+
+function submitDealAnswer(recordId) {
+  var textarea = document.getElementById('qaAnswer_' + recordId);
+  if (!textarea) return;
+  var answer = textarea.value.trim();
+  if (!answer) return;
+  var user = typeof getUser === 'function' ? getUser() : null;
+  var params = new URLSearchParams(window.location.search);
+  var dealId = params.get('id');
+  fetch('/api/deal-qa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'answer',
+      recordId: recordId,
+      answer: answer,
+      userName: user ? user.name : 'Pascal'
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success && dealId) loadDealQA(dealId);
+  })
+  .catch(function() {});
+}
+
+function upvoteQuestion(recordId, btn) {
+  var upvoted = JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]');
+  if (upvoted.includes(recordId)) return;
+  upvoted.push(recordId);
+  localStorage.setItem('gycQAUpvoted', JSON.stringify(upvoted));
+  fetch('/api/deal-qa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'upvote', recordId: recordId })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      var countEl = btn.nextElementSibling;
+      if (countEl) countEl.textContent = data.upvotes;
+      btn.style.color = 'var(--primary)';
+      btn.querySelector('svg').setAttribute('fill', 'var(--primary)');
+      btn.style.cursor = 'default';
+    }
+  })
+  .catch(function() {});
+}
+
 // ========== GEOCODE & MAP ==========
 
 async function geocodeAndMap(locationStr, containerId) {
