@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Cashflow Academy',
   webDir: 'www',
   server: {
-    url: 'https://dealflow-puce.vercel.app',
+    url: 'https://dealflow.growyourcashflow.io',
     cleartext: false,
   },
   plugins: {

@@ -481,115 +481,88 @@ body {
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-const WEBHOOKS = {
-  magicLink: 'https://hook.us2.make.com/764mdv3rfz2v7y3cdruxntvjyuto28kv',
-  verify:    'https://hook.us2.make.com/iwreofes14twzdn628quljwkjepnjnrb',
-  signUp:    'https://hook.us2.make.com/i3nlsj9uq3p7sdvqf0viq0ggilvudwhx'
-};
+const _supa = window.supabase.createClient(
+  'https://nntzqyufmtypfjpusflm.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.pm6TDqZT37942PrVP0NQxtMiuucPuEicE32qVDebCZ4'
+);
 
-(async function checkMagicLink() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('magic') !== '1') return;
-  const email = params.get('email'), ts = params.get('ts'), token = params.get('token');
-  if (!email || !ts || !token) return;
+// Handle Supabase Auth callback (magic link redirect with #access_token=...)
+(async function handleAuthCallback() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('access_token')) {
+    // Also check for old ?magic=1 links (backwards compat)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('magic') === '1') {
+      const email = params.get('email');
+      if (email) {
+        document.getElementById('authContent').style.display = 'none';
+        document.getElementById('verifyingState').classList.add('show');
+        // Old-style link — look up via API and create session
+        const resp = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'lookup', email })
+        }).catch(() => null);
+        if (resp && resp.ok) {
+          const d = await resp.json().catch(() => ({}));
+          if (d.success) {
+            saveUser(d, email);
+            window.location.href = 'index.html';
+            return;
+          }
+        }
+        // Fallback
+        saveUser({}, email);
+        window.location.href = 'index.html';
+        return;
+      }
+    }
+    return;
+  }
 
+  // Supabase magic link callback
   document.getElementById('authContent').style.display = 'none';
   document.getElementById('verifyingState').classList.add('show');
 
   try {
-    console.log('[Magic Link] Verifying:', { email, ts, token: token.slice(0, 10) + '...' });
-    const resp = await fetch(WEBHOOKS.verify, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, ts, token })
-    }).catch(err => { console.error('[Magic Link] Fetch error:', err); return null; });
-
-    console.log('[Magic Link] Response status:', resp?.status);
-    if (resp && resp.ok) {
-      const data = await resp.json().catch(() => ({}));
-      console.log('[Magic Link] Response data:', JSON.stringify(data));
-      if (data.success) {
-        const user = {
-          email: data.email || email, name: data.name || email.split('@')[0],
-          id: data.contactId || null, token: data.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
-          tier: data.tier || 'free', loggedInAt: new Date().toISOString()
-        };
-        console.log('[Magic Link] Saving user:', JSON.stringify(user));
-        localStorage.setItem('gycUser', JSON.stringify(user));
-        window.location.href = 'index.html';
-        return;
-      } else {
-        console.warn('[Magic Link] Verify returned success=false:', data.error);
-      }
+    // Supabase client auto-detects the hash and sets the session
+    const { data: { session }, error } = await _supa.auth.getSession();
+    if (error || !session) {
+      console.error('[Auth] Session error:', error);
+      document.getElementById('verifyingState').classList.remove('show');
+      document.getElementById('authContent').style.display = '';
+      showErr('signinError', 'Login link expired or invalid. Please try again.');
+      return;
     }
-    // Verification failed — look up contact directly via our API
-    console.log('[Magic Link] Verify webhook failed, calling /api/auth lookup for:', email);
-    const lookupResp = await fetch('/api/auth', {
+
+    const email = session.user.email;
+    // Fetch tier + name from our API (syncs with GHL)
+    const resp = await fetch('/api/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'lookup', email })
-    }).catch(err => { console.error('[Magic Link] Lookup fetch error:', err); return null; });
+    }).catch(() => null);
 
-    if (lookupResp && lookupResp.ok) {
-      const lookupData = await lookupResp.json().catch(() => ({}));
-      console.log('[Magic Link] Lookup result:', JSON.stringify(lookupData));
-      if (lookupData.success) {
-        const lookupUser = {
-          email: lookupData.email || email,
-          name: lookupData.name || email.split('@')[0],
-          id: lookupData.contactId || null,
-          token: lookupData.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
-          tier: lookupData.tier || 'free',
-          loggedInAt: new Date().toISOString()
-        };
-        console.log('[Magic Link] Saving user from lookup:', JSON.stringify(lookupUser));
-        localStorage.setItem('gycUser', JSON.stringify(lookupUser));
-        window.location.href = 'index.html';
-        return;
-      }
-    }
+    const d = resp && resp.ok ? await resp.json().catch(() => ({})) : {};
 
-    // Last resort fallback
-    console.warn('[Magic Link] Lookup also failed, using minimal session');
-    const directUser = {
-      email: email, name: email.split('@')[0],
-      id: null, token: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      tier: 'free', loggedInAt: new Date().toISOString()
-    };
-    localStorage.setItem('gycUser', JSON.stringify(directUser));
-    window.location.href = 'index.html';
-    return;
-  } catch(e) {
-    console.error('[Magic Link] Exception:', e);
-    // Even on exception, try lookup
-    try {
-      const lookupResp = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'lookup', email })
-      }).catch(() => null);
-      if (lookupResp && lookupResp.ok) {
-        const d = await lookupResp.json().catch(() => ({}));
-        if (d.success) {
-          localStorage.setItem('gycUser', JSON.stringify({
-            email: d.email || email, name: d.name || email.split('@')[0],
-            id: d.contactId || null, token: d.token || Date.now().toString(36) + Math.random().toString(36).slice(2),
-            tier: d.tier || 'free', loggedInAt: new Date().toISOString()
-          }));
-          window.location.href = 'index.html';
-          return;
-        }
-      }
-    } catch(e2) {}
-    // Absolute last resort
     localStorage.setItem('gycUser', JSON.stringify({
-      email: email, name: email.split('@')[0],
-      id: null, token: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      tier: 'free', loggedInAt: new Date().toISOString()
+      email,
+      name: d.name || session.user.user_metadata?.full_name || email.split('@')[0],
+      id: d.contactId || session.user.id,
+      token: session.access_token,
+      refreshToken: session.refresh_token,
+      tier: d.tier || 'free',
+      isAdmin: d.isAdmin || false,
+      loggedInAt: new Date().toISOString()
     }));
     window.location.href = 'index.html';
-    return;
+  } catch (e) {
+    console.error('[Auth] Callback exception:', e);
+    document.getElementById('verifyingState').classList.remove('show');
+    document.getElementById('authContent').style.display = '';
+    showErr('signinError', 'Something went wrong. Please try again.');
   }
 })();
 
@@ -620,21 +593,21 @@ async function handleSignIn() {
   btn.classList.add('btn-loading'); btn.textContent = 'Sending link...';
 
   try {
-    const resp = await fetch(WEBHOOKS.magicLink, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    }).catch(() => null);
+    // Send magic link via Supabase Auth (through our API)
+    const resp = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'magic-link', email })
+    });
 
-    if (resp && resp.ok) {
-      const data = await resp.json().catch(() => ({}));
-      if (data.success) {
-        document.getElementById('signinForm').style.display = 'none';
-        document.getElementById('sentEmail').textContent = email;
-        document.getElementById('signinSent').classList.add('show');
-        return;
-      }
+    const data = await resp.json().catch(() => ({}));
+    if (data.success) {
+      document.getElementById('signinForm').style.display = 'none';
+      document.getElementById('sentEmail').textContent = email;
+      document.getElementById('signinSent').classList.add('show');
+      return;
     }
-    showErr('signinError', 'No account found with this email. Request access first.');
+    showErr('signinError', data.error || 'Could not send login link. Try again.');
   } catch(e) { showErr('signinError', 'Connection error. Try again.'); }
   btn.classList.remove('btn-loading'); btn.textContent = 'Send Login Link';
 }
@@ -659,24 +632,27 @@ async function handleSignUp() {
   btn.classList.add('btn-loading'); btn.textContent = 'Requesting access...';
 
   try {
-    const resp = await fetch(WEBHOOKS.signUp, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ firstName: first, lastName: last, email, source })
-    }).catch(() => null);
+    // Register via our API (creates Supabase Auth user + GHL contact)
+    const resp = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'register', email, password: crypto.randomUUID(), firstName: first, lastName: last })
+    });
 
-    if (resp && resp.ok) {
-      const data = await resp.json().catch(() => ({}));
-      if (data.success) {
-        await fetch(WEBHOOKS.magicLink, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        }).catch(() => null);
-        document.getElementById('signupForm').style.display = 'none';
-        document.getElementById('signupSentEmail').textContent = email;
-        document.getElementById('signupSent').classList.add('show'); return;
-      }
-      showErr('signupError', data.error || 'Sign up failed.');
-    } else { showErr('signupError', 'Unable to connect.'); }
+    const data = await resp.json().catch(() => ({}));
+    if (data.success) {
+      // Now send magic link so they can log in
+      await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'magic-link', email })
+      }).catch(() => null);
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('signupSentEmail').textContent = email;
+      document.getElementById('signupSent').classList.add('show');
+      return;
+    }
+    showErr('signupError', data.error || 'Sign up failed.');
   } catch(e) { showErr('signupError', 'Connection error.'); }
   btn.classList.remove('btn-loading'); btn.textContent = 'Request Access';
 }
@@ -703,7 +679,7 @@ if (autoLogin) {
 }
 
 const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
-if (user && user.token && !new URLSearchParams(window.location.search).get('magic')) {
+if (user && user.token && !window.location.hash.includes('access_token') && !new URLSearchParams(window.location.search).get('magic')) {
   window.location.href = 'index.html';
 }
 </script>
