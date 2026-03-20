@@ -4858,6 +4858,17 @@ async function renderDeal() {
     } else {
       materialsHtml += '<div class="material-tile-locked">' + _ppmIcon + 'PPM<span class="lock-badge">Academy</span></div>';
     }
+  } else {
+    // No PPM — show upload tile
+    materialsHtml += '<div class="material-tile" style="border-style:dashed;cursor:pointer;color:var(--text-muted);" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\', \'ppm\')">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+      'Upload PPM</div>';
+  }
+  if (!deal.deckUrl) {
+    // No deck — show upload tile
+    materialsHtml += '<div class="material-tile" style="border-style:dashed;cursor:pointer;color:var(--text-muted);" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\', \'deck\')">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+      'Upload Deck</div>';
   }
   if (deal.subAgreementUrl) {
     if (_subExpired) {
@@ -4884,12 +4895,6 @@ async function renderDeal() {
   var secQuery = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
   materialsHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + secQuery + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>SEC EDGAR</a>';
   materialsHtml += '</div>';
-  if (!deal.deckUrl || !deal.ppmUrl) {
-    var missingItems = [];
-    if (!deal.deckUrl) missingItems.push('deck');
-    if (!deal.ppmUrl) missingItems.push('PPM');
-    materialsHtml += '<div class="materials-missing">Missing ' + missingItems.join(' or ') + '? <button onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')">Upload documents</button></div>';
-  }
   materialsHtml += '</div></div>';
 
   // --- 8. DD Checklist ---
@@ -5803,7 +5808,7 @@ function initDealReturnsChart(deal) {
 
 // ========== DECK SUBMIT MODAL ==========
 
-function openDeckSubmitModal(dealId, dealName) {
+function openDeckSubmitModal(dealId, dealName, defaultDocType) {
   // Remove any existing modal
   var existing = document.getElementById('deckSubmitOverlay');
   if (existing) existing.remove();
@@ -5845,6 +5850,11 @@ function openDeckSubmitModal(dealId, dealName) {
     '</div>';
 
   document.body.appendChild(overlay);
+  // Pre-select document type if specified
+  if (defaultDocType) {
+    var docTypeSelect = document.getElementById('deckDocType');
+    if (docTypeSelect) docTypeSelect.value = defaultDocType;
+  }
   // Trigger transition
   requestAnimationFrame(function() { overlay.classList.add('visible'); });
 
