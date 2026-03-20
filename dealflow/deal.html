@@ -5015,6 +5015,40 @@ async function renderDeal() {
   })();
 
   // --- Case Study ---
+  // --- SEC Filing ---
+  var secFilingHtml = '';
+  (function buildSecFiling() {
+    if (!deal.secCik && !deal.totalAmountSold && !deal.totalInvestors && !deal.dateOfFirstSale) return;
+    secFilingHtml += '<div class="section">';
+    secFilingHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">SEC Filing</span>';
+    secFilingHtml += '<span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-family:var(--font-ui);font-size:11px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);padding:3px 10px;border-radius:20px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>SEC Verified</span>';
+    secFilingHtml += '</div><div class="section-body">';
+    secFilingHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:16px;">';
+    if (deal.totalAmountSold) {
+      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">$' + (deal.totalAmountSold >= 1e6 ? (deal.totalAmountSold/1e6).toFixed(1)+'M' : Math.round(deal.totalAmountSold).toLocaleString()) + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Total Sold</div></div>';
+    }
+    if (deal.offeringSize) {
+      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Total Offering</div></div>';
+    }
+    if (deal.totalInvestors) {
+      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">' + deal.totalInvestors + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Investors</div></div>';
+    }
+    if (deal.dateOfFirstSale) {
+      var fsd = new Date(deal.dateOfFirstSale);
+      secFilingHtml += '<div><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">' + fsd.toLocaleDateString('en-US',{month:'short',year:'numeric'}) + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">First Sale</div></div>';
+    }
+    secFilingHtml += '</div>';
+    if (deal.totalAmountSold && deal.offeringSize && deal.offeringSize > 0) {
+      var pctSold = Math.min(100, Math.round((deal.totalAmountSold / deal.offeringSize) * 100));
+      secFilingHtml += '<div style="margin-bottom:16px;"><div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;"><span>' + pctSold + '% funded</span><span>$' + (deal.offeringSize >= 1e6 ? (deal.offeringSize/1e6).toFixed(1)+'M' : Math.round(deal.offeringSize).toLocaleString()) + ' target</span></div>';
+      secFilingHtml += '<div style="height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;"><div style="height:100%;width:' + pctSold + '%;background:var(--primary);border-radius:3px;"></div></div></div>';
+    }
+    if (deal.secCik) {
+      secFilingHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=' + esc(deal.secCik) + '&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View on SEC EDGAR</a>';
+    }
+    secFilingHtml += '</div></div>';
+  })();
+
   var caseStudyHtml = '';
   (function buildCaseStudy() {
     var cs = deal.caseStudy;
@@ -5529,15 +5563,23 @@ async function renderDeal() {
     geoMapHtml += '<div class="section-body">';
 
     // SVG map — continental US only (AK/HI don't render well at this scale)
+    var allHighlighted = highlightedStates.length > 40;
     geoMapHtml += '<div style="position:relative;width:100%;max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(244,247,245,0.6) 0%,rgba(238,243,240,0.3) 100%);border-radius:12px;padding:20px 16px 12px;">';
-    geoMapHtml += '<svg viewBox="200 45 1030 500" style="width:100%;height:auto;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.06));" xmlns="http://www.w3.org/2000/svg">';
+    geoMapHtml += '<svg viewBox="175 40 1060 530" style="width:100%;height:auto;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.06));" xmlns="http://www.w3.org/2000/svg">';
 
     for (var st in statePaths) {
-      if (st === 'AK' || st === 'HI') continue; // Skip non-continental states
+      if (st === 'AK' || st === 'HI') continue;
       var isHighlighted = matched[st];
-      var fillColor = isHighlighted ? 'rgba(56,168,105,0.55)' : '#e8edea';
-      var strokeColor = isHighlighted ? 'rgba(42,140,82,0.85)' : '#c8d0cc';
-      var strokeWidth = isHighlighted ? '2.5' : '1';
+      var fillColor, strokeColor, strokeWidth;
+      if (isHighlighted) {
+        fillColor = allHighlighted ? '#6bbe8a' : '#4fb878';
+        strokeColor = allHighlighted ? '#4a9e6a' : '#2d8a52';
+        strokeWidth = allHighlighted ? '0.75' : '2';
+      } else {
+        fillColor = '#e4eae6';
+        strokeColor = '#d0d8d3';
+        strokeWidth = '0.75';
+      }
       geoMapHtml += '<path d="' + statePaths[st] + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '" stroke-linejoin="round">';
       geoMapHtml += '<title>' + st + '</title></path>';
     }
@@ -6397,6 +6439,7 @@ async function renderDeal() {
     + operatorHtml
     + '</div>'
     + geoMapHtml
+    + secFilingHtml
     + operatorDealsHtml
     + caseStudyHtml
     // --- Job 5: How does it compare? ---
