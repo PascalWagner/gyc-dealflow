@@ -4069,7 +4069,13 @@ async function renderDeal() {
 
   let deal = DEALS.find(d => d.id === id);
 
-
+  // Check localStorage for user-submitted deals
+  if (!deal) {
+    try {
+      const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+      deal = userDeals.find(d => d.id === id);
+    } catch(e) {}
+  }
 
   // Fetch deal from Supabase API
 
