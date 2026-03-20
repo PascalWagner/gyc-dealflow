@@ -8009,15 +8009,6 @@ function renderSearchStageBadge(deal) {
 function renderCardStageExtras(deal) {
   const stage = getDealStage(deal.id);
   if (stage === 'saved') {
-    // Income gap contribution
-    const wd = getCachedWizardData();
-    const checkSize = wd._checkSize || wd.checkSize || 0;
-    const incomeGap = wd._incomeGap || wd.incomeGap || 0;
-    if (checkSize > 0 && incomeGap > 0) {
-      const annualIncome = (deal.cashOnCash || deal.preferredReturn || 0.08) * checkSize;
-      const fillPct = Math.min(Math.round((annualIncome / incomeGap) * 100), 100);
-      return '<div style="padding:6px 12px;margin-top:8px;background:rgba(74,222,128,0.08);border-radius:6px;font-size:11px;color:#4ade80;font-weight:600;text-align:center;">Fills ' + fillPct + '% of your income gap</div>';
-    }
     return '';
   } else if (stage === 'vetting') {
     // DD checklist progress — deal-type-specific
