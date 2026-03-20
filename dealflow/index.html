@@ -5836,40 +5836,42 @@ const _supa = window.supabase.createClient(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Manage Database</div>
-      <div style="margin-left:auto;display:flex;gap:8px;">
-        <button class="topbar-tab active" onclick="adminShowTab('deals',this)">Deals</button>
-        <button class="topbar-tab" onclick="adminShowTab('operators',this)">Operators</button>
-        <button class="topbar-tab" onclick="adminShowTab('users',this)">Users</button>
+      <div style="margin-left:auto;">
+        <div class="admin-seg-ctrl">
+          <button class="admin-seg active" onclick="adminShowTab('deals',this)">Deals</button>
+          <button class="admin-seg" onclick="adminShowTab('operators',this)">Operators</button>
+          <button class="admin-seg" onclick="adminShowTab('users',this)">Users</button>
+        </div>
       </div>
     </div>
     <div class="sub-page" style="max-width:1200px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-        <div style="position:relative;flex:1;min-width:200px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16" style="position:absolute;left:12px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="adminSearch" placeholder="Search..." oninput="adminSearchDebounce()" style="width:100%;padding:10px 14px 10px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:14px;background:var(--bg-card);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+        <div class="admin-search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="adminSearch" class="admin-search-input" placeholder="Search..." oninput="adminSearchDebounce()">
         </div>
-        <button onclick="adminCreateNew()" style="padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <button onclick="adminCreateNew()" class="admin-btn primary" style="display:flex;align-items:center;gap:6px;padding:10px 20px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add New
         </button>
-        <button id="adminQualityToggle" onclick="adminToggleQuality()" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;" title="Audit deal completeness — find missing fields, decks, and PPMs">&#x2705; Quality Audit</button>
-        <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);" id="adminResultCount"></div>
+        <button id="adminQualityToggle" onclick="adminToggleQuality()" class="admin-btn secondary" style="font-size:12px;white-space:nowrap;" title="Audit deal completeness">Quality Audit</button>
+        <span id="adminResultCount" style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);font-weight:500;"></span>
       </div>
-      <div id="adminQualityBanner" style="display:none;padding:12px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">
+      <div id="adminQualityBanner" style="display:none;padding:14px 18px;background:var(--bg-cream);border-radius:12px;margin-bottom:16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">
         <strong style="color:var(--text-dark);">Quality Audit Mode</strong> — Shows how complete each deal listing is. Deals are sorted worst-first so you can fix the biggest gaps. Green = 80%+, Yellow = 50-80%, Red = below 50%.
       </div>
       <div id="adminQualityStats" style="display:none;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;"></div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+      <div class="admin-table-wrap">
         <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:14px;">
             <thead id="adminTableHead">
-              <tr style="border-bottom:2px solid var(--border);background:var(--bg-cream);"></tr>
+              <tr></tr>
             </thead>
             <tbody id="adminTableBody"></tbody>
           </table>
         </div>
       </div>
-      <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:16px;" id="adminPagination"></div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:16px;" id="adminPagination"></div>
     </div>
   </div>
 
@@ -14751,7 +14753,7 @@ function adminShowTab(tab, btn) {
   _adminPage = 1;
   _adminQualityMode = false;
   document.getElementById('adminSearch').value = '';
-  document.querySelectorAll('#page-admin-manage .topbar-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#page-admin-manage .admin-seg').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   var qBtn = document.getElementById('adminQualityToggle');
   if (qBtn) { qBtn.style.display = tab === 'deals' ? '' : 'none'; qBtn.style.background = 'transparent'; qBtn.style.color = 'var(--text-secondary)'; }
@@ -14890,24 +14892,24 @@ function adminRenderTable(rows, total) {
   }
 
   head.innerHTML = cols.map(c =>
-    '<th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + c.label + '</th>'
-  ).join('') + '<th style="width:80px;padding:10px 12px;"></th>';
+    '<th style="text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);">' + c.label + '</th>'
+  ).join('') + '<th style="width:80px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';
 
   body.innerHTML = rows.map(row => {
     const cells = cols.map(c => {
       let val = row[c.key];
-      if (c.key === 'archived') val = val ? '<span style="color:var(--text-muted);">Archived</span>' : '<span style="color:var(--primary);">Active</span>';
-      else if (c.key === 'is_admin') val = val ? 'Yes' : '';
-      else if (c.key === 'tier') val = '<span style="text-transform:capitalize;font-weight:600;">' + (val || 'free') + '</span>';
-      else if (c.key === 'target_irr' && val) val = val + '%';
+      if (c.key === 'archived') val = val ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;background:var(--bg-cream);font-size:12px;font-weight:600;color:var(--text-muted);">Archived</span>' : '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;background:var(--green-bg);font-size:12px;font-weight:600;color:var(--primary);">Active</span>';
+      else if (c.key === 'is_admin') val = val ? '<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>' : '';
+      else if (c.key === 'tier') val = '<span style="display:inline-flex;padding:3px 10px;border-radius:20px;background:' + (val === 'premium' ? 'var(--green-bg)' : val === 'pro' ? 'var(--blue-bg)' : 'var(--bg-cream)') + ';font-size:12px;font-weight:600;text-transform:capitalize;color:' + (val === 'premium' ? 'var(--primary)' : val === 'pro' ? 'var(--blue)' : 'var(--text-muted)') + ';">' + (val || 'free') + '</span>';
+      else if (c.key === 'target_irr' && val) val = '<span style="font-weight:600;">' + val + '%</span>';
       else if (c.key === 'investment_minimum' && val) val = '$' + Number(val).toLocaleString();
       else if (c.key === 'created_at' && val) val = new Date(val).toLocaleDateString();
-      else if (c.key === 'website' && val) val = '<a href="' + val + '" target="_blank" style="color:var(--primary);text-decoration:none;">' + val.replace(/https?:\/\//, '').slice(0, 30) + '</a>';
-      else val = val || '—';
-      return '<td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-dark);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + val + '</td>';
+      else if (c.key === 'website' && val) val = '<a href="' + val + '" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:500;">' + val.replace(/https?:\/\//, '').replace(/\/$/, '').slice(0, 30) + '</a>';
+      else val = val || '<span style="color:var(--text-muted);opacity:0.4;">—</span>';
+      return '<td style="padding:12px 16px;border-bottom:1px solid var(--border-light);color:var(--text-dark);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + val + '</td>';
     }).join('');
-    const editBtn = '<td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;"><button onclick="adminEditRow(\'' + row.id + '\')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button></td>';
-    return '<tr style="cursor:pointer;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'">' + cells + editBtn + '</tr>';
+    const editBtn = '<td style="padding:12px 16px;border-bottom:1px solid var(--border-light);text-align:right;"><button onclick="adminEditRow(\'' + row.id + '\')" class="admin-edit-btn">Edit</button></td>';
+    return '<tr style="cursor:pointer;transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'">' + cells + editBtn + '</tr>';
   }).join('');
 
   if (rows.length === 0) {
@@ -14923,9 +14925,9 @@ function adminRenderTable(rows, total) {
   const totalPages = Math.ceil((total || rows.length) / 25);
   const pag = document.getElementById('adminPagination');
   if (totalPages > 1) {
-    pag.innerHTML = '<button onclick="adminPage(' + (_adminPage - 1) + ')" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;font-family:var(--font-ui);font-size:12px;"' + (_adminPage <= 1 ? ' disabled style="opacity:0.3"' : '') + '>&larr; Prev</button>' +
-      '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);">Page ' + _adminPage + ' of ' + totalPages + '</span>' +
-      '<button onclick="adminPage(' + (_adminPage + 1) + ')" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;font-family:var(--font-ui);font-size:12px;"' + (_adminPage >= totalPages ? ' disabled style="opacity:0.3"' : '') + '>Next &rarr;</button>';
+    pag.innerHTML = '<button onclick="adminPage(' + (_adminPage - 1) + ')" class="admin-page-btn"' + (_adminPage <= 1 ? ' disabled' : '') + '>&larr; Previous</button>' +
+      '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);padding:0 8px;">' + _adminPage + ' of ' + totalPages + '</span>' +
+      '<button onclick="adminPage(' + (_adminPage + 1) + ')" class="admin-page-btn"' + (_adminPage >= totalPages ? ' disabled' : '') + '>Next &rarr;</button>';
   } else { pag.innerHTML = ''; }
 }
 
@@ -14945,34 +14947,125 @@ function adminEditRow(id) {
   });
 }
 
+function adminFieldLabel(key) {
+  var labels = {
+    investment_name: 'Deal Name', asset_class: 'Asset Class', deal_type: 'Deal Type',
+    strategy: 'Strategy', investment_strategy: 'Investment Strategy', status: 'Status',
+    target_irr: 'Target IRR', preferred_return: 'Preferred Return', cash_on_cash: 'Cash on Cash',
+    equity_multiple: 'Equity Multiple', investment_minimum: 'Minimum Investment',
+    offering_size: 'Offering Size', offering_type: 'Offering Type', lp_gp_split: 'LP/GP Split',
+    hold_period_years: 'Hold Period', distributions: 'Distributions', fees: 'Fees',
+    location: 'Location', property_address: 'Property Address',
+    deck_url: 'Deck URL', ppm_url: 'PPM URL', description: 'Description',
+    airtable_id: 'Airtable ID', deal_number: 'Deal Number', added_date: 'Added Date',
+    last_updated: 'Last Updated', management_company_id: 'Operator ID',
+    management_company_name: 'Operator',
+    name: 'Name', operator_name: 'Operator Name', ceo: 'CEO', website: 'Website',
+    linkedin_ceo: 'LinkedIn', invest_clearly_profile: 'InvestClearly',
+    founding_year: 'Founded', type: 'Type', asset_classes: 'Asset Classes',
+    total_investors: 'Total Investors', aum: 'AUM', headquarters: 'Headquarters',
+    email: 'Email', full_name: 'Full Name', tier: 'Tier', is_admin: 'Admin',
+    archived: 'Archived', can_show_metrics: 'Show Metrics', can_show_deck: 'Show Deck',
+    can_show_ppm: 'Show PPM', outreach_status: 'Outreach Status'
+  };
+  return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function adminGetFieldSections(keys, row) {
+  // Group fields into logical sections based on which tab we're on
+  var sections = [];
+  if (_adminTab === 'deals') {
+    var groups = {
+      'Deal Info': ['investment_name', 'asset_class', 'deal_type', 'strategy', 'status', 'management_company_name', 'management_company_id'],
+      'Returns': ['target_irr', 'preferred_return', 'cash_on_cash', 'equity_multiple'],
+      'Structure': ['investment_minimum', 'offering_size', 'offering_type', 'lp_gp_split', 'hold_period_years', 'distributions', 'fees'],
+      'Location': ['location', 'property_address'],
+      'Strategy Detail': ['investment_strategy'],
+      'Documents': ['deck_url', 'ppm_url', 'description'],
+      'System': ['airtable_id', 'deal_number', 'added_date', 'last_updated', 'archived']
+    };
+    Object.keys(groups).forEach(function(title) {
+      var sKeys = groups[title].filter(function(k) { return keys.includes(k); });
+      if (sKeys.length) sections.push({ title: title, keys: sKeys });
+    });
+    // Remaining keys
+    var used = [].concat.apply([], Object.values(groups));
+    var remaining = keys.filter(function(k) { return !used.includes(k); });
+    if (remaining.length) sections.push({ title: 'Other', keys: remaining });
+  } else if (_adminTab === 'operators') {
+    var groups = {
+      'Identity': ['name', 'operator_name', 'type'],
+      'Contact': ['website', 'ceo', 'linkedin_ceo'],
+      'Details': ['founding_year', 'asset_classes', 'total_investors', 'aum', 'headquarters', 'description', 'invest_clearly_profile'],
+      'Permissions': ['can_show_metrics', 'can_show_deck', 'can_show_ppm', 'outreach_status'],
+      'System': ['airtable_id', 'last_updated']
+    };
+    Object.keys(groups).forEach(function(title) {
+      var sKeys = groups[title].filter(function(k) { return keys.includes(k); });
+      if (sKeys.length) sections.push({ title: title, keys: sKeys });
+    });
+    var used = [].concat.apply([], Object.values(groups));
+    var remaining = keys.filter(function(k) { return !used.includes(k); });
+    if (remaining.length) sections.push({ title: 'Other', keys: remaining });
+  } else {
+    var groups = {
+      'Profile': ['email', 'full_name'],
+      'Access': ['tier', 'is_admin'],
+      'System': ['airtable_id', 'last_updated']
+    };
+    Object.keys(groups).forEach(function(title) {
+      var sKeys = groups[title].filter(function(k) { return keys.includes(k); });
+      if (sKeys.length) sections.push({ title: title, keys: sKeys });
+    });
+    var used = [].concat.apply([], Object.values(groups));
+    var remaining = keys.filter(function(k) { return !used.includes(k); });
+    if (remaining.length) sections.push({ title: 'Other', keys: remaining });
+  }
+  return sections;
+}
+
+function adminRenderFieldRow(key, row) {
+  var val = row[key] === null ? '' : row[key];
+  var isBoolean = typeof val === 'boolean';
+  var label = adminFieldLabel(key);
+  if (isBoolean) {
+    return '<div class="admin-field-row"><span class="admin-field-label">' + label + '</span>' +
+      '<select class="admin-field-input" data-key="' + key + '"><option value="true"' + (val ? ' selected' : '') + '>Yes</option><option value="false"' + (!val ? ' selected' : '') + '>No</option></select></div>';
+  }
+  return '<div class="admin-field-row"><span class="admin-field-label">' + label + '</span>' +
+    '<input type="text" class="admin-field-input" data-key="' + key + '" value="' + String(val).replace(/"/g, '&quot;') + '" placeholder="—"></div>';
+}
+
 function adminShowEditModal(row) {
-  const overlay = document.createElement('div');
+  var overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'adminEditModal';
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 
-  const editableKeys = Object.keys(row).filter(k => !['id', 'created_at', 'updated_at'].includes(k));
-  const fields = editableKeys.map(k => {
-    const val = row[k] === null ? '' : row[k];
-    const isBoolean = typeof val === 'boolean';
-    if (isBoolean) {
-      return '<div class="field" style="margin-bottom:10px;"><label class="field-label" style="font-size:11px;">' + k + '</label>' +
-        '<select class="field-input" data-key="' + k + '" style="padding:8px 12px;font-size:13px;"><option value="true"' + (val ? ' selected' : '') + '>Yes</option><option value="false"' + (!val ? ' selected' : '') + '>No</option></select></div>';
-    }
-    return '<div class="field" style="margin-bottom:10px;"><label class="field-label" style="font-size:11px;">' + k + '</label>' +
-      '<input type="text" class="field-input" data-key="' + k + '" value="' + String(val).replace(/"/g, '&quot;') + '" style="padding:8px 12px;font-size:13px;"></div>';
+  var editableKeys = Object.keys(row).filter(function(k) { return !['id', 'created_at', 'updated_at'].includes(k); });
+  var sections = adminGetFieldSections(editableKeys, row);
+  var isNew = row.id === '__new__';
+  var title = isNew ? 'New ' + (_adminTab === 'deals' ? 'Deal' : _adminTab === 'operators' ? 'Operator' : 'User') : adminFieldLabel(editableKeys.find(function(k) { return k === 'investment_name' || k === 'name' || k === 'email'; }) || '');
+  var subtitle = isNew ? '' : (row.investment_name || row.name || row.operator_name || row.email || '');
+
+  var sectionsHtml = sections.map(function(s) {
+    var rows = s.keys.map(function(k) { return adminRenderFieldRow(k, row); }).join('');
+    return '<div class="admin-field-section"><div class="admin-section-title">' + s.title + '</div><div class="admin-field-group">' + rows + '</div></div>';
   }).join('');
 
-  overlay.innerHTML = '<div class="modal-card" style="max-width:560px;max-height:80vh;overflow-y:auto;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--bg-card);padding-bottom:8px;border-bottom:1px solid var(--border);">' +
-    '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">Edit Record</div>' +
-    '<button onclick="document.getElementById(\'adminEditModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button></div>' +
-    '<div id="adminEditFields">' + fields + '</div>' +
-    '<div style="display:flex;gap:12px;margin-top:16px;position:sticky;bottom:0;background:var(--bg-card);padding-top:8px;border-top:1px solid var(--border);">' +
-    (_adminTab === 'deals' ? '<button onclick="adminToggleArchive(\'' + row.id + '\',' + !row.archived + ')" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">' + (row.archived ? 'Unarchive' : 'Archive') + '</button>' : '') +
+  var archiveBtn = '';
+  if (_adminTab === 'deals' && !isNew) {
+    archiveBtn = '<button class="admin-btn danger" onclick="adminToggleArchive(\'' + row.id + '\',' + !row.archived + ')">' + (row.archived ? 'Unarchive' : 'Archive') + '</button>';
+  }
+
+  overlay.innerHTML = '<div class="modal-card" style="max-width:560px;max-height:85vh;overflow-y:auto;padding:0;">' +
+    '<div class="admin-modal-header"><h2>' + (isNew ? 'New Record' : (subtitle || 'Edit Record')) + '</h2>' +
+    '<button class="admin-modal-close" onclick="document.getElementById(\'adminEditModal\').remove()">&#x2715;</button></div>' +
+    '<div class="admin-modal-body" id="adminEditFields">' + sectionsHtml + '</div>' +
+    '<div class="admin-modal-footer">' + archiveBtn +
     '<div style="flex:1;"></div>' +
-    '<button onclick="document.getElementById(\'adminEditModal\').remove()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>' +
-    '<button onclick="adminSaveEdit(\'' + row.id + '\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Save</button>' +
+    '<button class="admin-btn secondary" onclick="document.getElementById(\'adminEditModal\').remove()">Cancel</button>' +
+    '<button class="admin-btn primary" onclick="adminSaveEdit(\'' + row.id + '\')">Save Changes</button>' +
     '</div></div>';
   document.body.appendChild(overlay);
 }
@@ -15062,23 +15155,23 @@ adminSaveEdit = async function(id) {
 };
 
 // ========== DATA QUALITY DASHBOARD ==========
-function adminToggleQuality(){_adminQualityMode=!_adminQualityMode;var b=document.getElementById('adminQualityToggle');if(b){b.style.background=_adminQualityMode?'var(--primary)':'transparent';b.style.color=_adminQualityMode?'#fff':'var(--text-secondary)';}var q=document.getElementById('adminQualityStats');if(q)q.style.display=_adminQualityMode?'grid':'none';var bn=document.getElementById('adminQualityBanner');if(bn)bn.style.display=_adminQualityMode?'block':'none';var p=document.getElementById('adminPagination');if(p)p.style.display=_adminQualityMode?'none':'flex';adminLoadData();}
-function adminRenderQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' deals';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Deals',stats.total_deals)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Deck',stats.no_deck,stats.no_deck>0?'var(--orange)':'var(--primary)')+sc('No PPM',stats.no_ppm,stats.no_ppm>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;';head.innerHTML='<th style="'+thS+'">Deal Name</th><th style="'+thS+'">Operator</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="'+thS+'text-align:center;width:50px;">Deck</th><th style="'+thS+'text-align:center;width:50px;">PPM</th><th style="width:60px;padding:10px 12px;"></th>';var chk='<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>';var xm='<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:8px;background:'+barBg+';border-radius:4px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:4px;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 6px;background:var(--bg-cream);border:1px solid var(--border);border-radius:4px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:10px 12px;border-bottom:1px solid var(--border);';return'<tr onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.investment_name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.management_company_name||'\u2014')+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:center;">'+(r.has_deck?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_ppm?chk:xm)+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No deals found</td></tr>';}
+function adminToggleQuality(){_adminQualityMode=!_adminQualityMode;var b=document.getElementById('adminQualityToggle');if(b){if(_adminQualityMode){b.classList.add('primary');b.classList.remove('secondary');b.style.background='var(--primary)';b.style.color='#fff';}else{b.classList.remove('primary');b.classList.add('secondary');b.style.background='';b.style.color='';}}var q=document.getElementById('adminQualityStats');if(q)q.style.display=_adminQualityMode?'grid':'none';var bn=document.getElementById('adminQualityBanner');if(bn)bn.style.display=_adminQualityMode?'block':'none';var p=document.getElementById('adminPagination');if(p)p.style.display=_adminQualityMode?'none':'flex';adminLoadData();}
+function adminRenderQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' deals';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 0 0 1px rgba(0,0,0,0.03);"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.3px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Deals',stats.total_deals)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Deck',stats.no_deck,stats.no_deck>0?'var(--orange)':'var(--primary)')+sc('No PPM',stats.no_ppm,stats.no_ppm>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);';head.innerHTML='<th style="'+thS+'">Deal Name</th><th style="'+thS+'">Operator</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="'+thS+'text-align:center;width:50px;">Deck</th><th style="'+thS+'text-align:center;width:50px;">PPM</th><th style="width:60px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';var chk='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';var xm='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fde8e8;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:'+barBg+';border-radius:3px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:3px;transition:width 0.3s ease;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:12px 16px;border-bottom:1px solid var(--border-light);';return'<tr style="transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.investment_name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.management_company_name||'\u2014')+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:center;">'+(r.has_deck?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_ppm?chk:xm)+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" class="admin-edit-btn">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No deals found</td></tr>';}
 
 // ========== DEAL INTAKE WIZARD ==========
 var _intakeStep=1,_intakeData={},_intakeOperators=[];
-function intakeShowWizard(){_intakeStep=1;_intakeData={};_intakeOperators=[];var ov=document.createElement('div');ov.className='modal-overlay';ov.id='intakeWizardModal';ov.onclick=function(e){if(e.target===ov)ov.remove();};ov.innerHTML='<div class="modal-card" style="max-width:680px;max-height:85vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">New Deal Intake</div><button onclick="document.getElementById(\'intakeWizardModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button></div><div id="intakeSteps" style="display:flex;gap:4px;margin-bottom:20px;"></div><div id="intakeBody"></div><div id="intakeFooter" style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;"></div></div>';document.body.appendChild(ov);intakeLoadOperators();intakeRenderStep();}
+function intakeShowWizard(){_intakeStep=1;_intakeData={};_intakeOperators=[];var ov=document.createElement('div');ov.className='modal-overlay';ov.id='intakeWizardModal';ov.onclick=function(e){if(e.target===ov)ov.remove();};ov.innerHTML='<div class="modal-card" style="max-width:680px;max-height:85vh;overflow-y:auto;padding:0;"><div class="admin-modal-header"><h2>New Deal Intake</h2><button class="admin-modal-close" onclick="document.getElementById(\'intakeWizardModal\').remove()">&#x2715;</button></div><div style="padding:20px 24px 0;"><div id="intakeSteps" style="display:flex;gap:3px;margin-bottom:0;"></div></div><div id="intakeBody" style="padding:20px 24px;"></div><div id="intakeFooter" class="admin-modal-footer" style="justify-content:flex-end;"></div></div>';document.body.appendChild(ov);intakeLoadOperators();intakeRenderStep();}
 async function intakeLoadOperators(){var user=getUser();try{var resp=await fetch('/api/admin-manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify({action:'list-operators',page:1,limit:500})});var result=await resp.json();if(result.success)_intakeOperators=result.data||[];}catch(e){console.warn('Failed to load operators:',e);}}
-function intakeRenderStep(){var stepsEl=document.getElementById('intakeSteps'),body=document.getElementById('intakeBody'),footer=document.getElementById('intakeFooter');if(!stepsEl||!body||!footer)return;var labels=['Upload & Extract','Review Fields','Link Operator','Publish'];stepsEl.innerHTML=labels.map(function(l,i){var n=i+1,active=n===_intakeStep,done=n<_intakeStep;var bg=active?'var(--primary)':done?'var(--green-bg)':'var(--bg-cream)';var col=active?'#fff':done?'var(--primary)':'var(--text-muted)';return'<div style="flex:1;text-align:center;padding:8px 4px;border-radius:var(--radius-sm);background:'+bg+';font-family:var(--font-ui);font-size:11px;font-weight:700;color:'+col+';">'+n+'. '+l+'</div>';}).join('');if(_intakeStep===1)intakeRenderStep1(body,footer);else if(_intakeStep===2)intakeRenderStep2(body,footer);else if(_intakeStep===3)intakeRenderStep3(body,footer);else if(_intakeStep===4)intakeRenderStep4(body,footer);}
-function intakeRenderStep1(body,footer){body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Paste PPM or offering text</div><textarea id="intakePPMText" placeholder="Paste the full PPM text, offering summary, or deal deck content here..." style="width:100%;min-height:200px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;background:var(--bg-card);"></textarea><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:8px;">AI will extract deal fields automatically. You can also skip and fill manually.</div>';footer.innerHTML='<button onclick="intakeSkipExtract()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Skip (Fill Manually)</button><button onclick="intakeExtract()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Extract with AI</button>';}
+function intakeRenderStep(){var stepsEl=document.getElementById('intakeSteps'),body=document.getElementById('intakeBody'),footer=document.getElementById('intakeFooter');if(!stepsEl||!body||!footer)return;var labels=['Upload & Extract','Review Fields','Link Operator','Publish'];stepsEl.innerHTML=labels.map(function(l,i){var n=i+1,active=n===_intakeStep,done=n<_intakeStep;var cls=active?'active':done?'done':'pending';return'<div class="intake-step '+cls+'">'+n+'. '+l+'</div>';}).join('');if(_intakeStep===1)intakeRenderStep1(body,footer);else if(_intakeStep===2)intakeRenderStep2(body,footer);else if(_intakeStep===3)intakeRenderStep3(body,footer);else if(_intakeStep===4)intakeRenderStep4(body,footer);}
+function intakeRenderStep1(body,footer){body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Paste PPM or offering text</div><textarea id="intakePPMText" placeholder="Paste the full PPM text, offering summary, or deal deck content here..." style="width:100%;min-height:200px;padding:14px;border:none;border-radius:12px;font-family:var(--font-body);font-size:14px;resize:vertical;background:var(--bg-cream);outline:none;"></textarea><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:8px;">AI will extract deal fields automatically. You can also skip and fill manually.</div>';footer.innerHTML='<button onclick="intakeSkipExtract()" class="admin-btn secondary">Skip (Fill Manually)</button><button onclick="intakeExtract()" class="admin-btn primary">Extract with AI</button>';}
 function intakeSkipExtract(){_intakeData={};_intakeStep=2;intakeRenderStep();}
 async function intakeExtract(){var text=document.getElementById('intakePPMText')?.value?.trim();if(!text){alert('Please paste some text first');return;}var btn=document.querySelector('#intakeFooter button:last-child');if(btn){btn.disabled=true;btn.textContent='Extracting...';}var user=getUser();try{var resp=await fetch('/api/deal-enrich',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify({text:text,mode:'extract'})});var result=await resp.json();if(result.success&&result.data)_intakeData=result.data;else{console.warn('Extraction returned no data:',result);_intakeData={};}}catch(e){console.error('Extract failed:',e);_intakeData={};}_intakeStep=2;intakeRenderStep();}
-function intakeRenderStep2(body,footer){var d=_intakeData;var fields=[{key:'investment_name',label:'Deal Name',val:d.investmentName||d.investment_name||''},{key:'asset_class',label:'Asset Class',val:d.assetClass||d.asset_class||'',type:'select',opts:['Lending','Multi Family','Self Storage','Industrial','Hotels/Hospitality','RV/Mobile Home Parks','Short Term Rental','Mixed Use','Office','Retail','Oil & Gas','Other']},{key:'deal_type',label:'Deal Type',val:d.dealType||d.deal_type||'',type:'select',opts:['Fund','Syndication','Direct','REIT']},{key:'strategy',label:'Strategy',val:d.strategy||''},{key:'investment_strategy',label:'Investment Strategy',val:d.investmentStrategy||d.investment_strategy||'',type:'textarea'},{key:'target_irr',label:'Target IRR',val:d.targetIRR||d.target_irr||''},{key:'preferred_return',label:'Preferred Return',val:d.preferredReturn||d.preferred_return||''},{key:'cash_on_cash',label:'Cash on Cash',val:d.cashOnCash||d.cash_on_cash||''},{key:'investment_minimum',label:'Minimum Investment ($)',val:d.investmentMinimum||d.investment_minimum||''},{key:'hold_period_years',label:'Hold Period (years)',val:d.holdPeriod||d.hold_period_years||''},{key:'offering_size',label:'Offering Size ($)',val:d.offeringSize||d.offering_size||''},{key:'offering_type',label:'Offering Type',val:d.offeringType||d.offering_type||'',type:'select',opts:['506(b)','506(c)','Reg A','Reg D']},{key:'distributions',label:'Distributions',val:d.distributions||'',type:'select',opts:['Monthly','Quarterly','Annual','None']},{key:'lp_gp_split',label:'LP/GP Split',val:d.lpGpSplit||d.lp_gp_split||''},{key:'fees',label:'Fees',val:d.fees||''},{key:'deck_url',label:'Deck URL',val:d.deck_url||''},{key:'status',label:'Status',val:d.status||'open',type:'select',opts:['open','closed','coming_soon']}];var fieldsHtml=fields.map(function(f){var isEmpty=!f.val;var hl=isEmpty?'border-color:var(--orange);':'';var inp;if(f.type==='select'){inp='<select class="field-input intake-field" data-key="'+f.key+'" style="padding:8px 12px;font-size:13px;'+hl+'"><option value="">--</option>'+f.opts.map(function(o){return'<option value="'+o+'"'+(f.val===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';}else if(f.type==='textarea'){inp='<textarea class="field-input intake-field" data-key="'+f.key+'" style="padding:8px 12px;font-size:13px;min-height:60px;resize:vertical;'+hl+'">'+(f.val||'')+'</textarea>';}else{inp='<input type="text" class="field-input intake-field" data-key="'+f.key+'" value="'+String(f.val).replace(/"/g,'&quot;')+'" style="padding:8px 12px;font-size:13px;'+hl+'">';}return'<div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">'+f.label+(isEmpty?' <span style="color:var(--orange);font-size:9px;">MISSING</span>':'')+'</label>'+inp+'</div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Review & Edit Fields</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:12px;">Fields highlighted in orange are empty. Fill as many as you can.</div><div style="max-height:400px;overflow-y:auto;padding-right:8px;">'+fieldsHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=1;intakeRenderStep()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Back</button><button onclick="intakeSaveStep2()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Next: Link Operator</button>';}
+function intakeRenderStep2(body,footer){var d=_intakeData;var fields=[{key:'investment_name',label:'Deal Name',val:d.investmentName||d.investment_name||''},{key:'asset_class',label:'Asset Class',val:d.assetClass||d.asset_class||'',type:'select',opts:['Lending','Multi Family','Self Storage','Industrial','Hotels/Hospitality','RV/Mobile Home Parks','Short Term Rental','Mixed Use','Office','Retail','Oil & Gas','Other']},{key:'deal_type',label:'Deal Type',val:d.dealType||d.deal_type||'',type:'select',opts:['Fund','Syndication','Direct','REIT']},{key:'strategy',label:'Strategy',val:d.strategy||''},{key:'investment_strategy',label:'Investment Strategy',val:d.investmentStrategy||d.investment_strategy||'',type:'textarea'},{key:'target_irr',label:'Target IRR',val:d.targetIRR||d.target_irr||''},{key:'preferred_return',label:'Preferred Return',val:d.preferredReturn||d.preferred_return||''},{key:'cash_on_cash',label:'Cash on Cash',val:d.cashOnCash||d.cash_on_cash||''},{key:'investment_minimum',label:'Minimum Investment ($)',val:d.investmentMinimum||d.investment_minimum||''},{key:'hold_period_years',label:'Hold Period (years)',val:d.holdPeriod||d.hold_period_years||''},{key:'offering_size',label:'Offering Size ($)',val:d.offeringSize||d.offering_size||''},{key:'offering_type',label:'Offering Type',val:d.offeringType||d.offering_type||'',type:'select',opts:['506(b)','506(c)','Reg A','Reg D']},{key:'distributions',label:'Distributions',val:d.distributions||'',type:'select',opts:['Monthly','Quarterly','Annual','None']},{key:'lp_gp_split',label:'LP/GP Split',val:d.lpGpSplit||d.lp_gp_split||''},{key:'fees',label:'Fees',val:d.fees||''},{key:'deck_url',label:'Deck URL',val:d.deck_url||''},{key:'status',label:'Status',val:d.status||'open',type:'select',opts:['open','closed','coming_soon']}];var fieldsHtml=fields.map(function(f){var isEmpty=!f.val;var inp;if(f.type==='select'){inp='<select class="admin-field-input intake-field" data-key="'+f.key+'"><option value="">—</option>'+f.opts.map(function(o){return'<option value="'+o+'"'+(f.val===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';}else if(f.type==='textarea'){inp='<textarea class="admin-field-input intake-field" data-key="'+f.key+'" style="min-height:50px;resize:vertical;text-align:left;">'+(f.val||'')+'</textarea>';}else{inp='<input type="text" class="admin-field-input intake-field" data-key="'+f.key+'" value="'+String(f.val).replace(/"/g,'&quot;')+'" placeholder="—">';}return'<div class="admin-field-row"><span class="admin-field-label">'+f.label+(isEmpty?' <span style="color:var(--orange);font-size:9px;font-weight:700;">MISSING</span>':'')+'</span>'+inp+'</div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:6px;">Review & Edit Fields</div><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-bottom:16px;">Fields marked MISSING are empty. Fill as many as you can.</div><div class="admin-field-group" style="max-height:400px;overflow-y:auto;">'+fieldsHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=1;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakeSaveStep2()" class="admin-btn primary">Next: Link Operator</button>';}
 function intakeSaveStep2(){var fields=document.querySelectorAll('.intake-field');var deal={};fields.forEach(function(f){deal[f.dataset.key]=f.value===''?null:f.value;});_intakeData.deal_fields=deal;_intakeStep=3;intakeRenderStep();}
-function intakeRenderStep3(body,footer){var opOpts=_intakeOperators.map(function(o){return'<option value="'+o.id+'">'+(o.name||o.operator_name)+'</option>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Link to Operator</div><div style="margin-bottom:16px;"><label class="field-label" style="font-size:11px;">Select Existing Operator</label><select id="intakeOperatorSelect" class="field-input" onchange="intakeToggleNewOp()" style="padding:8px 12px;font-size:13px;"><option value="">-- Select --</option>'+opOpts+'<option value="__new__">+ Create New Operator</option></select></div><div id="intakeNewOpFields" style="display:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;background:var(--bg-cream);"><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-secondary);">New Operator Details</div><div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">Operator Name</label><input type="text" id="intakeNewOpName" class="field-input" style="padding:8px 12px;font-size:13px;" value="'+((_intakeData.managementCompany||'')+'').replace(/"/g,'&quot;')+'"></div><div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">Website</label><input type="text" id="intakeNewOpWebsite" class="field-input" style="padding:8px 12px;font-size:13px;"></div><div class="field" style="margin-bottom:8px;"><label class="field-label" style="font-size:11px;">CEO / Managing Partner</label><input type="text" id="intakeNewOpCeo" class="field-input" style="padding:8px 12px;font-size:13px;" value="'+((_intakeData.ceo||'')+'').replace(/"/g,'&quot;')+'"></div></div>';setTimeout(function(){if(_intakeData.managementCompany){var sel=document.getElementById('intakeOperatorSelect');if(sel){var match=_intakeOperators.find(function(o){return(o.name||o.operator_name||'').toLowerCase()===_intakeData.managementCompany.toLowerCase();});if(match)sel.value=match.id;else{sel.value='__new__';intakeToggleNewOp();}}}},0);footer.innerHTML='<button onclick="_intakeStep=2;intakeRenderStep()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Back</button><button onclick="intakeSaveStep3()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Next: Review & Publish</button>';}
+function intakeRenderStep3(body,footer){var opOpts=_intakeOperators.map(function(o){return'<option value="'+o.id+'">'+(o.name||o.operator_name)+'</option>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:16px;">Link to Operator</div><div class="admin-field-group" style="margin-bottom:16px;"><div class="admin-field-row"><span class="admin-field-label">Operator</span><select id="intakeOperatorSelect" class="admin-field-input" onchange="intakeToggleNewOp()"><option value="">Select...</option>'+opOpts+'<option value="__new__">+ Create New</option></select></div></div><div id="intakeNewOpFields" style="display:none;"><div class="admin-section-title" style="margin-top:16px;">New Operator Details</div><div class="admin-field-group"><div class="admin-field-row"><span class="admin-field-label">Name</span><input type="text" id="intakeNewOpName" class="admin-field-input" placeholder="—" value="'+((_intakeData.managementCompany||'')+'').replace(/"/g,'&quot;')+'"></div><div class="admin-field-row"><span class="admin-field-label">Website</span><input type="text" id="intakeNewOpWebsite" class="admin-field-input" placeholder="—"></div><div class="admin-field-row"><span class="admin-field-label">CEO</span><input type="text" id="intakeNewOpCeo" class="admin-field-input" placeholder="—" value="'+((_intakeData.ceo||'')+'').replace(/"/g,'&quot;')+'"></div></div></div>';setTimeout(function(){if(_intakeData.managementCompany){var sel=document.getElementById('intakeOperatorSelect');if(sel){var match=_intakeOperators.find(function(o){return(o.name||o.operator_name||'').toLowerCase()===_intakeData.managementCompany.toLowerCase();});if(match)sel.value=match.id;else{sel.value='__new__';intakeToggleNewOp();}}}},0);footer.innerHTML='<button onclick="_intakeStep=2;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakeSaveStep3()" class="admin-btn primary">Next: Review & Publish</button>';}
 function intakeToggleNewOp(){var sel=document.getElementById('intakeOperatorSelect');var flds=document.getElementById('intakeNewOpFields');if(flds)flds.style.display=sel&&sel.value==='__new__'?'block':'none';}
 function intakeSaveStep3(){var sel=document.getElementById('intakeOperatorSelect');var val=sel?sel.value:'';if(val==='__new__'){_intakeData.create_operator=true;_intakeData.operator_data={name:document.getElementById('intakeNewOpName')?.value||'',website:document.getElementById('intakeNewOpWebsite')?.value||'',ceo:document.getElementById('intakeNewOpCeo')?.value||''};_intakeData.operator_id=null;}else{_intakeData.create_operator=false;_intakeData.operator_id=val||null;_intakeData.operator_data=null;}_intakeStep=4;intakeRenderStep();}
-function intakeRenderStep4(body,footer){var d=_intakeData.deal_fields||{};var opName=_intakeData.create_operator?(_intakeData.operator_data?.name||'New operator'):(_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.name||_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.operator_name||'None');var sRows=[['Deal Name',d.investment_name||'\u2014'],['Asset Class',d.asset_class||'\u2014'],['Deal Type',d.deal_type||'\u2014'],['Target IRR',d.target_irr||'\u2014'],['Minimum',d.investment_minimum?'$'+Number(d.investment_minimum).toLocaleString():'\u2014'],['Operator',opName+(_intakeData.create_operator?' (NEW)':'')],['Status',d.status||'open']];var sHtml=sRows.map(function(r){return'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-light);"><span style="color:var(--text-muted);font-size:12px;">'+r[0]+'</span><span style="font-weight:600;font-size:12px;">'+r[1]+'</span></div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Review & Publish</div><div style="background:var(--bg-cream);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;">'+sHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=3;intakeRenderStep()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Back</button><button onclick="intakePublish()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Publish Deal</button>';}
+function intakeRenderStep4(body,footer){var d=_intakeData.deal_fields||{};var opName=_intakeData.create_operator?(_intakeData.operator_data?.name||'New operator'):(_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.name||_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.operator_name||'None');var sRows=[['Deal Name',d.investment_name||'\u2014'],['Asset Class',d.asset_class||'\u2014'],['Deal Type',d.deal_type||'\u2014'],['Target IRR',d.target_irr||'\u2014'],['Minimum',d.investment_minimum?'$'+Number(d.investment_minimum).toLocaleString():'\u2014'],['Operator',opName+(_intakeData.create_operator?' (NEW)':'')],['Status',d.status||'open']];var sHtml=sRows.map(function(r){return'<div class="admin-field-row"><span class="admin-field-label">'+r[0]+'</span><span style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">'+r[1]+'</span></div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:16px;">Review & Publish</div><div class="admin-field-group" style="margin-bottom:12px;">'+sHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=3;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakePublish()" class="admin-btn primary">Publish Deal</button>';}
 async function intakePublish(){var user=getUser();var btn=document.querySelector('#intakeFooter button:last-child');if(btn){btn.disabled=true;btn.textContent='Publishing...';}var payload={action:'intake-create',deal_data:_intakeData.deal_fields||{},operator_id:_intakeData.operator_id||null,create_operator:!!_intakeData.create_operator,operator_data:_intakeData.operator_data||null};try{var resp=await fetch('/api/admin-manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify(payload)});var result=await resp.json();if(result.success){document.getElementById('intakeWizardModal')?.remove();adminLoadData();}else{alert('Publish failed: '+(result.error||'Unknown error'));if(btn){btn.disabled=false;btn.textContent='Publish Deal';}}}catch(e){alert('Publish failed: '+e.message);if(btn){btn.disabled=false;btn.textContent='Publish Deal';}}}
 
 
