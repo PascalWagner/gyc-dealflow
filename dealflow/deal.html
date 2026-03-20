@@ -1393,6 +1393,7 @@ body {
 .cf-table tr:last-child td { border-bottom: none; font-weight: 700; }
 .cf-table .cf-highlight { color: var(--primary); font-weight: 700; }
 .cf-table .cf-total-row td { border-top: 2px solid var(--border); background: rgba(81,190,123,0.04); font-weight: 700; }
+.cf-table .cf-summary-row td { border-top: 2px solid var(--border); font-weight: normal; }
 
 .cf-chart-wrap { position: relative; height: 220px; }
 .cf-bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
@@ -5380,7 +5381,7 @@ async function renderDeal() {
     }
   })();
 
-  // --- Projected Cash Flow ---
+  // --- Projected LP Cash Flow ---
   var cashFlowHtml = '';
   (function buildCashFlow() {
     var yieldRate = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
@@ -5437,7 +5438,7 @@ async function renderDeal() {
     var uid = 'cfProj_' + Date.now();
 
     cashFlowHtml += '<div class="section">';
-    cashFlowHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Projected Cash Flow</span></div>';
+    cashFlowHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Projected LP Cash Flow</span></div>';
     cashFlowHtml += '<div class="section-body">';
 
     // Assumption banner
@@ -5463,7 +5464,7 @@ async function renderDeal() {
       distPts.push(r.dist);
     }
     var maxCum = Math.max.apply(null, cumCashPts) || 1;
-    var svgW = 560, svgH = 200, padL = 50, padR = 20, padT = 20, padB = 30;
+    var svgW = 560, svgH = 140, padL = 50, padR = 20, padT = 16, padB = 24;
     var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
     var n = rows.length;
 
@@ -5544,15 +5545,11 @@ async function renderDeal() {
       cashFlowHtml += '<td style="font-size:10px;color:var(--text-muted);font-style:italic;">' + (r.note || '') + '</td>';
       cashFlowHtml += '</tr>';
     }
-    cashFlowHtml += '</table>';
-    cashFlowHtml += '</div>';
-
-    // Summary strip — aligned under table columns
+    // Summary strip — inside the same table so columns align
     // Table cols: Year | Capital | Distributions | % Cash Flow | Total Cash | Cumulative | Notes
     var avgCoC = years > 0 ? (totalDist / years / investment) * 100 : 0;
     var displayIRR = deal.targetIRR ? (deal.targetIRR < 1 ? (deal.targetIRR * 100).toFixed(1) : parseFloat(deal.targetIRR).toFixed(1)) : '';
-    cashFlowHtml += '<table class="cf-table" style="margin-top:0;border-top:2px solid var(--border);">';
-    cashFlowHtml += '<tr>';
+    cashFlowHtml += '<tr class="cf-summary-row">';
     cashFlowHtml += '<td style="text-align:left;vertical-align:top;padding:14px 12px;border-bottom:none;"><div class="cf-summary-value">$' + Math.round(investment).toLocaleString() + '</div><div class="cf-summary-label">Invested</div></td>';
     cashFlowHtml += '<td style="border-bottom:none;"></td>';
     cashFlowHtml += '<td style="text-align:right;vertical-align:top;padding:14px 12px;border-bottom:none;"><div class="cf-summary-value green">$' + Math.round(totalDist).toLocaleString() + '</div><div class="cf-summary-label">Total Distributions</div></td>';
@@ -5562,6 +5559,7 @@ async function renderDeal() {
     cashFlowHtml += '<td style="border-bottom:none;"></td>';
     cashFlowHtml += '</tr>';
     cashFlowHtml += '</table>';
+    cashFlowHtml += '</div>';
 
     cashFlowHtml += '</div></div>';
   })();
