@@ -5449,33 +5449,70 @@ async function renderDeal() {
     cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
     cashFlowHtml += '</div>';
 
-    // --- Chart view ---
-    var maxVal = 0;
-    for (var i = 0; i < rows.length; i++) {
-      var rv = rows[i].dist + rows[i].capReturn;
-      if (rv > maxVal) maxVal = rv;
-    }
-    cashFlowHtml += '<div id="' + uid + '_chart" style="display:none;">';
-    cashFlowHtml += '<div class="cf-chart-grid">';
+    // --- Chart view (SVG line chart) ---
+    // Build cumulative cash data for the line
+    var cumCashPts = []; // cumulative total cash received
+    var distPts = [];    // annual distributions
+    var cumSum = 0;
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
-      var distH = maxVal > 0 ? Math.round((r.dist / maxVal) * 150) : 0;
-      var capH = maxVal > 0 ? Math.round((r.capReturn / maxVal) * 150) : 0;
-      var totalVal = r.dist + r.capReturn;
-      cashFlowHtml += '<div class="cf-bar-group">';
-      cashFlowHtml += '<div class="cf-bar-value">$' + Math.round(totalVal / 1000) + 'K</div>';
-      cashFlowHtml += '<div class="cf-bar-container">';
-      if (r.capReturn > 0) cashFlowHtml += '<div class="cf-bar cf-bar-cap" style="height:' + Math.max(capH, 2) + 'px;" title="Capital return: $' + Math.round(r.capReturn).toLocaleString() + '"></div>';
-      cashFlowHtml += '<div class="cf-bar cf-bar-dist" style="height:' + Math.max(distH, 2) + 'px;" title="Distributions: $' + Math.round(r.dist).toLocaleString() + '"></div>';
-      cashFlowHtml += '</div>';
-      cashFlowHtml += '<div class="cf-bar-label">Yr ' + r.year + '</div>';
-      cashFlowHtml += '</div>';
+      cumSum += r.dist + r.capReturn;
+      cumCashPts.push(cumSum);
+      distPts.push(r.dist);
     }
-    cashFlowHtml += '</div>';
+    var maxCum = Math.max.apply(null, cumCashPts) || 1;
+    var svgW = 560, svgH = 200, padL = 50, padR = 20, padT = 20, padB = 30;
+    var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+    var n = rows.length;
+
+    // Scale helpers
+    function xPos(idx) { return padL + (n > 1 ? (idx / (n - 1)) * plotW : plotW / 2); }
+    function yPos(val) { return padT + plotH - (val / maxCum) * plotH; }
+
+    cashFlowHtml += '<div id="' + uid + '_chart" style="display:none;">';
+    cashFlowHtml += '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;height:auto;overflow:visible;" xmlns="http://www.w3.org/2000/svg">';
+
+    // Grid lines
+    var gridSteps = 4;
+    for (var g = 0; g <= gridSteps; g++) {
+      var gy = padT + (g / gridSteps) * plotH;
+      var gVal = maxCum * (1 - g / gridSteps);
+      cashFlowHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (svgW - padR) + '" y2="' + gy + '" stroke="#e5e7eb" stroke-width="1"/>';
+      cashFlowHtml += '<text x="' + (padL - 6) + '" y="' + (gy + 4) + '" text-anchor="end" fill="#9ca3af" font-family="var(--font-ui)" font-size="10">$' + Math.round(gVal / 1000) + 'K</text>';
+    }
+
+    // X-axis labels
+    for (var i = 0; i < n; i++) {
+      cashFlowHtml += '<text x="' + xPos(i) + '" y="' + (svgH - 6) + '" text-anchor="middle" fill="#9ca3af" font-family="var(--font-ui)" font-size="10">Yr ' + rows[i].year + '</text>';
+    }
+
+    // Area fill under cumulative line
+    var areaPath = 'M' + xPos(0) + ',' + yPos(cumCashPts[0]);
+    for (var i = 1; i < n; i++) areaPath += ' L' + xPos(i) + ',' + yPos(cumCashPts[i]);
+    areaPath += ' L' + xPos(n - 1) + ',' + (padT + plotH) + ' L' + xPos(0) + ',' + (padT + plotH) + ' Z';
+    cashFlowHtml += '<path d="' + areaPath + '" fill="rgba(81,190,123,0.08)"/>';
+
+    // Cumulative cash line
+    var linePath = 'M' + xPos(0) + ',' + yPos(cumCashPts[0]);
+    for (var i = 1; i < n; i++) linePath += ' L' + xPos(i) + ',' + yPos(cumCashPts[i]);
+    cashFlowHtml += '<path d="' + linePath + '" fill="none" stroke="#51be7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+
+    // Investment baseline
+    cashFlowHtml += '<line x1="' + padL + '" y1="' + yPos(investment) + '" x2="' + (svgW - padR) + '" y2="' + yPos(investment) + '" stroke="#51be7b" stroke-width="1" stroke-dasharray="4,3" opacity="0.5"/>';
+    cashFlowHtml += '<text x="' + (svgW - padR + 4) + '" y="' + (yPos(investment) + 3) + '" fill="#9ca3af" font-family="var(--font-ui)" font-size="9">Invested</text>';
+
+    // Data points with value labels
+    for (var i = 0; i < n; i++) {
+      var cx = xPos(i), cy = yPos(cumCashPts[i]);
+      cashFlowHtml += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="#fff" stroke="#51be7b" stroke-width="2"/>';
+      cashFlowHtml += '<text x="' + cx + '" y="' + (cy - 10) + '" text-anchor="middle" fill="#1f2937" font-family="var(--font-ui)" font-size="10" font-weight="600">$' + Math.round(cumCashPts[i] / 1000) + 'K</text>';
+    }
+
+    cashFlowHtml += '</svg>';
     cashFlowHtml += '<div class="cf-legend">';
-    cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:var(--primary);"></div>Distributions</div>';
+    cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:var(--primary);"></div>Cumulative Cash Received</div>';
     if (rows.some(function(r) { return r.capReturn > 0; })) {
-      cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:rgba(81,190,123,0.25);"></div>Capital Return</div>';
+      cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:rgba(81,190,123,0.25);border:1px dashed rgba(81,190,123,0.5);"></div>Invested Capital</div>';
     }
     cashFlowHtml += '</div>';
     cashFlowHtml += '</div>';
@@ -5484,21 +5521,22 @@ async function renderDeal() {
     cashFlowHtml += '<div id="' + uid + '_table">';
     cashFlowHtml += '<table class="cf-table">';
     var _hasCapReturn = rows.some(function(r) { return r.capReturn > 0; });
-    cashFlowHtml += '<tr><th>Year</th><th>Investment</th><th>Distributions</th><th>% Cash Flow</th><th>Capital Back</th><th>Total Cash</th><th>Cumulative</th><th>Notes</th></tr>';
+    cashFlowHtml += '<tr><th>Year</th><th>Capital</th><th>Distributions</th><th>% Cash Flow</th><th>Total Cash</th><th>Cumulative</th><th>Notes</th></tr>';
     var cumAll = 0;
-    var capitalRemaining = investment;
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       cumAll += r.dist + r.capReturn;
-      capitalRemaining -= r.capReturn;
       var cocPct = investment > 0 ? ((r.dist / investment) * 100).toFixed(1) : '0.0';
       var isLast = (i === rows.length - 1);
+      // Capital column: investment in (negative) on Year 1, capital back (positive) on return year
+      var capitalCell = '—';
+      if (i === 0) capitalCell = '<span style="color:var(--text-muted);">($' + Math.round(investment).toLocaleString() + ')</span>';
+      if (r.capReturn > 0) capitalCell = '<span style="color:var(--primary);font-weight:600;">$' + Math.round(r.capReturn).toLocaleString() + '</span>';
       cashFlowHtml += '<tr' + (isLast ? ' class="cf-total-row"' : '') + '>';
       cashFlowHtml += '<td>Year ' + r.year + '</td>';
-      cashFlowHtml += '<td>' + (i === 0 ? '$' + Math.round(investment).toLocaleString() : '—') + '</td>';
+      cashFlowHtml += '<td>' + capitalCell + '</td>';
       cashFlowHtml += '<td class="cf-highlight">$' + Math.round(r.dist).toLocaleString() + '</td>';
       cashFlowHtml += '<td class="cf-highlight">' + cocPct + '%</td>';
-      cashFlowHtml += '<td>' + (r.capReturn > 0 ? '$' + Math.round(r.capReturn).toLocaleString() : '—') + '</td>';
       cashFlowHtml += '<td>$' + Math.round(r.dist + r.capReturn).toLocaleString() + '</td>';
       cashFlowHtml += '<td>$' + Math.round(cumAll).toLocaleString() + '</td>';
       cashFlowHtml += '<td style="font-size:10px;color:var(--text-muted);font-style:italic;">' + (r.note || '') + '</td>';
