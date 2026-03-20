@@ -3999,33 +3999,27 @@ async function renderDeal() {
     chartHtml += '</table></div></div></div>';
   }
 
-  // --- 6. Investment Details + Deal Summary + Geography ---
+  // --- 6. Deal Terms + Geography ---
   var detailsHtml = '';
   detailsHtml += '<div class="section">';
-  detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="section-title">Investment Details</span></div>';
+  detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="section-title">Deal Terms</span></div>';
   detailsHtml += '<div class="section-body"><div class="details-grid">';
   detailsHtml += detailItem('Distributions', deal.distributions);
   detailsHtml += detailItem('Available To', deal.availableTo);
-  detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
   detailsHtml += detailItem('Offering Type', deal.offeringType);
   if (isCreditFund(deal)) {
-    detailsHtml += detailItem('Debt Position', deal.debtPosition);
-    detailsHtml += detailItem('Financials', deal.financials);
-    detailsHtml += detailItem('Objective', deal.investmentObjective);
     detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
   } else {
     detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
-    detailsHtml += detailItem('Objective', deal.investmentObjective);
+  }
+  detailsHtml += detailItem('Objective', deal.investmentObjective);
+  if (!isCreditFund(deal)) {
     detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
     detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
   }
-  detailsHtml += '</div></div>';
+  detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
   detailsHtml += '</div>';
-
-  // Deal Summary sub-section
-  detailsHtml += '<div class="section">';
-  detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span class="section-title">Deal Summary</span></div>';
-  detailsHtml += '<div class="section-body">';
+  // Summary rows below the grid
   detailsHtml += summaryRow('Strategy', deal.strategy);
   detailsHtml += summaryRow('Instrument', deal.instrument);
   if (deal.debtPosition) detailsHtml += summaryRow('Debt Position', deal.debtPosition);
@@ -4176,6 +4170,24 @@ async function renderDeal() {
   ddHtml += '</div>';
   ddHtml += '</div>';
   ddHtml += '</div></div>';
+
+  // --- 8c. Q&A Section ---
+  var qaHtml = '';
+  qaHtml += '<div class="section">';
+  qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
+  qaHtml += '<div class="section-body">';
+  qaHtml += '<div id="dealQAList" style="margin-bottom:16px;"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading questions...</div></div>';
+  qaHtml += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;">';
+  qaHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">Ask a question about this deal</div>';
+  qaHtml += '<textarea id="qaNewQuestion" rows="2" placeholder="e.g. What is the redemption policy? How are distributions calculated?" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;background:#fff;box-sizing:border-box;"></textarea>';
+  qaHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
+  qaHtml += '<span style="font-size:11px;color:var(--text-muted);">Questions are reviewed and answered by Pascal</span>';
+  qaHtml += '<button onclick="submitDealQuestion(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Submit Question</button>';
+  qaHtml += '</div></div>';
+  qaHtml += '</div></div>';
+
+  // Load Q&A data async after render
+  setTimeout(function() { loadDealQA(deal.id); }, 200);
 
   // --- 8b. Stress Test Calculator ---
   var stressHtml = '';
@@ -4428,6 +4440,7 @@ async function renderDeal() {
     + chartHtml
     + materialsHtml
     + ddHtml
+    + qaHtml
     + stressHtml
     + pipelineHtml
     + actionsHtml
