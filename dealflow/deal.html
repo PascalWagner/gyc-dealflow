@@ -5365,13 +5365,20 @@ async function renderDeal() {
 
   // --- 5. Performance Chart + Share Classes ---
   var chartHtml = '';
+  // Only render chart if there's actual historical return data (not just targetIRR)
   if (isCreditFund(deal) && deal.targetIRR) {
-    chartHtml += '<div class="returns-chart-section">';
-    chartHtml += '<div class="returns-chart-container"><canvas id="dealReturnsChart"></canvas></div>';
-    chartHtml += '<div class="returns-chart-legend">';
-    chartHtml += '<span class="returns-chart-legend-item"><span class="returns-chart-legend-line" style="background:rgba(81,190,123,0.7);"></span>' + esc(deal.investmentName || 'Fund') + '</span>';
-    chartHtml += '</div>';
-    chartHtml += '</div>';
+    var _hasChartData = [2022, 2023, 2024].some(function(y) {
+      var v = deal[String(y)];
+      return v !== null && v !== undefined && typeof v === 'number' && v > 0;
+    });
+    if (_hasChartData) {
+      chartHtml += '<div class="returns-chart-section">';
+      chartHtml += '<div class="returns-chart-container"><canvas id="dealReturnsChart"></canvas></div>';
+      chartHtml += '<div class="returns-chart-legend">';
+      chartHtml += '<span class="returns-chart-legend-item"><span class="returns-chart-legend-line" style="background:rgba(81,190,123,0.7);"></span>' + esc(deal.investmentName || 'Fund') + '</span>';
+      chartHtml += '</div>';
+      chartHtml += '</div>';
+    }
   }
   if (deal.shareClasses && deal.shareClasses.length > 0) {
     chartHtml += '<div class="section">';
@@ -6487,6 +6494,7 @@ async function renderDeal() {
     + gpInsightsHtml
     + noPermissionHtml
     // --- Deep DD (bottom) ---
+    + '<div style="margin-top:24px;"></div>'
     + caseStudyHtml
     + ddHtml
     + stressHtml
