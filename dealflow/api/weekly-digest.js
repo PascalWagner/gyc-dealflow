@@ -323,6 +323,18 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // ══════════════════════════════════════════════════════════════
+  // KILL SWITCH: Emails are OFF until Pascal sets env var
+  //   DIGEST_ENABLED=true  in Vercel → Settings → Environment Variables
+  // ══════════════════════════════════════════════════════════════
+  const DIGEST_ENABLED = process.env.DIGEST_ENABLED === 'true';
+  if (!DIGEST_ENABLED) {
+    return res.status(200).json({
+      enabled: false,
+      message: 'Weekly digest is disabled. Set DIGEST_ENABLED=true in Vercel env vars to activate.'
+    });
+  }
+
   const { dryRun = true, daysBack = 7 } = req.body || {};
 
   try {
