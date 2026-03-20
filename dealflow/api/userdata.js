@@ -65,16 +65,30 @@ const FIELD_MAP = {
 
 // GHL custom field mapping for goals → CRM sync
 // GHL custom field mapping for goals
-// NOTE: contact.investment_amount is reserved for buy box check_size (per-deal amount)
-//       contact.total_capital_available is a separate field for total capital
+// Verified against actual GHL custom fields (March 20, 2026)
+// Fields that exist:  primary_investment_objective, current_monthly_passive_income,
+//                     monthly_passive_income_goal, deployable_capital
+// Fields to create:   investment_timeline, tax_reduction_target, income_gap
 const GHL_GOALS_FIELD_MAP = {
-  goal_type: 'contact.primary_investment_objective',
-  current_income: 'contact.current_passive_income',
-  target_income: 'contact.income_goal',
-  capital_available: 'contact.total_capital_available',
-  timeline: 'contact.investment_timeline',
-  tax_reduction: 'contact.tax_reduction_target'
+  goal_type: 'contact.primary_investment_objective',          // "Primary Investment Goal" (exists)
+  current_income: 'contact.current_monthly_passive_income',   // "Current Annual Passive Income" (exists)
+  target_income: 'contact.monthly_passive_income_goal',       // "Annual Passive Income Goal" (exists)
+  capital_available: 'contact.deployable_capital',            // "Deployable Capital" (exists, but SINGLE_OPTIONS with ranges)
+  timeline: 'contact.investment_timeline',                    // NEEDS TO BE CREATED in GHL
+  tax_reduction: 'contact.tax_reduction_target'               // NEEDS TO BE CREATED in GHL
 };
+
+// Convert numeric capital to GHL SINGLE_OPTIONS range label
+function capitalToRange(num) {
+  const n = Number(num);
+  if (!n || isNaN(n)) return null;
+  if (n < 100000) return 'Less than $100k';
+  if (n < 250000) return '$100k - $249k';
+  if (n < 500000) return '$250k - $499k';
+  if (n < 1000000) return '$500k - $999k';
+  if (n < 5000000) return '$1M - $4.9M';
+  return '$5M+';
+}
 
 // Background sync goals to GHL contact custom fields
 async function syncGoalsToGhl(email, goalsRow) {
@@ -92,7 +106,13 @@ async function syncGoalsToGhl(email, goalsRow) {
     for (const [column, ghlKey] of Object.entries(GHL_GOALS_FIELD_MAP)) {
       const value = goalsRow[column];
       if (value !== undefined && value !== null && value !== '') {
-        customField[ghlKey] = String(value);
+        // deployable_capital is a SINGLE_OPTIONS field — convert number to range label
+        if (column === 'capital_available') {
+          const rangeLabel = capitalToRange(value);
+          if (rangeLabel) customField[ghlKey] = rangeLabel;
+        } else {
+          customField[ghlKey] = String(value);
+        }
       }
     }
 
@@ -183,26 +203,57 @@ async function handleGet(req, res, supabase, user) {
         if (contact?.customField) {
           // Reverse-map GHL fields to Supabase columns
           const cf = {};
-          if (Array.isArray(contact.customField)) {
-            contact.customField.forEach(f => { cf[f.id] = f.value; });
-          } else {
-            Object.assign(cf, contact.customField);
+          // GHL v1 returns customFields as array of {id, value}
+          // Map by field ID (from GHL custom fields list)
+          const GHL_ID_MAP = {
+            'WIdv6G8BBHk9lBZqsXLy': 'goal_type',               // Primary Investment Goal
+            'JDRc9bmJpwCNoXDe6T6a': 'current_income',           // Current Annual Passive Income
+            'Auy8hrr2O1G4GZweNaqt': 'target_income',            // Annual Passive Income Goal
+            '6FpI05sEc7R7VSl5TK2d': 'capital_available',        // Deployable Capital
+          };
+
+          const fields = contact.customFields || contact.customField || [];
+          if (Array.isArray(fields)) {
+            fields.forEach(f => {
+              const mapped = GHL_ID_MAP[f.id];
+              if (mapped) cf[mapped] = f.value;
+            });
           }
 
-          const goalType = cf['contact.primary_investment_objective'] || cf['primary_investment_objective'];
-          const targetIncome = cf['contact.income_goal'] || cf['income_goal'];
-          const capitalAvailable = cf['contact.total_capital_available'] || cf['total_capital_available'] || cf['contact.investment_amount'] || cf['investment_amount'];
-          const timeline = cf['contact.investment_timeline'] || cf['investment_timeline'];
+          const goalType = cf.goal_type;
+          const targetIncome = cf.target_income;
+          const capitalAvailable = cf.capital_available;
 
           if (goalType || targetIncome || capitalAvailable) {
+            // Map GHL goal labels to Supabase goal_type values
+            const GOAL_TYPE_MAP = {
+              'Cash Flow (income now)': 'passive_income',
+              'Equity Growth (wealth later)': 'build_wealth',
+              'Tax Optimization (tax shield now)': 'reduce_taxes'
+            };
+
+            // Convert GHL range label back to midpoint number
+            function rangeToCapital(label) {
+              if (!label || typeof label !== 'string') return 0;
+              const ranges = {
+                'Less than $100k': 50000,
+                '$100k - $249k': 175000,
+                '$250k - $499k': 375000,
+                '$500k - $999k': 750000,
+                '$1M - $4.9M': 3000000,
+                '$5M+': 5000000
+              };
+              return ranges[label] || Number(label) || 0;
+            }
+
             const seedGoals = {
               user_id: user.id,
-              goal_type: goalType || 'passive_income',
-              current_income: Number(cf['contact.current_passive_income'] || cf['current_passive_income'] || 0),
+              goal_type: GOAL_TYPE_MAP[goalType] || goalType || 'passive_income',
+              current_income: Number(cf.current_income || 0),
               target_income: Number(targetIncome || 0),
-              capital_available: Number(capitalAvailable || 0),
-              timeline: timeline || '5',
-              tax_reduction: Number(cf['contact.tax_reduction_target'] || cf['tax_reduction_target'] || 0)
+              capital_available: rangeToCapital(capitalAvailable),
+              timeline: '5',
+              tax_reduction: 0
             };
 
             // Save to Supabase so we don't pull from GHL again

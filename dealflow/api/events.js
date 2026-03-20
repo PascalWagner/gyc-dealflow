@@ -59,8 +59,8 @@ async function syncEventToGhl(email, event, data) {
     if (event === 'wizard_complete')
       customField['contact.buy_box_complete'] = 'true';
     if (event === 'goals_complete' && data) {
-      if (data.incomeGoal !== undefined) customField['contact.income_goal'] = String(data.incomeGoal);
-      if (data.incomeGap !== undefined) customField['contact.income_gap'] = String(data.incomeGap);
+      if (data.incomeGoal !== undefined) customField['contact.monthly_passive_income_goal'] = String(data.incomeGoal);
+      if (data.incomeGap !== undefined) customField['contact.income_gap'] = String(data.incomeGap);  // NEEDS field created in GHL
     }
 
     // Direct tags
