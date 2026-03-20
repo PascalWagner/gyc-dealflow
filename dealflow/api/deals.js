@@ -136,6 +136,8 @@ function transformRecord(rec, mcLookup, peopleLookup) {
     location: f['Location'] || '',
     address: f['Property Address'] || '',
     deckUrl: Array.isArray(f['Deck']) && f['Deck'].length > 0 ? f['Deck'][0].url : '',
+    ppmUrl: Array.isArray(f['PPM']) && f['PPM'].length > 0 ? f['PPM'][0].url : '',
+    subAgreementUrl: Array.isArray(f['Subscription Agreement']) && f['Subscription Agreement'].length > 0 ? f['Subscription Agreement'][0].url : '',
     parentDealId: Array.isArray(f['Parent Deal']) && f['Parent Deal'].length > 0 ? f['Parent Deal'][0] : null,
     shareClassLabel: f['Share Class Label'] || null,
     verticalIntegration: f['Vertically Integrated'] || f['Vertical Integration'] || null
