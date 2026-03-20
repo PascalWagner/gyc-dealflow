@@ -6068,50 +6068,134 @@ function showToast(msg) {
 }
 
 function renderComparePage() {
+  var searchEl = document.getElementById('compareSearchContainer');
   var chipsEl = document.getElementById('compareChipsContainer');
   var tableEl = document.getElementById('compareTableContainer');
-  if (!chipsEl || !tableEl) return;
+  if (!chipsEl || !tableEl || !searchEl) return;
 
   var compareIds = getCompareDeals();
   var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
 
-  // Build deal chips from saved/vetting/ready deals
-  var eligibleDeals = allDeals.filter(function(d) {
+  // --- Search Input ---
+  searchEl.innerHTML = '<div class="compare-search-wrap">' +
+    '<svg class="compare-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+    '<input class="compare-search-input" id="compareSearchInput" type="text" placeholder="Search all deals by name..." autocomplete="off">' +
+    '<div class="compare-search-results" id="compareSearchResults"></div>' +
+    '</div>';
+
+  var searchInput = document.getElementById('compareSearchInput');
+  var searchResults = document.getElementById('compareSearchResults');
+  searchInput.addEventListener('input', function() {
+    var q = this.value.trim().toLowerCase();
+    if (q.length < 2) { searchResults.classList.remove('open'); searchResults.innerHTML = ''; return; }
+    var matches = allDeals.filter(function(d) { return d.investmentName.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+    if (matches.length === 0) { searchResults.innerHTML = '<div style="padding:10px 14px;font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">No deals found</div>'; searchResults.classList.add('open'); return; }
+    var currentIds = getCompareDeals();
+    searchResults.innerHTML = matches.map(function(d) {
+      var isSelected = currentIds.indexOf(d.id) >= 0;
+      return '<div class="compare-search-item" data-deal-id="' + d.id + '">' +
+        '<span class="csi-check' + (isSelected ? ' checked' : '') + '"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
+        '<span class="csi-name">' + d.investmentName + '</span>' +
+        '<span class="csi-meta">' + (d.assetClass || '') + (d.managementCompany ? ' \u00b7 ' + d.managementCompany : '') + '</span>' +
+        '</div>';
+    }).join('');
+    searchResults.classList.add('open');
+  });
+  searchResults.addEventListener('click', function(e) {
+    var item = e.target.closest('.compare-search-item');
+    if (!item) return;
+    toggleCompareAdd(item.dataset.dealId);
+    searchInput.value = '';
+    searchResults.classList.remove('open');
+  });
+  searchInput.addEventListener('blur', function() { setTimeout(function() { searchResults.classList.remove('open'); }, 200); });
+
+  // --- Pipeline Chips (quick add) ---
+  var pipelineDeals = allDeals.filter(function(d) {
     var st = getDealStage(d.id);
     return st === 'saved' || st === 'vetting' || st === 'ready' || st === 'invested';
   });
 
-  var chipsHtml = '<div style="margin-bottom:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Select deals to compare (2\u20134)</div><div class="compare-chips">';
-  if (eligibleDeals.length === 0) {
-    chipsHtml += '<span style="font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">Save deals from Deal Flow to compare them here</span>';
+  var chipsHtml = '<div class="compare-chips-section">';
+  chipsHtml += '<div class="compare-chips-label">Your Pipeline (quick add)</div><div class="compare-chips">';
+  if (pipelineDeals.length === 0) {
+    chipsHtml += '<span style="font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">No pipeline deals yet. Save deals from Deal Flow first.</span>';
   } else {
-    eligibleDeals.forEach(function(d) {
+    pipelineDeals.forEach(function(d) {
       var sel = compareIds.indexOf(d.id) >= 0;
       chipsHtml += '<div class="compare-chip' + (sel ? ' selected' : '') + '" onclick="toggleCompareAdd(\'' + d.id + '\')">';
       chipsHtml += '<span class="chip-add">+</span>';
+      chipsHtml += '<span class="chip-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';
       chipsHtml += d.investmentName;
-      chipsHtml += '<span class="chip-remove">&times;</span>';
       chipsHtml += '</div>';
     });
   }
-  chipsHtml += '</div>';
+  chipsHtml += '</div></div>';
+  chipsHtml += '<div class="compare-count">' + compareIds.length + '/4 selected</div>';
   chipsEl.innerHTML = chipsHtml;
 
-  // Filter to valid deals
+  // --- Resolve deals ---
   var deals = compareIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
 
+  // --- Empty State ---
   if (deals.length < 2) {
     tableEl.innerHTML = '<div class="compare-empty">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>' +
-      '<div class="compare-empty-title">' + (deals.length === 0 ? 'No deals selected' : 'Select one more deal') + '</div>' +
-      '<div class="compare-empty-sub">' + (eligibleDeals.length === 0 ? 'Save deals from Deal Flow to compare them here.' : 'Click the chips above to select 2\u20134 deals for comparison.') + '</div>' +
+      '<div class="compare-empty-title">Compare deals side by side</div>' +
+      '<div class="compare-empty-sub">' +
+        (deals.length === 0
+          ? 'Save 2+ deals from Deal Flow, then come back here to compare them. Use the search above to find any deal, or click pipeline chips to quickly add saved deals.'
+          : 'Select one more deal to start comparing. Search above or click a pipeline chip.') +
+      '</div>' +
+      '<button class="compare-empty-cta" onclick="navigateTo(\'dealflow\')">Browse Deals \u2192</button>' +
+      '<div class="compare-empty-preview">' +
+        '<div class="compare-empty-preview-title">What you\'ll see</div>' +
+        '<div class="compare-empty-preview-row"><div class="compare-empty-preview-label">Target IRR</div><div class="compare-empty-preview-vals"><div class="compare-empty-preview-val">15.2%</div><div class="compare-empty-preview-val">18.7%</div><div class="compare-empty-preview-val">12.0%</div></div></div>' +
+        '<div class="compare-empty-preview-row"><div class="compare-empty-preview-label">Min Invest</div><div class="compare-empty-preview-vals"><div class="compare-empty-preview-val">$50K</div><div class="compare-empty-preview-val">$100K</div><div class="compare-empty-preview-val">$25K</div></div></div>' +
+        '<div class="compare-empty-preview-row"><div class="compare-empty-preview-label">Match Score</div><div class="compare-empty-preview-vals"><div class="compare-empty-preview-val">4/5</div><div class="compare-empty-preview-val">3/5</div><div class="compare-empty-preview-val">5/5</div></div></div>' +
+      '</div>' +
       '</div>';
     return;
   }
 
   var cols = deals.length;
 
-  // Helpers
+  // --- Buy box + goals for match scoring ---
+  var bb = null;
+  try { bb = JSON.parse(localStorage.getItem('gycBuyBox') || 'null'); } catch(e) {}
+  var goals = null;
+  try { goals = JSON.parse(localStorage.getItem('gycGoals') || 'null'); } catch(e) {}
+
+  // --- Match Score Calculation ---
+  function calcMatchScore(d) {
+    if (!bb) return { score: 0, max: 5 };
+    var score = 0;
+    if (bb.assetClasses && bb.assetClasses.length > 0 && bb.assetClasses.indexOf(d.assetClass) >= 0) score++;
+    if (bb.strategies && bb.strategies.length > 0 && bb.strategies.indexOf(d.strategy) >= 0) score++;
+    if (bb.maxInvest) {
+      var maxInv = parseFloat(String(bb.maxInvest).replace(/[$,]/g, ''));
+      if (!isNaN(maxInv) && d.investmentMinimum && d.investmentMinimum <= maxInv) score++;
+    }
+    if (d.preferredReturn && d.preferredReturn > 0) score++;
+    if (bb.objectives && bb.objectives.length > 0) {
+      var hasCashflow = bb.objectives.indexOf('Cashflow') >= 0 || bb.objectives.indexOf('Balanced (Cashflow + Equity)') >= 0;
+      var distLower = (d.distributions || '').toLowerCase();
+      if (hasCashflow && (distLower === 'monthly' || distLower === 'quarterly')) score++;
+    }
+    return { score: score, max: 5 };
+  }
+
+  var matchScores = deals.map(calcMatchScore);
+  var bestMatchScore = Math.max.apply(null, matchScores.map(function(m) { return m.score; }));
+  var bestMatchIndices = [];
+  matchScores.forEach(function(m, i) { if (m.score === bestMatchScore && bestMatchScore > 0) bestMatchIndices.push(i); });
+  var highlightBest = bestMatchScore > 0;
+
+  function colClass(i) {
+    return 'col-deal' + (highlightBest && bestMatchIndices.indexOf(i) >= 0 ? ' best-match-col' : '');
+  }
+
+  // --- Helpers
   function cmpRow(label, values, format, higherIsBetter) {
     var best = null;
     var nums = values.map(function(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; });
@@ -6120,7 +6204,7 @@ function renderComparePage() {
     var r = '<tr><td class="col-label">' + label + '</td>';
     values.forEach(function(v, i) {
       var isBest = uniqueBest && nums[i] !== null && nums[i] === best;
-      var cls = 'col-deal' + (isBest ? ' best-val' : '');
+      var cls = colClass(i) + (isBest ? ' best-val' : '');
       var display;
       if (v === null || v === undefined || v === '') { display = '\u2014'; }
       else if (format === 'pct') { var n = typeof v === 'string' ? parseFloat(v) : v; display = isNaN(n) ? '\u2014' : (n > 1 ? n : n * 100).toFixed(1) + '%'; }
@@ -6134,7 +6218,7 @@ function renderComparePage() {
   }
   function cmpTextRow(label, values) {
     var r = '<tr><td class="col-label">' + label + '</td>';
-    values.forEach(function(v) { r += '<td class="col-deal">' + (v || '\u2014') + '</td>'; });
+    values.forEach(function(v, i) { r += '<td class="' + colClass(i) + '">' + (v || '\u2014') + '</td>'; });
     return r + '</tr>';
   }
   function cmpSection(title) {
@@ -6145,14 +6229,32 @@ function renderComparePage() {
 
   // Header row
   h += '<thead><tr><th class="col-label"></th>';
-  deals.forEach(function(d) {
-    h += '<th class="deal-header col-deal">';
+  deals.forEach(function(d, i) {
+    h += '<th class="deal-header ' + colClass(i) + '">';
     h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
     h += '<div class="deal-header-name">' + d.investmentName + '</div>';
     h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
     h += '</th>';
   });
   h += '</tr></thead><tbody>';
+
+  // --- Best Match Row ---
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Best Match</td>';
+  deals.forEach(function(d, i) {
+    var ms = matchScores[i];
+    var isBest = highlightBest && bestMatchIndices.indexOf(i) >= 0 && bestMatchIndices.length < deals.length;
+    h += '<td class="' + colClass(i) + '" style="text-align:center;">';
+    if (!bb) {
+      h += '<span style="color:var(--text-muted);font-size:11px;">Set Buy Box first</span>';
+    } else {
+      h += '<span style="font-weight:700;font-size:14px;color:' + (isBest ? 'var(--primary)' : 'var(--text-dark)') + ';">' + ms.score + '/' + ms.max + '</span>';
+      h += '<span style="font-size:11px;color:var(--text-muted);"> match</span>';
+      h += '<div class="compare-match-bar"><div class="compare-match-bar-fill" style="width:' + Math.round((ms.score / ms.max) * 100) + '%;' + (isBest ? 'background:var(--primary);' : '') + '"></div></div>';
+      if (isBest) h += '<div style="font-size:10px;font-weight:700;color:var(--primary);margin-top:3px;">BEST MATCH</div>';
+    }
+    h += '</td>';
+  });
+  h += '</tr>';
 
   // Overview
   h += cmpSection('Overview');
@@ -6186,13 +6288,70 @@ function renderComparePage() {
 
   // Your Analysis
   h += cmpSection('Your Analysis');
-  // Income gap fill
-  var gapFills = deals.map(function(d) { var gf = getGapFillPercent(d); return gf ? gf.percent : null; });
-  h += cmpRow('Income Gap Fill %', gapFills, null, true);
+
+  // Income Gap Fill — enhanced with dollar amount
+  h += '<tr><td class="col-label">Income Gap Fill</td>';
+  deals.forEach(function(d, i) {
+    var gf = getGapFillPercent(d);
+    if (!gf) {
+      h += '<td class="' + colClass(i) + '"><span style="color:var(--text-muted);">\u2014</span></td>';
+    } else {
+      var dealMin = d.investmentMinimum || 100000;
+      var dealYield = d.preferredReturn || 0.08;
+      var yieldNum = dealYield > 1 ? dealYield / 100 : dealYield;
+      var annualIncome = dealMin * yieldNum;
+      h += '<td class="' + colClass(i) + '">';
+      h += '<div style="font-weight:700;color:var(--primary);font-size:14px;">' + gf.percent + '%</div>';
+      h += '<div style="font-size:11px;color:var(--text-muted);">Fills $' + Math.round(annualIncome).toLocaleString() + '/yr (' + gf.percent + '% of ' + gf.label + ')</div>';
+      h += '</td>';
+    }
+  });
+  h += '</tr>';
+
+  // Deals needed to close gap
+  h += '<tr><td class="col-label">Deals Needed</td>';
+  deals.forEach(function(d, i) {
+    var gf = getGapFillPercent(d);
+    if (!gf || gf.percent <= 0) {
+      h += '<td class="' + colClass(i) + '"><span style="color:var(--text-muted);">\u2014</span></td>';
+    } else {
+      var needed = Math.ceil(100 / gf.percent);
+      h += '<td class="' + colClass(i) + '">';
+      h += '<span style="font-weight:700;">' + needed + '</span>';
+      h += '<span style="font-size:11px;color:var(--text-muted);"> at this rate to close gap</span>';
+      h += '</td>';
+    }
+  });
+  h += '</tr>';
+
+  // Portfolio Fit
+  h += '<tr><td class="col-label">Portfolio Fit</td>';
+  deals.forEach(function(d, i) {
+    var ac = d.assetClass || '';
+    var sameClassCount = 0;
+    Object.keys(dealStages).forEach(function(id) {
+      if (id === d.id) return;
+      var stage = dealStages[id];
+      if (stage === 'invested' || stage === 'ready' || stage === 'vetting' || stage === 'saved') {
+        var otherDeal = allDeals.find(function(od) { return od.id === id; });
+        if (otherDeal && otherDeal.assetClass === ac) sameClassCount++;
+      }
+    });
+    h += '<td class="' + colClass(i) + '">';
+    if (sameClassCount === 0) {
+      h += '<span class="compare-portfolio-fit-new">New asset class</span>';
+      h += '<div style="font-size:10px;color:var(--text-muted);">Adds diversification</div>';
+    } else {
+      h += '<span class="compare-portfolio-fit-warn">You have ' + sameClassCount + ' ' + ac + ' deal' + (sameClassCount > 1 ? 's' : '') + '</span>';
+      h += '<div style="font-size:10px;color:#d97706;">Concentration risk</div>';
+    }
+    h += '</td>';
+  });
+  h += '</tr>';
 
   // DD Progress
   h += '<tr><td class="col-label">DD Progress</td>';
-  deals.forEach(function(d) {
+  deals.forEach(function(d, i) {
     var checks = {};
     try { checks = JSON.parse(localStorage.getItem('gycDDChecklist_' + d.id) || '{}'); } catch(e) {}
     var done = Object.values(checks).filter(Boolean).length;
@@ -6203,36 +6362,73 @@ function renderComparePage() {
       ? '<div style="text-align:center;"><span style="font-weight:700;color:' + barColor + ';">' + pct + '%</span><span style="font-size:11px;color:var(--text-muted);"> (' + done + '/' + total + ')</span>' +
         '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:' + pct + '%;background:var(--primary);border-radius:2px;"></div></div></div>'
       : '<span style="color:var(--text-muted);">\u2014</span>';
-    h += '<td class="col-deal">' + cell + '</td>';
+    h += '<td class="' + colClass(i) + '">' + cell + '</td>';
   });
   h += '</tr>';
 
   // Stage
   h += '<tr><td class="col-label">Your Stage</td>';
-  deals.forEach(function(d) {
+  deals.forEach(function(d, i) {
     var stage = getDealStage(d.id);
     var colors = {saved:'var(--blue)',vetting:'var(--orange)',ready:'var(--green)',invested:'var(--green)',passed:'var(--red)',browse:'var(--text-muted)'};
     var labels = {saved:'Saved',vetting:'Vetting',ready:'Ready',invested:'Invested',passed:'Passed',browse:'Browse'};
-    h += '<td class="col-deal"><span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:' + (colors[stage] || 'var(--text-muted)') + '22;color:' + (colors[stage] || 'var(--text-muted)') + ';">' + (labels[stage] || stage) + '</span></td>';
+    h += '<td class="' + colClass(i) + '"><span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:' + (colors[stage] || 'var(--text-muted)') + '22;color:' + (colors[stage] || 'var(--text-muted)') + ';">' + (labels[stage] || stage) + '</span></td>';
   });
   h += '</tr>';
 
   // Buy Box Match
-  var bb = null;
-  try { bb = JSON.parse(localStorage.getItem('gycBuyBox') || 'null'); } catch(e) {}
   h += '<tr><td class="col-label">Buy Box Match</td>';
-  deals.forEach(function(d) {
+  deals.forEach(function(d, i) {
     if (!bb || !bb.assetClasses || bb.assetClasses.length === 0) {
-      h += '<td class="col-deal"><span style="color:var(--text-muted);">\u2014</span></td>';
+      h += '<td class="' + colClass(i) + '"><span style="color:var(--text-muted);">\u2014</span></td>';
     } else {
       var match = bb.assetClasses.indexOf(d.assetClass) >= 0;
-      h += '<td class="col-deal"><span style="font-weight:700;color:' + (match ? 'var(--green)' : 'var(--text-muted)') + ';">' + (match ? 'Yes' : 'No') + '</span></td>';
+      h += '<td class="' + colClass(i) + '"><span style="font-weight:700;color:' + (match ? 'var(--green)' : 'var(--text-muted)') + ';">' + (match ? 'Yes' : 'No') + '</span></td>';
     }
+  });
+  h += '</tr>';
+
+  // --- Your Notes ---
+  h += cmpSection('Your Notes');
+  var savedNotes = {};
+  try { savedNotes = JSON.parse(localStorage.getItem('gycCompareNotes') || '{}'); } catch(e) {}
+  h += '<tr><td class="col-label">Notes</td>';
+  deals.forEach(function(d, i) {
+    var noteVal = (savedNotes[d.id] || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    h += '<td class="' + colClass(i) + '">';
+    h += '<textarea class="compare-notes-ta" rows="3" data-deal-id="' + d.id + '" placeholder="What do you think about this deal?" oninput="saveCompareNote(this)">' + noteVal + '</textarea>';
+    h += '</td>';
+  });
+  h += '</tr>';
+
+  // --- Action Buttons ---
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Actions</td>';
+  deals.forEach(function(d, i) {
+    var stage = getDealStage(d.id);
+    h += '<td class="' + colClass(i) + '" style="vertical-align:top;">';
+    h += '<a href="deal.html?id=' + d.id + '" class="compare-action-btn primary">Open Deal</a>';
+    if (stage === 'browse' || stage === 'saved') {
+      h += '<button class="compare-action-btn" onclick="setDealStage(\'' + d.id + '\',\'vetting\');renderComparePage();">Move to Vetting</button>';
+    } else if (stage === 'vetting') {
+      h += '<button class="compare-action-btn" onclick="setDealStage(\'' + d.id + '\',\'ready\');renderComparePage();">Mark Ready</button>';
+    } else {
+      h += '<button class="compare-action-btn" disabled style="opacity:0.5;cursor:default;">' + (stage === 'invested' ? 'Invested' : stage === 'ready' ? 'Ready' : stage.charAt(0).toUpperCase() + stage.slice(1)) + '</button>';
+    }
+    h += '<a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="compare-action-btn" style="color:#3b82f6;border-color:rgba(59,130,246,0.3);">Schedule Review</a>';
+    h += '</td>';
   });
   h += '</tr>';
 
   h += '</tbody></table></div>';
   tableEl.innerHTML = h;
+}
+
+// Auto-save compare notes to localStorage
+function saveCompareNote(textarea) {
+  var notes = {};
+  try { notes = JSON.parse(localStorage.getItem('gycCompareNotes') || '{}'); } catch(e) {}
+  notes[textarea.dataset.dealId] = textarea.value;
+  localStorage.setItem('gycCompareNotes', JSON.stringify(notes));
 }
 
 // ========== AIRTABLE SYNC LAYER ==========
@@ -9584,6 +9780,49 @@ function renderWizardStep() {
     html += '<div class="wizard-plan-summary-row"><span>Max per deal</span><span>' + checkLabel + '</span></div>';
     html += '<div class="wizard-plan-summary-row"><span>Deals saved</span><span>' + (savedCount > 0 ? savedCount + ' of 3 recommended' : '<em style="color:var(--text-muted);font-style:italic;">You can save deals from your dashboard</em>') + '</span></div>';
     html += '</div>';
+
+    // Deployment timeline
+    var capMap = { '$50-100K': 75000, '$100-250K': 175000, '$250-500K': 375000, '$500K-1M': 750000, '$1M+': 1500000 };
+    var totalCap = capMap[wizardData._capitalRange] || 200000;
+    var checkAmt = parseInt(wizardData.checkSize) || 100000;
+    var numDeals = Math.ceil(totalCap / checkAmt);
+    var avgYield = summaryBranch === 'cashflow' ? 0.09 : summaryBranch === 'tax' ? 0.06 : 0.15;
+    var projectedIncome = Math.round(totalCap * avgYield);
+    var quarters = Math.ceil(numDeals / 2); // ~2 deals per quarter
+
+    html += '<div style="background:rgba(81,190,123,0.04);border:1px solid rgba(81,190,123,0.12);border-radius:10px;padding:20px;margin-top:16px;text-align:left;">';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">Your Deployment Roadmap</div>';
+
+    // Timeline steps
+    for (var q = 1; q <= Math.min(quarters, 4); q++) {
+      var dealsThisQ = Math.min(2, numDeals - (q - 1) * 2);
+      var cumDeals = Math.min(numDeals, q * 2);
+      var cumCapital = Math.min(totalCap, cumDeals * checkAmt);
+      var cumIncome = Math.round(cumCapital * avgYield);
+      var isLast = q === Math.min(quarters, 4);
+      html += '<div style="display:flex;gap:12px;margin-bottom:' + (isLast ? '0' : '12px') + ';">';
+      html += '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px;">';
+      html += '<div style="width:10px;height:10px;border-radius:50%;background:var(--primary);flex-shrink:0;"></div>';
+      if (!isLast) html += '<div style="width:2px;flex:1;background:rgba(81,190,123,0.3);"></div>';
+      html += '</div>';
+      html += '<div style="padding-bottom:' + (isLast ? '0' : '4px') + ';">';
+      html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">';
+      if (q === 1) html += 'Month 1\u20133';
+      else if (q === 2) html += 'Month 4\u20136';
+      else if (q === 3) html += 'Month 7\u20139';
+      else html += 'Month 10\u201312';
+      html += '</div>';
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">';
+      html += 'Deploy ' + dealsThisQ + ' deal' + (dealsThisQ > 1 ? 's' : '') + ' at $' + checkAmt.toLocaleString() + ' each';
+      html += ' \u2192 $' + cumCapital.toLocaleString() + ' deployed, ~$' + cumIncome.toLocaleString() + '/yr';
+      html += '</div></div></div>';
+    }
+
+    html += '<div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(81,190,123,0.15);text-align:center;">';
+    html += '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--primary);">$' + projectedIncome.toLocaleString() + '/yr</div>';
+    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">projected annual income from ' + numDeals + ' deals</div>';
+    html += '</div></div>';
+
     // Video placeholder — hidden until video URLs are configured
     // if (false) {
     // html += '<div class="wizard-video-slot" onclick="">';
@@ -12688,6 +12927,92 @@ function saveInvestmentFromModal(editId, linkDealId) {
   closeModal();
   renderPortfolio();
   renderAll();
+
+  // Show "Next Move" suggestion for new investments
+  if (!editId) {
+    setTimeout(function() { showNextMoveSuggestion(data); }, 400);
+  }
+}
+
+function showNextMoveSuggestion(newInvestment) {
+  var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  var wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  var branch = wd._branch;
+  if (!goals && !branch) return; // No goal set, skip
+
+  var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  var totalInvested = portfolio.reduce(function(s, i) { return s + (parseFloat(i.amountInvested) || 0); }, 0);
+  var deals = typeof DEALS !== 'undefined' ? DEALS : [];
+  var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+
+  // Calculate allocation breakdown
+  var allocByClass = {};
+  portfolio.forEach(function(p) {
+    var cls = p.assetClass || 'Other';
+    allocByClass[cls] = (allocByClass[cls] || 0) + (parseFloat(p.amountInvested) || 0);
+  });
+
+  // Find gaps — what asset classes does the user NOT have yet?
+  var targetClasses = [];
+  if (branch === 'cashflow') targetClasses = ['Lending', 'Multi Family', 'Self Storage'];
+  else if (branch === 'tax') targetClasses = ['Multi Family', 'Self Storage', 'Industrial'];
+  else if (branch === 'growth') targetClasses = ['Multi Family', 'Industrial', 'Hotels/Hospitality'];
+  else targetClasses = ['Lending', 'Multi Family', 'Self Storage'];
+
+  var missingClasses = targetClasses.filter(function(c) { return !allocByClass[c]; });
+  var nextClass = missingClasses.length > 0 ? missingClasses[0] : null;
+
+  // Find recommended next deals
+  var nextDeals = [];
+  if (nextClass) {
+    nextDeals = deals
+      .filter(function(d) { return d.assetClass === nextClass && !stages[d.id]; })
+      .sort(function(a, b) { return (b.preferredReturn || b.targetIRR || 0) - (a.preferredReturn || a.targetIRR || 0); })
+      .slice(0, 2);
+  }
+
+  // Income progress
+  var incomeText = '';
+  if (goals && goals.targetIncome > 0) {
+    var estimatedIncome = portfolio.reduce(function(s, i) {
+      var yield_ = parseFloat(i.targetIRR) || 8;
+      return s + ((parseFloat(i.amountInvested) || 0) * (yield_ / 100));
+    }, 0);
+    var pct = Math.min(100, Math.round((estimatedIncome / goals.targetIncome) * 100));
+    incomeText = '<div style="margin-bottom:16px;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px;"><span>Income progress</span><span>$' + Math.round(estimatedIncome).toLocaleString() + ' / $' + goals.targetIncome.toLocaleString() + '/yr (' + pct + '%)</span></div>'
+      + '<div style="height:10px;background:var(--bg-main);border-radius:5px;overflow:hidden;"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:5px;"></div></div>'
+      + '</div>';
+  }
+
+  // Build next deal cards
+  var dealCardsHtml = '';
+  if (nextDeals.length > 0 && nextClass) {
+    dealCardsHtml = '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Diversify into ' + nextClass + '</div>';
+    dealCardsHtml += nextDeals.map(function(d) {
+      var yld = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
+      return '<div onclick="closeModal();window.location.href=\'deal.html?id=' + d.id + '\'" style="display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:6px;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">' + d.investmentName + '</div><div style="font-size:11px;color:var(--text-muted);">' + (d.managementCompany || '') + '</div></div>'
+        + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--primary);">' + (yld > 1 ? yld.toFixed(1) : (yld * 100).toFixed(1)) + '%</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'investmentModal';
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+  overlay.innerHTML = '<div class="modal-card" style="max-width:480px;text-align:center;">'
+    + '<div style="font-size:48px;margin-bottom:12px;">&#127881;</div>'
+    + '<div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin-bottom:8px;">Investment Logged!</div>'
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;">' + newInvestment.investmentName + ' added to your portfolio. Total deployed: <strong>$' + totalInvested.toLocaleString() + '</strong> across <strong>' + portfolio.length + ' deal' + (portfolio.length !== 1 ? 's' : '') + '</strong>.</div>'
+    + incomeText
+    + dealCardsHtml
+    + '<div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">'
+    + '<button onclick="closeModal();navigateTo(\'portfolio\')" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">View Portfolio</button>'
+    + '<button onclick="closeModal();navigateTo(\'deals\')" style="padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Browse More Deals</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
 }
 
 function deleteInvestment(id) {
@@ -15153,52 +15478,48 @@ function showOnboarding() {
         html += '</div>';
         html += '<button class="onboarding-skip" onclick="window._obClose()">Skip, I will explore on my own</button>';
       } else if (step === 2) {
-        html += '<div class="onboarding-title">What are you trying to accomplish?</div>';
-        html += '<div class="onboarding-subtitle">Select all that apply. This helps us show you the most relevant deals.</div>';
+        html += '<div class="onboarding-title">What\u2019s your #1 goal right now?</div>';
+        html += '<div class="onboarding-subtitle">Pick one. We\u2019ll build your entire experience around it.</div>';
         html += '<div class="onboarding-options" id="obGoalOptions">';
         var goalOpts = [
-          { id: 'income', label: 'Build passive income' },
-          { id: 'tax', label: 'Reduce my tax bill' },
-          { id: 'diversify', label: 'Diversify away from stocks / business' },
-          { id: 'all', label: 'All of the above' }
+          { id: 'income', label: 'Build passive income', desc: 'Replace W-2 income with cashflow from private deals' },
+          { id: 'tax', label: 'Reduce my tax bill', desc: 'Use depreciation to offset taxable income' },
+          { id: 'diversify', label: 'Grow my wealth', desc: 'Deploy capital into high-return equity deals' }
         ];
         for (var g = 0; g < goalOpts.length; g++) {
-          html += '<button class="onboarding-option" data-goal="' + goalOpts[g].id + '" onclick="window._obToggleGoal(this)">' + goalOpts[g].label + '</button>';
+          html += '<button class="onboarding-option" data-goal="' + goalOpts[g].id + '" onclick="window._obSelectGoal(this)"><strong>' + goalOpts[g].label + '</strong><span style="display:block;font-size:12px;color:var(--text-muted);margin-top:4px;font-weight:400;">' + goalOpts[g].desc + '</span></button>';
         }
         html += '</div>';
-        html += '<button class="onboarding-btn" onclick="window._obShowStep(3)">Continue &rarr;</button>';
         html += '<button class="onboarding-skip" onclick="window._obClose()">Skip</button>';
       } else if (step === 3) {
         var exp = window._obData.experience || 'never';
-        var goals = window._obData.goals || [];
-        var hasAll = goals.indexOf('all') >= 0;
-        var wantsIncome = hasAll || goals.indexOf('income') >= 0;
-        var wantsTax = goals.indexOf('tax') >= 0;
+        var goal = window._obData.goal || 'income';
 
         var recTitle = '';
         var recText = '';
         var recAction = '';
-        var recTarget = 'explore';
+        var recTarget = 'buybox';
 
-        if (exp === 'never' && wantsTax && !wantsIncome) {
-          recTitle = 'Look for Tax-Advantaged Deals';
-          recText = 'Syndications and development deals often offer significant depreciation benefits that can offset your W-2 income.';
-          recAction = 'Browse Tax Deals';
-          recTarget = 'tax';
-        } else if (exp === 'never' && wantsIncome) {
-          recTitle = 'Start with Lending Funds';
-          recText = 'Lending funds offer monthly cashflow with lower risk &mdash; perfect for getting started. They pay consistent income backed by real estate collateral.';
-          recAction = 'Browse Lending Funds';
-          recTarget = 'lending';
-        } else if (hasAll || exp === 'some' || exp === 'experienced') {
-          recTitle = 'Build Your Buy Box';
-          recText = 'With 800+ deals in the database, your Buy Box filters everything down to what matches your investment criteria &mdash; asset class, check size, target return, and lockup preference.';
+        if (goal === 'tax') {
+          recTitle = 'Let\u2019s Find Tax-Advantaged Deals';
+          recText = exp === 'never'
+            ? 'Syndications and development deals often offer 50\u201380% first-year depreciation. We\u2019ll help you find the right ones for your tax situation.'
+            : 'Your Buy Box will filter to deals with depreciation benefits, cost segregation, and bonus depreciation.';
+          recAction = exp === 'never' ? 'Build My Buy Box' : 'Build My Buy Box';
+          recTarget = 'buybox';
+        } else if (goal === 'diversify') {
+          recTitle = 'Let\u2019s Build Your Growth Portfolio';
+          recText = exp === 'never'
+            ? 'Value-add and development deals target 15\u201320%+ IRR. We\u2019ll match you with high-return opportunities that fit your capital and timeline.'
+            : 'Your Buy Box will surface the highest-return deals matched to your check size and risk tolerance.';
           recAction = 'Build My Buy Box';
           recTarget = 'buybox';
         } else {
-          recTitle = 'Build Your Buy Box';
-          recText = 'We recommend starting with your Buy Box to filter the 800+ deals to what matters most to you.';
-          recAction = 'Build My Buy Box';
+          recTitle = 'Let\u2019s Build Your Income Plan';
+          recText = exp === 'never'
+            ? 'Lending funds and preferred equity deals pay 8\u201312% annual income with monthly or quarterly distributions. We\u2019ll start you with the safest, most consistent options.'
+            : 'Your Buy Box will prioritize deals that generate consistent passive income \u2014 sorted by yield and matched to your check size.';
+          recAction = exp === 'never' ? 'Build My Buy Box' : 'Build My Buy Box';
           recTarget = 'buybox';
         }
 
@@ -15214,14 +15535,14 @@ function showOnboarding() {
 
     window._obShowStep = function(step) { renderStep(step); };
 
-    window._obToggleGoal = function(btn) {
-      btn.classList.toggle('selected');
-      var goals = [];
-      var opts = document.querySelectorAll('#obGoalOptions .onboarding-option.selected');
-      for (var i = 0; i < opts.length; i++) {
-        goals.push(opts[i].getAttribute('data-goal'));
-      }
-      window._obData.goals = goals;
+    window._obSelectGoal = function(btn) {
+      // Single-select: deselect all others, select this one
+      var opts = document.querySelectorAll('#obGoalOptions .onboarding-option');
+      for (var i = 0; i < opts.length; i++) opts[i].classList.remove('selected');
+      btn.classList.add('selected');
+      window._obData.goal = btn.getAttribute('data-goal');
+      // Auto-advance to step 3 after brief delay
+      setTimeout(function() { window._obShowStep(3); }, 300);
     };
 
     window._obClose = function() {
