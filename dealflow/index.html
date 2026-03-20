@@ -827,6 +827,106 @@ html.dark .card-match-badge.red { background: #2E1515; }
   background: var(--text-muted);
   opacity: 0.4;
 }
+/* Hot deal badge for high-activity deals */
+.hot-deal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  letter-spacing: 0.3px;
+  background: rgba(239,68,68,0.08);
+  color: #ef4444;
+  animation: hotPulse 2s ease-in-out infinite;
+}
+@keyframes hotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+/* Academy paywall overlay */
+.academy-gate-overlay {
+  position: relative;
+}
+.academy-gate-overlay::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, transparent 0%, var(--bg-cream) 60%);
+  pointer-events: none;
+  z-index: 1;
+}
+.academy-gate-cta {
+  position: relative;
+  z-index: 2;
+  margin-top: -40px;
+  padding: 24px;
+  text-align: center;
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 2px solid rgba(59,130,246,0.3);
+  border-radius: var(--radius);
+}
+html.dark .academy-gate-cta {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(74,222,128,0.06));
+  border-color: rgba(59,130,246,0.25);
+}
+.academy-gate-cta .gate-icon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #3b82f6, #4ade80);
+  border-radius: 12px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.academy-gate-cta .gate-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.academy-gate-cta .gate-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.academy-gate-cta .gate-btn {
+  padding: 10px 24px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.academy-gate-cta .gate-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+.academy-gate-cta .gate-features {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.academy-gate-cta .gate-features span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.academy-gate-cta .gate-features svg {
+  width: 12px; height: 12px;
+  stroke: var(--primary);
+}
 .deal-freshness-badge {
   display: inline-flex;
   align-items: center;
@@ -1617,6 +1717,46 @@ html.dark .credit-chart-legend-divider {
   .table-view { font-size: 11px; }
   .table-view th, .table-view td { padding: 8px 10px; }
   .mobile-tab-bar { display: flex !important; }
+
+  /* ── Mobile: Pipeline stage tabs ── */
+  .pipeline-tabs, .topbar-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap !important; }
+  .pipeline-tabs::-webkit-scrollbar, .topbar-tabs::-webkit-scrollbar { display: none; }
+
+  /* ── Mobile: Compare table ── */
+  .compare-table-wrap { -webkit-overflow-scrolling: touch; }
+  .compare-table .col-label { min-width: 120px; width: 120px; font-size: 10px; }
+  .compare-table .col-deal { min-width: 140px; }
+  .compare-chips { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .compare-chip { flex-shrink: 0; }
+
+  /* ── Mobile: Dashboard cards grid ── */
+  .dashboard-grid, .settings-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Mobile: Portfolio allocation/risk side-by-side → stacked ── */
+  #page-portfolio .content-area > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+
+  /* ── Mobile: Detail panel actions ── */
+  .panel-actions { flex-direction: column; }
+  .panel-actions .btn-cta { width: 100%; text-align: center; }
+
+  /* ── Mobile: Academy gate CTA ── */
+  .academy-gate-cta { padding: 18px; }
+  .academy-gate-cta .gate-features { flex-direction: column; gap: 6px; align-items: center; }
+
+  /* ── Mobile: Social proof ── */
+  .card-social-proof { flex-wrap: wrap; gap: 6px 10px; }
+
+  /* ── Mobile: Modal ── */
+  .modal-card { padding: 20px; max-height: 85vh; }
+
+  /* ── Mobile: Three paths section ── */
+  .three-paths-grid { grid-template-columns: 1fr !important; }
+
+  /* ── Mobile: Settings / Buy Box sliders ── */
+  input[type="range"] { width: 100% !important; }
+
+  /* ── Mobile: Sidebar overlay backdrop ── */
+  .sidebar.open ~ .sidebar-backdrop { display: block; }
 }
 
 /* Mobile Bottom Tab Bar */
@@ -4101,6 +4241,14 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
   gtag('js', new Date());
   gtag('config', 'G-XXXXXXXXXX');
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// Supabase Realtime client (anon key — respects RLS)
+const _supa = window.supabase.createClient(
+  'https://nntzqyufmtypfjpusflm.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.pm6TDqZT37942PrVP0NQxtMiuucPuEicE32qVDebCZ4'
+);
+</script>
 </head>
 <body>
 
@@ -4312,6 +4460,9 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
   <div id="panelContent" style="flex:1;overflow-y:auto;"></div>
 </div>
 
+<!-- Mobile sidebar backdrop -->
+<div class="sidebar-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:99;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none';"></div>
+
 <!-- Main Content -->
 <div class="main">
 
@@ -4412,6 +4563,9 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
           <button onclick="showAddDealModal()" style="width:100%;padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add a Deal</button>
         </div>
       </div>
+      <label id="showArchivedToggle" style="display:none;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;" title="Show deals that are likely closed or no longer accepting capital">
+        <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;"> Show archived
+      </label>
       <button class="filter-clear" onclick="clearFilters()">Clear Filters</button>
       <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
       <div class="filter-count"><span id="visibleCount">30</span> deals</div>
@@ -5874,11 +6028,32 @@ function renderSocialProof(dealId) {
   const eyeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   const ddSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>';
   const investSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
+  const fireSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1012 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/></svg>';
+  // Hot deal badge if 5+ total interactions
+  if (total >= 5) {
+    parts.push('<span class="hot-deal-badge">' + fireSvg + 'Hot</span>');
+  }
   if (total > 0) parts.push('<span class="sp-item">' + eyeSvg + total + ' watching</span>');
   var ddCount = (stats.vetting || 0) + (stats.ready || 0);
   if (ddCount > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + ddSvg + ddCount + ' in DD</span>');
   if ((stats.invested || 0) > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + investSvg + stats.invested + ' invested</span>');
   return '<div class="card-social-proof">' + parts.join('') + '</div>';
+}
+
+// Render academy gate CTA block (reusable)
+function renderAcademyGateCTA(source, title, subtitle) {
+  var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+  return '<div class="academy-gate-cta">' +
+    '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>' +
+    '<div class="gate-title">' + (title || 'Unlock with Cashflow Academy') + '</div>' +
+    '<div class="gate-sub">' + (subtitle || 'Get full DD checklists, deal comparisons, stress tests, and Pascal\'s personal analysis.') + '</div>' +
+    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Academy &rarr;</button>' +
+    '<div class="gate-features">' +
+      '<span>' + checkSvg + 'Full DD Checklist</span>' +
+      '<span>' + checkSvg + 'Deal Comparison</span>' +
+      '<span>' + checkSvg + 'Pascal\'s Analysis</span>' +
+    '</div>' +
+  '</div>';
 }
 
 // ========== REF TRACKING (Content → Deal Attribution) ==========
@@ -5899,6 +6074,10 @@ function getContentRef() {
 
 // ========== DEAL FRESHNESS BADGE ==========
 function renderFreshnessBadge(deal) {
+  // Stale/archived deal badge
+  if (isDealStale(deal)) {
+    return '<span class="deal-freshness-badge" style="background:rgba(138,154,160,0.12);color:var(--text-muted);">Archived</span>';
+  }
   // Check data completeness
   var fields = [deal.investmentStrategy, deal.targetIRR || deal.cashOnCash, deal.investmentMinimum, deal.holdPeriod, deal.managementCompany, deal.offeringType, deal.status];
   var filled = fields.filter(function(f) { return f && f !== '' && f !== 0; }).length;
@@ -5950,11 +6129,11 @@ function getTimeAgo(dateStr) {
   return months + 'mo ago';
 }
 
-// Shared DD checklist — stored in Airtable per deal, visible to all users
+// Shared DD checklist — stored in Supabase per deal, visible to all users
 let dealDDChecks = {};
 let ddCheckDetails = {}; // { dealId: { "0": { by, name, at }, ... } }
 
-// Fetch shared DD checklist for a deal from Airtable
+// Fetch shared DD checklist for a deal from Supabase
 async function fetchDealDD(dealId) {
   try {
     const resp = await fetch('/api/ddchecklist?dealId=' + encodeURIComponent(dealId));
@@ -5984,7 +6163,7 @@ function toggleDDItem(dealId, index) {
   const newState = !dealDDChecks[dealId][index];
   dealDDChecks[dealId][index] = newState;
 
-  // Sync to Airtable (shared)
+  // Sync to Supabase (shared)
   const user = getUser();
   fetch('/api/ddchecklist', {
     method: 'POST',
@@ -6009,6 +6188,49 @@ function toggleDDItem(dealId, index) {
 
   const deal = DEALS.find(d => d.id === dealId);
   if (deal) document.getElementById('panelContent').innerHTML = renderPanel(deal);
+}
+
+// ========== DD CHECKLIST REALTIME ==========
+let _ddRealtimeSubs = {};
+
+function subscribeDealDD(dealId) {
+  if (_ddRealtimeSubs[dealId]) return; // already subscribed
+  const channel = _supa.channel('dd-' + dealId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'dd_checklist',
+      filter: 'deal_id=eq.' + dealId
+    }, (payload) => {
+      const row = payload.new || {};
+      const idx = row.item_index;
+      if (idx == null) return;
+      const user = getUser();
+      // Skip if this is our own change (already applied locally)
+      if (row.checked_by_email === user?.email) return;
+      // Apply the remote change
+      if (!dealDDChecks[dealId]) dealDDChecks[dealId] = new Array(DD_CHECKLIST.length).fill(false);
+      if (!ddCheckDetails[dealId]) ddCheckDetails[dealId] = {};
+      if (payload.eventType === 'DELETE') {
+        dealDDChecks[dealId][idx] = false;
+        delete ddCheckDetails[dealId][String(idx)];
+      } else {
+        dealDDChecks[dealId][idx] = true;
+        ddCheckDetails[dealId][String(idx)] = {
+          by: row.checked_by_email || '',
+          name: row.checked_by_name || '',
+          at: row.checked_at || new Date().toISOString()
+        };
+      }
+      // Re-render the panel if this deal is currently open
+      const deal = DEALS.find(d => d.id === dealId);
+      if (deal) {
+        const panel = document.getElementById('panelContent');
+        if (panel) panel.innerHTML = renderPanel(deal);
+      }
+    })
+    .subscribe();
+  _ddRealtimeSubs[dealId] = channel;
 }
 
 // ========== DEAL COMPARISON ==========
@@ -6324,6 +6546,28 @@ function renderComparePage() {
   }
 
   var cols = deals.length;
+
+  // --- Academy gate for comparison table ---
+  var _compUser = getUser();
+  var _compTier = (_compUser && _compUser.tier) || 'free';
+  var _isCompAdmin = typeof isAdmin === 'function' && isAdmin();
+  if (_compTier === 'free' && !_isCompAdmin) {
+    tableEl.innerHTML = '<div style="position:relative;">' +
+      '<div class="academy-gate-overlay" style="filter:blur(4px);pointer-events:none;user-select:none;max-height:400px;overflow:hidden;">' +
+        '<div class="compare-table-wrap"><table class="compare-table"><thead><tr><th class="col-label"></th>' +
+        deals.map(function(d) { return '<th class="col-deal"><div class="deal-header"><div class="deal-header-name">' + d.investmentName + '</div><div class="deal-header-mgr">' + (d.managementCompany || '') + '</div></div></th>'; }).join('') +
+        '</tr></thead><tbody>' +
+        '<tr><td class="col-label">Target IRR</td>' + deals.map(function() { return '<td class="col-deal">XX.X%</td>'; }).join('') + '</tr>' +
+        '<tr><td class="col-label">Cash Yield</td>' + deals.map(function() { return '<td class="col-deal">X.X%</td>'; }).join('') + '</tr>' +
+        '<tr><td class="col-label">Minimum</td>' + deals.map(function() { return '<td class="col-deal">$XXK</td>'; }).join('') + '</tr>' +
+        '<tr><td class="col-label">Hold Period</td>' + deals.map(function() { return '<td class="col-deal">X yrs</td>'; }).join('') + '</tr>' +
+        '<tr><td class="col-label">Buy Box Match</td>' + deals.map(function() { return '<td class="col-deal">X/5</td>'; }).join('') + '</tr>' +
+        '</tbody></table></div>' +
+      '</div>' +
+      renderAcademyGateCTA('compare_page', 'Unlock Deal Comparison', 'Compare deals side by side with buy box fit scoring, risk analysis, and Pascal\'s insights.') +
+    '</div>';
+    return;
+  }
 
   // --- Buy box + goals for match scoring ---
   var bb = null;
@@ -7583,7 +7827,7 @@ function renderCard(deal) {
       <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
       </button>
-      <div class="equity-card-hero" style="background:${hero.gradient};position:relative;">
+      <div class="equity-card-hero" style="background:${deal.propertyImageUrl ? 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(' + deal.propertyImageUrl + ')' : hero.gradient};${deal.propertyImageUrl ? 'background-size:cover;background-position:center;' : ''}position:relative;">
         <div class="equity-hero-badges">
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
@@ -7592,7 +7836,7 @@ function renderCard(deal) {
           ${renderFreshnessBadge(deal)}
           ${renderMatchBadge(deal)}
         </div>
-        <div class="equity-hero-icon">${hero.icon}</div>
+        ${deal.propertyImageUrl ? '' : '<div class="equity-hero-icon">' + hero.icon + '</div>'}
         ${deal.targetIRR ? `<div class="equity-hero-irr"><span class="equity-hero-irr-value">${fmt(deal.targetIRR, 'pct')}</span><span class="equity-hero-irr-label">Target IRR</span></div>` : ''}
       </div>
       <div class="credit-card-body" onclick="window.location.href='deal.html?id=${deal.id}'" style="cursor:pointer;flex:1;">
@@ -7622,11 +7866,11 @@ function renderCard(deal) {
         <div class="equity-card-info-row">
           <div class="metric">
             <div class="metric-label">Manager Size</div>
-            <div class="metric-value" style="font-size:11px;color:var(--text-muted);font-weight:600;">Coming Soon</div>
+            <div class="metric-value" style="font-size:11px;${getManagerTier(deal).label !== '—' ? '' : 'color:var(--text-muted);font-weight:600;'}">${getManagerTier(deal).label !== '—' ? getManagerTier(deal).label + '<div style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:1px;">' + getManagerTier(deal).range + '</div>' : '—'}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Full Cycle Deals</div>
-            <div class="metric-value" style="font-size:11px;color:var(--text-muted);font-weight:600;">Coming Soon</div>
+            <div class="metric-label">Fund Founded</div>
+            <div class="metric-value" style="font-size:11px;${deal.mcFoundingYear ? '' : 'color:var(--text-muted);font-weight:600;'}">${deal.mcFoundingYear || '—'}</div>
           </div>
         </div>
         ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
@@ -7883,13 +8127,14 @@ function renderPanelNextSteps(deal) {
     var checkedCount = checks.filter(Boolean).length;
     var pct = Math.round((checkedCount / DD_CHECKLIST.length) * 100);
 
-    // Fetch shared DD data if not loaded yet
+    // Fetch shared DD data if not loaded yet + subscribe to Realtime updates
     if (!dealDDChecks[deal.id]) {
       fetchDealDD(deal.id).then(function() {
         var d = DEALS.find(function(dd) { return dd.id === deal.id; });
         if (d) document.getElementById('panelContent').innerHTML = renderPanel(d);
       });
     }
+    subscribeDealDD(deal.id);
 
     h += '<div style="margin-bottom:12px;">';
     h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
@@ -8058,6 +8303,20 @@ function getGoalFitLine(deal) {
   return '';
 }
 
+// Client-side staleness fallback for hardcoded/demo deals that don't have isStale from API
+function isDealStale(d) {
+  if (typeof d.isStale === 'boolean') return d.isStale;
+  var status = (d.status || '').toLowerCase();
+  if (status === 'closed' || status === 'fully funded' || status === 'completed') return true;
+  if (status === 'evergreen') return false;
+  if (!d.addedDate) return false;
+  var months = (Date.now() - new Date(d.addedDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+  var type = (d.dealType || '').toLowerCase();
+  if (type === 'syndication' && months > 18) return true;
+  if (months > 24) return true;
+  return false;
+}
+
 function getFilteredDeals() {
   const ac = document.getElementById('filterAssetClass').value;
   const dt = document.getElementById('filterDealType').value;
@@ -8065,8 +8324,19 @@ function getFilteredDeals() {
   const status = document.getElementById('filterStatus').value;
   const sortBy = document.getElementById('filterSort').value;
   const q = document.getElementById('filterSearch').value.toLowerCase();
+  const showArchived = document.getElementById('showArchivedCheck')?.checked || false;
+
+  // Count archived deals and show/hide toggle (only on Browse tab)
+  var archivedCount = DEALS.filter(d => isDealStale(d)).length;
+  var archivedToggle = document.getElementById('showArchivedToggle');
+  if (archivedToggle) {
+    archivedToggle.style.display = (currentTab === 'browse' && archivedCount > 0) ? 'flex' : 'none';
+    archivedToggle.title = archivedCount + ' deal' + (archivedCount !== 1 ? 's' : '') + ' archived (likely closed or no longer accepting capital)';
+  }
 
   let filtered = DEALS.filter(d => {
+    // Hide stale deals unless "Show archived" is checked (only on Browse tab)
+    if (currentTab === 'browse' && !showArchived && isDealStale(d)) return false;
     if (ac && d.assetClass !== ac) return false;
     if (dt && d.dealType !== dt) return false;
     if (st && d.strategy !== st) return false;
@@ -8369,6 +8639,8 @@ function clearFilters() {
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterSort').value = 'newest';
   document.getElementById('filterSearch').value = '';
+  var archCheck = document.getElementById('showArchivedCheck');
+  if (archCheck) archCheck.checked = false;
   _goalSortOverridden = false;
   applyFilters();
 }
@@ -8994,8 +9266,8 @@ function initAuth() {
       }).catch(() => {});
     }
 
-    // Fetch all user data from Airtable on login
-    fetchUserDataFromAirtable(user.email);
+    // Fetch all user data from Supabase on login
+    fetchUserDataFromSupabase(user.email);
   }
   // Check if new user should see onboarding
   if (user && user.email && !localStorage.getItem('gycOnboardingComplete') && !localStorage.getItem('gycBuyBoxComplete')) {
@@ -9010,8 +9282,20 @@ function initAuth() {
   showAdminNav();
 }
 
+// Mobile sidebar backdrop — show/hide when sidebar toggles
+(function() {
+  var sb = document.getElementById('sidebar');
+  if (!sb) return;
+  var bd = document.querySelector('.sidebar-backdrop');
+  if (!bd) return;
+  var obs = new MutationObserver(function() {
+    bd.style.display = sb.classList.contains('open') ? 'block' : 'none';
+  });
+  obs.observe(sb, { attributes: true, attributeFilter: ['class'] });
+})();
+
 // Fetch deal stages, goals, and portfolio from Airtable and populate localStorage
-async function fetchUserDataFromAirtable(email) {
+async function fetchUserDataFromSupabase(email) {
   if (!email) return;
   try {
     const [stagesResp, goalsResp, portfolioResp] = await Promise.all([
@@ -9020,7 +9304,7 @@ async function fetchUserDataFromAirtable(email) {
       fetch(SYNC_API + '?type=portfolio&email=' + encodeURIComponent(email)).catch(() => null)
     ]);
 
-    // Merge deal stages from Airtable into localStorage
+    // Merge deal stages from Supabase into localStorage
     if (stagesResp && stagesResp.ok) {
       const stagesData = await stagesResp.json().catch(() => ({}));
       if (stagesData.records && stagesData.records.length > 0) {
@@ -9042,7 +9326,7 @@ async function fetchUserDataFromAirtable(email) {
       }
     }
 
-    // Merge goals from Airtable into localStorage
+    // Merge goals from Supabase into localStorage
     if (goalsResp && goalsResp.ok) {
       const goalsData = await goalsResp.json().catch(() => ({}));
       if (goalsData.records && goalsData.records.length > 0) {
@@ -9063,7 +9347,7 @@ async function fetchUserDataFromAirtable(email) {
       }
     }
 
-    // Merge portfolio from Airtable into localStorage
+    // Merge portfolio from Supabase into localStorage
     if (portfolioResp && portfolioResp.ok) {
       const portfolioData = await portfolioResp.json().catch(() => ({}));
       if (portfolioData.records && portfolioData.records.length > 0) {
@@ -10822,8 +11106,12 @@ function renderGoalsDashboard() {
   const gap = g.targetIncome - g.currentIncome;
   const progress = g.targetIncome > 0 ? Math.min(100, Math.round((g.currentIncome / g.targetIncome) * 100)) : 0;
 
-  // Calculate what it takes
-  const avgYield = 0.08; // 8% avg cash yield assumption
+  // Calculate what it takes — use actual portfolio yield if available, else 8%
+  portfolioInvestments = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  const _pTotalInvested = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0);
+  const _pTotalDist = portfolioInvestments.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
+  const actualYield = (_pTotalInvested > 0 && _pTotalDist > 0) ? _pTotalDist / _pTotalInvested : 0;
+  const avgYield = actualYield > 0.02 ? actualYield : 0.08;
   const capitalNeeded = gap > 0 ? Math.round(gap / avgYield) : 0;
   const dealsNeeded = capitalNeeded > 0 ? Math.ceil(capitalNeeded / 100000) : 0; // avg $100K per deal
   const capitalGap = Math.max(0, capitalNeeded - g.capital);
@@ -10935,7 +11223,7 @@ function renderGoalsDashboard() {
   let roadmapRows = '';
   for (let y = 1; y <= rmYears; y++) {
     const cumCapital = Math.min(capitalNeeded, rmAnnualDeploy * y);
-    const cumIncome = Math.round(cumCapital * 0.08);
+    const cumIncome = Math.round(cumCapital * avgYield);
     const pct = Math.round((cumIncome / gap) * 100);
     const isFinal = y === rmYears;
     roadmapRows += '<div style="display:flex;align-items:flex-start;gap:16px;position:relative;' + (y < rmYears ? 'padding-bottom:20px;' : '') + '">'
@@ -12411,9 +12699,33 @@ function renderPortfolioInDeals(container, portfolioDeals) {
     </div>`;
   }).join('');
 
+  // Goal progress bar for portfolio view
+  var goalProgressHtml = '';
+  var pGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  if (pGoals && pGoals.targetIncome > 0 && portfolioInvestments.length > 0) {
+    var estIncome = portfolioInvestments.reduce(function(s, inv) {
+      var y = parseFloat(inv.targetIRR) || 8;
+      return s + ((parseFloat(inv.amountInvested) || 0) * (y / 100));
+    }, 0);
+    var goalPct = Math.min(100, Math.round((estIncome / pGoals.targetIncome) * 100));
+    var gap = Math.max(0, pGoals.targetIncome - estIncome);
+    goalProgressHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">'
+      + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">Income Goal Progress</div>'
+      + '<div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--primary);">' + goalPct + '%</div>'
+      + '</div>'
+      + '<div style="height:10px;background:var(--bg-main);border-radius:5px;overflow:hidden;margin-bottom:8px;"><div style="height:100%;width:' + goalPct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:5px;min-width:' + (goalPct > 0 ? '4px' : '0') + ';"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
+      + '<span>~$' + Math.round(estIncome).toLocaleString() + '/yr estimated</span>'
+      + '<span>' + (gap > 0 ? '$' + Math.round(gap).toLocaleString() + '/yr gap' : 'Goal reached!') + '</span>'
+      + '<span>$' + pGoals.targetIncome.toLocaleString() + '/yr target</span>'
+      + '</div></div>';
+  }
+
   container.style.display = 'block';
   container.innerHTML = `
     <div style="margin:0 auto;">
+      ${goalProgressHtml}
       <!-- Summary Cards Row -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
@@ -12859,7 +13171,7 @@ function submitNewDeal() {
   closeModal();
   renderAll();
   updateDealCount();
-  alert('Deal added! It will appear in your New Deals feed.' + (_addDealFile ? ' Deck is uploading to Google Drive.' : ''));
+  alert('Deal added! It will appear in your New Deals feed.' + (_addDealFile ? ' Deck is uploading...' : ''));
 }
 
 function showDealSearchModal() {

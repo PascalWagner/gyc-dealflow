@@ -3757,19 +3757,47 @@ async function renderDeal() {
   }
   if (deal.dealType) heroHtml += '<span class="deal-badge deal-type">' + esc(deal.dealType) + '</span>';
   if (deal.status) heroHtml += '<span class="deal-badge ' + statusBadgeClass(deal.status) + '">' + esc(deal.status) + '</span>';
+  // Staleness check
+  var _dealIsStale = false;
+  if (deal.isStale) {
+    _dealIsStale = true;
+  } else {
+    var _st = (deal.status || '').toLowerCase();
+    if (_st === 'closed' || _st === 'fully funded' || _st === 'completed') { _dealIsStale = true; }
+    else if (_st !== 'evergreen' && deal.addedDate) {
+      var _months = (Date.now() - new Date(deal.addedDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+      var _dt = (deal.dealType || '').toLowerCase();
+      if (_dt === 'syndication' && _months > 18) _dealIsStale = true;
+      else if (_months > 24) _dealIsStale = true;
+    }
+  }
   // Freshness badge
-  var freshnessFields = [deal.investmentStrategy, deal.targetIRR || deal.cashOnCash, deal.investmentMinimum, deal.holdPeriod, deal.managementCompany, deal.offeringType, deal.status];
-  var freshnessFilled = freshnessFields.filter(function(f) { return f && f !== '' && f !== 0; }).length;
-  var freshnessScore = Math.round((freshnessFilled / freshnessFields.length) * 100);
-  var hasPPM = !!deal.ppmUrl;
-  if (hasPPM && freshnessScore >= 70) {
-    heroHtml += '<span class="deal-badge" style="background:rgba(74,222,128,0.15);color:#4ade80;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="display:inline;vertical-align:-1px;margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
-  } else if (freshnessScore < 50) {
-    heroHtml += '<span class="deal-badge" style="background:rgba(251,191,36,0.12);color:#fbbf24;">Limited Data</span>';
+  if (_dealIsStale) {
+    heroHtml += '<span class="deal-badge" style="background:rgba(138,154,160,0.15);color:#8A9AA0;">Archived</span>';
+  } else {
+    var freshnessFields = [deal.investmentStrategy, deal.targetIRR || deal.cashOnCash, deal.investmentMinimum, deal.holdPeriod, deal.managementCompany, deal.offeringType, deal.status];
+    var freshnessFilled = freshnessFields.filter(function(f) { return f && f !== '' && f !== 0; }).length;
+    var freshnessScore = Math.round((freshnessFilled / freshnessFields.length) * 100);
+    var hasPPM = !!deal.ppmUrl;
+    if (hasPPM && freshnessScore >= 70) {
+      heroHtml += '<span class="deal-badge" style="background:rgba(74,222,128,0.15);color:#4ade80;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="display:inline;vertical-align:-1px;margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
+    } else if (freshnessScore < 50) {
+      heroHtml += '<span class="deal-badge" style="background:rgba(251,191,36,0.12);color:#fbbf24;">Limited Data</span>';
+    }
   }
   heroHtml += '</div>';
   heroHtml += '<div id="dealSocialProof" class="hero-social-proof"></div>';
   heroHtml += '</div></div>';
+
+  // Archived deal warning banner
+  var archivedBannerHtml = '';
+  if (_dealIsStale) {
+    var _reason = deal.stalenessReason || 'This deal may no longer be accepting new investors.';
+    archivedBannerHtml += '<div style="background:rgba(138,154,160,0.08);border:1px solid rgba(138,154,160,0.2);border-radius:var(--radius-sm);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">';
+    archivedBannerHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#8A9AA0" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    archivedBannerHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-secondary);">Archived Deal</span>';
+    archivedBannerHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">' + esc(_reason) + '</span></div></div>';
+  }
 
   // --- 2. Key Metrics Strip ---
   var metricsHtml = '';
@@ -4341,9 +4369,12 @@ async function renderDeal() {
   // Load Q&A data async after render
   setTimeout(function() { loadDealQA(deal.id); }, 200);
 
-  // --- 8b. Stress Test Calculator (HIDDEN — shipping fewer things, done well) ---
+  // --- 8b. Stress Test Calculator ---
   var stressHtml = '';
-  if (false && !isCreditFund(deal)) {
+  var _stUser = typeof getUser === 'function' ? getUser() : null;
+  var _stTier = (_stUser && _stUser.tier) || 'free';
+  var _stIsAdmin = _stUser && (_stUser.isAdmin || (_stUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_stUser.email.toLowerCase()) >= 0));
+  if (!isCreditFund(deal)) {
     var stBaseIRR = deal.targetIRR || 0.15;
     var stBaseCoC = deal.cashOnCash || 0.08;
     var stBaseEM = deal.equityMultiple || 2.0;
@@ -4435,6 +4466,32 @@ async function renderDeal() {
       baseExitCap: stBaseExitCap,
       baseVacancy: stBaseVacancy
     }) + '</' + 'script>';
+
+    // Academy gate: free users see blurred preview
+    if (_stTier === 'free' && !_stIsAdmin) {
+      stressHtml = '<div class="section">';
+      stressHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="section-title">Stress Test Calculator</span></div>';
+      stressHtml += '<div class="section-body" style="position:relative;">';
+      stressHtml += '<div style="filter:blur(5px);pointer-events:none;user-select:none;max-height:250px;overflow:hidden;">';
+      stressHtml += '<div style="background:var(--mint-bg);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--teal-deep);"><strong>Base Case:</strong> IRR 15.0% · CoC 8.0% · EM 2.00x · Hold 5 yrs</div>';
+      stressHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+      stressHtml += '<div><div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">ADJUST ASSUMPTIONS</div>';
+      stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
+      stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
+      stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
+      stressHtml += '</div>';
+      stressHtml += '<div><div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">PROJECTED RETURNS</div>';
+      stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
+      stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
+      stressHtml += '</div></div></div>';
+      stressHtml += '<div style="position:relative;z-index:2;margin-top:-30px;padding:24px;text-align:center;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid rgba(59,130,246,0.3);border-radius:12px;">';
+      stressHtml += '<div style="width:48px;height:48px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>';
+      stressHtml += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Unlock Stress Test Calculator</div>';
+      stressHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.5;">Manipulate assumptions and stress test any deal\'s proforma with Academy.</div>';
+      stressHtml += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 24px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Join Academy &rarr;</button>';
+      stressHtml += '</div>';
+      stressHtml += '</div></div>';
+    }
   }
 
   // --- 9. Vetting Pipeline ---
@@ -4582,6 +4639,7 @@ async function renderDeal() {
   html = breadcrumbHtml
     + '<div class="deal-page-content">'
     + heroHtml
+    + archivedBannerHtml
     + metricsHtml
     + buyBoxHtml
     + pascalTakeHtml
