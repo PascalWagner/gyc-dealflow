@@ -6151,6 +6151,7 @@ const _supa = window.supabase.createClient(
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
           <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Asset Class Allocation</div>
           <div style="max-width:280px;margin:0 auto;"><canvas id="portfolioChart"></canvas></div>
+          <div id="portfolioAllocationMeta" style="display:flex;justify-content:center;gap:24px;margin-top:16px;"></div>
         </div>
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
           <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Risk Analysis</div>
@@ -13674,10 +13675,6 @@ function renderPortfolioInDeals(container, portfolioDeals) {
           <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg IRR</div>
           <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${avgIRR ? avgIRR.toFixed(1) + '%' : '---'}</div>
         </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Asset Classes</div>
-          <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div>
-        </div>
       </div>
 
       <!-- Header Row -->
@@ -13804,9 +13801,14 @@ function renderPortfolioSummary() {
     <div class="portfolio-stat-card"><div class="stat-label">Active Investments</div><div class="stat-value">${active.length}</div></div>
     <div class="portfolio-stat-card"><div class="stat-label">Total Distributions</div><div class="stat-value">$${totalDistributions.toLocaleString()}</div></div>
     <div class="portfolio-stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">${avgIRR ? avgIRR.toFixed(1) + '%' : '--'}</div></div>
-    <div class="portfolio-stat-card"><div class="stat-label">Asset Classes</div><div class="stat-value">${assetClasses.size}</div></div>
-    <div class="portfolio-stat-card"><div class="stat-label">Sponsors</div><div class="stat-value">${sponsors.size}</div></div>
   `;
+  const meta = document.getElementById('portfolioAllocationMeta');
+  if (meta) {
+    meta.innerHTML = `
+      <div style="text-align:center;"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);">${assetClasses.size}</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Asset Classes</div></div>
+      <div style="text-align:center;"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:var(--text-dark);">${sponsors.size}</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Sponsors</div></div>
+    `;
+  }
 }
 
 function renderPortfolioChart() {
