@@ -4702,7 +4702,7 @@ async function renderDeal() {
         var cardBorder = pctMatch >= 80 ? 'rgba(74,222,128,0.2)' : pctMatch >= 50 ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)';
         var matchLabel = pctMatch >= 80 ? 'Strong Match' : pctMatch >= 50 ? 'Partial Match' : 'Low Match';
 
-        buyBoxHtml += '<div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:var(--radius);padding:20px;margin-bottom:16px;">';
+        buyBoxHtml += '<div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-card);">';
         // Header row
         buyBoxHtml += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
         buyBoxHtml += '<div style="display:flex;align-items:center;gap:8px;">';
@@ -5331,18 +5331,21 @@ async function renderDeal() {
     // --- Table view ---
     cashFlowHtml += '<div id="' + uid + '_table">';
     cashFlowHtml += '<table class="cf-table">';
-    cashFlowHtml += '<tr><th>Year</th><th>Distributions</th>';
-    if (rows.some(function(r) { return r.capReturn > 0; })) cashFlowHtml += '<th>Capital Return</th>';
+    var _hasCapReturn = rows.some(function(r) { return r.capReturn > 0; });
+    cashFlowHtml += '<tr><th>Year</th><th>Distributions</th><th>% Cash Flow</th>';
+    if (_hasCapReturn) cashFlowHtml += '<th>Capital Return</th>';
     cashFlowHtml += '<th>Total Cash</th><th>Cumulative</th></tr>';
     var cumAll = 0;
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
       cumAll += r.dist + r.capReturn;
+      var cocPct = investment > 0 ? ((r.dist / investment) * 100).toFixed(1) : '0.0';
       var isLast = (i === rows.length - 1);
       cashFlowHtml += '<tr' + (isLast ? ' class="cf-total-row"' : '') + '>';
       cashFlowHtml += '<td>Year ' + r.year + (r.note ? ' <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(' + r.note + ')</span>' : '') + '</td>';
       cashFlowHtml += '<td class="cf-highlight">$' + Math.round(r.dist).toLocaleString() + '</td>';
-      if (rows.some(function(r) { return r.capReturn > 0; })) cashFlowHtml += '<td>' + (r.capReturn > 0 ? '$' + Math.round(r.capReturn).toLocaleString() : '—') + '</td>';
+      cashFlowHtml += '<td class="cf-highlight">' + cocPct + '%</td>';
+      if (_hasCapReturn) cashFlowHtml += '<td>' + (r.capReturn > 0 ? '$' + Math.round(r.capReturn).toLocaleString() : '—') + '</td>';
       cashFlowHtml += '<td>$' + Math.round(r.dist + r.capReturn).toLocaleString() + '</td>';
       cashFlowHtml += '<td>$' + Math.round(cumAll).toLocaleString() + '</td>';
       cashFlowHtml += '</tr>';
