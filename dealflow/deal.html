@@ -3773,7 +3773,7 @@ function syncMemoToDb(dealId) {
       var checks = [];
       if (bb.assetClasses && bb.assetClasses.length > 0) checks.push({ label: 'Asset Class', match: bb.assetClasses.indexOf(deal.assetClass) >= 0 });
       if (bb.checkSize) checks.push({ label: 'Check Size', match: deal.investmentMinimum <= bb.checkSize });
-      if (bb.minIRR) checks.push({ label: 'Target Return', match: (deal.targetIRR || 0) >= bb.minIRR });
+      if (bb.minIRR) { var _di = deal.targetIRR || 0; var _dipct = _di <= 1 ? _di * 100 : _di; var _bipct = parseFloat(bb.minIRR) <= 1 ? parseFloat(bb.minIRR) * 100 : parseFloat(bb.minIRR); checks.push({ label: 'Target Return', match: _dipct >= _bipct }); }
       if (bb.strategies && bb.strategies.length > 0) checks.push({ label: 'Strategy', match: bb.strategies.indexOf(deal.strategy) >= 0 });
       if (bb.maxLockup) checks.push({ label: 'Lockup', match: (deal.holdPeriod || 0) <= bb.maxLockup });
       bbMatch = { criteria: checks, matched: checks.filter(function(c) { return c.match; }).length, total: checks.length };
@@ -4681,7 +4681,10 @@ async function renderDeal() {
       if (bb.minIRR) {
         var bbIRR = parseFloat(bb.minIRR);
         var dealIRR = deal.targetIRR || 0;
-        checks.push({ label: 'Target Return', match: dealIRR >= bbIRR, want: bbFmtPct(bbIRR) + '+', got: dealIRR ? fmt(dealIRR, 'pct') : '---' });
+        // Normalize: deal stores as decimal (0.15), buybox stores as whole number (9)
+        var dealIRRpct = dealIRR <= 1 ? dealIRR * 100 : dealIRR;
+        var bbIRRpct = bbIRR <= 1 ? bbIRR * 100 : bbIRR;
+        checks.push({ label: 'Target Return', match: dealIRRpct >= bbIRRpct, want: bbIRRpct.toFixed(1) + '%+', got: dealIRRpct ? dealIRRpct.toFixed(1) + '%' : '---' });
       }
       if (bb.strategies && bb.strategies.length > 0) {
         checks.push({ label: 'Strategy', match: bb.strategies.indexOf(deal.strategy) >= 0, want: bbFmtList(bb.strategies), got: deal.strategy || '---' });
@@ -6023,7 +6026,7 @@ async function renderDeal() {
     if (bbData) {
       if (bbData.assetClasses && bbData.assetClasses.length > 0) bbChecks.push({ label: 'Asset Class: ' + deal.assetClass, match: bbData.assetClasses.indexOf(deal.assetClass) >= 0 });
       if (bbData.checkSize) bbChecks.push({ label: 'Min $' + (deal.investmentMinimum ? (deal.investmentMinimum/1000) + 'K' : '?') + ' vs your $' + (bbData.checkSize/1000) + 'K', match: deal.investmentMinimum <= bbData.checkSize });
-      if (bbData.minIRR) bbChecks.push({ label: 'Target ' + ((deal.targetIRR||0)*100).toFixed(1) + '% vs your ' + (bbData.minIRR*100).toFixed(1) + '% min', match: (deal.targetIRR || 0) >= bbData.minIRR });
+      if (bbData.minIRR) { var _mdIRR = deal.targetIRR || 0; var _mdPct = _mdIRR <= 1 ? _mdIRR * 100 : _mdIRR; var _mbPct = parseFloat(bbData.minIRR) <= 1 ? parseFloat(bbData.minIRR) * 100 : parseFloat(bbData.minIRR); bbChecks.push({ label: 'Target ' + _mdPct.toFixed(1) + '% vs your ' + _mbPct.toFixed(1) + '% min', match: _mdPct >= _mbPct }); }
       if (bbData.strategies && bbData.strategies.length > 0) bbChecks.push({ label: 'Strategy: ' + (deal.strategy || 'N/A'), match: bbData.strategies.indexOf(deal.strategy) >= 0 });
       if (bbData.maxLockup) bbChecks.push({ label: 'Hold ' + (deal.holdPeriod || '?') + ' yrs vs your ' + bbData.maxLockup + ' yr max', match: (deal.holdPeriod || 0) <= bbData.maxLockup });
     }
