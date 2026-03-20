@@ -1847,66 +1847,82 @@ html.dark .credit-chart-legend-divider {
 .table-view {
   display: none;
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 .table-view th, .table-view td {
-  padding: 10px 14px;
+  padding: 12px 16px;
   text-align: left;
+  font-family: var(--font-ui);
   font-size: 13px;
   border-bottom: 1px solid var(--border-light);
   white-space: nowrap;
 }
 
 .table-view th {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;
   position: sticky;
   top: 0;
-  background: var(--bg-card);
-  border-bottom: 2px solid var(--border);
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border);
   transition: color var(--transition);
+  padding: 10px 16px;
 }
 .table-view th:hover { color: var(--primary); }
-.table-view th .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.4; }
+.table-view th .sort-arrow { font-size: 8px; margin-left: 3px; opacity: 0; transition: opacity 0.15s; }
+.table-view th:hover .sort-arrow { opacity: 0.4; }
 .table-view th.sorted .sort-arrow { opacity: 1; color: var(--primary); }
 
 .table-view tbody tr {
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background 0.15s ease;
 }
-.table-view tbody tr:nth-child(even) { background: var(--bg-cream); }
-.table-view tbody tr:hover { background: var(--green-bg); }
+.table-view tbody tr:hover { background: rgba(81,190,123,0.04); }
+.table-view tbody tr:last-child td { border-bottom: none; }
 
 .table-view td.name-cell {
   font-weight: 600;
   color: var(--text-dark);
-  max-width: 220px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.1px;
 }
 
 .table-view td.irr-cell {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+
+.table-view td {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .table-status-pill {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 3px 10px;
+  border-radius: 100px;
   font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
-.table-status-pill.open { background: var(--green-bg); color: var(--green); }
-.table-status-pill.evergreen { background: var(--blue-bg); color: var(--blue); }
+.table-status-pill.open { background: rgba(81,190,123,0.08); color: var(--green); }
+.table-status-pill.evergreen { background: rgba(59,130,246,0.08); color: var(--blue); }
 
 /* Responsive */
 @media (max-width: 1200px) {
@@ -1925,8 +1941,8 @@ html.dark .credit-chart-legend-divider {
   .content-area { padding: 16px; padding-bottom: 80px; }
   .detail-panel { width: 100vw; }
   .topbar-title { font-size: 16px; margin-right: 12px; }
-  .table-view { font-size: 11px; }
-  .table-view th, .table-view td { padding: 8px 10px; }
+  .table-view { font-size: 12px; }
+  .table-view th, .table-view td { padding: 10px 12px; }
   .mobile-tab-bar { display: flex !important; }
 
   /* ── Mobile: Pipeline stage tabs ── */
