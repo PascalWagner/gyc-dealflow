@@ -4218,12 +4218,16 @@ async function renderDeal() {
   if (_compIsAdmin && deal.operatorPermission) {
     var perm = deal.operatorPermission;
     if (!perm.granted) {
-      var permColor = perm.status === 'contacted' || perm.status === 'follow_up' ? '#f59e0b' : '#ef4444';
-      var permBg = perm.status === 'contacted' || perm.status === 'follow_up' ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
-      var permBorder = perm.status === 'contacted' || perm.status === 'follow_up' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
-      var permLabel = perm.status === 'not_contacted' ? 'Operator Not Contacted'
+      var activeOutreach = ['contacted', 'follow_up', 'in_discussion'].includes(perm.status);
+      var permColor = activeOutreach ? '#f59e0b' : '#ef4444';
+      var permBg = activeOutreach ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
+      var permBorder = activeOutreach ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+      var permLabel = perm.status === 'backlog' ? 'Operator In Backlog'
+        : perm.status === 'researching' ? 'Researching Operator'
+        : perm.status === 'ready_to_contact' ? 'Ready to Contact'
         : perm.status === 'contacted' ? 'Awaiting Permission'
         : perm.status === 'follow_up' ? 'Follow-Up Needed'
+        : perm.status === 'in_discussion' ? 'In Discussion'
         : perm.status === 'denied' ? 'Permission Denied' : 'No Permission';
       complianceBannerHtml += '<div style="background:' + permBg + ';border:1px solid ' + permBorder + ';border-radius:var(--radius-sm);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">';
       complianceBannerHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="' + permColor + '" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';

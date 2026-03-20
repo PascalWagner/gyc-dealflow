@@ -5,12 +5,21 @@
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
 
 // --- Priority score for outreach sorting ---
+// Higher = should be worked next. Backlog operators with lots of deals float up.
 function computePriority(row) {
   const dealScore = (row.deal_count || 0) * 10;
   const typeScore = row.offering_type === '506b' ? 5 : row.offering_type === 'unknown' ? 3 : 0;
-  const statusScore = row.outreach_status === 'not_contacted' ? 3
-    : row.outreach_status === 'contacted' ? 1
-    : row.outreach_status === 'follow_up' ? 2 : 0;
+  // Pre-outreach stages get higher urgency so they surface for planning
+  const statusScore = {
+    backlog: 4,
+    researching: 3,
+    ready_to_contact: 5,  // highest — these are prepped and waiting
+    contacted: 1,
+    follow_up: 2,
+    in_discussion: 1,
+    approved: 0,
+    denied: 0
+  }[row.outreach_status] || 0;
   return dealScore + typeScore + statusScore;
 }
 
@@ -85,8 +94,9 @@ async function upsertOutreach(supabase, params, adminUser) {
     ...fields
   };
 
-  // Auto-set dates
-  if (fields.outreach_status && fields.outreach_status !== 'not_contacted' && !fields.outreach_date) {
+  // Auto-set outreach_date when first actual contact happens (not during planning stages)
+  const contactStages = ['contacted', 'follow_up', 'in_discussion', 'approved', 'denied'];
+  if (fields.outreach_status && contactStages.includes(fields.outreach_status) && !fields.outreach_date) {
     record.outreach_date = new Date().toISOString();
   }
   if (fields.permission_granted === true && !fields.permission_date) {
@@ -103,7 +113,7 @@ async function upsertOutreach(supabase, params, adminUser) {
 
   // Auto-log status changes
   const adminEmail = adminUser?.email || 'admin';
-  const oldStatus = existing?.outreach_status || 'not_contacted';
+  const oldStatus = existing?.outreach_status || 'backlog';
   const newStatus = fields.outreach_status;
   if (newStatus && newStatus !== oldStatus) {
     await supabase.from('operator_interactions').insert({
@@ -271,9 +281,12 @@ async function outreachStats(supabase) {
 
   const stats = {
     total: all.length,
-    not_contacted: 0,
+    backlog: 0,
+    researching: 0,
+    ready_to_contact: 0,
     contacted: 0,
     follow_up: 0,
+    in_discussion: 0,
     approved: 0,
     denied: 0,
     permission_rate: 0,
@@ -282,7 +295,7 @@ async function outreachStats(supabase) {
   };
 
   for (const row of all) {
-    const s = row.outreach_status || 'not_contacted';
+    const s = row.outreach_status || 'backlog';
     stats[s] = (stats[s] || 0) + 1;
     stats.deals_total += row.deal_count || 0;
     if (row.permission_granted) stats.deals_covered += row.deal_count || 0;
