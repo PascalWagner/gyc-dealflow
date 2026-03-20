@@ -7994,6 +7994,18 @@ function renderFeedCardActions(deal, stage, isInterested) {
 }
 
 // Stage-specific card extras (income gap, DD progress, CTA, tracking)
+function renderSearchStageBadge(deal) {
+  var q = document.getElementById('filterSearch')?.value || '';
+  if (!q.trim()) return '';
+  var stage = getDealStage(deal.id) || 'browse';
+  if (stage === 'browse') return '';
+  var labels = { saved: 'Saved', vetting: 'Vetting', ready: 'Ready to Invest', invested: 'Invested', passed: 'Passed' };
+  var colors = { saved: '#3b82f6', vetting: '#f59e0b', ready: '#22c55e', invested: '#22c55e', passed: '#6b7280' };
+  var label = labels[stage] || stage;
+  var color = colors[stage] || '#6b7280';
+  return '<span class="credit-badge" style="background:' + color + ';color:#fff;font-weight:600;">' + label + '</span>';
+}
+
 function renderCardStageExtras(deal) {
   const stage = getDealStage(deal.id);
   if (stage === 'saved') {
@@ -8116,6 +8128,7 @@ function renderFeedCard(deal) {
         <div style="position:absolute;top:12px;left:12px;display:flex;gap:6px;flex-wrap:wrap;">
           <span class="credit-badge">${primaryBadge}</span>
           ${deal.dealType ? `<span class="credit-badge">${deal.dealType}</span>` : ''}
+          ${renderSearchStageBadge(deal)}
         </div>
       </div>
 
@@ -8401,6 +8414,7 @@ function renderCreditCard(deal) {
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
           ${renderFreshnessBadge(deal)}
           ${renderMatchBadge(deal)}
+          ${renderSearchStageBadge(deal)}
           ${isAdmin() ? renderPermissionBadge(deal) : ''}
         </div>
         ${heroContent}
@@ -8690,6 +8704,7 @@ function renderCard(deal) {
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
           ${renderFreshnessBadge(deal)}
           ${renderMatchBadge(deal)}
+          ${renderSearchStageBadge(deal)}
         </div>
         ${deal.propertyImageUrl ? '' : '<div class="equity-hero-icon">' + hero.icon + '</div>'}
         ${deal.targetIRR ? `<div class="equity-hero-irr"><span class="equity-hero-irr-value">${fmt(deal.targetIRR, 'pct')}</span><span class="equity-hero-irr-label">Target IRR</span></div>` : ''}
@@ -9236,20 +9251,22 @@ function getFilteredDeals() {
     if (q) {
       const haystack = [d.investmentName, d.managementCompany, d.assetClass, d.ceo, d.location || '', d.investmentStrategy || ''].join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
-    }
-    // Filter by workflow stage tab
-    if (currentTab === 'browse') {
-      if (dealStages[d.id]) return false;
-    } else if (currentTab === 'saved') {
-      if (getDealStage(d.id) !== 'saved') return false;
-    } else if (currentTab === 'vetting') {
-      if (getDealStage(d.id) !== 'vetting') return false;
-    } else if (currentTab === 'ready') {
-      if (getDealStage(d.id) !== 'ready') return false;
-    } else if (currentTab === 'invested') {
-      if (getDealStage(d.id) !== 'invested') return false;
-    } else if (currentTab === 'passed') {
-      if (getDealStage(d.id) !== 'passed') return false;
+      // When searching, show results from ALL tabs (cross-tab search)
+    } else {
+      // Filter by workflow stage tab (only when not searching)
+      if (currentTab === 'browse') {
+        if (dealStages[d.id]) return false;
+      } else if (currentTab === 'saved') {
+        if (getDealStage(d.id) !== 'saved') return false;
+      } else if (currentTab === 'vetting') {
+        if (getDealStage(d.id) !== 'vetting') return false;
+      } else if (currentTab === 'ready') {
+        if (getDealStage(d.id) !== 'ready') return false;
+      } else if (currentTab === 'invested') {
+        if (getDealStage(d.id) !== 'invested') return false;
+      } else if (currentTab === 'passed') {
+        if (getDealStage(d.id) !== 'passed') return false;
+      }
     }
     return true;
   });
