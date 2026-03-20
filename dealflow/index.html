@@ -7229,11 +7229,6 @@ function renderComparePage() {
       if (!isNaN(maxInv) && d.investmentMinimum && d.investmentMinimum <= maxInv) score++;
     }
     if (d.preferredReturn && d.preferredReturn > 0) score++;
-    if (bb.objectives && bb.objectives.length > 0) {
-      var hasCashflow = bb.objectives.indexOf('Cashflow') >= 0 || bb.objectives.indexOf('Balanced (Cashflow + Equity)') >= 0;
-      var distLower = (d.distributions || '').toLowerCase();
-      if (hasCashflow && (distLower === 'monthly' || distLower === 'quarterly')) score++;
-    }
     return { score: score, max: 5 };
   }
 
@@ -8444,7 +8439,6 @@ function renderCreditCard(deal) {
             <div class="metric-value" style="font-size:11px;${deal.mcFoundingYear ? '' : 'color:var(--text-muted);font-weight:600;'}">${deal.mcFoundingYear || 'Coming Soon'}</div>
           </div>
         </div>
-        ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
         ${renderCardStageExtras(deal)}
         ${renderUserStageIndicator(deal.id)}
       </div>
@@ -8734,7 +8728,6 @@ function renderCard(deal) {
             <div class="metric-value" style="font-size:11px;${deal.mcFoundingYear ? '' : 'color:var(--text-muted);font-weight:600;'}">${deal.mcFoundingYear || '—'}</div>
           </div>
         </div>
-        ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
         ${renderCardStageExtras(deal)}
         ${renderUserStageIndicator(deal.id)}
       </div>
@@ -8907,10 +8900,6 @@ function renderPanel(deal) {
           <div class="panel-detail-item">
             <div class="panel-detail-label">Offering Type</div>
             <div class="panel-detail-value">${deal.offeringType || '---'}</div>
-          </div>
-          <div class="panel-detail-item">
-            <div class="panel-detail-label">Objective</div>
-            <div class="panel-detail-value">${deal.investmentObjective || '---'}</div>
           </div>
           ${deal.sponsorInDeal ? `<div class="panel-detail-item"><div class="panel-detail-label">Sponsor Co-Invest</div><div class="panel-detail-value">${fmt(deal.sponsorInDeal, 'pct0')}</div></div>` : ''}
           ${deal.firstYrDepreciation ? `<div class="panel-detail-item"><div class="panel-detail-label">1st Yr Depreciation</div><div class="panel-detail-value">${deal.firstYrDepreciation}</div></div>` : ''}
@@ -9970,13 +9959,11 @@ function navigateTo(page) {
 const BB_ASSET_CLASSES = [...new Set(DEALS.map(d => d.assetClass).filter(Boolean))].sort();
 const BB_STRATEGIES = ['Value-Add','Lending','Development','Buy & Hold','Distressed'];
 const BB_DEAL_TYPES = ['Fund','Syndication'];
-const BB_OBJECTIVES = ['Cashflow','Equity Growth','Balanced (Cashflow + Equity)'];
 
 let buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || 'null') || {
   assetClasses: ['Multi-Family','Self Storage','Industrial'],
   strategies: ['Value-Add','Lending'],
   dealTypes: ['Fund','Syndication'],
-  objectives: ['Cashflow','Balanced (Cashflow + Equity)'],
   irrMin: '8%', irrMax: '25%',
   minInvest: '$25,000', maxInvest: '$250,000',
   holdMin: '2 years', holdMax: '10 years'
