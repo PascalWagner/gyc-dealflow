@@ -5272,305 +5272,96 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="sub-page" style="max-width:960px">
 
-      <!-- 1. HERO -->
-      <div class="if-hero" id="if-the-offer">
+      <!-- HERO -->
+      <div class="if-hero">
         <h1>Build a <span style="color:#51BE7B">monthly income stream</span><br>you can actually live on.</h1>
         <p class="if-hero-sub"><strong style="color:#fff">$1,667/mo per $250K invested.</strong> One investment. 10 funds. Monthly deposits. We did the vetting so you don&#8217;t have to.</p>
         <div class="if-hero-stats">
-          <div class="if-hero-stat"><div class="val">8.0%</div><div class="lbl">Paid to You Today</div><div style="font-family:var(--font-ui);font-size:10px;color:#40E47F;margin-top:4px;font-weight:600">Targeting 10%+ at scale</div></div>
+          <div class="if-hero-stat"><div class="val">8.0%</div><div class="lbl">Net LP Yield</div><div style="font-family:var(--font-ui);font-size:10px;color:#40E47F;margin-top:4px;font-weight:600">Targeting 10%+ at scale</div></div>
           <div class="if-hero-stat"><div class="val">10</div><div class="lbl">Funds<br>One Portfolio</div></div>
           <div class="if-hero-stat"><div class="val">28 mo</div><div class="lbl">Zero Missed Payments</div></div>
         </div>
       </div>
 
-      <!-- 2. SECTION NAV -->
-      <div class="if-section-nav">
-        <div class="if-section-nav-inner">
-          <a href="#if-the-offer" class="if-active" onclick="event.preventDefault();document.getElementById('if-the-offer').scrollIntoView({behavior:'smooth',block:'start'})">The Offer</a>
-          <a href="#if-your-income" onclick="event.preventDefault();document.getElementById('if-your-income').scrollIntoView({behavior:'smooth',block:'start'})">Your Income</a>
-          <a href="#if-the-portfolio" onclick="event.preventDefault();document.getElementById('if-the-portfolio').scrollIntoView({behavior:'smooth',block:'start'})">The Portfolio</a>
-          <a href="#if-track-record" onclick="event.preventDefault();document.getElementById('if-track-record').scrollIntoView({behavior:'smooth',block:'start'})">Track Record</a>
-          <a href="#if-investors" onclick="event.preventDefault();document.getElementById('if-investors').scrollIntoView({behavior:'smooth',block:'start'})">Investors</a>
-          <a href="#if-risks" onclick="event.preventDefault();document.getElementById('if-risks').scrollIntoView({behavior:'smooth',block:'start'})">Risks</a>
-          <a href="#if-next-steps" onclick="event.preventDefault();document.getElementById('if-next-steps').scrollIntoView({behavior:'smooth',block:'start'})">Next Steps</a>
+      <!-- AT A GLANCE -->
+      <div class="if-mg if-mg5" style="margin:24px 0">
+        <div class="if-mc" style="text-align:center"><div class="if-mcl">Targeted Return</div><div class="if-mcv if-green">10%+</div></div>
+        <div class="if-mc" style="text-align:center"><div class="if-mcl">Distributions</div><div class="if-mcv">Monthly</div></div>
+        <div class="if-mc" style="text-align:center"><div class="if-mcl">Minimum</div><div class="if-mcv">$100K</div></div>
+        <div class="if-mc" style="text-align:center"><div class="if-mcl">Commitment</div><div class="if-mcv">3 Years</div></div>
+        <div class="if-mc" style="text-align:center"><div class="if-mcl">GP Co-Invest</div><div class="if-mcv if-green">$400K</div></div>
+      </div>
+
+      <!-- INCOME CALCULATOR -->
+      <div class="if-v2-sh"><div class="if-v2-sh-num">Your Income</div><h2>What does this actually pay me?</h2></div>
+      <div class="if-calc-wrap">
+        <div style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+            <label style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:rgba(255,255,255,0.7)">If I invest</label>
+            <div style="font-family:var(--font-headline);font-size:28px;color:#fff" id="if-calc-display">$250,000</div>
+          </div>
+          <input type="range" id="if-calc-slider" min="100000" max="2000000" step="25000" value="250000" oninput="updateIfCalc()" style="width:100%;accent-color:#51BE7B;height:4px;background:rgba(81,190,123,0.18);border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer">
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px"><span>$100K</span><span>$500K</span><span>$1M</span><span>$2M</span></div>
+        </div>
+        <div style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:16px;text-align:center">Based on current net LP yield of <strong style="color:#40E47F">8.0%</strong> annually &middot; Paid monthly to your bank account</div>
+        <div class="if-calc-results">
+          <div class="if-calc-r"><div class="v" id="if-calc-monthly">$1,667</div><div class="l">Deposited monthly</div></div>
+          <div class="if-calc-r"><div class="v" id="if-calc-annual">$20,000</div><div class="l">Annual income (pre-tax)</div></div>
+          <div class="if-calc-r"><div class="v" id="if-calc-3yr">$60,000</div><div class="l">Total over 3 years</div></div>
         </div>
       </div>
 
-      <!-- 3. THE OFFER -->
-      <div class="if-v2-section" id="if-sec-the-offer">
-        <div class="if-v2-sh"><div class="if-v2-sh-num">The Offer</div><h2>What is the GYC Income Fund?</h2><p>A private credit fund-of-funds targeting accredited investors seeking consistent monthly income backed by collateralized lending.</p></div>
-        <div class="if-hl-grid">
-          <div class="if-hl-card"><div class="if-hl-val">10%+</div><div class="if-hl-label">Targeted annual return</div></div>
-          <div class="if-hl-card"><div class="if-hl-val">Monthly</div><div class="if-hl-label">Cash distributions</div></div>
-          <div class="if-hl-card"><div class="if-hl-val">10 Funds</div><div class="if-hl-label">Diversified portfolio</div></div>
-          <div class="if-hl-card"><div class="if-hl-val">1 K-1</div><div class="if-hl-label">One tax document. Not ten.</div></div>
-          <div class="if-hl-card"><div class="if-hl-val">1st Position</div><div class="if-hl-label">Your money gets paid back first</div></div>
-        </div>
-        <div class="if-mg if-mg4" style="margin-bottom:20px">
-          <div class="if-mc"><div class="if-mcl">Minimum investment</div><div class="if-mcv">$100,000</div><div class="if-mcs">Built for serious capital, not retail</div></div>
-          <div class="if-mc"><div class="if-mcl">Commitment</div><div class="if-mcv">3 Years</div><div class="if-mcs">The premium that earns you 10%+</div></div>
-          <div class="if-mc"><div class="if-mcl">Manager</div><div class="if-mcv">Pascal Wagner</div><div class="if-mcs">$400K of his own money invested alongside yours</div></div>
-          <div class="if-mc"><div class="if-mcl">Structure</div><div class="if-mcv">Fund of Funds</div><div class="if-mcs">You invest once. We manage 10 relationships.</div></div>
-        </div>
-        <!-- Is this the right fit? -->
-        <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:24px 28px;margin-top:4px;color:#fff;position:relative;overflow:hidden">
-          <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.05)"></div>
-          <div style="font-family:var(--font-headline);font-size:18px;margin-bottom:16px;position:relative">Is this the right fit?</div>
-          <div class="if-fit-grid" style="position:relative">
-            <div class="if-fit-col-left">
-              <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#40E47F;margin-bottom:10px">Built for you if</div>
-              <div style="display:flex;flex-direction:column;gap:8px">
-                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You&#8217;re transitioning into retirement and need recurring income to live on</div>
-                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You just had an exit and want cash flow immediately</div>
-                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You&#8217;re building a family office and want diversified, hands-off income</div>
-                <div class="if-fit-item"><span style="color:#40E47F;font-weight:700;flex-shrink:0;margin-top:1px">&#10003;</span> You want risk spread across 10 funds, not concentrated in one bet</div>
-              </div>
-            </div>
-            <div class="if-fit-col-right">
-              <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,120,120,0.8);margin-bottom:10px">Not the right fit if</div>
-              <div style="display:flex;flex-direction:column;gap:8px">
-                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You need access to your capital within 3 years</div>
-                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You&#8217;re looking for massive upside or 50%+ returns</div>
-                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You want a short-term parking spot for cash</div>
-                <div class="if-fit-item" style="color:rgba(255,255,255,0.55)"><span style="color:rgba(255,120,120,0.7);font-weight:700;flex-shrink:0;margin-top:1px">&#10007;</span> You&#8217;re not an accredited investor</div>
-              </div>
-            </div>
+      <!-- TRACK RECORD STRIP -->
+      <div class="if-track-banner" style="margin-top:28px">
+        <div class="if-track-banner-title">28 Months. Zero Missed Payments.</div>
+        <div class="if-track-banner-sub">$84,455 distributed to LPs since inception &middot; 8.0% net yield &middot; 4 LPs &middot; $552K AUM</div>
+      </div>
+
+      <!-- PORTFOLIO SNAPSHOT -->
+      <div class="if-v2-sh" style="margin-top:28px"><div class="if-v2-sh-num">The Portfolio</div><h2>Where does my money go?</h2></div>
+      <div class="if-chart-card" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:2px;background:#1F5159"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Allocation %</span></div>
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:2px;border-radius:1px;background:#32C583"></div><div style="width:6px;height:6px;border-radius:50%;background:#32C583"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Gross Yield %</span></div>
           </div>
+          <div style="font-family:var(--font-ui);font-size:11px;color:#607179">10 funds &middot; 5 asset classes &middot; 20% max single fund</div>
+        </div>
+        <div style="position:relative;width:100%;height:280px"><canvas id="if-alloc-yield-chart"></canvas></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0 0;border-top:2px solid #1F5159;margin-top:12px">
+          <div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#1F5159">Blended Portfolio</div><div style="font-family:var(--font-ui);font-size:11px;color:#607179">Weighted average across all 10 funds</div></div>
+          <div style="display:flex;gap:24px"><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:600;color:#1F5159;width:50px;text-align:right">100%</div><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:700;color:#32C583;width:50px;text-align:right" id="if-blended-yield">13.6%</div></div>
+        </div>
+      </div>
+      <div id="if-fund-table" style="display:none"></div>
+
+      <!-- SOCIAL PROOF -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:28px 0 20px">
+        <div class="if-testimonial">
+          <div class="if-avatar">TS</div>
+          <div><div class="if-t-name">Tod Spooner</div><div class="if-t-quote">&#8220;14 months in, the deposit shows up every month like clockwork.&#8221;</div></div>
+        </div>
+        <div class="if-testimonial">
+          <div class="if-avatar">MS</div>
+          <div><div class="if-t-name">Matt Sommers</div><div class="if-t-quote">&#8220;I can see exactly where every dollar is. That level of transparency is rare.&#8221;</div></div>
         </div>
       </div>
 
-      <!-- 4. YOUR INCOME -->
-      <div class="if-v2-section" id="if-your-income">
-        <div class="if-v2-sh"><div class="if-v2-sh-num">Your Income</div><h2>What does this actually pay me?</h2><p>Monthly distributions, deposited directly. Here&#8217;s what it looks like at different investment levels.</p></div>
-        <!-- How it works explanation -->
-        <div style="background:#E7F5F0;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;border-left:4px solid #51BE7B">
-          <div style="font-family:var(--font-body);font-size:14px;color:#1F5159;line-height:1.7">
-            <strong>Slide to your investment amount. See your monthly deposit.</strong> Currently paying <strong style="color:#32C583">8.0% net annually</strong>, with 10%+ projected at scale.
+      <!-- VIEW FULL DATA ROOM -->
+      <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:32px;text-align:center;color:#fff;position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.05)"></div>
+        <div style="position:relative">
+          <div style="font-family:var(--font-headline);font-size:22px;margin-bottom:8px">Want the full picture?</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7">The complete data room has everything: fee waterfall, tax treatment, K-1 walkthrough, investment process, risk analysis, fund-by-fund due diligence, and financial statements.</div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px">
+            <a href="https://growyourcashflow.io/income-fund" target="_blank" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;transition:all 0.15s" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">View Full Data Room &#8594;</a>
+            <a href="https://growyourcashflow.io/introcall" target="_blank" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:transparent;color:#fff;text-decoration:none;border:1.5px solid rgba(255,255,255,0.3);transition:all 0.15s" onmouseover="this.style.borderColor='#51BE7B';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)';this.style.transform='none'">&#9742; Book a Call</a>
           </div>
-        </div>
-        <!-- Calculator -->
-        <div class="if-calc-wrap">
-          <div style="margin-bottom:20px">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-              <label style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:rgba(255,255,255,0.7)">If I invest</label>
-              <div style="font-family:var(--font-headline);font-size:28px;color:#fff" id="if-calc-display">$250,000</div>
-            </div>
-            <input type="range" id="if-calc-slider" min="100000" max="2000000" step="25000" value="250000" oninput="updateIfCalc()" style="width:100%;accent-color:#51BE7B;height:4px;background:rgba(81,190,123,0.18);border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer">
-            <div style="display:flex;justify-content:space-between;font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px"><span>$100K</span><span>$500K</span><span>$1M</span><span>$2M</span></div>
-          </div>
-          <div style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:16px;text-align:center">Based on current net LP yield of <strong style="color:#40E47F">8.0%</strong> annually &middot; Paid monthly to your bank account</div>
-          <div class="if-calc-results">
-            <div class="if-calc-r"><div class="v" id="if-calc-monthly">$1,667</div><div class="l">Deposited monthly</div></div>
-            <div class="if-calc-r"><div class="v" id="if-calc-annual">$20,000</div><div class="l">Annual income (pre-tax)</div></div>
-            <div class="if-calc-r"><div class="v" id="if-calc-3yr">$60,000</div><div class="l">Total over 3 years</div></div>
-          </div>
-          <div style="margin-top:16px;background:rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.5);text-align:center;line-height:1.8">
-            After the 3-year lockup, you may redeem your principal with 90 days&#8217; notice &#8212; or keep it invested.<br>
-            These distributions are <strong style="color:rgba(255,255,255,0.8)">income on top of your investment</strong>, not a drawdown of it.
-          </div>
-        </div>
-
-        <!-- Comparison table -->
-        <div style="margin-top:24px">
-          <div class="if-sec-lbl">What $250K earns across different vehicles</div>
-          <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07)">
-            <table class="if-compare-table" style="min-width:640px">
-              <thead><tr><th style="text-align:left"></th><th style="text-align:center">Savings Account</th><th style="text-align:center">Money Market</th><th style="text-align:center">S&amp;P 500</th><th class="if-act" style="text-align:center">GYC Income Fund</th></tr></thead>
-              <tbody>
-                <tr><td>Annual yield</td><td style="text-align:center">0.5%</td><td style="text-align:center">4.5%</td><td style="text-align:center">~10% (avg)</td><td class="if-act" style="text-align:center">8&#8211;10%+</td></tr>
-                <tr><td>Monthly income</td><td style="text-align:center">$104</td><td style="text-align:center">$938</td><td style="text-align:center">$0*</td><td class="if-act" style="text-align:center">$1,667+</td></tr>
-                <tr><td>Predictable?</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td class="if-act" style="text-align:center">Yes</td></tr>
-                <tr><td>Monthly deposits?</td><td style="text-align:center">No</td><td style="text-align:center">Varies</td><td style="text-align:center">No</td><td class="if-act" style="text-align:center">Yes</td></tr>
-                <tr><td>FDIC insured?</td><td style="text-align:center">Yes</td><td style="text-align:center">Yes</td><td style="text-align:center">No</td><td class="if-act" style="text-align:center">No</td></tr>
-                <tr><td>Diversified?</td><td style="text-align:center">N/A</td><td style="text-align:center">N/A</td><td style="text-align:center">500 stocks</td><td class="if-act" style="text-align:center">10 private funds</td></tr>
-                <tr><td>Effort required</td><td style="text-align:center">None</td><td style="text-align:center">None</td><td style="text-align:center">Moderate</td><td class="if-act" style="text-align:center">None</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <!-- S&P callout -->
-          <div style="background:#0A1E21;border-radius:8px;padding:12px 16px;margin-top:10px;color:#fff">
-            <div style="font-family:var(--font-body);font-size:13px;line-height:1.7"><strong style="color:#40E47F">The S&amp;P averages 10% a year but pays you $0 per month.</strong> You have to sell shares to eat. GYC deposits income to your bank account every month &#8212; without touching your principal.</div>
-            <div style="font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.4);margin-top:8px">This is not an apples-to-apples comparison. GYC is a private, illiquid investment with a 3-year commitment. But for investors who don&#8217;t need immediate access to their capital, the income difference is significant.</div>
-          </div>
-        </div>
-        <!-- Mid-page CTA -->
-        <div style="background:linear-gradient(135deg,#51BE7B,#3a9d6a);border-radius:var(--radius);padding:24px 32px;margin-top:24px;text-align:center">
-          <div style="font-family:var(--font-headline);font-size:20px;color:#fff;margin-bottom:8px">Ready to start collecting monthly income?</div>
-          <div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.8);margin-bottom:16px">If you&#8217;ve seen enough, book an intro call. If not, keep scrolling &#8212; there&#8217;s a lot more detail below.</div>
-          <a href="https://growyourcashflow.io/introcall" target="_blank" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;padding:12px 28px;border-radius:24px;background:#fff;color:#1F5159;text-decoration:none;transition:all 0.15s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">&#9742; Book a call</a>
+          <div style="margin-top:16px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.35)">Or email <a href="mailto:pascal@growyourcashflow.io" style="color:#51BE7B">pascal@growyourcashflow.io</a></div>
         </div>
       </div>
 
-      <!-- 5. THE PORTFOLIO -->
-      <div class="if-v2-section" id="if-the-portfolio">
-        <div class="if-v2-sh"><div class="if-v2-sh-num">The Portfolio</div><h2>Where does my money actually go?</h2><p>Your capital is spread across 10 independent lending funds. No single fund holds more than 20% of the portfolio.</p></div>
-        <!-- GP Co-Invest banner -->
-        <div style="background:#0A1E21;border-radius:var(--radius);padding:18px 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#51BE7B;margin-bottom:4px">GP Co-Invest</div>
-            <div style="font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.8)">Pascal has <strong style="color:#fff">$400,000</strong> of his own money in this fund. He eats his own cooking.</div>
-          </div>
-          <div style="font-family:var(--font-headline);font-size:32px;color:#40E47F;flex-shrink:0;margin-left:20px">$400K</div>
-        </div>
-        <div class="if-mg if-mg3" style="margin-bottom:18px">
-          <div class="if-mc"><div class="if-mcl">Asset classes</div><div class="if-mcv">5</div><div class="if-mcs">CRE, Resi, Aviation, Healthcare, Notes</div></div>
-          <div class="if-mc"><div class="if-mcl">Avg fund age</div><div class="if-mcv">6 yrs</div><div class="if-mcs">Oldest: 2014</div></div>
-          <div class="if-mc"><div class="if-mcl">Max single fund</div><div class="if-mcv">20%</div><div class="if-mcs">No concentration risk</div></div>
-        </div>
-        <!-- Fund Allocation & Yield chart -->
-        <div class="if-sec-lbl" style="margin-bottom:8px">Fund Allocation &amp; Yield</div>
-        <div class="if-chart-card" style="margin-bottom:20px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div style="display:flex;align-items:center;gap:16px">
-              <div style="display:flex;align-items:center;gap:6px"><div style="width:12px;height:12px;border-radius:2px;background:#1F5159"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Allocation %</span></div>
-              <div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:2px;border-radius:1px;background:#32C583"></div><div style="width:6px;height:6px;border-radius:50%;background:#32C583"></div><span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179">Gross Yield %</span></div>
-            </div>
-          </div>
-          <div style="position:relative;width:100%;height:280px"><canvas id="if-alloc-yield-chart"></canvas></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0 0;border-top:2px solid #1F5159;margin-top:12px">
-            <div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#1F5159">Blended Portfolio</div><div style="font-family:var(--font-ui);font-size:11px;color:#607179">Weighted average across all 10 funds</div></div>
-            <div style="display:flex;gap:24px"><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:600;color:#1F5159;width:50px;text-align:right">100%</div><div style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:700;color:#32C583;width:50px;text-align:right" id="if-blended-yield">13.6%</div></div>
-          </div>
-        </div>
-        <!-- Hidden fund table container for backward compat -->
-        <div id="if-fund-table" style="display:none"></div>
-      </div>
-
-      <!-- 6. TRACK RECORD -->
-      <div class="if-v2-section" id="if-track-record">
-        <div class="if-v2-sh"><div class="if-v2-sh-num">Track Record</div><h2>Has this actually worked?</h2></div>
-        <div class="if-track-banner">
-          <div class="if-track-banner-title">28 Months. Zero Missed Payments.</div>
-          <div class="if-track-banner-sub">Every distribution paid on time since GYC&#8217;s first LP in January 2024.</div>
-        </div>
-        <div class="if-mg if-mg4" style="margin-bottom:20px">
-          <div class="if-mc if-accent"><div class="if-mcl">Net LP Yield</div><div class="if-mcv if-green">8.0%</div><div class="if-mcs">Annualized, net of all fees</div></div>
-          <div class="if-mc"><div class="if-mcl">Total Distributions</div><div class="if-mcv">$84,455</div><div class="if-mcs">Paid to LPs since inception</div></div>
-          <div class="if-mc"><div class="if-mcl">Current AUM</div><div class="if-mcv">$552K</div><div class="if-mcs">4 LPs</div></div>
-          <div class="if-mc"><div class="if-mcl">Monthly per $250K</div><div class="if-mcv if-green">$1,667</div><div class="if-mcs">At current 8% net yield</div></div>
-        </div>
-        <!-- Year-by-year table -->
-        <div class="if-sec-lbl" style="margin-bottom:8px">Year-by-year performance</div>
-        <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);margin-bottom:22px">
-          <table class="if-yr-table" style="min-width:500px">
-            <thead><tr><th style="text-align:left">Year</th><th>End-of-Year AUM</th><th>LPs</th><th>LP Distributions</th><th>Net LP Yield</th></tr></thead>
-            <tbody>
-              <tr><td>2023 <span style="font-size:10px;color:#607179">(Nov&#8211;Dec setup)</span></td><td>$400K</td><td>1</td><td style="color:#607179">&#8212;</td><td style="color:#607179">First dist. Jan 2024</td></tr>
-              <tr><td>2024</td><td>$550K</td><td>4</td><td>$5,000</td><td style="color:#32C583;font-weight:700">8.0%</td></tr>
-              <tr><td>2025</td><td>$550K</td><td>4</td><td>$17,333</td><td style="color:#32C583;font-weight:700">8.0%</td></tr>
-              <tr><td>2026 <span style="font-size:10px;color:#607179">(YTD)</span></td><td>$552K</td><td>4</td><td>$55,511</td><td style="color:#32C583;font-weight:700">8.0%</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <!-- Charts -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px">
-          <div class="if-chart-card">
-            <div style="font-family:var(--font-headline);font-size:17px;color:var(--text-dark);margin-bottom:14px">What the fund earns vs. what you keep</div>
-            <div style="position:relative;width:100%;height:240px"><canvas id="if-monthly-chart"></canvas></div>
-            <div style="display:flex;gap:16px;margin-top:10px;font-family:var(--font-ui);font-size:11px;color:#607179"><span><span style="display:inline-block;width:12px;height:3px;background:#51BE7B;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Gross return</span><span><span style="display:inline-block;width:12px;height:3px;background:#1F5159;border-radius:2px;vertical-align:middle;margin-right:4px"></span>LP net return</span></div>
-          </div>
-          <div class="if-chart-card">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px">
-              <div style="font-family:var(--font-headline);font-size:17px;color:var(--text-dark)">Total cash paid to investors</div>
-              <div style="font-family:var(--font-headline);font-size:20px;color:#32C583">$84,455</div>
-            </div>
-            <div style="position:relative;width:100%;height:240px"><canvas id="if-cumulative-chart"></canvas></div>
-          </div>
-        </div>
-        <!-- Fund Manager bio -->
-        <div style="margin-top:24px">
-          <div class="if-sec-lbl" style="margin-bottom:8px">Who manages your capital</div>
-          <div class="if-manager">
-            <div class="if-photo">PW</div>
-            <div>
-              <div style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#51BE7B;margin-bottom:6px">Fund Manager &middot; CEO</div>
-              <div style="font-family:var(--font-headline);font-size:20px;margin-bottom:8px">Pascal Wagner</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.75);line-height:1.7;margin-bottom:12px">Founder and managing member of GYC Income Fund. Real estate investor, fund operator, and host of Grow Your Cashflow &#8212; helping accredited investors build passive income through private credit and fund-of-funds investing. Pascal invests his own capital alongside LPs in every fund.</div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap">
-                <a href="https://www.linkedin.com/in/pascalwagner/" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">LinkedIn</a>
-                <a href="https://www.youtube.com/@PascalWagner" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">YouTube</a>
-                <a href="mailto:pascal@growyourcashflow.io" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;padding:4px 12px;border-radius:12px;border:1px solid rgba(81,190,123,0.4)">Email</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. INVESTORS -->
-      <div class="if-v2-section" id="if-investors">
-        <div class="if-v2-sh"><div class="if-v2-sh-num">Investors</div><h2>What our investors are saying</h2><p>A small fund on purpose &#8212; capped at 99 LPs and $10M. Here&#8217;s what our earliest investors have to say.</p></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-          <div class="if-testimonial">
-            <div class="if-avatar">TS</div>
-            <div><div class="if-t-name">Tod Spooner</div><div class="if-t-quote">&#8220;I was looking for something outside the stock market that could actually generate monthly income. 14 months in, the deposit shows up every month like clockwork.&#8221;</div></div>
-          </div>
-          <div class="if-testimonial">
-            <div class="if-avatar">GW</div>
-            <div><div class="if-t-name">Gabriela Wagner</div><div class="if-t-role">Pascal&#8217;s mother &#8212; the reason this fund exists</div><div class="if-t-quote">&#8220;After my husband passed, Pascal built this so I&#8217;d have income I could count on every month without worrying about the stock market.&#8221;</div></div>
-          </div>
-          <div class="if-testimonial">
-            <div class="if-avatar">PL</div>
-            <div><div class="if-t-name">Philip Lima</div><div class="if-t-quote">&#8220;I spent months trying to vet private credit funds on my own. GYC did the work I didn&#8217;t have time for. Now I get one deposit every month and one K-1 at tax time.&#8221;</div></div>
-          </div>
-          <div class="if-testimonial">
-            <div class="if-avatar">MS</div>
-            <div><div class="if-t-name">Matt Sommers</div><div class="if-t-quote">&#8220;I can see exactly where every dollar is and what it&#8217;s earning. Pascal sends updates I actually read. That level of transparency is rare in this space.&#8221;</div></div>
-          </div>
-        </div>
-        <!-- Invest Clearly -->
-        <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07);padding:24px 28px;margin-bottom:20px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div style="background:#0A1E21;border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#51BE7B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#51BE7B" stroke-width="2"/></svg><span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#fff;letter-spacing:0.5px">INVEST CLEARLY</span></div>
-              <div>
-                <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:#607179;letter-spacing:1px;text-transform:uppercase">Verified Third-Party Review</div>
-                <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><span style="color:#F5A623;font-size:14px">&#9733;&#9733;&#9733;&#9733;&#9733;</span><span style="font-family:'SF Mono','Fira Mono',monospace;font-size:13px;font-weight:700;color:#32C583">5.00</span><span style="font-family:var(--font-ui);font-size:11px;color:#607179">(1 review)</span></div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#51BE7B;background:#E7F5F0;padding:4px 10px;border-radius:10px">Claimed Profile</span>
-              <span style="font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#32C583;background:rgba(50,197,131,0.1);padding:4px 10px;border-radius:10px">Actively Raising</span>
-            </div>
-          </div>
-          <div style="background:var(--bg-cream);border-radius:8px;padding:16px 20px;border:1px solid rgba(31,81,89,0.07)">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#51BE7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#51BE7B" stroke-width="1.5"/></svg>
-              <span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark)">Verified Investor</span>
-              <span style="font-family:var(--font-ui);font-size:11px;color:#607179">&middot; July 17, 2025</span>
-            </div>
-            <div style="font-family:var(--font-headline);font-size:16px;color:var(--text-dark);margin-bottom:8px">&#8220;Great debt fund and communication&#8221;</div>
-            <div style="font-family:var(--font-body);font-size:13px;color:#607179;line-height:1.7">Invested in the debt fund which was a lower entry point that directly with DLP. Solid communication with consistent distributions. Pascal is easy to work with and communication is great. Will be investing more soon.</div>
-          </div>
-          <div style="margin-top:12px;text-align:right">
-            <a href="https://www.investclearly.com/sponsor/grow-your-cashflow" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;text-decoration:none;display:inline-flex;align-items:center;gap:4px" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Invest Clearly &#8594;</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- 8. RISKS -->
-      <div class="if-v2-section" id="if-risks">
-        <div class="if-v2-sh"><div class="if-v2-sh-num">Risks</div><h2>What could go wrong?</h2><p>We don&#8217;t hide risk. Here are the real trade-offs of investing in GYC, in plain English.</p></div>
-        <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid rgba(31,81,89,0.07);box-shadow:0 2px 12px rgba(10,30,33,0.07);overflow:hidden">
-          <div style="padding:0 24px">
-            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#128274; 3-year commitment &#8212; and that&#8217;s by design</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-mod">Trade-off</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">The 3-year commitment is what gives you access to these private credit returns. If these funds were liquid, they wouldn&#8217;t pay 10%+. The lockup is the premium &#8212; it&#8217;s the reason this yield exists. After 3 years, quarterly partial or full redemptions are available with 90 days&#8217; notice.</div></div>
-            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#128200; Interest rates could compress yields</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-mod">Moderate</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">6 of our 10 funds (65% of allocation) have some sensitivity to interest rates. Our 3 rate-independent funds provide meaningful insulation.</div></div>
-            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#9888;&#65039; An underlying fund could fail</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-low">Unlikely</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">Every fund is audited, with multi-year track records. No single fund holds more than 20%. For principal to be at material risk, 3+ funds would need to fail simultaneously.</div></div>
-            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#128101; You&#8217;re trusting Pascal to manage this</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-low">Operator risk</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">Full bank statement transparency, GP co-invests alongside LPs, open calendar for any LP to schedule a review.</div></div>
-            <div class="if-acc"><div class="if-acc-header" onclick="toggleIfAcc(this)"><h3>&#10060; Returns depend on 10 fund managers performing</h3><div style="display:flex;align-items:center;gap:8px"><span class="if-tag if-tag-mod">Reality</span><span class="if-chevron">&#9660;</span></div></div><div class="if-acc-body">8&#8211;10% is a target, not a promise. Your income comes from 10 independent fund managers each running their own lending operations. If any of them underperform, it affects the blended yield. LP distributions are paid before GP carry, giving you first priority on income.</div></div>
-          </div>
-        </div>
-        <div style="background:#E7F5F0;border-radius:var(--radius);padding:14px 18px;margin-top:16px"><p style="margin:0;font-family:var(--font-body);font-size:13px;color:#1F5159;line-height:1.65"><strong>Bottom line:</strong> We don&#8217;t guarantee returns. But our structure is designed to absorb market stress: 10 independent managers, all first-position, all audited, diversified across 5 asset classes.</p></div>
-      </div>
-
-      <!-- 9. NEXT STEPS CTA -->
-      <div class="if-cta-section" id="if-next-steps">
-        <h2>Ready to start collecting monthly income?</h2>
-        <p>Book an intro call with Pascal. We&#8217;ll walk you through the fund, answer your questions, and tell you honestly if it&#8217;s a fit. If it&#8217;s not, we&#8217;ll say so.</p>
-        <div style="font-family:var(--font-ui);font-size:12px;color:rgba(255,255,255,0.5);margin-bottom:20px;letter-spacing:0.3px">Limited to <strong style="color:#40E47F">99 investors</strong> and <strong style="color:#40E47F">$10M total AUM</strong>. 4 spots filled.</div>
-        <a href="https://growyourcashflow.io/introcall" target="_blank" style="font-family:var(--font-ui);font-size:15px;font-weight:700;padding:14px 36px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">&#9742; Book a call</a>
-        <div style="margin-top:20px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.4)">Or email <a href="mailto:pascal@growyourcashflow.io" style="color:#51BE7B">pascal@growyourcashflow.io</a></div>
-        <div style="margin-top:32px;max-width:600px;margin-left:auto;margin-right:auto;font-family:var(--font-ui);font-size:9px;color:rgba(255,255,255,0.15);line-height:1.6;text-align:center">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only. GYC Income Fund &middot; Grow Your Cashflow LLC &middot; growyourcashflow.com</div>
-      </div>
+      <div style="margin-top:16px;font-family:var(--font-ui);font-size:9px;color:var(--text-muted);line-height:1.6;text-align:center;opacity:0.5">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</div>
 
     </div>
   </div>
