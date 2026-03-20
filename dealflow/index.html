@@ -13922,15 +13922,10 @@ function showAddDealModal() {
       <div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">Add a Deal</div>
       <button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>
     </div>
-    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">Can't find a deal? Submit it to the community database. Other investors can help enrich it over time.</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">Can't find a deal? Submit it to the community database. Details like asset class, IRR, and minimums will be automatically extracted from the deck.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
-      <div class="modal-field" style="grid-column:1/-1;position:relative;"><label>Investment Name *</label><input id="addDealName" placeholder="Search existing deals or enter a new name..." oninput="searchExistingDeals(this.value)"><div id="addDealSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:10;max-height:200px;overflow-y:auto;margin-top:-2px;"></div></div>
-      <div class="modal-field"><label>Sponsor / Management Company *</label><input id="addDealSponsor" placeholder="e.g. Acme Capital"></div>
-      <div class="modal-field"><label>Asset Class</label><select id="addDealAsset"><option value="">Select...</option>${assetOptions.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>
-      <div class="modal-field"><label>Deal Type</label><select id="addDealType"><option value="">Select...</option>${dealTypeOptions.map(o => `<option value="${o}">${o}</option>`).join('')}</select></div>
-      <div class="modal-field"><label>Target IRR (%)</label><input id="addDealIRR" type="number" step="0.1" placeholder="e.g. 15"></div>
-      <div class="modal-field"><label>Min Investment ($)</label><input id="addDealMin" type="number" placeholder="e.g. 50000"></div>
-      <div class="modal-field"><label>Location</label><input id="addDealLocation" placeholder="e.g. Tampa, FL"></div>
+      <div class="modal-field" style="grid-column:1/-1;position:relative;"><label>Investment Name *</label><input id="addDealName" placeholder="Search existing deals or enter a new name..." oninput="searchExistingDeals(this.value)" onblur="setTimeout(function(){var r=document.getElementById('addDealSearchResults');if(r)r.style.display='none';},200)" onfocus="if(this.value.length>=2)searchExistingDeals(this.value)"><div id="addDealSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:10;max-height:200px;overflow-y:auto;margin-top:-2px;"></div></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>Sponsor / Management Company *</label><input id="addDealSponsor" placeholder="e.g. Acme Capital"></div>
       <div class="modal-field" style="grid-column:1/-1"><label>Website / Link</label><input id="addDealURL" placeholder="https://..."></div>
       <div class="modal-field" style="grid-column:1/-1"><label>Investment Deck</label>
         <div id="addDealUploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('addDealFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='rgba(81,190,123,0.04)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='transparent';handleAddDealFileDrop(event)">
@@ -13941,7 +13936,15 @@ function showAddDealModal() {
         </div>
         <input type="file" id="addDealFileInput" accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx" style="display:none" onchange="handleAddDealFileSelect(this)" />
       </div>
-      <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="addDealNotes" rows="2" placeholder="Any additional details..."></textarea></div>
+      <div class="modal-field" style="grid-column:1/-1"><label>PPM (Private Placement Memorandum)</label>
+        <div id="addDealPPMArea" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('addDealPPMInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='rgba(81,190,123,0.04)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='transparent';handleAddDealPPMDrop(event)">
+          <div id="addDealPPMText" style="font-size:13px;color:var(--text-muted);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Drop a PDF here or click to upload
+          </div>
+        </div>
+        <input type="file" id="addDealPPMInput" accept=".pdf,.doc,.docx" style="display:none" onchange="handleAddDealPPMSelect(this)" />
+      </div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:12px;">
       <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
@@ -13963,7 +13966,7 @@ function searchExistingDeals(query) {
   }).slice(0, 8);
   if (matches.length === 0) {
     results.style.display = 'block';
-    results.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);text-align:center;">No existing deals found — you can submit a new one</div>';
+    results.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);text-align:center;">No existing deals found — fill out the details below to add it</div>';
     return;
   }
   results.style.display = 'block';
@@ -13991,6 +13994,8 @@ function selectExistingDeal(dealId) {
 // File upload state for Add Deal modal
 var _addDealFile = null;
 var _addDealFileBase64 = null;
+var _addDealPPMFile = null;
+var _addDealPPMFileBase64 = null;
 
 function handleAddDealFileSelect(input) {
   if (input.files && input.files[0]) processAddDealFile(input.files[0]);
@@ -14012,6 +14017,26 @@ function processAddDealFile(file) {
   reader.readAsDataURL(file);
 }
 
+function handleAddDealPPMSelect(input) {
+  if (input.files && input.files[0]) processAddDealPPMFile(input.files[0]);
+}
+function handleAddDealPPMDrop(event) {
+  if (event.dataTransfer.files && event.dataTransfer.files[0]) processAddDealPPMFile(event.dataTransfer.files[0]);
+}
+function processAddDealPPMFile(file) {
+  if (file.size > 25 * 1024 * 1024) { alert('File too large. Max 25MB.'); return; }
+  _addDealPPMFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _addDealPPMFileBase64 = e.target.result.split(',')[1];
+    var el = document.getElementById('addDealPPMText');
+    var area = document.getElementById('addDealPPMArea');
+    if (el) el.innerHTML = '<span style="color:var(--primary);font-weight:700;">✓ ' + file.name + '</span> <span style="font-size:11px;color:var(--text-muted);">(' + (file.size / 1024 / 1024).toFixed(1) + ' MB)</span>';
+    if (area) area.style.borderColor = 'var(--primary)';
+  };
+  reader.readAsDataURL(file);
+}
+
 function submitNewDeal() {
   const name = document.getElementById('addDealName').value.trim();
   const sponsor = document.getElementById('addDealSponsor').value.trim();
@@ -14023,11 +14048,11 @@ function submitNewDeal() {
     dealNumber: 0,
     investmentName: name,
     managementCompany: sponsor,
-    assetClass: document.getElementById('addDealAsset').value || '',
-    dealType: document.getElementById('addDealType').value || '',
-    targetIRR: document.getElementById('addDealIRR').value ? parseFloat(document.getElementById('addDealIRR').value) / 100 : null,
-    investmentMinimum: parseFloat(document.getElementById('addDealMin').value) || 0,
-    location: document.getElementById('addDealLocation').value || '',
+    assetClass: '',
+    dealType: '',
+    targetIRR: null,
+    investmentMinimum: 0,
+    location: '',
     status: 'Open to invest',
     addedDate: new Date().toISOString().split('T')[0],
     equityMultiple: null, preferredReturn: null, holdPeriod: null, offeringType: '', offeringSize: null,
@@ -14056,7 +14081,7 @@ function submitNewDeal() {
         dealName: name,
         filedata: _addDealFileBase64,
         filename: _addDealFile.name,
-        notes: document.getElementById('addDealNotes').value || '',
+        notes: '',
         userEmail: userData.email || '',
         userName: userData.name || userData.firstName || ''
       })
@@ -14072,6 +14097,8 @@ function submitNewDeal() {
     _addDealFile = null;
     _addDealFileBase64 = null;
   }
+  _addDealPPMFile = null;
+  _addDealPPMFileBase64 = null;
 
   closeModal();
   renderAll();
