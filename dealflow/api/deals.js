@@ -63,12 +63,57 @@ export default async function handler(req, res) {
       }
     }
 
+    // Staleness detection: hide deals that are likely closed/no longer accepting capital
+    function computeStaleness(d) {
+      const now = new Date();
+      const added = d.added_date ? new Date(d.added_date) : null;
+      const updated = d.updated_at ? new Date(d.updated_at) : null;
+      const monthsSinceAdded = added ? (now - added) / (1000 * 60 * 60 * 24 * 30.44) : null;
+      const monthsSinceUpdated = updated ? (now - updated) / (1000 * 60 * 60 * 24 * 30.44) : null;
+      const status = (d.status || '').toLowerCase();
+
+      // Manually closed deals are always stale
+      if (status === 'closed' || status === 'fully funded' || status === 'completed') {
+        return { isStale: true, reason: 'Closed' };
+      }
+
+      // Evergreen funds never go stale (they accept capital indefinitely)
+      if (status === 'evergreen') {
+        return { isStale: false, reason: null };
+      }
+
+      // Syndications: stale after 18 months from added date
+      const dealType = (d.deal_type || '').toLowerCase();
+      if (dealType === 'syndication') {
+        if (monthsSinceAdded && monthsSinceAdded > 18) {
+          return { isStale: true, reason: 'Added ' + Math.round(monthsSinceAdded) + ' months ago (syndication)' };
+        }
+        return { isStale: false, reason: null };
+      }
+
+      // Funds (non-evergreen): stale after 24 months
+      if (dealType === 'fund') {
+        if (monthsSinceAdded && monthsSinceAdded > 24) {
+          return { isStale: true, reason: 'Added ' + Math.round(monthsSinceAdded) + ' months ago (fund)' };
+        }
+        return { isStale: false, reason: null };
+      }
+
+      // Unknown deal type: stale after 24 months
+      if (monthsSinceAdded && monthsSinceAdded > 24) {
+        return { isStale: true, reason: 'Added ' + Math.round(monthsSinceAdded) + ' months ago' };
+      }
+
+      return { isStale: false, reason: null };
+    }
+
     // Transform to match existing frontend API contract
     // (so the frontend doesn't need to change yet)
     const deals = allDeals
       .filter(d => !childIds.has(d.id))
       .map(d => {
         const mc = d.management_company || {};
+        const staleness = computeStaleness(d);
         return {
           id: d.id,
           dealNumber: d.deal_number,
@@ -118,7 +163,9 @@ export default async function handler(req, res) {
           parentDealId: d.parent_deal_id,
           shareClassLabel: d.share_class_label,
           verticalIntegration: d.vertical_integration,
-          shareClasses: parentMap[d.id] || null
+          shareClasses: parentMap[d.id] || null,
+          isStale: staleness.isStale,
+          stalenessReason: staleness.reason
         };
       });
 

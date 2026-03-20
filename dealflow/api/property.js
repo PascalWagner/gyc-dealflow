@@ -2,7 +2,7 @@
 // Looks up property details by address using RentCast API
 // Returns: property details, tax history, sale history, owner info
 
-const RENTCAST_API_KEY = 'a5bdee5fc3df432090ecbc1d1e17d652';
+const RENTCAST_API_KEY = process.env.RENTCAST_API_KEY;
 const RENTCAST_BASE = 'https://api.rentcast.io/v1';
 
 module.exports = async function handler(req, res) {

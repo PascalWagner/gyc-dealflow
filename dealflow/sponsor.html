@@ -1100,6 +1100,14 @@ body {
         </div>
       </div>
 
+      <!-- Track Record & Trust Signals -->
+      <div class="section-card" id="trackRecordSection" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">Track Record</div>
+        </div>
+        <div class="section-body" id="trackRecordBody"></div>
+      </div>
+
       <!-- Deals Section -->
       <div class="section-card">
         <div class="section-header">
@@ -1112,6 +1120,10 @@ body {
             <p>No deals listed from this sponsor yet.</p>
           </div>
         </div>
+      </div>
+
+      <!-- Investor Engagement (GP Analytics) -->
+      <div class="section-card" id="sponsorAnalytics" style="display:none;">
       </div>
 
       <!-- Key People -->
@@ -1232,7 +1244,7 @@ const FALLBACK_DATA = {
   }
 };
 
-const WEBHOOK_URL = 'https://hook.us2.make.com/SPONSOR_DATA_WEBHOOK';
+const SPONSOR_API_URL = '/api/sponsor';
 
 // ========== GET SPONSOR PARAMS ==========
 function getSponsorParams() {
@@ -1245,18 +1257,14 @@ function getSponsorParams() {
 // ========== FETCH SPONSOR DATA ==========
 async function fetchSponsorData(params) {
   try {
-    const body = params.id ? { sponsorId: params.id } : { companyName: params.company };
-    const resp = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!resp.ok) throw new Error('Webhook failed');
+    const qs = params.id ? 'id=' + encodeURIComponent(params.id) : 'company=' + encodeURIComponent(params.company);
+    const resp = await fetch(SPONSOR_API_URL + '?' + qs);
+    if (!resp.ok) throw new Error('API returned ' + resp.status);
     const data = await resp.json();
     if (data && data.sponsor) return data;
     throw new Error('Invalid response');
   } catch (e) {
-    console.warn('Webhook unavailable, using fallback data:', e.message);
+    console.warn('Sponsor API unavailable, using fallback data:', e.message);
     return FALLBACK_DATA;
   }
 }
@@ -1473,8 +1481,54 @@ function renderSponsor(data) {
     } catch (e) {}
   }
 
+  // ===== GP Analytics Section (loaded async) =====
+  loadSponsorAnalytics(s.name, deals);
+
   // Show content
   document.body.classList.add('page-loaded');
+}
+
+function loadSponsorAnalytics(companyName, deals) {
+  fetch('/api/sponsor-analytics?company=' + encodeURIComponent(companyName))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.analytics) return;
+      var a = data.analytics;
+      if (a.totalInvestorsWatching === 0) return;
+
+      var analyticsContainer = document.getElementById('sponsorAnalytics');
+      if (!analyticsContainer) return;
+
+      // Build deal-level breakdown rows
+      var dealRows = '';
+      if (a.dealBreakdown && a.dealBreakdown.length > 0) {
+        var sortedDeals = a.dealBreakdown.sort(function(x, y) { return y.watching - x.watching; });
+        dealRows = sortedDeals.map(function(db) {
+          var deal = deals.find(function(d) { return d.id === db.dealId; });
+          var name = deal ? deal.name : db.dealId;
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-light);">'
+            + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(name) + '</div>'
+            + '<div style="display:flex;gap:16px;flex-shrink:0;">'
+            + '<div style="text-align:center;"><div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);">' + db.watching + '</div><div style="font-size:10px;color:var(--text-muted);">watching</div></div>'
+            + '<div style="text-align:center;"><div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:#3b82f6;">' + db.inDD + '</div><div style="font-size:10px;color:var(--text-muted);">in DD</div></div>'
+            + '<div style="text-align:center;"><div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--primary);">' + db.invested + '</div><div style="font-size:10px;color:var(--text-muted);">invested</div></div>'
+            + '</div></div>';
+        }).join('');
+      }
+
+      analyticsContainer.innerHTML = ''
+        + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">Investor Engagement</span></div>'
+        + '<div style="margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">'
+        + '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + a.totalInvestorsWatching + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:4px;">Investors Watching</div></div>'
+        + '<div style="background:rgba(59,130,246,0.06);border-radius:var(--radius-sm);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:#3b82f6;">' + a.investorsInDD + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:4px;">In Due Diligence</div></div>'
+        + '<div style="background:rgba(81,190,123,0.06);border-radius:var(--radius-sm);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--primary);">' + a.investorsInvested + '</div><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:4px;">Invested</div></div>'
+        + '</div>'
+        + (dealRows ? '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Per Deal Breakdown</div>' + dealRows : '')
+        + '<div style="margin-top:16px;padding:12px 16px;background:var(--bg-cream);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;color:var(--text-muted);text-align:center;">Data is anonymized. Individual investor identities are never shared.</div>';
+
+      analyticsContainer.style.display = 'block';
+    })
+    .catch(function() {});
 }
 
 function escHtml(str) {

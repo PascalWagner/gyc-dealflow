@@ -2110,6 +2110,104 @@ body {
   white-space: nowrap;
 }
 
+/* ====== ACADEMY GATE CTA ====== */
+.academy-gate-inline {
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 2px solid rgba(59,130,246,0.2);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  margin: 8px 0;
+}
+.academy-gate-inline .gate-icon {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #3b82f6, #4ade80);
+  border-radius: 12px;
+  margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.academy-gate-inline .gate-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.academy-gate-inline .gate-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  line-height: 1.5;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.academy-gate-inline .gate-btn {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.academy-gate-inline .gate-btn:hover { background: #2563eb; }
+.academy-gate-inline .gate-features {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.academy-gate-inline .gate-features span {
+  display: flex; align-items: center; gap: 4px;
+}
+.material-tile-locked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(0,0,0,0.02);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: default;
+  position: relative;
+}
+.material-tile-locked .lock-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #3b82f6, #4ade80);
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dd-section-locked {
+  position: relative;
+  overflow: hidden;
+  max-height: 120px;
+}
+.dd-section-locked::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  background: linear-gradient(transparent, var(--bg-card));
+  pointer-events: none;
+}
+
 /* ====== HERO SOCIAL PROOF ====== */
 .hero-social-proof {
   display: flex;
@@ -3310,6 +3408,139 @@ function loadDDAnswers(dealId) {
   } catch(e) { return {}; }
 }
 
+// Investment Memo save/print
+function saveMemoField(dealId, field, value) {
+  var memo = {};
+  try { memo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
+  memo[field] = value;
+  memo._lastSaved = new Date().toISOString();
+  localStorage.setItem('gycMemo_' + dealId, JSON.stringify(memo));
+
+  // Debounced sync to database
+  clearTimeout(window._memoSyncTimer);
+  window._memoSyncTimer = setTimeout(function() { syncMemoToDb(dealId); }, 1500);
+}
+
+function syncMemoToDb(dealId) {
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  if (!user || !user.email) return;
+
+  var memo = {};
+  try { memo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
+  var deal = DEALS.find(function(d) { return d.id === dealId; });
+  var ddAnswers = loadDDAnswers(dealId);
+
+  // Build buy box match snapshot
+  var bbMatch = null;
+  try {
+    var bb = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || 'null');
+    if (bb && deal) {
+      var checks = [];
+      if (bb.assetClasses && bb.assetClasses.length > 0) checks.push({ label: 'Asset Class', match: bb.assetClasses.indexOf(deal.assetClass) >= 0 });
+      if (bb.checkSize) checks.push({ label: 'Check Size', match: deal.investmentMinimum <= bb.checkSize });
+      if (bb.minIRR) checks.push({ label: 'Target Return', match: (deal.targetIRR || 0) >= bb.minIRR });
+      if (bb.strategies && bb.strategies.length > 0) checks.push({ label: 'Strategy', match: bb.strategies.indexOf(deal.strategy) >= 0 });
+      if (bb.maxLockup) checks.push({ label: 'Lockup', match: (deal.holdPeriod || 0) <= bb.maxLockup });
+      bbMatch = { criteria: checks, matched: checks.filter(function(c) { return c.match; }).length, total: checks.length };
+    }
+  } catch(e) {}
+
+  // Build deal snapshot
+  var snapshot = deal ? {
+    investmentName: deal.investmentName, managementCompany: deal.managementCompany, ceo: deal.ceo,
+    assetClass: deal.assetClass, dealType: deal.dealType, targetIRR: deal.targetIRR,
+    preferredReturn: deal.preferredReturn, investmentMinimum: deal.investmentMinimum,
+    holdPeriod: deal.holdPeriod, strategy: deal.strategy, status: deal.status
+  } : {};
+
+  fetch('/api/memo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dealId: dealId,
+      email: user.email,
+      dealName: deal ? deal.investmentName : '',
+      thesis: memo.thesis || '',
+      risks: memo.risks || '',
+      reflection: memo.reflection || '',
+      buyBoxMatch: bbMatch,
+      ddAnswers: ddAnswers,
+      dealSnapshot: snapshot,
+      stage: typeof getDealStage === 'function' ? getDealStage(dealId) : 'ready'
+    })
+  }).catch(function(err) { console.warn('Memo sync failed:', err.message); });
+}
+
+// Load memo from database on page load (merge with localStorage)
+function loadMemoFromDb(dealId) {
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  if (!user || !user.email) return;
+
+  fetch('/api/memo?dealId=' + encodeURIComponent(dealId) + '&email=' + encodeURIComponent(user.email))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.memo) return;
+      var dbMemo = data.memo;
+      var localMemo = {};
+      try { localMemo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
+
+      // Merge: use most recent version (DB or local)
+      var dbTime = dbMemo.updated_at ? new Date(dbMemo.updated_at).getTime() : 0;
+      var localTime = localMemo._lastSaved ? new Date(localMemo._lastSaved).getTime() : 0;
+
+      if (dbTime > localTime) {
+        // DB is newer — update localStorage and re-render textareas
+        localMemo.thesis = dbMemo.thesis || localMemo.thesis || '';
+        localMemo.risks = dbMemo.risks || localMemo.risks || '';
+        localMemo.reflection = dbMemo.reflection || localMemo.reflection || '';
+        localMemo._lastSaved = dbMemo.updated_at;
+        localStorage.setItem('gycMemo_' + dealId, JSON.stringify(localMemo));
+
+        // Update textareas if they exist
+        var thesisEl = document.getElementById('memoThesis');
+        var risksEl = document.getElementById('memoRisks');
+        var reflEl = document.getElementById('memoReflection');
+        if (thesisEl && dbMemo.thesis) thesisEl.value = dbMemo.thesis;
+        if (risksEl && dbMemo.risks) risksEl.value = dbMemo.risks;
+        if (reflEl && dbMemo.reflection) reflEl.value = dbMemo.reflection;
+      } else if (localTime > dbTime && (localMemo.thesis || localMemo.risks || localMemo.reflection)) {
+        // Local is newer — push to DB
+        syncMemoToDb(dealId);
+      }
+    })
+    .catch(function(err) { console.warn('Memo load failed:', err.message); });
+}
+
+function printMemo(dealId) {
+  var memoEl = document.getElementById('memoBody');
+  if (!memoEl) return;
+  var win = window.open('', '_blank');
+  var deal = DEALS.find(function(d) { return d.id === dealId; });
+  var title = deal ? deal.investmentName + ' — Investment Memo' : 'Investment Memo';
+  win.document.write('<!DOCTYPE html><html><head><title>' + title + '</title>');
+  win.document.write('<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#1a1a1a;line-height:1.6;}h1{font-size:22px;margin-bottom:4px;}h2{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin:20px 0 8px;border-bottom:1px solid #eee;padding-bottom:4px;}.snap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}.snap-item{padding:6px 10px;background:#f8f8f8;border-radius:6px;}.snap-label{font-size:10px;color:#888;}.snap-val{font-size:13px;font-weight:600;}.check-pass{color:#22c55e;}.check-fail{color:#ef4444;}.qa{border-bottom:1px solid #f0f0f0;padding:4px 0;}.qa-q{font-size:11px;color:#888;}.qa-a{font-size:12px;font-weight:600;}.auto-tag{font-size:9px;color:#22c55e;background:#f0fdf4;padding:1px 5px;border-radius:4px;}.textarea-print{white-space:pre-wrap;padding:8px 12px;background:#fafafa;border:1px solid #eee;border-radius:6px;font-size:13px;min-height:40px;}.footer{margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px;}@media print{body{margin:20px;}}</style>');
+  win.document.write('</head><body>');
+  win.document.write('<h1>' + title + '</h1>');
+  win.document.write('<div style="font-size:12px;color:#888;margin-bottom:20px;">Generated ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' &middot; Grow Your Cashflow</div>');
+  // Clone memo content but convert textareas to divs
+  var clone = memoEl.cloneNode(true);
+  var textareas = clone.querySelectorAll('textarea');
+  for (var ti = 0; ti < textareas.length; ti++) {
+    var ta = textareas[ti];
+    var div = document.createElement('div');
+    div.className = 'textarea-print';
+    div.textContent = ta.value || '(not yet written)';
+    ta.parentNode.replaceChild(div, ta);
+  }
+  win.document.write(clone.innerHTML);
+  win.document.write('<div class="footer">This memo was generated from your research on Grow Your Cashflow. Use it to evaluate your investment decisions over time.</div>');
+  win.document.write('</body></html>');
+  win.document.close();
+  setTimeout(function() { win.print(); }, 300);
+}
+
 function saveDDAnswer(dealId, key, value) {
   var answers = loadDDAnswers(dealId);
   if (value) {
@@ -3951,6 +4182,19 @@ async function renderDeal() {
     overviewHtml += '</div></div>';
   }
 
+  // --- Academy nudge between overview and thesis (free users only) ---
+  var academyNudgeHtml = '';
+  if (!isPaidUser) {
+    academyNudgeHtml += '<div style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,rgba(59,130,246,0.04),rgba(81,190,123,0.06));border:1px solid rgba(59,130,246,0.12);border-radius:var(--radius);padding:16px 20px;margin:4px 0;">';
+    academyNudgeHtml += '<div style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">PW</div>';
+    academyNudgeHtml += '<div style="flex:1;min-width:0;">';
+    academyNudgeHtml += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Need help evaluating this deal?</div>';
+    academyNudgeHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Academy members get weekly live deal reviews with Pascal + a personal deployment plan.</div>';
+    academyNudgeHtml += '</div>';
+    academyNudgeHtml += '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="padding:8px 16px;background:#3b82f6;color:#fff;border-radius:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">Learn More</a>';
+    academyNudgeHtml += '</div>';
+  }
+
   // --- Thesis & Risks (auto-generated from deal data) ---
   var thesisHtml = '';
   var pros = [];
@@ -4030,13 +4274,13 @@ async function renderDeal() {
         pascalTakeHtml += '</div>';
       }
     } else {
-      // Fallback: Office Hours CTA
-      pascalTakeHtml += '<div style="display:flex;align-items:center;justify-content:space-between;background:rgba(81,190,123,0.04);border:1px solid rgba(81,190,123,0.12);border-radius:8px;padding:16px 20px;">';
-      pascalTakeHtml += '<div>';
-      pascalTakeHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Bring this deal to Office Hours</div>';
-      pascalTakeHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">Every Thursday 12\u20131pm ET \u2014 get Pascal\'s take on any deal</div>';
-      pascalTakeHtml += '</div>';
-      pascalTakeHtml += '<a href="https://growyourcashflow.io/office-hours" target="_blank" style="padding:8px 16px;background:var(--primary);color:#fff;border-radius:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">Join This Week</a>';
+      // Academy CTA for free users
+      pascalTakeHtml += '<div class="academy-gate-inline">';
+      pascalTakeHtml += '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>';
+      pascalTakeHtml += '<div class="gate-title">Get Pascal\'s Analysis on This Deal</div>';
+      pascalTakeHtml += '<div class="gate-sub">Academy members get Pascal\'s personal video breakdown and written analysis on every deal — including what he\'d do with his own money.</div>';
+      pascalTakeHtml += '<button class="gate-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy \u2192</button>';
+      pascalTakeHtml += '<div class="gate-features"><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Video walkthroughs</span><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Written analysis</span><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly office hours</span></div>';
       pascalTakeHtml += '</div>';
     }
 
@@ -4243,13 +4487,25 @@ async function renderDeal() {
   materialsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><span class="section-title">Supporting Materials</span></div>';
   materialsHtml += '<div class="section-body"><div class="materials-grid">';
   if (deal.deckUrl) {
-    materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Investment Deck</a>';
+    if (isPaidUser) {
+      materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Investment Deck</a>';
+    } else {
+      materialsHtml += '<div class="material-tile-locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Investment Deck<span class="lock-badge">Academy</span></div>';
+    }
   }
   if (deal.ppmUrl) {
-    materialsHtml += '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>PPM</a>';
+    if (isPaidUser) {
+      materialsHtml += '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>PPM</a>';
+    } else {
+      materialsHtml += '<div class="material-tile-locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PPM<span class="lock-badge">Academy</span></div>';
+    }
   }
   if (deal.subAgreementUrl) {
-    materialsHtml += '<a href="' + escAttr(deal.subAgreementUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Subscription Agreement</a>';
+    if (isPaidUser) {
+      materialsHtml += '<a href="' + escAttr(deal.subAgreementUrl) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Subscription Agreement</a>';
+    } else {
+      materialsHtml += '<div class="material-tile-locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Subscription Docs<span class="lock-badge">Academy</span></div>';
+    }
   }
   if (deal.mcWebsite) {
     materialsHtml += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Sponsor Website</a>';
@@ -4319,20 +4575,43 @@ async function renderDeal() {
       } else if (userVal) {
         sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon user">' + checkSvg + '</div><div class="dd-answer-text">' + esc(userVal) + '</div><span class="dd-answer-badge user">you</span></div>';
       } else {
-        sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon empty">' + circleSvg + '</div><input class="dd-answer-input" type="text" placeholder="Add your research..." data-deal-id="' + escAttr(deal.id) + '" data-key="' + key + '" onblur="handleDDInput(this)" /></div>';
+        var isSectionLockedEarly = !isPaidUser && si >= 2;
+        if (isSectionLockedEarly) {
+          sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon empty">' + circleSvg + '</div><span class="dd-answer-input" style="color:var(--text-muted);font-style:italic;font-size:12px;cursor:default;">Unlock with Academy</span></div>';
+        } else {
+          sectionHtml += '<div class="dd-answer"><div class="dd-answer-icon empty">' + circleSvg + '</div><input class="dd-answer-input" type="text" placeholder="Add your research..." data-deal-id="' + escAttr(deal.id) + '" data-key="' + key + '" onblur="handleDDInput(this)" /></div>';
+        }
       }
       sectionHtml += '</div>';
       qIdx++;
     }
+    var isSectionLocked = !isPaidUser && si >= 2;
     ddHtml += '<div class="dd-accordion-section' + (si === 0 ? ' open' : '') + '">';
-    ddHtml += '<div class="dd-accordion-header" onclick="toggleAccordion(this)">';
-    ddHtml += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + '</div>';
-    ddHtml += '<span class="dd-accordion-progress">' + answered + '/' + sec.questions.length + '</span>';
-    ddHtml += '</div>';
-    ddHtml += '<div class="dd-accordion-body">' + sectionHtml + '</div>';
+    if (isSectionLocked) {
+      ddHtml += '<div class="dd-accordion-header" onclick="toggleAccordion(this)" style="opacity:0.5;cursor:pointer;">';
+      ddHtml += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + ' <span style="display:inline-block;padding:1px 6px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:8px;font-size:9px;font-weight:700;color:#fff;margin-left:6px;vertical-align:middle;">ACADEMY</span></div>';
+      ddHtml += '<span class="dd-accordion-progress">' + answered + '/' + sec.questions.length + '</span>';
+      ddHtml += '</div>';
+      ddHtml += '<div class="dd-accordion-body"><div class="dd-section-locked">' + sectionHtml + '</div></div>';
+    } else {
+      ddHtml += '<div class="dd-accordion-header" onclick="toggleAccordion(this)">';
+      ddHtml += '<div class="dd-accordion-title">' + chevronSvg + esc(sec.title) + '</div>';
+      ddHtml += '<span class="dd-accordion-progress">' + answered + '/' + sec.questions.length + '</span>';
+      ddHtml += '</div>';
+      ddHtml += '<div class="dd-accordion-body">' + sectionHtml + '</div>';
+    }
     ddHtml += '</div>';
   }
   ddHtml += '</div>';
+  // Academy CTA for locked DD sections
+  if (!isPaidUser) {
+    ddHtml += '<div class="academy-gate-inline" style="margin-top:16px;">';
+    ddHtml += '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>';
+    ddHtml += '<div class="gate-title">Unlock Full Due Diligence</div>';
+    ddHtml += '<div class="gate-sub">Academy members get all ' + checklist.sections.length + ' DD sections unlocked, plus Pascal\'s completed answers and live deal reviews every week.</div>';
+    ddHtml += '<button class="gate-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy \u2192</button>';
+    ddHtml += '</div>';
+  }
   // Third-party perspectives
   ddHtml += '<div class="dd-perspectives">';
   ddHtml += '<div class="dd-perspectives-title">Third-Party Perspectives</div>';
@@ -4357,13 +4636,21 @@ async function renderDeal() {
   qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
   qaHtml += '<div class="section-body">';
   qaHtml += '<div id="dealQAList" style="margin-bottom:16px;"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading questions...</div></div>';
-  qaHtml += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;">';
-  qaHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">Ask a question about this deal</div>';
-  qaHtml += '<textarea id="qaNewQuestion" rows="2" placeholder="e.g. What is the redemption policy? How are distributions calculated?" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;background:#fff;box-sizing:border-box;"></textarea>';
-  qaHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
-  qaHtml += '<span style="font-size:11px;color:var(--text-muted);">Questions are reviewed and answered by Pascal</span>';
-  qaHtml += '<button onclick="submitDealQuestion(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Submit Question</button>';
-  qaHtml += '</div></div>';
+  if (isPaidUser) {
+    qaHtml += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;">';
+    qaHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">Ask a question about this deal</div>';
+    qaHtml += '<textarea id="qaNewQuestion" rows="2" placeholder="e.g. What is the redemption policy? How are distributions calculated?" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;background:#fff;box-sizing:border-box;"></textarea>';
+    qaHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
+    qaHtml += '<span style="font-size:11px;color:var(--text-muted);">Questions are reviewed and answered by Pascal</span>';
+    qaHtml += '<button onclick="submitDealQuestion(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Submit Question</button>';
+    qaHtml += '</div></div>';
+  } else {
+    qaHtml += '<div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px dashed rgba(59,130,246,0.3);border-radius:var(--radius-sm);padding:16px;text-align:center;">';
+    qaHtml += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Submit questions directly to Pascal</div>';
+    qaHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Academy members can ask Pascal about any deal and get a personal response.</div>';
+    qaHtml += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:8px 18px;background:#3b82f6;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Join Academy \u2192</button>';
+    qaHtml += '</div>';
+  }
   qaHtml += '</div></div>';
 
   // Load Q&A data async after render
@@ -4540,13 +4827,187 @@ async function renderDeal() {
     actionsHtml += '<button class="btn-action btn-link" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Submit a Deck Link</button>';
   }
   if (deal.ppmUrl) {
-    actionsHtml += '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'View PPM</a>';
+    if (isPaidUser) {
+      actionsHtml += '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'View PPM</a>';
+    } else {
+      actionsHtml += '<button class="btn-action btn-secondary" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="opacity:0.6;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>PPM (Academy)</button>';
+    }
   }
   if (deal.subAgreementUrl) {
-    actionsHtml += '<a href="' + escAttr(deal.subAgreementUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'Subscription Docs</a>';
+    if (isPaidUser) {
+      actionsHtml += '<a href="' + escAttr(deal.subAgreementUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'Subscription Docs</a>';
+    } else {
+      actionsHtml += '<button class="btn-action btn-secondary" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="opacity:0.6;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Sub Docs (Academy)</button>';
+    }
   }
   actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
   actionsHtml += '</div></div></div>';
+
+  // --- Investment Memo ---
+  var memoHtml = '';
+  if (currentStage === 'ready' || currentStage === 'invested') {
+    var ddAnswers = loadDDAnswers(deal.id);
+    var checklist = getChecklistForDeal(deal);
+    var answeredCount = Object.keys(ddAnswers).filter(function(k) { return ddAnswers[k]; }).length;
+    var totalQs = checklist.sections.reduce(function(s, sec) { return s + sec.questions.length; }, 0);
+
+    // Buy box data
+    var bbData = null;
+    try { bbData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || 'null'); } catch(e) {}
+    var bbChecks = [];
+    if (bbData) {
+      if (bbData.assetClasses && bbData.assetClasses.length > 0) bbChecks.push({ label: 'Asset Class: ' + deal.assetClass, match: bbData.assetClasses.indexOf(deal.assetClass) >= 0 });
+      if (bbData.checkSize) bbChecks.push({ label: 'Min $' + (deal.investmentMinimum ? (deal.investmentMinimum/1000) + 'K' : '?') + ' vs your $' + (bbData.checkSize/1000) + 'K', match: deal.investmentMinimum <= bbData.checkSize });
+      if (bbData.minIRR) bbChecks.push({ label: 'Target ' + ((deal.targetIRR||0)*100).toFixed(1) + '% vs your ' + (bbData.minIRR*100).toFixed(1) + '% min', match: (deal.targetIRR || 0) >= bbData.minIRR });
+      if (bbData.strategies && bbData.strategies.length > 0) bbChecks.push({ label: 'Strategy: ' + (deal.strategy || 'N/A'), match: bbData.strategies.indexOf(deal.strategy) >= 0 });
+      if (bbData.maxLockup) bbChecks.push({ label: 'Hold ' + (deal.holdPeriod || '?') + ' yrs vs your ' + bbData.maxLockup + ' yr max', match: (deal.holdPeriod || 0) <= bbData.maxLockup });
+    }
+
+    // Portfolio data for invested deals
+    var portfolioEntry = null;
+    try {
+      var allPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+      portfolioEntry = allPortfolio.find(function(p) { return p.dealId === deal.id; });
+    } catch(e) {}
+
+    // Goal data
+    var goalData = null;
+    try { goalData = JSON.parse(localStorage.getItem('gycGoals') || 'null'); } catch(e) {}
+
+    // Memo notes (user-written thesis + reflections)
+    var memoNotes = {};
+    try { memoNotes = JSON.parse(localStorage.getItem('gycMemo_' + deal.id) || '{}'); } catch(e) {}
+
+    memoHtml += '<div class="section" id="investmentMemo">';
+    memoHtml += '<div class="section-header">';
+    memoHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+    memoHtml += '<span class="section-title">Investment Memo</span>';
+    memoHtml += '<button onclick="printMemo(\'' + escAttr(deal.id) + '\')" style="margin-left:auto;padding:5px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);cursor:pointer;display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print / Save PDF</button>';
+    memoHtml += '</div>';
+    memoHtml += '<div class="section-body" id="memoBody">';
+
+    // --- 1. Deal Snapshot ---
+    memoHtml += '<div style="margin-bottom:20px;">';
+    memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Deal Snapshot</div>';
+    memoHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    var snapFields = [
+      ['Investment', deal.investmentName],
+      ['Sponsor', deal.managementCompany + (deal.ceo ? ' (' + deal.ceo + ')' : '')],
+      ['Asset Class', deal.assetClass || '—'],
+      ['Deal Type', deal.dealType || '—'],
+      ['Target IRR', deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '—'],
+      ['Pref Return', deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—'],
+      ['Minimum', deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—'],
+      ['Hold Period', deal.holdPeriod ? formatHoldPeriod(deal.holdPeriod) : '—'],
+      ['Strategy', deal.strategy || '—'],
+      ['Distributions', deal.distributions || '—'],
+      ['Offering Type', deal.offeringType || '—'],
+      ['Status', deal.status || '—']
+    ];
+    for (var si = 0; si < snapFields.length; si++) {
+      memoHtml += '<div style="padding:6px 10px;background:var(--bg-cream);border-radius:6px;">';
+      memoHtml += '<div style="font-size:10px;color:var(--text-muted);">' + snapFields[si][0] + '</div>';
+      memoHtml += '<div style="font-size:13px;font-weight:600;color:var(--text-dark);">' + esc(String(snapFields[si][1])) + '</div>';
+      memoHtml += '</div>';
+    }
+    memoHtml += '</div></div>';
+
+    // --- 2. Buy Box Alignment ---
+    if (bbChecks.length > 0) {
+      var bbMatched = bbChecks.filter(function(c) { return c.match; }).length;
+      memoHtml += '<div style="margin-bottom:20px;">';
+      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Buy Box Alignment &mdash; ' + bbMatched + '/' + bbChecks.length + ' criteria met</div>';
+      memoHtml += '<div style="display:flex;flex-direction:column;gap:4px;">';
+      for (var bi = 0; bi < bbChecks.length; bi++) {
+        var bc = bbChecks[bi];
+        var bcIcon = bc.match
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        memoHtml += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:' + (bc.match ? 'rgba(74,222,128,0.04)' : 'rgba(248,113,113,0.04)') + ';border-radius:6px;font-size:12px;color:' + (bc.match ? 'var(--text-dark)' : 'var(--text-secondary)') + ';">' + bcIcon + esc(bc.label) + '</div>';
+      }
+      memoHtml += '</div></div>';
+    }
+
+    // --- 3. Research Summary (DD answers by section) ---
+    if (answeredCount > 0) {
+      memoHtml += '<div style="margin-bottom:20px;">';
+      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Research Summary &mdash; ' + answeredCount + '/' + totalQs + ' questions answered</div>';
+      for (var msi = 0; msi < checklist.sections.length; msi++) {
+        var msec = checklist.sections[msi];
+        var secKey = msec.title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        // Collect answered questions in this section
+        var secAnswers = [];
+        for (var mqi = 0; mqi < msec.questions.length; mqi++) {
+          var mq = msec.questions[mqi];
+          var mKey = secKey + '_' + mqi;
+          var mAnswer = ddAnswers[mKey];
+          var mAutoVal = mq.autoField ? getAutoValue(deal, mq.autoField, mq.format) : null;
+          var mDisplayVal = mAnswer || mAutoVal;
+          if (mDisplayVal) {
+            secAnswers.push({ q: mq.q, a: mDisplayVal, isAuto: !mAnswer && !!mAutoVal });
+          }
+        }
+        if (secAnswers.length === 0) continue;
+        memoHtml += '<div style="margin-bottom:12px;">';
+        memoHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">' + esc(msec.title) + ' <span style="font-weight:500;color:var(--text-muted);">(' + secAnswers.length + '/' + msec.questions.length + ')</span></div>';
+        for (var ai = 0; ai < secAnswers.length; ai++) {
+          memoHtml += '<div style="padding:4px 0;border-bottom:1px solid var(--border-light);">';
+          memoHtml += '<div style="font-size:11px;color:var(--text-muted);">' + esc(secAnswers[ai].q) + '</div>';
+          memoHtml += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);">' + esc(secAnswers[ai].a);
+          if (secAnswers[ai].isAuto) memoHtml += ' <span style="font-size:9px;color:var(--primary);background:rgba(81,190,123,0.1);padding:1px 5px;border-radius:4px;font-weight:700;">from deal data</span>';
+          memoHtml += '</div></div>';
+        }
+        memoHtml += '</div>';
+      }
+      memoHtml += '</div>';
+    } else {
+      memoHtml += '<div style="margin-bottom:20px;padding:16px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);border-radius:8px;text-align:center;">';
+      memoHtml += '<div style="font-size:12px;color:var(--text-secondary);">No DD research recorded yet. <a href="#" onclick="document.querySelector(\'.dd-accordion\').scrollIntoView({behavior:\'smooth\'});return false;" style="color:var(--primary);font-weight:700;">Start the DD Checklist</a> to build your research record.</div>';
+      memoHtml += '</div>';
+    }
+
+    // --- 4. Investment Thesis (user writes why they're investing) ---
+    memoHtml += '<div style="margin-bottom:20px;">';
+    memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">My Investment Thesis</div>';
+    memoHtml += '<textarea id="memoThesis" onchange="saveMemoField(\'' + escAttr(deal.id) + '\',\'thesis\',this.value)" placeholder="Why are you investing in this deal? What convinced you? What do you expect to happen?" style="width:100%;min-height:80px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);resize:vertical;box-sizing:border-box;">' + esc(memoNotes.thesis || '') + '</textarea>';
+    memoHtml += '</div>';
+
+    // --- 5. Key Risks ---
+    memoHtml += '<div style="margin-bottom:20px;">';
+    memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Key Risks I\'ve Identified</div>';
+    memoHtml += '<textarea id="memoRisks" onchange="saveMemoField(\'' + escAttr(deal.id) + '\',\'risks\',this.value)" placeholder="What are the biggest risks? What could go wrong? What assumptions need to hold?" style="width:100%;min-height:60px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);resize:vertical;box-sizing:border-box;">' + esc(memoNotes.risks || '') + '</textarea>';
+    memoHtml += '</div>';
+
+    // --- 6. Investment Details (if invested) ---
+    if (currentStage === 'invested') {
+      memoHtml += '<div style="margin-bottom:20px;">';
+      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Investment Details</div>';
+      memoHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      if (portfolioEntry) {
+        memoHtml += '<div style="padding:8px 10px;background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.1);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Amount Invested</div><div style="font-size:16px;font-weight:800;color:var(--primary);">' + fmt(parseFloat(portfolioEntry.amountInvested) || 0, 'money') + '</div></div>';
+        memoHtml += '<div style="padding:8px 10px;background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.1);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Date Invested</div><div style="font-size:14px;font-weight:700;color:var(--text-dark);">' + esc(portfolioEntry.investmentDate || '—') + '</div></div>';
+      } else {
+        memoHtml += '<div style="padding:8px 10px;background:var(--bg-cream);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Amount Invested</div><div style="font-size:13px;color:var(--text-secondary);">Not recorded yet</div></div>';
+        memoHtml += '<div style="padding:8px 10px;background:var(--bg-cream);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Date Invested</div><div style="font-size:13px;color:var(--text-secondary);">Not recorded yet</div></div>';
+      }
+      memoHtml += '</div></div>';
+
+      // --- 7. Post-Investment Reflection (only for invested deals) ---
+      memoHtml += '<div style="margin-bottom:20px;">';
+      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Post-Investment Reflection</div>';
+      memoHtml += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Come back periodically to journal how this investment is performing vs your expectations.</div>';
+      memoHtml += '<textarea id="memoReflection" onchange="saveMemoField(\'' + escAttr(deal.id) + '\',\'reflection\',this.value)" placeholder="Is the deal performing as expected? Are distributions on time? Would you invest again? What have you learned?" style="width:100%;min-height:80px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);resize:vertical;box-sizing:border-box;">' + esc(memoNotes.reflection || '') + '</textarea>';
+      memoHtml += '</div>';
+    }
+
+    // --- Memo timestamp ---
+    var memoDate = memoNotes._lastSaved ? new Date(memoNotes._lastSaved).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+    if (memoDate) {
+      memoHtml += '<div style="font-size:10px;color:var(--text-muted);text-align:right;">Last updated: ' + memoDate + '</div>';
+    }
+
+    memoHtml += '</div></div>';
+  }
 
   // --- Similar Deals Section ---
   var similarHtml = '';
@@ -4644,6 +5105,7 @@ async function renderDeal() {
     + buyBoxHtml
     + pascalTakeHtml
     + overviewHtml
+    + academyNudgeHtml
     + thesisHtml
     + goalImpactHtml
     + detailsHtml
@@ -4652,6 +5114,7 @@ async function renderDeal() {
     + ddHtml
     + qaHtml
     + stressHtml
+    + memoHtml
     + pipelineHtml
     + actionsHtml
     + similarHtml
