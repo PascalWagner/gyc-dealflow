@@ -140,7 +140,10 @@ function transformRecord(rec, mcLookup, peopleLookup) {
     subAgreementUrl: Array.isArray(f['Subscription Agreement']) && f['Subscription Agreement'].length > 0 ? f['Subscription Agreement'][0].url : '',
     parentDealId: Array.isArray(f['Parent Deal']) && f['Parent Deal'].length > 0 ? f['Parent Deal'][0] : null,
     shareClassLabel: f['Share Class Label'] || null,
-    verticalIntegration: f['Vertically Integrated'] || f['Vertical Integration'] || null
+    verticalIntegration: f['Vertically Integrated'] || f['Vertical Integration'] || null,
+    pascalVideoUrl: f['Pascals Take Video'] || '',
+    pascalTakeText: f['Pascals Take Text'] || '',
+    propertyImageUrl: Array.isArray(f['Property Image']) && f['Property Image'].length > 0 ? f['Property Image'][0].url : ''
   };
 }
 
