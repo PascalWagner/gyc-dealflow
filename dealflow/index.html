@@ -5138,7 +5138,7 @@ const _supa = window.supabase.createClient(
             <li>&#9744; Add server-side password hashing (store hash in GHL custom field or notes)</li>
             <li>&#9744; Password reset managed from GHL</li>
             <li>&#9744; Wire up remaining webhooks (buyBoxSync, subscribe, activity)</li>
-            <li>&#9745; Live deal data from Supabase API (migrated from Airtable)</li>
+            <li>&#9745; Live deal data from Supabase API</li>
             <li>&#9744; Subscription/payment integration (Stripe)</li>
             <li>&#9744; Deck review request flow</li>
             <li>&#9744; GP introduction request flow</li>
@@ -8288,7 +8288,7 @@ function creditBadgeLabel(deal) {
 }
 
 // Build annual return series for a credit fund
-// Currently data is simulated (from generateYearReturn). In the future, replace with actual Airtable fields.
+// Currently data is simulated (from generateYearReturn). In the future, replace with actual Supabase fields.
 function getCreditFundReturns(deal) {
   const years = [2022, 2023, 2024, 2025];
   const series = [];
@@ -13316,7 +13316,7 @@ function renderManagersPage() {
     if (d.dealType) dealsByCompany[name].dealTypes.add(d.dealType);
   });
 
-  // Primary source: GYC_COMPANIES from API (Airtable Management Companies table)
+  // Primary source: GYC_COMPANIES from API (Supabase management_companies table)
   const companyMap = {};
   apiCompanies.forEach(c => {
     const name = c.name;
@@ -17219,7 +17219,7 @@ function renderSchemaPage() {
 
     <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;padding-left:4px;">Persistent Backend (Supabase + GHL)</div>
 
-    ${tableCard('Opportunities (Deals)', 'persistent', 'Airtable · tblXFNpOvL0Ub5tVt', [
+    ${tableCard('Opportunities (Deals)', 'persistent', 'Supabase · opportunities', [
       { name: 'Deal #', type: 'number', example: dealsCount + ' deals loaded' },
       { name: 'Investment Name', type: 'text', example: 'The Heritage Fund' },
       { name: 'Asset Class', type: 'text', example: 'Multi Family, Lending, Self Storage...' },
@@ -17231,7 +17231,7 @@ function renderSchemaPage() {
       { name: '+ 30 more fields', type: '...', example: 'Strategy, distributions, financials, etc.' }
     ], dealsCount)}
 
-    ${tableCard('Management Companies', 'persistent', 'Airtable · tblRczR8Eok31ZhJj', [
+    ${tableCard('Management Companies', 'persistent', 'Supabase · management_companies', [
       { name: 'Operator Name', type: 'text', example: 'Cedar, Hornet Capital, etc.' },
       { name: 'CEO', type: 'text', example: 'AJ Osborne' },
       { name: 'Website', type: 'url', example: 'https://...' },
@@ -17251,7 +17251,7 @@ function renderSchemaPage() {
       { name: '+ 18 more fields', type: '...', example: 'Check size, lockup, instruments, etc.' }
     ], 'Per contact')}
 
-    ${tableCard('User Deal Stages', 'persistent', 'Airtable · tbl0g5yms16Qi2h5I + localStorage', [
+    ${tableCard('User Deal Stages', 'persistent', 'Supabase · user_deal_stages + localStorage', [
       { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Deal ID', type: 'text', example: Object.keys(stages)[0] || '—' },
       { name: 'Stage', type: 'enum', example: 'new / interested / duediligence / portfolio / passed' },
@@ -17259,7 +17259,7 @@ function renderSchemaPage() {
       { name: 'Updated At', type: 'datetime', example: '—' }
     ], stageCount)}
 
-    ${tableCard('User Portfolio', 'persistent', 'Airtable · tblK0Jb6yrxHSf1Y6 + localStorage', [
+    ${tableCard('User Portfolio', 'persistent', 'Supabase · user_portfolio + localStorage', [
       { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Investment Name', type: 'text', example: portfolio[0]?.investmentName || '—' },
       { name: 'Sponsor', type: 'text', example: portfolio[0]?.sponsor || '—' },
@@ -17270,7 +17270,7 @@ function renderSchemaPage() {
       { name: '+ 8 more fields', type: '...', example: 'Entity, target IRR, notes, asset class, etc.' }
     ], portfolio.length)}
 
-    ${tableCard('User Goals', 'persistent', 'Airtable · tblWkUZWhHkuG2waP + localStorage', [
+    ${tableCard('User Goals', 'persistent', 'Supabase · user_goals + localStorage', [
       { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Goal Type', type: 'enum', example: goals?.type || '—' },
       { name: 'Current Income', type: 'currency', example: goals ? '$' + (goals.currentIncome || 0).toLocaleString() : '—' },
@@ -17281,7 +17281,7 @@ function renderSchemaPage() {
       { name: 'Updated At', type: 'datetime', example: '—' }
     ], goals ? 1 : 0)}
 
-    ${tableCard('User Tax Docs', 'persistent', 'Airtable · tblQZllNS7B9DmW83 + localStorage', [
+    ${tableCard('User Tax Docs', 'persistent', 'Supabase · user_tax_docs + localStorage', [
       { name: 'Email', type: 'email', example: user?.email || '—' },
       { name: 'Tax Year', type: 'number', example: taxDocs[0]?.taxYear || '—' },
       { name: 'Investment Name', type: 'text', example: taxDocs[0]?.investmentName || '—' },
@@ -17294,7 +17294,7 @@ function renderSchemaPage() {
     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);padding:20px;margin-top:16px;">
       <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px;">All Data Persistent</div>
       <div style="font-size:13px;color:#166534;line-height:1.8;">
-        All 7 tables are synced to persistent backends (Airtable + GHL). User data persists across devices and browser clears. Analytics tracked via Google Analytics.
+        All tables are synced to persistent backends (Supabase + GHL). User data persists across devices and browser clears. Analytics tracked via Google Analytics.
       </div>
     </div>
   `;
