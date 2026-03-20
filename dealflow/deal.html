@@ -1580,7 +1580,152 @@ body {
 
 .sponsor-company-link:hover { color: var(--primary-hover); text-decoration: underline; }
 
+/* ====== OPERATOR PROFILE ====== */
+.operator-profile {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.operator-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  color: #fff;
+  font-size: 28px;
+  letter-spacing: -0.5px;
+}
+.operator-details { flex: 1; min-width: 0; }
+.operator-name {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.operator-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.operator-bio {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+.operator-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.operator-stat {
+  text-align: center;
+}
+.operator-stat-value {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+.operator-stat-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.operator-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.operator-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition);
+}
+.operator-link:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(81,190,123,0.04);
+}
+.operator-link svg { width: 14px; height: 14px; }
 
+/* ====== OPERATOR OTHER DEALS ====== */
+.operator-deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.operator-deal-card {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-decoration: none;
+  transition: box-shadow 0.2s;
+}
+.operator-deal-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+.operator-deal-name {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.operator-deal-meta {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.operator-deal-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.operator-deal-stat {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.operator-deal-stat strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+@media (max-width: 768px) {
+  .operator-profile { flex-direction: column; align-items: center; text-align: center; }
+  .operator-stats { justify-content: center; }
+  .operator-links { justify-content: center; }
+  .operator-deals-grid { grid-template-columns: 1fr; }
+}
 
 /* ====== ACTION BUTTONS ====== */
 
@@ -4503,6 +4648,126 @@ async function renderDeal() {
     thesisHtml += '</div></div></div>';
   }
 
+  // --- Operator Profile ---
+  var operatorHtml = '';
+  (function buildOperatorProfile() {
+    if (!deal.managementCompany) return;
+    operatorHtml += '<div class="section">';
+    operatorHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="section-title">About the Operator</span></div>';
+    operatorHtml += '<div class="section-body">';
+    operatorHtml += '<div class="operator-profile">';
+
+    // Photo or initials avatar
+    if (deal.ceoPhotoUrl) {
+      operatorHtml += '<img class="operator-photo" src="' + escAttr(deal.ceoPhotoUrl) + '" alt="' + escAttr(deal.ceo || '') + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" />';
+      operatorHtml += '<div class="operator-photo" style="display:none;">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
+    } else {
+      operatorHtml += '<div class="operator-photo">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
+    }
+
+    operatorHtml += '<div class="operator-details">';
+
+    // Name and title
+    if (deal.ceo) {
+      operatorHtml += '<div class="operator-name">' + esc(deal.ceo) + '</div>';
+      operatorHtml += '<div class="operator-title">CEO, <a href="sponsor.html?company=' + encodeURIComponent(deal.managementCompany) + '" style="color:var(--primary);text-decoration:none;">' + esc(deal.managementCompany) + '</a></div>';
+    } else {
+      operatorHtml += '<div class="operator-name">' + esc(deal.managementCompany) + '</div>';
+      operatorHtml += '<div class="operator-title">Sponsor / Operator</div>';
+    }
+
+    // Bio if available
+    if (deal.sponsorBio) {
+      operatorHtml += '<div class="operator-bio">' + esc(deal.sponsorBio) + '</div>';
+    }
+
+    // Key stats row
+    var opStats = [];
+    if (deal.mcFoundingYear) {
+      var yrsInBiz = new Date().getFullYear() - deal.mcFoundingYear;
+      opStats.push({ value: yrsInBiz + '+', label: 'Years' });
+    }
+    if (deal.fundAUM) {
+      opStats.push({ value: '$' + (deal.fundAUM >= 1000000000 ? (deal.fundAUM / 1000000000).toFixed(1) + 'B' : (deal.fundAUM / 1000000).toFixed(0) + 'M'), label: 'AUM' });
+    }
+    if (deal.operatorDealCount) {
+      opStats.push({ value: deal.operatorDealCount, label: 'Deals' });
+    }
+    if (deal.operatorTotalRaised) {
+      opStats.push({ value: '$' + (deal.operatorTotalRaised >= 1000000000 ? (deal.operatorTotalRaised / 1000000000).toFixed(1) + 'B' : (deal.operatorTotalRaised / 1000000).toFixed(0) + 'M'), label: 'Total Raised' });
+    }
+
+    if (opStats.length > 0) {
+      operatorHtml += '<div class="operator-stats">';
+      for (var si = 0; si < opStats.length; si++) {
+        operatorHtml += '<div class="operator-stat"><div class="operator-stat-value">' + opStats[si].value + '</div><div class="operator-stat-label">' + opStats[si].label + '</div></div>';
+      }
+      operatorHtml += '</div>';
+    }
+
+    // Links
+    var hasLinks = deal.mcWebsite || deal.mcLinkedin || deal.mcInvestClearly;
+    if (hasLinks) {
+      operatorHtml += '<div class="operator-links">';
+      if (deal.mcWebsite) {
+        operatorHtml += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>';
+      }
+      if (deal.mcLinkedin) {
+        operatorHtml += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>';
+      }
+      if (deal.mcInvestClearly) {
+        operatorHtml += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Reviews</a>';
+      }
+      operatorHtml += '</div>';
+    }
+
+    operatorHtml += '</div></div>'; // close operator-details, operator-profile
+    operatorHtml += '</div></div>'; // close section-body, section
+  })();
+
+  // --- Other Deals from This Operator ---
+  var operatorDealsHtml = '';
+  (function buildOperatorDeals() {
+    if (!deal.managementCompany) return;
+    var allDeals = [];
+    try {
+      var cached = sessionStorage.getItem('gycDealsCache');
+      if (cached) allDeals = JSON.parse(cached);
+    } catch(e) {}
+    if (allDeals.length < 2) return;
+
+    var otherDeals = allDeals.filter(function(d) {
+      return d.id !== deal.id && d.managementCompany && d.managementCompany === deal.managementCompany;
+    });
+    if (otherDeals.length === 0) return;
+
+    // Sort by date (newest first)
+    otherDeals.sort(function(a, b) {
+      return (new Date(b.addedDate || 0).getTime()) - (new Date(a.addedDate || 0).getTime());
+    });
+
+    var cards = otherDeals.slice(0, 6).map(function(d) {
+      var yld = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
+      var yldLabel = d.preferredReturn ? 'Pref' : d.cashOnCash ? 'CoC' : 'IRR';
+      var statusClass = (d.status || '').toLowerCase() === 'open' || (d.status || '').toLowerCase() === 'evergreen' ? 'status-open' : 'status-closed';
+      return '<a href="deal.html?id=' + d.id + '" class="operator-deal-card">'
+        + '<div class="operator-deal-name">' + esc(d.investmentName) + '</div>'
+        + '<div class="operator-deal-meta">'
+        + (d.assetClass ? esc(d.assetClass) : '') + (d.status ? ' · <span class="deal-badge ' + statusClass + '" style="font-size:10px;padding:2px 6px;">' + esc(d.status) + '</span>' : '')
+        + '</div>'
+        + '<div class="operator-deal-stats">'
+        + (yld > 0 ? '<div class="operator-deal-stat"><strong>' + fmt(yld, 'pct') + '</strong> ' + yldLabel + '</div>' : '')
+        + (d.investmentMinimum ? '<div class="operator-deal-stat"><strong>' + fmt(d.investmentMinimum, 'money') + '</strong> Min</div>' : '')
+        + (d.holdPeriod ? '<div class="operator-deal-stat"><strong>' + formatHoldPeriod(d.holdPeriod) + '</strong> Hold</div>' : '')
+        + '</div></a>';
+    }).join('');
+
+    operatorDealsHtml = '<div class="section">'
+      + '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg><span class="section-title">Other Deals from ' + esc(deal.managementCompany) + '</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + otherDeals.length + ' deal' + (otherDeals.length !== 1 ? 's' : '') + '</span></div>'
+      + '<div class="section-body"><div class="operator-deals-grid">' + cards + '</div></div>'
+      + '</div>';
+  })();
+
   // --- Pascal's Take ---
   var pascalTakeHtml = '';
   var userTier = (getUser() && getUser().tier) || 'free';
@@ -5485,30 +5750,42 @@ async function renderDeal() {
   }
   stickyHtml += '</div>';
 
-  // === Assemble in new order (JTBD redesign) ===
+  // === Assemble in new order (JTBD redesign v2) ===
+  // 1. At-a-glance → 2. Understand → 3. Evaluate operator → 4. Fit my criteria
+  // 5. Expert opinion → 6. Terms & details → 7. Deep DD → 8. Decide → 9. Explore more
   html = breadcrumbHtml
     + '<div class="deal-page-content">'
     + heroHtml
     + archivedBannerHtml
     + complianceBannerHtml
     + metricsHtml
-    + buyBoxHtml
-    + pascalTakeHtml
+    // --- Understand the opportunity ---
     + overviewHtml
-    + academyNudgeHtml
     + thesisHtml
+    // --- Who's behind this? ---
+    + operatorHtml
+    + operatorDealsHtml
+    // --- Does it fit me? ---
+    + buyBoxHtml
     + goalImpactHtml
+    // --- Expert opinion ---
+    + pascalTakeHtml
+    + academyNudgeHtml
+    // --- Deal specifics ---
     + detailsHtml
     + feeBenchHtml
     + chartHtml
+    // --- Due diligence ---
     + materialsHtml
     + ddHtml
     + qaHtml
     + stressHtml
+    // --- Decision ---
     + memoHtml
     + pipelineHtml
     + gpInsightsHtml
     + actionsHtml
+    // --- Explore more ---
     + similarHtml
     + fundNudgeHtml
     + '</div>'
