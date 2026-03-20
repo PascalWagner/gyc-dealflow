@@ -1374,6 +1374,48 @@ body {
 
 
 
+/* ====== CASH FLOW PROJECTION ====== */
+.cf-toggle { display: flex; gap: 0; margin-bottom: 16px; }
+.cf-toggle button {
+  padding: 7px 16px; font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--bg-main); color: var(--text-secondary);
+  cursor: pointer; transition: all 0.15s;
+}
+.cf-toggle button:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.cf-toggle button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: 0; }
+.cf-toggle button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.cf-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
+.cf-table th { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border-light); }
+.cf-table th:first-child { text-align: left; }
+.cf-table td { padding: 10px 12px; text-align: right; color: var(--text-dark); border-bottom: 1px solid var(--border-light); }
+.cf-table td:first-child { text-align: left; font-weight: 600; color: var(--text-secondary); }
+.cf-table tr:last-child td { border-bottom: none; font-weight: 700; }
+.cf-table .cf-highlight { color: var(--primary); font-weight: 700; }
+.cf-table .cf-total-row td { border-top: 2px solid var(--border); background: rgba(81,190,123,0.04); font-weight: 700; }
+
+.cf-chart-wrap { position: relative; height: 220px; }
+.cf-bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.cf-bar-container { display: flex; align-items: flex-end; gap: 3px; height: 160px; width: 100%; justify-content: center; }
+.cf-bar {
+  width: 18px; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s;
+  position: relative;
+}
+.cf-bar-dist { background: var(--primary); }
+.cf-bar-cap { background: rgba(81,190,123,0.25); }
+.cf-bar-label { font-family: var(--font-ui); font-size: 10px; color: var(--text-muted); }
+.cf-bar-value { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--text-dark); white-space: nowrap; }
+.cf-chart-grid { display: flex; align-items: flex-end; gap: 4px; padding: 0 8px; justify-content: space-around; }
+.cf-legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; }
+.cf-legend-item { display: flex; align-items: center; gap: 5px; font-family: var(--font-ui); font-size: 11px; color: var(--text-secondary); }
+.cf-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+.cf-summary { display: flex; gap: 24px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-light); flex-wrap: wrap; }
+.cf-summary-item { display: flex; flex-direction: column; }
+.cf-summary-value { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.5px; }
+.cf-summary-value.green { color: var(--primary); }
+.cf-summary-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-top: 2px; }
+
 /* ====== OVERVIEW ====== */
 
 .overview-text {
@@ -5032,6 +5074,143 @@ async function renderDeal() {
     }
   })();
 
+  // --- Projected Cash Flow ---
+  var cashFlowHtml = '';
+  (function buildCashFlow() {
+    var yieldRate = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
+    if (yieldRate > 1) yieldRate = yieldRate / 100;
+    if (!yieldRate || yieldRate <= 0) return;
+
+    var investment = deal.investmentMinimum || 100000;
+    var hold = deal.holdPeriod || 5;
+    if (hold < 1) hold = 1;
+    var isCredit = isCreditFund(deal);
+    var isEvergreen = (deal.status || '').toLowerCase() === 'evergreen';
+    var eqMult = deal.equityMultiple || 0;
+    var years = Math.min(Math.ceil(hold), 10);
+    if (isEvergreen) years = 5; // show 5 years for evergreen funds
+
+    // Build year-by-year projection
+    var rows = [];
+    var totalDist = 0;
+    for (var y = 1; y <= years; y++) {
+      var dist, capReturn = 0, note = '';
+      if (isCredit) {
+        // Credit funds: steady yield, capital back at lockup end (unless evergreen)
+        dist = investment * yieldRate;
+        if (!isEvergreen && y === years) {
+          capReturn = investment;
+          note = 'Capital returned';
+        }
+      } else {
+        // Equity: pref return during hold, capital event at exit
+        if (y === 1) {
+          dist = investment * yieldRate * 0.5; // ramp-up year
+          note = 'Partial year (ramp-up)';
+        } else {
+          dist = investment * yieldRate;
+        }
+        if (y === years && eqMult > 0) {
+          // At exit: total return = investment * equityMultiple
+          // minus distributions already paid, the rest is capital event
+          var totalProjected = investment * eqMult;
+          capReturn = totalProjected - totalDist - dist;
+          if (capReturn < 0) capReturn = 0;
+          note = 'Sale / capital event';
+        } else if (y === years && !isEvergreen) {
+          capReturn = investment;
+          note = 'Capital returned';
+        }
+      }
+      totalDist += dist;
+      rows.push({ year: y, dist: dist, capReturn: capReturn, cumDist: totalDist, note: note });
+    }
+
+    var totalCash = totalDist + (rows[rows.length - 1] ? rows[rows.length - 1].capReturn : 0);
+    var totalReturn = ((totalCash / investment) - 1) * 100;
+    var uid = 'cfProj_' + Date.now();
+
+    cashFlowHtml += '<div class="section">';
+    cashFlowHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Projected Cash Flow</span></div>';
+    cashFlowHtml += '<div class="section-body">';
+
+    // Assumption banner
+    cashFlowHtml += '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:14px;padding:8px 12px;background:var(--bg-main);border-radius:var(--radius-sm);">';
+    cashFlowHtml += 'Based on ' + fmt(investment, 'money') + ' invested at ' + fmt(yieldRate, 'pct') + ' ' + (isCredit ? 'yield' : 'pref return') + ' over ' + years + (isEvergreen ? '+ years' : ' years') + '. Projections are illustrative only.';
+    cashFlowHtml += '</div>';
+
+    // Toggle
+    cashFlowHtml += '<div class="cf-toggle">';
+    cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_chart\').style.display=\'block\';document.getElementById(\'' + uid + '_table\').style.display=\'none\';this.classList.add(\'active\');this.nextElementSibling.classList.remove(\'active\');">Chart</button>';
+    cashFlowHtml += '<button onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
+    cashFlowHtml += '</div>';
+
+    // --- Chart view ---
+    var maxVal = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var rv = rows[i].dist + rows[i].capReturn;
+      if (rv > maxVal) maxVal = rv;
+    }
+    cashFlowHtml += '<div id="' + uid + '_chart">';
+    cashFlowHtml += '<div class="cf-chart-grid">';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var distH = maxVal > 0 ? Math.round((r.dist / maxVal) * 150) : 0;
+      var capH = maxVal > 0 ? Math.round((r.capReturn / maxVal) * 150) : 0;
+      var totalVal = r.dist + r.capReturn;
+      cashFlowHtml += '<div class="cf-bar-group">';
+      cashFlowHtml += '<div class="cf-bar-value">$' + Math.round(totalVal / 1000) + 'K</div>';
+      cashFlowHtml += '<div class="cf-bar-container">';
+      if (r.capReturn > 0) cashFlowHtml += '<div class="cf-bar cf-bar-cap" style="height:' + Math.max(capH, 2) + 'px;" title="Capital return: $' + Math.round(r.capReturn).toLocaleString() + '"></div>';
+      cashFlowHtml += '<div class="cf-bar cf-bar-dist" style="height:' + Math.max(distH, 2) + 'px;" title="Distributions: $' + Math.round(r.dist).toLocaleString() + '"></div>';
+      cashFlowHtml += '</div>';
+      cashFlowHtml += '<div class="cf-bar-label">Yr ' + r.year + '</div>';
+      cashFlowHtml += '</div>';
+    }
+    cashFlowHtml += '</div>';
+    cashFlowHtml += '<div class="cf-legend">';
+    cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:var(--primary);"></div>Distributions</div>';
+    if (rows.some(function(r) { return r.capReturn > 0; })) {
+      cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:rgba(81,190,123,0.25);"></div>Capital Return</div>';
+    }
+    cashFlowHtml += '</div>';
+    cashFlowHtml += '</div>';
+
+    // --- Table view ---
+    cashFlowHtml += '<div id="' + uid + '_table" style="display:none;">';
+    cashFlowHtml += '<table class="cf-table">';
+    cashFlowHtml += '<tr><th>Year</th><th>Distributions</th>';
+    if (rows.some(function(r) { return r.capReturn > 0; })) cashFlowHtml += '<th>Capital Return</th>';
+    cashFlowHtml += '<th>Total Cash</th><th>Cumulative</th></tr>';
+    var cumAll = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      cumAll += r.dist + r.capReturn;
+      var isLast = (i === rows.length - 1);
+      cashFlowHtml += '<tr' + (isLast ? ' class="cf-total-row"' : '') + '>';
+      cashFlowHtml += '<td>Year ' + r.year + (r.note ? ' <span style="font-size:10px;color:var(--text-muted);font-weight:400;">(' + r.note + ')</span>' : '') + '</td>';
+      cashFlowHtml += '<td class="cf-highlight">$' + Math.round(r.dist).toLocaleString() + '</td>';
+      if (rows.some(function(r) { return r.capReturn > 0; })) cashFlowHtml += '<td>' + (r.capReturn > 0 ? '$' + Math.round(r.capReturn).toLocaleString() : '—') + '</td>';
+      cashFlowHtml += '<td>$' + Math.round(r.dist + r.capReturn).toLocaleString() + '</td>';
+      cashFlowHtml += '<td>$' + Math.round(cumAll).toLocaleString() + '</td>';
+      cashFlowHtml += '</tr>';
+    }
+    cashFlowHtml += '</table>';
+    cashFlowHtml += '</div>';
+
+    // Summary strip
+    cashFlowHtml += '<div class="cf-summary">';
+    cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value">$' + Math.round(investment).toLocaleString() + '</div><div class="cf-summary-label">Invested</div></div>';
+    cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value green">$' + Math.round(totalDist).toLocaleString() + '</div><div class="cf-summary-label">Total Distributions</div></div>';
+    cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value">$' + Math.round(totalCash).toLocaleString() + '</div><div class="cf-summary-label">Total Cash Received</div></div>';
+    if (totalReturn > 0) {
+      cashFlowHtml += '<div class="cf-summary-item"><div class="cf-summary-value green">' + totalReturn.toFixed(0) + '%</div><div class="cf-summary-label">Total Return</div></div>';
+    }
+    cashFlowHtml += '</div>';
+
+    cashFlowHtml += '</div></div>';
+  })();
+
   // --- 5. Performance Chart + Share Classes ---
   var chartHtml = '';
   if (isCreditFund(deal) && deal.targetIRR) {
@@ -6123,6 +6302,7 @@ async function renderDeal() {
     + geoMapHtml
     + operatorDealsHtml
     // --- Job 5: How does it compare? ---
+    + cashFlowHtml
     + feeBenchHtml
     + chartHtml
     + similarHtml
