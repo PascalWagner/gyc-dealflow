@@ -15618,7 +15618,6 @@ function renderDashboardMilestoneProgress() {
 // ========== NEW USER ONBOARDING (4-step) ==========
 function showOnboarding() {
   if (localStorage.getItem('gycOnboardingComplete')) return;
-  if (localStorage.getItem('gycBuyBoxComplete')) return;
   if (!localStorage.getItem('gycUser')) return;
 
   // Remove any existing onboarding overlay
@@ -15903,6 +15902,8 @@ function showOnboarding() {
 
   renderStep(1);
   document.body.appendChild(overlay);
+  // Trigger active class after a frame so CSS transition works
+  requestAnimationFrame(function() { overlay.classList.add('active'); });
 }
 
 // ========== INIT ==========
