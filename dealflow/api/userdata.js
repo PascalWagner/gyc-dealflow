@@ -79,12 +79,11 @@ const GHL_GOALS_FIELD_MAP = {
 function capitalToRange(num) {
   const n = Number(num);
   if (!n || isNaN(n)) return null;
-  if (n < 100000) return 'Less than $100k';
+  if (n < 100000) return '<$100k';
   if (n < 250000) return '$100k - $249k';
-  if (n < 500000) return '$250k - $499k';
+  if (n < 500000) return '$249k - $499k';
   if (n < 1000000) return '$500k - $999k';
-  if (n < 5000000) return '$1M - $4.9M';
-  return '$5M+';
+  return '$1M+';
 }
 
 // Background sync goals to GHL contact custom fields
@@ -233,12 +232,11 @@ async function handleGet(req, res, supabase, user) {
             function rangeToCapital(label) {
               if (!label || typeof label !== 'string') return 0;
               const ranges = {
-                'Less than $100k': 50000,
+                '<$100k': 50000,
                 '$100k - $249k': 175000,
-                '$250k - $499k': 375000,
+                '$249k - $499k': 375000,
                 '$500k - $999k': 750000,
-                '$1M - $4.9M': 3000000,
-                '$5M+': 5000000
+                '$1M+': 2000000
               };
               return ranges[label] || Number(label) || 0;
             }
