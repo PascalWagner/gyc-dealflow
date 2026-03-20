@@ -1068,6 +1068,29 @@ html.dark .academy-gate-cta {
 .compare-chart-legend-item { display:flex; align-items:center; gap:4px; }
 .compare-chart-legend-swatch { width:10px; height:10px; border-radius:2px; }
 
+/* Add/remove fields picker */
+.compare-add-fields { position:relative; text-align:center; }
+.compare-add-fields-btn {
+  display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border:1px dashed var(--border);
+  border-radius:var(--radius-sm); background:none; cursor:pointer; font-family:var(--font-ui);
+  font-size:11px; font-weight:600; color:var(--text-muted); transition:all 0.15s;
+}
+.compare-add-fields-btn:hover { border-color:var(--primary); color:var(--primary); }
+.compare-field-picker {
+  display:none; position:absolute; bottom:100%; left:50%; transform:translateX(-50%);
+  background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:8px 4px; box-shadow:0 4px 16px rgba(0,0,0,0.1); z-index:20; min-width:180px;
+  margin-bottom:6px;
+}
+.compare-field-picker.open { display:block; }
+.compare-field-option {
+  display:flex; align-items:center; gap:8px; padding:6px 12px; cursor:pointer;
+  font-family:var(--font-ui); font-size:12px; color:var(--text-dark); border-radius:4px;
+  transition:background 0.1s;
+}
+.compare-field-option:hover { background:var(--bg-hover); }
+.compare-field-option input[type="checkbox"] { accent-color:var(--primary); }
+
 @media (max-width:768px) {
   .compare-charts { grid-template-columns:1fr; }
   .compare-empty-steps { flex-direction:column; align-items:center; gap:12px; }
@@ -5115,6 +5138,7 @@ const _supa = window.supabase.createClient(
             <li>&#10003; Deal Q&amp;A system (Supabase <code>deal_qa</code> table)</li>
             <li>&#10003; Deck upload &rarr; Supabase Storage (<code>deal-decks</code> bucket) + auto-enrichment via Claude</li>
             <li>&#10003; User data sync: localStorage (primary) &harr; Supabase (persistent backup)</li>
+            <li>&#10003; Goals &harr; GHL sync: Supabase goals push to GHL custom fields, GHL seeds Supabase on first login</li>
             <li>&#10003; Social proof: deal stage counts via <code>deal_stage_counts</code> view</li>
             <li>&#10003; Admin analytics dashboard (hot deals, funnel, top users)</li>
             <li>&#10003; Income Goal Bridge on dashboard (distribution-based progress tracking)</li>
@@ -5126,8 +5150,7 @@ const _supa = window.supabase.createClient(
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:12px;">Known Issues</h3>
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#10007; GHL goals sync is one-directional &mdash; wizard goal syncs TO GHL, but <code>user_goals</code> table (target income, capital, etc.) does not sync to GHL custom fields</li>
-            <li>&#10007; No bidirectional GHL &harr; Supabase sync &mdash; GHL contact updates don't flow back to Supabase</li>
+            <li>&#10007; GHL &rarr; Supabase sync is login-only &mdash; if a user's GHL contact is updated directly (e.g. by admin), changes only pull on next login</li>
             <li>&#10007; Magic link sign-in not built yet</li>
             <li>&#10007; Forgot password flow not built</li>
             <li>&#10007; Weekly digest email (kill-switched off, needs migration from old Airtable version)</li>
@@ -5137,7 +5160,7 @@ const _supa = window.supabase.createClient(
         <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
           <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#3b82f6;margin-bottom:12px;">Still To Do</h3>
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#9744; GHL &harr; Supabase bidirectional goals sync (target income, capital, timeline &rarr; GHL custom fields)</li>
+            <li>&#9745; GHL &harr; Supabase bidirectional goals sync (target income, capital, timeline &rarr; GHL custom fields)</li>
             <li>&#9744; Build magic link / forgot password flow via Supabase Auth</li>
             <li>&#9744; Subscription/payment integration (Stripe)</li>
             <li>&#9744; Deck review request flow</li>
@@ -7448,6 +7471,43 @@ function renderComparePage() {
   h += '</tr>';
   h += cmpTextRow('Geography', deals.map(function(d) { return d.investingGeography || d.location; }));
 
+  // --- Optional Extra Fields ---
+  var extraFields = [
+    { id: 'dealType', label: 'Deal Type', render: function() { return cmpTextRow('Deal Type', deals.map(function(d) { return d.dealType; })); } },
+    { id: 'offeringSize', label: 'Offering Size', render: function() { return cmpRow('Offering Size', deals.map(function(d) { return d.offeringSize; }), 'money', false); } },
+    { id: 'offeringType', label: 'Offering Type', render: function() { return cmpTextRow('Offering Type', deals.map(function(d) { return d.offeringType; })); } },
+    { id: 'sponsorAUM', label: 'Sponsor AUM', render: function() { return cmpRow('Sponsor AUM', deals.map(function(d) { return d.fundAUM; }), 'money', true); } },
+    { id: 'strategy', label: 'Strategy', render: function() { return cmpTextRow('Strategy', deals.map(function(d) { return d.investmentStrategy || d.strategy; })); } },
+    { id: 'sponsor', label: 'Sponsor', render: function() { return cmpTextRow('Sponsor', deals.map(function(d) { return d.managementCompany; })); } },
+    { id: 'availableTo', label: 'Available To', render: function() { return cmpTextRow('Available To', deals.map(function(d) { return d.availableTo; })); } }
+  ];
+
+  var activeExtras = [];
+  try { activeExtras = JSON.parse(localStorage.getItem('gycCompareExtras') || '[]'); } catch(e) {}
+
+  // Render active extra fields
+  var hasExtras = activeExtras.length > 0;
+  if (hasExtras) {
+    h += cmpSection('Additional');
+    extraFields.forEach(function(f) {
+      if (activeExtras.indexOf(f.id) >= 0) h += f.render();
+    });
+  }
+
+  // "Add fields" toggle row
+  h += '<tr><td colspan="' + (cols + 1) + '" style="padding:8px 14px;border-bottom:none;">';
+  h += '<div class="compare-add-fields">';
+  h += '<button class="compare-add-fields-btn" onclick="toggleCompareFieldPicker()">';
+  h += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  h += ' Add / remove fields</button>';
+  h += '<div class="compare-field-picker" id="compareFieldPicker">';
+  extraFields.forEach(function(f) {
+    var isOn = activeExtras.indexOf(f.id) >= 0;
+    h += '<label class="compare-field-option">';
+    h += '<input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleCompareExtraField(\'' + f.id + '\', this.checked)">';
+    h += '<span>' + f.label + '</span></label>';
+  });
+  h += '</div></div></td></tr>';
 
   // --- Your Notes ---
   h += cmpSection('Your Notes');
@@ -7485,6 +7545,20 @@ function renderComparePage() {
 
   // Render visual charts
   if (chartsEl) renderCompareCharts(chartsEl, deals, matchScores);
+}
+
+// --- Compare Extra Fields ---
+function toggleCompareFieldPicker() {
+  var picker = document.getElementById('compareFieldPicker');
+  if (picker) picker.classList.toggle('open');
+}
+function toggleCompareExtraField(fieldId, isOn) {
+  var extras = [];
+  try { extras = JSON.parse(localStorage.getItem('gycCompareExtras') || '[]'); } catch(e) {}
+  if (isOn && extras.indexOf(fieldId) < 0) extras.push(fieldId);
+  if (!isOn) extras = extras.filter(function(id) { return id !== fieldId; });
+  localStorage.setItem('gycCompareExtras', JSON.stringify(extras));
+  renderComparePage();
 }
 
 // --- Compare Charts ---
@@ -14833,26 +14907,59 @@ function adminSearchDebounce() {
   _adminSearchTimer = setTimeout(() => { _adminPage = 1; adminLoadData(); }, 300);
 }
 
+async function adminRefreshToken() {
+  const user = getUser();
+  if (!user || !user.refreshToken || typeof _supa === 'undefined') return null;
+  try {
+    const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
+    if (data?.session) {
+      user.token = data.session.access_token;
+      user.refreshToken = data.session.refresh_token;
+      localStorage.setItem('gycUser', JSON.stringify(user));
+      return user.token;
+    }
+  } catch (e) { console.warn('Admin token refresh failed:', e.message); }
+  return null;
+}
+
+async function adminFetch(body) {
+  let user = getUser();
+  if (!user) return { success: false, error: 'Not signed in' };
+  let resp = await fetch('/api/admin-manage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify(body)
+  });
+  let result = await resp.json();
+  // Auto-refresh token on auth failure and retry once
+  if (!result.success && (result.error || '').toLowerCase().includes('expired')) {
+    const newToken = await adminRefreshToken();
+    if (newToken) {
+      resp = await fetch('/api/admin-manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + newToken },
+        body: JSON.stringify(body)
+      });
+      result = await resp.json();
+    }
+  }
+  return result;
+}
+
 async function adminLoadData() {
   const user = getUser();
   if (!user || !isAdmin()) { adminRenderEmptyState('Sign in as admin to manage data'); return; }
   const search = document.getElementById('adminSearch')?.value?.trim() || '';
   if (_adminQualityMode && _adminTab === 'deals') {
     try {
-      const resp = await fetch('/api/admin-manage', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token }, body: JSON.stringify({ action: 'list-deals-quality', search: search }) });
-      const result = await resp.json();
+      const result = await adminFetch({ action: 'list-deals-quality', search });
       if (!result.success) { adminRenderEmptyState('Failed to load: ' + (result.error || 'Unknown error')); return; }
       adminRenderQualityView(result.data, result.stats);
     } catch (e) { adminRenderEmptyState('Could not connect to database'); }
     return;
   }
   try {
-    const resp = await fetch('/api/admin-manage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
-      body: JSON.stringify({ action: 'list-' + _adminTab, page: _adminPage, limit: 25, search })
-    });
-    const result = await resp.json();
+    const result = await adminFetch({ action: 'list-' + _adminTab, page: _adminPage, limit: 25, search });
     if (!result.success) { adminRenderEmptyState('Load failed: ' + (result.error || 'Unknown error')); return; }
     adminRenderTable(result.data, result.total);
   } catch (e) { adminRenderEmptyState('Could not connect to database'); }
@@ -14865,11 +14972,28 @@ function adminRenderEmptyState(msg) {
   if (countEl) countEl.textContent = '';
   if (head) head.innerHTML = '';
   var tabLabel = _adminTab === 'deals' ? 'deals' : _adminTab === 'operators' ? 'operators' : 'users';
+  var isTokenError = (msg || '').toLowerCase().includes('expired') || (msg || '').toLowerCase().includes('token');
+  var actionHtml = isTokenError
+    ? '<div style="margin-top:14px;"><button onclick="adminRefreshAndRetry()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Refresh Session</button></div>'
+    : '';
+  var subtext = isTokenError
+    ? 'Your session has expired. Click the button to refresh, or sign out and back in.'
+    : 'Data loads from Supabase on the live deploy. If you are on the live site, check your admin credentials.';
   if (body) body.innerHTML = '<tr><td style="padding:60px 20px;text-align:center;">' +
     '<div style="font-size:32px;margin-bottom:12px;opacity:0.3;">' + (_adminTab === 'deals' ? '\uD83D\uDCC8' : _adminTab === 'operators' ? '\uD83C\uDFE2' : '\uD83D\uDC65') + '</div>' +
     '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">' + (msg || 'No ' + tabLabel + ' found') + '</div>' +
-    '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto;">Data loads from Supabase on the live deploy. If you are on the live site, check your admin credentials.</div>' +
+    '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);max-width:360px;margin:0 auto;">' + subtext + '</div>' +
+    actionHtml +
     '</td></tr>';
+}
+
+async function adminRefreshAndRetry() {
+  const newToken = await adminRefreshToken();
+  if (newToken) {
+    adminLoadData();
+  } else {
+    adminRenderEmptyState('Session refresh failed. Please sign out and back in.');
+  }
 }
 
 function adminRenderTable(rows, total) {
