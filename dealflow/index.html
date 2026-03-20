@@ -946,6 +946,9 @@ html.dark .academy-gate-cta {
   background: rgba(251,191,36,0.08);
   color: #fbbf24;
 }
+/* DD Checklist section accordion */
+.dd-sec-open > .dd-sec-body { display: block !important; }
+.dd-sec-open .dd-sec-chevron { transform: rotate(180deg); }
 .card-footer {
   padding: 12px 18px 16px;
   display: flex;
@@ -4228,6 +4231,83 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
   }
 }
 
+/* ── Income Fund Page ── */
+.if-hero{background:linear-gradient(135deg,#0a1e21 0%,#1a3a3f 50%,#0d2b1f 100%);border-radius:var(--radius);padding:48px 40px;margin-bottom:28px;color:#fff;position:relative;overflow:hidden}
+.if-hero .circle1{position:absolute;top:-30px;right:-30px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.08)}
+.if-hero .circle2{position:absolute;bottom:-50px;left:-50px;width:250px;height:250px;border-radius:50%;background:rgba(81,190,123,0.05)}
+.if-hero-inner{position:relative;z-index:1}
+.if-badge{display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(81,190,123,0.2);color:var(--green);font-family:var(--font-ui);font-size:11px;font-weight:700;margin-bottom:16px;letter-spacing:0.5px}
+.if-hero h1{font-family:var(--font-ui);font-size:32px;font-weight:800;margin:0 0 6px 0}
+.if-hero-sub{font-family:var(--font-body);font-size:16px;opacity:0.85;margin:0 0 8px 0;max-width:650px}
+.if-hero-stats{display:flex;gap:32px;margin-top:20px;flex-wrap:wrap}
+.if-hero-stat{text-align:center}
+.if-hero-stat .val{font-family:var(--font-ui);font-size:28px;font-weight:800;color:#51BE7B}
+.if-hero-stat .lbl{font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
+.if-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+.if-metric{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
+.if-metric .label{font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:4px}
+.if-metric .value{font-family:var(--font-ui);font-size:26px;font-weight:800}
+.if-metric .sub{font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-top:2px}
+.if-section-title{font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin:32px 0 6px 0}
+.if-section-sub{font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:16px}
+.if-calc{background:linear-gradient(135deg,#0a1e21,#1a3a3f);border-radius:var(--radius);padding:28px 32px;margin-bottom:28px;color:#fff}
+.if-calc-results{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}
+.if-calc-r{text-align:center;background:rgba(255,255,255,0.08);border-radius:var(--radius);padding:16px}
+.if-calc-r .v{font-family:var(--font-ui);font-size:24px;font-weight:800;color:#51BE7B}
+.if-calc-r .l{font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.55);margin-top:4px}
+.if-fund-row{display:grid;grid-template-columns:1fr 80px 70px 80px 90px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-family:var(--font-ui);font-size:13px}
+.if-fund-row:nth-child(even){background:var(--bg-body)}
+.if-fund-row .name{font-weight:600;color:var(--text-dark)}
+.if-fund-row .strat{font-size:11px;color:var(--text-muted);margin-top:1px}
+.if-fund-row .num{text-align:right;font-family:'SF Mono','Fira Mono',monospace;font-size:12px;color:var(--text-secondary)}
+.if-fund-row .num.green{color:var(--green);font-weight:700}
+.if-fund-header{display:grid;grid-template-columns:1fr 80px 70px 80px 90px;padding:8px 14px;background:#0a1e21;border-radius:var(--radius) var(--radius) 0 0;color:rgba(255,255,255,0.45);font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.if-fund-header span{text-align:right}
+.if-fund-header span:first-child{text-align:left}
+.if-risk-dot{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700}
+.if-track-banner{background:linear-gradient(135deg,#51BE7B,#3a9d6a);border-radius:var(--radius);padding:24px 32px;margin-bottom:20px;text-align:center;color:#fff}
+.if-track-banner h3{font-family:var(--font-ui);font-size:24px;font-weight:800;margin:0}
+.if-track-banner p{font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.8);margin:6px 0 0 0}
+.if-yr-table{width:100%;border-collapse:collapse;font-size:13px}
+.if-yr-table thead tr{background:#0a1e21}
+.if-yr-table th{padding:10px 14px;font-family:var(--font-ui);font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.45);text-align:right}
+.if-yr-table th:first-child{text-align:left}
+.if-yr-table td{padding:10px 14px;text-align:right;font-family:'SF Mono','Fira Mono',monospace;font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border)}
+.if-yr-table td:first-child{text-align:left;font-family:var(--font-ui);font-weight:600;color:var(--text-dark)}
+.if-testimonial{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;display:flex;gap:16px;align-items:flex-start}
+.if-testimonial .avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#e7f5f0,rgba(31,81,89,0.15));display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:16px;font-weight:700;color:#1F5159;flex-shrink:0}
+.if-testimonial .quote{font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.65;font-style:italic}
+.if-testimonial .name{font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px}
+.if-testimonial .role{font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--green);margin-bottom:6px}
+.if-manager{background:#0a1e21;border-radius:var(--radius);padding:24px 28px;color:#fff;display:flex;gap:20px;align-items:flex-start}
+.if-manager .photo{flex-shrink:0;width:80px;height:80px;border-radius:50%;border:2px solid #51BE7B;background:#1a3a3f;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:22px;font-weight:700;color:#51BE7B}
+.if-cta-box{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;margin-top:32px}
+.if-fit-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px}
+.if-fit-col{padding:0 24px}
+.if-fit-col:first-child{border-right:1px solid rgba(255,255,255,0.1)}
+.if-fit-item{display:flex;align-items:flex-start;gap:8px;font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.5;margin-bottom:8px}
+.if-compare-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+.if-compare-table thead tr{background:#0a1e21}
+.if-compare-table th{padding:10px 14px;font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.45);text-align:center}
+.if-compare-table th:first-child{text-align:left}
+.if-compare-table th.hl{color:#51BE7B;background:rgba(81,190,123,0.18)}
+.if-compare-table td{padding:10px 14px;text-align:center;font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);border-bottom:1px solid var(--border)}
+.if-compare-table td:first-child{text-align:left;font-weight:600;color:var(--text-dark)}
+.if-compare-table td.hl{background:rgba(81,190,123,0.04);font-weight:600;color:var(--text-dark)}
+@media(max-width:768px){
+  .if-hero{padding:28px 20px}
+  .if-hero h1{font-size:24px}
+  .if-hero-stats{gap:20px}
+  .if-calc-results{grid-template-columns:1fr}
+  .if-fund-row,.if-fund-header{grid-template-columns:1fr 60px 55px 60px 70px;font-size:11px}
+  .if-fund-header{font-size:8px}
+  .if-fit-grid{grid-template-columns:1fr}
+  .if-fit-col{padding:0}
+  .if-fit-col:first-child{border-right:none;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;margin-bottom:12px}
+  .if-testimonial{flex-direction:column;gap:10px}
+  .if-manager{flex-direction:column;align-items:center;text-align:center}
+}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -4358,6 +4438,10 @@ const _supa = window.supabase.createClient(
       <a class="nav-item" href="#" data-page="casestudies" onclick="navigateTo('casestudies'); return false">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         Case Studies
+      </a>
+      <a class="nav-item" href="#" data-page="admin-manage" onclick="navigateTo('admin-manage'); return false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Manage Data
       </a>
     </div>
   </nav>
@@ -4980,9 +5064,9 @@ const _supa = window.supabase.createClient(
       </button>
       <div class="topbar-title">GYC Income Fund</div>
     </div>
-    <div class="sub-page" style="max-width:1000px">
-      <!-- Hero -->
-      <div style="background:linear-gradient(135deg, #0a1e21 0%, #1a3a3f 50%, #0d2b1f 100%);border-radius:var(--radius);padding:48px 40px;margin-bottom:32px;color:#fff;position:relative;overflow:hidden;">
+    <div class="sub-page" style="max-width:1060px">
+      <!-- HERO -->
+      <div class="if-hero">
         <div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.08);"></div>
         <div style="position:absolute;bottom:-50px;left:-50px;width:250px;height:250px;border-radius:50%;background:rgba(81,190,123,0.05);"></div>
         <div style="position:relative;z-index:1;">
@@ -5447,6 +5531,45 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="sub-page" style="max-width:1100px" id="caseStudiesContent">
       <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <!-- PAGE: Admin Manage (Deals, Operators, Users) -->
+  <div class="page" id="page-admin-manage">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Manage Database</div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="topbar-tab active" onclick="adminShowTab('deals',this)">Deals</button>
+        <button class="topbar-tab" onclick="adminShowTab('operators',this)">Operators</button>
+        <button class="topbar-tab" onclick="adminShowTab('users',this)">Users</button>
+      </div>
+    </div>
+    <div class="sub-page" style="max-width:1200px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div style="position:relative;flex:1;min-width:200px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16" style="position:absolute;left:12px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="adminSearch" placeholder="Search..." oninput="adminSearchDebounce()" style="width:100%;padding:10px 14px 10px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:14px;background:var(--bg-card);">
+        </div>
+        <button onclick="adminCreateNew()" style="padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add New
+        </button>
+        <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);" id="adminResultCount"></div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+            <thead id="adminTableHead">
+              <tr style="border-bottom:2px solid var(--border);background:var(--bg-cream);"></tr>
+            </thead>
+            <tbody id="adminTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:16px;" id="adminPagination"></div>
     </div>
   </div>
 
@@ -6102,19 +6225,158 @@ function renderMatchBadge(deal) {
   return '<span class="deal-freshness-badge" style="background:' + bg + ';color:' + color + ';">' + info.text + '</span>';
 }
 
-// ========== DD CHECKLIST DATA ==========
-const DD_CHECKLIST = [
-  'Review PPM / Offering Memorandum',
-  'Verify operator track record',
-  'Check fee structure',
-  'Review financial statements',
-  'Confirm investment minimum & terms',
-  'Verify accreditation requirements',
-  'Review tax implications (K-1 timing, depreciation)',
-  'Schedule call with operator',
-  'Check references / other LPs',
-  'Review subscription documents'
-];
+// ========== DD CHECKLIST DATA (Deal-type specific) ==========
+const DD_CHECKLIST_CREDIT = {
+  label: 'Debt/Credit Fund Template',
+  sections: [
+    { title: 'Firm Basics', key: 'firm', questions: [
+      { q: 'What is the management company name?', autoField: 'managementCompany' },
+      { q: 'Who is the CEO or primary decision-maker?', autoField: 'ceo' },
+      { q: 'Who are the key team members beyond the CEO?' },
+      { q: 'When was the firm founded?', autoField: 'mcFoundingYear' },
+      { q: 'How many employees does the management firm have?' },
+      { q: "What is the firm's AUM?", autoField: 'fundAUM', format: 'money' },
+      { q: 'How many funds or vehicles have they launched to date?' },
+      { q: 'Has the manager ever lost investor capital?' },
+      { q: 'Is there a key person succession/backup plan?' },
+      { q: 'Any pending litigation?' }
+    ]},
+    { title: 'Fund Basics', key: 'fund', questions: [
+      { q: 'What is the name of the fund?', autoField: 'investmentName' },
+      { q: "What is the fund's investment strategy?", autoField: 'investmentStrategy' },
+      { q: 'How many investors are in the fund?' },
+      { q: 'What is the current AUM of this fund?', autoField: 'fundAUM', format: 'money' },
+      { q: 'What specific asset classes does the fund focus on?', autoField: 'assetClass' },
+      { q: 'How much does the sponsor co-invest in this fund?' },
+      { q: 'What geographic markets does the fund operate in?', autoField: 'investingGeography' },
+      { q: 'How diversified is the fund by borrower/loan type?' }
+    ]},
+    { title: 'Performance & Structure', key: 'perf', questions: [
+      { q: 'What is the target IRR?', autoField: 'targetIRR', format: 'pct' },
+      { q: 'What is the preferred return?', autoField: 'preferredReturn', format: 'pct' },
+      { q: "What was the fund's return in 2024?" },
+      { q: "What was the fund's return in 2023?" },
+      { q: 'How often are returns distributed?', autoField: 'distributions' },
+      { q: 'What is the current leverage ratio?' },
+      { q: 'What is the fee structure (mgmt, performance)?', gated: true },
+      { q: 'Has the fund paused distributions?', gated: true }
+    ]},
+    { title: 'Loan Details', key: 'loans', questions: [
+      { q: 'How are loans underwritten?', gated: true },
+      { q: 'Are loans senior secured, mezzanine, or unsecured?', autoField: 'debtPosition' },
+      { q: 'How many loans are in the portfolio?', autoField: 'loanCount' },
+      { q: 'What is the average loan-to-value?', autoField: 'avgLoanLTV', format: 'pct' },
+      { q: 'What is the historical default rate?', gated: true },
+      { q: 'What happens if a loan defaults?', gated: true },
+      { q: 'Who services the loans?', gated: true }
+    ]},
+    { title: 'Investor Experience', key: 'inv', questions: [
+      { q: 'Accreditation required?', autoField: 'availableTo' },
+      { q: 'Minimum investment?', autoField: 'investmentMinimum', format: 'money' },
+      { q: 'Lock-up period?', autoField: 'holdPeriod', format: 'years' },
+      { q: 'What is the redemption policy?', gated: true },
+      { q: 'K-1s or 1099s?', gated: true },
+      { q: 'Are financials audited?', autoField: 'financials' }
+    ]},
+    { title: 'External DD (LP Led)', key: 'ext', questions: [
+      { q: 'Do we have a strong relationship with the sponsor?' },
+      { q: 'Do you know investors with positive past results?' },
+      { q: 'Does Google show any negative publicity?' },
+      { q: 'Background checks produce concerns?' },
+      { q: 'InvestClearly profile — all reviews positive?' }
+    ]}
+  ]
+};
+
+const DD_CHECKLIST_SYNDICATION = {
+  label: 'Syndication Template',
+  sections: [
+    { title: 'Executive Summary', key: 'exec', questions: [
+      { q: 'What is the name of the deal?', autoField: 'investmentName' },
+      { q: 'Minimum Investment', autoField: 'investmentMinimum', format: 'money' },
+      { q: 'Target Hold', autoField: 'holdPeriod', format: 'years' },
+      { q: 'Target IRR', autoField: 'targetIRR', format: 'pct' },
+      { q: 'Target Cash-on-Cash', autoField: 'cashOnCash', format: 'pct' },
+      { q: 'Preferred return?', autoField: 'preferredReturn', format: 'pct' },
+      { q: 'Target Equity Multiple', autoField: 'equityMultiple', format: 'multiple' },
+      { q: '506B or 506C?', autoField: 'offeringType' },
+      { q: 'Target Equity Raise', autoField: 'offeringSize', format: 'money' },
+      { q: 'Basic business plan summary', autoField: 'investmentStrategy' }
+    ]},
+    { title: 'Firm Basics', key: 'firm', questions: [
+      { q: 'Management company name?', autoField: 'managementCompany' },
+      { q: 'When was the firm founded?', autoField: 'mcFoundingYear' },
+      { q: 'Who is the CEO?', autoField: 'ceo' },
+      { q: "Firm's AUM?", autoField: 'fundAUM', format: 'money' },
+      { q: 'How many deals have gone full-cycle?' },
+      { q: 'Average IRR of full-cycle deals?' },
+      { q: 'Average Equity Multiple of full-cycle deals?' },
+      { q: 'Does Google show any negative publicity?' }
+    ]},
+    { title: 'Deal Basics', key: 'deal', questions: [
+      { q: 'Property address?', autoField: 'address' },
+      { q: 'Number of units' },
+      { q: 'When was the property built?' },
+      { q: 'Current occupancy?' },
+      { q: 'How does the sponsor plan to grow NOI?' },
+      { q: 'Going-in cap rate?' },
+      { q: 'Assumed cap rate at sale?' },
+      { q: 'Is the interest rate fixed or variable?', gated: true },
+      { q: 'What is the combined LTC or LTV?', gated: true }
+    ]},
+    { title: 'Fees & Economics', key: 'fees', questions: [
+      { q: 'LP / GP profit split?', autoField: 'lpGpSplit' },
+      { q: "Sponsor's acquisition fee?", gated: true },
+      { q: 'Annual Asset Management Fee?', gated: true },
+      { q: 'Property management fee?', gated: true },
+      { q: 'Any other fees (marketing, admin)?', gated: true }
+    ]},
+    { title: 'Intro Call Questions', key: 'call', questions: [
+      { q: 'Describe due diligence process to acquire?', gated: true },
+      { q: 'Major systems needing replacement during hold?', gated: true },
+      { q: 'Property management in-house or 3rd party?', gated: true },
+      { q: 'Annual rent growth assumptions for first 5 years?', gated: true },
+      { q: 'What % of equity raise is set aside as reserves?', gated: true },
+      { q: 'Expected depreciation year 1?', autoField: 'firstYrDepreciation', gated: true },
+      { q: 'What are the biggest risks?', gated: true }
+    ]},
+    { title: 'Sponsor Deep Dive', key: 'sponsor', questions: [
+      { q: 'Has the firm ever paused distributions?' },
+      { q: 'Has the firm ever issued a capital call?' },
+      { q: 'Has the firm ever lost investor capital?' },
+      { q: 'How much is sponsor investing in this deal?', autoField: 'sponsorInDeal', format: 'pct' },
+      { q: 'Background checks produce concerns?' }
+    ]},
+    { title: 'Post-Research', key: 'post', questions: [
+      { q: 'What do WE believe the biggest risks are?' },
+      { q: 'Is the sponsor wealthy enough to save the deal if things go wrong?' },
+      { q: 'Do we know investors with positive past results?' }
+    ]}
+  ]
+};
+
+function getDDChecklistForDeal(deal) {
+  if (isCreditFund(deal)) return DD_CHECKLIST_CREDIT;
+  return DD_CHECKLIST_SYNDICATION;
+}
+
+function getDDTotalQuestions(deal) {
+  var cl = getDDChecklistForDeal(deal);
+  return cl.sections.reduce(function(sum, s) { return sum + s.questions.length; }, 0);
+}
+
+function getDDAutoValue(deal, field, format) {
+  var val = deal[field];
+  if (val === undefined || val === null || val === '' || val === 0) return null;
+  if (format === 'pct') return (val > 1 ? val : val * 100).toFixed(1) + '%';
+  if (format === 'money') return fmt(val, 'money');
+  if (format === 'multiple') return val.toFixed(2) + 'x';
+  if (format === 'years') return formatHoldPeriod(val);
+  return String(val);
+}
+
+// Legacy compat — old code references DD_CHECKLIST.length
+const DD_CHECKLIST = DD_CHECKLIST_SYNDICATION.sections.reduce(function(arr, s) { return arr.concat(s.questions.map(function(q) { return q.q; })); }, []);
 // Time ago helper for DD checklist contributor timestamps
 function getTimeAgo(dateStr) {
   var diff = Date.now() - new Date(dateStr).getTime();
@@ -6188,6 +6450,28 @@ function toggleDDItem(dealId, index) {
 
   const deal = DEALS.find(d => d.id === dealId);
   if (deal) document.getElementById('panelContent').innerHTML = renderPanel(deal);
+}
+
+// Save DD answer to localStorage (deal-type-specific checklist)
+function saveDDAnswer(dealId, key, value) {
+  var answers = {};
+  try { answers = JSON.parse(localStorage.getItem('gycDDChecklist_' + dealId) || '{}'); } catch(e) {}
+  if (value && value.trim()) {
+    answers[key] = value.trim();
+  } else {
+    delete answers[key];
+  }
+  localStorage.setItem('gycDDChecklist_' + dealId, JSON.stringify(answers));
+  // Re-render panel to update progress
+  var deal = DEALS.find(function(d) { return d.id === dealId; });
+  if (deal) {
+    // Small delay to not interrupt typing
+    clearTimeout(window._ddSaveTimer);
+    window._ddSaveTimer = setTimeout(function() {
+      var panel = document.getElementById('panelContent');
+      if (panel) panel.innerHTML = renderPanel(deal);
+    }, 500);
+  }
 }
 
 // ========== DD CHECKLIST REALTIME ==========
@@ -7154,12 +7438,12 @@ function renderCardStageExtras(deal) {
     }
     return '';
   } else if (stage === 'vetting') {
-    // DD checklist progress
+    // DD checklist progress — deal-type-specific
     const checks = JSON.parse(localStorage.getItem('gycDDChecklist_' + deal.id) || '{}');
-    const done = Object.values(checks).filter(Boolean).length;
-    const total = 65;
-    const pct = Math.min(Math.round((done / total) * 100), 100);
-    const btnLabel = done > 0 ? 'Continue DD (' + done + ' items reviewed)' : 'Start DD Checklist';
+    const done = Object.keys(checks).filter(function(k) { return checks[k]; }).length;
+    const total = getDDTotalQuestions(deal);
+    const pct = total > 0 ? Math.min(Math.round((done / total) * 100), 100) : 0;
+    const btnLabel = done > 0 ? 'Continue DD (' + done + '/' + total + ')' : 'Start DD Checklist';
     return '<div style="margin-top:8px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
       '<span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">DD Progress</span>' +
@@ -8121,64 +8405,101 @@ function renderPanelNextSteps(deal) {
     h += '</div>';
 
   } else if (stage === 'vetting') {
-    // Shared DD Checklist — community-contributed
-    var checks = dealDDChecks[deal.id] || [];
-    var details = ddCheckDetails[deal.id] || {};
-    var checkedCount = checks.filter(Boolean).length;
-    var pct = Math.round((checkedCount / DD_CHECKLIST.length) * 100);
+    // Deal-type-specific DD checklist
+    var checklist = getDDChecklistForDeal(deal);
+    var ddAnswers = {};
+    try { ddAnswers = JSON.parse(localStorage.getItem('gycDDChecklist_' + deal.id) || '{}'); } catch(e) {}
+    var totalQ = getDDTotalQuestions(deal);
+    var answeredQ = Object.keys(ddAnswers).filter(function(k) { return ddAnswers[k]; }).length;
+    var pct = totalQ > 0 ? Math.round((answeredQ / totalQ) * 100) : 0;
 
-    // Fetch shared DD data if not loaded yet + subscribe to Realtime updates
-    if (!dealDDChecks[deal.id]) {
-      fetchDealDD(deal.id).then(function() {
-        var d = DEALS.find(function(dd) { return dd.id === deal.id; });
-        if (d) document.getElementById('panelContent').innerHTML = renderPanel(d);
-      });
-    }
-    subscribeDealDD(deal.id);
-
-    h += '<div style="margin-bottom:12px;">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-    h += '<div style="display:flex;align-items:center;gap:6px;">';
-    h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
-    h += '<span style="font-size:12px;color:var(--text-secondary);">Community DD &middot; ' + checkedCount + '/' + DD_CHECKLIST.length + '</span>';
+    // Header with progress
+    h += '<div style="margin-bottom:14px;">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">';
+    h += '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + checklist.label + '</span>';
+    h += '<span style="font-size:12px;font-weight:700;color:' + (pct >= 50 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + answeredQ + '/' + totalQ + '</span>';
     h += '</div>';
-    h += '<span style="font-size:12px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + pct + '%</span>';
-    h += '</div>';
-    h += '<div style="height:6px;background:var(--bg-main);border-radius:3px;overflow:hidden;">';
+    h += '<div style="height:6px;background:var(--border-light);border-radius:3px;overflow:hidden;margin-bottom:4px;">';
     h += '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:3px;transition:width 0.3s ease;"></div>';
     h += '</div>';
-    h += '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Check items you\'ve completed. Your contributions help other investors.</div>';
+    h += '<div style="font-size:10px;color:var(--text-muted);">Answer questions below or <a href="deal.html?id=' + deal.id + '" style="color:var(--primary);text-decoration:underline;">open full DD page</a> for the complete experience.</div>';
     h += '</div>';
 
-    h += '<div style="display:flex;flex-direction:column;gap:4px;">';
-    DD_CHECKLIST.forEach(function(item, i) {
-      var checked = checks[i];
-      var detail = details[String(i)];
-      var gated = isExplorer && i >= 3;
-      if (gated) {
-        h += '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;font-size:12px;color:var(--text-muted);filter:blur(3px);pointer-events:none;user-select:none;"><input type="checkbox" disabled><span>' + item + '</span></label>';
+    // Render sections as collapsible groups
+    var globalIdx = 0;
+    checklist.sections.forEach(function(sec, si) {
+      var secAnswered = 0;
+      var secQuestions = sec.questions.length;
+      sec.questions.forEach(function(q, qi) {
+        var key = sec.key + '_' + qi;
+        var autoVal = q.autoField ? getDDAutoValue(deal, q.autoField, q.format) : null;
+        if (ddAnswers[key] || autoVal) secAnswered++;
+      });
+      var secPct = Math.round((secAnswered / secQuestions) * 100);
+      var secDone = secAnswered === secQuestions;
+      var secGated = isExplorer && si >= 2;
+
+      h += '<div style="margin-bottom:6px;border:1px solid var(--border-light);border-radius:8px;overflow:hidden;">';
+      // Section header
+      h += '<div onclick="this.parentElement.classList.toggle(\'dd-sec-open\')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;background:' + (secDone ? 'rgba(74,222,128,0.04)' : 'transparent') + ';">';
+      h += '<div style="display:flex;align-items:center;gap:6px;">';
+      if (secDone) {
+        h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
       } else {
-        var contributorInfo = '';
-        if (checked && detail && detail.name) {
-          var timeAgo = detail.at ? getTimeAgo(detail.at) : '';
-          contributorInfo = '<div style="font-size:10px;color:var(--text-muted);margin-left:24px;margin-top:1px;">' + (detail.name || detail.by) + (timeAgo ? ' &middot; ' + timeAgo : '') + '</div>';
-        }
-        h += '<div style="border-radius:6px;background:' + (checked ? 'rgba(74,222,128,0.06)' : 'transparent') + ';">';
-        h += '<label onclick="toggleDDItem(\'' + deal.id + '\',' + i + ')" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:12px;color:' + (checked ? 'var(--primary)' : 'var(--text-dark)') + ';' + (checked ? 'text-decoration:line-through;' : '') + '"><input type="checkbox" ' + (checked ? 'checked' : '') + ' style="pointer-events:none;accent-color:var(--primary);"><span>' + item + '</span></label>';
-        h += contributorInfo;
+        h += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
+      }
+      h += '<span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);">' + sec.title + '</span>';
+      h += '</div>';
+      h += '<div style="display:flex;align-items:center;gap:6px;">';
+      h += '<span style="font-size:10px;color:' + (secDone ? 'var(--primary)' : 'var(--text-muted)') + ';font-weight:600;">' + secAnswered + '/' + secQuestions + '</span>';
+      h += '<svg class="dd-sec-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>';
+      h += '</div></div>';
+
+      // Section body (questions)
+      if (secGated) {
+        h += '<div class="dd-sec-body" style="display:none;padding:8px 12px;">';
+        h += '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px;">';
+        h += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block;margin:0 auto 6px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+        h += 'Academy members only';
+        h += '</div></div>';
+      } else {
+        h += '<div class="dd-sec-body" style="display:none;padding:4px 8px 8px;">';
+        sec.questions.forEach(function(q, qi) {
+          var key = sec.key + '_' + qi;
+          var autoVal = q.autoField ? getDDAutoValue(deal, q.autoField, q.format) : null;
+          var userAnswer = ddAnswers[key] || '';
+          var isAnswered = !!userAnswer || !!autoVal;
+          var displayVal = userAnswer || autoVal || '';
+
+          h += '<div style="padding:4px 0;border-bottom:1px solid var(--border-light);">';
+          h += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px;">' + q.q + '</div>';
+          if (autoVal && !userAnswer) {
+            h += '<div style="display:flex;align-items:center;gap:4px;">';
+            h += '<span style="font-size:12px;font-weight:600;color:var(--text-dark);">' + autoVal + '</span>';
+            h += '<span style="font-size:9px;color:var(--primary);background:rgba(81,190,123,0.1);padding:1px 5px;border-radius:4px;">auto</span>';
+            h += '</div>';
+          } else {
+            h += '<input type="text" value="' + (userAnswer || '').replace(/"/g, '&quot;') + '" placeholder="' + (autoVal ? autoVal : 'Your answer...') + '" '
+              + 'onchange="saveDDAnswer(\'' + deal.id + '\',\'' + key + '\',this.value)" '
+              + 'style="width:100%;padding:4px 8px;border:1px solid ' + (isAnswered ? 'var(--primary)' : 'var(--border)') + ';border-radius:5px;font-size:11px;font-family:var(--font-body);background:' + (isAnswered ? 'rgba(74,222,128,0.03)' : 'var(--bg-card)') + ';color:var(--text-dark);box-sizing:border-box;" />';
+          }
+          h += '</div>';
+        });
         h += '</div>';
       }
+      h += '</div>';
     });
-    h += '</div>';
 
+    // Academy gate for free users
     if (isExplorer) {
       h += '<div style="margin-top:8px;padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;text-align:center;">';
-      h += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">Unlock full DD checklist</div>';
+      h += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">Unlock all ' + checklist.sections.length + ' DD sections</div>';
       h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
       h += '</div>';
     }
 
-    if (checkedCount >= 6) {
+    // Ready to Invest button — appears when enough progress
+    if (pct >= 40) {
       h += '<button onclick="changeDealStage(\'' + deal.id + '\',\'ready\')" style="margin-top:12px;width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Ready to Invest &rarr;</button>';
     }
 
@@ -9041,6 +9362,7 @@ function navigateTo(page) {
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'schema') renderSchemaPage();
   if (page === 'casestudies') renderCaseStudies();
+  if (page === 'admin-manage') adminLoadData();
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
     // Try to render from localStorage first
@@ -13853,6 +14175,261 @@ function filterAcademyCourses(level) {
     c.style.display = (level === 'all' || c.dataset.level === level) ? '' : 'none';
   });
 }
+
+// ========== JWT TOKEN REFRESH ==========
+(function setupTokenRefresh() {
+  const user = getUser();
+  if (!user || !user.refreshToken) return;
+  // Refresh token every 50 minutes (Supabase tokens expire in 60 min)
+  setInterval(async () => {
+    try {
+      const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
+      if (data?.session) {
+        const u = getUser();
+        u.token = data.session.access_token;
+        u.refreshToken = data.session.refresh_token;
+        localStorage.setItem('gycUser', JSON.stringify(u));
+      }
+    } catch (e) { console.warn('Token refresh failed:', e.message); }
+  }, 50 * 60 * 1000);
+})();
+
+// ========== ADMIN MANAGE DATABASE ==========
+let _adminTab = 'deals';
+let _adminPage = 1;
+let _adminSearchTimer = null;
+
+function adminShowTab(tab, btn) {
+  _adminTab = tab;
+  _adminPage = 1;
+  document.getElementById('adminSearch').value = '';
+  document.querySelectorAll('#page-admin-manage .topbar-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  adminLoadData();
+}
+
+function adminSearchDebounce() {
+  clearTimeout(_adminSearchTimer);
+  _adminSearchTimer = setTimeout(() => { _adminPage = 1; adminLoadData(); }, 300);
+}
+
+async function adminLoadData() {
+  const user = getUser();
+  if (!user || !isAdmin()) return;
+  const search = document.getElementById('adminSearch')?.value?.trim() || '';
+  try {
+    const resp = await fetch('/api/admin-manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'list-' + _adminTab, page: _adminPage, limit: 25, search })
+    });
+    const result = await resp.json();
+    if (!result.success) { console.error('Admin load error:', result.error); return; }
+    adminRenderTable(result.data, result.total);
+  } catch (e) { console.error('Admin load failed:', e); }
+}
+
+function adminRenderTable(rows, total) {
+  const head = document.querySelector('#adminTableHead tr');
+  const body = document.getElementById('adminTableBody');
+  const countEl = document.getElementById('adminResultCount');
+  if (countEl) countEl.textContent = (total || rows.length) + ' records';
+
+  let cols = [];
+  if (_adminTab === 'deals') {
+    cols = [
+      { key: 'investment_name', label: 'Deal Name' },
+      { key: 'asset_class', label: 'Asset Class' },
+      { key: 'target_irr', label: 'Target IRR' },
+      { key: 'investment_minimum', label: 'Minimum' },
+      { key: 'management_company_name', label: 'Operator' },
+      { key: 'archived', label: 'Status' }
+    ];
+  } else if (_adminTab === 'operators') {
+    cols = [
+      { key: 'name', label: 'Name' },
+      { key: 'website', label: 'Website' },
+      { key: 'aum', label: 'AUM' },
+      { key: 'headquarters', label: 'HQ' }
+    ];
+  } else {
+    cols = [
+      { key: 'email', label: 'Email' },
+      { key: 'full_name', label: 'Name' },
+      { key: 'tier', label: 'Tier' },
+      { key: 'is_admin', label: 'Admin' },
+      { key: 'created_at', label: 'Joined' }
+    ];
+  }
+
+  head.innerHTML = cols.map(c =>
+    '<th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + c.label + '</th>'
+  ).join('') + '<th style="width:80px;padding:10px 12px;"></th>';
+
+  body.innerHTML = rows.map(row => {
+    const cells = cols.map(c => {
+      let val = row[c.key];
+      if (c.key === 'archived') val = val ? '<span style="color:var(--text-muted);">Archived</span>' : '<span style="color:var(--primary);">Active</span>';
+      else if (c.key === 'is_admin') val = val ? 'Yes' : '';
+      else if (c.key === 'tier') val = '<span style="text-transform:capitalize;font-weight:600;">' + (val || 'free') + '</span>';
+      else if (c.key === 'target_irr' && val) val = val + '%';
+      else if (c.key === 'investment_minimum' && val) val = '$' + Number(val).toLocaleString();
+      else if (c.key === 'created_at' && val) val = new Date(val).toLocaleDateString();
+      else if (c.key === 'website' && val) val = '<a href="' + val + '" target="_blank" style="color:var(--primary);text-decoration:none;">' + val.replace(/https?:\/\//, '').slice(0, 30) + '</a>';
+      else val = val || '—';
+      return '<td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-dark);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + val + '</td>';
+    }).join('');
+    const editBtn = '<td style="padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;"><button onclick="adminEditRow(\'' + row.id + '\')" style="padding:4px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:pointer;color:var(--text-secondary);">Edit</button></td>';
+    return '<tr style="cursor:pointer;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'">' + cells + editBtn + '</tr>';
+  }).join('');
+
+  if (rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="' + (cols.length + 1) + '" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No records found</td></tr>';
+  }
+
+  // Pagination
+  const totalPages = Math.ceil((total || rows.length) / 25);
+  const pag = document.getElementById('adminPagination');
+  if (totalPages > 1) {
+    pag.innerHTML = '<button onclick="adminPage(' + (_adminPage - 1) + ')" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;font-family:var(--font-ui);font-size:12px;"' + (_adminPage <= 1 ? ' disabled style="opacity:0.3"' : '') + '>&larr; Prev</button>' +
+      '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);">Page ' + _adminPage + ' of ' + totalPages + '</span>' +
+      '<button onclick="adminPage(' + (_adminPage + 1) + ')" style="padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);cursor:pointer;font-family:var(--font-ui);font-size:12px;"' + (_adminPage >= totalPages ? ' disabled style="opacity:0.3"' : '') + '>Next &rarr;</button>';
+  } else { pag.innerHTML = ''; }
+}
+
+function adminPage(p) { _adminPage = p; adminLoadData(); }
+
+function adminEditRow(id) {
+  const user = getUser();
+  const action = _adminTab === 'deals' ? 'list-deals' : _adminTab === 'operators' ? 'list-operators' : 'list-users';
+  // Fetch single record and show edit modal
+  fetch('/api/admin-manage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify({ action, search: '', page: 1, limit: 1000 })
+  }).then(r => r.json()).then(result => {
+    const row = result.data?.find(r => r.id === id);
+    if (row) adminShowEditModal(row);
+  });
+}
+
+function adminShowEditModal(row) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'adminEditModal';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  const editableKeys = Object.keys(row).filter(k => !['id', 'created_at', 'updated_at'].includes(k));
+  const fields = editableKeys.map(k => {
+    const val = row[k] === null ? '' : row[k];
+    const isBoolean = typeof val === 'boolean';
+    if (isBoolean) {
+      return '<div class="field" style="margin-bottom:10px;"><label class="field-label" style="font-size:11px;">' + k + '</label>' +
+        '<select class="field-input" data-key="' + k + '" style="padding:8px 12px;font-size:13px;"><option value="true"' + (val ? ' selected' : '') + '>Yes</option><option value="false"' + (!val ? ' selected' : '') + '>No</option></select></div>';
+    }
+    return '<div class="field" style="margin-bottom:10px;"><label class="field-label" style="font-size:11px;">' + k + '</label>' +
+      '<input type="text" class="field-input" data-key="' + k + '" value="' + String(val).replace(/"/g, '&quot;') + '" style="padding:8px 12px;font-size:13px;"></div>';
+  }).join('');
+
+  overlay.innerHTML = '<div class="modal-card" style="max-width:560px;max-height:80vh;overflow-y:auto;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--bg-card);padding-bottom:8px;border-bottom:1px solid var(--border);">' +
+    '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">Edit Record</div>' +
+    '<button onclick="document.getElementById(\'adminEditModal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button></div>' +
+    '<div id="adminEditFields">' + fields + '</div>' +
+    '<div style="display:flex;gap:12px;margin-top:16px;position:sticky;bottom:0;background:var(--bg-card);padding-top:8px;border-top:1px solid var(--border);">' +
+    (_adminTab === 'deals' ? '<button onclick="adminToggleArchive(\'' + row.id + '\',' + !row.archived + ')" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">' + (row.archived ? 'Unarchive' : 'Archive') + '</button>' : '') +
+    '<div style="flex:1;"></div>' +
+    '<button onclick="document.getElementById(\'adminEditModal\').remove()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>' +
+    '<button onclick="adminSaveEdit(\'' + row.id + '\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Save</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+async function adminSaveEdit(id) {
+  const user = getUser();
+  const fields = document.querySelectorAll('#adminEditFields [data-key]');
+  const updates = {};
+  fields.forEach(f => {
+    let val = f.value;
+    if (f.tagName === 'SELECT' && (val === 'true' || val === 'false')) val = val === 'true';
+    updates[f.dataset.key] = val === '' ? null : val;
+  });
+  const actionMap = { deals: 'update-deal', operators: 'update-operator', users: 'update-user-tier' };
+  try {
+    const resp = await fetch('/api/admin-manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: actionMap[_adminTab], id, updates })
+    });
+    const result = await resp.json();
+    if (result.success) {
+      document.getElementById('adminEditModal')?.remove();
+      adminLoadData();
+    } else { alert('Save failed: ' + (result.error || 'Unknown error')); }
+  } catch (e) { alert('Save failed: ' + e.message); }
+}
+
+async function adminToggleArchive(id, archived) {
+  const user = getUser();
+  try {
+    await fetch('/api/admin-manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'toggle-archive', id, archived })
+    });
+    document.getElementById('adminEditModal')?.remove();
+    adminLoadData();
+  } catch (e) { alert('Failed: ' + e.message); }
+}
+
+function adminCreateNew() {
+  const row = {};
+  if (_adminTab === 'deals') {
+    row.investment_name = ''; row.asset_class = ''; row.deal_type = ''; row.target_irr = '';
+    row.investment_minimum = ''; row.preferred_return = ''; row.description = ''; row.archived = false;
+  } else if (_adminTab === 'operators') {
+    row.name = ''; row.website = ''; row.aum = ''; row.headquarters = ''; row.description = '';
+  } else {
+    row.email = ''; row.full_name = ''; row.tier = 'free'; row.is_admin = false;
+  }
+  row.id = '__new__';
+  adminShowEditModal(row);
+}
+
+// Override save for new records
+const _origAdminSaveEdit = adminSaveEdit;
+adminSaveEdit = async function(id) {
+  if (id === '__new__') {
+    const user = getUser();
+    const fields = document.querySelectorAll('#adminEditFields [data-key]');
+    const data = {};
+    fields.forEach(f => {
+      let val = f.value;
+      if (f.tagName === 'SELECT' && (val === 'true' || val === 'false')) val = val === 'true';
+      data[f.dataset.key] = val === '' ? null : val;
+    });
+    const actionMap = { deals: 'create-deal', operators: 'create-operator' };
+    const action = actionMap[_adminTab];
+    if (!action) { alert('Cannot create this record type'); return; }
+    try {
+      const resp = await fetch('/api/admin-manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+        body: JSON.stringify({ action, ...data })
+      });
+      const result = await resp.json();
+      if (result.success) {
+        document.getElementById('adminEditModal')?.remove();
+        adminLoadData();
+      } else { alert('Create failed: ' + (result.error || 'Unknown error')); }
+    } catch (e) { alert('Create failed: ' + e.message); }
+  } else {
+    return _origAdminSaveEdit(id);
+  }
+};
+
+// Auto-load admin data when navigating to the page
+const _origNavigateTo = typeof navigateTo === 'function' ? navigateTo : null;
 
 // ========== ADMIN & ANALYTICS ==========
 const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'pascal@growyourcashflow.io', 'info@pascalwagner.com'];
