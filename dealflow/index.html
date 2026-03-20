@@ -13693,13 +13693,44 @@ function renderPortfolioInDeals(container, portfolioDeals) {
       ${portfolioInvestments.length > 0 ? `
       <div style="display:flex;flex-direction:column;gap:12px;">
         ${investmentCards}
-      </div>` : `
-      <div style="text-align:center;padding:60px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
-        <div style="font-size:40px;opacity:0.25;margin-bottom:12px;">&#128188;</div>
-        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Add your first investment to start tracking your portfolio.</div>
-        <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Investment</button>
-      </div>`}
+      </div>` : ''}
+
+      ${/* Show untracked invested deals that aren't in portfolioInvestments yet */
+        (() => {
+          const untrackedDeals = portfolioDeals.filter(d => !portfolioInvestments.find(i => i.dealId === d.id));
+          if (untrackedDeals.length === 0 && portfolioInvestments.length === 0) return `
+            <div style="text-align:center;padding:60px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
+              <div style="font-size:40px;opacity:0.25;margin-bottom:12px;">&#128188;</div>
+              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Add your first investment to start tracking your portfolio.</div>
+              <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Investment</button>
+            </div>`;
+          if (untrackedDeals.length === 0) return '';
+          return `
+            <div style="margin-top:${portfolioInvestments.length > 0 ? '24px' : '0'};margin-bottom:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Needs Investment Details</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              ${untrackedDeals.map(d => {
+                const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(d.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+                return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);">
+                  <div style="display:flex;align-items:stretch;">
+                    <div style="width:6px;background:#f59e0b;flex-shrink:0;"></div>
+                    <div style="flex:1;padding:20px 24px;">
+                      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                        <div>
+                          <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">${d.investmentName}</div>
+                          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">${d.managementCompany || ''}${d.assetClass ? ' &middot; ' + d.assetClass : ''}</div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                          <span style="padding:4px 12px;border-radius:100px;background:rgba(245,158,11,0.08);font-family:var(--font-ui);font-size:11px;font-weight:700;color:#f59e0b;">Pending</span>
+                          <button onclick="showAddInvestmentModal(null, DEALS.find(dd=>dd.id==='${d.id}'), '${d.id}')" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Add Details</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>`;
+        })()}
     </div>
   `;
 }

@@ -4842,57 +4842,114 @@ async function renderDeal() {
   var pros = [];
   var risks = [];
 
+  // Determine deal characteristics for thesis generation
+  var _isLendingDeal = isCreditFund(deal);
+  var _isFundDeal = (deal.dealType || '').toLowerCase() === 'fund';
+  var _isSyndicationDeal = (deal.dealType || '').toLowerCase() === 'syndication';
+  var _strategyLc = (deal.strategy || '').toLowerCase();
+  var _operatorYears = deal.mcFoundingYear ? (new Date().getFullYear() - deal.mcFoundingYear) : null;
+  var _holdYears = deal.holdPeriod || 0;
+  var _targetIRR = deal.targetIRR || 0;
+  var _targetIRRpct = _targetIRR <= 1 ? _targetIRR * 100 : _targetIRR;
+
+  // === COMPENSATION THESIS ===
+  var compensationThesis = '';
+  if (_isLendingDeal) {
+    if (deal.debtPosition === '2nd') {
+      compensationThesis = 'You are being compensated for subordination risk \u2014 this fund lends in a junior position in the capital stack, which means higher yields but greater exposure to borrower default.';
+    } else if (deal.avgLoanLTV && deal.avgLoanLTV > 0.7) {
+      compensationThesis = 'You are being compensated for leverage risk \u2014 higher LTV loans offer better yields but leave less equity cushion if property values decline.';
+    } else {
+      compensationThesis = 'You are being compensated for credit risk \u2014 lending returns come from interest on loans to real estate borrowers, and your return depends on those borrowers performing.';
+    }
+  } else if (_strategyLc === 'development') {
+    compensationThesis = 'You are being compensated for execution and entitlement risk \u2014 development deals depend on construction timelines, permitting, and lease-up, but offer higher potential returns.';
+  } else if (_strategyLc === 'distressed') {
+    compensationThesis = 'You are being compensated for turnaround risk \u2014 distressed deals buy below market value and depend on the operator\'s ability to stabilize and reposition the asset.';
+  } else if (_strategyLc === 'value-add') {
+    compensationThesis = 'You are being compensated for renovation and lease-up risk \u2014 value-add deals depend on the operator executing a business plan to increase NOI through improvements and better management.';
+  } else if (_isSyndicationDeal) {
+    compensationThesis = 'You are being compensated for operator risk and illiquidity \u2014 your capital is locked for the hold period and returns depend heavily on the sponsor\'s execution.';
+  } else if (_isFundDeal) {
+    compensationThesis = 'You are being compensated for illiquidity and manager risk \u2014 fund returns depend on the GP\'s ability to source, execute, and exit deals across the portfolio.';
+  } else if (_targetIRRpct > 15) {
+    compensationThesis = 'Higher target returns typically reflect higher risk \u2014 understand the specific execution plan before committing capital.';
+  }
+
   // Auto-generate pros
   if (deal.financials === 'Audited') pros.push('Audited financials provide transparency');
-  if (deal.preferredReturn >= 0.07) pros.push(fmt(deal.preferredReturn, 'pct') + ' preferred return');
-  if (deal.fundAUM && deal.fundAUM >= 100000000) pros.push('$' + (deal.fundAUM / 1000000).toFixed(0) + 'M AUM — scale & diversification');
-  if (deal.debtPosition === '1st') pros.push('First lien position — senior in capital stack');
-  if (deal.distributions === 'Monthly') pros.push('Monthly distributions for consistent cashflow');
-  if (deal.mcFoundingYear && (new Date().getFullYear() - deal.mcFoundingYear) >= 10) pros.push((new Date().getFullYear() - deal.mcFoundingYear) + '-year track record');
-  if (deal.loanCount && deal.loanCount >= 20) pros.push(deal.loanCount + ' loans — well diversified');
-  if (deal.verticalIntegration === 'Yes') pros.push('Vertically integrated operations');
-  if (deal.sponsorInDeal && deal.sponsorInDeal > 0) pros.push(fmt(deal.sponsorInDeal, 'pct') + ' sponsor co-invest');
+  if (deal.preferredReturn >= 0.07) pros.push(fmt(deal.preferredReturn, 'pct') + ' preferred return \u2014 downside protection before GP participates');
+  if (deal.fundAUM && deal.fundAUM >= 100000000) pros.push('$' + (deal.fundAUM / 1000000).toFixed(0) + 'M AUM \u2014 scale reduces single-asset concentration risk');
+  if (deal.debtPosition === '1st') pros.push('First lien position \u2014 senior in the capital stack with priority on recovery');
+  if (deal.distributions === 'Monthly') pros.push('Monthly distributions \u2014 consistent cashflow for income-focused investors');
+  if (_operatorYears && _operatorYears >= 10) pros.push(_operatorYears + '-year operator track record');
+  if (deal.loanCount && deal.loanCount >= 20) pros.push(deal.loanCount + ' loans \u2014 well diversified across borrowers');
+  if (deal.verticalIntegration === 'Yes') pros.push('Vertically integrated \u2014 operator controls more of the value chain');
+  if (deal.sponsorInDeal && deal.sponsorInDeal > 0) pros.push(fmt(deal.sponsorInDeal, 'pct') + ' sponsor co-invest \u2014 skin in the game');
+  if (deal.lpGpSplit) {
+    var _splitParts = String(deal.lpGpSplit).split('/');
+    if (_splitParts.length === 2 && parseInt(_splitParts[0]) >= 80) pros.push(deal.lpGpSplit + ' LP/GP split \u2014 investor-favorable alignment');
+  }
+  if (deal.equityMultiple && deal.equityMultiple >= 1.8) pros.push(fmt(deal.equityMultiple, 'x') + ' equity multiple target');
 
-  // Auto-generate risks
-  if (deal.financials === 'Unaudited') risks.push('Unaudited financials — limited transparency');
-  if (deal.investmentMinimum >= 200000) risks.push('$' + (deal.investmentMinimum / 1000).toFixed(0) + 'K minimum — high entry point');
-  if (deal.holdPeriod >= 5) risks.push(formatHoldPeriod(deal.holdPeriod) + ' hold period — limited liquidity');
-  if (deal.fundAUM && deal.fundAUM < 50000000) risks.push('$' + (deal.fundAUM / 1000000).toFixed(0) + 'M AUM — smaller fund');
-  if (deal.debtPosition === '2nd') risks.push('Second lien — subordinate in capital stack');
-  if (deal.avgLoanLTV && deal.avgLoanLTV > 0.7) risks.push(fmt(deal.avgLoanLTV, 'pct') + ' avg LTV — higher leverage');
-  if (!deal.deckUrl || (deal.deckUrl.indexOf('airtableusercontent.com') >= 0)) risks.push('No investment deck available');
-  if (deal.mcFoundingYear && (new Date().getFullYear() - deal.mcFoundingYear) < 5) risks.push('Firm founded ' + deal.mcFoundingYear + ' — limited track record');
+  // Auto-generate risks — labeled risk categories with explanations
+  if (_operatorYears !== null && _operatorYears < 5) risks.push({ label: 'Operator Risk', detail: 'Firm founded ' + deal.mcFoundingYear + ' \u2014 limited track record (' + _operatorYears + ' years)' });
+  if (deal.financials === 'Unaudited') risks.push({ label: 'Transparency Risk', detail: 'Unaudited financials \u2014 less independent verification of fund performance' });
+  if (_holdYears >= 5) risks.push({ label: 'Illiquidity Risk', detail: formatHoldPeriod(_holdYears) + ' hold period \u2014 your capital is locked with limited or no redemption options' });
+  else if (_holdYears >= 3) risks.push({ label: 'Illiquidity Risk', detail: formatHoldPeriod(_holdYears) + ' hold period \u2014 limited liquidity during the investment term' });
+  if (deal.avgLoanLTV && deal.avgLoanLTV > 0.7) risks.push({ label: 'Leverage Risk', detail: fmt(deal.avgLoanLTV, 'pct') + ' average LTV \u2014 less equity cushion to absorb property value declines' });
+  if (deal.debtPosition === '2nd') risks.push({ label: 'Subordination Risk', detail: 'Second lien \u2014 gets repaid after senior debt, higher loss severity in default' });
+  if (_isSyndicationDeal) risks.push({ label: 'Concentration Risk', detail: 'Single-asset deal \u2014 no diversification across properties or markets' });
+  if (deal.fundAUM && deal.fundAUM < 50000000) risks.push({ label: 'Scale Risk', detail: '$' + (deal.fundAUM / 1000000).toFixed(0) + 'M AUM \u2014 smaller fund with less diversification and operating cushion' });
+  if (_isLendingDeal) risks.push({ label: 'Interest Rate Risk', detail: 'Lending returns can be impacted by rate changes \u2014 rising rates help new loans but may stress existing borrowers' });
+  if (_strategyLc === 'development') risks.push({ label: 'Construction Risk', detail: 'Development deals face permitting delays, cost overruns, and lease-up uncertainty' });
+  if (_strategyLc === 'distressed') risks.push({ label: 'Turnaround Risk', detail: 'Distressed assets may have deferred maintenance, occupancy issues, or structural problems' });
+  if (deal.investmentMinimum >= 200000) risks.push({ label: 'High Entry Point', detail: '$' + (deal.investmentMinimum / 1000).toFixed(0) + 'K minimum \u2014 larger allocation increases portfolio concentration' });
 
-  if (pros.length > 0 || risks.length > 0) {
-    thesisHtml += '<div class="section">';
-    thesisHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Investment Thesis &amp; Key Risks</span></div>';
-    thesisHtml += '<div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+  // Always show this section
+  thesisHtml += '<div class="section">';
+  thesisHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Investment Thesis &amp; Key Risks</span></div>';
+  thesisHtml += '<div class="section-body">';
 
-    // Pros column
-    thesisHtml += '<div>';
-    thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#4ade80;margin-bottom:10px;">Why This Deal</div>';
+  // Compensation thesis — the overarching risk sentence
+  if (compensationThesis) {
+    thesisHtml += '<div style="padding:14px 16px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px;margin-bottom:18px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.6;">';
+    thesisHtml += '<span style="font-weight:700;color:#d97706;">What risk are you taking?</span> ';
+    thesisHtml += compensationThesis;
+    thesisHtml += '</div>';
+  }
+
+  thesisHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+
+  // Pros column
+  thesisHtml += '<div>';
+  thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#4ade80;margin-bottom:10px;">Why This Deal</div>';
+  if (pros.length > 0) {
     for (var p = 0; p < pros.length; p++) {
       thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
       thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg>';
       thesisHtml += '<span>' + esc(pros[p]) + '</span></div>';
     }
-    thesisHtml += '</div>';
-
-    // Risks column
-    thesisHtml += '<div>';
-    thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:10px;">Key Risks</div>';
-    for (var r = 0; r < risks.length; r++) {
-      thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
-      thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-      thesisHtml += '<span>' + esc(risks[r]) + '</span></div>';
-    }
-    if (risks.length === 0) {
-      thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">No significant risks auto-detected from available data.</div>';
-    }
-    thesisHtml += '</div>';
-
-    thesisHtml += '</div></div></div>';
+  } else {
+    thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">Not enough data to highlight strengths. Review the deck for more detail.</div>';
   }
+  thesisHtml += '</div>';
+
+  // Risks column
+  thesisHtml += '<div>';
+  thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:10px;">Key Risks</div>';
+  if (risks.length > 0) {
+    for (var r = 0; r < risks.length; r++) {
+      thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
+      thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      thesisHtml += '<div><span style="font-weight:600;color:var(--text-dark);">' + esc(risks[r].label) + '</span><br><span style="color:var(--text-secondary);">' + esc(risks[r].detail) + '</span></div></div>';
+    }
+  } else {
+    thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">No significant risks auto-detected from available data.</div>';
+  }
+  thesisHtml += '</div>';
+
+  thesisHtml += '</div></div></div>';
 
   // --- Operator Profile ---
   var operatorHtml = '';
