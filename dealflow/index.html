@@ -854,7 +854,30 @@ html.dark .card-match-badge.red { background: #2E1515; }
 }
 
 /* Compare page */
-.compare-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.compare-search-wrap { position:relative; margin-bottom:12px; }
+.compare-search-input {
+  width:100%; box-sizing:border-box; padding:10px 14px 10px 36px;
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--bg-card); color:var(--text-dark);
+  font-family:var(--font-ui); font-size:13px; font-weight:500;
+  transition:border-color var(--transition);
+}
+.compare-search-input:focus { outline:none; border-color:var(--primary); }
+.compare-search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--text-muted); pointer-events:none; }
+.compare-search-results { position:absolute; top:100%; left:0; right:0; z-index:20; background:var(--bg-card); border:1px solid var(--border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:220px; overflow-y:auto; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.compare-search-results.open { display:block; }
+.compare-search-item { padding:8px 14px; cursor:pointer; font-family:var(--font-ui); font-size:12px; display:flex; align-items:center; gap:8px; transition:background 0.1s; }
+.compare-search-item:hover { background:var(--bg-hover); }
+.compare-search-item .csi-name { font-weight:600; color:var(--text-dark); }
+.compare-search-item .csi-meta { font-size:11px; color:var(--text-muted); }
+.compare-search-item .csi-check { width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.compare-search-item .csi-check.checked { background:var(--primary); border-color:var(--primary); }
+.compare-search-item .csi-check.checked svg { display:block; }
+.compare-search-item .csi-check svg { display:none; width:10px; height:10px; }
+
+.compare-chips-section { margin-bottom:16px; }
+.compare-chips-label { margin-bottom:6px; font-family:var(--font-ui); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); }
+.compare-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
 .compare-chip {
   display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:100px;
   font-family:var(--font-ui); font-size:12px; font-weight:600; cursor:pointer;
@@ -863,29 +886,60 @@ html.dark .card-match-badge.red { background: #2E1515; }
 }
 .compare-chip:hover { border-color:var(--primary); }
 .compare-chip.selected { background:var(--primary); color:#fff; border-color:var(--primary); }
-.compare-chip .chip-remove { display:none; margin-left:2px; font-size:14px; line-height:1; }
-.compare-chip.selected .chip-remove { display:inline; }
+.compare-chip .chip-check { display:none; margin-right:-2px; }
+.compare-chip.selected .chip-check { display:inline-flex; }
 .compare-chip .chip-add { display:inline; }
 .compare-chip.selected .chip-add { display:none; }
+.compare-count { font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:14px; }
 
 .compare-table-wrap { overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-card); }
 .compare-table { width:100%; border-collapse:collapse; font-family:var(--font-ui); font-size:13px; table-layout:fixed; min-width:600px; }
 .compare-table th, .compare-table td { padding:10px 14px; border-bottom:1px solid var(--border-light); vertical-align:middle; }
 .compare-table .col-label { position:sticky; left:0; z-index:2; background:var(--bg-card); width:170px; min-width:170px; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); }
 .compare-table .col-deal { text-align:center; min-width:180px; }
+.compare-table .col-deal.best-match-col { background:rgba(81,190,123,0.04); }
 .compare-table .section-row td { padding:14px 14px 6px; font-weight:800; font-size:11px; color:var(--primary); text-transform:uppercase; letter-spacing:1px; border-bottom:none; background:var(--bg-card); }
 .compare-table .best-val { background:rgba(81,190,123,0.08); color:var(--primary); font-weight:700; }
 .compare-table .deal-header { padding:16px 14px; text-align:center; border-bottom:2px solid var(--border); background:var(--bg-card); vertical-align:top; }
 .compare-table .deal-header-name { font-size:14px; font-weight:700; color:var(--text-dark); margin-bottom:2px; }
 .compare-table .deal-header-mgr { font-size:11px; color:var(--text-muted); }
 .compare-table .deal-header-badge { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700; background:var(--green-bg); color:var(--green); margin-bottom:4px; }
+.compare-match-bar { height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin-top:4px; width:100%; }
+.compare-match-bar-fill { height:100%; background:var(--primary); border-radius:2px; }
+.compare-notes-ta { width:100%; box-sizing:border-box; resize:vertical; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-family:var(--font-ui); font-size:12px; color:var(--text-dark); background:var(--bg-card); transition:border-color var(--transition); }
+.compare-notes-ta:focus { outline:none; border-color:var(--primary); }
+.compare-action-btn { display:block; width:100%; box-sizing:border-box; font-size:11px; padding:6px 14px; border-radius:var(--radius-sm); font-family:var(--font-ui); font-weight:600; cursor:pointer; text-align:center; text-decoration:none; transition:all 0.15s; margin-bottom:4px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-dark); }
+.compare-action-btn:hover { border-color:var(--primary); color:var(--primary); }
+.compare-action-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.compare-action-btn.primary:hover { opacity:0.9; }
+.compare-portfolio-fit-new { color:var(--green); font-weight:700; font-size:12px; }
+.compare-portfolio-fit-warn { color:#d97706; font-weight:700; font-size:12px; }
 
 .compare-empty {
   text-align:center; padding:60px 24px; color:var(--text-muted); font-family:var(--font-ui);
 }
-.compare-empty svg { width:48px; height:48px; margin-bottom:16px; opacity:0.3; }
-.compare-empty-title { font-size:16px; font-weight:700; color:var(--text-dark); margin-bottom:8px; }
-.compare-empty-sub { font-size:13px; max-width:400px; margin:0 auto; }
+.compare-empty svg { width:56px; height:56px; margin-bottom:16px; opacity:0.3; }
+.compare-empty-title { font-size:18px; font-weight:700; color:var(--text-dark); margin-bottom:8px; }
+.compare-empty-sub { font-size:13px; max-width:440px; margin:0 auto 20px; line-height:1.5; }
+.compare-empty-cta { display:inline-block; padding:10px 24px; background:var(--primary); color:#fff; border:none; border-radius:var(--radius-sm); font-family:var(--font-ui); font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:opacity 0.15s; }
+.compare-empty-cta:hover { opacity:0.9; }
+.compare-empty-preview { margin-top:24px; padding:20px; background:var(--bg-hover); border-radius:var(--radius); max-width:500px; margin-left:auto; margin-right:auto; }
+.compare-empty-preview-title { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; }
+.compare-empty-preview-row { display:flex; gap:12px; margin-bottom:6px; font-size:12px; }
+.compare-empty-preview-label { width:100px; color:var(--text-muted); font-weight:600; text-align:right; }
+.compare-empty-preview-vals { display:flex; gap:16px; flex:1; }
+.compare-empty-preview-val { flex:1; text-align:center; padding:4px 0; background:var(--bg-card); border-radius:4px; color:var(--text-dark); font-weight:500; }
+
+@media print {
+  .compare-search-wrap, .compare-chips-section, .compare-count,
+  .compare-action-btn, .compare-notes-ta,
+  .sidebar, .topbar, .compare-empty { display:none !important; }
+  .main { margin-left:0 !important; }
+  .compare-table-wrap { border:none; box-shadow:none; }
+  .compare-table { font-size:11px; }
+  .compare-table .col-label { position:static; }
+  .content-area { padding:0 !important; }
+}
 
 /* Compare button on cards */
 .card-compare-btn {
@@ -5256,9 +5310,11 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
         <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">Side-by-side comparison of your selected deals</div>
       </div>
       <div class="topbar-spacer"></div>
+      <button class="btn btn-outline" onclick="window.print()" style="font-size:12px;padding:6px 14px;margin-right:6px;">Print / Export</button>
       <button class="btn btn-outline" onclick="clearCompareDeals()" style="font-size:12px;padding:6px 14px;">Clear All</button>
     </div>
     <div class="content-area" style="padding:20px 24px;">
+      <div id="compareSearchContainer"></div>
       <div id="compareChipsContainer"></div>
       <div id="compareTableContainer"></div>
     </div>
