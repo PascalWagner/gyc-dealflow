@@ -290,6 +290,101 @@ async function listDealsQuality(supabase, body) {
   };
 }
 
+// --- Operator Quality Audit ---
+
+const OPERATOR_QUALITY_FIELDS = [
+  { key: 'operator_name', label: 'Name' },
+  { key: 'ceo', label: 'CEO' },
+  { key: 'website', label: 'Website' },
+  { key: 'linkedin_ceo', label: 'LinkedIn' },
+  { key: 'invest_clearly_profile', label: 'InvestClearly' },
+  { key: 'founding_year', label: 'Founded' },
+  { key: 'type', label: 'Type' },
+  { key: 'asset_classes', label: 'Asset Classes' },
+  { key: 'headquarters', label: 'HQ' },
+  { key: 'aum', label: 'AUM' },
+  { key: 'description', label: 'Description' },
+];
+
+function computeOperatorQuality(op) {
+  const missing = [];
+  let filled = 0;
+  for (const f of OPERATOR_QUALITY_FIELDS) {
+    const val = op[f.key];
+    const isFilled = val !== null && val !== undefined && val !== '' && val !== 0 &&
+      !(Array.isArray(val) && val.length === 0);
+    if (isFilled) filled++;
+    else missing.push(f.label);
+  }
+  return {
+    pct: Math.round((filled / OPERATOR_QUALITY_FIELDS.length) * 100),
+    missing,
+    hasWebsite: !!op.website,
+    hasLinkedIn: !!op.linkedin_ceo
+  };
+}
+
+async function listOperatorsQuality(supabase, body) {
+  const { search } = body;
+
+  let query = supabase
+    .from('management_companies')
+    .select('*')
+    .order('operator_name', { ascending: true });
+
+  if (search) {
+    query = query.ilike('operator_name', `%${search}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  // Count deals per operator
+  const { data: dealCounts } = await supabase
+    .from('opportunities')
+    .select('management_company_id')
+    .is('parent_deal_id', null);
+
+  const countMap = {};
+  (dealCounts || []).forEach(d => {
+    if (d.management_company_id) {
+      countMap[d.management_company_id] = (countMap[d.management_company_id] || 0) + 1;
+    }
+  });
+
+  const rows = (data || []).map(op => {
+    const q = computeOperatorQuality(op);
+    return {
+      id: op.id,
+      name: op.operator_name || op.name,
+      type: op.type || '—',
+      deal_count: countMap[op.id] || 0,
+      completeness_pct: q.pct,
+      missing_fields: q.missing,
+      has_website: q.hasWebsite,
+      has_linkedin: q.hasLinkedIn
+    };
+  });
+
+  rows.sort((a, b) => a.completeness_pct - b.completeness_pct);
+
+  const total = rows.length;
+  const avgPct = total > 0 ? Math.round(rows.reduce((s, r) => s + r.completeness_pct, 0) / total) : 0;
+
+  return {
+    data: rows,
+    total,
+    stats: {
+      total_operators: total,
+      avg_completeness: avgPct,
+      above_80: rows.filter(r => r.completeness_pct >= 80).length,
+      below_50: rows.filter(r => r.completeness_pct < 50).length,
+      no_website: rows.filter(r => !r.has_website).length,
+      no_linkedin: rows.filter(r => !r.has_linkedin).length
+    }
+  };
+}
+
 // --- Deal Intake Wizard ---
 
 async function intakeCreate(supabase, body) {
@@ -349,6 +444,7 @@ const ACTION_MAP = {
   'list-users': listUsers,
   'update-user-tier': updateUserTier,
   'list-deals-quality': listDealsQuality,
+  'list-operators-quality': listOperatorsQuality,
   'intake-create': intakeCreate,
 };
 
