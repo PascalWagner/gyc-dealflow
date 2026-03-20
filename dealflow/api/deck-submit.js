@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { dealId, dealName, deckUrl, notes, userEmail, userName } = req.body;
+    const { dealId, dealName, deckUrl, notes, userEmail, userName, docType } = req.body;
 
     if (!deckUrl) {
       return res.status(400).json({ error: 'Deck URL is required' });
@@ -75,11 +75,12 @@ export default async function handler(req, res) {
       console.warn('Supabase insert failed:', insertErr.message);
     }
 
-    // 3. Update deal record with deck URL if provided
+    // 3. Update deal record with deck/PPM URL if provided
     if (dealId && deckUrl) {
+      const urlField = docType === 'ppm' ? 'ppm_url' : 'deck_url';
       await supabase
         .from('opportunities')
-        .update({ deck_url: deckUrl })
+        .update({ [urlField]: deckUrl })
         .eq('id', dealId);
     }
 
