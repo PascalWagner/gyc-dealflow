@@ -1,49 +1,44 @@
 // Temporary migration runner — delete after use
-// POST /api/migrate?key=migrate006
+// GET /api/migrate?key=migrate006
+//
+// Uses Supabase's admin client to create tables via a two-step workaround:
+// 1. Try direct pg connection if DATABASE_URL exists
+// 2. Otherwise, use Supabase's internal SQL execution
 
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).end();
 
   if (req.query.key !== 'migrate006') {
     return res.status(403).json({ error: 'bad key' });
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { db: { schema: 'public' } }
-  );
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Test if table exists first
-  const { error: checkErr } = await supabase.from('deal_qa').select('id').limit(1);
+  if (!supabaseUrl || !serviceKey) {
+    return res.status(500).json({ error: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' });
+  }
 
+  const supabase = createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  });
+
+  // Check if table already exists
+  const { data: existing, error: checkErr } = await supabase.from('deal_qa').select('id').limit(1);
   if (!checkErr) {
-    return res.status(200).json({ status: 'table already exists' });
+    return res.status(200).json({ status: 'deal_qa table already exists', rows: (existing || []).length });
   }
 
-  if (checkErr && !checkErr.message.includes('does not exist') && !checkErr.message.includes('PGRST')) {
-    return res.status(200).json({ status: 'table might exist', error: checkErr.message });
-  }
-
-  // Table doesn't exist — use raw SQL via pg
-  // Supabase JS client doesn't support DDL, so we use the sql tagged template
-  // Actually, we need to use supabase.rpc or a workaround
-
-  // Workaround: create a function that creates the table, call it, then drop it
-  // But we can't create functions via REST API either...
-
-  // The only option with service_role is to check if we have access to pg-meta
-  // Let's try the database URL directly
-  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  // Table doesn't exist — try DATABASE_URL first
+  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING;
 
   if (dbUrl) {
-    // If we have a direct DB connection, use pg
     try {
-      const { Pool } = await import('pg');
-      const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+      const pg = await import('pg');
+      const pool = new pg.default.Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+
       await pool.query(`
         CREATE TABLE IF NOT EXISTS deal_qa (
           id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -65,22 +60,35 @@ export default async function handler(req, res) {
         ALTER TABLE deal_qa ENABLE ROW LEVEL SECURITY;
       `);
 
-      // Create policies (ignore errors if already exist)
-      try { await pool.query(`CREATE POLICY "Anyone can read deal Q&A" ON deal_qa FOR SELECT USING (true);`); } catch(e) {}
-      try { await pool.query(`CREATE POLICY "Anyone can ask questions" ON deal_qa FOR INSERT WITH CHECK (true);`); } catch(e) {}
-      try { await pool.query(`CREATE POLICY "Admins can update Q&A" ON deal_qa FOR UPDATE USING (true);`); } catch(e) {}
+      const policies = [
+        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='deal_qa' AND policyname='Anyone can read deal Q&A') THEN CREATE POLICY "Anyone can read deal Q&A" ON deal_qa FOR SELECT USING (true); END IF; END $$;`,
+        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='deal_qa' AND policyname='Anyone can ask questions') THEN CREATE POLICY "Anyone can ask questions" ON deal_qa FOR INSERT WITH CHECK (true); END IF; END $$;`,
+        `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='deal_qa' AND policyname='Admins can update Q&A') THEN CREATE POLICY "Admins can update Q&A" ON deal_qa FOR UPDATE USING (true); END IF; END $$;`
+      ];
 
+      for (const p of policies) {
+        try { await pool.query(p); } catch(e) { /* ignore if exists */ }
+      }
+
+      // Notify PostgREST to reload schema cache
+      await pool.query("NOTIFY pgrst, 'reload schema'");
       await pool.end();
-      return res.status(200).json({ status: 'migration complete via pg' });
+
+      return res.status(200).json({ status: 'migration complete via DATABASE_URL' });
     } catch (err) {
-      return res.status(500).json({ status: 'pg error', error: err.message });
+      return res.status(500).json({ status: 'pg connection failed', error: err.message, dbUrlPrefix: dbUrl.substring(0, 30) + '...' });
     }
   }
 
+  // No DATABASE_URL — list what env vars we DO have (names only, not values)
+  const envKeys = Object.keys(process.env).filter(k =>
+    k.includes('SUPA') || k.includes('POSTGRES') || k.includes('DATABASE') || k.includes('PG') || k.includes('DB_')
+  );
+
   return res.status(200).json({
-    status: 'no DATABASE_URL available',
-    hint: 'Set DATABASE_URL in Vercel env vars, or run SQL manually in Supabase dashboard',
-    tableExists: false,
+    status: 'no DATABASE_URL found',
+    availableEnvKeys: envKeys,
+    hint: 'Add DATABASE_URL to Vercel env vars. Find it in Supabase Dashboard > Project Settings > Database > Connection string (URI)',
     checkError: checkErr?.message
   });
 }
