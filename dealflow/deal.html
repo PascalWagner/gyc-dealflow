@@ -4689,9 +4689,6 @@ async function renderDeal() {
       if (bb.strategies && bb.strategies.length > 0) {
         checks.push({ label: 'Strategy', match: bb.strategies.indexOf(deal.strategy) >= 0, want: bbFmtList(bb.strategies), got: deal.strategy || '---' });
       }
-      if (bb.instruments && bb.instruments.length > 0) {
-        checks.push({ label: 'Instrument', match: bb.instruments.indexOf(deal.instrument) >= 0, want: bbFmtList(bb.instruments), got: deal.instrument || '---' });
-      }
       if (bb.maxLockup) {
         checks.push({ label: 'Lockup', match: (deal.holdPeriod || 0) <= parseFloat(bb.maxLockup), want: bbFmtYrs(bb.maxLockup) + ' max', got: deal.holdPeriod ? bbFmtYrs(deal.holdPeriod) : '---' });
       }
@@ -4731,14 +4728,10 @@ async function renderDeal() {
           buyBoxHtml += '<div style="flex-shrink:0;margin-top:1px;">' + icon + '</div>';
           buyBoxHtml += '<div style="flex:1;min-width:0;">';
           buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + (c.match ? '#4ade80' : '#f87171') + ';">' + esc(c.label) + '</div>';
-          if (!c.match) {
-            buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.4;">';
-            buyBoxHtml += 'You want <span style="color:var(--text-secondary);font-weight:600;">' + esc(c.want) + '</span>';
-            buyBoxHtml += ' &middot; Deal offers <span style="color:#f87171;font-weight:600;">' + esc(c.got) + '</span>';
-            buyBoxHtml += '</div>';
-          } else {
-            buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">' + esc(c.got) + '</div>';
-          }
+          buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.4;">';
+          buyBoxHtml += 'You want <span style="color:var(--text-secondary);font-weight:600;">' + esc(c.want) + '</span>';
+          buyBoxHtml += ' &middot; Deal offers <span style="color:' + (c.match ? '#4ade80' : '#f87171') + ';font-weight:600;">' + esc(c.got) + '</span>';
+          buyBoxHtml += '</div>';
           buyBoxHtml += '</div>';
           if (!c.match) {
             buyBoxHtml += '<div style="flex-shrink:0;margin-top:1px;color:var(--text-muted);opacity:0.5;" title="Edit in Buy Box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>';
@@ -5025,51 +5018,29 @@ async function renderDeal() {
   var caseStudyHtml = '';
   (function buildCaseStudy() {
     var cs = deal.caseStudy;
-    var isLive = cs && cs.title;
+    if (!cs || !cs.title) return;
 
-    // Sample data when no real case study exists
-    var sample;
-    if (!isLive) {
-      if (isCreditFund(deal)) {
-        sample = {
-          title: 'Greenfield Housing Partners',
-          overview: 'A $28M bridge loan funded the acquisition and renovation of a 320-unit workforce housing community in a high-demand suburban market.',
-          result: '320 units fully leased within 9 months of renovation. The loan was repaid on schedule, generating a 16.5% net return for fund investors.',
-          metrics: { 'Region': 'Atlanta, GA', 'Property Type': 'Multi-Family; Workforce Housing', 'Loan Amount': '$28M', 'LTV': '68%', 'Loan Duration': '14 Months', 'Net Return': '16.5%' }
-        };
-      } else {
-        sample = {
-          title: 'Summit Ridge Apartments',
-          overview: 'Acquired a 240-unit Class B apartment community and executed a $3.8M value-add renovation including unit interiors, amenity upgrades, and operational improvements.',
-          result: 'Achieved 94% occupancy and 32% rent growth within 18 months. Property sold at a 5.1% cap rate, delivering a 2.1x equity multiple to investors.',
-          metrics: { 'Region': 'Phoenix, AZ', 'Property Type': 'Multi-Family; 240 Units', 'Purchase Price': '$32M', 'Renovation Budget': '$3.8M', 'Hold Period': '3 Years', 'Equity Multiple': '2.1x', 'LP IRR': '21%' }
-        };
-      }
-    }
-
-    var data = isLive ? cs : sample;
-
-    caseStudyHtml += '<div class="section" style="position:relative;">';
-    caseStudyHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span class="section-title">Case Study</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">' + (isLive ? 'From Pitch Deck' : '') + '</span></div>';
-    caseStudyHtml += '<div class="section-body" style="' + (isLive ? '' : 'filter:blur(4px);pointer-events:none;user-select:none;') + '">';
+    caseStudyHtml += '<div class="section">';
+    caseStudyHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span class="section-title">Case Study</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">From Pitch Deck</span></div>';
+    caseStudyHtml += '<div class="section-body">';
 
     // Title
-    caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">' + esc(data.title) + '</div>';
+    caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">' + esc(cs.title) + '</div>';
     caseStudyHtml += '<div style="font-family:var(--font-ui);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--primary);font-weight:700;margin-bottom:16px;">Example ' + (isCreditFund(deal) ? 'Loan' : 'Investment') + '</div>';
 
     // Two-column: metrics table + overview/result
     caseStudyHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">';
 
     // Left: Metrics table
-    if (data.metrics && Object.keys(data.metrics).length > 0) {
+    if (cs.metrics && Object.keys(cs.metrics).length > 0) {
       caseStudyHtml += '<div>';
       caseStudyHtml += '<table style="width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:13px;">';
-      var keys = Object.keys(data.metrics);
+      var keys = Object.keys(cs.metrics);
       for (var i = 0; i < keys.length; i++) {
         var bgColor = i % 2 === 0 ? 'rgba(81,190,123,0.04)' : 'transparent';
         caseStudyHtml += '<tr style="background:' + bgColor + ';">'
           + '<td style="padding:8px 12px;font-weight:600;color:var(--text-dark);border-bottom:1px solid var(--border);white-space:nowrap;">' + esc(keys[i]) + '</td>'
-          + '<td style="padding:8px 12px;color:var(--text-secondary);border-bottom:1px solid var(--border);">' + esc(data.metrics[keys[i]]) + '</td>'
+          + '<td style="padding:8px 12px;color:var(--text-secondary);border-bottom:1px solid var(--border);">' + esc(cs.metrics[keys[i]]) + '</td>'
           + '</tr>';
       }
       caseStudyHtml += '</table>';
@@ -5078,31 +5049,22 @@ async function renderDeal() {
 
     // Right: Overview + Result
     caseStudyHtml += '<div>';
-    if (data.overview) {
+    if (cs.overview) {
       caseStudyHtml += '<div style="margin-bottom:16px;">';
       caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Overview</div>';
-      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(data.overview) + '</div>';
+      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(cs.overview) + '</div>';
       caseStudyHtml += '</div>';
     }
-    if (data.result) {
+    if (cs.result) {
       caseStudyHtml += '<div>';
       caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Result</div>';
-      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(data.result) + '</div>';
+      caseStudyHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">' + esc(cs.result) + '</div>';
       caseStudyHtml += '</div>';
     }
     caseStudyHtml += '</div>';
 
     caseStudyHtml += '</div>'; // close grid
-    caseStudyHtml += '</div>'; // close section-body
-
-    // Coming Soon overlay (only when no real data)
-    if (!isLive) {
-      caseStudyHtml += '<div style="position:absolute;inset:0;top:52px;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.5);backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px);">';
-      caseStudyHtml += '<div style="text-align:center;"><div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Real case studies from the pitch deck</div></div>';
-      caseStudyHtml += '</div>';
-    }
-
-    caseStudyHtml += '</div>'; // close section
+    caseStudyHtml += '</div></div>'; // close section-body, section
   })();
 
   // --- Pascal's Take ---

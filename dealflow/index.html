@@ -7854,7 +7854,7 @@ function computeMatchScore(deal) {
   const reasons = [];
 
   // Asset class match (weight: 3)
-  const assetMap = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
+  const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Multi-Family', 'Lending': 'Multi-Family', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family' };
   const userAssets = (wd.assetClasses || []).map(function(a) { return assetMap[a] || a; });
   if (userAssets.length > 0) {
     maxScore += 3;
@@ -9968,12 +9968,12 @@ function navigateTo(page) {
 // ========== SETTINGS: BUY BOX ==========
 // Dynamic: pull unique asset classes from actual deals in database
 const BB_ASSET_CLASSES = [...new Set(DEALS.map(d => d.assetClass).filter(Boolean))].sort();
-const BB_STRATEGIES = ['Value-Add','Lending','Development'];
+const BB_STRATEGIES = ['Value-Add','Lending','Development','Buy & Hold','Distressed'];
 const BB_DEAL_TYPES = ['Fund','Syndication'];
 const BB_OBJECTIVES = ['Cashflow','Equity Growth','Balanced (Cashflow + Equity)'];
 
 let buyBox = JSON.parse(localStorage.getItem('gycBuyBox') || 'null') || {
-  assetClasses: ['Multi Family','Self Storage','Lending'],
+  assetClasses: ['Multi-Family','Self Storage','Industrial'],
   strategies: ['Value-Add','Lending'],
   dealTypes: ['Fund','Syndication'],
   objectives: ['Cashflow','Balanced (Cashflow + Equity)'],
@@ -10029,7 +10029,7 @@ function saveBuyBox() {
 
 function resetBuyBox() {
   localStorage.removeItem('gycBuyBox');
-  buyBox = { assetClasses: ['Multi Family','Self Storage','Lending'], strategies: ['Value-Add','Lending'], dealTypes: ['Fund','Syndication'], objectives: ['Cashflow','Balanced (Cashflow + Equity)'], irrMin: '8%', irrMax: '25%', minInvest: '$25,000', maxInvest: '$250,000', holdMin: '2 years', holdMax: '10 years' };
+  buyBox = { assetClasses: ['Multi-Family','Self Storage','Industrial'], strategies: ['Value-Add','Lending'], dealTypes: ['Fund','Syndication'], objectives: ['Cashflow','Balanced (Cashflow + Equity)'], irrMin: '8%', irrMax: '25%', minInvest: '$25,000', maxInvest: '$250,000', holdMin: '2 years', holdMax: '10 years' };
   initBuyBox();
   showSaveStatus();
 }
@@ -11235,7 +11235,7 @@ function selectGoalBranch(branch, goalValue) {
   wizardData.goal = goalValue;
   // Pre-select the best-fit asset classes and strategies for this goal
   if (branch === 'cashflow') {
-    wizardData.assetClasses = wizardData.assetClasses || ['Lending', 'Multi-Family', 'Self Storage'];
+    wizardData.assetClasses = wizardData.assetClasses || ['Multi-Family', 'Self Storage', 'Industrial'];
     wizardData.strategies = wizardData.strategies || ['Lending', 'Buy & Hold'];
     wizardData.instruments = ['Debt'];
     wizardData.distributions = wizardData.distributions || 'Monthly';
@@ -11244,7 +11244,7 @@ function selectGoalBranch(branch, goalValue) {
     wizardData.strategies = wizardData.strategies || ['Value-Add', 'Distressed'];
     wizardData.instruments = ['Equity'];
   } else if (branch === 'tax') {
-    wizardData.assetClasses = wizardData.assetClasses || ['Multi-Family', 'Oil & Gas', 'RV / Mobile Home Parks'];
+    wizardData.assetClasses = wizardData.assetClasses || ['Multi-Family', 'Oil & Gas / Energy', 'RV/Mobile Home Parks'];
     wizardData.strategies = wizardData.strategies || ['Value-Add', 'Development'];
   }
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
@@ -11368,17 +11368,18 @@ function syncWizardToBuyBox() {
   // Map wizard data to the buy box format used by deal matching
   const d = wizardData;
   const assetMap = {
-    'Multi-Family': 'Multi Family',
+    'Multi Family': 'Multi-Family',
     'Hotels / Hospitality': 'Hotels/Hospitality',
-    'Private Debt / Credit': 'Lending',
+    'Private Debt / Credit': 'Multi-Family',
+    'Lending': 'Multi-Family',
+    'Debt': 'Multi-Family',
     'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
     'Short-Term Rentals': 'Short Term Rental',
-    'Single Family Homes': 'Multi Family',
-    'NNN (Triple Net Lease)': 'Mixed-Use',
-    'Oil & Gas': 'Business / Other',
-    'Senior Assisted Living': 'Business / Other',
-    'Retail Shopping Centres': 'Mixed-Use',
-    'Land': 'Business / Other'
+    'Single Family Homes': 'Single Family',
+    'SFH': 'Single Family',
+    'NNN (Triple Net Lease)': 'NNN',
+    'Oil & Gas': 'Oil & Gas / Energy',
+    'Retail Shopping Centres': 'Retail'
   };
   const mappedAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
   const stratMap = { 'Lending / Credit': 'Lending' };
@@ -11527,7 +11528,7 @@ function renderReport() {
 
   // Get top matching deals
   const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
-  const assetMap = { 'Multi-Family': 'Multi Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Lending', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental' };
+  const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'Private Debt / Credit': 'Multi-Family', 'Lending': 'Multi-Family', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family' };
   const userAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
   const matchedDeals = allDeals.filter(deal => {
     if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
@@ -11817,14 +11818,14 @@ function reportItem(label, value) {
 function getMatchingDealCount(d) {
   // Simple count of deals matching user's asset class and strategy preferences
   const assetMap = {
-    'Multi-Family': 'Multi Family',
+    'Multi Family': 'Multi-Family',
     'Hotels / Hospitality': 'Hotels/Hospitality',
-    'Private Debt / Credit': 'Lending',
+    'Private Debt / Credit': 'Multi-Family',
+    'Lending': 'Multi-Family',
     'RV / Mobile Home Parks': 'RV/Mobile Home Parks',
     'Short-Term Rentals': 'Short Term Rental',
-    'Industrial': 'Industrial',
-    'Self Storage': 'Self Storage',
-    'Business / Other': 'Business / Other'
+    'Oil & Gas': 'Oil & Gas / Energy',
+    'SFH': 'Single Family'
   };
   const userAssets = (d.assetClasses || []).map(a => assetMap[a] || a);
   if (userAssets.length === 0) return DEALS.length;
