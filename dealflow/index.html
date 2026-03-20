@@ -5167,7 +5167,7 @@ const _supa = window.supabase.createClient(
             <li>&#9744; GP introduction request flow</li>
             <li>&#9744; Email notifications for new deals matching buy box</li>
             <li>&#9744; Weekly digest email (re-enable with Supabase backend)</li>
-            <li>&#9744; Clean up <code>_airtable_backup/</code> folder (migration complete, safe to delete)</li>
+            <li>&#9745; Airtable backup folder + migration script deleted (migration complete)</li>
           </ul>
         </div>
 
@@ -5211,7 +5211,7 @@ const _supa = window.supabase.createClient(
           <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:disc;padding-left:20px;">
             <li>Full migration from Airtable &rarr; Supabase completed March 19-20, 2026</li>
             <li>All API endpoints now query Supabase exclusively &mdash; zero Airtable dependencies remain</li>
-            <li>Old Airtable code archived in <code>_airtable_backup/</code> (safe to delete)</li>
+            <li>Airtable backup folder + migration script fully removed</li>
             <li>Make.com still used for deal processing automations (GDrive &rarr; enrichment pipeline)</li>
             <li>Deck/PPM files stored in Supabase Storage <code>deal-decks</code> bucket (signed URLs, 1-year expiry)</li>
           </ul>
