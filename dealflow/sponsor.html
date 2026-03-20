@@ -1496,7 +1496,7 @@ function renderSponsor(data) {
 
   // Research grid
   const researchGrid = document.getElementById('researchGrid');
-  const secUrl = 'https://efts.sec.gov/LATEST/search-index?q=%22' + encodeURIComponent(s.name) + '%22&dateRange=custom&startdt=2020-01-01&enddt=2026-12-31';
+  const secUrl = 'https://www.sec.gov/cgi-bin/browse-edgar?company=' + encodeURIComponent(s.name) + '&CIK=&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany';
   let researchHtml = '';
 
   if (s.website) {

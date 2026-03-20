@@ -5666,8 +5666,8 @@ async function renderDeal() {
   if (deal.mcLinkedin) {
     materialsHtml += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>CEO LinkedIn</a>';
   }
-  var secQuery = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
-  materialsHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + secQuery + '%22&dateRange=custom&startdt=2020-01-01" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>SEC EDGAR</a>';
+  var secCompany = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
+  materialsHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?company=' + secCompany + '&CIK=&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany" target="_blank" rel="noopener" class="material-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search SEC EDGAR</a>';
   materialsHtml += '</div>';
   materialsHtml += '</div></div>';
 
