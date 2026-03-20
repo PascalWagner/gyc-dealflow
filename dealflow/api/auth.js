@@ -56,7 +56,12 @@ export default async function handler(req, res) {
   if (action === 'magic-link') {
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    // Use site URL for redirect (Vercel sets this, fallback to prod)
+    const siteUrl = process.env.SITE_URL || 'https://growyourcashflow.com/dealflow';
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: siteUrl + '/deal-login.html' }
+    });
     if (error) return res.status(500).json({ error: error.message });
 
     return res.status(200).json({ success: true, message: 'Magic link sent' });
@@ -145,21 +150,21 @@ export default async function handler(req, res) {
 
   // ── Register ───────────────────────────────────────────────────────
   if (action === 'register') {
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !firstName || !lastName) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    // Use admin API to create a pre-confirmed user (no confirmation email sent)
+    const { data, error } = await adminSupabase.auth.admin.createUser({
       email,
-      password,
-      options: {
-        data: { full_name: `${firstName} ${lastName}` }
-      }
+      password: password || crypto.randomUUID(),
+      email_confirm: true, // Auto-confirm — no "Confirm Your Signup" email
+      user_metadata: { full_name: `${firstName} ${lastName}` }
     });
 
     if (error) {
       if (error.message?.includes('already')) {
-        return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
+        return res.status(409).json({ success: false, error: 'An account with this email already exists. Try signing in instead.' });
       }
       return res.status(500).json({ success: false, error: error.message });
     }
@@ -189,7 +194,7 @@ export default async function handler(req, res) {
       email,
       name: `${firstName} ${lastName}`,
       tier: 'free',
-      token: data.session?.access_token || 'confirm-email'
+      token: 'pending' // User will get a magic link to actually sign in
     });
   }
 
