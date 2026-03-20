@@ -2,15 +2,7 @@
 // Admin CRUD operations for deals, operators, and users in Supabase
 // Requires JWT auth + email in ADMIN_EMAILS list
 
-import { getAdminClient, setCors } from './_supabase.js';
-
-const ADMIN_EMAILS = [
-  'pascal@growyourcashflow.com',
-  'pascalwagner@gmail.com',
-  'pascal.wagner@growyourcashflow.com',
-  'info@pascalwagner.com',
-  'pascal@growyourcashflow.io'
-];
+import { getAdminClient, setCors, ADMIN_EMAILS } from './_supabase.js';
 
 async function verifyAdmin(req) {
   const authHeader = req.headers.authorization;

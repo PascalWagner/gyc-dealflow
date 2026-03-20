@@ -16,13 +16,7 @@ function deriveTier(tags) {
   return 'free';
 }
 
-const ADMIN_EMAILS = [
-  'pascal@growyourcashflow.com',
-  'pascalwagner@gmail.com',
-  'pascal.wagner@growyourcashflow.com',
-  'pascal@growyourcashflow.io',
-  'info@pascalwagner.com'
-];
+import { ADMIN_EMAILS } from './_supabase.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

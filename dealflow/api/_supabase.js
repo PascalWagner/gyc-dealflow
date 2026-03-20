@@ -36,6 +36,15 @@ export function getUserClient(accessToken) {
   });
 }
 
+// Shared admin email list (single source of truth)
+export const ADMIN_EMAILS = [
+  'pascal@growyourcashflow.com',
+  'pascalwagner@gmail.com',
+  'pascal.wagner@growyourcashflow.com',
+  'info@pascalwagner.com',
+  'pascal@growyourcashflow.io'
+];
+
 // CORS helper (reused across all endpoints)
 export function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

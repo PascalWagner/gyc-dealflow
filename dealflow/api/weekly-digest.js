@@ -99,6 +99,8 @@ async function fetchRecentDeals(daysBack = 7) {
 
   const records = [];
   let offset = null;
+  let pages = 0;
+  const MAX_PAGES = 20;
 
   do {
     const url = new URL(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent('Opportunities')}`);
@@ -118,7 +120,8 @@ async function fetchRecentDeals(daysBack = 7) {
     const data = await response.json();
     records.push(...(data.records || []));
     offset = data.offset || null;
-  } while (offset);
+    pages++;
+  } while (offset && pages < MAX_PAGES);
 
   return records.map(rec => {
     const f = rec.fields || {};

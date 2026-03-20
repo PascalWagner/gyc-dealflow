@@ -9,20 +9,12 @@
 //   - Still syncs tier from GHL tags (GHL remains the CRM)
 
 import { createClient } from '@supabase/supabase-js';
-import { setCors } from './_supabase.js';
+import { setCors, ADMIN_EMAILS } from './_supabase.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GHL_API_KEY = process.env.GHL_API_KEY;
-
-const ADMIN_EMAILS = [
-  'pascal@growyourcashflow.com',
-  'pascalwagner@gmail.com',
-  'pascal.wagner@growyourcashflow.com',
-  'info@pascalwagner.com',
-  'pascal@growyourcashflow.io'
-];
 
 // Derive tier from GHL tags (same logic as before)
 function deriveTier(tags) {

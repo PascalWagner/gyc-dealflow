@@ -118,23 +118,29 @@ export default async function handler(req, res) {
       if (!recordId) return res.status(400).json({ error: 'recordId required' });
 
       try {
-        // Use RPC or manual increment
+        // Atomic increment via RPC (avoids race condition)
+        const { data: newVotes, error: rpcErr } = await supabase
+          .rpc('increment_upvote', { row_id: recordId });
+
+        if (!rpcErr) {
+          return res.status(200).json({ success: true, upvotes: newVotes });
+        }
+
+        // Fallback if RPC not yet created: read-then-write
+        console.warn('increment_upvote RPC not found, using fallback:', rpcErr.message);
         const { data: current, error: fetchErr } = await supabase
           .from('deal_qa')
           .select('upvotes')
           .eq('id', recordId)
           .single();
-
         if (fetchErr) throw fetchErr;
-
-        const newVotes = (current?.upvotes || 0) + 1;
+        const fallbackVotes = (current?.upvotes || 0) + 1;
         const { error: updateErr } = await supabase
           .from('deal_qa')
-          .update({ upvotes: newVotes, updated_at: new Date().toISOString() })
+          .update({ upvotes: fallbackVotes, updated_at: new Date().toISOString() })
           .eq('id', recordId);
-
         if (updateErr) throw updateErr;
-        return res.status(200).json({ success: true, upvotes: newVotes });
+        return res.status(200).json({ success: true, upvotes: fallbackVotes });
       } catch (err) {
         return res.status(500).json({ error: 'Failed to upvote' });
       }
