@@ -14103,7 +14103,8 @@ function submitNewDeal() {
   closeModal();
   renderAll();
   updateDealCount();
-  alert('Deal added! It will appear in your New Deals feed.' + (_addDealFile ? ' Deck is uploading...' : ''));
+  setDealStage(newDeal.id, 'saved');
+  window.location.href = 'deal.html?id=' + newDeal.id;
 }
 
 function showDealSearchModal() {
