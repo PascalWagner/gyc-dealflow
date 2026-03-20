@@ -4706,17 +4706,19 @@ async function renderDeal() {
         var cardBorder = pctMatch >= 80 ? 'rgba(74,222,128,0.2)' : pctMatch >= 50 ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)';
         var matchLabel = pctMatch >= 80 ? 'Strong Match' : pctMatch >= 50 ? 'Partial Match' : 'Low Match';
 
-        buyBoxHtml += '<div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-card);">';
+        buyBoxHtml += '<div class="section">';
         // Header row
-        buyBoxHtml += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
-        buyBoxHtml += '<div style="display:flex;align-items:center;gap:8px;">';
-        buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Buy Box Match</span>';
-        buyBoxHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-family:var(--font-ui);font-size:11px;font-weight:700;background:' + matchColor + '22;color:' + matchColor + ';">' + matchLabel + '</span>';
+        buyBoxHtml += '<div class="section-header" style="justify-content:space-between;">';
+        buyBoxHtml += '<div style="display:flex;align-items:center;gap:10px;">';
+        buyBoxHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+        buyBoxHtml += '<span class="section-title">Buy Box Match</span>';
+        buyBoxHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-family:var(--font-ui);font-size:11px;font-weight:700;background:' + matchColor + '18;color:' + matchColor + ';">' + matchLabel + '</span>';
         buyBoxHtml += '</div>';
-        buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:' + matchColor + ';">' + matched + '/' + total + '</span>';
+        buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:' + matchColor + ';">' + matched + '/' + total + '</span>';
         buyBoxHtml += '</div>';
+        buyBoxHtml += '<div class="section-body">';
         // Progress bar
-        buyBoxHtml += '<div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-bottom:16px;overflow:hidden;">';
+        buyBoxHtml += '<div style="height:5px;background:var(--border-light);border-radius:3px;margin-bottom:20px;overflow:hidden;">';
         buyBoxHtml += '<div style="height:100%;width:' + pctMatch + '%;background:' + matchColor + ';border-radius:3px;transition:width 0.3s;"></div>';
         buyBoxHtml += '</div>';
         // Criteria rows
@@ -4744,10 +4746,10 @@ async function renderDeal() {
         }
         buyBoxHtml += '</div>';
         // Edit link
-        buyBoxHtml += '<div style="text-align:right;margin-top:12px;">';
+        buyBoxHtml += '<div style="text-align:right;margin-top:14px;">';
         buyBoxHtml += '<a href="index.html#buybox" style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--primary);text-decoration:none;opacity:0.8;">Edit Buy Box \u2192</a>';
         buyBoxHtml += '</div>';
-        buyBoxHtml += '</div>';
+        buyBoxHtml += '</div></div>';
       }
     } catch(e) {}
   } else {
