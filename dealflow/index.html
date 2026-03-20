@@ -692,6 +692,7 @@ body {
   transition: all 0.25s ease;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 .deal-card:hover {
   box-shadow: var(--shadow-card-hover);
@@ -851,6 +852,60 @@ html.dark .card-match-badge.red { background: #2E1515; }
   gap: 8px;
   border-top: 1px solid var(--border-light);
 }
+
+/* Compare page */
+.compare-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.compare-chip {
+  display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:100px;
+  font-family:var(--font-ui); font-size:12px; font-weight:600; cursor:pointer;
+  border:1.5px solid var(--border); background:var(--bg-card); color:var(--text-dark);
+  transition:all 0.15s;
+}
+.compare-chip:hover { border-color:var(--primary); }
+.compare-chip.selected { background:var(--primary); color:#fff; border-color:var(--primary); }
+.compare-chip .chip-remove { display:none; margin-left:2px; font-size:14px; line-height:1; }
+.compare-chip.selected .chip-remove { display:inline; }
+.compare-chip .chip-add { display:inline; }
+.compare-chip.selected .chip-add { display:none; }
+
+.compare-table-wrap { overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-card); }
+.compare-table { width:100%; border-collapse:collapse; font-family:var(--font-ui); font-size:13px; table-layout:fixed; min-width:600px; }
+.compare-table th, .compare-table td { padding:10px 14px; border-bottom:1px solid var(--border-light); vertical-align:middle; }
+.compare-table .col-label { position:sticky; left:0; z-index:2; background:var(--bg-card); width:170px; min-width:170px; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); }
+.compare-table .col-deal { text-align:center; min-width:180px; }
+.compare-table .section-row td { padding:14px 14px 6px; font-weight:800; font-size:11px; color:var(--primary); text-transform:uppercase; letter-spacing:1px; border-bottom:none; background:var(--bg-card); }
+.compare-table .best-val { background:rgba(81,190,123,0.08); color:var(--primary); font-weight:700; }
+.compare-table .deal-header { padding:16px 14px; text-align:center; border-bottom:2px solid var(--border); background:var(--bg-card); vertical-align:top; }
+.compare-table .deal-header-name { font-size:14px; font-weight:700; color:var(--text-dark); margin-bottom:2px; }
+.compare-table .deal-header-mgr { font-size:11px; color:var(--text-muted); }
+.compare-table .deal-header-badge { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700; background:var(--green-bg); color:var(--green); margin-bottom:4px; }
+
+.compare-empty {
+  text-align:center; padding:60px 24px; color:var(--text-muted); font-family:var(--font-ui);
+}
+.compare-empty svg { width:48px; height:48px; margin-bottom:16px; opacity:0.3; }
+.compare-empty-title { font-size:16px; font-weight:700; color:var(--text-dark); margin-bottom:8px; }
+.compare-empty-sub { font-size:13px; max-width:400px; margin:0 auto; }
+
+/* Compare button on cards */
+.card-compare-btn {
+  position:absolute; top:8px; right:8px; z-index:10; width:28px; height:28px; border-radius:50%;
+  border:none; background:rgba(0,0,0,0.35); backdrop-filter:blur(4px); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:all 0.15s; padding:0;
+}
+.card-compare-btn:hover { background:rgba(0,0,0,0.55); }
+.card-compare-btn.in-compare { background:var(--primary); }
+.card-compare-btn svg { width:16px; height:16px; }
+
+/* Toast notification */
+.gyc-toast {
+  position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+  background:var(--bg-sidebar); color:#fff; padding:10px 20px; border-radius:8px;
+  font-family:var(--font-ui); font-size:13px; font-weight:600; z-index:10002;
+  box-shadow:0 4px 16px rgba(0,0,0,0.25); transition:all 0.3s ease; pointer-events:none;
+  white-space:nowrap;
+}
+.gyc-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
 .btn {
   flex: 1;
@@ -3755,6 +3810,11 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Operators
     </a>
+    <a class="nav-item" href="#" data-page="compare" onclick="navigateTo('compare'); return false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
+      Compare
+      <span class="nav-badge" id="compareCountBadge" style="display:none;">0</span>
+    </a>
     <a class="nav-item nav-item-disabled" href="#" data-page="assets" id="navAssets" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('assets'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Assets
@@ -5070,6 +5130,25 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
     </div>
   </div>
 
+  <!-- PAGE: Compare Deals -->
+  <div class="page" id="page-compare">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <div class="topbar-title">Compare Deals</div>
+        <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">Side-by-side comparison of your selected deals</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-outline" onclick="clearCompareDeals()" style="font-size:12px;padding:6px 14px;">Clear All</button>
+    </div>
+    <div class="content-area" style="padding:20px 24px;">
+      <div id="compareChipsContainer"></div>
+      <div id="compareTableContainer"></div>
+    </div>
+  </div>
+
   <!-- PAGE: My Portfolio -->
   <div class="page" id="page-portfolio">
     <div class="topbar">
@@ -5192,6 +5271,10 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
         <a class="more-menu-item" href="#" onclick="navigateTo('buybox'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
           <span>Buy Box</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('compare'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
+          <span>Compare</span>
         </a>
         <a class="more-menu-item" href="#" onclick="navigateTo('assets'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -5361,6 +5444,7 @@ async function loadDeals() {
   // Render fallback deals immediately so page is never blank
   updateDealCount();
   renderAll();
+  updateCompareBadge();
 
   // Then try to fetch fresh data from Airtable in background
   const cached = sessionStorage.getItem('gycDealsCache');
@@ -5754,6 +5838,230 @@ function preselectComparison(dealId) {
     }
   });
   if (comparisonSelection.size >= 2) openComparisonView();
+}
+
+// ========== COMPARE PAGE ==========
+function getCompareDeals() {
+  try { return JSON.parse(localStorage.getItem('gycCompareDeals') || '[]'); } catch(e) { return []; }
+}
+function saveCompareDeals(ids) {
+  localStorage.setItem('gycCompareDeals', JSON.stringify(ids));
+  updateCompareBadge();
+}
+function updateCompareBadge() {
+  var ids = getCompareDeals();
+  var badge = document.getElementById('compareCountBadge');
+  if (badge) {
+    if (ids.length > 0) { badge.textContent = ids.length; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
+}
+function toggleCompareAdd(dealId, e) {
+  if (e) e.stopPropagation();
+  var ids = getCompareDeals();
+  var idx = ids.indexOf(dealId);
+  if (idx >= 0) {
+    ids.splice(idx, 1);
+    saveCompareDeals(ids);
+    showToast('Removed from compare');
+  } else {
+    if (ids.length >= 4) { showToast('Max 4 deals \u2014 remove one first'); return; }
+    ids.push(dealId);
+    saveCompareDeals(ids);
+    showToast('Added to compare (' + ids.length + '/4)');
+  }
+  // Update compare button visuals on cards
+  document.querySelectorAll('.card-compare-btn').forEach(function(btn) {
+    var bid = btn.dataset.dealId;
+    btn.classList.toggle('in-compare', getCompareDeals().indexOf(bid) >= 0);
+  });
+  // If we're on the compare page, re-render
+  var comparePage = document.getElementById('page-compare');
+  if (comparePage && comparePage.classList.contains('active')) renderComparePage();
+}
+function clearCompareDeals() {
+  saveCompareDeals([]);
+  document.querySelectorAll('.card-compare-btn').forEach(function(btn) { btn.classList.remove('in-compare'); });
+  var comparePage = document.getElementById('page-compare');
+  if (comparePage && comparePage.classList.contains('active')) renderComparePage();
+}
+function showToast(msg) {
+  var existing = document.querySelector('.gyc-toast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.className = 'gyc-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function() { requestAnimationFrame(function() { t.classList.add('show'); }); });
+  setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 2200);
+}
+
+function renderComparePage() {
+  var chipsEl = document.getElementById('compareChipsContainer');
+  var tableEl = document.getElementById('compareTableContainer');
+  if (!chipsEl || !tableEl) return;
+
+  var compareIds = getCompareDeals();
+  var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+
+  // Build deal chips from saved/vetting/ready deals
+  var eligibleDeals = allDeals.filter(function(d) {
+    var st = getDealStage(d.id);
+    return st === 'saved' || st === 'vetting' || st === 'ready' || st === 'invested';
+  });
+
+  var chipsHtml = '<div style="margin-bottom:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Select deals to compare (2\u20134)</div><div class="compare-chips">';
+  if (eligibleDeals.length === 0) {
+    chipsHtml += '<span style="font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">Save deals from Deal Flow to compare them here</span>';
+  } else {
+    eligibleDeals.forEach(function(d) {
+      var sel = compareIds.indexOf(d.id) >= 0;
+      chipsHtml += '<div class="compare-chip' + (sel ? ' selected' : '') + '" onclick="toggleCompareAdd(\'' + d.id + '\')">';
+      chipsHtml += '<span class="chip-add">+</span>';
+      chipsHtml += d.investmentName;
+      chipsHtml += '<span class="chip-remove">&times;</span>';
+      chipsHtml += '</div>';
+    });
+  }
+  chipsHtml += '</div>';
+  chipsEl.innerHTML = chipsHtml;
+
+  // Filter to valid deals
+  var deals = compareIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
+
+  if (deals.length < 2) {
+    tableEl.innerHTML = '<div class="compare-empty">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>' +
+      '<div class="compare-empty-title">' + (deals.length === 0 ? 'No deals selected' : 'Select one more deal') + '</div>' +
+      '<div class="compare-empty-sub">' + (eligibleDeals.length === 0 ? 'Save deals from Deal Flow to compare them here.' : 'Click the chips above to select 2\u20134 deals for comparison.') + '</div>' +
+      '</div>';
+    return;
+  }
+
+  var cols = deals.length;
+
+  // Helpers
+  function cmpRow(label, values, format, higherIsBetter) {
+    var best = null;
+    var nums = values.map(function(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; });
+    nums.forEach(function(n) { if (n !== null && (best === null || (higherIsBetter ? n > best : n < best))) best = n; });
+    var uniqueBest = best !== null && nums.filter(function(n) { return n === best; }).length < nums.filter(function(n) { return n !== null; }).length;
+    var r = '<tr><td class="col-label">' + label + '</td>';
+    values.forEach(function(v, i) {
+      var isBest = uniqueBest && nums[i] !== null && nums[i] === best;
+      var cls = 'col-deal' + (isBest ? ' best-val' : '');
+      var display;
+      if (v === null || v === undefined || v === '') { display = '\u2014'; }
+      else if (format === 'pct') { var n = typeof v === 'string' ? parseFloat(v) : v; display = isNaN(n) ? '\u2014' : (n > 1 ? n : n * 100).toFixed(1) + '%'; }
+      else if (format === 'money') { display = fmt(v, 'money'); }
+      else if (format === 'multiple') { var n = typeof v === 'string' ? parseFloat(v) : v; display = isNaN(n) ? '\u2014' : n.toFixed(2) + 'x'; }
+      else if (format === 'yr') { display = v < 1 ? Math.round(v * 12) + ' mo' : v + ' yr'; }
+      else { display = String(v); }
+      r += '<td class="' + cls + '">' + display + '</td>';
+    });
+    return r + '</tr>';
+  }
+  function cmpTextRow(label, values) {
+    var r = '<tr><td class="col-label">' + label + '</td>';
+    values.forEach(function(v) { r += '<td class="col-deal">' + (v || '\u2014') + '</td>'; });
+    return r + '</tr>';
+  }
+  function cmpSection(title) {
+    return '<tr class="section-row"><td colspan="' + (cols + 1) + '">' + title + '</td></tr>';
+  }
+
+  var h = '<div class="compare-table-wrap"><table class="compare-table">';
+
+  // Header row
+  h += '<thead><tr><th class="col-label"></th>';
+  deals.forEach(function(d) {
+    h += '<th class="deal-header col-deal">';
+    h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
+    h += '<div class="deal-header-name">' + d.investmentName + '</div>';
+    h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
+    h += '</th>';
+  });
+  h += '</tr></thead><tbody>';
+
+  // Overview
+  h += cmpSection('Overview');
+  h += cmpTextRow('Deal Name', deals.map(function(d) { return d.investmentName; }));
+  h += cmpTextRow('Sponsor', deals.map(function(d) { return d.managementCompany; }));
+  h += cmpTextRow('Asset Class', deals.map(function(d) { return d.assetClass; }));
+  h += cmpTextRow('Deal Type', deals.map(function(d) { return d.dealType; }));
+  h += cmpTextRow('Geography', deals.map(function(d) { return d.investingGeography || d.location; }));
+
+  // Returns
+  h += cmpSection('Returns');
+  h += cmpRow('Target IRR', deals.map(function(d) { return d.targetIRR; }), 'pct', true);
+  h += cmpRow('Cash-on-Cash', deals.map(function(d) { return d.cashOnCash; }), 'pct', true);
+  h += cmpRow('Preferred Return', deals.map(function(d) { return d.preferredReturn; }), 'pct', true);
+  h += cmpRow('Equity Multiple', deals.map(function(d) { return d.equityMultiple; }), 'multiple', true);
+  h += cmpTextRow('Distributions', deals.map(function(d) { return d.distributions; }));
+
+  // Investment Terms
+  h += cmpSection('Investment Terms');
+  h += cmpRow('Minimum Investment', deals.map(function(d) { return d.investmentMinimum; }), 'money', false);
+  h += cmpRow('Hold Period', deals.map(function(d) { return d.holdPeriod; }), 'yr', false);
+  h += cmpRow('Offering Size', deals.map(function(d) { return d.offeringSize; }), 'money', false);
+  h += cmpTextRow('Offering Type', deals.map(function(d) { return d.offeringType; }));
+
+  // Risk Metrics
+  h += cmpSection('Risk Metrics');
+  h += cmpRow('Sponsor AUM', deals.map(function(d) { return d.fundAUM; }), 'money', true);
+  h += cmpTextRow('Track Record', deals.map(function(d) { return d.fullCycleDeals ? d.fullCycleDeals + ' full-cycle deals' : null; }));
+  h += cmpRow('Sponsor Co-Invest', deals.map(function(d) { return d.sponsorInDeal; }), 'pct', true);
+  h += cmpRow('LTV / Leverage', deals.map(function(d) { return d.avgLoanLTV || d.leverage; }), 'pct', false);
+
+  // Your Analysis
+  h += cmpSection('Your Analysis');
+  // Income gap fill
+  var gapFills = deals.map(function(d) { var gf = getGapFillPercent(d); return gf ? gf.percent : null; });
+  h += cmpRow('Income Gap Fill %', gapFills, null, true);
+
+  // DD Progress
+  h += '<tr><td class="col-label">DD Progress</td>';
+  deals.forEach(function(d) {
+    var checks = {};
+    try { checks = JSON.parse(localStorage.getItem('gycDDChecklist_' + d.id) || '{}'); } catch(e) {}
+    var done = Object.values(checks).filter(Boolean).length;
+    var total = 65;
+    var pct = Math.min(Math.round((done / total) * 100), 100);
+    var barColor = pct >= 60 ? 'var(--primary)' : 'var(--text-muted)';
+    var cell = done > 0
+      ? '<div style="text-align:center;"><span style="font-weight:700;color:' + barColor + ';">' + pct + '%</span><span style="font-size:11px;color:var(--text-muted);"> (' + done + '/' + total + ')</span>' +
+        '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px;"><div style="height:100%;width:' + pct + '%;background:var(--primary);border-radius:2px;"></div></div></div>'
+      : '<span style="color:var(--text-muted);">\u2014</span>';
+    h += '<td class="col-deal">' + cell + '</td>';
+  });
+  h += '</tr>';
+
+  // Stage
+  h += '<tr><td class="col-label">Your Stage</td>';
+  deals.forEach(function(d) {
+    var stage = getDealStage(d.id);
+    var colors = {saved:'var(--blue)',vetting:'var(--orange)',ready:'var(--green)',invested:'var(--green)',passed:'var(--red)',browse:'var(--text-muted)'};
+    var labels = {saved:'Saved',vetting:'Vetting',ready:'Ready',invested:'Invested',passed:'Passed',browse:'Browse'};
+    h += '<td class="col-deal"><span style="display:inline-block;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:' + (colors[stage] || 'var(--text-muted)') + '22;color:' + (colors[stage] || 'var(--text-muted)') + ';">' + (labels[stage] || stage) + '</span></td>';
+  });
+  h += '</tr>';
+
+  // Buy Box Match
+  var bb = null;
+  try { bb = JSON.parse(localStorage.getItem('gycBuyBox') || 'null'); } catch(e) {}
+  h += '<tr><td class="col-label">Buy Box Match</td>';
+  deals.forEach(function(d) {
+    if (!bb || !bb.assetClasses || bb.assetClasses.length === 0) {
+      h += '<td class="col-deal"><span style="color:var(--text-muted);">\u2014</span></td>';
+    } else {
+      var match = bb.assetClasses.indexOf(d.assetClass) >= 0;
+      h += '<td class="col-deal"><span style="font-weight:700;color:' + (match ? 'var(--green)' : 'var(--text-muted)') + ';">' + (match ? 'Yes' : 'No') + '</span></td>';
+    }
+  });
+  h += '</tr>';
+
+  h += '</tbody></table></div>';
+  tableEl.innerHTML = h;
 }
 
 // ========== AIRTABLE SYNC LAYER ==========
@@ -6332,12 +6640,51 @@ function getCreditStrategy(deal) {
   return 'Real estate debt fund focused on contractual income opportunities.';
 }
 
-// Format hold/lockup for credit card
+// Format hold period with smart units (days/months/years)
+function formatHoldPeriod(yrs) {
+  if (!yrs && yrs !== 0) return '—';
+  if (yrs === 0) return 'No Lockup';
+  if (yrs < 1) {
+    var days = Math.round(yrs * 365);
+    if (days <= 90) return days + ' Days';
+    return Math.round(yrs * 12) + ' Mo';
+  }
+  if (yrs === 1) return '1 Yr';
+  if (Number.isInteger(yrs)) return yrs + ' Yrs';
+  return yrs.toFixed(1) + ' Yrs';
+}
+
+// Format hold/lockup for credit card (legacy wrapper)
 function formatLockup(deal) {
-  if (!deal.holdPeriod) return '—';
-  if (deal.holdPeriod < 1) return Math.round(deal.holdPeriod * 12) + ' mo';
-  if (deal.holdPeriod === 1) return '1 yr';
-  return deal.holdPeriod + ' yr';
+  return formatHoldPeriod(deal.holdPeriod);
+}
+
+// Build highlight pills for a deal card (max 2)
+function buildHighlightPills(deal) {
+  var pills = [];
+  if (deal.financials === 'Audited') pills.push('Audited');
+  if ((deal.distributions || '').toLowerCase() === 'monthly') pills.push('Monthly');
+  if (deal.debtPosition === '1st') pills.push('1st Lien');
+  if (pills.length > 2) pills = pills.slice(0, 2);
+  if (pills.length === 0) return '';
+  var html = '<div style="display:flex;gap:4px;margin-top:4px;">';
+  for (var pi = 0; pi < pills.length; pi++) {
+    html += '<span style="padding:2px 6px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:10px;font-family:var(--font-ui);font-size:9px;font-weight:600;color:var(--primary);">' + pills[pi] + '</span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// Render user's stage indicator on card
+function renderUserStageIndicator(dealId) {
+  var userStage = getDealStage(dealId);
+  if (!userStage || userStage === 'browse') return '';
+  var stageLabels = { saved: 'Saved', vetting: 'In DD', ready: 'Ready', invested: 'Invested', passed: 'Passed' };
+  var stageColors = { saved: '#3b82f6', vetting: '#f59e0b', ready: '#4ade80', invested: '#059669', passed: '#6b7280' };
+  var label = stageLabels[userStage] || '';
+  var color = stageColors[userStage] || 'var(--text-muted)';
+  if (!label) return '';
+  return '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:' + color + ';margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">' + label + '</div>';
 }
 
 // Format distribution frequency
@@ -6411,6 +6758,9 @@ function renderCreditCard(deal) {
   const html = `
     <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
       ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
+      <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
+      </button>
       <div class="credit-card-hero" style="position:relative">
         <div class="credit-badges">
           <span class="credit-badge">${typeLabel}</span>
@@ -6694,6 +7044,9 @@ function renderCard(deal) {
   return `
     <div class="deal-card" data-id="${deal.id}">
       ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
+      <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
+      </button>
       <div class="equity-card-hero" style="background:${hero.gradient};position:relative;">
         <div class="equity-hero-badges">
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
@@ -6710,6 +7063,7 @@ function renderCard(deal) {
         <div class="credit-card-title">${deal.investmentName}</div>
         <div class="credit-card-manager">${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}</div>
         ${strategy ? `<div class="credit-card-strategy">${strategy}</div>` : ''}
+        ${buildHighlightPills(deal)}
         <div class="credit-card-metrics">
           <div class="metric">
             <div class="metric-label">Equity Multiple</div>
@@ -6721,7 +7075,7 @@ function renderCard(deal) {
           </div>
           <div class="metric">
             <div class="metric-label">Hold Period</div>
-            <div class="metric-value">${deal.holdPeriod ? (deal.holdPeriod < 1 ? Math.round(deal.holdPeriod * 12) + ' mo' : deal.holdPeriod + ' yr') : '—'}</div>
+            <div class="metric-value">${formatHoldPeriod(deal.holdPeriod)}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Pref Return</div>
@@ -6741,6 +7095,7 @@ function renderCard(deal) {
         </div>
         ${(function(){ var gf = getGapFillPercent(deal); if (!gf) return ''; var colors = {income_gap:'#4ade80',tax_shelter:'#a78bfa',capital_to_deploy:'#fbbf24'}; var c = colors[(gf.label||'').replace(/ /g,'_')] || '#4ade80'; var bgAlpha = c === '#a78bfa' ? 'rgba(167,139,250,0.08)' : c === '#fbbf24' ? 'rgba(251,191,36,0.08)' : 'rgba(74,222,128,0.08)'; var text = 'Fills ' + Math.min(gf.percent, 100) + '% of your ' + gf.label; if (gf.extra) text += ' · ' + gf.extra; return '<div style="padding:6px 12px;margin-top:8px;background:' + bgAlpha + ';border-radius:6px;font-size:11px;color:' + c + ';font-weight:600;text-align:center;">' + text + '</div>'; })()}
         ${renderCardStageExtras(deal)}
+        ${renderUserStageIndicator(deal.id)}
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
@@ -7861,6 +8216,7 @@ function navigateTo(page) {
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'schema') renderSchemaPage();
   if (page === 'casestudies') renderCaseStudies();
+  if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
     // Try to render from localStorage first
     renderReport();
