@@ -589,6 +589,17 @@ async function handleSignIn() {
   if (!email) { showErr('signinError', 'Please enter your email.'); return; }
   hideErr('signinError');
 
+  // Demo account for App Store review — skip magic link, log in directly
+  if (email.toLowerCase() === 'test@test.com') {
+    localStorage.setItem('gycUser', JSON.stringify({
+      email: email, name: 'Test User',
+      id: null, token: Date.now().toString(36),
+      tier: 'academy', loggedInAt: new Date().toISOString()
+    }));
+    window.location.href = 'index.html';
+    return;
+  }
+
   const btn = document.querySelector('#signinForm .btn-submit');
   btn.classList.add('btn-loading'); btn.textContent = 'Sending link...';
 
