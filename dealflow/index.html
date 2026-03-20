@@ -3809,48 +3809,122 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
 }
 
 /* Onboarding Wizard */
+/* ===== NEW USER ONBOARDING OVERLAY ===== */
 .onboarding-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: var(--bg-cream);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   padding: 20px;
+  opacity: 0;
+  animation: obFadeIn 0.4s ease forwards;
 }
+@keyframes obFadeIn { to { opacity: 1; } }
+@keyframes obFadeOut { to { opacity: 0; } }
+.onboarding-overlay.ob-closing { animation: obFadeOut 0.3s ease forwards; }
+
 .onboarding-modal {
   background: var(--bg-card);
-  border-radius: 16px;
-  padding: 40px;
-  max-width: 520px;
-  width: 90%;
+  border-radius: 20px;
+  padding: 48px 40px 40px;
+  max-width: 560px;
+  width: 100%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  position: relative;
+}
+.onboarding-step-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+.onboarding-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+}
+.onboarding-dot.active {
+  background: var(--primary);
+  width: 24px;
+  border-radius: 4px;
+}
+.onboarding-dot.done {
+  background: var(--primary);
 }
 .onboarding-title {
   font-family: var(--font-headline);
-  font-size: 24px;
+  font-size: 28px;
   color: var(--text-dark);
   margin-bottom: 8px;
+  line-height: 1.2;
 }
 .onboarding-subtitle {
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   line-height: 1.6;
 }
-.onboarding-options {
+.onboarding-value-props {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 32px;
+  text-align: left;
 }
-.onboarding-option {
-  padding: 14px 20px;
+.onboarding-value-prop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg-cream);
+  border-radius: 12px;
+}
+.onboarding-value-prop-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(81,190,123,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.onboarding-value-prop-icon svg { width: 20px; height: 20px; }
+.onboarding-value-prop-text {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+/* Preset button grid */
+.ob-preset-group {
+  margin-bottom: 24px;
+  text-align: left;
+}
+.ob-preset-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.ob-preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ob-preset-btn {
+  padding: 10px 20px;
   background: var(--bg-cream);
   border: 2px solid var(--border);
   border-radius: 10px;
@@ -3861,65 +3935,156 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.onboarding-option:hover, .onboarding-option.selected {
+.ob-preset-btn:hover {
   border-color: var(--primary);
-  background: rgba(81,190,123,0.05);
+  background: rgba(81,190,123,0.04);
 }
-.onboarding-option.selected {
+.ob-preset-btn.selected {
+  border-color: var(--primary);
+  background: rgba(81,190,123,0.08);
   color: var(--primary);
 }
-.onboarding-btn {
+/* Asset class chips */
+.ob-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.ob-chip {
+  padding: 10px 18px;
+  background: var(--bg-cream);
+  border: 2px solid var(--border);
+  border-radius: 100px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ob-chip:hover {
+  border-color: var(--primary);
+}
+.ob-chip.selected {
+  border-color: var(--primary);
+  background: rgba(81,190,123,0.1);
+  color: var(--primary);
+}
+.ob-chip-check {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.ob-chip.selected .ob-chip-check {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+/* CTA and skip */
+.onboarding-cta {
   display: inline-block;
-  padding: 12px 28px;
+  padding: 14px 36px;
   background: var(--primary);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-family: var(--font-ui);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 320px;
 }
-.onboarding-btn:hover {
+.onboarding-cta:hover {
   background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(81,190,123,0.4);
+}
+.onboarding-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 .onboarding-skip {
   display: block;
-  margin: 12px auto 0;
+  margin: 16px auto 0;
   font-family: var(--font-ui);
   font-size: 12px;
   color: var(--text-muted);
   background: none;
   border: none;
   cursor: pointer;
-  text-decoration: underline;
+  transition: color 0.15s ease;
 }
 .onboarding-skip:hover {
   color: var(--text-secondary);
 }
-.onboarding-step-dots {
+/* Summary card in step 4 */
+.ob-summary {
+  background: var(--bg-cream);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+.ob-summary-row {
   display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-dark);
 }
-.onboarding-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 0.15s ease;
+.ob-summary-row svg { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+.ob-summary-row strong { font-weight: 700; }
+.ob-match-count {
+  font-family: var(--font-headline);
+  font-size: 42px;
+  color: var(--primary);
+  margin-bottom: 4px;
+  line-height: 1;
 }
-.onboarding-dot.active {
-  background: var(--primary);
+.ob-match-label {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+/* Step content transition */
+.ob-step-content {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: obStepIn 0.35s ease forwards;
+}
+@keyframes obStepIn {
+  to { opacity: 1; transform: translateY(0); }
 }
 @media (max-width: 480px) {
   .onboarding-modal {
-    padding: 28px 20px;
+    padding: 32px 20px 28px;
   }
   .onboarding-title {
-    font-size: 20px;
+    font-size: 22px;
+  }
+  .ob-preset-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .ob-chip {
+    padding: 8px 14px;
+    font-size: 12px;
   }
 }
 
@@ -8832,10 +8997,12 @@ function initAuth() {
     // Fetch all user data from Airtable on login
     fetchUserDataFromAirtable(user.email);
   }
-  // Check if new user should see wizard
-  if (user && user.isNewUser && !localStorage.getItem('gycBuyBoxComplete')) {
-    setTimeout(() => openBuyBoxWizard(), 500);
-    // Clear isNewUser flag
+  // Check if new user should see onboarding
+  if (user && user.email && !localStorage.getItem('gycOnboardingComplete') && !localStorage.getItem('gycBuyBoxComplete')) {
+    setTimeout(() => showOnboarding(), 800);
+  }
+  // Clear isNewUser flag if set
+  if (user && user.isNewUser) {
     user.isNewUser = false;
     localStorage.setItem('gycUser', JSON.stringify(user));
   }
@@ -15448,128 +15615,294 @@ function renderDashboardMilestoneProgress() {
     + '</div>';
 }
 
-// ========== ONBOARDING WIZARD ==========
+// ========== NEW USER ONBOARDING (4-step) ==========
 function showOnboarding() {
   if (localStorage.getItem('gycOnboardingComplete')) return;
+  if (localStorage.getItem('gycBuyBoxComplete')) return;
+  if (!localStorage.getItem('gycUser')) return;
 
-  window._obData = { experience: '', goals: [] };
+  // Remove any existing onboarding overlay
+  var existing = document.getElementById('onboardingOverlay');
+  if (existing) existing.remove();
 
-  setTimeout(function() {
-    var overlay = document.createElement('div');
-    overlay.className = 'onboarding-overlay';
-    overlay.id = 'onboardingOverlay';
+  var obStep = 1;
+  var obData = {
+    targetCashFlow: '',
+    currentCashFlow: '',
+    assetClasses: [],
+    checkSize: ''
+  };
 
-    function renderStep(step) {
-      var html = '<div class="onboarding-modal">';
-      html += '<div class="onboarding-step-dots">';
-      for (var d = 1; d <= 3; d++) {
-        html += '<div class="onboarding-dot' + (d === step ? ' active' : '') + '"></div>';
+  var overlay = document.createElement('div');
+  overlay.className = 'onboarding-overlay';
+  overlay.id = 'onboardingOverlay';
+
+  function getUserFirstName() {
+    try {
+      var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+      return u.firstName || (u.name || '').split(' ')[0] || 'Investor';
+    } catch(e) { return 'Investor'; }
+  }
+
+  function renderDots(step) {
+    var html = '<div class="onboarding-step-dots">';
+    for (var d = 1; d <= 4; d++) {
+      var cls = d === step ? ' active' : (d < step ? ' done' : '');
+      html += '<div class="onboarding-dot' + cls + '"></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderStep(step) {
+    obStep = step;
+    var html = '<div class="onboarding-modal"><div class="ob-step-content">';
+    html += renderDots(step);
+
+    if (step === 1) {
+      // ===== WELCOME =====
+      html += '<div class="onboarding-title">Welcome to Cashflow Academy</div>';
+      html += '<div class="onboarding-subtitle">Let\'s set up your deal finder in under 2 minutes</div>';
+      html += '<div class="onboarding-value-props">';
+      html += '<div class="onboarding-value-prop">';
+      html += '  <div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>';
+      html += '  <div class="onboarding-value-prop-text">Set your income goal</div>';
+      html += '</div>';
+      html += '<div class="onboarding-value-prop">';
+      html += '  <div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>';
+      html += '  <div class="onboarding-value-prop-text">Build your buy box</div>';
+      html += '</div>';
+      html += '<div class="onboarding-value-prop">';
+      html += '  <div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>';
+      html += '  <div class="onboarding-value-prop-text">Get matched with deals</div>';
+      html += '</div>';
+      html += '</div>';
+      html += '<button class="onboarding-cta" onclick="window._obGo(2)">Let\'s Go</button>';
+      html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
+
+    } else if (step === 2) {
+      // ===== INCOME GOAL =====
+      html += '<div class="onboarding-title">What\'s your passive income goal?</div>';
+      html += '<div class="onboarding-subtitle">This helps us match you with the right deals and track your progress.</div>';
+
+      html += '<div class="ob-preset-group">';
+      html += '<div class="ob-preset-label">Target Passive Income</div>';
+      html += '<div class="ob-preset-grid">';
+      var targets = ['25000', '50000', '100000', '200000', '500000'];
+      var targetLabels = ['$25K/yr', '$50K/yr', '$100K/yr', '$200K/yr', '$500K/yr'];
+      for (var t = 0; t < targets.length; t++) {
+        var sel = obData.targetCashFlow === targets[t] ? ' selected' : '';
+        html += '<button class="ob-preset-btn' + sel + '" onclick="window._obSelectTarget(\'' + targets[t] + '\', this)">' + targetLabels[t] + '</button>';
+      }
+      html += '</div></div>';
+
+      html += '<div class="ob-preset-group">';
+      html += '<div class="ob-preset-label">Current Passive Income</div>';
+      html += '<div class="ob-preset-grid">';
+      var currents = ['0', '25000', '50000', '100000'];
+      var currentLabels = ['$0', '$25K', '$50K', '$100K+'];
+      for (var c = 0; c < currents.length; c++) {
+        var sel2 = obData.currentCashFlow === currents[c] ? ' selected' : '';
+        html += '<button class="ob-preset-btn' + sel2 + '" onclick="window._obSelectCurrent(\'' + currents[c] + '\', this)">' + currentLabels[c] + '</button>';
+      }
+      html += '</div></div>';
+
+      html += '<button class="onboarding-cta" id="obStep2Next" onclick="window._obGo(3)"' + (!obData.targetCashFlow ? ' disabled' : '') + '>Next</button>';
+      html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
+
+    } else if (step === 3) {
+      // ===== BUY BOX: ASSET CLASSES + CHECK SIZE =====
+      html += '<div class="onboarding-title">What types of deals interest you?</div>';
+      html += '<div class="onboarding-subtitle">Select all that apply. You can always change this later.</div>';
+
+      html += '<div class="ob-chip-grid">';
+      var assets = [
+        { key: 'Multi-Family', label: 'Multi-Family', icon: '\uD83C\uDFE2' },
+        { key: 'Self Storage', label: 'Self Storage', icon: '\uD83D\uDCE6' },
+        { key: 'Industrial', label: 'Industrial', icon: '\uD83C\uDFED' },
+        { key: 'Lending', label: 'Private Credit', icon: '\uD83D\uDCB5' },
+        { key: 'Hotels / Hospitality', label: 'Hotels', icon: '\uD83C\uDFE8' },
+        { key: 'RV / Mobile Home Parks', label: 'Mobile Home Parks', icon: '\uD83C\uDFD5\uFE0F' },
+        { key: 'Senior Assisted Living', label: 'Senior Living', icon: '\uD83C\uDFE5' },
+        { key: 'Land', label: 'Land', icon: '\uD83C\uDF3E' },
+        { key: 'Oil & Gas', label: 'Oil & Gas', icon: '\u26FD' }
+      ];
+      for (var a = 0; a < assets.length; a++) {
+        var isSel = obData.assetClasses.indexOf(assets[a].key) >= 0;
+        html += '<button class="ob-chip' + (isSel ? ' selected' : '') + '" onclick="window._obToggleAsset(\'' + assets[a].key.replace(/'/g, "\\'") + '\', this)">';
+        html += '<span class="ob-chip-check">' + (isSel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>';
+        html += assets[a].icon + ' ' + assets[a].label;
+        html += '</button>';
       }
       html += '</div>';
 
-      if (step === 1) {
-        html += '<div class="onboarding-title">Welcome to GYC Dealflow</div>';
-        html += '<div class="onboarding-subtitle">The largest database of vetted passive investment opportunities for accredited investors.</div>';
-        html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">Have you invested in private deals before?</div>';
-        html += '<div class="onboarding-options">';
-        html += '<button class="onboarding-option" onclick="window._obData.experience=&quot;never&quot;;window._obShowStep(2)">Never &mdash; I&apos;m just getting started</button>';
-        html += '<button class="onboarding-option" onclick="window._obData.experience=&quot;some&quot;;window._obShowStep(2)">1-3 deals &mdash; building my portfolio</button>';
-        html += '<button class="onboarding-option" onclick="window._obData.experience=&quot;experienced&quot;;window._obShowStep(2)">4+ deals &mdash; experienced LP</button>';
-        html += '</div>';
-        html += '<button class="onboarding-skip" onclick="window._obClose()">Skip, I will explore on my own</button>';
-      } else if (step === 2) {
-        html += '<div class="onboarding-title">What\u2019s your #1 goal right now?</div>';
-        html += '<div class="onboarding-subtitle">Pick one. We\u2019ll build your entire experience around it.</div>';
-        html += '<div class="onboarding-options" id="obGoalOptions">';
-        var goalOpts = [
-          { id: 'income', label: 'Build passive income', desc: 'Replace W-2 income with cashflow from private deals' },
-          { id: 'tax', label: 'Reduce my tax bill', desc: 'Use depreciation to offset taxable income' },
-          { id: 'diversify', label: 'Grow my wealth', desc: 'Deploy capital into high-return equity deals' }
-        ];
-        for (var g = 0; g < goalOpts.length; g++) {
-          html += '<button class="onboarding-option" data-goal="' + goalOpts[g].id + '" onclick="window._obSelectGoal(this)"><strong>' + goalOpts[g].label + '</strong><span style="display:block;font-size:12px;color:var(--text-muted);margin-top:4px;font-weight:400;">' + goalOpts[g].desc + '</span></button>';
-        }
-        html += '</div>';
-        html += '<button class="onboarding-skip" onclick="window._obClose()">Skip</button>';
-      } else if (step === 3) {
-        var exp = window._obData.experience || 'never';
-        var goal = window._obData.goal || 'income';
+      html += '<div class="ob-preset-group" style="text-align:center;">';
+      html += '<div class="ob-preset-label" style="text-align:center;">Typical Check Size</div>';
+      html += '<div class="ob-preset-grid" style="justify-content:center;">';
+      var checks = ['25000', '50000', '100000', '250000', '500000'];
+      var checkLabels = ['$25K', '$50K', '$100K', '$250K', '$500K+'];
+      for (var k = 0; k < checks.length; k++) {
+        var sel3 = obData.checkSize === checks[k] ? ' selected' : '';
+        html += '<button class="ob-preset-btn' + sel3 + '" onclick="window._obSelectCheck(\'' + checks[k] + '\', this)">' + checkLabels[k] + '</button>';
+      }
+      html += '</div></div>';
 
-        var recTitle = '';
-        var recText = '';
-        var recAction = '';
-        var recTarget = 'buybox';
+      html += '<button class="onboarding-cta" onclick="window._obGo(4)">Next</button>';
+      html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
 
-        if (goal === 'tax') {
-          recTitle = 'Let\u2019s Find Tax-Advantaged Deals';
-          recText = exp === 'never'
-            ? 'Syndications and development deals often offer 50\u201380% first-year depreciation. We\u2019ll help you find the right ones for your tax situation.'
-            : 'Your Buy Box will filter to deals with depreciation benefits, cost segregation, and bonus depreciation.';
-          recAction = exp === 'never' ? 'Build My Buy Box' : 'Build My Buy Box';
-          recTarget = 'buybox';
-        } else if (goal === 'diversify') {
-          recTitle = 'Let\u2019s Build Your Growth Portfolio';
-          recText = exp === 'never'
-            ? 'Value-add and development deals target 15\u201320%+ IRR. We\u2019ll match you with high-return opportunities that fit your capital and timeline.'
-            : 'Your Buy Box will surface the highest-return deals matched to your check size and risk tolerance.';
-          recAction = 'Build My Buy Box';
-          recTarget = 'buybox';
-        } else {
-          recTitle = 'Let\u2019s Build Your Income Plan';
-          recText = exp === 'never'
-            ? 'Lending funds and preferred equity deals pay 8\u201312% annual income with monthly or quarterly distributions. We\u2019ll start you with the safest, most consistent options.'
-            : 'Your Buy Box will prioritize deals that generate consistent passive income \u2014 sorted by yield and matched to your check size.';
-          recAction = exp === 'never' ? 'Build My Buy Box' : 'Build My Buy Box';
-          recTarget = 'buybox';
-        }
+    } else if (step === 4) {
+      // ===== ALL SET =====
+      var firstName = getUserFirstName();
+      var targetVal = obData.targetCashFlow ? '$' + parseInt(obData.targetCashFlow).toLocaleString() : '';
 
-        html += '<div class="onboarding-title">' + recTitle + '</div>';
-        html += '<div class="onboarding-subtitle">' + recText + '</div>';
-        html += '<button class="onboarding-btn" data-ob-target="' + recTarget + '" onclick="window._obFinish(this)">' + recAction + ' &rarr;</button>';
-        html += '<button class="onboarding-skip" onclick="window._obClose()">I will explore on my own</button>';
+      // Save data before calculating match count
+      saveOnboardingData();
+      var wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+      var matchCount = typeof getMatchingDealCount === 'function' ? getMatchingDealCount(wd) : 0;
+
+      html += '<div style="font-size:48px;margin-bottom:8px;">&#127881;</div>';
+      html += '<div class="onboarding-title">You\'re all set, ' + firstName + '!</div>';
+      html += '<div class="onboarding-subtitle">Your deal finder is ready to go.</div>';
+
+      html += '<div class="ob-summary">';
+      if (targetVal) {
+        html += '<div class="ob-summary-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Your goal: <strong>' + targetVal + '/yr</strong> passive income</span></div>';
+      }
+      if (obData.assetClasses.length > 0) {
+        html += '<div class="ob-summary-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span><strong>' + obData.assetClasses.length + '</strong> asset class' + (obData.assetClasses.length > 1 ? 'es' : '') + ' selected</span></div>';
+      }
+      if (obData.checkSize) {
+        html += '<div class="ob-summary-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>Check size: <strong>$' + parseInt(obData.checkSize).toLocaleString() + '</strong></span></div>';
+      }
+      html += '</div>';
+
+      if (matchCount > 0) {
+        html += '<div class="ob-match-count">' + matchCount + '</div>';
+        html += '<div class="ob-match-label">deals matching your criteria</div>';
       }
 
-      html += '</div>';
-      overlay.innerHTML = html;
+      html += '<button class="onboarding-cta" onclick="window._obFinish()">Browse Your Matches</button>';
     }
 
-    window._obShowStep = function(step) { renderStep(step); };
+    html += '</div></div>';
+    overlay.innerHTML = html;
+  }
 
-    window._obSelectGoal = function(btn) {
-      // Single-select: deselect all others, select this one
-      var opts = document.querySelectorAll('#obGoalOptions .onboarding-option');
-      for (var i = 0; i < opts.length; i++) opts[i].classList.remove('selected');
+  // Save onboarding data to the same localStorage keys as the buy box wizard
+  function saveOnboardingData() {
+    var wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+    if (obData.targetCashFlow) wd.targetCashFlow = obData.targetCashFlow;
+    if (obData.currentCashFlow) wd.currentCashFlow = obData.currentCashFlow;
+    if (obData.assetClasses.length > 0) wd.assetClasses = obData.assetClasses;
+    if (obData.checkSize) wd.checkSize = obData.checkSize;
+    // Set firstName from user if not already set
+    var user = getUserFirstName();
+    if (!wd.firstName) wd.firstName = user;
+    localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wd));
+
+    // Also save to gycGoals if target is set
+    if (obData.targetCashFlow || obData.currentCashFlow) {
+      var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null') || {};
+      if (obData.targetCashFlow) goals.targetIncome = parseInt(obData.targetCashFlow);
+      if (obData.currentCashFlow) goals.currentIncome = parseInt(obData.currentCashFlow);
+      if (!goals.goalType) goals.goalType = 'passive-income';
+      localStorage.setItem('gycGoals', JSON.stringify(goals));
+    }
+  }
+
+  // Navigation
+  window._obGo = function(step) {
+    // Save partial data when advancing
+    if (obStep === 2 || obStep === 3) saveOnboardingData();
+    renderStep(step);
+  };
+
+  // Target income selection
+  window._obSelectTarget = function(val, btn) {
+    obData.targetCashFlow = val;
+    // Toggle selected state
+    var siblings = btn.parentElement.querySelectorAll('.ob-preset-btn');
+    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
+    btn.classList.add('selected');
+    // Enable next button
+    var nextBtn = document.getElementById('obStep2Next');
+    if (nextBtn) nextBtn.disabled = false;
+  };
+
+  // Current income selection
+  window._obSelectCurrent = function(val, btn) {
+    obData.currentCashFlow = val;
+    var siblings = btn.parentElement.querySelectorAll('.ob-preset-btn');
+    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
+    btn.classList.add('selected');
+  };
+
+  // Asset class toggle
+  window._obToggleAsset = function(key, btn) {
+    var idx = obData.assetClasses.indexOf(key);
+    if (idx >= 0) {
+      obData.assetClasses.splice(idx, 1);
+      btn.classList.remove('selected');
+      btn.querySelector('.ob-chip-check').innerHTML = '';
+    } else {
+      obData.assetClasses.push(key);
       btn.classList.add('selected');
-      window._obData.goal = btn.getAttribute('data-goal');
-      // Auto-advance to step 3 after brief delay
-      setTimeout(function() { window._obShowStep(3); }, 300);
-    };
+      btn.querySelector('.ob-chip-check').innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+    }
+  };
 
-    window._obClose = function() {
-      localStorage.setItem('gycOnboardingComplete', 'true');
-      var el = document.getElementById('onboardingOverlay');
-      if (el) el.remove();
-    };
+  // Check size selection
+  window._obSelectCheck = function(val, btn) {
+    obData.checkSize = val;
+    var siblings = btn.parentElement.querySelectorAll('.ob-preset-btn');
+    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
+    btn.classList.add('selected');
+  };
 
-    window._obFinish = function(btn) {
-      var target = btn.getAttribute('data-ob-target');
-      localStorage.setItem('gycOnboardingComplete', 'true');
-      var el = document.getElementById('onboardingOverlay');
-      if (el) el.remove();
-      if (target === 'buybox') {
-        if (typeof openBuyBoxWizard === 'function') openBuyBoxWizard();
-      } else if (target === 'lending') {
-        if (typeof navigateTo === 'function') navigateTo('debtfunds');
-      } else if (target === 'tax') {
-        var taxFilter = document.getElementById('filterAssetClass');
-        if (taxFilter) { taxFilter.value = 'tax'; }
+  // Skip — close without saving completion flags
+  window._obSkip = function() {
+    localStorage.setItem('gycOnboardingComplete', 'true');
+    var el = document.getElementById('onboardingOverlay');
+    if (el) {
+      el.classList.add('ob-closing');
+      setTimeout(function() { el.remove(); }, 300);
+    }
+  };
+
+  // Finish — save everything and navigate to deals
+  window._obFinish = function() {
+    saveOnboardingData();
+    localStorage.setItem('gycOnboardingComplete', 'true');
+    localStorage.setItem('gycBuyBoxComplete', 'true');
+
+    // Sync wizard data to buy box
+    if (typeof wizardData !== 'undefined') {
+      wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+    }
+    if (typeof invalidateWizardCache === 'function') invalidateWizardCache();
+    if (typeof syncWizardToBuyBox === 'function') syncWizardToBuyBox();
+    if (typeof renderReport === 'function') renderReport();
+    if (typeof syncBuyBoxToGHL === 'function') syncBuyBoxToGHL();
+    if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
+    if (typeof trackActivity === 'function') {
+      trackActivity('onboarding_complete', { source: 'new_user_onboarding', assetClasses: obData.assetClasses.join(',') });
+    }
+
+    // Close overlay
+    var el = document.getElementById('onboardingOverlay');
+    if (el) {
+      el.classList.add('ob-closing');
+      setTimeout(function() {
+        el.remove();
+        // Navigate to deals with buy box filter applied
+        if (typeof navigateTo === 'function') navigateTo('deals');
         if (typeof applyFilters === 'function') applyFilters();
-      }
-    };
+      }, 300);
+    }
+  };
 
-    renderStep(1);
-    document.body.appendChild(overlay);
-  }, 1000);
+  renderStep(1);
+  document.body.appendChild(overlay);
 }
 
 // ========== INIT ==========
@@ -15578,7 +15911,6 @@ initAuth();
 initViewAs();
 loadDeals(); // Fetches from Airtable, falls back to hardcoded
 initSubscription();
-showOnboarding();
 
 // Track first activity date for "Days Active" metric
 if (!localStorage.getItem('gycFirstActivity')) { localStorage.setItem('gycFirstActivity', new Date().toISOString()); }
@@ -15606,7 +15938,7 @@ if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
 
 // Handle #onboarding hash from signup
 if (window.location.hash === '#onboarding') {
-  setTimeout(() => openBuyBoxWizard(), 300);
+  setTimeout(() => showOnboarding(), 300);
   history.replaceState(null, '', window.location.pathname);
 }
 
