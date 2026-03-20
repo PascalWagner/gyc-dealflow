@@ -34,9 +34,7 @@ export default async function handler(req, res) {
           founding_year,
           type,
           asset_classes,
-          total_investors,
-          hq_city,
-          hq_state
+          total_investors
         )
       `)
       .not('investment_name', 'eq', '')
@@ -178,10 +176,7 @@ export default async function handler(req, res) {
           dateOfFirstSale: d.date_of_first_sale,
           totalAmountSold: d.total_amount_sold,
           totalInvestors: d.total_investors,
-          is506b: d.is_506b || false,
-          // Operator HQ
-          mcHqCity: mc.hq_city || '',
-          mcHqState: mc.hq_state || ''
+          is506b: d.is_506b || false
         };
       });
 
