@@ -5592,18 +5592,25 @@ async function renderDeal() {
     geoMapHtml += '<div style="position:relative;width:100%;max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(244,247,245,0.6) 0%,rgba(238,243,240,0.3) 100%);border-radius:12px;padding:20px 16px 12px;">';
     geoMapHtml += '<svg viewBox="175 40 1060 530" style="width:100%;height:auto;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.06));" xmlns="http://www.w3.org/2000/svg">';
 
+    // Background layer: fill all states with a solid base color to eliminate anti-aliasing gaps
+    var baseFill = allHighlighted ? '#6bbe8a' : '#e4eae6';
+    for (var st in statePaths) {
+      if (st === 'AK' || st === 'HI') continue;
+      geoMapHtml += '<path d="' + statePaths[st] + '" fill="' + baseFill + '" stroke="' + baseFill + '" stroke-width="1.5" stroke-linejoin="round"/>';
+    }
+    // Top layer: styled states with borders
     for (var st in statePaths) {
       if (st === 'AK' || st === 'HI') continue;
       var isHighlighted = matched[st];
       var fillColor, strokeColor, strokeWidth;
       if (isHighlighted) {
         fillColor = allHighlighted ? '#6bbe8a' : '#4fb878';
-        strokeColor = allHighlighted ? '#4a9e6a' : '#2d8a52';
-        strokeWidth = allHighlighted ? '0.75' : '2';
+        strokeColor = allHighlighted ? '#5aaa78' : '#2d8a52';
+        strokeWidth = allHighlighted ? '0.5' : '2';
       } else {
         fillColor = '#e4eae6';
         strokeColor = '#d0d8d3';
-        strokeWidth = '0.75';
+        strokeWidth = '0.5';
       }
       geoMapHtml += '<path d="' + statePaths[st] + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '" stroke-linejoin="round">';
       geoMapHtml += '<title>' + st + '</title></path>';
@@ -5820,10 +5827,8 @@ async function renderDeal() {
   ddHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   ddHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span>' + ddRingSvg + '</div>';
   // Coming Soon overlay
-  ddHtml += '<div style="position:absolute;inset:0;top:60px;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);">';
-  ddHtml += '<div style="text-align:center;"><div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Interactive due diligence checklists are on the way</div></div>';
-  ddHtml += '</div>';
-  ddHtml += '<div class="section-body" style="opacity:0.3;pointer-events:none;filter:grayscale(0.5);">';
+  ddHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div><div style="font-size:13px;color:var(--text-secondary);">Interactive due diligence checklists are on the way</div></div>';
+  ddHtml += '<div class="section-body" style="opacity:0.3;pointer-events:none;user-select:none;filter:grayscale(0.5);">';
   ddHtml += '<div id="gpAgendaPanel"></div>';
   ddHtml += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
   ddHtml += '<div class="dd-accordion">';
@@ -5890,10 +5895,8 @@ async function renderDeal() {
   qaHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
   // Coming Soon overlay
-  qaHtml += '<div style="position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);">';
-  qaHtml += '<div style="text-align:center;padding:24px;"><div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">Coming Soon</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Community Q&A is on the way</div></div>';
-  qaHtml += '</div>';
-  qaHtml += '<div class="section-body">';
+  qaHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div><div style="font-size:13px;color:var(--text-secondary);">Community Q&A is on the way</div></div>';
+  qaHtml += '<div class="section-body" style="opacity:0.3;pointer-events:none;user-select:none;filter:grayscale(0.5);">';
   qaHtml += '<div id="dealQAList" style="margin-bottom:16px;"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading questions...</div></div>';
   if (isPaidUser) {
     qaHtml += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;">';
