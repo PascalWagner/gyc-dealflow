@@ -9222,8 +9222,8 @@ function getFilteredDeals() {
   }
 
   let filtered = DEALS.filter(d => {
-    // Hide stale deals unless "Show archived" is checked (only on Browse tab)
-    if (currentTab === 'browse' && !showArchived && isDealStale(d)) return false;
+    // Hide stale deals unless "Show archived" is checked or user is searching (only on Browse tab)
+    if (currentTab === 'browse' && !showArchived && !q && isDealStale(d)) return false;
     if (ac && d.assetClass !== ac) return false;
     if (dt && d.dealType !== dt) return false;
     if (st && d.strategy !== st) return false;
