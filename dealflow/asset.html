@@ -1059,7 +1059,7 @@ body {
     <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
     <div class="sidebar-user-info">
       <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
-      <div class="sidebar-user-tier" id="sidebarTier">Explorer</div>
+      <div class="sidebar-user-email" id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
     </div>
     <button class="sidebar-logout" onclick="logout()" title="Sign out">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1251,7 +1251,8 @@ function initAuth() {
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     document.getElementById('sidebarAvatar').textContent = initials;
     document.getElementById('sidebarName').textContent = name;
-    document.getElementById('sidebarTier').textContent = (user.tier || 'free').charAt(0).toUpperCase() + (user.tier || 'free').slice(1);
+    const sidebarEmailEl = document.getElementById('sidebarEmail');
+    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
   }
 }
 

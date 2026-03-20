@@ -2390,6 +2390,10 @@ html.cap-ios .debt-metric-select-mobile {
   0%, 100% { box-shadow: 0 0 0 0 rgba(64,228,127,0.6); }
   50% { box-shadow: 0 0 0 8px rgba(64,228,127,0); }
 }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 .office-hours-text {
   font-family: var(--font-ui);
   font-size: 13px;
@@ -4352,13 +4356,13 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
-<!-- Google Analytics 4 — Replace G-XXXXXXXXXX with your actual GA4 Measurement ID -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<!-- Google Analytics 4 — Replace G-F8B5NMB9J9 with your actual GA4 Measurement ID -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-F8B5NMB9J9"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX');
+  gtag('config', 'G-F8B5NMB9J9');
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
@@ -6150,170 +6154,114 @@ const _supa = window.supabase.createClient(
 </div>
 
 <script>
-// ========== AIRTABLE INTEGRATION ==========
-const AIRTABLE_API_URL = '/api/deals';
+// ========== DEAL DATA (Supabase API) ==========
+const DEALS_API_URL = '/api/deals';
 
-// Hardcoded fallback deals (used if API is unavailable)
-const FALLBACK_DEALS = [
-  {id:"rec012",dealNumber:81,investmentName:"COARE 2023 FUND I",assetClass:"RV/Mobile Home Parks",dealType:"Fund",targetIRR:0.1973,equityMultiple:3.05,preferredReturn:0.08,investmentMinimum:250000,lpGpSplit:"70/30",holdPeriod:5,addedDate:"2023-04-08",status:"Open to invest",offeringType:"Unknown",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire a national portfolio of mobile home communities valued at approximately $65 million, increase its value to around $91 million within 5 years, and create a perpetual cash flow stream for investors.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",sponsorInDeal:0.04,ceo:"Hansel Rodriguez",managementCompany:"COARE Capital",fees:["6% of Gross Revenue Management Fee","1.5% Acquisition Fee"],firstYrDepreciation:"120%",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec0UMH",dealNumber:19,investmentName:"PFD Fund V",assetClass:"Business / Other",dealType:"Fund",targetIRR:0.191,preferredReturn:0.08,investmentMinimum:104000,lpGpSplit:"70/30",holdPeriod:10,addedDate:"2023-02-23",status:"Open to invest",investingGeography:"USA",investmentStrategy:"Accessing attractive real estate locations for ATMs, strategically positioning for next generation revenue opportunities through advertising monetization.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Andy Elfers",managementCompany:"The Prestige Fund",strategy:"Value-Add",instrument:"Equity",firstYrDepreciation:"80%-100%"},
-  {id:"rec26jk",dealNumber:126,investmentName:"SubTo Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.14,investmentMinimum:100000,lpGpSplit:"90/10",holdPeriod:7,addedDate:"2023-07-17",status:"Open to invest",offeringSize:12000000,investingGeography:"USA",investmentStrategy:"Acquire class B and C multifamily properties in Arizona and similar growth market states within the Sunbelt region.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Cashflow",ceo:"Pace Morby",managementCompany:"SubTo Fund",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec3ii",dealNumber:25,investmentName:"National Diversified Fund 6",assetClass:"Mixed-Use",dealType:"Fund",targetIRR:0.20,preferredReturn:0.05,investmentMinimum:50000,lpGpSplit:"80/20",holdPeriod:5,addedDate:"2023-02-28",status:"Open to invest",investingGeography:"USA",investmentStrategy:"STI Short Term Income Fund offers passive real estate investment opportunities with expected IRR of 7-8% per year, paid quarterly.",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Lon Welsh",managementCompany:"Ironton Capital",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec4L8d",dealNumber:91,investmentName:"Spartan Storage Fund 1",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.18,equityMultiple:2.2,preferredReturn:0.08,investmentMinimum:50000,lpGpSplit:"70/30",holdPeriod:4,addedDate:"2023-04-17",status:"Open to invest",offeringType:"506(c)",offeringSize:150000000,investingGeography:"USA",investmentStrategy:"Identified FreeUp Storage facilities in Shelby County, KY for acquisition. Located near major interstates with growth catalysts including new 380,000 SF facility bringing 700 jobs.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Scott Lewis",managementCompany:"Spartan Investment Group",fees:["2% Disposition Fee","6% of Gross Revenue Management Fee","1% Refinancing Fee"],strategy:"Value-Add",instrument:"Equity",cashOnCash:0.14},
-  {id:"rec4ee5",dealNumber:137,investmentName:"Haven Fund II LLC",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.25,preferredReturn:0.08,investmentMinimum:50000,lpGpSplit:"75/25",holdPeriod:10,addedDate:"2023-07-20",status:"Open to invest",offeringType:"506(c)",offeringSize:20000000,investingGeography:"USA",investmentStrategy:"Purchase 10 to 20 MHC assets across strategically targeted markets, hold for 5-10 years, then exit following substantial value growth.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Equity Growth",ceo:"Thomas O. Miller",managementCompany:"Haven Capital Ventures",strategy:"Value-Add",instrument:"Equity",cashOnCash:0.12},
-  {id:"rec5Sr2",dealNumber:125,investmentName:"VF Portfolio I",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.30,investmentMinimum:75000,lpGpSplit:"85/15",holdPeriod:5,addedDate:"2023-07-14",status:"Open to invest",offeringSize:10000000,investingGeography:"USA",investmentStrategy:"Value-Add Workforce Housing in Denver, leveraging VonFinch's vertically integrated partnership with management team.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Steven Pesavento",managementCompany:"Vonfinch Capital",fees:["2% Acquisition Fee","2% Asset Management Fee"],strategy:"Value-Add",instrument:"Equity",cashOnCash:0.08},
-  {id:"rec5q3C",dealNumber:28,investmentName:"Welcome Capital Fund 1",assetClass:"Short Term Rental",dealType:"Fund",targetIRR:0.18,equityMultiple:2.0,preferredReturn:0.07,investmentMinimum:50000,lpGpSplit:"60/40",holdPeriod:5,addedDate:"2023-02-28",status:"Open to invest",offeringType:"506(c)",investingGeography:"USA",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Cashflow",ceo:"Diya Liu",managementCompany:"Welcome Capital",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec5rSc",dealNumber:103,investmentName:"Patriot Fund IV",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.22,investmentMinimum:50000,holdPeriod:5,addedDate:"2023-06-15",status:"Open to invest",offeringType:"506(c)",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire existing self-storage facilities, mobile home parks, or industrial facilities and install capital improvements, optimize management, and stabilize the assets.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Jeremiah Boucher",managementCompany:"Patriot Holdings",fees:["2% Acquisition Fee","1.5% Capital Deployed","1% Guarantor Fee","8% Property Management Fee"],strategy:"Value-Add",instrument:"Equity",preferredReturn:0.09},
-  {id:"rec5vZF",dealNumber:108,investmentName:"The Henry at Generation Park",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.1355,equityMultiple:1.8,preferredReturn:0.07,investmentMinimum:50000,holdPeriod:5,addedDate:"2023-06-22",status:"Open to invest",investingGeography:"USA",investmentStrategy:"QC Capital invests in commercial real estate assets since 2018 with a portfolio of $120M+ and 800+ apartment units.",distributions:"Monthly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Christopher Salerno",managementCompany:"QC Capital",strategy:"Value-Add",instrument:"Equity",cashOnCash:0.0645},
-  {id:"rec07kt",dealNumber:395,investmentName:"Bayside 44 Industrial Park",assetClass:"Industrial",dealType:"Syndication",targetIRR:0.213,equityMultiple:1.5,preferredReturn:0.08,investmentMinimum:15000,holdPeriod:2,addedDate:"2024-08-08",offeringType:"501(a)",investmentStrategy:"Targeting a 21.3% IRR through acquisition and repositioning of industrial park in Clearwater, FL, leveraging off-market purchase at 25% discount.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Equity Growth",ceo:"Charles Clinton",managementCompany:"EM Investment Partners",strategy:"Value-Add",instrument:"Equity",location:"Clearwater, FL"},
-  {id:"rec0EGv",dealNumber:494,investmentName:"Cambridge Court Apartments",assetClass:"Multi Family",dealType:"Syndication",equityMultiple:3.0,investmentMinimum:50000,holdPeriod:10,addedDate:"2024-12-18",offeringType:"506(c)",investmentStrategy:"Targets strong cash flow with a 10-20 year hold, utilizing seller financing (4.5% interest-only), cost segregation for tax benefits, and planned rent increases.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",ceo:"Joe Rinderknecht",managementCompany:"UPC Fund",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec0RI3",dealNumber:316,investmentName:"YS ALTNOTES II LLC",assetClass:"Business / Other",dealType:"Syndication",targetIRR:0.065,investmentMinimum:10000,holdPeriod:0.9,addedDate:"2024-04-24",offeringType:"506(c)",investmentStrategy:"Aims to provide accredited investors with a 6.5% target annualized net yield through a 9-month term syndication, focusing on debt investments across diversified asset classes.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Cashflow",ceo:"Michael Weisz",managementCompany:"Yieldstreet",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec0YOu",dealNumber:846,investmentName:"The Heritage Fund",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.2031,equityMultiple:2.21,investmentMinimum:50000,holdPeriod:5,addedDate:"2025-10-23",offeringType:"506(c)",investmentStrategy:"Targets 10-12 Class A self-storage facilities in high-growth U.S. markets, backed by $10M GP co-investment and assets acquired ~30% below replacement cost.",distributions:"Quarterly",availableTo:"Accredited",ceo:"AJ Osborne",managementCompany:"Cedar",strategy:"Value-Add",instrument:"Equity"},
-  {id:"rec0Zkw",dealNumber:871,investmentName:"Highland Hills Apartments",assetClass:"Multi Family",dealType:"Syndication",targetIRR:0.15,equityMultiple:2.0,preferredReturn:0.08,investmentMinimum:25000,holdPeriod:5,addedDate:"2025-11-14",offeringType:"506(c)",investmentStrategy:"Recapitalize a 112-unit Class A asset in a high-growth GA submarket with 91% occupancy using preferred equity.",distributions:"Quarterly",availableTo:"Accredited",cashOnCash:0.08,ceo:"Hugh D. Cohen",managementCompany:"Cohen Investment Group",strategy:"Value-Add",instrument:"Equity",location:"Georgia"},
-  {id:"rec0iJP",dealNumber:241,investmentName:"Moxy Chattanooga",assetClass:"Hotels/Hospitality",dealType:"Syndication",targetIRR:0.173,investmentMinimum:25000,addedDate:"2024-01-04",offeringType:"506(c)",investmentStrategy:"Capitalize on targeted 17.3% IRR through development and operation of Moxy Hotel, Downtown Chattanooga, with exit within 5 years aiming for 1.8x equity multiple.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Sanjay Vora",managementCompany:"Del Monte Hotels",strategy:"Development",instrument:"Equity",location:"Chattanooga, TN"},
-  {id:"rec07kx",dealNumber:732,investmentName:"Hornet Debt Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.096,investmentMinimum:0,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending fund focused on residential transition loans.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Brian Whitten",managementCompany:"Hornet Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
-  {id:"rec0Htb",dealNumber:733,investmentName:"RD Real Estate Debt Fund II",assetClass:"Lending",dealType:"Fund",investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",offeringSize:1662500,investmentStrategy:"Invests in shorter-term senior-secured real estate loans in the Greater Boston Area, funding 300+ projects over 8 years.",distributions:"Quarterly",ceo:"Sean Kelly-Rand",managementCompany:"RD Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:133000000,loanCount:80,avgLoanLTV:0.64},
-  {id:"rec1HuV",dealNumber:719,investmentName:"Pacific Western Trust Deeds",assetClass:"Lending",dealType:"Syndication",targetIRR:0.10,investmentMinimum:10000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Trust Deeds requiring borrowers with 10+ years of commercial lending experience. Strategies: Land Acquisition, Development, Construction & Tenant Improvement.",distributions:"Monthly",financials:"Audited",availableTo:"Unaccredited",ceo:"Carrie Cook",managementCompany:"Pacific Western Realty Advisors",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
-  {id:"rec1dwW",dealNumber:712,investmentName:"Alcova Capital Yield Premium Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,preferredReturn:0.06,investmentMinimum:250000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Commercial real estate lending fund with quarterly distributions and audited financials.",distributions:"Quarterly",financials:"Audited",availableTo:"Accredited",ceo:"Russell Diamond",managementCompany:"Alcova Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:227000000,loanCount:45},
-  {id:"rec1pkw",dealNumber:749,investmentName:"Arixa Secured Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending with 15+ year track record, monthly distributions, and audited financials.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Jan Brzeski",managementCompany:"Arixa Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:209000000,loanCount:60,avgLoanLTV:0.65},
-  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615,avgLoanLTV:0.55,shareClasses:[{id:"recRThMoAkKT8BItY",label:"Class A",targetReturn:0.12,lockup:3,investmentMinimum:50000,financials:"Audited"},{id:"rec3wj1FR0mip4iF9",label:"Class B",targetReturn:0.10,lockup:1,investmentMinimum:50000,financials:"Unaudited"},{id:"recguRQt9Vjy74PkF",label:"Class C",targetReturn:0.06,lockup:0.5,investmentMinimum:50000,financials:"Unaudited"}]},
-  {id:"rec2gb9",dealNumber:793,investmentName:"Industrial Real Estate Income Trust (BIGi)",assetClass:"Industrial",dealType:"Fund",targetIRR:0.11,preferredReturn:0.05,investmentMinimum:25000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"CRE Industrial single-tenant buildings that generate stable yield with monthly distributions.",distributions:"Monthly",availableTo:"Accredited",ceo:"Jonathan Slager",managementCompany:"Modiv Industrial",strategy:"Core/Stabilized",instrument:"Equity",fundAUM:825000000},
-  {id:"rec532e",dealNumber:776,investmentName:"The Private Credit Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.09,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Private credit fund focused on real estate-backed lending with quarterly distributions.",distributions:"Quarterly",availableTo:"Accredited",ceo:"Tait Duryea",managementCompany:"Alpine Note",strategy:"Lending",instrument:"Preferred Equity",debtPosition:"2nd"},
-  {id:"rec62hE",dealNumber:770,investmentName:"Income Plus Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.09,preferredReturn:0.06,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"60% preferred equity portfolio in Class A multifamily, Sunbelt & Mountain West (Colorado/Utah). Debt & equity blend.",distributions:"Monthly",availableTo:"Accredited",ceo:"David Scherer",managementCompany:"Origin Investments",strategy:"Lending",instrument:"Equity",fundAUM:500000000,investingGeography:"Sunbelt & Mountain West"}
-];
+// All deal data comes from Supabase — no hardcoded fallback
+let DEALS = [];
+let _dealsLoaded = false;
 
-
-let DEALS = [...FALLBACK_DEALS];
-
-// Transform Airtable record to dashboard deal format
-function transformAirtableRecord(rec) {
-  return {
-    id: rec.id || rec.fields?.id || '',
-    dealNumber: rec['Deal #'] || rec.fields?.['Deal #'] || 0,
-    investmentName: rec['Investment Name / Address'] || rec.fields?.['Investment Name / Address'] || '',
-    assetClass: Array.isArray(rec['Asset Class']) ? rec['Asset Class'][0] : (rec['Asset Class'] || rec.fields?.['Asset Class']?.[0] || ''),
-    dealType: rec['Deal Type'] || rec.fields?.['Deal Type'] || '',
-    targetIRR: rec['Target IRR'] || rec.fields?.['Target IRR'] || null,
-    equityMultiple: rec['Equity Multiple'] || rec.fields?.['Equity Multiple'] || null,
-    preferredReturn: rec['Preferred Return'] || rec['Class A - Pref'] || rec.fields?.['Preferred Return'] || null,
-    investmentMinimum: rec['Investment Minimum'] || rec['Class A - Min Investment'] || rec.fields?.['Investment Minimum'] || 0,
-    lpGpSplit: rec['Class A - LP/GP Split'] || rec.fields?.['Class A - LP/GP Split'] || '',
-    holdPeriod: rec['Min Hold Period (Yrs)'] || rec.fields?.['Min Hold Period (Yrs)'] || null,
-    addedDate: rec['Added Date'] || rec.fields?.['Added Date'] || '',
-    status: rec['Status'] || rec.fields?.['Status'] || '',
-    offeringType: rec['Offering Type'] || rec.fields?.['Offering Type'] || '',
-    offeringSize: rec['Offering Size'] || rec.fields?.['Offering Size'] || null,
-    investingGeography: rec['Investing Geography'] || rec.fields?.['Investing Geography'] || '',
-    investmentStrategy: rec['Investment Strategy'] || rec.fields?.['Investment Strategy'] || '',
-    distributions: Array.isArray(rec['Distributions']) ? rec['Distributions'][0] : (rec['Distributions'] || ''),
-    financials: rec['Financials'] || rec.fields?.['Financials'] || '',
-    availableTo: Array.isArray(rec['Available To']) ? rec['Available To'][0] : (rec['Available To'] || ''),
-    investmentObjective: Array.isArray(rec['Investment Objective']) ? rec['Investment Objective'][0] : (rec['Investment Objective'] || ''),
-    sponsorInDeal: rec['% Sponsor In The Deal'] || rec.fields?.['% Sponsor In The Deal'] || null,
-    ceo: Array.isArray(rec['CEO (from Management Company)']) ? rec['CEO (from Management Company)'][0] : (rec['CEO (from Management Company)'] || ''),
-    managementCompany: rec['_managementCompanyName'] || '', // Resolved by webhook
-    fees: rec['Fees'] || rec.fields?.['Fees'] || [],
-    firstYrDepreciation: rec['1st Yr Depreciation'] || rec.fields?.['1st Yr Depreciation'] || '',
-    strategy: rec['Strategy'] || rec.fields?.['Strategy'] || '',
-    instrument: rec['Instrument'] || rec.fields?.['Instrument'] || '',
-    cashOnCash: rec['Cash on Cash Return'] || rec.fields?.['Cash on Cash Return'] || null,
-    debtPosition: rec['Debt Position'] || rec.fields?.['Debt Position'] || '',
-    fundAUM: rec['Fund AUM'] || rec.fields?.['Fund AUM'] || null,
-    loanCount: rec['Loan Count'] || rec.fields?.['Loan Count'] || null,
-    avgLoanLTV: rec['Avg Loan LTV'] || rec.fields?.['Avg Loan LTV'] || null,
-    location: rec['Location'] || rec.fields?.['Location'] || '',
-    address: rec['Property Address'] || rec.fields?.['Property Address'] || '',
-    deckUrl: rec['_deckUrl'] || rec.fields?.['_deckUrl'] || '',
-    ppmUrl: rec['_ppmUrl'] || rec.fields?.['_ppmUrl'] || '',
-    subAgreementUrl: rec['_subAgreementUrl'] || rec.fields?.['_subAgreementUrl'] || ''
-  };
+// Show loading skeleton in the card grid while deals load
+function showLoadingSkeleton() {
+  const grid = document.getElementById('cardGrid');
+  if (!grid) return;
+  const skeletonCard = '<div class="deal-card" style="pointer-events:none;opacity:0.5;">'
+    + '<div style="background:linear-gradient(135deg,#e8e8e8 25%,#f0f0f0 50%,#e8e8e8 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;height:140px;border-radius:var(--radius) var(--radius) 0 0;"></div>'
+    + '<div style="padding:16px;">'
+    + '<div style="background:#e8e8e8;height:16px;width:70%;border-radius:4px;margin-bottom:10px;animation:shimmer 1.5s infinite;background-size:200% 100%;"></div>'
+    + '<div style="background:#e8e8e8;height:12px;width:40%;border-radius:4px;margin-bottom:16px;animation:shimmer 1.5s infinite;background-size:200% 100%;"></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    + '<div style="background:#e8e8e8;height:36px;border-radius:4px;animation:shimmer 1.5s infinite;background-size:200% 100%;"></div>'
+    + '<div style="background:#e8e8e8;height:36px;border-radius:4px;animation:shimmer 1.5s infinite;background-size:200% 100%;"></div>'
+    + '<div style="background:#e8e8e8;height:36px;border-radius:4px;animation:shimmer 1.5s infinite;background-size:200% 100%;"></div>'
+    + '</div></div></div>';
+  grid.innerHTML = skeletonCard + skeletonCard + skeletonCard + skeletonCard + skeletonCard + skeletonCard;
 }
 
-// Fetch deals from Airtable via serverless API
-async function fetchDealsFromAirtable() {
+// Fetch deals from Supabase via serverless API
+async function fetchDeals() {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout for paginated fetch
-    const resp = await fetch(AIRTABLE_API_URL, {
-      signal: controller.signal
-    });
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    const resp = await fetch(DEALS_API_URL, { signal: controller.signal });
     clearTimeout(timeout);
     if (!resp.ok) throw new Error('API returned ' + resp.status);
     const data = await resp.json();
-    // New format: { deals, managementCompanies, people, meta }
     if (data && data.deals && Array.isArray(data.deals)) {
-      // Store management companies and people globally
       window.GYC_COMPANIES = data.managementCompanies || [];
       window.GYC_PEOPLE = data.people || [];
       window.GYC_META = data.meta || {};
-      console.log(`API: ${data.meta?.totalOpportunities} opportunities, ${data.meta?.totalCompanies} companies, ${data.meta?.totalPeople} people`);
+      console.log('API: ' + (data.meta?.totalOpportunities || data.deals.length) + ' opportunities, ' + (data.meta?.totalCompanies || 0) + ' companies');
       return data.deals;
-    }
-    // Legacy format: plain array
-    if (Array.isArray(data) && data.length > 0) {
-      const first = data[0];
-      if (first.investmentName) {
-        return data;
-      } else if (first['Investment Name / Address'] || first.fields) {
-        return data.map(transformAirtableRecord).filter(d => d.investmentName);
-      }
     }
     throw new Error('Invalid response format');
   } catch (e) {
-    console.warn('Airtable fetch failed, using fallback deals:', e.message);
+    console.warn('API fetch failed:', e.message);
     return null;
   }
 }
 
 // Load deals on startup
 async function loadDeals() {
-  // Render fallback deals immediately so page is never blank
-  updateDealCount();
-  renderAll();
+  // Show skeleton loading state immediately
+  showLoadingSkeleton();
   updateCompareBadge();
 
-  // Then try to fetch fresh data from Airtable in background
+  // Try session cache first
   const cached = sessionStorage.getItem('gycDealsCache');
   const cacheTime = sessionStorage.getItem('gycDealsCacheTime');
   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  // Use cache if fresh
   if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
     try {
       const cachedDeals = JSON.parse(cached);
-      if (cachedDeals.length > DEALS.length) {
+      if (cachedDeals.length > 0) {
         DEALS = cachedDeals;
-        console.log('Updated to ' + DEALS.length + ' deals from cache');
+        _dealsLoaded = true;
+        const cachedCompanies = sessionStorage.getItem('gycCompaniesCache');
+        if (cachedCompanies) {
+          try { window.GYC_COMPANIES = JSON.parse(cachedCompanies); } catch(e) {}
+        }
+        mergeUserDeals();
+        console.log('Loaded ' + DEALS.length + ' deals from cache');
         updateDealCount();
         renderAll();
+        return;
       }
-      // Restore cached companies if available
-      const cachedCompanies = sessionStorage.getItem('gycCompaniesCache');
-      if (cachedCompanies) {
-        try { window.GYC_COMPANIES = JSON.parse(cachedCompanies); } catch(e) {}
-      }
-      return;
-    } catch (e) { /* fall through */ }
+    } catch (e) { /* fall through to API */ }
   }
 
-  // Fetch from Airtable in background (don't block initial render)
+  // Fetch fresh data from Supabase API
   try {
-    const freshDeals = await fetchDealsFromAirtable();
+    const freshDeals = await fetchDeals();
     if (freshDeals && freshDeals.length > 0) {
       DEALS = freshDeals;
+      _dealsLoaded = true;
       mergeUserDeals();
       sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS));
       sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
-      // Cache companies too
       if (window.GYC_COMPANIES && window.GYC_COMPANIES.length > 0) {
         sessionStorage.setItem('gycCompaniesCache', JSON.stringify(window.GYC_COMPANIES));
       }
-      console.log('Loaded ' + DEALS.length + ' deals from Airtable');
+      console.log('Loaded ' + DEALS.length + ' deals from API');
       updateDealCount();
       renderAll();
+    } else {
+      // API returned nothing — show error state
+      _dealsLoaded = true;
+      const grid = document.getElementById('cardGrid');
+      if (grid) {
+        grid.innerHTML = '<div class="empty-state">'
+          + '<div class="empty-state-icon">&#x26A0;</div>'
+          + '<div class="empty-state-text">Unable to load deals</div>'
+          + '<div class="empty-state-sub">Please check your connection and try refreshing the page.</div>'
+          + '<button onclick="location.reload()" class="btn-cta btn-cta-primary" style="width:auto;padding:10px 24px;font-size:12px;margin-top:16px;">Refresh</button>'
+          + '</div>';
+      }
+      updateDealCount();
     }
   } catch (e) {
-    console.warn('Background Airtable fetch failed:', e.message);
+    console.warn('API fetch failed:', e.message);
   }
 }
 
@@ -6324,7 +6272,6 @@ function mergeUserDeals() {
     if (!DEALS.find(d => d.id === ud.id)) DEALS.unshift(ud);
   });
 }
-mergeUserDeals();
 
 function updateDealCount() {
   const badge = document.querySelector('.nav-badge');
@@ -7368,7 +7315,7 @@ const SYNC_API = '/api/userdata';
 function getUserEmail() {
   try { return JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e) { return ''; }
 }
-// Fire-and-forget sync to Airtable backend
+// Fire-and-forget sync to backend
 function syncToBackend(type, data) {
   const email = getUserEmail();
   if (!email) return;
@@ -17551,7 +17498,7 @@ function showOnboarding() {
 showAdminNav();
 initAuth();
 initViewAs();
-loadDeals(); // Fetches from Airtable, falls back to hardcoded
+loadDeals(); // Fetches from Supabase API
 initSubscription();
 
 // Track first activity date for "Days Active" metric

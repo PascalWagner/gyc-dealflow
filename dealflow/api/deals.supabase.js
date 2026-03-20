@@ -123,11 +123,37 @@ export default async function handler(req, res) {
       });
 
     // Management companies as separate array (for filters/search)
-    const { data: mcData, error: mcError } = await supabase
-      .from('management_companies')
-      .select('*');
+    // Fetch MCs and operator permissions in parallel
+    const [mcResult, permResult] = await Promise.all([
+      supabase.from('management_companies').select('*'),
+      supabase.from('operator_permissions').select('management_company_id, permission_granted, outreach_status, offering_type, can_show_deck, can_show_ppm, can_show_metrics').catch(() => ({ data: [], error: null }))
+    ]);
 
+    const { data: mcData, error: mcError } = mcResult;
     if (mcError) throw mcError;
+
+    // Build permission lookup by management_company_id
+    const permMap = {};
+    for (const p of (permResult.data || [])) {
+      permMap[p.management_company_id] = p;
+    }
+
+    // Attach permission data to deals
+    for (const deal of deals) {
+      const perm = permMap[deal.managementCompanyId];
+      if (perm) {
+        deal.operatorPermission = {
+          granted: perm.permission_granted,
+          status: perm.outreach_status,
+          offeringType: perm.offering_type,
+          canShowDeck: perm.can_show_deck,
+          canShowPpm: perm.can_show_ppm,
+          canShowMetrics: perm.can_show_metrics
+        };
+      } else {
+        deal.operatorPermission = null;
+      }
+    }
 
     const managementCompanies = (mcData || []).map(mc => ({
       id: mc.id,

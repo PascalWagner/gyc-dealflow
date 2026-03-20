@@ -2223,6 +2223,15 @@ body {
   gap: 5px;
 }
 
+/* ====== GP INSIGHTS PANEL ====== */
+.gp-insights-panel {
+  border: 1px solid rgba(59,130,246,0.25);
+  background: linear-gradient(135deg, var(--bg-card) 0%, rgba(59,130,246,0.02) 100%);
+}
+.gp-insights-panel .section-header {
+  border-bottom-color: rgba(59,130,246,0.15);
+}
+
 /* ====== SOCIAL PROOF ====== */
 
 .deal-social-proof {
@@ -3073,63 +3082,9 @@ function initAuth() {
 
 
 
-// ========== DEALS DATA ==========
-
-const DEALS = [
-
-  {id:"rec012",dealNumber:81,investmentName:"COARE 2023 FUND I",assetClass:"RV/Mobile Home Parks",dealType:"Fund",targetIRR:0.1973,equityMultiple:3.05,preferredReturn:0.08,investmentMinimum:250000,lpGpSplit:"70/30",holdPeriod:5,addedDate:"2023-04-08",status:"Open to invest",offeringType:"Unknown",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire a national portfolio of mobile home communities valued at approximately $65 million, increase its value to around $91 million within 5 years, and create a perpetual cash flow stream for investors.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",sponsorInDeal:0.04,ceo:"Hansel Rodriguez",managementCompany:"COARE Capital",fees:["6% of Gross Revenue Management Fee","1.5% Acquisition Fee"],firstYrDepreciation:"120%",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec0UMH",dealNumber:19,investmentName:"PFD Fund V",assetClass:"Business / Other",dealType:"Fund",targetIRR:0.191,preferredReturn:0.08,investmentMinimum:104000,lpGpSplit:"70/30",holdPeriod:10,addedDate:"2023-02-23",status:"Open to invest",investingGeography:"USA",investmentStrategy:"Accessing attractive real estate locations for ATMs, strategically positioning for next generation revenue opportunities through advertising monetization.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Andy Elfers",managementCompany:"The Prestige Fund",strategy:"Value-Add",instrument:"Equity",firstYrDepreciation:"80%-100%"},
-
-  {id:"rec26jk",dealNumber:126,investmentName:"SubTo Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.14,investmentMinimum:100000,lpGpSplit:"90/10",holdPeriod:7,addedDate:"2023-07-17",status:"Open to invest",offeringSize:12000000,investingGeography:"USA",investmentStrategy:"Acquire class B and C multifamily properties in Arizona and similar growth market states within the Sunbelt region.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Cashflow",ceo:"Pace Morby",managementCompany:"SubTo Fund",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec3ii",dealNumber:25,investmentName:"National Diversified Fund 6",assetClass:"Mixed-Use",dealType:"Fund",targetIRR:0.20,preferredReturn:0.05,investmentMinimum:50000,lpGpSplit:"80/20",holdPeriod:5,addedDate:"2023-02-28",status:"Open to invest",investingGeography:"USA",investmentStrategy:"STI Short Term Income Fund offers passive real estate investment opportunities with expected IRR of 7-8% per year, paid quarterly.",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Lon Welsh",managementCompany:"Ironton Capital",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec4L8d",dealNumber:91,investmentName:"Spartan Storage Fund 1",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.18,equityMultiple:2.2,preferredReturn:0.08,investmentMinimum:50000,lpGpSplit:"70/30",holdPeriod:4,addedDate:"2023-04-17",status:"Open to invest",offeringType:"506(c)",offeringSize:150000000,investingGeography:"USA",investmentStrategy:"Identified FreeUp Storage facilities in Shelby County, KY for acquisition. Located near major interstates with growth catalysts including new 380,000 SF facility bringing 700 jobs.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Scott Lewis",managementCompany:"Spartan Investment Group",fees:["2% Disposition Fee","6% of Gross Revenue Management Fee","1% Refinancing Fee"],strategy:"Value-Add",instrument:"Equity",cashOnCash:0.14},
-
-  {id:"rec4ee5",dealNumber:137,investmentName:"Haven Fund II LLC",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.25,preferredReturn:0.08,investmentMinimum:50000,lpGpSplit:"75/25",holdPeriod:10,addedDate:"2023-07-20",status:"Open to invest",offeringType:"506(c)",offeringSize:20000000,investingGeography:"USA",investmentStrategy:"Purchase 10 to 20 MHC assets across strategically targeted markets, hold for 5-10 years, then exit following substantial value growth.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Equity Growth",ceo:"Thomas O. Miller",managementCompany:"Haven Capital Ventures",strategy:"Value-Add",instrument:"Equity",cashOnCash:0.12},
-
-  {id:"rec5Sr2",dealNumber:125,investmentName:"VF Portfolio I",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.30,investmentMinimum:75000,lpGpSplit:"85/15",holdPeriod:5,addedDate:"2023-07-14",status:"Open to invest",offeringSize:10000000,investingGeography:"USA",investmentStrategy:"Value-Add Workforce Housing in Denver, leveraging VonFinch's vertically integrated partnership with management team.",distributions:"Unknown",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Steven Pesavento",managementCompany:"Vonfinch Capital",fees:["2% Acquisition Fee","2% Asset Management Fee"],strategy:"Value-Add",instrument:"Equity",cashOnCash:0.08},
-
-  {id:"rec5q3C",dealNumber:28,investmentName:"Welcome Capital Fund 1",assetClass:"Short Term Rental",dealType:"Fund",targetIRR:0.18,equityMultiple:2.0,preferredReturn:0.07,investmentMinimum:50000,lpGpSplit:"60/40",holdPeriod:5,addedDate:"2023-02-28",status:"Open to invest",offeringType:"506(c)",investingGeography:"USA",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Cashflow",ceo:"Diya Liu",managementCompany:"Welcome Capital",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec5rSc",dealNumber:103,investmentName:"Patriot Fund IV",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.22,investmentMinimum:50000,holdPeriod:5,addedDate:"2023-06-15",status:"Open to invest",offeringType:"506(c)",offeringSize:25000000,investingGeography:"USA",investmentStrategy:"Acquire existing self-storage facilities, mobile home parks, or industrial facilities and install capital improvements, optimize management, and stabilize the assets.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Jeremiah Boucher",managementCompany:"Patriot Holdings",fees:["2% Acquisition Fee","1.5% Capital Deployed","1% Guarantor Fee","8% Property Management Fee"],strategy:"Value-Add",instrument:"Equity",preferredReturn:0.09},
-
-  {id:"rec5vZF",dealNumber:108,investmentName:"The Henry at Generation Park",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.1355,equityMultiple:1.8,preferredReturn:0.07,investmentMinimum:50000,holdPeriod:5,addedDate:"2023-06-22",status:"Open to invest",investingGeography:"USA",investmentStrategy:"QC Capital invests in commercial real estate assets since 2018 with a portfolio of $120M+ and 800+ apartment units.",distributions:"Monthly",financials:"Unaudited",availableTo:"Unknown",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Christopher Salerno",managementCompany:"QC Capital",strategy:"Value-Add",instrument:"Equity",cashOnCash:0.0645},
-
-  {id:"rec07kt",dealNumber:395,investmentName:"Bayside 44 Industrial Park",assetClass:"Industrial",dealType:"Syndication",targetIRR:0.213,equityMultiple:1.5,preferredReturn:0.08,investmentMinimum:15000,holdPeriod:2,addedDate:"2024-08-08",offeringType:"501(a)",investmentStrategy:"Targeting a 21.3% IRR through acquisition and repositioning of industrial park in Clearwater, FL, leveraging off-market purchase at 25% discount.",distributions:"Quarterly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Equity Growth",ceo:"Charles Clinton",managementCompany:"EM Investment Partners",strategy:"Value-Add",instrument:"Equity",location:"Clearwater, FL"},
-
-  {id:"rec0EGv",dealNumber:494,investmentName:"Cambridge Court Apartments",assetClass:"Multi Family",dealType:"Syndication",equityMultiple:3.0,investmentMinimum:50000,holdPeriod:10,addedDate:"2024-12-18",offeringType:"506(c)",investmentStrategy:"Targets strong cash flow with a 10-20 year hold, utilizing seller financing (4.5% interest-only), cost segregation for tax benefits, and planned rent increases.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",ceo:"Joe Rinderknecht",managementCompany:"UPC Fund",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec0RI3",dealNumber:316,investmentName:"YS ALTNOTES II LLC",assetClass:"Business / Other",dealType:"Syndication",targetIRR:0.065,investmentMinimum:10000,holdPeriod:0.9,addedDate:"2024-04-24",offeringType:"506(c)",investmentStrategy:"Aims to provide accredited investors with a 6.5% target annualized net yield through a 9-month term syndication, focusing on debt investments across diversified asset classes.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Cashflow",ceo:"Michael Weisz",managementCompany:"Yieldstreet",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec0YOu",dealNumber:846,investmentName:"The Heritage Fund",assetClass:"Self Storage",dealType:"Fund",targetIRR:0.2031,equityMultiple:2.21,investmentMinimum:50000,holdPeriod:5,addedDate:"2025-10-23",offeringType:"506(c)",investmentStrategy:"Targets 10-12 Class A self-storage facilities in high-growth U.S. markets, backed by $10M GP co-investment and assets acquired ~30% below replacement cost.",distributions:"Quarterly",availableTo:"Accredited",ceo:"AJ Osborne",managementCompany:"Cedar",strategy:"Value-Add",instrument:"Equity"},
-
-  {id:"rec0Zkw",dealNumber:871,investmentName:"Highland Hills Apartments",assetClass:"Multi Family",dealType:"Syndication",targetIRR:0.15,equityMultiple:2.0,preferredReturn:0.08,investmentMinimum:25000,holdPeriod:5,addedDate:"2025-11-14",offeringType:"506(c)",investmentStrategy:"Recapitalize a 112-unit Class A asset in a high-growth GA submarket with 91% occupancy using preferred equity.",distributions:"Quarterly",availableTo:"Accredited",cashOnCash:0.08,ceo:"Hugh D. Cohen",managementCompany:"Cohen Investment Group",strategy:"Value-Add",instrument:"Equity",location:"Georgia"},
-
-  {id:"rec0iJP",dealNumber:241,investmentName:"Moxy Chattanooga",assetClass:"Hotels/Hospitality",dealType:"Syndication",targetIRR:0.173,investmentMinimum:25000,addedDate:"2024-01-04",offeringType:"506(c)",investmentStrategy:"Capitalize on targeted 17.3% IRR through development and operation of Moxy Hotel, Downtown Chattanooga, with exit within 5 years aiming for 1.8x equity multiple.",distributions:"Unknown",financials:"Unaudited",availableTo:"Accredited",investmentObjective:"Balanced (Cashflow + Equity)",ceo:"Sanjay Vora",managementCompany:"Del Monte Hotels",strategy:"Development",instrument:"Equity",location:"Chattanooga, TN"},
-
-  {id:"rec07kx",dealNumber:732,investmentName:"Hornet Debt Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.096,investmentMinimum:0,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending fund focused on residential transition loans.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Brian Whitten",managementCompany:"Hornet Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
-
-  {id:"rec0Htb",dealNumber:733,investmentName:"RD Real Estate Debt Fund II",assetClass:"Lending",dealType:"Fund",investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",offeringSize:1662500,investmentStrategy:"Invests in shorter-term senior-secured real estate loans in the Greater Boston Area, funding 300+ projects over 8 years.",distributions:"Quarterly",ceo:"Sean Kelly-Rand",managementCompany:"RD Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:133000000,loanCount:80,avgLoanLTV:0.64},
-
-  {id:"rec1HuV",dealNumber:719,investmentName:"Pacific Western Trust Deeds",assetClass:"Lending",dealType:"Syndication",targetIRR:0.10,investmentMinimum:10000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Trust Deeds requiring borrowers with 10+ years of commercial lending experience. Strategies: Land Acquisition, Development, Construction & Tenant Improvement.",distributions:"Monthly",financials:"Audited",availableTo:"Unaccredited",ceo:"Carrie Cook",managementCompany:"Pacific Western Realty Advisors",strategy:"Lending",instrument:"Debt",debtPosition:"1st"},
-
-  {id:"rec1dwW",dealNumber:712,investmentName:"Alcova Capital Yield Premium Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,preferredReturn:0.06,investmentMinimum:250000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Commercial real estate lending fund with quarterly distributions and audited financials.",distributions:"Quarterly",financials:"Audited",availableTo:"Accredited",ceo:"Russell Diamond",managementCompany:"Alcova Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:227000000,loanCount:45},
-
-  {id:"rec1pkw",dealNumber:749,investmentName:"Arixa Secured Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.08,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Senior-secured real estate lending with 15+ year track record, monthly distributions, and audited financials.",distributions:"Monthly",financials:"Audited",availableTo:"Accredited",ceo:"Jan Brzeski",managementCompany:"Arixa Capital",strategy:"Lending",instrument:"Debt",debtPosition:"1st",fundAUM:209000000,loanCount:60,avgLoanLTV:0.65},
-
-  {id:"rec3wj1",dealNumber:729,investmentName:"Saint Income Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.10,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Acquiring non-performing loans from banks at a 20% discount, with monthly distributions and strong risk-adjusted returns.",distributions:"Monthly",financials:"Unaudited",availableTo:"Accredited",ceo:"Nic DeAngelo",managementCompany:"Saint Investment Group",strategy:"Lending",instrument:"Debt",debtPosition:"Both",fundAUM:206000000,loanCount:615,avgLoanLTV:0.55,shareClasses:[{id:"recRThMoAkKT8BItY",label:"Class A",targetReturn:0.12,lockup:3,investmentMinimum:50000,financials:"Audited"},{id:"rec3wj1FR0mip4iF9",label:"Class B",targetReturn:0.10,lockup:1,investmentMinimum:50000,financials:"Unaudited"},{id:"recguRQt9Vjy74PkF",label:"Class C",targetReturn:0.06,lockup:0.5,investmentMinimum:50000,financials:"Unaudited"}]},
-
-  {id:"rec2gb9",dealNumber:793,investmentName:"Industrial Real Estate Income Trust (BIGi)",assetClass:"Industrial",dealType:"Fund",targetIRR:0.11,preferredReturn:0.05,investmentMinimum:25000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"CRE Industrial single-tenant buildings that generate stable yield with monthly distributions.",distributions:"Monthly",availableTo:"Accredited",ceo:"Jonathan Slager",managementCompany:"Modiv Industrial",strategy:"Core/Stabilized",instrument:"Equity",fundAUM:825000000},
-
-  {id:"rec532e",dealNumber:776,investmentName:"The Private Credit Fund",assetClass:"Lending",dealType:"Fund",targetIRR:0.09,investmentMinimum:50000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"Private credit fund focused on real estate-backed lending with quarterly distributions.",distributions:"Quarterly",availableTo:"Accredited",ceo:"Tait Duryea",managementCompany:"Alpine Note",strategy:"Lending",instrument:"Preferred Equity",debtPosition:"2nd"},
-
-  {id:"rec62hE",dealNumber:770,investmentName:"Income Plus Fund",assetClass:"Multi Family",dealType:"Fund",targetIRR:0.09,preferredReturn:0.06,investmentMinimum:100000,addedDate:"2025-07-15",status:"Evergreen",investmentStrategy:"60% preferred equity portfolio in Class A multifamily, Sunbelt & Mountain West (Colorado/Utah). Debt & equity blend.",distributions:"Monthly",availableTo:"Accredited",ceo:"David Scherer",managementCompany:"Origin Investments",strategy:"Lending",instrument:"Equity",fundAUM:500000000,investingGeography:"Sunbelt & Mountain West"}
-
-];
-
-
+// ========== DEALS DATA (loaded from Supabase API) ==========
+// All deal data fetched from /api/deals — no hardcoded data
+let DEALS = [];
 
 // ========== FORMATTERS ==========
 
@@ -3551,12 +3506,14 @@ function saveDDAnswer(dealId, key, value) {
   localStorage.setItem('gycDDChecklist_' + dealId, JSON.stringify(answers));
   // Update progress counts
   updateChecklistProgress();
-  // Sync to Airtable in background
+  // Sync to Supabase in background
   try {
     var user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+    var headers = { 'Content-Type': 'application/json' };
+    if (user && user.token) headers['Authorization'] = 'Bearer ' + user.token;
     fetch('/api/ddchecklist', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({
         dealId: dealId,
         itemIndex: key,
@@ -3605,6 +3562,85 @@ function setJourneyStage(dealId, stage) {
   } catch(e) {}
   // Re-render the journey bar and sticky bar
   updateJourneyUI(dealId, stage);
+  // Sync stage to Supabase in background
+  syncStageToDb(dealId, stage);
+}
+
+function syncStageToDb(dealId, stage) {
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  if (!user || !user.token) return;
+
+  // Map new stage names back to DB format
+  var dbStageMap = { 'browse': 'new', 'saved': 'interested', 'vetting': 'duediligence', 'ready': 'ready', 'invested': 'portfolio', 'passed': 'passed' };
+  var dbStage = dbStageMap[stage] || stage;
+
+  fetch('/api/userdata', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + user.token
+    },
+    body: JSON.stringify({
+      type: 'stages',
+      data: {
+        'Deal ID': dealId,
+        'Stage': dbStage,
+        'Notes': ''
+      }
+    })
+  }).catch(function(err) { console.warn('Stage sync failed:', err.message); });
+
+  // Also fire an event for analytics
+  fetch('/api/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: user.email,
+      event: stage === 'saved' ? 'deal_saved' : 'stage_changed',
+      data: { dealId: dealId, stage: dbStage }
+    })
+  }).catch(function() {});
+}
+
+function loadStagesFromDb(dealId) {
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  if (!user || !user.token) return;
+
+  fetch('/api/userdata?type=stages', {
+    headers: { 'Authorization': 'Bearer ' + user.token }
+  })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.records || data.records.length === 0) return;
+
+      var localStages = {};
+      try { localStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}'); } catch(e) {}
+
+      var changed = false;
+      for (var i = 0; i < data.records.length; i++) {
+        var rec = data.records[i];
+        var rid = rec.deal_id;
+        var dbStage = mapStageName(rec.stage || 'new');
+        // If local doesn't have this deal or is at default, use DB value
+        if (!localStages[rid] || localStages[rid] === 'new' || localStages[rid] === 'browse') {
+          if (dbStage !== 'browse') {
+            localStages[rid] = dbStage;
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        localStorage.setItem('gycDealStages', JSON.stringify(localStages));
+        // If we're on the deal page for one of these deals, update the UI
+        if (dealId && localStages[dealId]) {
+          updateJourneyUI(dealId, localStages[dealId]);
+        }
+      }
+    })
+    .catch(function(err) { console.warn('Stage load failed:', err.message); });
 }
 
 function updateJourneyUI(dealId, stage) {
@@ -3667,6 +3703,118 @@ function handleDDInput(input) {
 }
 
 
+
+// ========== GP INSIGHTS ==========
+
+function loadGPInsights(deal) {
+  var panel = document.getElementById('gpInsightsPanel');
+  var body = document.getElementById('gpInsightsBody');
+  if (!panel || !body) return;
+
+  fetch('/api/sponsor-analytics?company=' + encodeURIComponent(deal.managementCompany))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.analytics) {
+        panel.style.display = 'none';
+        return;
+      }
+      var a = data.analytics;
+
+      // Find this deal's specific stats from breakdown
+      var thisDeal = null;
+      if (a.dealBreakdown) {
+        for (var i = 0; i < a.dealBreakdown.length; i++) {
+          if (a.dealBreakdown[i].dealId === deal.id) {
+            thisDeal = a.dealBreakdown[i];
+            break;
+          }
+        }
+      }
+      var thisWatching = thisDeal ? thisDeal.watching : 0;
+      var thisDD = thisDeal ? thisDeal.inDD : 0;
+      var thisInvested = thisDeal ? thisDeal.invested : 0;
+
+      var html = '';
+
+      // This deal's stats — hero numbers
+      html += '<div style="margin-bottom:20px;">';
+      html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">This Deal</div>';
+      html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+
+      html += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:14px;text-align:center;">';
+      html += '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + thisWatching + '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:2px;">Watching</div></div>';
+
+      html += '<div style="background:rgba(59,130,246,0.06);border-radius:var(--radius-sm);padding:14px;text-align:center;">';
+      html += '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:#3b82f6;">' + thisDD + '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:2px;">In DD</div></div>';
+
+      html += '<div style="background:rgba(81,190,123,0.06);border-radius:var(--radius-sm);padding:14px;text-align:center;">';
+      html += '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--primary);">' + thisInvested + '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-top:2px;">Invested</div></div>';
+
+      html += '</div></div>';
+
+      // Funnel visualization
+      if (thisWatching > 0) {
+        var funnelMax = thisWatching;
+        var ddPct = funnelMax > 0 ? Math.round((thisDD / funnelMax) * 100) : 0;
+        var invPct = funnelMax > 0 ? Math.round((thisInvested / funnelMax) * 100) : 0;
+        html += '<div style="margin-bottom:20px;">';
+        html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Conversion Funnel</div>';
+
+        html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">';
+        html += '<div style="width:70px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">Watching</div>';
+        html += '<div style="flex:1;height:24px;background:var(--bg-cream);border-radius:4px;overflow:hidden;"><div style="width:100%;height:100%;background:var(--text-dark);border-radius:4px;opacity:0.15;"></div></div>';
+        html += '<div style="width:36px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-align:right;">' + thisWatching + '</div></div>';
+
+        html += '<div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">';
+        html += '<div style="width:70px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">In DD</div>';
+        html += '<div style="flex:1;height:24px;background:var(--bg-cream);border-radius:4px;overflow:hidden;"><div style="width:' + Math.max(ddPct, 3) + '%;height:100%;background:#3b82f6;border-radius:4px;"></div></div>';
+        html += '<div style="width:36px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-align:right;">' + ddPct + '%</div></div>';
+
+        html += '<div style="display:flex;align-items:center;gap:8px;">';
+        html += '<div style="width:70px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">Invested</div>';
+        html += '<div style="flex:1;height:24px;background:var(--bg-cream);border-radius:4px;overflow:hidden;"><div style="width:' + Math.max(invPct, 3) + '%;height:100%;background:var(--primary);border-radius:4px;"></div></div>';
+        html += '<div style="width:36px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-align:right;">' + invPct + '%</div></div>';
+
+        html += '</div>';
+      }
+
+      // Sponsor-wide aggregate (if they have multiple deals)
+      if (a.totalDeals > 1) {
+        html += '<div style="border-top:1px solid var(--border-light);padding-top:16px;">';
+        html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">All ' + esc(a.sponsorName) + ' Deals (' + a.totalDeals + ')</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+
+        html += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:10px;text-align:center;">';
+        html += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">' + a.totalInvestorsWatching + '</div>';
+        html += '<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Total Watching</div></div>';
+
+        html += '<div style="background:rgba(59,130,246,0.06);border-radius:var(--radius-sm);padding:10px;text-align:center;">';
+        html += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:#3b82f6;">' + a.investorsInDD + '</div>';
+        html += '<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Total In DD</div></div>';
+
+        html += '<div style="background:rgba(81,190,123,0.06);border-radius:var(--radius-sm);padding:10px;text-align:center;">';
+        html += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--primary);">' + a.investorsInvested + '</div>';
+        html += '<div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Total Invested</div></div>';
+
+        html += '</div></div>';
+      }
+
+      // Privacy note
+      html += '<div style="margin-top:16px;padding:10px 14px;background:var(--bg-cream);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;color:var(--text-muted);text-align:center;">';
+      html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="vertical-align:-2px;margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+      html += 'Data is anonymized. Individual investor identities are never shared.</div>';
+
+      body.innerHTML = html;
+      panel.style.display = 'block';
+    })
+    .catch(function(err) {
+      console.warn('GP insights load failed:', err.message);
+      panel.style.display = 'none';
+    });
+}
 
 // ========== DEAL Q&A ==========
 
@@ -3890,7 +4038,7 @@ async function renderDeal() {
 
 
 
-  // If not in hardcoded list, fetch from Airtable API
+  // Fetch deal from Supabase API
 
   if (!deal) {
 
@@ -4028,6 +4176,32 @@ async function renderDeal() {
     archivedBannerHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#8A9AA0" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
     archivedBannerHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-secondary);">Archived Deal</span>';
     archivedBannerHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">' + esc(_reason) + '</span></div></div>';
+  }
+
+  // --- Compliance banner (admin only) ---
+  var complianceBannerHtml = '';
+  var _compUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var _compIsAdmin = _compUser && _compUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_compUser.email.toLowerCase()) >= 0;
+  if (_compIsAdmin && deal.operatorPermission) {
+    var perm = deal.operatorPermission;
+    if (!perm.granted) {
+      var permColor = perm.status === 'contacted' || perm.status === 'follow_up' ? '#f59e0b' : '#ef4444';
+      var permBg = perm.status === 'contacted' || perm.status === 'follow_up' ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
+      var permBorder = perm.status === 'contacted' || perm.status === 'follow_up' ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)';
+      var permLabel = perm.status === 'not_contacted' ? 'Operator Not Contacted'
+        : perm.status === 'contacted' ? 'Awaiting Permission'
+        : perm.status === 'follow_up' ? 'Follow-Up Needed'
+        : perm.status === 'denied' ? 'Permission Denied' : 'No Permission';
+      complianceBannerHtml += '<div style="background:' + permBg + ';border:1px solid ' + permBorder + ';border-radius:var(--radius-sm);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">';
+      complianceBannerHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="' + permColor + '" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      complianceBannerHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + permColor + ';">' + permLabel + '</span>';
+      complianceBannerHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">Operator has not granted permission to share this deal\'s confidential materials.</span></div></div>';
+    }
+  } else if (_compIsAdmin && !deal.operatorPermission) {
+    complianceBannerHtml += '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">';
+    complianceBannerHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+    complianceBannerHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#ef4444;">No Permission Record</span>';
+    complianceBannerHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">No outreach has been logged for this operator.</span></div></div>';
   }
 
   // --- 2. Key Metrics Strip ---
@@ -4876,6 +5050,18 @@ async function renderDeal() {
   pipelineHtml += 'Pass</div>';
   pipelineHtml += '</div>';
 
+  // --- GP Insights Panel (admin / sponsor only) ---
+  var gpInsightsHtml = '';
+  var _gpUser = null;
+  try { _gpUser = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  var _gpIsAdmin = _gpUser && _gpUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf((_gpUser.email || '').toLowerCase()) >= 0;
+  if (_gpIsAdmin && deal.managementCompany) {
+    gpInsightsHtml += '<div class="section gp-insights-panel" id="gpInsightsPanel" style="display:none;">';
+    gpInsightsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights — Investor Pipeline</span><span style="font-family:var(--font-ui);font-size:10px;font-weight:700;padding:2px 8px;background:rgba(59,130,246,0.1);color:#3b82f6;border-radius:10px;margin-left:8px;">ADMIN</span></div>';
+    gpInsightsHtml += '<div class="section-body" id="gpInsightsBody"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading investor pipeline...</div></div>';
+    gpInsightsHtml += '</div>';
+  }
+
   // --- Action buttons ---
   var actionsHtml = '';
   var deckSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
@@ -5175,6 +5361,7 @@ async function renderDeal() {
     + '<div class="deal-page-content">'
     + heroHtml
     + archivedBannerHtml
+    + complianceBannerHtml
     + metricsHtml
     + buyBoxHtml
     + pascalTakeHtml
@@ -5191,6 +5378,7 @@ async function renderDeal() {
     + stressHtml
     + memoHtml
     + pipelineHtml
+    + gpInsightsHtml
     + actionsHtml
     + similarHtml
     + fundNudgeHtml
@@ -5206,7 +5394,17 @@ async function renderDeal() {
     loadMemoFromDb(deal.id);
   }
 
-  // Fetch shared DD data from Airtable and merge community answers
+  // Load deal stages from database (merges with localStorage)
+  if (typeof loadStagesFromDb === 'function') {
+    loadStagesFromDb(deal.id);
+  }
+
+  // Load GP Insights Panel (admin only)
+  if (document.getElementById('gpInsightsPanel') && deal.managementCompany) {
+    loadGPInsights(deal);
+  }
+
+  // Fetch shared DD data from Supabase and merge community answers
   (function() {
     var currentUser = null;
     try { currentUser = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}

@@ -30,7 +30,7 @@ const EVENT_FUNNEL = {
   call_booked: 'call-booked'
 };
 
-async function syncEventToGhl(email, event, data, currentTags) {
+async function syncEventToGhl(email, event, data) {
   if (!GHL_API_KEY) return { fieldsUpdated: 0, tagsAdded: [] };
 
   try {
