@@ -3980,6 +3980,7 @@ html.dark .cs-badge-milestone { background: #1f2937; color: #9ca3af; }
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
     <div class="content-area">
+      <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
       <div class="card-grid" id="cardGrid"></div>
       <table class="table-view" id="tableView">
         <thead id="tableHead"></thead>
@@ -7202,7 +7203,18 @@ function renderAll() {
       grid.style.margin = '';
     }
     if (deals.length === 0) {
-      grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f50d;</div><div class="empty-state-text">No deals found</div><div class="empty-state-sub">Try adjusting your filters</div></div>`;
+      const emptyStates = {
+        browse: { icon: '&#x1f50d;', title: 'No deals found', sub: 'Try adjusting your filters or clearing your buy box criteria.' },
+        saved: { icon: '&#x1f516;', title: 'No saved deals yet', sub: 'Browse deals and click Save on ones that catch your eye. This is your shortlist.', cta: 'Browse Deals', action: "document.querySelector('[data-tab=\"browse\"]').click()" },
+        vetting: { icon: '&#x1f4cb;', title: 'No deals in vetting', sub: 'Move a saved deal here when you\'re ready to dig deeper. You\'ll get a DD checklist to work through.', cta: 'Review Saved Deals', action: "document.querySelector('[data-tab=\"saved\"]').click()" },
+        ready: { icon: '&#x2705;', title: 'No deals ready to invest', sub: 'Complete vetting on a deal to move it here. This is your final review before wiring money.', cta: 'Check Vetting Pipeline', action: "document.querySelector('[data-tab=\"vetting\"]').click()" },
+        invested: { icon: '&#x1f4b0;', title: 'No investments yet', sub: 'Once you commit capital to a deal, track it here. You\'ll see distributions, K-1 status, and more.' },
+        passed: { icon: '&#x1f44b;', title: 'No passed deals', sub: 'Deals you skip or pass on will show up here. You can always reconsider later.' }
+      };
+      const es = emptyStates[currentTab] || emptyStates.browse;
+      grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">' + es.icon + '</div><div class="empty-state-text">' + es.title + '</div><div class="empty-state-sub">' + es.sub + '</div>'
+        + (es.cta ? '<button onclick="' + es.action + '" class="btn-cta btn-cta-primary" style="width:auto;padding:10px 24px;font-size:12px;margin-top:16px;">' + es.cta + '</button>' : '')
+        + '</div>';
       return;
     }
     const cardRenderer = renderCard;
@@ -7223,7 +7235,8 @@ function renderAll() {
     mapContainer.style.display = 'none';
     renderTableHead();
     if (deals.length === 0) {
-      document.getElementById('tableBody').innerHTML = '<tr><td colspan="' + TABLE_COLS.length + '" style="text-align:center;padding:60px;color:var(--text-muted);font-size:15px;">No deals found. Try adjusting your filters.</td></tr>';
+      const tEmptyStates = { browse: 'No deals found. Try adjusting your filters.', saved: 'No saved deals yet. Browse and save deals that interest you.', vetting: 'No deals in vetting. Move a saved deal here to start your due diligence.', ready: 'No deals ready to invest. Complete vetting first.', invested: 'No investments tracked yet.', passed: 'No passed deals.' };
+      document.getElementById('tableBody').innerHTML = '<tr><td colspan="' + TABLE_COLS.length + '" style="text-align:center;padding:60px;color:var(--text-muted);font-size:15px;">' + (tEmptyStates[currentTab] || tEmptyStates.browse) + '</td></tr>';
       return;
     }
     renderTable(deals);
@@ -7282,7 +7295,30 @@ function switchTab(el, fromSelect) {
   // Clear comparison selection on tab switch
   comparisonSelection.clear();
   updateCompareBar();
+  // Update stage description banner
+  updateStageDescription();
   renderAll();
+}
+
+function updateStageDescription() {
+  const desc = document.getElementById('stageDescription');
+  if (!desc) return;
+  const stages = {
+    browse: null, // No banner for browse — it's the default
+    saved: { title: 'Your Shortlist', text: 'Deals you want to look at closer. When you\'re ready to dig in, move one to Vetting.', color: 'var(--primary)' },
+    vetting: { title: 'Vetting Pipeline', text: 'Do your homework here. Work through the DD checklist, research the sponsor, and check the numbers.', color: '#2563EB' },
+    ready: { title: 'Ready to Invest', text: 'You\'ve done your due diligence. Review the final details and schedule a call with Pascal before wiring.', color: '#8b5cf6' },
+    invested: { title: 'Your Portfolio', text: 'Deals you\'ve committed capital to. Track distributions, K-1s, and hold periods.', color: '#059669' },
+    passed: { title: 'Passed', text: 'Deals you decided weren\'t right for you. You can always reconsider.', color: 'var(--text-muted)' }
+  };
+  const s = stages[currentTab];
+  if (!s) { desc.style.display = 'none'; return; }
+  desc.style.display = 'block';
+  desc.style.borderLeftColor = s.color;
+  desc.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+    + '<div><span style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + s.title + '</span>'
+    + '<span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-left:12px;">' + s.text + '</span></div>'
+    + '</div>';
 }
 
 function switchView(el) {
