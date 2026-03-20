@@ -116,11 +116,6 @@ export default async function handler(req, res) {
     return res.status(403).json({ success: false, error: auth.error });
   }
 
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
-  }
-
   const { action } = req.body || {};
 
   try {
@@ -170,6 +165,11 @@ export default async function handler(req, res) {
 
     // Action: enrich a single deal
     if (action === 'enrich-deal') {
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicKey) {
+        return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+      }
+
       const { dealId } = req.body;
       if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
 
