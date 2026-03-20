@@ -6508,7 +6508,7 @@ function syncTaxDoc(doc) {
 // Stages: 'browse' (default/no stage), 'saved', 'vetting', 'ready', 'invested', 'passed'
 // Backward compat mapping from old stage names
 const _stageRenameMap = { 'new': 'browse', 'interested': 'saved', 'duediligence': 'vetting', 'portfolio': 'invested' };
-function _migrateStage(stage) { return _stageRenameMap[stage] || stage; }
+function _migrateStage(stage) { if (stage && typeof stage === 'object') stage = stage.stage || 'browse'; return _stageRenameMap[stage] || stage || 'browse'; }
 let dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
 // Migrate any old stage names in existing data
 (function _migrateAllStages() {
