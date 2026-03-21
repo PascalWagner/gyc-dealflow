@@ -10429,6 +10429,7 @@ async function fetchUserDataFromSupabase(email) {
         const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
         if (localPortfolio.length === 0) {
           const restored = portfolioData.records.map(r => ({
+            id: r.id || ('inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
             dealId: r.deal_id || '',
             investmentName: r.investment_name || '',
             sponsor: r.sponsor || '',
@@ -10446,6 +10447,10 @@ async function fetchUserDataFromSupabase(email) {
           }));
           localStorage.setItem('gycPortfolio', JSON.stringify(restored));
           if (typeof portfolioInvestments !== 'undefined') portfolioInvestments = restored;
+          // Re-render portfolio if currently viewing it, so restored data appears
+          if (typeof renderPortfolio === 'function' && document.getElementById('page-portfolio')?.classList.contains('active')) {
+            renderPortfolio();
+          }
         }
       }
     }
