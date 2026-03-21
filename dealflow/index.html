@@ -18382,7 +18382,7 @@ function searchViewAsUsers(query) {
 }
 
 // Keys that are per-user and need to be scoped when impersonating
-const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals'];
+const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed'];
 
 function saveUserScopedData(email) {
   // Save current localStorage data under the user's email prefix
