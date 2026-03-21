@@ -17805,14 +17805,6 @@ function renderDashboard() {
       + '<div class="dash-hero-progress"><div class="dash-hero-progress-fill" style="width:' + goalProgress + '%;' + (goalProgress > 0 ? 'min-width:6px;' : '') + '"></div></div>'
       + '<div class="dash-hero-value">' + goalValueText + ' <span class="dash-hero-pct">' + goalProgress + '%</span></div>'
       + '<div class="dash-hero-stats">' + statsLine + '</div>'
-      + (nextMilestone ? '<div class="dash-hero-action" onclick="navigateTo(\'' + actionPage + '\')">'
-        + '<div class="dash-hero-action-icon">' + actionIcon + '</div>'
-        + '<div class="dash-hero-action-text">'
-        + '<div class="dash-hero-action-title">' + actionTitle + '</div>'
-        + '<div class="dash-hero-action-desc">' + actionDesc + '</div>'
-        + '</div>'
-        + '<button class="dash-hero-action-btn" onclick="event.stopPropagation();navigateTo(\'' + actionPage + '\')">' + actionBtnText + '</button>'
-        + '</div>' : '')
       + '</div>';
   } else {
     // No onboarding — show CTA
@@ -18210,7 +18202,7 @@ function renderDashboard() {
     // Only show stat rows if they have meaningful data
     if (dealsReviewedCount > 0) sections += momentumRow;
     if (hasPortfolio) sections += statsRow;
-    sections += actionItemsHtml + portfolioHtml + ddHistoryHtml + fundNudgeHtml;
+    sections += portfolioHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
 }
