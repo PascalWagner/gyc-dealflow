@@ -2325,34 +2325,34 @@ html.cap-ios #managersFilterSidebar.ios-filters-open {
 }
 
 /* ── Debt Fund page: collapse filter bar on iOS ────── */
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] > *:not(.ios-filter-row):not(.ios-filter-toggle) {
+html.cap-ios #debtFilterBar > *:not(.ios-filter-row):not(.ios-filter-toggle) {
   display: none !important;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > * {
+html.cap-ios #debtFilterBar.ios-filters-open > * {
   display: flex !important;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] {
+html.cap-ios #debtFilterBar {
   flex-wrap: wrap !important;
   gap: 8px !important;
   padding: 10px 12px !important;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > div:not(.ios-filter-row) {
+html.cap-ios #debtFilterBar.ios-filters-open > div:not(.ios-filter-row) {
   width: calc(50% - 4px) !important;
   min-width: 0 !important;
   flex-shrink: 0;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > div:not(.ios-filter-row) select,
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > div:not(.ios-filter-row) input {
+html.cap-ios #debtFilterBar.ios-filters-open > div:not(.ios-filter-row) select,
+html.cap-ios #debtFilterBar.ios-filters-open > div:not(.ios-filter-row) input {
   width: 100% !important;
   box-sizing: border-box;
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 8px;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > .buybox-toggle {
+html.cap-ios #debtFilterBar.ios-filters-open > .buybox-toggle {
   width: 100% !important;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > button:last-child {
+html.cap-ios #debtFilterBar.ios-filters-open > button:last-child {
   width: 100% !important;
 }
 
@@ -6090,7 +6090,7 @@ const _supa = window.supabase.createClient(
       <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
 
       <!-- Debt Fund Filters -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+      <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
         <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
           <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
           Apply My Buy Box
@@ -20053,7 +20053,7 @@ fetchBuyBoxFromGHL();
     }
 
     // Debt Fund Explorer filter bar
-    const debtFilter = document.querySelector('#page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"]');
+    const debtFilter = document.getElementById('debtFilterBar');
     if (debtFilter) {
       const drow = document.createElement('div');
       drow.className = 'ios-filter-row';
@@ -20062,7 +20062,7 @@ fetchBuyBoxFromGHL();
         <input type="text" placeholder="Search funds..."
           oninput="document.getElementById('debtSearchInput').value=this.value;syncDebtFilters();"
           style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
-        <button class="ios-filter-toggle" style="flex:1;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');this.closest('div[style]').classList.toggle('ios-filters-open');">
+        <button class="ios-filter-toggle" style="flex:1;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');document.getElementById('debtFilterBar').classList.toggle('ios-filters-open');">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           Filters
         </button>
