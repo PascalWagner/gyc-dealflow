@@ -779,6 +779,214 @@ body {
 }
 .person-link svg { width: 13px; height: 13px; }
 
+/* ====== BACKGROUND REPORT ====== */
+.bg-report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bg-report-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.bg-report-status.clear { background: var(--green-bg); color: var(--green); }
+.bg-report-status.flagged { background: #FEE2E2; color: #DC2626; }
+.bg-report-status.needs_review { background: var(--orange-bg); color: var(--orange); }
+.bg-report-status.pending { background: var(--bg-cream); color: var(--text-muted); }
+.bg-report-status svg { width: 14px; height: 14px; }
+
+.bg-report-intro {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--mint-bg) 0%, #f0fdf4 100%);
+  border: 1px solid rgba(81,190,123,0.15);
+  border-radius: var(--radius-sm);
+}
+.bg-report-intro strong { color: var(--text-dark); }
+
+.bg-checks-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.bg-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+}
+.bg-check-row:hover {
+  border-color: var(--border);
+}
+
+.bg-check-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bg-check-icon svg { width: 20px; height: 20px; }
+.bg-check-icon.sec { background: #F3E8FF; color: #7C3AED; }
+.bg-check-icon.finra { background: #DBEAFE; color: #1D4ED8; }
+.bg-check-icon.iapd { background: #E0E7FF; color: #4338CA; }
+.bg-check-icon.ofac { background: #FEF3C7; color: #D97706; }
+.bg-check-icon.court { background: #FEE2E2; color: #DC2626; }
+.bg-check-icon.news { background: #F0FDF4; color: #16A34A; }
+.bg-check-icon.sos { background: #F1F5F9; color: #475569; }
+.bg-check-icon.bbb { background: #FFF7ED; color: #EA580C; }
+
+.bg-check-info { flex: 1; min-width: 0; }
+.bg-check-source {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bg-check-source .check-badge {
+  font-size: 9px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.check-badge.clear { background: var(--green-bg); color: var(--green); }
+.check-badge.flagged { background: #FEE2E2; color: #DC2626; }
+.check-badge.needs_review { background: var(--orange-bg); color: var(--orange); }
+.check-badge.not_found { background: var(--bg-cream); color: var(--text-muted); }
+.check-badge.pending { background: var(--bg-cream); color: var(--text-muted); }
+.check-badge.not_checked { background: var(--bg-cream); color: var(--text-muted); }
+.check-badge.error { background: #FEE2E2; color: #DC2626; }
+
+.bg-check-desc {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.bg-check-result {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.bg-check-result a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+.bg-check-result a:hover { text-decoration: underline; }
+
+.bg-flags {
+  margin-top: 16px;
+  padding: 16px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-sm);
+}
+.bg-flag-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: #991B1B;
+  line-height: 1.5;
+}
+.bg-flag-item + .bg-flag-item { margin-top: 8px; }
+.bg-flag-icon { flex-shrink: 0; margin-top: 2px; }
+.bg-flag-severity-high { color: #DC2626; }
+.bg-flag-severity-medium { color: var(--orange); }
+
+.bg-report-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.bg-report-run-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(81,190,123,0.4);
+}
+.bg-report-run-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.bg-report-run-btn svg { width: 16px; height: 16px; }
+
+.bg-report-gate {
+  text-align: center;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%);
+  border: 1px dashed rgba(59,130,246,0.3);
+  border-radius: var(--radius-sm);
+}
+.bg-report-gate-title {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.bg-report-gate-sub {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.bg-report-timestamp {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* ====== RESEARCH LINKS ====== */
 .research-grid {
   display: grid;
@@ -845,6 +1053,11 @@ body {
   font-family: var(--font-ui);
   font-size: 13px;
   font-weight: 500;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ====== RESPONSIVE ====== */
@@ -928,78 +1141,8 @@ body {
 </head>
 <body>
 
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="sidebar-logo-icon">GYC</div>
-    <div class="sidebar-logo-text">Grow Your Cashflow</div>
-  </div>
-    <nav class="sidebar-nav">
-    <a class="nav-item" href="index.html" style="color:var(--primary);font-weight:700;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to Dashboard
-    </a>
-    <div class="nav-section-label">Marketplace</div>
-    <a class="nav-item" href="index.html#dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Dashboard
-    </a>
-    <a class="nav-item" href="index.html#buybox">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      My Buy Box
-    </a>
-    <a class="nav-item" href="index.html#deals">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>
-      Live Deals
-    </a>
-    <a class="nav-item" href="index.html#debtfunds">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
-      Debt Fund Explorer
-    </a>
-    <a class="nav-item" href="index.html#managers">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Investment Managers
-    </a>
-    <a class="nav-item" href="index.html#assets">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Assets
-    </a>
-    <div class="nav-section-label">My Investments</div>
-    <a class="nav-item" href="index.html#portfolio">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-      My Portfolio
-    </a>
-    <a class="nav-item" href="index.html#taxprep">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Tax Prep
-    </a>
-    <div class="nav-section-label">Support</div>
-    <a class="nav-item" href="index.html#officehours">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
-      Office Hours
-    </a>
-    <a class="nav-item" href="index.html#academy">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      Cash Flow Academy
-    </a>
-  </nav>
-  <div class="sidebar-user" id="sidebarUser" style="display:none">
-    <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
-    <div class="sidebar-user-info">
-      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
-      <div class="sidebar-user-email" id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-    </div>
-    <button class="sidebar-logout" onclick="logout()" title="Sign out">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </button>
-  </div>
-  <div class="sidebar-footer">
-    <div style="font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.5px;">GYC Dealflow v1.0</div>
-  </div>
-</aside>
-
-<!-- Sidebar overlay for mobile -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div id="sidebar-root"></div>
+<script src="sidebar.js" data-page="sponsor"></script>
 
 <!-- Mobile top bar -->
 <div class="mobile-topbar">
@@ -1112,6 +1255,23 @@ body {
         </div>
       </div>
 
+      <!-- Background Report -->
+      <div class="section-card" id="bgReportSection">
+        <div class="section-header bg-report-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;color:var(--primary);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <div class="section-title">Sponsor Background Report</div>
+          </div>
+          <div class="bg-report-status pending" id="bgOverallStatus">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span id="bgOverallStatusText">Not Yet Run</span>
+          </div>
+        </div>
+        <div class="section-body" id="bgReportBody">
+          <!-- Content injected by JS -->
+        </div>
+      </div>
+
       <!-- Research -->
       <div class="section-card">
         <div class="section-header">
@@ -1139,37 +1299,6 @@ body {
 
 function getUser() {
   return JSON.parse(localStorage.getItem('gycUser') || 'null');
-}
-
-function logout() {
-  localStorage.removeItem('gycUser');
-  window.location.href = 'deal-login.html';
-}
-
-// ========== SIDEBAR ==========
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('open');
-}
-
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('open');
-}
-
-// ========== INIT AUTH UI ==========
-function initAuth() {
-  const user = getUser();
-  const userEl = document.getElementById('sidebarUser');
-  if (user && user.email) {
-    userEl.style.display = 'flex';
-    const name = user.name || user.email.split('@')[0];
-    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    document.getElementById('sidebarAvatar').textContent = initials;
-    document.getElementById('sidebarName').textContent = name;
-    const sidebarEmailEl = document.getElementById('sidebarEmail');
-    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
-  }
 }
 
 // ========== FALLBACK DATA ==========
@@ -1522,12 +1651,296 @@ function handleGetIntroduced() {
 }
 
 
+// ========== BACKGROUND REPORT ==========
+const BG_CHECK_SOURCES = [
+  {
+    key: 'sec',
+    name: 'SEC EDGAR',
+    icon: 'sec',
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    description: 'Searches all Form D filings with the SEC. Verifies that the sponsor has properly filed their securities offerings and shows total capital raised.',
+    benefit: 'Confirms the sponsor is legally raising capital and shows their track record of offerings'
+  },
+  {
+    key: 'finra',
+    name: 'FINRA BrokerCheck',
+    icon: 'finra',
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>',
+    description: 'Checks FINRA\'s public database for broker/dealer registrations, customer complaints, regulatory actions, and employment history.',
+    benefit: 'Reveals any complaints, disciplinary actions, or regulatory issues in the securities industry'
+  },
+  {
+    key: 'iapd',
+    name: 'SEC Investment Adviser',
+    icon: 'iapd',
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+    description: 'Searches the SEC\'s Investment Adviser Public Disclosure database for adviser registrations and any enforcement actions.',
+    benefit: 'Shows if they\'re a registered investment adviser and any disclosure events'
+  },
+  {
+    key: 'ofac',
+    name: 'OFAC Sanctions',
+    icon: 'ofac',
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+    description: 'Screens against the U.S. Treasury\'s Specially Designated Nationals (SDN) list for sanctions matches.',
+    benefit: 'Ensures the sponsor is not on any government sanctions or watchlists'
+  },
+  {
+    key: 'court',
+    name: 'Federal Court Records',
+    icon: 'court',
+    svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/><path d="M9 10h.01"/><path d="M15 10h.01"/></svg>',
+    description: 'Searches PACER/CourtListener for federal lawsuits, bankruptcies, and judgments involving the person.',
+    benefit: 'Surfaces any litigation history, bankruptcies, or legal judgments'
+  }
+];
+
+function renderBgReportIntro() {
+  return '<div class="bg-report-intro">' +
+    '<strong>What is this?</strong> We automatically search 5 free public databases on every sponsor to surface potential red flags before you invest. ' +
+    'This includes SEC filings, FINRA broker records, investment adviser disclosures, Treasury sanctions screening, and federal court records. ' +
+    '<strong>No sponsor can hide from public records.</strong>' +
+  '</div>';
+}
+
+function renderBgCheckRow(source, result) {
+  var statusKey = result ? (result[source.key + 'Status'] || result[source.key + '_status'] || 'pending') : 'pending';
+  var statusLabels = { clear: 'Clear', flagged: 'Flagged', needs_review: 'Review', not_found: 'Not Found', pending: 'Pending', not_checked: 'N/A', error: 'Error' };
+  var statusLabel = statusLabels[statusKey] || statusKey;
+
+  var resultText = '';
+  if (result) {
+    switch (source.key) {
+      case 'sec':
+        var count = result.sec_filings_count || result.secFilingsCount || 0;
+        resultText = count > 0 ? count + ' filing(s) found' : 'No Form D filings found';
+        break;
+      case 'finra':
+        if (result.finra_found || result.finraFound) {
+          var disc = result.finra_disclosures || result.finraDisclosures || 0;
+          resultText = disc > 0 ? disc + ' disclosure event(s) found' : 'Registered, no disclosures';
+        } else {
+          resultText = 'Not registered with FINRA';
+        }
+        break;
+      case 'iapd':
+        if (result.iapd_found || result.iapdFound) {
+          var iapdDisc = result.iapd_disclosures || result.iapdDisclosures || 0;
+          resultText = iapdDisc > 0 ? iapdDisc + ' disclosure(s) found' : 'Registered adviser, clean record';
+        } else {
+          resultText = 'Not registered as investment adviser';
+        }
+        break;
+      case 'ofac':
+        resultText = (result.ofac_found || result.ofacFound) ? 'Potential match found - verify identity' : 'No sanctions matches';
+        break;
+      case 'court':
+        var cases = result.court_cases_count || result.courtCasesCount || 0;
+        var bk = result.court_bankruptcies || result.courtBankruptcies || 0;
+        resultText = cases > 0 ? cases + ' case(s) found' + (bk > 0 ? ', including ' + bk + ' bankruptcy' : '') : 'No federal court records found';
+        break;
+    }
+  }
+
+  return '<div class="bg-check-row">' +
+    '<div class="bg-check-icon ' + source.icon + '">' + source.svg + '</div>' +
+    '<div class="bg-check-info">' +
+      '<div class="bg-check-source">' + escHtml(source.name) +
+        ' <span class="check-badge ' + statusKey + '">' + statusLabel + '</span>' +
+      '</div>' +
+      '<div class="bg-check-desc">' + source.description + '</div>' +
+      (resultText ? '<div class="bg-check-result">' + escHtml(resultText) + '</div>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function renderBgFlags(flags) {
+  if (!flags || flags.length === 0) return '';
+  var html = '<div class="bg-flags">';
+  html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Flags Requiring Attention</div>';
+  flags.forEach(function(f) {
+    html += '<div class="bg-flag-item">' +
+      '<div class="bg-flag-icon bg-flag-severity-' + f.severity + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+      '<div><strong>' + escHtml(f.source) + ':</strong> ' + escHtml(f.message) + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderBgReport(result, isPaid) {
+  var body = document.getElementById('bgReportBody');
+  if (!body) return;
+
+  var html = renderBgReportIntro();
+
+  if (!isPaid) {
+    // Free tier — show structure but gate the action
+    html += '<div class="bg-checks-grid">';
+    BG_CHECK_SOURCES.forEach(function(src) {
+      html += '<div class="bg-check-row" style="opacity:0.6;">' +
+        '<div class="bg-check-icon ' + src.icon + '">' + src.svg + '</div>' +
+        '<div class="bg-check-info">' +
+          '<div class="bg-check-source">' + escHtml(src.name) + '</div>' +
+          '<div class="bg-check-desc">' + src.description + '</div>' +
+          '<div class="bg-check-result" style="color:var(--primary);font-weight:600;">' + src.benefit + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    html += '<div class="bg-report-gate" style="margin-top:20px;">';
+    html += '<div class="bg-report-gate-title">Automated Background Checks</div>';
+    html += '<div class="bg-report-gate-sub">Academy members get automated public records searches across 5 government databases for every sponsor. Know exactly who you\'re investing with before you write a check.</div>';
+    html += '<button class="bg-report-run-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy &rarr;</button>';
+    html += '</div>';
+  } else if (result) {
+    // Has results — show them
+    var overallStatus = result.overall_status || 'clear';
+    updateBgOverallStatus(overallStatus);
+
+    html += '<div class="bg-checks-grid">';
+    BG_CHECK_SOURCES.forEach(function(src) {
+      html += renderBgCheckRow(src, result);
+    });
+    html += '</div>';
+
+    html += renderBgFlags(result.flags);
+
+    var runDate = result.run_at ? new Date(result.run_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    html += '<div class="bg-report-timestamp">';
+    html += '<span>Last checked: ' + runDate + '</span>';
+    html += '<button class="bg-report-run-btn" style="padding:8px 16px;font-size:11px;" onclick="triggerBgCheck()" id="bgRerunBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Re-run Check</button>';
+    html += '</div>';
+  } else {
+    // No results yet — show run button
+    html += '<div class="bg-checks-grid">';
+    BG_CHECK_SOURCES.forEach(function(src) {
+      html += '<div class="bg-check-row">' +
+        '<div class="bg-check-icon ' + src.icon + '">' + src.svg + '</div>' +
+        '<div class="bg-check-info">' +
+          '<div class="bg-check-source">' + escHtml(src.name) + ' <span class="check-badge pending">Pending</span></div>' +
+          '<div class="bg-check-desc">' + src.description + '</div>' +
+          '<div class="bg-check-result" style="color:var(--primary);font-weight:600;">' + src.benefit + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    html += '<div style="text-align:center;margin-top:20px;">';
+    html += '<button class="bg-report-run-btn" onclick="triggerBgCheck()" id="bgRunBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</button>';
+    html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:8px;">Searches 5 public databases in ~10 seconds</div>';
+    html += '</div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function updateBgOverallStatus(status) {
+  var el = document.getElementById('bgOverallStatus');
+  var textEl = document.getElementById('bgOverallStatusText');
+  if (!el || !textEl) return;
+
+  el.className = 'bg-report-status ' + status;
+
+  var statusSvgs = {
+    clear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    flagged: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    needs_review: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
+    pending: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+  };
+
+  var labels = { clear: 'All Clear', flagged: 'Flags Found', needs_review: 'Needs Review', pending: 'Not Yet Run' };
+  el.innerHTML = (statusSvgs[status] || statusSvgs.pending) + '<span>' + (labels[status] || status) + '</span>';
+}
+
+// Store sponsor data globally for bg check
+var _bgSponsorData = null;
+
+async function triggerBgCheck() {
+  var btn = document.getElementById('bgRunBtn') || document.getElementById('bgRerunBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Running checks...';
+  }
+
+  var user = getUser();
+  var tier = (user && user.tier) || 'free';
+  var s = _bgSponsorData;
+  if (!s) return;
+
+  try {
+    var resp = await fetch('/api/background-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'run',
+        personName: s.ceo || s.name,
+        companyName: s.name,
+        managementCompanyId: s.id,
+        userEmail: user ? user.email : '',
+        userTier: tier
+      })
+    });
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return {}; });
+      if (errData.upgrade) {
+        alert('Background checks are available to Academy members. Join at growyourcashflow.io/cashflow-academy');
+      } else {
+        alert('Error running background check: ' + (errData.error || resp.status));
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Run Background Check'; }
+      return;
+    }
+
+    var data = await resp.json();
+    renderBgReport(data.result, true);
+  } catch (e) {
+    console.error('Background check error:', e);
+    alert('Error: ' + e.message);
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Run Background Check'; }
+  }
+}
+
+async function loadBgReport(sponsor) {
+  _bgSponsorData = sponsor;
+  var user = getUser();
+  var tier = (user && user.tier) || 'free';
+  var isPaid = tier === 'academy' || tier === 'investor' || tier === 'alumni' ||
+    (user && user.isAdmin) ||
+    (user && user.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(user.email.toLowerCase()) >= 0);
+
+  if (!isPaid) {
+    renderBgReport(null, false);
+    return;
+  }
+
+  // Try to load cached results
+  try {
+    var resp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(sponsor.id));
+    if (resp.ok) {
+      var data = await resp.json();
+      if (data.results && data.results.length > 0) {
+        renderBgReport(data.results[0], true);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load cached background check:', e.message);
+  }
+
+  // No cached results — show pending state
+  renderBgReport(null, true);
+}
+
 // ========== BOOT ==========
 async function init() {
-  initAuth();
   const params = getSponsorParams();
   const data = await fetchSponsorData(params);
   renderSponsor(data);
+  // Load background report after sponsor data is ready
+  if (data && data.sponsor) {
+    loadBgReport(data.sponsor);
+  }
 }
 
 init();

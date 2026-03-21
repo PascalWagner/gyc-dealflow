@@ -5566,10 +5566,10 @@ async function renderDeal() {
 
     var _opUrl = 'sponsor.html?company=' + encodeURIComponent(operator.name);
     if (operator.ceo) {
-      operatorHtml += '<div class="operator-name"><a href="person.html?name=' + encodeURIComponent(operator.ceo) + '" style="color:var(--text-dark);text-decoration:none;">' + esc(operator.ceo) + '</a></div>';
+      operatorHtml += '<div class="operator-name"><a href="person.html?name=' + encodeURIComponent(operator.ceo) + '" style="color:var(--text-dark);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--primary)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' + esc(operator.ceo) + '</a></div>';
       operatorHtml += '<div class="operator-title">CEO, <a href="' + _opUrl + '" style="color:var(--primary);text-decoration:none;">' + esc(operator.name) + '</a></div>';
     } else {
-      operatorHtml += '<div class="operator-name"><a href="' + _opUrl + '" style="color:var(--text-dark);text-decoration:none;">' + esc(operator.name) + '</a></div>';
+      operatorHtml += '<div class="operator-name"><a href="' + _opUrl + '" style="color:var(--text-dark);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--primary)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' + esc(operator.name) + '</a></div>';
       operatorHtml += '<div class="operator-title">Sponsor / Operator</div>';
     }
 
@@ -5625,11 +5625,12 @@ async function renderDeal() {
       operatorHtml += '<div style="width:44px;height:44px;border-radius:50%;background:var(--bg-main);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-weight:700;font-size:14px;color:var(--text-muted);flex-shrink:0;">' + getInitials(capitalRaiser.ceo || capitalRaiser.name) + '</div>';
       operatorHtml += '<div>';
       var _crUrl = 'sponsor.html?company=' + encodeURIComponent(capitalRaiser.name);
+      var _crPersonUrl = capitalRaiser.ceo ? 'person.html?name=' + encodeURIComponent(capitalRaiser.ceo) : _crUrl;
       if (capitalRaiser.ceo) {
-        operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">' + esc(capitalRaiser.ceo) + '</div>';
-        operatorHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);"><a href="' + _crUrl + '" style="color:var(--text-secondary);text-decoration:none;">' + esc(capitalRaiser.name) + '</a> &middot; Raising capital for this offering</div>';
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;"><a href="' + _crPersonUrl + '" style="color:var(--text-dark);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;">' + esc(capitalRaiser.ceo) + '</a></div>';
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);"><a href="' + _crUrl + '" style="color:var(--primary);text-decoration:none;">' + esc(capitalRaiser.name) + '</a> &middot; Raising capital for this offering</div>';
       } else {
-        operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);"><a href="' + _crUrl + '" style="color:var(--text-dark);text-decoration:none;">' + esc(capitalRaiser.name) + '</a></div>';
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;"><a href="' + _crUrl + '" style="color:var(--text-dark);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:1px;">' + esc(capitalRaiser.name) + '</a></div>';
         operatorHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);">Raising capital for this offering</div>';
       }
       operatorHtml += '</div></div></div>';
