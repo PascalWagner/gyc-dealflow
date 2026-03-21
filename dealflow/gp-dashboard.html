@@ -1072,15 +1072,26 @@ function showToast(message) {
 var gpState = {
   companyId: null,
   companyName: '',
+  isAdmin: false,
   deals: [],
   calendarUrl: '',
   authorizedEmails: []
 };
 
 // ========== CHECK GP ACCESS ==========
+var ADMIN_EMAILS = ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'];
+
 function checkGPAccess() {
   var user = getUser();
   if (!user) return false;
+
+  // Admin always has access
+  if (user.isAdmin || (user.email && ADMIN_EMAILS.indexOf(user.email.toLowerCase()) >= 0)) {
+    gpState.companyId = user.management_company_id || user.managementCompanyId || null;
+    gpState.companyName = user.management_company_name || user.managementCompanyName || user.company || 'Grow Your Cashflow';
+    gpState.isAdmin = true;
+    return true;
+  }
 
   // Check for gp_type in the user record
   if (user.gp_type || user.gpType || user.is_gp) {
@@ -1108,7 +1119,9 @@ function fetchGPDeals() {
   }
 
   var url = '/api/deals';
-  if (gpState.companyId) {
+  if (gpState.isAdmin) {
+    // Admin sees all deals
+  } else if (gpState.companyId) {
     url += '?management_company_id=' + encodeURIComponent(gpState.companyId);
   } else if (gpState.companyName) {
     url += '?management_company=' + encodeURIComponent(gpState.companyName);
@@ -1178,7 +1191,7 @@ function renderGPDashboard(deals, settings) {
   document.getElementById('gpCompanyName').textContent = gpState.companyName || 'Your Company';
 
   var userName = user.name || user.email.split('@')[0];
-  var gpType = user.gp_type || user.gpType || 'General Partner';
+  var gpType = gpState.isAdmin ? 'Platform Admin' : (user.gp_type || user.gpType || 'General Partner');
   document.getElementById('gpUserMeta').innerHTML = '<strong>' + escHtml(userName) + '</strong> &middot; ' + escHtml(gpType);
 
   // Tags
@@ -1197,9 +1210,20 @@ function renderGPDashboard(deals, settings) {
   // Stats
   document.getElementById('statDeals').textContent = deals.length;
   document.getElementById('statIntros').textContent = countIntroRequests();
-  // Views and Saved are placeholders
-  document.getElementById('statViews').textContent = '--';
-  document.getElementById('statSaved').textContent = '--';
+
+  if (gpState.isAdmin) {
+    // Admin: show platform-wide stats from real data
+    var activeDeals = deals.filter(function(d) { var s = (d.status || '').toLowerCase(); return s === 'active' || s === 'open' || s === 'fundraising'; });
+    var operators = {};
+    deals.forEach(function(d) { var mc = d.managementCompany || d.management_company; if (mc) operators[mc] = true; });
+    document.getElementById('statViews').textContent = activeDeals.length;
+    document.querySelector('#statViews + .stat-card-label').textContent = 'Active Deals';
+    document.getElementById('statSaved').textContent = Object.keys(operators).length;
+    document.querySelector('#statSaved + .stat-card-label').textContent = 'Operators';
+  } else {
+    document.getElementById('statViews').textContent = '--';
+    document.getElementById('statSaved').textContent = '--';
+  }
 
   // Deals
   gpState.deals = deals;
