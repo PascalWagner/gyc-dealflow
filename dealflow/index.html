@@ -11480,23 +11480,42 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 9: LOCKUP PREFERENCE =====
+  // ===== SCREEN 12: LOCKUP PREFERENCE =====
   if (step.type === 'lockupPrefs') {
     html += '<div class="wizard-card-title">How long can your capital be locked up?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are illiquid \u2014 you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
+    // Count deals by hold period
+    var lockActiveDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
+    var lockTotal = lockActiveDeals.length;
+    function countLockup(minYrs, maxYrs) {
+      return lockActiveDeals.filter(function(d) {
+        var hp = parseFloat(d.holdPeriod) || 0;
+        if (!hp && d.holdPeriod) { var m = String(d.holdPeriod).match(/(\d+)/); hp = m ? parseFloat(m[1]) : 0; }
+        return hp >= minYrs && (maxYrs === null || hp <= maxYrs);
+      }).length;
+    }
+    // Cumulative: flexible = all, 1-3 = holds ≤3, etc
+    var lockCounts = {
+      'flexible': lockTotal,
+      '1-3': countLockup(0, 3),
+      '3-5': countLockup(0, 5),
+      '5+': lockTotal
+    };
     var lockupOptions = [
-      { val: 'flexible', label: 'Flexible', desc: 'Monthly/quarterly redemptions', detail: 'Lending funds and open-ended vehicles' },
-      { val: '1-3', label: '1\u20133 years', desc: 'Short-term holds', detail: 'Bridge loans, short-duration credit' },
-      { val: '3-5', label: '3\u20135 years', desc: 'Standard fund terms', detail: 'Most syndications and value-add deals' },
-      { val: '5+', label: '5+ years', desc: 'Long-term, highest returns', detail: 'Development, ground-up, opportunistic' }
+      { val: 'flexible', label: 'Flexible', detail: 'Lending funds and open-ended vehicles', count: lockCounts['flexible'] },
+      { val: '1-3', label: '1\u20133 years', detail: 'Bridge loans, short-duration credit', count: lockCounts['1-3'] },
+      { val: '3-5', label: '3\u20135 years', detail: 'Most syndications and value-add deals', count: lockCounts['3-5'] },
+      { val: '5+', label: '5+ years', detail: 'Development, ground-up, opportunistic', count: lockCounts['5+'] }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     lockupOptions.forEach(function(opt) {
       var isSel = wizardData.lockup === opt.val;
+      var pct = lockTotal > 0 ? Math.round(opt.count / lockTotal * 100) : 0;
       html += '<div onclick="wizardData.lockup=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
+      if (opt.count > 0) html += '<div style="flex-shrink:0;text-align:right;"><div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' deals</div><div style="font-size:10px;color:var(--text-muted);">' + pct + '% of database</div></div>';
       html += '</div>';
     });
     html += '</div>';
@@ -11540,7 +11559,11 @@ function renderWizardStep() {
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
       html += '<div style="flex-shrink:0;text-align:right;">';
-      if (opt.count > 0) html += '<div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + '</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">deals</div>';
+      if (opt.count > 0) {
+        var pct = anyTotal > 0 ? Math.round(opt.count / anyTotal * 100) : 0;
+        html += '<div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' deals</div>';
+        html += '<div style="font-size:10px;color:var(--text-muted);">' + pct + '% of database</div>';
+      }
       if (isSel) html += '<div style="color:var(--primary);margin-top:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
       html += '</div>';
       html += '</div>';
