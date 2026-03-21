@@ -6494,26 +6494,17 @@ const _supa = window.supabase.createClient(
       <div class="topbar-title">Tax Prep</div>
     </div>
     <div class="sub-page" style="max-width:1000px;">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
-        <div style="font-size:15px;color:var(--text-secondary);max-width:420px;line-height:1.6;margin-bottom:24px;">Tax document tracking, K-1 management, CPA-ready reporting, and bulk download are coming soon.</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">K-1 Tracker</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Track receipt status per investment</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Download All Docs</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">One-click export for your CPA</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Tax Year Summary</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Annual investment income overview</div>
-          </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <select id="taxYearFilter" onchange="renderTaxPrep()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;background:var(--bg-card);color:var(--text-dark);cursor:pointer;">
+            <option value="">All Years</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="autoPopulateTaxDocs(document.getElementById('taxYearFilter').value || new Date().getFullYear()-1)" style="padding:8px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;">Auto-Populate from Portfolio</button>
+          <button onclick="showAddTaxDocModal()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Document</button>
         </div>
       </div>
-      <div style="display:none;">
       <div id="taxSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
       <div id="taxPrepTableContainer">
         <table class="table-view" id="taxPrepTable" style="display:table;width:100%;">
@@ -6539,7 +6530,6 @@ const _supa = window.supabase.createClient(
         <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;margin-right:10px;">Auto-Populate from Portfolio</button>
         <button onclick="showAddTaxDocModal()" style="padding:10px 24px;background:transparent;color:var(--primary);border:2px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Manually</button>
       </div>
-      </div><!-- end display:none -->
     </div>
   </div>
 
@@ -14149,6 +14139,17 @@ function renderAssetsPage() {
       if (!haystack.includes(searchVal)) return false;
     }
     return true;
+  });
+
+  // Sort: assets with addresses first, then by name
+  assets.sort((a, b) => {
+    const aHasAddr = (a.address || a.propertyAddress) ? 1 : 0;
+    const bHasAddr = (b.address || b.propertyAddress) ? 1 : 0;
+    if (bHasAddr !== aHasAddr) return bHasAddr - aHasAddr;
+    const aLoc = (a.location || a.investingGeography || '') !== 'Unknown' && (a.location || a.investingGeography || '') !== '' ? 1 : 0;
+    const bLoc = (b.location || b.investingGeography || '') !== 'Unknown' && (b.location || b.investingGeography || '') !== '' ? 1 : 0;
+    if (bLoc !== aLoc) return bLoc - aLoc;
+    return (a.investmentName || '').localeCompare(b.investmentName || '');
   });
 
   document.getElementById('assetsCount').textContent = assets.length;
