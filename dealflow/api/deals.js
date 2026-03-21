@@ -238,6 +238,9 @@ export default async function handler(req, res) {
           totalAmountSold: d.total_amount_sold,
           totalInvestors: d.total_investors,
           is506b: d.is_506b || false,
+          issuerEntity: d.issuer_entity || '',
+          gpEntity: d.gp_entity || '',
+          sponsorEntity: d.sponsor_entity || '',
           sponsors: sponsorsByDeal[d.id] || []
         };
       });
