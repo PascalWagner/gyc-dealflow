@@ -1673,22 +1673,25 @@ window._SIDEBAR_PAGE = "sponsor";
       </div>
 
       <!-- Investment Criteria -->
-      <div class="section-card" id="investCriteriaSection" style="display:none;">
+      <div class="section-card" id="investCriteriaSection" style="opacity:0.5;">
         <div class="section-header">
           <div class="section-title">Investment Criteria</div>
         </div>
         <div class="section-body">
           <div id="investCriteriaGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+          <div id="investCriteriaEmpty" style="text-align:center;padding:16px 0;"><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">We haven't extracted investment criteria for this operator yet.</div></div>
         </div>
       </div>
 
       <!-- Existing Portfolio -->
-      <div class="section-card" id="portfolioSnapshotSection" style="display:none;">
+      <div class="section-card" id="portfolioSnapshotSection" style="opacity:0.5;">
         <div class="section-header">
           <div class="section-title">Existing Portfolio</div>
           <span class="section-badge" id="portfolioCount">0</span>
         </div>
         <div class="section-body">
+          <div id="portfolioEmpty" style="text-align:center;padding:16px 0;"><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">We haven't extracted portfolio data for this operator yet.</div></div>
+          <div id="portfolioDataWrap" style="display:none;">
           <div id="portfolioSummaryStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;"></div>
           <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;">
@@ -1706,6 +1709,7 @@ window._SIDEBAR_PAGE = "sponsor";
               <tfoot id="portfolioTableFoot"></tfoot>
             </table>
           </div>
+          </div><!-- /portfolioDataWrap -->
         </div>
       </div>
 
@@ -1966,7 +1970,8 @@ function renderSponsor(data) {
 
   // Investment Criteria
   if (s.investmentCriteria && Array.isArray(s.investmentCriteria) && s.investmentCriteria.length > 0) {
-    document.getElementById('investCriteriaSection').style.display = '';
+    document.getElementById('investCriteriaSection').style.opacity = '1';
+    document.getElementById('investCriteriaEmpty').style.display = 'none';
     var iconSvgs = {
       building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V12h6v10"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01"/></svg>',
       percent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
@@ -1991,7 +1996,9 @@ function renderSponsor(data) {
 
   // Existing Portfolio
   if (s.portfolioSnapshot && Array.isArray(s.portfolioSnapshot) && s.portfolioSnapshot.length > 0) {
-    document.getElementById('portfolioSnapshotSection').style.display = '';
+    document.getElementById('portfolioSnapshotSection').style.opacity = '1';
+    document.getElementById('portfolioEmpty').style.display = 'none';
+    document.getElementById('portfolioDataWrap').style.display = '';
     document.getElementById('portfolioCount').textContent = s.portfolioSnapshot.length;
     var totalPurchase = 0, totalValue = 0, totalSqft = 0, capSum = 0, capCount = 0;
     s.portfolioSnapshot.forEach(function(p) {
