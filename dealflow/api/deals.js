@@ -51,8 +51,7 @@ export default async function handler(req, res) {
         company:management_companies (
           id, operator_name, ceo, website, linkedin_ceo,
           invest_clearly_profile, founding_year, type,
-          asset_classes, total_investors, booking_url,
-          investment_criteria, portfolio_snapshot
+          asset_classes, total_investors, booking_url
         )
       `)
       .order('display_order', { ascending: true });
@@ -74,8 +73,8 @@ export default async function handler(req, res) {
         foundingYear: row.company.founding_year,
         type: row.company.type || '',
         bookingUrl: row.company.booking_url || '',
-        investmentCriteria: row.company.investment_criteria || [],
-        portfolioSnapshot: row.company.portfolio_snapshot || []
+        investmentCriteria: [],
+        portfolioSnapshot: []
       });
     }
 
