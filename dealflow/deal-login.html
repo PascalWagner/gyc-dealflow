@@ -722,12 +722,14 @@ function getMailAppInfo(email) {
   const isAndroid = /Android/i.test(navigator.userAgent);
   const isMobile = isIOS || isAndroid || window.matchMedia('(max-width: 767px)').matches;
 
-  // Map email domains to their app deep links and web URLs
+  // Universal links open native apps automatically on iOS/Android when the app is installed.
+  // Custom URL schemes (googlegmail://) fail silently in WKWebView and many mobile browsers,
+  // so we use web URLs that the OS intercepts via universal/app links.
   const providers = {
-    gmail: { label: 'Open Gmail', app: 'googlegmail:///', web: 'https://mail.google.com' },
-    outlook: { label: 'Open Outlook', app: 'ms-outlook://', web: 'https://outlook.live.com/mail' },
-    yahoo: { label: 'Open Yahoo Mail', app: 'ymail://mail', web: 'https://mail.yahoo.com' },
-    icloud: { label: 'Open Mail', app: 'message://', web: 'https://www.icloud.com/mail' },
+    gmail: { label: 'Open Gmail', url: 'https://mail.google.com/mail/u/0/#inbox', scheme: 'googlegmail:///' },
+    outlook: { label: 'Open Outlook', url: 'https://outlook.live.com/mail/0/inbox', scheme: 'ms-outlook://' },
+    yahoo: { label: 'Open Yahoo Mail', url: 'https://mail.yahoo.com', scheme: 'ymail://mail' },
+    icloud: { label: 'Open Mail', url: 'https://www.icloud.com/mail', scheme: 'message://' },
   };
 
   let provider = null;
@@ -742,6 +744,25 @@ function getMailAppInfo(email) {
   return { provider, providers, isCapacitor, isIOS, isAndroid, isMobile };
 }
 
+function openMailApp(email) {
+  const info = getMailAppInfo(email);
+  if (!info.provider) return;
+  const p = info.providers[info.provider];
+
+  // In Capacitor, use native App plugin to open URL scheme, with web fallback
+  if (info.isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.openUrl({ url: p.scheme }).catch(function() {
+      window.open(p.url, '_blank');
+    });
+    return;
+  }
+
+  // On mobile browsers, use the universal link (web URL) — the OS will
+  // intercept and open the native app if installed (e.g., Gmail app handles
+  // mail.google.com links). No custom scheme needed.
+  window.location.href = p.url;
+}
+
 function renderMailCta(containerId, email) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -754,20 +775,14 @@ function renderMailCta(containerId, email) {
 
   if (info.provider) {
     const p = info.providers[info.provider];
-    // On native or mobile, try app deep link first; fall back to web
-    const href = (info.isIOS || info.isAndroid) ? p.app : p.web;
-    let html = '<a class="open-mail-btn" href="' + href + '" target="_blank" rel="noopener">' + mailSvg + p.label + '</a>';
-    // Show web fallback link if using app deep link
-    if ((info.isIOS || info.isAndroid) && p.web) {
-      html += '<div class="open-mail-alt">Didn\'t open? <a href="' + p.web + '" target="_blank" rel="noopener">Open in browser</a></div>';
-    }
+    const safeEmail = email.replace(/'/g, "\\'");
+    let html = '<button class="open-mail-btn" onclick="openMailApp(\'' + safeEmail + '\')">' + mailSvg + p.label + '</button>';
     container.innerHTML = html;
   } else {
-    // Unknown provider on mobile — show generic open-mail button
-    // On iOS try Apple Mail, on Android use Gmail as most common default
-    const fallbackHref = info.isIOS ? 'message://' : 'https://mail.google.com';
+    // Unknown provider on mobile — show generic link to check email
+    const fallbackUrl = info.isIOS ? 'message://' : 'https://mail.google.com';
     const fallbackLabel = info.isIOS ? 'Open Mail' : 'Open Email';
-    container.innerHTML = '<a class="open-mail-btn" href="' + fallbackHref + '" target="_blank" rel="noopener">' + mailSvg + fallbackLabel + '</a>';
+    container.innerHTML = '<a class="open-mail-btn" href="' + fallbackUrl + '">' + mailSvg + fallbackLabel + '</a>';
   }
 }
 
