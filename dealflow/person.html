@@ -1225,22 +1225,6 @@ function renderPerson(data) {
 
   researchGrid.innerHTML = researchHtml;
 
-  // Load saved notes
-  var notesKey = 'gycPersonNotes_' + p.name.replace(/\s+/g, '_').toLowerCase();
-  var savedNotes = localStorage.getItem(notesKey);
-  if (savedNotes) {
-    try {
-      var parsed = JSON.parse(savedNotes);
-      document.getElementById('myNotes').value = parsed.text || '';
-      if (parsed.timestamp) {
-        document.getElementById('notesTimestamp').textContent = 'Last saved: ' + new Date(parsed.timestamp).toLocaleString();
-      }
-    } catch (e) {}
-  }
-
-  // Store current person for save
-  window._currentPerson = p;
-
   // Show content
   document.body.classList.add('page-loaded');
 }
@@ -1254,24 +1238,6 @@ var PERSON_PHOTOS = {
 function getPersonPhotoUrl(name) {
   if (!name) return null;
   return PERSON_PHOTOS[name.toLowerCase()] || null;
-}
-
-// ========== SAVE NOTES ==========
-function saveNotes() {
-  if (!window._currentPerson) return;
-  var notesKey = 'gycPersonNotes_' + window._currentPerson.name.replace(/\s+/g, '_').toLowerCase();
-  var text = document.getElementById('myNotes').value;
-  localStorage.setItem(notesKey, JSON.stringify({ text: text, timestamp: Date.now() }));
-  document.getElementById('notesTimestamp').textContent = 'Last saved: ' + new Date().toLocaleString();
-}
-
-// ========== GET INTRODUCED ==========
-function handleGetIntroduced() {
-  var p = window._currentPerson;
-  if (!p) return;
-  var subject = encodeURIComponent('Introduction Request: ' + p.name);
-  var body = encodeURIComponent('Hi Pascal,\n\nI\'d like to learn more about ' + p.name + '. Could you facilitate an introduction?\n\nThanks!');
-  window.open('mailto:pascal@growyourcashflow.com?subject=' + subject + '&body=' + body);
 }
 
 // ========== INIT ==========
