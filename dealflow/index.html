@@ -1845,15 +1845,13 @@ html.dark .credit-chart-legend-divider {
 
 /* Table View */
 .table-view {
-  display: none;
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   background: var(--bg-card);
-  border-radius: var(--radius);
   border: 1px solid var(--border);
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
+  border-radius: var(--radius);
+  min-width: 900px;
 }
 
 .table-view th, .table-view td {
@@ -5003,10 +5001,12 @@ const _supa = window.supabase.createClient(
     <div class="content-area">
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
       <div class="card-grid" id="cardGrid"></div>
-      <table class="table-view" id="tableView">
-        <thead id="tableHead"></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <div id="tableViewWrap" style="display:none;overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow-card);">
+        <table class="table-view" id="tableView" style="display:table;">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
       <div id="mapView" style="display:none"></div>
     </div>
   </div>
@@ -9453,7 +9453,7 @@ function renderAll() {
   }
 
   const grid = document.getElementById('cardGrid');
-  const table = document.getElementById('tableView');
+  const table = document.getElementById('tableViewWrap');
   const mapContainer = document.getElementById('mapView');
 
   // Invested tab: show portfolio summary view instead of deal cards
@@ -9525,7 +9525,7 @@ function renderAll() {
     renderMapView();
   } else {
     grid.style.display = 'none';
-    table.style.display = 'table';
+    table.style.display = '';
     mapContainer.style.display = 'none';
     renderTableHead();
     if (deals.length === 0) {
