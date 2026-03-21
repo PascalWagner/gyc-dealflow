@@ -11226,26 +11226,27 @@ function renderWizardStep() {
       html += '</div>';
     });
     html += '</div>';
-    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;">Most first-time LP investors start with $25\u201350K per deal.</div>';
+    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;">Most private investments require a minimum of $50K. <span style="color:var(--text-muted);opacity:0.6;">~25% of deals on our platform have a $50K minimum.</span></div>';
     html += '</div>';
 
-    // Max operator concentration
+    // Max loss tolerance (replaces operator concentration)
     html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How much of your portfolio would you put with one operator?</div>';
-    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Concentration risk: if one sponsor fails, how much of your portfolio is at risk?</div>';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s the max you\'d be comfortable losing in any single deal?</div>';
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Private investments are illiquid and carry real risk. This helps us flag concentration.</div>';
     var concOptions = [
-      { val: '10', label: '10%', desc: 'Very diversified' },
-      { val: '20', label: '20%', desc: 'Moderate' },
-      { val: '33', label: '33%', desc: 'Concentrated' },
-      { val: '50', label: '50%+', desc: 'High conviction' },
-      { val: 'no_limit', label: 'No limit', desc: 'Trust my picks' }
+      { val: '10', label: '1\u20132%', desc: 'of net worth', example: '~$25\u201350K' },
+      { val: '20', label: '3\u20135%', desc: 'of net worth', example: '~$75\u2013125K' },
+      { val: '33', label: '5\u201310%', desc: 'of net worth', example: '~$125\u2013250K' },
+      { val: '50', label: '10%+', desc: 'of net worth', example: '$250K+' },
+      { val: 'no_limit', label: 'No limit', desc: '', example: 'High conviction' }
     ];
     html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
     concOptions.forEach(function(opt) {
       var isSel = wizardData.maxOperatorPct === opt.val;
       html += '<div onclick="wizardData.maxOperatorPct=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 6px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
       html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
+      if (opt.desc) html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
+      html += '<div style="font-size:10px;color:var(--text-muted);opacity:0.6;margin-top:2px;">' + opt.example + '</div>';
       html += '</div>';
     });
     html += '</div></div>';
