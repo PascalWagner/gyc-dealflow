@@ -1680,7 +1680,7 @@ function renderAssetOverview(deals, propertyDetails) {
     .filter(function(d) { return d.investmentStrategy && d.investmentStrategy.length > 50; })
     .map(function(d) { return { text: d.investmentStrategy, op: d.managementCompany }; });
 
-  if (!items.length && !strategyTexts.length) return;
+  if (!items.length) return;
 
   section.style.display = 'block';
 
@@ -1692,13 +1692,6 @@ function renderAssetOverview(deals, propertyDetails) {
       }).join('') + '</div>';
   }
 
-  // Show each operator's strategy
-  strategyTexts.forEach(function(s) {
-    html += '<div class="overview-strategy">' +
-      '<div class="overview-strategy-label">Investment Thesis — ' + esc(s.op || 'Operator') + '</div>' +
-      '<div class="overview-strategy-text">' + esc(s.text) + '</div>' +
-    '</div>';
-  });
 
   el.innerHTML = html;
 }
