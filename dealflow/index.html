@@ -2345,16 +2345,35 @@ html.cap-ios #managersFilterSidebar.ios-filters-open {
 }
 
 /* ── Debt Fund page: collapse filter bar on iOS ────── */
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] > *:not(.ios-filter-row):not(.ios-filter-toggle) {
+html.cap-ios #debtFilterBar > *:not(.ios-filter-row):not(.ios-filter-toggle) {
   display: none !important;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > * {
+html.cap-ios #debtFilterBar.ios-filters-open > * {
   display: flex !important;
 }
-html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"] {
+html.cap-ios #debtFilterBar {
   flex-wrap: wrap !important;
   gap: 8px !important;
   padding: 10px 12px !important;
+}
+html.cap-ios #debtFilterBar.ios-filters-open > div:not(.ios-filter-row) {
+  width: calc(50% - 4px) !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+html.cap-ios #debtFilterBar.ios-filters-open > div:not(.ios-filter-row) select,
+html.cap-ios #debtFilterBar.ios-filters-open > div:not(.ios-filter-row) input {
+  width: 100% !important;
+  box-sizing: border-box;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+html.cap-ios #debtFilterBar.ios-filters-open > .buybox-toggle {
+  width: 100% !important;
+}
+html.cap-ios #debtFilterBar.ios-filters-open > button:last-child {
+  width: 100% !important;
 }
 
 /* ── Stats bar: single row, no wrapping ───────────── */
@@ -4814,11 +4833,12 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   display: none;
   position: relative;
   width: 100%;
-  height: calc(100vh - 180px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  height: calc(100vh - 150px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   min-height: 420px;
   overflow: hidden;
   touch-action: pan-y;
   padding: 0;
+  /* Stretch to fill: header(~50) + toggle(~44) + bottom-nav(~56) = ~150px */
 }
 .swipe-card-stack {
   position: relative;
@@ -6473,7 +6493,7 @@ const _supa = window.supabase.createClient(
       <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
 
       <!-- Debt Fund Filters -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+      <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
         <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
           <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
           Apply My Buy Box
@@ -9981,9 +10001,17 @@ function renderAll() {
   // Mobile swipe feed view
   var showSwipe = isMobileScreen() && mobileView === 'swipe' && currentTab === 'browse';
   if (swipeFeed) swipeFeed.style.display = showSwipe ? 'block' : 'none';
-  // Hide filter bar in swipe mode for max card space
+  // Hide filter bar, stats bar, checklist, and goal indicator in swipe mode for max card space
   var filterBar = document.querySelector('.filter-bar');
   if (filterBar) filterBar.style.display = showSwipe ? 'none' : '';
+  var statsBar = document.getElementById('statsBar');
+  if (statsBar) statsBar.style.display = showSwipe ? 'none' : '';
+  var goalIndicator = document.getElementById('goalSortIndicator');
+  if (goalIndicator && showSwipe) goalIndicator.style.display = 'none';
+  var milestoneChecklist = document.getElementById('dealsMilestoneChecklist');
+  if (milestoneChecklist) milestoneChecklist.style.display = showSwipe ? 'none' : '';
+  var stageDesc = document.getElementById('stageDescription');
+  if (stageDesc && showSwipe) stageDesc.style.display = 'none';
 
   if (showSwipe) {
     grid.style.display = 'none';
@@ -20526,6 +20554,24 @@ fetchBuyBoxFromGHL();
         </select>
       `;
       dealsFilter.insertBefore(row, dealsFilter.firstChild);
+    }
+
+    // Debt Fund Explorer filter bar
+    const debtFilter = document.getElementById('debtFilterBar');
+    if (debtFilter) {
+      const drow = document.createElement('div');
+      drow.className = 'ios-filter-row';
+      drow.style.cssText = 'display:flex!important;width:100%;gap:6px;padding:6px 0;align-items:center;flex-wrap:nowrap!important;';
+      drow.innerHTML = `
+        <input type="text" placeholder="Search funds..."
+          oninput="document.getElementById('debtSearchInput').value=this.value;syncDebtFilters();"
+          style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+        <button class="ios-filter-toggle" style="flex:1;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');document.getElementById('debtFilterBar').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+      `;
+      debtFilter.insertBefore(drow, debtFilter.firstChild);
     }
 
     // Managers page filter row

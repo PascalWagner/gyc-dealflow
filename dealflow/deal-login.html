@@ -434,7 +434,7 @@ body {
               We'll email you a secure link to sign in instantly — no password needed.
             </div>
             <div class="login-footer">
-              Don't have an account? <a style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signup')">Request access</a>
+              New here? <a style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signup')">Sign up</a>
             </div>
           </div>
           <div class="magic-sent" id="signinSent">
@@ -483,9 +483,9 @@ body {
               </select>
             </div>
             <div class="error-msg" id="signupError"></div>
-            <button class="btn-submit btn-submit-primary" onclick="handleSignUp()">Request Access</button>
+            <button class="btn-submit btn-submit-primary" onclick="handleSignUp()">Sign Up</button>
             <div class="login-footer">
-              Already have access? <a style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signin')">Sign in</a>
+              Already have an account? <a style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signin')">Sign in</a>
             </div>
           </div>
           <div class="magic-sent" id="signupSent">
@@ -618,8 +618,8 @@ function switchAuthTab(tab) {
     document.getElementById('cardDesc').textContent = 'Access the deal marketplace.';
   } else {
     document.getElementById('panel-signup').classList.add('active');
-    document.getElementById('cardTitle').textContent = 'Get started';
-    document.getElementById('cardDesc').textContent = 'Free access to the CRE deal marketplace.';
+    document.getElementById('cardTitle').textContent = 'Sign up';
+    document.getElementById('cardDesc').textContent = 'Create your free account.';
   }
   document.getElementById('signinForm').style.display = '';
   document.getElementById('signinSent').classList.remove('show');
