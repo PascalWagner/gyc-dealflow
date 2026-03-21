@@ -18199,7 +18199,6 @@ function renderDashboard() {
   } else {
     // ===== ACTIVE USER: Goal → Portfolio → Coaching =====
     var sections = heroHtml;
-    if (hasPortfolio) sections += statsRow;
     sections += portfolioHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
