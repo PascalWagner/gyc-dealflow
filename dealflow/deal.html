@@ -6256,9 +6256,12 @@ async function renderDeal() {
     geoMapHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="section-title">Investing Geography</span></div>';
     geoMapHtml += '<div class="section-body">';
 
-    // SVG map — continental US only (AK/HI don't render well at this scale)
+    // Two-column layout: map left, description right
     var allHighlighted = highlightedStates.length > 40;
-    geoMapHtml += '<div style="position:relative;width:100%;max-width:640px;margin:0 auto;background:linear-gradient(180deg,rgba(244,247,245,0.6) 0%,rgba(238,243,240,0.3) 100%);border-radius:12px;padding:20px 16px 12px;">';
+    geoMapHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center;">';
+
+    // Left: SVG map
+    geoMapHtml += '<div style="position:relative;width:100%;background:linear-gradient(180deg,rgba(244,247,245,0.6) 0%,rgba(238,243,240,0.3) 100%);border-radius:12px;padding:20px 16px 12px;">';
     geoMapHtml += '<svg viewBox="175 40 1060 530" style="width:100%;height:auto;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.06));" xmlns="http://www.w3.org/2000/svg">';
 
     // Background layer: fill all states with a solid base color to eliminate anti-aliasing gaps
@@ -6284,23 +6287,59 @@ async function renderDeal() {
       geoMapHtml += '<path d="' + statePaths[st] + '" fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '" stroke-linejoin="round">';
       geoMapHtml += '<title>' + st + '</title></path>';
     }
-
     geoMapHtml += '</svg></div>';
 
-    // Label underneath
+    // Right: description panel
+    geoMapHtml += '<div>';
+    // Region badge
     var geoLabel = deal.investingGeography || deal.location || '';
-    geoMapHtml += '<div style="text-align:center;margin-top:12px;">';
     if (highlightedStates.length > 0) {
-      geoMapHtml += '<span style="display:inline-block;padding:4px 12px;background:rgba(81,190,123,0.08);border:1px solid rgba(81,190,123,0.2);border-radius:20px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);">';
-      geoMapHtml += isNationwide ? 'Nationwide' : esc(geoLabel);
-      geoMapHtml += '</span>';
-    } else {
-      geoMapHtml += '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">' + esc(geoLabel) + '</span>';
+      geoMapHtml += '<div style="margin-bottom:12px;"><span style="display:inline-block;padding:4px 12px;background:rgba(81,190,123,0.08);border:1px solid rgba(81,190,123,0.2);border-radius:20px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);">'
+        + (isNationwide ? 'Nationwide' : esc(geoLabel)) + '</span></div>';
     }
+    // Address
     if (deal.address) {
-      geoMapHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:6px;">' + esc(deal.address) + '</div>';
+      geoMapHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">'
+        + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16" style="flex-shrink:0;margin-top:2px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+        + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">' + esc(deal.address) + '</div>'
+        + '</div>';
     }
-    geoMapHtml += '</div>';
+    // Market description
+    var _geoDesc = '';
+    if (isNationwide) {
+      _geoDesc = 'This deal invests across the entire United States, providing broad geographic diversification across multiple markets and regions.';
+    } else if (highlightedStates.length > 5) {
+      _geoDesc = 'This deal targets properties across ' + highlightedStates.length + ' states, offering regional diversification across ' + esc(geoLabel) + ' markets.';
+    } else if (highlightedStates.length > 1) {
+      // Reverse lookup state names
+      var _stateNames = { 'AL':'Alabama','AK':'Alaska','AZ':'Arizona','AR':'Arkansas','CA':'California','CO':'Colorado','CT':'Connecticut','DE':'Delaware','FL':'Florida','GA':'Georgia','HI':'Hawaii','ID':'Idaho','IL':'Illinois','IN':'Indiana','IA':'Iowa','KS':'Kansas','KY':'Kentucky','LA':'Louisiana','ME':'Maine','MD':'Maryland','MA':'Massachusetts','MI':'Michigan','MN':'Minnesota','MS':'Mississippi','MO':'Missouri','MT':'Montana','NE':'Nebraska','NV':'Nevada','NH':'New Hampshire','NJ':'New Jersey','NM':'New Mexico','NY':'New York','NC':'North Carolina','ND':'North Dakota','OH':'Ohio','OK':'Oklahoma','OR':'Oregon','PA':'Pennsylvania','RI':'Rhode Island','SC':'South Carolina','SD':'South Dakota','TN':'Tennessee','TX':'Texas','UT':'Utah','VT':'Vermont','VA':'Virginia','WA':'Washington','WV':'West Virginia','WI':'Wisconsin','WY':'Wyoming' };
+      var _stNames = highlightedStates.map(function(s) { return _stateNames[s] || s; });
+      _geoDesc = 'This deal focuses on ' + _stNames.slice(0, -1).join(', ') + ' and ' + _stNames[_stNames.length - 1] + '.';
+    } else if (highlightedStates.length === 1) {
+      var _stateNames1 = { 'AL':'Alabama','AK':'Alaska','AZ':'Arizona','AR':'Arkansas','CA':'California','CO':'Colorado','CT':'Connecticut','DE':'Delaware','FL':'Florida','GA':'Georgia','HI':'Hawaii','ID':'Idaho','IL':'Illinois','IN':'Indiana','IA':'Iowa','KS':'Kansas','KY':'Kentucky','LA':'Louisiana','ME':'Maine','MD':'Maryland','MA':'Massachusetts','MI':'Michigan','MN':'Minnesota','MS':'Mississippi','MO':'Missouri','MT':'Montana','NE':'Nebraska','NV':'Nevada','NH':'New Hampshire','NJ':'New Jersey','NM':'New Mexico','NY':'New York','NC':'North Carolina','ND':'North Dakota','OH':'Ohio','OK':'Oklahoma','OR':'Oregon','PA':'Pennsylvania','RI':'Rhode Island','SC':'South Carolina','SD':'South Dakota','TN':'Tennessee','TX':'Texas','UT':'Utah','VT':'Vermont','VA':'Virginia','WA':'Washington','WV':'West Virginia','WI':'Wisconsin','WY':'Wyoming' };
+      _geoDesc = 'This deal is concentrated in ' + (_stateNames1[highlightedStates[0]] || highlightedStates[0]) + '.';
+    }
+    if (_geoDesc) {
+      geoMapHtml += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;">' + _geoDesc + '</div>';
+    }
+    // Asset class + strategy context
+    var _geoMeta = [];
+    if (deal.assetClass) _geoMeta.push({ label: 'Asset Class', value: deal.assetClass });
+    if (deal.strategy) _geoMeta.push({ label: 'Strategy', value: deal.strategy });
+    if (deal.unitCount) _geoMeta.push({ label: 'Units', value: String(deal.unitCount).replace(/\B(?=(\d{3})+(?!\d))/g, ',') });
+    if (deal.propertyType) _geoMeta.push({ label: 'Property Type', value: deal.propertyType });
+    if (_geoMeta.length > 0) {
+      geoMapHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      for (var gi = 0; gi < _geoMeta.length; gi++) {
+        geoMapHtml += '<div style="padding:8px 12px;background:var(--bg-cream);border-radius:8px;">'
+          + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px;">' + esc(_geoMeta[gi].label) + '</div>'
+          + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">' + esc(_geoMeta[gi].value) + '</div>'
+          + '</div>';
+      }
+      geoMapHtml += '</div>';
+    }
+    geoMapHtml += '</div>'; // end right panel
+    geoMapHtml += '</div>'; // end grid
 
     geoMapHtml += '</div></div>';
   })();
