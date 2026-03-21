@@ -150,6 +150,7 @@ export default async function handler(req, res) {
           mcLinkedin: mc.linkedin_ceo || '',
           mcInvestClearly: mc.invest_clearly_profile || '',
           mcTotalInvestors: mc.total_investors,
+          mcBookingUrl: mc.booking_url || '',
           fees: d.fees || [],
           firstYrDepreciation: d.first_yr_depreciation,
           strategy: d.strategy,
