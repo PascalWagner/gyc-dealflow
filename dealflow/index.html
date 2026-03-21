@@ -4807,7 +4807,8 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 // Supabase Realtime client (anon key — respects RLS)
 const _supa = window.supabase.createClient(
   'https://nntzqyufmtypfjpusflm.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.pm6TDqZT37942PrVP0NQxtMiuucPuEicE32qVDebCZ4'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.pm6TDqZT37942PrVP0NQxtMiuucPuEicE32qVDebCZ4',
+  { auth: { detectSessionInUrl: false, persistSession: false, autoRefreshToken: false } }
 );
 </script>
 </head>
@@ -10292,11 +10293,43 @@ function getUser() {
 }
 
 // ========== AUTH GATE ==========
-(function enforceAuth() {
+// Try to refresh an expired token before redirecting to login
+(async function enforceAuth() {
   const user = getUser();
-  if (!user || !user.token || user.token === 'local-session') {
+  if (!user || user.token === 'local-session') {
     localStorage.removeItem('gycUser');
     window.location.href = 'deal-login.html';
+    return;
+  }
+  if (!user.token && user.refreshToken) {
+    // Token missing but refresh token exists — try to restore session
+    try {
+      const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
+      if (data?.session) {
+        user.token = data.session.access_token;
+        user.refreshToken = data.session.refresh_token;
+        localStorage.setItem('gycUser', JSON.stringify(user));
+        return; // Session restored
+      }
+    } catch (e) { /* fall through to redirect */ }
+    localStorage.removeItem('gycUser');
+    window.location.href = 'deal-login.html';
+    return;
+  }
+  // Token exists — check if it's expired and proactively refresh
+  if (user.refreshToken) {
+    try {
+      const payload = JSON.parse(atob(user.token.split('.')[1]));
+      const expiresIn = payload.exp * 1000 - Date.now();
+      if (expiresIn < 5 * 60 * 1000) { // less than 5 minutes left
+        const { data } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
+        if (data?.session) {
+          user.token = data.session.access_token;
+          user.refreshToken = data.session.refresh_token;
+          localStorage.setItem('gycUser', JSON.stringify(user));
+        }
+      }
+    } catch (e) { /* token still present, let it proceed */ }
   }
 })();
 
@@ -15518,21 +15551,38 @@ function filterAcademyCourses(level) {
 }
 
 // ========== JWT TOKEN REFRESH ==========
+// Refreshes the Supabase JWT using the stored refresh token.
+// Called on a 50-min interval AND when the tab regains visibility (critical for mobile
+// where setInterval is suspended when the browser is backgrounded).
+async function _refreshToken() {
+  const user = getUser();
+  if (!user || !user.refreshToken) return;
+  try {
+    const { data } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
+    if (data?.session) {
+      const u = getUser();
+      u.token = data.session.access_token;
+      u.refreshToken = data.session.refresh_token;
+      localStorage.setItem('gycUser', JSON.stringify(u));
+    }
+  } catch (e) { console.warn('Token refresh failed:', e.message); }
+}
 (function setupTokenRefresh() {
   const user = getUser();
   if (!user || !user.refreshToken) return;
-  // Refresh token every 50 minutes (Supabase tokens expire in 60 min)
-  setInterval(async () => {
+  // Background interval (works while tab stays open on desktop)
+  setInterval(_refreshToken, 50 * 60 * 1000);
+  // Visibility change (critical for mobile — fires when user switches back to tab)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const u = getUser();
+    if (!u || !u.token) return;
     try {
-      const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
-      if (data?.session) {
-        const u = getUser();
-        u.token = data.session.access_token;
-        u.refreshToken = data.session.refresh_token;
-        localStorage.setItem('gycUser', JSON.stringify(u));
-      }
-    } catch (e) { console.warn('Token refresh failed:', e.message); }
-  }, 50 * 60 * 1000);
+      const payload = JSON.parse(atob(u.token.split('.')[1]));
+      const expiresIn = payload.exp * 1000 - Date.now();
+      if (expiresIn < 10 * 60 * 1000) _refreshToken(); // refresh if <10 min left
+    } catch (e) { _refreshToken(); } // can't parse token, refresh anyway
+  });
 })();
 
 // ========== ADMIN MANAGE DATABASE ==========
