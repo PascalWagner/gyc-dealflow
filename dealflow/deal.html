@@ -4837,7 +4837,10 @@ async function renderDeal() {
   // --- 2b. Social Proof — LinkedIn-style avatar stack (loaded async into hero) ---
   var socialProofHtml = '';
   (function loadDealSocialProof() {
-    fetch('/api/deal-stats?dealId=' + encodeURIComponent(deal.id))
+    var _spToken = '';
+    try { _spToken = JSON.parse(localStorage.getItem('gycUser') || '{}').token || ''; } catch(e) {}
+    var _spHeaders = _spToken ? { 'Authorization': 'Bearer ' + _spToken } : {};
+    fetch('/api/deal-stats?dealId=' + encodeURIComponent(deal.id), { headers: _spHeaders })
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(stats) {
         if (!stats) return;

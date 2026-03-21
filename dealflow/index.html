@@ -18915,7 +18915,8 @@ function showOnboarding() {
     targetCashFlow: '',
     currentCashFlow: '',
     assetClasses: [],
-    checkSize: ''
+    checkSize: '',
+    sharePortfolio: false
   };
 
   var overlay = document.createElement('div');
@@ -18931,7 +18932,7 @@ function showOnboarding() {
 
   function renderDots(step) {
     var html = '<div class="onboarding-step-dots">';
-    for (var d = 1; d <= 4; d++) {
+    for (var d = 1; d <= 5; d++) {
       var cls = d === step ? ' active' : (d < step ? ' done' : '');
       html += '<div class="onboarding-dot' + cls + '"></div>';
     }
@@ -19036,6 +19037,40 @@ function showOnboarding() {
       html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
 
     } else if (step === 4) {
+      // ===== INVESTOR NETWORK =====
+      html += '<div class="onboarding-title">Join the LP Network</div>';
+      html += '<div class="onboarding-subtitle">See who else is investing in the same deals as you — and let them see you too.</div>';
+
+      html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px 24px;margin:20px 0 16px;">';
+      // Avatar stack preview
+      html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">';
+      html += '<div style="display:flex;">';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:#51BE7B;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid rgba(81,190,123,0.06);">PW</div>';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:#3b82f6;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">JR</div>';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:#f59e0b;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">CR</div>';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">+8</div>';
+      html += '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.4;"><strong style="color:var(--text-dark);">Pascal Wagner</strong>, <strong style="color:var(--text-dark);">Joseph Root</strong>, and 9 others invested</div>';
+      html += '</div>';
+
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">';
+      html += 'When you opt in, other members can see your name on deals you\'ve invested in. This helps LPs coordinate, share due diligence, and connect with co-investors. You can toggle individual deals on or off anytime.';
+      html += '</div>';
+      html += '</div>';
+
+      // Opt-in toggle
+      html += '<label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:16px 0;margin:0 4px;">';
+      html += '<input type="checkbox" id="obSharePortfolio" ' + (obData.sharePortfolio ? 'checked' : '') + ' onchange="window._obToggleShare(this.checked)" style="width:22px;height:22px;cursor:pointer;accent-color:var(--green);flex-shrink:0;">';
+      html += '<div>';
+      html += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Yes, show my name on deals I invest in</div>';
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">You can only see others if you also opt in</div>';
+      html += '</div>';
+      html += '</label>';
+
+      html += '<button class="onboarding-cta" onclick="window._obGo(5)">Next</button>';
+      html += '<button class="onboarding-skip" onclick="window._obGo(5)">Skip</button>';
+
+    } else if (step === 5) {
       // ===== ALL SET =====
       var firstName = getUserFirstName();
       var targetVal = obData.targetCashFlow ? '$' + parseInt(obData.targetCashFlow).toLocaleString() : '';
@@ -19085,6 +19120,14 @@ function showOnboarding() {
     if (!wd.firstName) wd.firstName = user;
     localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wd));
 
+    // Save share_portfolio preference
+    if (obData.sharePortfolio) {
+      var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+      u.sharePortfolio = true;
+      localStorage.setItem('gycUser', JSON.stringify(u));
+      syncToBackend('profile', { share_portfolio: true });
+    }
+
     // Also save to gycGoals if target is set
     if (obData.targetCashFlow || obData.currentCashFlow) {
       var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null') || {};
@@ -19098,7 +19141,7 @@ function showOnboarding() {
   // Navigation
   window._obGo = function(step) {
     // Save partial data when advancing
-    if (obStep === 2 || obStep === 3) saveOnboardingData();
+    if (obStep === 2 || obStep === 3 || obStep === 4) saveOnboardingData();
     renderStep(step);
   };
 
@@ -19134,6 +19177,11 @@ function showOnboarding() {
       btn.classList.add('selected');
       btn.querySelector('.ob-chip-check').innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
     }
+  };
+
+  // Share portfolio toggle
+  window._obToggleShare = function(checked) {
+    obData.sharePortfolio = checked;
   };
 
   // Check size selection
