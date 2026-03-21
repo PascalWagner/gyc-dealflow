@@ -1971,6 +1971,15 @@ html.dark .credit-chart-legend-divider {
 .table-status-pill.open { background: rgba(81,190,123,0.08); color: var(--green); }
 .table-status-pill.evergreen { background: rgba(59,130,246,0.08); color: var(--blue); }
 
+/* Manager Cards */
+.manager-card { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);position:relative; }
+.manager-card-header { display:flex;align-items:center;gap:14px;margin-bottom:14px; }
+.manager-card-avatar { width:44px;height:44px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;font-family:var(--font-ui);flex-shrink:0; }
+.manager-card-name { font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.manager-card-meta { font-size:12px;color:var(--text-secondary); }
+.manager-card-badges { display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px; }
+.manager-card-link { font-size:12px;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px; }
+
 /* Responsive */
 @media (max-width: 1200px) {
   .card-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2031,6 +2040,17 @@ html.dark .credit-chart-legend-divider {
 
   /* ── Mobile: Sidebar overlay backdrop ── */
   .sidebar.open ~ .sidebar-backdrop { display: block; }
+
+  /* ── Mobile: Manager cards ── */
+  .manager-card { padding: 14px !important; }
+  .manager-card-header { gap: 10px !important; margin-bottom: 10px !important; }
+  .manager-card-avatar { width: 36px !important; height: 36px !important; font-size: 12px !important; border-radius: 8px !important; }
+  .manager-card-name { font-size: 14px !important; }
+  .manager-card-meta { font-size: 11px !important; }
+  .manager-card-badges { gap: 3px !important; margin-bottom: 8px !important; }
+  .manager-card-link { font-size: 11px !important; }
+  #managersGrid { gap: 8px !important; }
+  #page-managers .content-area { padding: 12px !important; padding-bottom: 80px !important; }
 }
 
 /* Mobile Bottom Tab Bar */
@@ -5409,22 +5429,23 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="filter-bar" style="padding:12px 24px;">
       <input type="text" id="managersNameSearch" oninput="renderManagersPage()" placeholder="Search managers..." style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);min-width:180px;box-sizing:border-box;">
-      <select id="managersAssetFilter" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+      <select id="managersAssetFilter" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="">All Asset Classes</option>
       </select>
-      <select id="managersTypeFilter" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+      <select id="managersTypeFilter" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="">All Types</option>
         <option value="Operator">Operator</option>
         <option value="Fund Manager">Fund Manager</option>
         <option value="Capital Allocator">Capital Allocator</option>
+        <option value="Syndicator">Syndicator</option>
       </select>
-      <select id="managersMinDeals" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+      <select id="managersMinDeals" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="0">Any # Deals</option>
         <option value="3">3+ deals</option>
         <option value="5">5+ deals</option>
         <option value="10">10+ deals</option>
       </select>
-      <select id="managersSortBy" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+      <select id="managersSortBy" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="deals">Most Deals</option>
         <option value="name">Name (A-Z)</option>
         <option value="newest">Newest First</option>
@@ -13991,22 +14012,18 @@ function renderManagersPage() {
       const websiteUrl = c.website ? (c.website.startsWith('http') ? c.website : 'https://' + c.website) : '';
       const websiteDisplay = c.website ? c.website.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
 
-      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);position:relative;" onclick="navigateTo('deals');setTimeout(function(){var s=document.getElementById('filterSearch');if(s){s.value='${c.name.replace(/'/g, "\\'")}';s.dispatchEvent(new Event('input'));}},100)" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
-          <div style="width:44px;height:44px;border-radius:10px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;font-family:var(--font-ui);flex-shrink:0;">${initials}</div>
+      return `<div class="manager-card" onclick="navigateTo('deals');setTimeout(function(){var s=document.getElementById('filterSearch');if(s){s.value='${c.name.replace(/'/g, "\\'")}';s.dispatchEvent(new Event('input'));}},100)" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+        <div class="manager-card-header">
+          <div class="manager-card-avatar">${initials}</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
-            <div style="font-size:12px;color:var(--text-secondary);">${c.ceo ? c.ceo : ''} ${c.ceo && c.type ? '·' : ''} ${c.type || ''}</div>
-          </div>
-          <div style="text-align:center;flex-shrink:0;">
-            <div style="font-size:22px;font-weight:800;color:var(--primary);">${c.dealCount}</div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">deals</div>
+            <div class="manager-card-name">${c.name}</div>
+            <div class="manager-card-meta">${c.ceo ? c.ceo : ''} ${c.ceo && c.type ? '·' : ''} ${c.type || ''}</div>
           </div>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">
+        <div class="manager-card-badges">
           ${assetBadges}${moreCount > 0 ? `<span style="display:inline-block;padding:2px 8px;background:var(--bg-main);border:1px solid var(--border);border-radius:12px;font-size:10px;font-weight:600;color:var(--text-muted);">+${moreCount}</span>` : ''}
         </div>
-        ${websiteUrl ? `<a href="${websiteUrl}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--primary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${websiteDisplay}</a>` : ''}
+        ${websiteUrl ? `<a href="${websiteUrl}" target="_blank" onclick="event.stopPropagation()" class="manager-card-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${websiteDisplay}</a>` : ''}
       </div>`;
     }).join('');
 
@@ -20033,24 +20050,27 @@ fetchBuyBoxFromGHL();
       dealsFilter.insertBefore(row, dealsFilter.firstChild);
     }
 
-    // Managers page filter toggle
-    const managersContent = document.querySelector('#page-managers .content-area');
-    if (managersContent) {
-      const sidebar = document.getElementById('managersFilterSidebar');
-      if (sidebar) {
-        const toggle = document.createElement('div');
-        toggle.style.cssText = 'padding:10px 0;display:flex;gap:8px;align-items:center;';
-        toggle.innerHTML = `
-          <input type="text" id="managersNameSearchMobile" placeholder="Search managers..."
-            oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();"
-            style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
-          <button class="ios-filter-toggle" onclick="this.classList.toggle('open');document.getElementById('managersFilterSidebar').classList.toggle('ios-filters-open');">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-            Filters
-          </button>
-        `;
-        managersContent.insertBefore(toggle, sidebar);
-      }
+    // Managers page filter row
+    const managersFilter = document.querySelector('#page-managers .filter-bar');
+    if (managersFilter) {
+      const mRow = document.createElement('div');
+      mRow.className = 'ios-filter-row';
+      mRow.style.cssText = 'display:flex!important;width:100%;gap:6px;padding:6px 0;align-items:center;flex-wrap:nowrap!important;';
+      mRow.innerHTML = `
+        <input type="text" placeholder="Search managers..."
+          oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();"
+          style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+        <button class="ios-filter-toggle" style="flex:0 0 auto;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+        <select style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;" onchange="document.getElementById('managersSortBy').value=this.value;renderManagersPage();">
+          <option value="deals">Most Deals</option>
+          <option value="name">A-Z</option>
+          <option value="newest">Newest</option>
+        </select>
+      `;
+      managersFilter.insertBefore(mRow, managersFilter.firstChild);
     }
   }
 })();
