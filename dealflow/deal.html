@@ -870,7 +870,9 @@ body {
   .deal-header-inner { flex-direction: column; align-items: flex-start; }
   .hero-right { flex-direction: row; align-items: center; gap: 12px; text-align: left; }
   .hero-operator-photo { width: 48px; height: 48px; font-size: 18px; }
-  .hero-metrics { gap: 16px; }
+  .hero-metrics { gap: 12px 16px; }
+  .hero-metric-value { font-size: 18px; }
+  .hero-type-icon { width: 60px !important; height: 60px !important; opacity: 0.15 !important; }
 }
 @media (max-width: 900px) {
   .deal-page-content > div[style*="grid-template-columns: 2fr 1fr"],
@@ -878,6 +880,71 @@ body {
     display: flex !important;
     flex-direction: column !important;
   }
+}
+/* ====== MOBILE: Stack all inline 2-col grids ====== */
+@media (max-width: 768px) {
+  /* Assembly-level grids: deal terms+operator, SEC+buybox */
+  .deal-page-content div[style*="grid-template-columns:2fr 1fr"],
+  .deal-page-content div[style*="grid-template-columns: 2fr 1fr"],
+  .deal-page-content div[style*="grid-template-columns:1fr 2fr"],
+  .deal-page-content div[style*="grid-template-columns: 1fr 2fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* All 1fr 1fr grids inside sections (thesis, SEC metrics, case study, stress test, memo) */
+  .deal-page-content div[style*="grid-template-columns:1fr 1fr"],
+  .deal-page-content div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* 3-column metric grids */
+  .deal-page-content div[style*="grid-template-columns:repeat(3"],
+  .deal-page-content div[style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* Cash flow table: horizontal scroll */
+  .cf-table { font-size: 11px; }
+  .cf-table th, .cf-table td { padding: 8px 8px; white-space: nowrap; }
+  .cf-table .cf-summary-row td { white-space: normal; }
+  /* Overlay padding on mobile */
+  .stress-test-coming-soon > .stress-test-overlay { padding: 20px 24px !important; }
+  /* Fund comparison table scroll */
+  .deal-page-content div[style*="overflow-x:auto"] table[style*="min-width:700px"] {
+    min-width: 500px !important;
+    font-size: 11px;
+  }
+  /* Hero summary max-width */
+  .deal-page-content div[style*="max-width: 560px"],
+  .deal-page-content div[style*="max-width:560px"] {
+    max-width: 100% !important;
+  }
+  /* Journey bar: shrink steps */
+  .journey-bar { padding: 10px 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .journey-step { font-size: 9px; padding: 3px 4px; }
+  .journey-step .step-dot { width: 24px; height: 24px; font-size: 11px; }
+  .journey-connector { min-width: 8px; max-width: 20px; }
+  /* Cash flow table: scrollable wrapper */
+  .section-body > div[id*="_table"] { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* Peer comparison cards */
+  .deal-page-content div[style*="minmax(155px"] { gap: 8px !important; }
+  /* Tags in hero */
+  .deal-tags { flex-wrap: wrap; gap: 6px !important; }
+  .deal-tag { font-size: 11px !important; padding: 3px 10px !important; }
+  /* Office hours CTA */
+  .deal-page-content div[style*="display:flex"][style*="justify-content:space-between"] {
+    flex-direction: column !important;
+    gap: 12px !important;
+    align-items: flex-start !important;
+  }
+}
+@media (max-width: 480px) {
+  .deal-page-content div[style*="grid-template-columns:repeat(3"],
+  .deal-page-content div[style*="grid-template-columns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+  .metrics-strip { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .deal-name { font-size: 20px !important; }
+  .hero-metrics { flex-wrap: wrap !important; }
+  .cf-table { font-size: 10px; }
+  .cf-table th, .cf-table td { padding: 6px 6px; }
 }
 
 .deal-name {
@@ -5118,7 +5185,7 @@ async function renderDeal() {
     // Name and title — always link to operator page
     var _opUrl = 'sponsor.html?company=' + encodeURIComponent(deal.managementCompany);
     if (deal.ceo) {
-      operatorHtml += '<div class="operator-name">' + esc(deal.ceo) + '</div>';
+      operatorHtml += '<div class="operator-name"><a href="person.html?name=' + encodeURIComponent(deal.ceo) + '" style="color:var(--text-dark);text-decoration:none;">' + esc(deal.ceo) + '</a></div>';
       operatorHtml += '<div class="operator-title">CEO, <a href="' + _opUrl + '" style="color:var(--primary);text-decoration:none;">' + esc(deal.managementCompany) + '</a></div>';
     } else {
       operatorHtml += '<div class="operator-name"><a href="' + _opUrl + '" style="color:var(--text-dark);text-decoration:none;">' + esc(deal.managementCompany) + '</a></div>';

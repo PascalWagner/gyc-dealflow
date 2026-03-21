@@ -1317,7 +1317,7 @@ function renderSponsor(data) {
 
   // CEO
   if (s.ceo) {
-    document.getElementById('sponsorCeo').innerHTML = 'CEO: <strong>' + escHtml(s.ceo) + '</strong>';
+    document.getElementById('sponsorCeo').innerHTML = 'CEO: <a href="person.html?name=' + encodeURIComponent(s.ceo) + '" style="color:rgba(255,255,255,0.85);font-weight:600;text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);">' + escHtml(s.ceo) + '</a>';
   }
 
   // Tags
@@ -1473,16 +1473,17 @@ function renderSponsor(data) {
   const peopleGrid = document.getElementById('peopleGrid');
   let peopleHtml = '';
   if (s.ceo) {
-    peopleHtml += '<div class="person-card">' +
+    peopleHtml += '<a href="person.html?name=' + encodeURIComponent(s.ceo) + '" class="person-card" style="text-decoration:none;color:inherit;">' +
       '<div class="person-avatar">' + getInitials(s.ceo) + '</div>' +
       '<div class="person-info">' +
         '<div class="person-name">' + escHtml(s.ceo) + '</div>' +
         '<div class="person-role">Chief Executive Officer</div>' +
         '<div class="person-links">' +
-          (s.linkedinCeo ? '<a href="' + escAttr(s.linkedinCeo) + '" target="_blank" rel="noopener" class="person-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>' : '') +
+          (s.linkedinCeo ? '<a href="' + escAttr(s.linkedinCeo) + '" target="_blank" rel="noopener" class="person-link" onclick="event.stopPropagation();"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>' : '') +
+          '<span class="person-link">View Profile &rarr;</span>' +
         '</div>' +
       '</div>' +
-    '</div>';
+    '</a>';
   }
   // Placeholder for additional team
   peopleHtml += '<div class="person-card" style="border-style:dashed;opacity:0.5;">' +
