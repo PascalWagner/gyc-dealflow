@@ -843,6 +843,15 @@ html.dark .admin-search-input { background: var(--bg-sidebar-hover); }
   border-color: #D4C9AD;
 }
 
+.deal-card.no-deck {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+.deal-card.no-deck:hover {
+  opacity: 0.7;
+  filter: grayscale(0.3);
+}
+
 .card-header {
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border-light);
@@ -8563,6 +8572,7 @@ function renderCreditCard(deal) {
   const hasChart = fundReturns.length >= 2;
   const typeLabel = creditBadgeLabel(deal);
   const strategy = getCreditStrategy(deal);
+  const hasDocs = !!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl);
 
   // Audit badge
   let auditBadge = '';
@@ -8603,7 +8613,7 @@ function renderCreditCard(deal) {
 
   const showCmpCheck = (currentTab === 'saved' || currentTab === 'vetting');
   const html = `
-    <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
+    <div class="deal-card${hasDocs ? '' : ' no-deck'}" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
       ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
@@ -8889,10 +8899,11 @@ function renderCard(deal) {
   const hero = getAssetHero(deal.assetClass);
   const strategy = getEquityStrategy(deal);
   const mgr = getManagerTier(deal);
+  const hasDocs = !!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl);
 
   var showCompareCheck = (currentTab === 'saved' || currentTab === 'vetting');
   return `
-    <div class="deal-card" data-id="${deal.id}">
+    <div class="deal-card${hasDocs ? '' : ' no-deck'}" data-id="${deal.id}">
       ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
@@ -10516,13 +10527,14 @@ let wizardStep = 0;
 let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Flow: 0=goal, 1/2/3=target, 4=capital, 9=asset classes, 10=strategies, 11=deal prefs, 5/6/7=plan, 8=done
+// Flow v3: 0=goal, 1=capital timeline, 2/3/4=branch target, 5=risk & concentration,
+//   6=asset classes, 7=strategies, 8=deal prefs, 9=LP network, 10/11/12=plan, 13=done
 const ONBOARDING_FLOW = {
-  common_start: [0],
-  cashflow: [1, 4, 9, 10, 11, 5],
-  growth: [2, 4, 9, 10, 11, 6],
-  tax: [3, 4, 9, 10, 11, 7],
-  common_end: [8]
+  common_start: [0, 1],
+  cashflow: [2, 5, 6, 7, 8, 9, 10],
+  growth: [3, 5, 6, 7, 8, 9, 11],
+  tax: [4, 5, 6, 7, 8, 9, 12],
+  common_end: [13]
 };
 
 function getStepSequence() {
@@ -10530,7 +10542,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Income Target', 'Growth Target', 'Tax Target', 'Capital', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Asset Classes', 'Strategy', 'Preferences'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Income Target', 'Growth Target', 'Tax Target', 'Risk', 'Asset Classes', 'Strategy', 'Preferences', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -10541,7 +10553,9 @@ function getPhaseLabel() {
 const WIZARD_STEPS = [
   // 0: Goal selection (all paths) — auto-advance on tap
   { type: 'goalSelect' },
-  // 1: Cash flow target
+  // 1: Capital timeline (all paths)
+  { type: 'capitalTimeline' },
+  // 2: Cash flow target
   { type: 'targetInput', branch: 'cashflow',
     title: 'How much passive income do you want?',
     suffix: '/ year',
@@ -10552,50 +10566,44 @@ const WIZARD_STEPS = [
     calcFn: function(v) {
       const mo = Math.round(v / 12).toLocaleString();
       return 'That\u2019s $' + mo + '/mo in passive income.';
-    }
+    },
+    timerSec: 30
   },
-  // 2: Growth target
+  // 3: Growth target
   { type: 'targetInput', branch: 'growth',
-    title: 'How much do you want to invest?',
+    title: 'How much do you want to grow your portfolio to?',
     suffix: '',
     key: 'growthCapital',
     defaultVal: '500000',
-    presets: [100000, 250000, 500000, 1000000, 2000000],
-    presetLabels: ['$100K','$250K','$500K','$1M','$2M+'],
+    presets: [250000, 500000, 1000000, 2000000, 5000000],
+    presetLabels: ['$250K','$500K','$1M','$2M','$5M+'],
     calcFn: function(v) {
-      const doubled = (v * 2);
-      return '$' + v.toLocaleString() + ' \u2192 $' + doubled.toLocaleString() + ' (2x in 5 years \u2248 15% IRR)';
-    }
+      const cap12 = parseDollar(wizardData.capital12mo) || v;
+      const mult = cap12 > 0 ? (v / cap12).toFixed(1) : '2.0';
+      return '$' + cap12.toLocaleString() + ' \u2192 $' + v.toLocaleString() + ' (' + mult + 'x target)';
+    },
+    timerSec: 30
   },
-  // 3: Tax target
-  { type: 'targetInput', branch: 'tax',
-    title: 'How much taxable income do you want to offset?',
-    suffix: '',
-    key: 'taxableIncome',
-    defaultVal: '200000',
-    presets: [50000, 100000, 200000, 500000, 1000000],
-    presetLabels: ['$50K','$100K','$200K','$500K','$1M+'],
-    calcFn: function(v) {
-      const saved = Math.round(v * 0.37).toLocaleString();
-      return 'At a 37% bracket, that\u2019s ~$' + saved + ' back in your pocket.';
-    }
-  },
-  // 4: Capital + check size (sentence-style)
-  { type: 'sentenceInput' },
-  // 5: Plan — cash flow
-  { type: 'planOutput', branch: 'cashflow' },
-  // 6: Plan — growth
-  { type: 'planOutput', branch: 'growth' },
-  // 7: Plan — tax
-  { type: 'planOutput', branch: 'tax' },
-  // 8: Completion
-  { type: 'completion' },
-  // 9: Asset class preferences (goal-contextualized)
+  // 4: Tax target (with income structure + RE pro status)
+  { type: 'taxTarget' },
+  // 5: Risk & concentration
+  { type: 'riskConcentration' },
+  // 6: Asset class preferences (goal-contextualized)
   { type: 'assetClassSelect' },
-  // 10: Strategy preferences (goal-contextualized)
+  // 7: Strategy preferences (goal-contextualized)
   { type: 'strategySelect' },
-  // 11: Deal structure preferences (lockup, distributions, instruments)
-  { type: 'dealPrefs' }
+  // 8: Deal structure preferences (lockup, distributions, accreditation)
+  { type: 'dealPrefs' },
+  // 9: LP Network opt-in
+  { type: 'lpNetwork' },
+  // 10: Plan — cash flow
+  { type: 'planOutput', branch: 'cashflow' },
+  // 11: Plan — growth
+  { type: 'planOutput', branch: 'growth' },
+  // 12: Plan — tax
+  { type: 'planOutput', branch: 'tax' },
+  // 13: Completion
+  { type: 'completion' }
 ];
 
 // Asset class definitions with goal-specific context
@@ -19270,22 +19278,16 @@ function renderDashboardMilestoneProgress() {
 }
 
 // ========== NEW USER ONBOARDING (4-step) ==========
+// ========== PRODUCT TOUR (5 educational slides, no forms) ==========
 function showOnboarding() {
-  if (localStorage.getItem('gycOnboardingComplete')) return;
+  if (localStorage.getItem('gycTourComplete')) return;
   if (!localStorage.getItem('gycUser')) return;
 
-  // Remove any existing onboarding overlay
   var existing = document.getElementById('onboardingOverlay');
   if (existing) existing.remove();
 
-  var obStep = 1;
-  var obData = {
-    targetCashFlow: '',
-    currentCashFlow: '',
-    assetClasses: [],
-    checkSize: '',
-    sharePortfolio: false
-  };
+  var tourStep = 1;
+  var totalSteps = 5;
 
   var overlay = document.createElement('div');
   overlay.className = 'onboarding-overlay';
@@ -19294,13 +19296,13 @@ function showOnboarding() {
   function getUserFirstName() {
     try {
       var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-      return u.firstName || (u.name || '').split(' ')[0] || 'Investor';
-    } catch(e) { return 'Investor'; }
+      return u.firstName || (u.name || '').split(' ')[0] || 'there';
+    } catch(e) { return 'there'; }
   }
 
   function renderDots(step) {
     var html = '<div class="onboarding-step-dots">';
-    for (var d = 1; d <= 5; d++) {
+    for (var d = 1; d <= totalSteps; d++) {
       var cls = d === step ? ' active' : (d < step ? ' done' : '');
       html += '<div class="onboarding-dot' + cls + '"></div>';
     }
@@ -19309,302 +19311,120 @@ function showOnboarding() {
   }
 
   function renderStep(step) {
-    obStep = step;
+    tourStep = step;
     var html = '<div class="onboarding-modal"><div class="ob-step-content">';
     html += renderDots(step);
 
     if (step === 1) {
       // ===== WELCOME =====
-      html += '<div class="onboarding-title">Welcome to Cashflow Academy</div>';
-      html += '<div class="onboarding-subtitle">Let\'s set up your deal finder in under 2 minutes</div>';
+      var firstName = getUserFirstName();
+      html += '<div style="font-size:48px;margin-bottom:8px;">&#128075;</div>';
+      html += '<div class="onboarding-title">Hey ' + firstName + ', welcome to the Deal Database</div>';
+      html += '<div class="onboarding-subtitle">Let me show you around. This takes about 30 seconds.</div>';
       html += '<div class="onboarding-value-props">';
-      html += '<div class="onboarding-value-prop">';
-      html += '  <div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>';
-      html += '  <div class="onboarding-value-prop-text">Set your income goal</div>';
+      html += '<div class="onboarding-value-prop"><div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div><div class="onboarding-value-prop-text">Browse 50+ vetted deals</div></div>';
+      html += '<div class="onboarding-value-prop"><div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="onboarding-value-prop-text">Build your personalized buy box</div></div>';
+      html += '<div class="onboarding-value-prop"><div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="onboarding-value-prop-text">Connect with other LPs</div></div>';
       html += '</div>';
-      html += '<div class="onboarding-value-prop">';
-      html += '  <div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>';
-      html += '  <div class="onboarding-value-prop-text">Build your buy box</div>';
-      html += '</div>';
-      html += '<div class="onboarding-value-prop">';
-      html += '  <div class="onboarding-value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>';
-      html += '  <div class="onboarding-value-prop-text">Get matched with deals</div>';
-      html += '</div>';
-      html += '</div>';
-      html += '<button class="onboarding-cta" onclick="window._obGo(2)">Let\'s Go</button>';
-      html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
+      html += '<button class="onboarding-cta" onclick="window._tourGo(2)">Show Me Around</button>';
+      html += '<button class="onboarding-skip" onclick="window._tourSkip()">Skip tour</button>';
 
     } else if (step === 2) {
-      // ===== INCOME GOAL =====
-      html += '<div class="onboarding-title">What\'s your passive income goal?</div>';
-      html += '<div class="onboarding-subtitle">This helps us match you with the right deals and track your progress.</div>';
-
-      html += '<div class="ob-preset-group">';
-      html += '<div class="ob-preset-label">Target Passive Income</div>';
-      html += '<div class="ob-preset-grid">';
-      var targets = ['25000', '50000', '100000', '200000', '500000'];
-      var targetLabels = ['$25K/yr', '$50K/yr', '$100K/yr', '$200K/yr', '$500K/yr'];
-      for (var t = 0; t < targets.length; t++) {
-        var sel = obData.targetCashFlow === targets[t] ? ' selected' : '';
-        html += '<button class="ob-preset-btn' + sel + '" onclick="window._obSelectTarget(\'' + targets[t] + '\', this)">' + targetLabels[t] + '</button>';
-      }
+      // ===== BROWSE & SAVE =====
+      html += '<div style="font-size:48px;margin-bottom:8px;">&#128278;</div>';
+      html += '<div class="onboarding-title">Browse & Save Deals</div>';
+      html += '<div class="onboarding-subtitle">Every deal is vetted before it hits the database.</div>';
+      html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;text-align:left;">';
+      html += '<div style="display:flex;flex-direction:column;gap:16px;">';
+      html += '<div style="display:flex;align-items:flex-start;gap:12px;"><div style="width:32px;height:32px;border-radius:8px;background:rgba(81,190,123,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg></div><div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">Save deals you like</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Click the bookmark icon to add any deal to your Interested list</div></div></div>';
+      html += '<div style="display:flex;align-items:flex-start;gap:12px;"><div style="width:32px;height:32px;border-radius:8px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">Filter by your criteria</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Search by asset class, strategy, return target, or minimum investment</div></div></div>';
+      html += '<div style="display:flex;align-items:flex-start;gap:12px;"><div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg></div><div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">Compare side by side</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Add deals to comparison to see fees, returns, and terms together</div></div></div>';
       html += '</div></div>';
-
-      html += '<div class="ob-preset-group">';
-      html += '<div class="ob-preset-label">Current Passive Income</div>';
-      html += '<div class="ob-preset-grid">';
-      var currents = ['0', '25000', '50000', '100000'];
-      var currentLabels = ['$0', '$25K', '$50K', '$100K+'];
-      for (var c = 0; c < currents.length; c++) {
-        var sel2 = obData.currentCashFlow === currents[c] ? ' selected' : '';
-        html += '<button class="ob-preset-btn' + sel2 + '" onclick="window._obSelectCurrent(\'' + currents[c] + '\', this)">' + currentLabels[c] + '</button>';
-      }
-      html += '</div></div>';
-
-      html += '<button class="onboarding-cta" id="obStep2Next" onclick="window._obGo(3)"' + (!obData.targetCashFlow ? ' disabled' : '') + '>Next</button>';
-      html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
+      html += '<button class="onboarding-cta" onclick="window._tourGo(3)">Next</button>';
+      html += '<button class="onboarding-skip" onclick="window._tourSkip()">Skip tour</button>';
 
     } else if (step === 3) {
-      // ===== BUY BOX: ASSET CLASSES + CHECK SIZE =====
-      html += '<div class="onboarding-title">What types of deals interest you?</div>';
-      html += '<div class="onboarding-subtitle">Select all that apply. You can always change this later.</div>';
-
-      html += '<div class="ob-chip-grid">';
-      var assets = [
-        { key: 'Multi-Family', label: 'Multi-Family', icon: '\uD83C\uDFE2' },
-        { key: 'Self Storage', label: 'Self Storage', icon: '\uD83D\uDCE6' },
-        { key: 'Industrial', label: 'Industrial', icon: '\uD83C\uDFED' },
-        { key: 'Lending', label: 'Private Credit', icon: '\uD83D\uDCB5' },
-        { key: 'Hotels / Hospitality', label: 'Hotels', icon: '\uD83C\uDFE8' },
-        { key: 'RV / Mobile Home Parks', label: 'Mobile Home Parks', icon: '\uD83C\uDFD5\uFE0F' },
-        { key: 'Senior Assisted Living', label: 'Senior Living', icon: '\uD83C\uDFE5' },
-        { key: 'Land', label: 'Land', icon: '\uD83C\uDF3E' },
-        { key: 'Oil & Gas', label: 'Oil & Gas', icon: '\u26FD' }
+      // ===== VETTING PIPELINE =====
+      html += '<div style="font-size:48px;margin-bottom:8px;">&#128269;</div>';
+      html += '<div class="onboarding-title">Your Vetting Pipeline</div>';
+      html += '<div class="onboarding-subtitle">Track every deal through your personal due diligence process.</div>';
+      html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:16px;">';
+      var stages = [
+        { label: 'Interested', color: '#51BE7B', icon: '&#128278;' },
+        { label: 'Vetting', color: '#3b82f6', icon: '&#128269;' },
+        { label: 'Invested', color: '#f59e0b', icon: '&#9989;' }
       ];
-      for (var a = 0; a < assets.length; a++) {
-        var isSel = obData.assetClasses.indexOf(assets[a].key) >= 0;
-        html += '<button class="ob-chip' + (isSel ? ' selected' : '') + '" onclick="window._obToggleAsset(\'' + assets[a].key.replace(/'/g, "\\'") + '\', this)">';
-        html += '<span class="ob-chip-check">' + (isSel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>';
-        html += assets[a].icon + ' ' + assets[a].label;
-        html += '</button>';
+      for (var s = 0; s < stages.length; s++) {
+        html += '<div style="flex:1;text-align:center;"><div style="font-size:24px;margin-bottom:4px;">' + stages[s].icon + '</div><div style="font-size:11px;font-weight:700;color:' + stages[s].color + ';">' + stages[s].label + '</div></div>';
+        if (s < stages.length - 1) html += '<div style="flex-shrink:0;color:var(--text-muted);font-size:16px;">&#8594;</div>';
       }
       html += '</div>';
-
-      html += '<div class="ob-preset-group" style="text-align:center;">';
-      html += '<div class="ob-preset-label" style="text-align:center;">Typical Check Size</div>';
-      html += '<div class="ob-preset-grid" style="justify-content:center;">';
-      var checks = ['25000', '50000', '100000', '250000', '500000'];
-      var checkLabels = ['$25K', '$50K', '$100K', '$250K', '$500K+'];
-      for (var k = 0; k < checks.length; k++) {
-        var sel3 = obData.checkSize === checks[k] ? ' selected' : '';
-        html += '<button class="ob-preset-btn' + sel3 + '" onclick="window._obSelectCheck(\'' + checks[k] + '\', this)">' + checkLabels[k] + '</button>';
-      }
-      html += '</div></div>';
-
-      html += '<button class="onboarding-cta" onclick="window._obGo(4)">Next</button>';
-      html += '<button class="onboarding-skip" onclick="window._obSkip()">Skip for now</button>';
+      html += '<div style="font-size:12px;color:var(--text-muted);line-height:1.6;text-align:center;">Move deals between stages as you research. Your pipeline is private and saved automatically.</div>';
+      html += '</div>';
+      html += '<button class="onboarding-cta" onclick="window._tourGo(4)">Next</button>';
+      html += '<button class="onboarding-skip" onclick="window._tourSkip()">Skip tour</button>';
 
     } else if (step === 4) {
-      // ===== INVESTOR NETWORK =====
-      html += '<div class="onboarding-title">Join the LP Network</div>';
-      html += '<div class="onboarding-subtitle">See who else is investing in the same deals as you — and let them see you too.</div>';
+      // ===== BUY BOX INTRO =====
+      html += '<div style="font-size:48px;margin-bottom:8px;">&#127919;</div>';
+      html += '<div class="onboarding-title">Build Your Buy Box</div>';
+      html += '<div class="onboarding-subtitle">Answer a few questions and we\'ll match you with deals that fit your goals.</div>';
+      html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;text-align:left;">';
+      html += '<div style="display:flex;flex-direction:column;gap:14px;">';
+      html += '<div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</div><div style="font-size:13px;color:var(--text-dark);">Pick your investing goal (income, growth, or tax reduction)</div></div>';
+      html += '<div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</div><div style="font-size:13px;color:var(--text-dark);">Tell us your capital and risk preferences</div></div>';
+      html += '<div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</div><div style="font-size:13px;color:var(--text-dark);">Get a personalized plan with curated deals</div></div>';
+      html += '</div></div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:16px;">Takes about 60 seconds. You can update it anytime.</div>';
+      html += '<button class="onboarding-cta" onclick="window._tourGo(5)">Next</button>';
+      html += '<button class="onboarding-skip" onclick="window._tourSkip()">Skip tour</button>';
 
-      html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px 24px;margin:20px 0 16px;">';
-      // Avatar stack preview
+    } else if (step === 5) {
+      // ===== LP NETWORK TEASER =====
+      html += '<div style="font-size:48px;margin-bottom:8px;">&#129309;</div>';
+      html += '<div class="onboarding-title">You\'re Not Investing Alone</div>';
+      html += '<div class="onboarding-subtitle">See who else is looking at the same deals. Coordinate with co-investors. Protect each other.</div>';
+      html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px 24px;margin:20px 0;">';
       html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">';
       html += '<div style="display:flex;">';
       html += '<div style="width:36px;height:36px;border-radius:50%;background:#51BE7B;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid rgba(81,190,123,0.06);">PW</div>';
       html += '<div style="width:36px;height:36px;border-radius:50%;background:#3b82f6;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">JR</div>';
       html += '<div style="width:36px;height:36px;border-radius:50%;background:#f59e0b;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">CR</div>';
-      html += '<div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">+8</div>';
+      html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--border);color:var(--text-muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">+8</div>';
       html += '</div>';
-      html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.4;"><strong style="color:var(--text-dark);">Pascal Wagner</strong>, <strong style="color:var(--text-dark);">Joseph Root</strong>, and 9 others invested</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.4;">Members can see who else invested in each deal</div>';
       html += '</div>';
-
-      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">';
-      html += 'When you opt in, other members can see your name on deals you\'ve invested in. This helps LPs coordinate, share due diligence, and connect with co-investors. You can toggle individual deals on or off anytime.';
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">Opt in during the Buy Box setup to join the LP Network. You can only see others who also opted in.</div>';
       html += '</div>';
-      html += '</div>';
-
-      // Opt-in toggle
-      html += '<label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:16px 0;margin:0 4px;">';
-      html += '<input type="checkbox" id="obSharePortfolio" ' + (obData.sharePortfolio ? 'checked' : '') + ' onchange="window._obToggleShare(this.checked)" style="width:22px;height:22px;cursor:pointer;accent-color:var(--green);flex-shrink:0;">';
-      html += '<div>';
-      html += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Yes, show my name on deals I invest in</div>';
-      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">You can only see others if you also opt in</div>';
-      html += '</div>';
-      html += '</label>';
-
-      html += '<button class="onboarding-cta" onclick="window._obGo(5)">Next</button>';
-      html += '<button class="onboarding-skip" onclick="window._obGo(5)">Skip</button>';
-
-    } else if (step === 5) {
-      // ===== ALL SET =====
-      var firstName = getUserFirstName();
-      var targetVal = obData.targetCashFlow ? '$' + parseInt(obData.targetCashFlow).toLocaleString() : '';
-
-      // Save data before calculating match count
-      saveOnboardingData();
-      var wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-      var matchCount = typeof getMatchingDealCount === 'function' ? getMatchingDealCount(wd) : 0;
-
-      html += '<div style="font-size:48px;margin-bottom:8px;">&#127881;</div>';
-      html += '<div class="onboarding-title">You\'re all set, ' + firstName + '!</div>';
-      html += '<div class="onboarding-subtitle">Your deal finder is ready to go.</div>';
-
-      html += '<div class="ob-summary">';
-      if (targetVal) {
-        html += '<div class="ob-summary-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Your goal: <strong>' + targetVal + '/yr</strong> passive income</span></div>';
-      }
-      if (obData.assetClasses.length > 0) {
-        html += '<div class="ob-summary-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span><strong>' + obData.assetClasses.length + '</strong> asset class' + (obData.assetClasses.length > 1 ? 'es' : '') + ' selected</span></div>';
-      }
-      if (obData.checkSize) {
-        html += '<div class="ob-summary-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>Check size: <strong>$' + parseInt(obData.checkSize).toLocaleString() + '</strong></span></div>';
-      }
-      html += '</div>';
-
-      if (matchCount > 0) {
-        html += '<div class="ob-match-count">' + matchCount + '</div>';
-        html += '<div class="ob-match-label">deals matching your criteria</div>';
-      }
-
-      html += '<button class="onboarding-cta" onclick="window._obFinish()">Browse Your Matches</button>';
+      html += '<button class="onboarding-cta" onclick="window._tourFinish()">Start Browsing Deals</button>';
+      html += '<button class="onboarding-skip" style="margin-top:4px;" onclick="window._tourFinish();setTimeout(function(){openBuyBoxWizard();},400);">Build My Buy Box First</button>';
     }
 
     html += '</div></div>';
     overlay.innerHTML = html;
   }
 
-  // Save onboarding data to the same localStorage keys as the buy box wizard
-  function saveOnboardingData() {
-    var wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-    if (obData.targetCashFlow) wd.targetCashFlow = obData.targetCashFlow;
-    if (obData.currentCashFlow) wd.currentCashFlow = obData.currentCashFlow;
-    if (obData.assetClasses.length > 0) wd.assetClasses = obData.assetClasses;
-    if (obData.checkSize) wd.checkSize = obData.checkSize;
-    // Set firstName from user if not already set
-    var user = getUserFirstName();
-    if (!wd.firstName) wd.firstName = user;
-    localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wd));
+  window._tourGo = function(step) { renderStep(step); };
 
-    // Save share_portfolio preference
-    if (obData.sharePortfolio) {
-      var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-      u.sharePortfolio = true;
-      localStorage.setItem('gycUser', JSON.stringify(u));
-      syncToBackend('profile', { share_portfolio: true });
-    }
-
-    // Also save to gycGoals if target is set
-    if (obData.targetCashFlow || obData.currentCashFlow) {
-      var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null') || {};
-      if (obData.targetCashFlow) goals.targetIncome = parseInt(obData.targetCashFlow);
-      if (obData.currentCashFlow) goals.currentIncome = parseInt(obData.currentCashFlow);
-      if (!goals.goalType) goals.goalType = 'passive-income';
-      localStorage.setItem('gycGoals', JSON.stringify(goals));
-    }
-  }
-
-  // Navigation
-  window._obGo = function(step) {
-    // Save partial data when advancing
-    if (obStep === 2 || obStep === 3 || obStep === 4) saveOnboardingData();
-    renderStep(step);
+  window._tourSkip = function() {
+    localStorage.setItem('gycTourComplete', 'true');
+    var el = document.getElementById('onboardingOverlay');
+    if (el) { el.classList.add('ob-closing'); setTimeout(function() { el.remove(); }, 300); }
   };
 
-  // Target income selection
-  window._obSelectTarget = function(val, btn) {
-    obData.targetCashFlow = val;
-    // Toggle selected state
-    var siblings = btn.parentElement.querySelectorAll('.ob-preset-btn');
-    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
-    btn.classList.add('selected');
-    // Enable next button
-    var nextBtn = document.getElementById('obStep2Next');
-    if (nextBtn) nextBtn.disabled = false;
-  };
-
-  // Current income selection
-  window._obSelectCurrent = function(val, btn) {
-    obData.currentCashFlow = val;
-    var siblings = btn.parentElement.querySelectorAll('.ob-preset-btn');
-    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
-    btn.classList.add('selected');
-  };
-
-  // Asset class toggle
-  window._obToggleAsset = function(key, btn) {
-    var idx = obData.assetClasses.indexOf(key);
-    if (idx >= 0) {
-      obData.assetClasses.splice(idx, 1);
-      btn.classList.remove('selected');
-      btn.querySelector('.ob-chip-check').innerHTML = '';
-    } else {
-      obData.assetClasses.push(key);
-      btn.classList.add('selected');
-      btn.querySelector('.ob-chip-check').innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-    }
-  };
-
-  // Share portfolio toggle
-  window._obToggleShare = function(checked) {
-    obData.sharePortfolio = checked;
-  };
-
-  // Check size selection
-  window._obSelectCheck = function(val, btn) {
-    obData.checkSize = val;
-    var siblings = btn.parentElement.querySelectorAll('.ob-preset-btn');
-    for (var i = 0; i < siblings.length; i++) siblings[i].classList.remove('selected');
-    btn.classList.add('selected');
-  };
-
-  // Skip — close without saving completion flags
-  window._obSkip = function() {
-    localStorage.setItem('gycOnboardingComplete', 'true');
+  window._tourFinish = function() {
+    localStorage.setItem('gycTourComplete', 'true');
+    if (typeof trackActivity === 'function') trackActivity('product_tour_complete', {});
     var el = document.getElementById('onboardingOverlay');
     if (el) {
       el.classList.add('ob-closing');
-      setTimeout(function() { el.remove(); }, 300);
-    }
-  };
-
-  // Finish — save everything and navigate to deals
-  window._obFinish = function() {
-    saveOnboardingData();
-    localStorage.setItem('gycOnboardingComplete', 'true');
-    localStorage.setItem('gycBuyBoxComplete', 'true');
-
-    // Sync wizard data to buy box
-    if (typeof wizardData !== 'undefined') {
-      wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-    }
-    if (typeof invalidateWizardCache === 'function') invalidateWizardCache();
-    if (typeof syncWizardToBuyBox === 'function') syncWizardToBuyBox();
-    if (typeof renderReport === 'function') renderReport();
-    if (typeof syncBuyBoxToGHL === 'function') syncBuyBoxToGHL();
-    if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
-    if (typeof trackActivity === 'function') {
-      trackActivity('onboarding_complete', { source: 'new_user_onboarding', assetClasses: obData.assetClasses.join(',') });
-    }
-
-    // Close overlay
-    var el = document.getElementById('onboardingOverlay');
-    if (el) {
-      el.classList.add('ob-closing');
-      setTimeout(function() {
-        el.remove();
-        // Navigate to deals with buy box filter applied
-        if (typeof navigateTo === 'function') navigateTo('deals');
-        if (typeof applyFilters === 'function') applyFilters();
-      }, 300);
+      setTimeout(function() { el.remove(); if (typeof navigateTo === 'function') navigateTo('deals'); }, 300);
     }
   };
 
   renderStep(1);
   document.body.appendChild(overlay);
-  // Trigger active class after a frame so CSS transition works
   requestAnimationFrame(function() { overlay.classList.add('active'); });
 }
 
