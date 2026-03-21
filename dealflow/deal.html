@@ -5993,22 +5993,22 @@ async function renderDeal() {
       chartHtml += '<th class="' + (_scActiveIdx === i ? 'sc-active' : '') + '" style="cursor:pointer;" onclick="switchShareClass(' + i + ')">' + esc(deal.shareClasses[i].label) + '</th>';
     }
     chartHtml += '</tr>';
+    chartHtml += '<tr><td>Min Investment</td>';
+    for (var i = 0; i < deal.shareClasses.length; i++) {
+      var sc = deal.shareClasses[i];
+      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '"><span class="value-highlight">' + esc(fmt(sc.investmentMinimum, 'money')) + '</span></td>';
+    }
+    chartHtml += '</tr>';
     chartHtml += '<tr><td>Target Return</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '"><span class="value-highlight">' + esc(fmt(sc.targetReturn, 'pct')) + '</span></td>';
+      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(fmt(sc.targetReturn, 'pct')) + '</td>';
     }
     chartHtml += '</tr>';
     chartHtml += '<tr><td>Lockup</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
       chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(formatHoldPeriod(sc.lockup)) + '</td>';
-    }
-    chartHtml += '</tr>';
-    chartHtml += '<tr><td>Min Investment</td>';
-    for (var i = 0; i < deal.shareClasses.length; i++) {
-      var sc = deal.shareClasses[i];
-      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(fmt(sc.investmentMinimum, 'money')) + '</td>';
     }
     chartHtml += '</tr>';
     var anyPref = deal.shareClasses.some(function(sc) { return sc.preferredReturn; });
@@ -7384,13 +7384,13 @@ async function renderDeal() {
     + detailsHtml
     + operatorHtml
     + '</div>'
+    + chartHtml
     + geoMapHtml
     + operatorDealsHtml
     // --- Job 5: How does it compare? ---
     + cashFlowHtml
     + feeBenchHtml
     + feeCompareHtml
-    + chartHtml
     + similarHtml
     // --- Job 6: SEC filing + Buy Box (1/3 + 2/3), Supporting Materials full width ---
     + (secFilingHtml || buyBoxHtml ? '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;">' + secFilingHtml + buyBoxHtml + '</div>' : '')
