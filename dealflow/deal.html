@@ -7421,6 +7421,196 @@ async function renderDeal() {
     fundNudgeHtml += '</div>';
   }
 
+  // --- Deal Fit Summary (personalized per user + deal) ---
+  var dealFitHtml = '';
+  (function buildDealFit() {
+    var bb = null;
+    try { bb = JSON.parse(localStorage.getItem('gycBuyBox') || 'null'); } catch(e) {}
+    var wd = null;
+    try { wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || 'null'); } catch(e) {}
+    if (!bb && !wd) return; // no buy box = can't personalize
+
+    var branch = (wd && wd._branch) || (bb && bb._branch) || 'cashflow';
+    var fits = [];
+    var misses = [];
+    var insights = [];
+
+    // --- 1. Buy Box Fit ---
+    var _bbAssets = (bb && bb.assetClasses) || [];
+    var _bbStrats = (bb && bb.strategies) || [];
+    var _bbMinInvest = bb ? parseDollar(bb.minInvest) : 0;
+    var _bbMaxInvest = bb ? parseDollar(bb.maxInvest) : 0;
+    var _bbDist = (wd && wd.distributions) || (bb && bb.distributions) || '';
+
+    // Asset class match
+    var _lendingAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
+    var _dealIsLending = isCreditFund(deal) || (deal.strategy || '').toLowerCase() === 'lending';
+    var _bbWantsLending = _bbAssets.some(function(a) { return _lendingAliases.indexOf(a) !== -1; }) || _bbStrats.indexOf('Lending') !== -1;
+    var assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family' };
+    var _mappedBBAssets = _bbAssets.filter(function(a) { return _lendingAliases.indexOf(a) === -1; }).map(function(a) { return assetMap[a] || a; });
+
+    if (_dealIsLending && _bbWantsLending) {
+      fits.push('Matches your interest in <strong>lending/credit</strong> deals');
+    } else if (!_dealIsLending && _mappedBBAssets.length > 0 && _mappedBBAssets.indexOf(deal.assetClass) !== -1) {
+      fits.push('Matches your <strong>' + esc(deal.assetClass) + '</strong> criteria');
+    } else if (_mappedBBAssets.length > 0 || _bbWantsLending) {
+      misses.push('Outside your target asset classes — you selected ' + _mappedBBAssets.slice(0, 3).map(function(a) { return '<strong>' + esc(a) + '</strong>'; }).join(', '));
+    }
+
+    // Check size fit
+    if (deal.investmentMinimum && _bbMaxInvest > 0) {
+      if (deal.investmentMinimum <= _bbMaxInvest && deal.investmentMinimum >= _bbMinInvest * 0.5) {
+        fits.push('Min investment of <strong>' + fmt(deal.investmentMinimum, 'money') + '</strong> fits your check size range');
+      } else if (deal.investmentMinimum > _bbMaxInvest) {
+        misses.push('Min investment of <strong>' + fmt(deal.investmentMinimum, 'money') + '</strong> exceeds your max check size of ' + fmt(_bbMaxInvest, 'money'));
+      }
+    }
+
+    // Distribution frequency fit
+    if (_bbDist && deal.distributions) {
+      var distRank = { 'monthly': 1, 'quarterly': 2, 'semi-annually': 3, 'annually': 4 };
+      var _bbDistLc = (typeof _bbDist === 'string' ? _bbDist : '').toLowerCase();
+      var _dealDistLc = (deal.distributions || '').toLowerCase();
+      var _bbDistRank = distRank[_bbDistLc] || 5;
+      var _dealDistRank = distRank[_dealDistLc] || 5;
+      if (_dealDistRank <= _bbDistRank) {
+        fits.push('Pays <strong>' + esc(deal.distributions) + '</strong>' + (_dealDistRank < _bbDistRank ? ' — better than your minimum' : ', matching your requirement'));
+      } else {
+        misses.push('Pays <strong>' + esc(deal.distributions) + '</strong>, but you want ' + _bbDistLc + ' or better');
+      }
+    }
+
+    // Hold period / lockup
+    var _bbHoldMax = bb ? parseFloat(bb.holdMax) || 0 : 0;
+    if (deal.holdPeriod && _bbHoldMax > 0) {
+      if (deal.holdPeriod <= _bbHoldMax) {
+        fits.push('<strong>' + deal.holdPeriod + '-year</strong> hold fits within your ' + _bbHoldMax + '-year max');
+      } else {
+        misses.push('<strong>' + deal.holdPeriod + '-year</strong> hold exceeds your ' + _bbHoldMax + '-year max lockup');
+      }
+    }
+
+    // --- 2. Peer Comparison Insights ---
+    var _allDealsForFit = DEALS.length > 0 ? DEALS : [];
+    var _peersFit = _allDealsForFit.filter(function(d) {
+      return d.id !== deal.id && d.assetClass === deal.assetClass && !d.isStale;
+    });
+
+    if (_peersFit.length >= 3) {
+      // IRR comparison
+      var _peerIRRs2 = _peersFit.map(function(d) { return d.targetIRR || 0; }).filter(function(v) { return v > 0; }).sort(function(a,b) { return a - b; });
+      if (deal.targetIRR && _peerIRRs2.length >= 3) {
+        var _medIRR = _peerIRRs2[Math.floor(_peerIRRs2.length / 2)];
+        var _dealIRR = deal.targetIRR;
+        if (_dealIRR >= _medIRR * 1.1) {
+          insights.push('Target IRR of <strong>' + (_dealIRR * 100).toFixed(1) + '%</strong> is above average for ' + esc(deal.assetClass) + ' (median ' + (_medIRR * 100).toFixed(1) + '%)');
+        } else if (_dealIRR < _medIRR * 0.9) {
+          insights.push('Target IRR of <strong>' + (_dealIRR * 100).toFixed(1) + '%</strong> is below average for ' + esc(deal.assetClass) + ' (median ' + (_medIRR * 100).toFixed(1) + '%)');
+        } else {
+          insights.push('Target IRR of <strong>' + (_dealIRR * 100).toFixed(1) + '%</strong> is in line with ' + esc(deal.assetClass) + ' peers');
+        }
+      }
+
+      // Min investment comparison
+      var _peerMins = _peersFit.map(function(d) { return d.investmentMinimum || 0; }).filter(function(v) { return v > 0; }).sort(function(a,b) { return a - b; });
+      if (deal.investmentMinimum && _peerMins.length >= 3) {
+        var _medMin = _peerMins[Math.floor(_peerMins.length / 2)];
+        if (deal.investmentMinimum < _medMin * 0.7) {
+          insights.push('Lower barrier to entry than most — min is <strong>' + fmt(deal.investmentMinimum, 'money') + '</strong> vs ' + fmt(_medMin, 'money') + ' median');
+        } else if (deal.investmentMinimum > _medMin * 1.3) {
+          insights.push('Higher min than most ' + esc(deal.assetClass) + ' deals — <strong>' + fmt(deal.investmentMinimum, 'money') + '</strong> vs ' + fmt(_medMin, 'money') + ' median');
+        }
+      }
+    }
+
+    // --- 3. Goal-Specific Insight ---
+    if (branch === 'cashflow' && deal.cashOnCash) {
+      var _coc = deal.cashOnCash;
+      var _cocPct = (_coc <= 1 ? _coc * 100 : _coc).toFixed(1);
+      insights.push('At <strong>' + _cocPct + '% cash-on-cash</strong>, a ' + fmt(deal.investmentMinimum || 100000, 'money') + ' investment would generate ~<strong>' + fmt(Math.round((deal.investmentMinimum || 100000) * (_coc <= 1 ? _coc : _coc / 100)), 'money') + '/yr</strong> in passive income');
+    } else if (branch === 'tax' && deal.firstYrDepreciation) {
+      insights.push('First-year depreciation of <strong>' + esc(deal.firstYrDepreciation) + '</strong> can offset taxable income');
+    } else if (branch === 'growth' && deal.equityMultiple) {
+      insights.push('Equity multiple of <strong>' + deal.equityMultiple.toFixed(2) + 'x</strong> — a ' + fmt(deal.investmentMinimum || 100000, 'money') + ' investment targets <strong>' + fmt(Math.round((deal.investmentMinimum || 100000) * deal.equityMultiple), 'money') + '</strong> total return');
+    }
+
+    // --- 4. Operator strength ---
+    if (_operatorYears && _operatorYears >= 10) {
+      fits.push('Backed by an operator with <strong>' + _operatorYears + '+ years</strong> of track record');
+    } else if (_operatorYears && _operatorYears < 3) {
+      misses.push('Newer operator — only <strong>' + _operatorYears + ' year' + (_operatorYears !== 1 ? 's' : '') + '</strong> of track record');
+    }
+
+    if (fits.length === 0 && misses.length === 0 && insights.length === 0) return;
+
+    // --- Verdict ---
+    var fitScore = fits.length - misses.length;
+    var verdictColor, verdictIcon, verdictText;
+    if (fitScore >= 2) {
+      verdictColor = 'var(--primary)';
+      verdictIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+      verdictText = 'Strong fit for your criteria';
+    } else if (fitScore >= 0) {
+      verdictColor = '#f59e0b';
+      verdictIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      verdictText = 'Partial fit — review the tradeoffs';
+    } else {
+      verdictColor = '#ef4444';
+      verdictIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+      verdictText = 'May not match what you\'re looking for';
+    }
+
+    dealFitHtml = '<div class="section">';
+    dealFitHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div>';
+    dealFitHtml += '<div class="section-body">';
+
+    // Verdict banner
+    dealFitHtml += '<div style="display:flex;align-items:center;gap:14px;padding:16px 20px;background:' + verdictColor + '0a;border:1px solid ' + verdictColor + '20;border-radius:10px;margin-bottom:20px;">';
+    dealFitHtml += '<div style="flex-shrink:0;color:' + verdictColor + ';">' + verdictIcon + '</div>';
+    dealFitHtml += '<div>';
+    dealFitHtml += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:' + verdictColor + ';">' + verdictText + '</div>';
+    dealFitHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Based on your investor profile and ' + _peersFit.length + ' comparable deals</div>';
+    dealFitHtml += '</div></div>';
+
+    // Fits
+    if (fits.length > 0) {
+      dealFitHtml += '<div style="margin-bottom:16px;">';
+      dealFitHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">What works</div>';
+      fits.forEach(function(f) {
+        dealFitHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg>'
+          + '<span>' + f + '</span></div>';
+      });
+      dealFitHtml += '</div>';
+    }
+
+    // Misses
+    if (misses.length > 0) {
+      dealFitHtml += '<div style="margin-bottom:16px;">';
+      dealFitHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ef4444;margin-bottom:8px;">Watch out</div>';
+      misses.forEach(function(m) {
+        dealFitHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+          + '<span>' + m + '</span></div>';
+      });
+      dealFitHtml += '</div>';
+    }
+
+    // Insights
+    if (insights.length > 0) {
+      dealFitHtml += '<div>';
+      dealFitHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#3b82f6;margin-bottom:8px;">Context</div>';
+      insights.forEach(function(ins) {
+        dealFitHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+          + '<span>' + ins + '</span></div>';
+      });
+      dealFitHtml += '</div>';
+    }
+
+    dealFitHtml += '</div></div>';
+  })();
+
   // --- Sticky action bar ---
   var stickyHtml = '';
   var nextStages = { 'browse': 'saved', 'saved': 'vetting', 'vetting': 'ready', 'ready': 'invested' };
@@ -7466,6 +7656,7 @@ async function renderDeal() {
     + (secFilingHtml || buyBoxHtml ? '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;">' + secFilingHtml + buyBoxHtml + '</div>' : '')
     + materialsHtml
     + thesisHtml
+    + dealFitHtml
     // --- Job 7: Decide ---
     + memoHtml
     + officeHoursHtml
