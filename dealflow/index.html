@@ -8740,10 +8740,10 @@ function renderCreditCard(deal) {
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
-        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal">
+        ${renderGridCardActions(deal, stage, isInterested)}
+        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal" style="margin-left:auto;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
-        ${renderGridCardActions(deal, stage, isInterested)}
       </div>
     </div>
   `;
@@ -9034,10 +9034,10 @@ function renderCard(deal) {
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
-        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal">
+        ${renderGridCardActions(deal, stage, isInterested)}
+        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal" style="margin-left:auto;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
-        ${renderGridCardActions(deal, stage, isInterested)}
       </div>
     </div>
   `;
@@ -17848,12 +17848,12 @@ function renderDashboard() {
   const totalDistributions = portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0);
   const activeInvestments = portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length;
 
-  // Goal progress (from gycGoals + actual distribution data)
+  // Goal progress (from gycGoals + actual distribution/portfolio data)
   const hasGoals = goals && goals.targetIncome > 0;
   const targetIncome = hasGoals ? goals.targetIncome : 0;
 
-  // Prefer actual distribution-derived income over manual entry
-  let currentIncome = goals?.currentIncome || 0;
+  // Derive actual passive income from distribution log first, then portfolio fallback
+  let currentIncome = 0;
   const _distLogForGoal = JSON.parse(localStorage.getItem('gycDistributions') || '[]');
   if (_distLogForGoal.length > 0) {
     let _firstDist = null, _totalDist = 0;
@@ -17863,9 +17863,21 @@ function renderDashboard() {
       if (!_firstDist || dt < _firstDist) _firstDist = dt;
     });
     var _distMonths = Math.max(1, (new Date().getFullYear() - _firstDist.getFullYear()) * 12 + (new Date().getMonth() - _firstDist.getMonth()) + 1);
-    var _derivedAnnual = Math.round((_totalDist / _distMonths) * 12);
-    if (_derivedAnnual > currentIncome) currentIncome = _derivedAnnual;
+    currentIncome = Math.round((_totalDist / _distMonths) * 12);
+  } else if (totalDistributions > 0 && portfolio.length > 0) {
+    // Fallback: estimate from portfolio distributionsReceived
+    var _oldestInv = null;
+    portfolio.forEach(function(p) {
+      if (p.dateInvested) {
+        var dt = new Date(p.dateInvested);
+        if (!_oldestInv || dt < _oldestInv) _oldestInv = dt;
+      }
+    });
+    var _estMonths = _oldestInv ? Math.max(1, (new Date().getFullYear() - _oldestInv.getFullYear()) * 12 + (new Date().getMonth() - _oldestInv.getMonth()) + 1) : 12;
+    currentIncome = Math.round((totalDistributions / _estMonths) * 12);
   }
+  // Use manual entry only if no actual data exists
+  if (currentIncome === 0 && goals?.currentIncome > 0) currentIncome = goals.currentIncome;
 
   const goalProgress = hasGoals ? Math.min(100, Math.round((currentIncome / targetIncome) * 100)) : 0;
 
@@ -18168,13 +18180,11 @@ function renderDashboard() {
     + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center;"><div style="font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:3px;">Days Active</div><div style="font-family:var(--font-headline);font-size:18px;color:var(--text-secondary);">' + daysActive + '</div></div>'
     + '</div>';
 
-  // ===== Stats row (compact) =====
-  const pipelineCount = stageCounts.interested + stageCounts.duediligence;
-  const statsRow = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">'
+  // ===== Stats row (compact) — no "In Pipeline" here, already in momentum row =====
+  const statsRow = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">'
     + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Invested</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">$' + (totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(1) + 'M' : totalInvested.toLocaleString()) + '</div></div>'
     + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Active Investments</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">' + activeInvestments + '</div></div>'
     + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Distributions</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--primary);">$' + totalDistributions.toLocaleString() + '</div></div>'
-    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">In Pipeline</div><div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);">' + pipelineCount + '</div></div>'
     + '</div>';
 
   // ===== Fund Nudge for Inactive Users =====
@@ -18191,40 +18201,12 @@ function renderDashboard() {
       + '</div></div>';
   }
 
-  // ===== SECTION: Income Goal Bridge =====
+  // ===== SECTION: Deal Recommendations (gap-closing deals) =====
+  // No duplicate progress bar — hero already shows goal progress.
+  // This section only renders the "deals that could close the gap" cards.
   let incomeGapHtml = '';
   if (hasGoals && goals.targetIncome > 0 && goals.type !== 'build_wealth') {
-    // Calculate actual passive income from distribution log
-    const distLog = JSON.parse(localStorage.getItem('gycDistributions') || '[]');
-    let annualPassiveIncome = 0;
-
-    if (distLog.length > 0) {
-      // Find date range of distributions to compute run rate
-      let firstDistDate = null;
-      let totalDistAmount = 0;
-      distLog.forEach(function(d) {
-        totalDistAmount += (d.amount || 0);
-        var dt = new Date(d.date);
-        if (!firstDistDate || dt < firstDistDate) firstDistDate = dt;
-      });
-      var nowDate = new Date();
-      var monthsTracking = Math.max(1, (nowDate.getFullYear() - firstDistDate.getFullYear()) * 12 + (nowDate.getMonth() - firstDistDate.getMonth()) + 1);
-      annualPassiveIncome = Math.round((totalDistAmount / monthsTracking) * 12);
-    } else if (totalDistributions > 0 && portfolio.length > 0) {
-      // Fallback: estimate from portfolio distributionsReceived
-      var oldestInvestment = null;
-      portfolio.forEach(function(p) {
-        if (p.dateInvested) {
-          var dt = new Date(p.dateInvested);
-          if (!oldestInvestment || dt < oldestInvestment) oldestInvestment = dt;
-        }
-      });
-      var estMonths = oldestInvestment ? Math.max(1, (new Date().getFullYear() - oldestInvestment.getFullYear()) * 12 + (new Date().getMonth() - oldestInvestment.getMonth()) + 1) : 12;
-      annualPassiveIncome = Math.round((totalDistributions / estMonths) * 12);
-    }
-
-    const incomeGap = Math.max(0, goals.targetIncome - annualPassiveIncome);
-    const incomePct = Math.min(100, Math.round((annualPassiveIncome / goals.targetIncome) * 100));
+    const incomeGap = Math.max(0, targetIncome - currentIncome);
 
     // Find deals that match the user's buy box and could close the gap
     var _sa3 = ['Private Debt / Credit', 'Lending', 'Debt'];
@@ -18234,29 +18216,25 @@ function renderDashboard() {
       return _assetMap3[a] || a;
     });
     const userMin = parseDollar(wd.investableCapital) || 0;
-    const userMaxMin = userMin > 0 ? userMin * 0.3 : 100000; // typical check size ~30% of investable
+    const userMaxMin = userMin > 0 ? userMin * 0.3 : 100000;
 
-    // Score and filter deals that generate income (have preferred return or cash-on-cash)
     var incomeDeals = deals.filter(function(deal) {
-      if (!deal.preferredReturn && !deal.cashOnCash) return false; // must be income-producing
+      if (!deal.preferredReturn && !deal.cashOnCash) return false;
       if (deal.status === 'Closed' || deal.status === 'Inactive') return false;
-      if (stages[deal.id] === 'passed') return false; // skip passed deals
-      if (_wantsLending3 && deal.strategy === 'Lending') { /* include lending deals */ }
+      if (stages[deal.id] === 'passed') return false;
+      if (_wantsLending3 && deal.strategy === 'Lending') { /* include */ }
       else if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
       if (deal.investmentMinimum && userMaxMin > 0 && deal.investmentMinimum > userMaxMin) return false;
       return true;
     }).map(function(deal) {
-      // Estimate annual income from this deal at minimum investment
       var checkSize = deal.investmentMinimum || 50000;
       var yieldRate = deal.cashOnCash || deal.preferredReturn || 0;
-      var estAnnualIncome = Math.round(checkSize * yieldRate);
-      return { deal: deal, estAnnualIncome: estAnnualIncome, checkSize: checkSize, yieldRate: yieldRate };
+      return { deal: deal, estAnnualIncome: Math.round(checkSize * yieldRate), checkSize: checkSize, yieldRate: yieldRate };
     }).sort(function(a, b) { return b.yieldRate - a.yieldRate; });
 
-    // Take top 3
     var topDeals = incomeDeals.slice(0, 3);
 
-    // Calculate "path to goal" — how many avg investments to close the gap
+    // "~N more investments" callout
     var avgCheckSize = totalInvested > 0 && activeInvestments > 0
       ? Math.round(totalInvested / activeInvestments)
       : (topDeals.length > 0 ? topDeals[0].checkSize : 50000);
@@ -18265,64 +18243,39 @@ function renderDashboard() {
       : 0.08;
     var dealsToGoal = incomeGap > 0 && avgYield > 0 ? Math.ceil(incomeGap / (avgCheckSize * avgYield)) : 0;
 
-    // Build the section HTML
-    var gapBarColor = incomePct >= 75 ? 'var(--primary)' : incomePct >= 40 ? '#3b82f6' : '#f59e0b';
+    if (incomeGap > 0 && (topDeals.length > 0 || dealsToGoal > 0)) {
+      incomeGapHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;">';
 
-    incomeGapHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-      + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Path to Your Income Goal</div>'
-      + '<button onclick="navigateTo(\'portfolio\')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;">View Income Tracker &rarr;</button>'
-      + '</div>';
-
-    // Income progress bar
-    incomeGapHtml += '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">'
-      + '<div style="flex:1;">'
-      + '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">'
-      + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);font-weight:700;">$' + annualPassiveIncome.toLocaleString() + '<span style="font-weight:400;color:var(--text-muted);font-size:12px;"> / yr earned</span></div>'
-      + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);font-weight:700;">$' + goals.targetIncome.toLocaleString() + '<span style="font-weight:400;color:var(--text-muted);font-size:12px;"> / yr goal</span></div>'
-      + '</div>'
-      + '<div style="height:10px;background:var(--bg-main);border-radius:5px;overflow:hidden;position:relative;">'
-      + '<div style="height:100%;width:' + incomePct + '%;background:linear-gradient(90deg,' + gapBarColor + ',' + gapBarColor + 'cc);border-radius:5px;transition:width 0.6s ease;' + (incomePct > 0 ? 'min-width:6px;' : '') + '"></div>'
-      + '</div>'
-      + '<div style="display:flex;justify-content:space-between;margin-top:4px;">'
-      + '<div style="font-size:11px;color:var(--text-muted);">' + incomePct + '% of goal</div>'
-      + (incomeGap > 0 ? '<div style="font-size:11px;color:' + gapBarColor + ';font-weight:600;">$' + incomeGap.toLocaleString() + '/yr gap remaining</div>' : '<div style="font-size:11px;color:var(--primary);font-weight:700;">Goal reached! \u{1F389}</div>')
-      + '</div></div>'
-      + '</div>';
-
-    // Path to goal callout
-    if (incomeGap > 0 && dealsToGoal > 0 && dealsToGoal <= 20) {
-      incomeGapHtml += '<div style="padding:14px 18px;background:linear-gradient(135deg,rgba(81,190,123,0.06),rgba(59,130,246,0.06));border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:20px;display:flex;align-items:center;gap:14px;">'
-        + '<div style="flex-shrink:0;width:44px;height:44px;border-radius:12px;background:rgba(81,190,123,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;">\u{1F4C8}</div>'
-        + '<div style="flex:1;">'
-        + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);font-weight:700;margin-bottom:2px;">~' + dealsToGoal + ' more investment' + (dealsToGoal !== 1 ? 's' : '') + ' to close the gap</div>'
-        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">At ~$' + avgCheckSize.toLocaleString() + ' avg check size and ~' + Math.round(avgYield * 100) + '% avg yield, ' + dealsToGoal + ' more investments could generate the remaining $' + incomeGap.toLocaleString() + '/yr.</div>'
-        + '</div></div>';
-    }
-
-    // Recommended deals to close the gap
-    if (topDeals.length > 0 && incomeGap > 0) {
-      incomeGapHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Deals That Could Close the Gap</div>';
-      incomeGapHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">';
-      topDeals.forEach(function(item) {
-        var d = item.deal;
-        var yieldPct = Math.round(item.yieldRate * 100);
-        var stageTag = stages[d.id] ? '<span style="padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700;background:var(--primary-light);color:var(--primary);margin-left:6px;">' + stages[d.id] + '</span>' : '';
-        incomeGapHtml += '<div onclick="navigateTo(\'deals\');setTimeout(function(){openPanel(\'' + d.id + '\')},200);" style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 2px 8px rgba(81,190,123,0.12)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
-          + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (d.investmentName || 'Unknown') + stageTag + '</div>'
-          + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">' + (d.managementCompany || '') + (d.assetClass ? ' \u00b7 ' + d.assetClass : '') + '</div>'
-          + '<div style="display:flex;gap:12px;">'
-          + '<div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Yield</div><div style="font-size:16px;font-weight:800;color:var(--primary);">' + yieldPct + '%</div></div>'
-          + '<div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Min</div><div style="font-size:14px;font-weight:700;color:var(--text-dark);">$' + (d.investmentMinimum || 0).toLocaleString() + '</div></div>'
-          + '<div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Est. Income</div><div style="font-size:14px;font-weight:700;color:#3b82f6;">$' + item.estAnnualIncome.toLocaleString() + '/yr</div></div>'
+      if (dealsToGoal > 0 && dealsToGoal <= 20) {
+        incomeGapHtml += '<div style="padding:14px 18px;background:linear-gradient(135deg,rgba(81,190,123,0.06),rgba(59,130,246,0.06));border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:20px;display:flex;align-items:center;gap:14px;">'
+          + '<div style="flex-shrink:0;width:44px;height:44px;border-radius:12px;background:rgba(81,190,123,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;">\u{1F4C8}</div>'
+          + '<div style="flex:1;">'
+          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);font-weight:700;margin-bottom:2px;">~' + dealsToGoal + ' more investment' + (dealsToGoal !== 1 ? 's' : '') + ' to close the gap</div>'
+          + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">At ~$' + avgCheckSize.toLocaleString() + ' avg check size and ~' + Math.round(avgYield * 100) + '% avg yield, ' + dealsToGoal + ' more investments could generate the remaining $' + incomeGap.toLocaleString() + '/yr.</div>'
           + '</div></div>';
-      });
-      incomeGapHtml += '</div>';
-    } else if (incomeGap > 0 && topDeals.length === 0 && userAssets.length > 0) {
-      incomeGapHtml += '<div style="padding:16px;background:var(--bg-main);border-radius:var(--radius-sm);text-align:center;color:var(--text-muted);font-size:13px;">No income-producing deals currently match your buy box. <a href="#" onclick="navigateTo(\'deals\');return false;" style="color:var(--primary);font-weight:600;">Browse all deals &rarr;</a></div>';
-    }
+      }
 
-    incomeGapHtml += '</div>';
+      if (topDeals.length > 0) {
+        incomeGapHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Deals That Could Close the Gap</div>';
+        incomeGapHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">';
+        topDeals.forEach(function(item) {
+          var d = item.deal;
+          var yieldPct = Math.round(item.yieldRate * 100);
+          var stageTag = stages[d.id] ? '<span style="padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700;background:var(--primary-light);color:var(--primary);margin-left:6px;">' + stages[d.id] + '</span>' : '';
+          incomeGapHtml += '<div onclick="navigateTo(\'deals\');setTimeout(function(){openPanel(\'' + d.id + '\')},200);" style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.boxShadow=\'0 2px 8px rgba(81,190,123,0.12)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
+            + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (d.investmentName || 'Unknown') + stageTag + '</div>'
+            + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">' + (d.managementCompany || '') + (d.assetClass ? ' \u00b7 ' + d.assetClass : '') + '</div>'
+            + '<div style="display:flex;gap:12px;">'
+            + '<div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Yield</div><div style="font-size:16px;font-weight:800;color:var(--primary);">' + yieldPct + '%</div></div>'
+            + '<div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Min</div><div style="font-size:14px;font-weight:700;color:var(--text-dark);">$' + (d.investmentMinimum || 0).toLocaleString() + '</div></div>'
+            + '<div><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;">Est. Income</div><div style="font-size:14px;font-weight:700;color:#3b82f6;">$' + item.estAnnualIncome.toLocaleString() + '/yr</div></div>'
+            + '</div></div>';
+        });
+        incomeGapHtml += '</div>';
+      }
+
+      incomeGapHtml += '</div>';
+    }
   }
 
   // ===== SECTION: DD History =====
