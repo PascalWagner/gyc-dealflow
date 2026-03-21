@@ -10633,11 +10633,11 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 // Flow v3: 0=goal, 1=capital timeline, 2/3/4=branch target, 5=risk & concentration,
 //   6=asset classes, 7=strategies, 8=deal prefs, 9=LP network, 10/11/12=plan, 13=done
 const ONBOARDING_FLOW = {
-  common_start: [0, 1, 2],
-  cashflow: [3, 6, 7, 8, 9, 10, 11, 12, 13],
-  growth: [4, 6, 7, 8, 9, 10, 11, 12, 14],
-  tax: [5, 6, 7, 8, 9, 10, 11, 12, 15],
-  common_end: [16]
+  common_start: [0, 1, 2, 3],
+  cashflow: [4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+  growth: [5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17],
+  tax: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18],
+  common_end: [19]
 };
 
 function getStepSequence() {
@@ -10645,7 +10645,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Risk', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -10656,11 +10656,13 @@ function getPhaseLabel() {
 const WIZARD_STEPS = [
   // 0: Goal selection (all paths) — auto-advance on tap
   { type: 'goalSelect' },
-  // 1: Capital timeline (all paths)
-  { type: 'capitalTimeline' },
-  // 2: Capital source (all paths)
+  // 1: Capital amount (all paths)
+  { type: 'capitalAmount' },
+  // 2: Capital readiness (all paths)
+  { type: 'capitalReadiness' },
+  // 3: Capital source (all paths)
   { type: 'capitalSource' },
-  // 3: Cash flow target
+  // 4: Cash flow target
   { type: 'targetInput', branch: 'cashflow',
     title: 'How much passive income do you want?',
     suffix: '/ year',
@@ -10674,7 +10676,7 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 4: Growth target
+  // 5: Growth target
   { type: 'targetInput', branch: 'growth',
     title: 'How much do you want to grow your portfolio to?',
     suffix: '',
@@ -10688,29 +10690,33 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 5: Tax target (with income structure + RE pro status)
+  // 6: Tax target (with income structure + RE pro status)
   { type: 'taxTarget' },
-  // 6: Risk & concentration
-  { type: 'riskConcentration' },
-  // 7: Asset class preferences (goal-contextualized)
+  // 7: Check size
+  { type: 'checkSize' },
+  // 8: Net worth
+  { type: 'netWorth' },
+  // 9: Loss tolerance
+  { type: 'lossTolerance' },
+  // 10: Asset class preferences (goal-contextualized)
   { type: 'assetClassSelect' },
-  // 8: Strategy preferences (goal-contextualized)
+  // 11: Strategy preferences (goal-contextualized)
   { type: 'strategySelect' },
-  // 9: Lockup preference
+  // 12: Lockup preference
   { type: 'lockupPrefs' },
-  // 10: Distribution preference
+  // 13: Distribution preference
   { type: 'distributionPrefs' },
-  // 11: Accreditation status
+  // 14: Accreditation status
   { type: 'accreditationPrefs' },
-  // 12: LP Network opt-in
+  // 15: LP Network opt-in
   { type: 'lpNetwork' },
-  // 13: Plan — cash flow
+  // 16: Plan — cash flow
   { type: 'planOutput', branch: 'cashflow' },
-  // 14: Plan — growth
+  // 17: Plan — growth
   { type: 'planOutput', branch: 'growth' },
-  // 15: Plan — tax
+  // 18: Plan — tax
   { type: 'planOutput', branch: 'tax' },
-  // 16: Completion
+  // 19: Completion
   { type: 'completion' }
 ];
 
@@ -11009,50 +11015,56 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 1: CAPITAL TIMELINE =====
-  if (step.type === 'capitalTimeline') {
-    html += '<div class="wizard-card-title">Let\'s talk about your capital.</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">No commitments \u2014 just helps us size recommendations.</div>';
-
-    // 12-month deploy amount
-    html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How much can you deploy in the next 12 months?</div>';
+  // ===== SCREEN 1: CAPITAL AMOUNT =====
+  if (step.type === 'capitalAmount') {
+    html += '<div class="wizard-card-title">How much can you deploy in the next 12 months?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">No commitments \u2014 just helps us size recommendations to deals you can actually invest in.</div>';
     var capOptions = [
-      { val: '<$100k', label: 'Under $100K' },
-      { val: '$100k-$250k', label: '$100K \u2013 $250K' },
-      { val: '$250k-$500k', label: '$250K \u2013 $500K' },
-      { val: '$500k-$1M', label: '$500K \u2013 $1M' },
-      { val: '$1M+', label: '$1M+' }
+      { val: '<$100k', label: 'Under $100K', desc: 'Getting started' },
+      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals at typical minimums' },
+      { val: '$250k-$500k', label: '$250K \u2013 $500K', desc: 'Well-diversified portfolio' },
+      { val: '$500k-$1M', label: '$500K \u2013 $1M', desc: 'Significant deployment' },
+      { val: '$1M+', label: '$1M+', desc: 'Institutional-level capital' }
     ];
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     capOptions.forEach(function(opt) {
       var isSel = wizardData.capital12mo === opt.val;
-      html += '<div onclick="wizardData.capital12mo=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 12px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
-      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div onclick="wizardData.capital12mo=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
       html += '</div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
 
-    // 90-day readiness
-    html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How soon could you write your first check?</div>';
+  // ===== SCREEN 2: CAPITAL READINESS =====
+  if (step.type === 'capitalReadiness') {
+    html += '<div class="wizard-card-title">How soon could you write your first check?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Good deals move fast. Knowing your timeline helps us prioritize what to show you first.</div>';
     var readyOptions = [
-      { val: 'now', label: 'Ready now', desc: 'Capital is liquid and waiting' },
-      { val: '30days', label: 'Within 30 days', desc: 'Just need the right deal' },
-      { val: '90days', label: '1\u20133 months', desc: 'Still moving funds around' },
-      { val: 'exploring', label: 'Just exploring', desc: 'Learning first, investing later' }
+      { val: 'now', label: 'Ready now', desc: 'Capital is liquid and waiting', icon: '\u26A1' },
+      { val: '30days', label: 'Within 30 days', desc: 'Just need the right deal', icon: '\uD83C\uDFAF' },
+      { val: '90days', label: '1\u20133 months', desc: 'Still moving funds around', icon: '\uD83D\uDD04' },
+      { val: 'exploring', label: 'Just exploring', desc: 'Learning first, investing later', icon: '\uD83D\uDCDA' }
     ];
-    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     readyOptions.forEach(function(opt) {
       var isSel = wizardData.capitalReadiness === opt.val;
-      html += '<div onclick="wizardData.capitalReadiness=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
-      html += '<div style="width:20px;height:20px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSel ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (isSel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-      html += '<div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      html += '<div onclick="wizardData.capitalReadiness=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
       html += '</div>';
     });
-    html += '</div></div>';
-
-    // Nav
+    html += '</div>';
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
@@ -11234,55 +11246,98 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 5: RISK & CONCENTRATION =====
-  if (step.type === 'riskConcentration') {
-    html += '<div class="wizard-card-title">How do you want to size your investments?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">This helps us recommend the right deals for your portfolio.</div>';
-
-    // Check size
-    html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s the most you\'d put in a single deal?</div>';
+  // ===== SCREEN 7: CHECK SIZE =====
+  if (step.type === 'checkSize') {
+    html += '<div class="wizard-card-title">What\'s the most you\'d invest in a single deal?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This helps us filter deals to ones that fit your check size. You can always adjust later.</div>';
     var checkOptions = [
-      { val: '25000', label: '$25K' },
-      { val: '50000', label: '$50K' },
-      { val: '100000', label: '$100K' },
-      { val: '200000', label: '$200K' },
-      { val: '500000', label: '$500K+' }
+      { val: '25000', label: '$25K', desc: 'Entry-level minimums' },
+      { val: '50000', label: '$50K', desc: 'Most common minimum' },
+      { val: '100000', label: '$100K', desc: 'Standard LP check' },
+      { val: '200000', label: '$200K', desc: 'Preferred LP access' },
+      { val: '500000', label: '$500K+', desc: 'Priority allocation' }
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     checkOptions.forEach(function(opt) {
       var isSel = wizardData.checkSize === opt.val;
-      html += '<div onclick="wizardData.checkSize=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 8px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
-      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div onclick="wizardData.checkSize=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
       html += '</div>';
     });
     html += '</div>';
-    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;">Most private investments require a minimum of $50K. <span style="color:var(--text-muted);opacity:0.6;">~25% of deals on our platform have a $50K minimum.</span></div>';
+    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px;">Most private investments require a minimum of $50K. <span style="opacity:0.6;">~25% of deals on our platform have a $50K minimum.</span></div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
     html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
 
-    // Max loss tolerance (replaces operator concentration)
-    html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s the max you\'d be comfortable losing in any single deal?</div>';
-    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Private investments are illiquid and carry real risk. This helps us flag concentration.</div>';
-    var concOptions = [
-      { val: '10', label: '1\u20132%', desc: 'of net worth', example: '~$25\u201350K' },
-      { val: '20', label: '3\u20135%', desc: 'of net worth', example: '~$75\u2013125K' },
-      { val: '33', label: '5\u201310%', desc: 'of net worth', example: '~$125\u2013250K' },
-      { val: '50', label: '10%+', desc: 'of net worth', example: '$250K+' },
-      { val: 'no_limit', label: 'No limit', desc: '', example: 'High conviction' }
+  // ===== SCREEN 8: NET WORTH =====
+  if (step.type === 'netWorth') {
+    html += '<div class="wizard-card-title">What\'s your investable net worth?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Excluding your primary residence. This lets us show you how each deal sizes relative to your portfolio \u2014 so you never over-concentrate.</div>';
+    var nwOptions = [
+      { val: '500000', label: 'Under $500K' },
+      { val: '1000000', label: '$500K \u2013 $1M' },
+      { val: '2000000', label: '$1M \u2013 $2M' },
+      { val: '5000000', label: '$2M \u2013 $5M' },
+      { val: '10000000', label: '$5M \u2013 $10M' },
+      { val: '10000001', label: '$10M+' }
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
-    concOptions.forEach(function(opt) {
-      var isSel = wizardData.maxOperatorPct === opt.val;
-      html += '<div onclick="wizardData.maxOperatorPct=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 6px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    nwOptions.forEach(function(opt) {
+      var isSel = wizardData.netWorth === opt.val;
+      html += '<div onclick="wizardData.netWorth=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      if (opt.desc) html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
-      html += '<div style="font-size:10px;color:var(--text-muted);opacity:0.6;margin-top:2px;">' + opt.example + '</div>';
       html += '</div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5;">This is never shared with operators or other users. It\u2019s only used to personalize your risk guidelines.</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
 
-    // Nav
+  // ===== SCREEN 9: LOSS TOLERANCE =====
+  if (step.type === 'lossTolerance') {
+    var nw = parseInt(wizardData.netWorth || '0', 10);
+    function fmtNw(n) { return n >= 1000000 ? '$' + (n/1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M' : '$' + Math.round(n/1000) + 'K'; }
+    html += '<div class="wizard-card-title">What\'s the max you\'d be comfortable losing in any single deal?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Private investments are illiquid and carry real risk. This helps us flag when a deal would over-concentrate your portfolio.</div>';
+    var lossOptions = [
+      { val: '10', pctLabel: '1\u20132%', pctLo: 0.01, pctHi: 0.02, desc: 'Very conservative' },
+      { val: '20', pctLabel: '3\u20135%', pctLo: 0.03, pctHi: 0.05, desc: 'Moderate risk' },
+      { val: '33', pctLabel: '5\u201310%', pctLo: 0.05, pctHi: 0.10, desc: 'Concentrated' },
+      { val: '50', pctLabel: '10%+', pctLo: 0.10, pctHi: 0.15, desc: 'High conviction' },
+      { val: 'no_limit', pctLabel: 'No limit', pctLo: 0, pctHi: 0, desc: 'I\u2019ll decide deal by deal' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    lossOptions.forEach(function(opt) {
+      var isSel = wizardData.maxOperatorPct === opt.val;
+      var dollarRange = '';
+      if (nw > 0 && opt.pctLo > 0) {
+        var lo = fmtNw(Math.round(nw * opt.pctLo));
+        var hi = fmtNw(Math.round(nw * opt.pctHi));
+        dollarRange = lo + ' \u2013 ' + hi;
+      }
+      html += '<div onclick="wizardData.maxOperatorPct=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="flex:1;">';
+      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.pctLabel + (opt.val !== 'no_limit' ? ' of net worth' : '') + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
+      html += '</div>';
+      if (dollarRange) html += '<div style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap;">' + dollarRange + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
