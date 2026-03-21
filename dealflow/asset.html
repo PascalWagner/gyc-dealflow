@@ -1028,9 +1028,9 @@ body {
         </div>
       </div>
 
-      <!-- Public Records (RentCast) -->
+      <!-- Property Records -->
       <div class="section" id="recordsSection" style="display:none;">
-        <div class="section-label">Public Records</div>
+        <div class="section-label">Property Records</div>
         <div class="section-card">
           <div id="recordsContent"></div>
         </div>
@@ -1711,24 +1711,45 @@ function renderOperatorComparison(deals) {
   el.innerHTML = html;
 }
 
-function renderRentCast(rc) {
-  if (!rc) return;
-
+function renderPropertyRecords(rc, deals) {
   document.getElementById('recordsSection').style.display = 'block';
   var content = document.getElementById('recordsContent');
-
-  // Property details grid
-  var items = [];
-  if (rc.propertyType) items.push({ l: 'Property Type', v: rc.propertyType });
-  if (rc.unitCount) items.push({ l: 'Units', v: rc.unitCount });
-  if (rc.squareFootage) items.push({ l: 'Square Footage', v: rc.squareFootage.toLocaleString() + ' sqft' });
-  if (rc.lotSize) items.push({ l: 'Lot Size', v: rc.lotSize.toLocaleString() + ' sqft' });
-  if (rc.yearBuilt) items.push({ l: 'Year Built', v: rc.yearBuilt });
-  if (rc.floorCount) items.push({ l: 'Floors', v: rc.floorCount });
-  if (rc.lastSaleDate) items.push({ l: 'Last Sale', v: fmtDate(rc.lastSaleDate) });
-  if (rc.lastSalePrice) items.push({ l: 'Last Sale Price', v: '$' + rc.lastSalePrice.toLocaleString() });
-
+  var unitCount = rc ? rc.unitCount : null;
   var html = '';
+  var source = rc ? 'RentCast' : 'Deal Data';
+
+  // ── Acquisition / Sale highlight ──
+  var salePrice = rc ? rc.lastSalePrice : null;
+  var saleDate = rc ? rc.lastSaleDate : null;
+  if (salePrice) {
+    var perUnit = unitCount ? Math.round(salePrice / unitCount) : null;
+    html += '<div style="padding:24px 24px 0;"><div style="padding:20px 24px;background:linear-gradient(135deg,var(--teal-midnight),var(--teal-deep));border-radius:var(--radius);color:#fff;">' +
+      '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.6;margin-bottom:8px;">Acquisition Price</div>' +
+      '<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">' +
+        '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;">$' + salePrice.toLocaleString() + '</div>' +
+        (perUnit ? '<div style="font-size:14px;opacity:0.7;">$' + perUnit.toLocaleString() + ' / unit</div>' : '') +
+      '</div>' +
+      (saleDate ? '<div style="font-size:12px;opacity:0.5;margin-top:6px;">Recorded ' + fmtDate(saleDate) + '</div>' : '') +
+    '</div></div>';
+  }
+
+  // ── Property details grid ──
+  var items = [];
+  if (rc) {
+    if (rc.propertyType) items.push({ l: 'Property Type', v: rc.propertyType });
+    if (rc.unitCount) items.push({ l: 'Units', v: rc.unitCount });
+    if (rc.squareFootage) items.push({ l: 'Square Footage', v: rc.squareFootage.toLocaleString() + ' sqft' });
+    if (rc.lotSize) items.push({ l: 'Lot Size', v: rc.lotSize.toLocaleString() + ' sqft' });
+    if (rc.yearBuilt) items.push({ l: 'Year Built', v: rc.yearBuilt });
+    if (rc.floorCount) items.push({ l: 'Floors', v: rc.floorCount });
+    if (!salePrice && rc.lastSaleDate) items.push({ l: 'Last Sale', v: fmtDate(rc.lastSaleDate) });
+    if (!salePrice && rc.lastSalePrice) items.push({ l: 'Last Sale Price', v: '$' + rc.lastSalePrice.toLocaleString() });
+    // Per-unit values when available
+    if (rc.lastSalePrice && unitCount) {
+      var sqftPerUnit = rc.squareFootage ? Math.round(rc.squareFootage / unitCount) : null;
+      if (sqftPerUnit) items.push({ l: 'Avg sqft / Unit', v: sqftPerUnit.toLocaleString() + ' sqft' });
+    }
+  }
   if (items.length) {
     html += '<div class="records-grid">' +
       items.map(function(d) {
@@ -1737,13 +1758,13 @@ function renderRentCast(rc) {
     '</div>';
   }
 
-  // Tax assessments
-  if (rc.taxAssessments) {
+  // ── Tax assessments ──
+  if (rc && rc.taxAssessments) {
     var years = Object.keys(rc.taxAssessments).sort().reverse().slice(0, 5);
     if (years.length) {
       html += '<div style="padding:0 24px 24px;"><div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Tax Assessment History</div>' +
         '<div style="overflow-x:auto;"><table class="tax-table"><thead><tr>' +
-        '<th>Year</th><th>Total Value</th><th>Land</th><th>Improvements</th><th>Tax</th>' +
+        '<th>Year</th><th>Total Value</th>' + (unitCount ? '<th>Per Unit</th>' : '') + '<th>Land</th><th>Improvements</th><th>Tax</th>' +
         '</tr></thead><tbody>' +
         years.map(function(yr) {
           var a = rc.taxAssessments[yr];
@@ -1751,6 +1772,7 @@ function renderRentCast(rc) {
           return '<tr>' +
             '<td style="font-weight:600;">' + yr + '</td>' +
             '<td>$' + (a.value || 0).toLocaleString() + '</td>' +
+            (unitCount ? '<td style="color:var(--blue);font-weight:600;">$' + Math.round((a.value || 0) / unitCount).toLocaleString() + '</td>' : '') +
             '<td>$' + (a.land || 0).toLocaleString() + '</td>' +
             '<td>$' + ((a.improvements || (a.value - a.land)) || 0).toLocaleString() + '</td>' +
             '<td>' + (tax ? '$' + tax.toLocaleString() : '--') + '</td>' +
@@ -1760,8 +1782,8 @@ function renderRentCast(rc) {
     }
   }
 
-  // Owner info
-  if (rc.owner && rc.owner.names && rc.owner.names.length) {
+  // ── Owner info ──
+  if (rc && rc.owner && rc.owner.names && rc.owner.names.length) {
     html += '<div style="padding:0 24px 24px;"><div style="padding:16px;background:var(--bg-cream);border-radius:var(--radius-sm);">' +
       '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Owner of Record</div>' +
       '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + esc(rc.owner.names.join(', ')) + '</div>' +
@@ -1772,18 +1794,18 @@ function renderRentCast(rc) {
   if (!html) {
     html = emptyState(
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
-      'No public records found',
+      'No property records found',
       'Property details from county records will appear here when available.'
     );
   }
 
-  // Add source badge
-  html = '<div style="padding:16px 24px 0;"><span style="font-family:var(--font-ui);font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(37,99,235,0.08);color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;">via RentCast</span></div>' + html;
+  // Source badge
+  html = '<div style="padding:16px 24px 0;"><span style="font-family:var(--font-ui);font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(37,99,235,0.08);color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;">via ' + source + '</span></div>' + html;
 
   content.innerHTML = html;
 
   // Update map with real coordinates
-  if (rc.latitude && rc.longitude) {
+  if (rc && rc.latitude && rc.longitude) {
     renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
   }
 }
@@ -2032,7 +2054,7 @@ async function init() {
   if (propertyAddress && propertyAddress.length > 10) {
     var rc = await enrichWithRentCast(propertyAddress);
     if (rc) {
-      renderRentCast(rc);
+      renderPropertyRecords(rc, matchingDeals);
       if (rc.latitude && rc.longitude) renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
       if (rc.unitCount) renderPriceHistory(matchingDeals, rc.unitCount);
     }
