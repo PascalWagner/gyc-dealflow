@@ -35,9 +35,7 @@ export default async function handler(req, res) {
           type,
           asset_classes,
           total_investors,
-          authorized_emails,
-          investment_criteria,
-          portfolio_snapshot
+          authorized_emails
         )
       `)
       .not('investment_name', 'eq', '')
@@ -156,8 +154,6 @@ export default async function handler(req, res) {
           mcTotalInvestors: mc.total_investors,
           mcBookingUrl: mc.booking_url || '',
           mcAuthorizedEmails: mc.authorized_emails || [],
-          mcInvestmentCriteria: mc.investment_criteria || [],
-          mcPortfolioSnapshot: mc.portfolio_snapshot || [],
           fees: d.fees || [],
           firstYrDepreciation: d.first_yr_depreciation,
           strategy: d.strategy,
