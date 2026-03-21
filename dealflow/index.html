@@ -11645,206 +11645,45 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 10/11/12: PLAN OUTPUT =====
+  // ===== SCREEN 10/11/12: PLAN OUTPUT (Apple-simple) =====
   if (step.type === 'planOutput') {
     const branch = step.branch;
-    const deals = getWizardPlanDeals(branch);
 
-    // Helper to parse capital range like "$250k-$500k", "$250-500K", or "$1M+"
-    function parseCapitalRange(str) {
-      if (!str) return { low: 0, high: 0, mid: 0 };
-      // Handle "<$100k" format
-      var isUnder = str.indexOf('<') >= 0;
-      const s = str.replace(/[\$<>+]/g, '');
-      const parts = s.split('-');
-      function parseVal(v) {
-        v = v.trim();
-        if (v.endsWith('M') || v.endsWith('m')) return parseFloat(v) * 1000000;
-        if (v.endsWith('K') || v.endsWith('k')) return parseFloat(v) * 1000;
-        var n = parseFloat(v);
-        return n > 10000 ? n : n * 1000; // assume K if small number without suffix
-      }
-      const low = parseVal(parts[0]) || 0;
-      const high = parts[1] ? parseVal(parts[1]) : low;
-      return { low, high, mid: Math.round((low + high) / 2) };
-    }
+    // Compute the one key number for each goal type
+    let heroNumber = '';
+    let heroLabel = '';
+    let heroSub = '';
 
     if (branch === 'cashflow') {
       const target = parseDollar(wizardData.targetCashFlow) || 100000;
-      const cap = parseCapitalRange(wizardData.capital12mo || wizardData._capitalRange);
-      const capitalMid = cap.mid > 0 ? cap.mid : Math.round(target / 0.09);
-      const yr1Raw = Math.round(capitalMid * 0.09);
-      const yr1 = Math.min(target, yr1Raw);
-      const yr2 = Math.min(target, Math.round(yr1Raw * 1.4));
-      const yr3 = Math.min(target, Math.round(yr1Raw * 1.8));
-      const yr4 = Math.min(target, Math.round(target * 0.9));
-      const yr5 = target;
-      html += `<div class="wizard-card-title">Your path to $${target.toLocaleString()}/yr</div>`;
-      // Growth curve chart
-      html += '<div class="wizard-plan-chart">';
-      html += '<svg viewBox="0 0 500 160" preserveAspectRatio="xMidYMid meet">';
-      // Fill area under curve
-      const incomes = [0, yr1, yr2, yr3, yr4, yr5];
-      const maxInc = yr5;
-      const chartTop = 20;
-      const chartBottom = 130;
-      const chartHeight = chartBottom - chartTop;
-      const pts = [];
-      const ptsFill = [];
-      for (let i = 0; i <= 5; i++) {
-        const x = 60 + i * 76;
-        const y = chartBottom - (incomes[i] / maxInc * chartHeight);
-        pts.push(`${x},${y}`);
-        ptsFill.push(`${x},${y}`);
-      }
-      ptsFill.push(`${60 + 5 * 76},${chartBottom}`);
-      ptsFill.push(`60,${chartBottom}`);
-      html += `<defs><linearGradient id="cfGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#51BE7B" stop-opacity="0.3"/><stop offset="100%" stop-color="#51BE7B" stop-opacity="0.02"/></linearGradient></defs>`;
-      html += `<polygon points="${ptsFill.join(' ')}" fill="url(#cfGrad)"/>`;
-      html += `<polyline points="${pts.join(' ')}" fill="none" stroke="#51BE7B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
-      // Dots + labels
-      for (let i = 0; i <= 5; i++) {
-        const x = 60 + i * 76;
-        const y = chartBottom - (incomes[i] / maxInc * chartHeight);
-        const showLabel = (i === 0 || i === 5);
-        const dotR = showLabel ? 6 : 3;
-        html += `<circle cx="${x}" cy="${y}" r="${dotR}" fill="${showLabel ? '#51BE7B' : '#51BE7B'}" stroke="#fff" stroke-width="${showLabel ? 2 : 0}"/>`;
-        html += `<text x="${x}" y="${chartBottom + 16}" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">${i === 0 ? 'Now' : 'Yr ' + i}</text>`;
-        if (showLabel) {
-          const labelY = i === 0 ? y - 14 : y - 14;
-          html += `<text x="${x}" y="${labelY}" text-anchor="middle" font-size="13" fill="#141413" font-weight="700" font-family="Plus Jakarta Sans">$${incomes[i] >= 1000 ? Math.round(incomes[i] / 1000) + 'K' : incomes[i]}</text>`;
-        }
-      }
-      // Dashed target line
-      html += `<line x1="55" y1="${chartTop}" x2="${60 + 5 * 76 + 5}" y2="${chartTop}" stroke="#51BE7B" stroke-width="1" stroke-dasharray="4" opacity="0.4"/>`;
-      html += `<text x="${60 + 5 * 76 + 10}" y="${chartTop + 4}" font-size="9" fill="#51BE7B" font-family="Plus Jakarta Sans" font-weight="600">GOAL</text>`;
-      html += '</svg>';
-      html += '</div>';
-      // Deployment breakdown
-      html += `<div class="wizard-plan-breakdown">With $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : '...'} deployed across 3\u20135 income-producing deals, you could generate ~$${Math.round(yr1/1000)}K/yr starting year one. As you reinvest distributions and add capital, you build toward $${(target/1000).toLocaleString()}K/yr.</div>`;
-      html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">These deals match your income goal:</div>';
-      html += '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">Save the ones you want to explore later:</div>';
+      heroNumber = '$' + target.toLocaleString();
+      heroLabel = 'per year in passive income';
+      heroSub = 'We found <strong>' + getWizardPlanDeals(branch).length + ' deals</strong> that match your criteria. Your dashboard is ready.';
     } else if (branch === 'tax') {
       const taxable = parseDollar(wizardData.taxableIncome) || 200000;
       const estRate = taxable > 500000 ? 0.37 : (taxable > 200000 ? 0.35 : 0.32);
-      const currentBill = Math.round(taxable * estRate);
-      const capT = parseCapitalRange(wizardData.capital12mo || wizardData._capitalRange);
-      const capitalMid = capT.mid > 0 ? capT.mid : Math.round(taxable * 1.5);
-      const depreciation = Math.round(capitalMid * 0.7);
-      const afterBill = Math.max(0, Math.round((taxable - depreciation) * estRate));
-      const saved = currentBill - afterBill;
-      html += `<div class="wizard-card-title">How to offset $${taxable.toLocaleString()} in taxable income</div>`;
-      // Tax savings bar chart
-      html += '<div class="wizard-plan-chart">';
-      html += '<svg viewBox="0 0 500 140" preserveAspectRatio="xMidYMid meet">';
-      const beforeH = 95;
-      const afterH = Math.max(10, Math.round(95 * (afterBill / currentBill)));
-      html += `<rect x="90" y="${115 - beforeH}" width="110" height="${beforeH}" rx="8" fill="#D04040" opacity="0.15"/>`;
-      html += `<rect x="90" y="${115 - beforeH}" width="110" height="${beforeH}" rx="8" fill="none" stroke="#D04040" stroke-width="2"/>`;
-      html += `<text x="145" y="${108 - beforeH}" text-anchor="middle" font-size="14" fill="#D04040" font-weight="800" font-family="Plus Jakarta Sans">$${Math.round(currentBill / 1000)}K</text>`;
-      html += `<text x="145" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">Current Tax Bill</text>`;
-      html += `<rect x="300" y="${115 - afterH}" width="110" height="${afterH}" rx="8" fill="#51BE7B" opacity="0.15"/>`;
-      html += `<rect x="300" y="${115 - afterH}" width="110" height="${afterH}" rx="8" fill="none" stroke="#51BE7B" stroke-width="2"/>`;
-      html += `<text x="355" y="${108 - afterH}" text-anchor="middle" font-size="14" fill="#51BE7B" font-weight="800" font-family="Plus Jakarta Sans">$${Math.round(afterBill / 1000)}K</text>`;
-      html += `<text x="355" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">After Investing</text>`;
-      // Arrow between bars
-      html += '<line x1="210" y1="70" x2="290" y2="70" stroke="#8A9AA0" stroke-width="1.5" stroke-dasharray="4"/>';
-      html += '<polygon points="288,65 298,70 288,75" fill="#8A9AA0"/>';
-      html += '</svg>';
-      html += '</div>';
-      // Deployment breakdown
-      html += `<div class="wizard-plan-breakdown">Deploy $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : '...'} in depreciation-heavy deals \u2192 offset ~$${(depreciation/1000).toLocaleString()}K in taxable income. Estimated tax savings: ~$${saved.toLocaleString()}.</div>`;
-      html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">Top depreciation deals for your profile:</div>';
-      html += '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">Save the ones you want to explore later:</div>';
+      const estSavings = Math.round(taxable * 0.7 * estRate);
+      heroNumber = '$' + estSavings.toLocaleString();
+      heroLabel = 'estimated tax savings';
+      heroSub = 'We found <strong>' + getWizardPlanDeals(branch).length + ' depreciation-heavy deals</strong> that match your profile.';
     } else {
       const cap = parseDollar(wizardData.growthCapital) || 500000;
-      const doubled = cap * 2;
-      const capG = parseCapitalRange(wizardData.capital12mo || wizardData._capitalRange);
-      const capitalMid = capG.mid > 0 ? capG.mid : cap;
-      html += `<div class="wizard-card-title">Double your $${(cap/1000).toLocaleString()}K in 5 years</div>`;
-      // Growth bar chart — Today vs Goal
-      html += '<div class="wizard-plan-chart">';
-      html += '<svg viewBox="0 0 500 140" preserveAspectRatio="xMidYMid meet">';
-      const todayH = 65;
-      const goalH = 100;
-      html += `<rect x="90" y="${115 - todayH}" width="110" height="${todayH}" rx="8" fill="#2563EB" opacity="0.15"/>`;
-      html += `<rect x="90" y="${115 - todayH}" width="110" height="${todayH}" rx="8" fill="none" stroke="#2563EB" stroke-width="2"/>`;
-      html += `<text x="145" y="${108 - todayH}" text-anchor="middle" font-size="14" fill="#2563EB" font-weight="800" font-family="Plus Jakarta Sans">$${(cap/1000).toLocaleString()}K</text>`;
-      html += `<text x="145" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">Today</text>`;
-      html += `<rect x="300" y="${115 - goalH}" width="110" height="${goalH}" rx="8" fill="#51BE7B" opacity="0.15"/>`;
-      html += `<rect x="300" y="${115 - goalH}" width="110" height="${goalH}" rx="8" fill="none" stroke="#51BE7B" stroke-width="2"/>`;
-      html += `<text x="355" y="${108 - goalH}" text-anchor="middle" font-size="14" fill="#51BE7B" font-weight="800" font-family="Plus Jakarta Sans">$${(doubled/1000).toLocaleString()}K</text>`;
-      html += `<text x="355" y="132" text-anchor="middle" font-size="11" fill="#8A9AA0" font-family="Plus Jakarta Sans">5 Years</text>`;
-      // Timeline arrow
-      html += '<line x1="210" y1="70" x2="290" y2="55" stroke="#8A9AA0" stroke-width="1.5" stroke-dasharray="4"/>';
-      html += '<polygon points="288,50 298,54 288,58" fill="#8A9AA0"/>';
-      html += '<text x="250" y="48" text-anchor="middle" font-size="10" fill="#8A9AA0" font-family="Plus Jakarta Sans">~15% IRR</text>';
-      html += '</svg>';
-      html += '</div>';
-      // Deployment breakdown
-      html += `<div class="wizard-plan-breakdown">Deploy $${capitalMid > 0 ? (capitalMid/1000).toLocaleString() + 'K' : (cap/1000).toLocaleString() + 'K'} across 3\u20134 value-add deals \u2192 target 2x over 5 years at ~15% IRR.</div>`;
-      html += '<div class="wizard-plan-detail" style="margin-bottom:16px;">These high-growth opportunities match your profile:</div>';
-      html += '<div style="font-size:14px;color:var(--text-secondary);margin-bottom:12px;">Save the ones you want to explore later:</div>';
+      heroNumber = '$' + (cap * 2 / 1000).toLocaleString() + 'K';
+      heroLabel = 'target in 5 years';
+      heroSub = 'We found <strong>' + getWizardPlanDeals(branch).length + ' high-growth deals</strong> targeting 15%+ IRR.';
     }
 
-    // Deal cards (non-clickable, with save button)
-    if (deals.length > 0) {
-      html += '<div class="wizard-plan-deals">';
-      deals.forEach(deal => {
-        const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
-        let metric = '';
-        let metricLabel = '';
-        let extraMeta = '';
-        if (branch === 'cashflow') {
-          const y = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
-          metric = fmt(y, 'pct');
-          metricLabel = deal.preferredReturn ? 'Pref Return' : (deal.cashOnCash ? 'Cash-on-Cash' : 'Target Return');
-          if (deal.distributionFrequency) extraMeta = deal.distributionFrequency;
-        } else if (branch === 'tax') {
-          if (deal.firstYrDepreciation) { metric = deal.firstYrDepreciation; metricLabel = 'Yr1 Depreciation'; }
-          else { metric = fmt(deal.targetIRR, 'pct'); metricLabel = 'Target Return'; }
-        } else {
-          metric = fmt(deal.targetIRR, 'pct');
-          metricLabel = 'Target Return';
-          if (deal.holdPeriod || deal.holdPeriod === 0) extraMeta = formatHoldPeriod(deal.holdPeriod) + ' hold';
-        }
-        const minInvest = deal.minimumInvestment ? '$' + parseInt(deal.minimumInvestment).toLocaleString() + ' min' : '';
-        const isSaved = typeof getDealStage === 'function' && (getDealStage(deal.id) === 'saved' || getDealStage(deal.id) === 'vetting');
-        const savedClass = isSaved ? ' saved' : '';
-        html += `<div class="wizard-plan-deal${savedClass}" id="wizDeal_${deal.id}">
-          <div class="wizard-plan-deal-icon" style="background:${ph.bg};">${ph.icon}</div>
-          <div class="wizard-plan-deal-info">
-            <div class="wizard-plan-deal-name">${deal.investmentName || 'Unnamed'}<span class="wizard-plan-deal-badge">${deal.assetClass || ''}</span></div>
-            <div class="wizard-plan-deal-meta">${deal.managementCompany || ''}</div>
-            <div class="wizard-plan-deal-row">
-              <span class="wizard-plan-deal-metric" style="font-size:15px;">${metric}</span>
-              <span class="wizard-plan-deal-dist">${metricLabel}</span>
-              ${extraMeta ? '<span class="wizard-plan-deal-dist">&middot; ' + extraMeta + '</span>' : ''}
-              ${minInvest ? '<span class="wizard-plan-deal-min">&middot; ' + minInvest + '</span>' : ''}
-            </div>
-          </div>
-          <button class="wizard-plan-deal-save${isSaved ? ' saved' : ''}" id="wizSave_${deal.id}" onclick="savePlanDeal('${deal.id}', this)">
-            ${isSaved ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 2h14a1 1 0 011 1v19.143a.5.5 0 01-.766.424L12 18.03l-7.234 4.536A.5.5 0 014 22.143V3a1 1 0 011-1z"/></svg> Saved' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h14a1 1 0 011 1v19.143a.5.5 0 01-.766.424L12 18.03l-7.234 4.536A.5.5 0 014 22.143V3a1 1 0 011-1z"/></svg> Save'}
-          </button>
-        </div>`;
-      });
-      html += '</div>';
-    }
-
-    // Soft next-step CTA — not salesy, just helpful
-    html += '<div class="wizard-plan-paths">';
-    html += '<div class="wizard-plan-paths-divider">or</div>';
-    html += '<div class="wizard-plan-paths-label">Not sure where to start?</div>';
-    html += '<div class="wizard-plan-paths-btns">';
-    html += '<div class="wizard-plan-path-btn-wrap"><a class="wizard-plan-path-btn" href="https://growyourcashflow.io/call" target="_blank" onclick="trackActivity(\'call_booked\',{source:\'wizard_plan\'})">Book a free strategy call</a><div class="wizard-plan-path-desc">Walk through your plan with Pascal</div></div>';
-    html += '<div class="wizard-plan-path-btn-wrap"><a class="wizard-plan-path-btn primary" href="https://growyourcashflow.io/cashflow-academy" target="_blank" onclick="trackActivity(\'academy_cta_clicked\',{source:\'wizard_plan\'})">Get guided deployment</a><div class="wizard-plan-path-desc">Deploy your first 3 deals in 90 days</div></div>';
-    html += '</div>';
+    // Minimal centered layout
+    html += '<div style="text-align:center;padding:40px 0 20px;">';
+    html += '<div style="font-family:var(--font-headline);font-size:48px;font-weight:800;color:var(--text-dark);line-height:1.1;margin-bottom:8px;">' + heroNumber + '</div>';
+    html += '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-secondary);margin-bottom:32px;">' + heroLabel + '</div>';
+    html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);line-height:1.6;max-width:360px;margin:0 auto;">' + heroSub + '</div>';
     html += '</div>';
 
     // Nav
-    html += '<div class="wizard-inline-nav">';
+    html += '<div class="wizard-inline-nav" style="margin-top:40px;">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += `<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Continue \u2192</button>`;
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Browse my deals \u2192</button>';
     html += '</div>';
 
     document.getElementById('wizardContent').innerHTML = html;
