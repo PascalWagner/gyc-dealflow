@@ -228,6 +228,44 @@ body {
 .error-msg { font-family: var(--font-ui); font-size: 12px; color: #D04040; margin-top: 4px; display: none; }
 .error-msg.show { display: block; }
 
+/* Open mail CTA */
+.open-mail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  margin-top: 20px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.open-mail-btn:hover { background: var(--primary-hover); }
+.open-mail-btn:active { transform: scale(0.98); }
+.open-mail-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.open-mail-alt {
+  margin-top: 10px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--slate);
+}
+.open-mail-alt a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.open-mail-alt a:hover { text-decoration: underline; }
+
 /* Stats bar */
 .stats-bar {
   display: flex;
@@ -404,7 +442,10 @@ body {
             <div class="magic-sent-title">Check your email</div>
             <div class="magic-sent-desc">
               We sent a login link to <strong id="sentEmail"></strong>.<br>
-              Click the link in the email to log in.<br><br>
+              Click the link in the email to log in.
+            </div>
+            <div id="signinMailCta"></div>
+            <div class="magic-sent-desc" style="margin-top:12px;">
               <span style="font-size:12px;color:var(--slate);">Link expires in 15 minutes. Check spam if you don't see it.</span><br>
               <a onclick="resetSignIn()">Try a different email</a>
             </div>
@@ -452,7 +493,10 @@ body {
             <div class="magic-sent-title">You're in!</div>
             <div class="magic-sent-desc">
               We sent a login link to <strong id="signupSentEmail"></strong>.<br>
-              Click the link in the email to access the deal marketplace.<br><br>
+              Click the link in the email to access the deal marketplace.
+            </div>
+            <div id="signupMailCta"></div>
+            <div class="magic-sent-desc" style="margin-top:12px;">
               <span style="font-size:12px;color:var(--slate);">Link expires in 15 minutes. Check spam if you don't see it.</span>
             </div>
           </div>
@@ -616,6 +660,9 @@ async function handleSignIn() {
       document.getElementById('signinForm').style.display = 'none';
       document.getElementById('sentEmail').textContent = email;
       document.getElementById('signinSent').classList.add('show');
+      renderMailCta('signinMailCta', email);
+      // Auto-open mail app on mobile after a brief delay so user sees the confirmation
+      autoOpenMailApp(email);
       return;
     }
     showErr('signinError', data.error || 'Could not send login link. Try again.');
@@ -661,11 +708,94 @@ async function handleSignUp() {
       document.getElementById('signupForm').style.display = 'none';
       document.getElementById('signupSentEmail').textContent = email;
       document.getElementById('signupSent').classList.add('show');
+      renderMailCta('signupMailCta', email);
+      // Auto-open mail app on mobile after a brief delay so user sees the confirmation
+      autoOpenMailApp(email);
       return;
     }
     showErr('signupError', data.error || 'Sign up failed.');
   } catch(e) { showErr('signupError', 'Connection error.'); }
   btn.classList.remove('btn-loading'); btn.textContent = 'Request Access';
+}
+
+/* ── Open Mail helper ── */
+function getMailAppInfo(email) {
+  const domain = (email.split('@')[1] || '').toLowerCase();
+  const isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || isCapacitor;
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isMobile = isIOS || isAndroid || window.matchMedia('(max-width: 767px)').matches;
+
+  // Universal links open native apps automatically on iOS/Android when the app is installed.
+  // Custom URL schemes (googlegmail://) fail silently in WKWebView and many mobile browsers,
+  // so we use web URLs that the OS intercepts via universal/app links.
+  const providers = {
+    gmail: { label: 'Open Gmail', url: 'https://mail.google.com/mail/u/0/#inbox', scheme: 'googlegmail:///' },
+    outlook: { label: 'Open Outlook', url: 'https://outlook.live.com/mail/0/inbox', scheme: 'ms-outlook://' },
+    yahoo: { label: 'Open Yahoo Mail', url: 'https://mail.yahoo.com', scheme: 'ymail://mail' },
+    icloud: { label: 'Open Mail', url: 'https://www.icloud.com/mail', scheme: 'message://' },
+  };
+
+  let provider = null;
+  if (domain === 'gmail.com' || domain === 'googlemail.com') provider = 'gmail';
+  else if (domain === 'outlook.com' || domain === 'hotmail.com' || domain === 'live.com' || domain === 'msn.com') provider = 'outlook';
+  else if (domain === 'yahoo.com' || domain === 'ymail.com') provider = 'yahoo';
+  else if (domain === 'icloud.com' || domain === 'me.com' || domain === 'mac.com') provider = 'icloud';
+
+  // On iOS Capacitor, default to Apple Mail for unknown providers
+  if (!provider && isCapacitor) provider = 'icloud';
+
+  return { provider, providers, isCapacitor, isIOS, isAndroid, isMobile };
+}
+
+function openMailApp(email) {
+  const info = getMailAppInfo(email);
+  if (!info.provider) return;
+  const p = info.providers[info.provider];
+
+  // In Capacitor, use native App plugin to open URL scheme, with web fallback
+  if (info.isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.openUrl({ url: p.scheme }).catch(function() {
+      window.open(p.url, '_blank');
+    });
+    return;
+  }
+
+  // On mobile browsers, use the universal link (web URL) — the OS will
+  // intercept and open the native app if installed (e.g., Gmail app handles
+  // mail.google.com links). No custom scheme needed.
+  window.location.href = p.url;
+}
+
+function autoOpenMailApp(email) {
+  const info = getMailAppInfo(email);
+  if (!info.isMobile || !info.provider) return;
+  // Brief 600ms delay so the user sees the "Check your email" confirmation
+  // before being redirected to their mail app
+  setTimeout(function() { openMailApp(email); }, 600);
+}
+
+function renderMailCta(containerId, email) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const info = getMailAppInfo(email);
+
+  // Only show on mobile / Capacitor
+  if (!info.isMobile) { container.innerHTML = ''; return; }
+
+  const mailSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
+
+  if (info.provider) {
+    const p = info.providers[info.provider];
+    const safeEmail = email.replace(/'/g, "\\'");
+    let html = '<button class="open-mail-btn" onclick="openMailApp(\'' + safeEmail + '\')">' + mailSvg + p.label + '</button>';
+    container.innerHTML = html;
+  } else {
+    // Unknown provider on mobile — show generic link to check email
+    const fallbackUrl = info.isIOS ? 'message://' : 'https://mail.google.com';
+    const fallbackLabel = info.isIOS ? 'Open Mail' : 'Open Email';
+    container.innerHTML = '<a class="open-mail-btn" href="' + fallbackUrl + '">' + mailSvg + fallbackLabel + '</a>';
+  }
 }
 
 function saveUser(data, email) {
