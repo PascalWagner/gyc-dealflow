@@ -2897,6 +2897,7 @@ html.cap-ios .debt-metric-select-mobile {
 }
 .wizard-btn-next:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
 .wizard-btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+@keyframes wizShake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
 .wizard-footer { display: none; }
 
 /* ===== Screen 0: Goal Selection Cards ===== */
@@ -11109,7 +11110,7 @@ function renderWizardStep() {
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()"' + (!wizardData.triggerEvent ? ' disabled style="opacity:0.5;pointer-events:none;"' : '') + '>Next</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -12023,6 +12024,33 @@ function wizardNext() {
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
   invalidateWizardCache();
   const seq = getStepSequence();
+  const curStep = WIZARD_STEPS[seq[wizardStepIndex]];
+
+  // Validate required fields before advancing
+  const requiredMap = {
+    capitalAmount: 'capital12mo',
+    capitalReadiness: 'capitalReadiness',
+    capitalSource: 'triggerEvent',
+    targetInput: curStep && curStep.key ? curStep.key : null,
+    taxTarget: 'taxableIncome',
+    checkSize: 'checkSize',
+    netWorth: 'netWorth',
+    lossTolerance: 'maxOperatorPct',
+    lockupPrefs: 'lockup',
+    distributionPrefs: 'distributions',
+    accreditationPrefs: 'accreditation'
+  };
+  var reqField = curStep ? requiredMap[curStep.type] : null;
+  if (reqField && !wizardData[reqField]) {
+    // Shake the Next button to indicate selection required
+    var nextBtn = document.querySelector('.wizard-btn-next');
+    if (nextBtn) {
+      nextBtn.style.animation = 'none';
+      nextBtn.offsetHeight; // trigger reflow
+      nextBtn.style.animation = 'wizShake 0.4s ease';
+    }
+    return;
+  }
 
   if (wizardStepIndex >= seq.length - 1) {
     // Finish
