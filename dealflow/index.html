@@ -9540,7 +9540,7 @@ function getFilteredDeals() {
     if (st && d.strategy !== st) return false;
     if (status && d.status !== status) return false;
     if (q) {
-      const haystack = [d.investmentName, d.managementCompany, d.assetClass, d.ceo, d.location || '', d.investmentStrategy || ''].join(' ').toLowerCase();
+      const haystack = [d.investmentName, d.managementCompany, d.assetClass, d.ceo, d.location || '', d.investmentStrategy || '', d.strategy || '', d.dealType || '', d.offeringType || '', d.address || ''].join(' ').toLowerCase();
       if (!haystack.includes(q)) return false;
       // When searching, show results from ALL tabs (cross-tab search)
     } else {
