@@ -90,6 +90,22 @@ export default async function handler(req, res) {
       }
     }
 
+    // 5. Send Slack DM notification
+    const slackWebhook = process.env.SLACK_INTRO_WEBHOOK_URL;
+    if (slackWebhook) {
+      try {
+        await fetch(slackWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: `🤝 *New Intro Request*\n• *Deal:* ${dealName}\n• *Operator:* ${operatorName}${operatorCeo ? `\n• *Contact:* ${operatorCeo}` : ''}\n• *User:* ${user.email}\n• *Date:* ${new Date().toISOString().split('T')[0]}`
+          })
+        });
+      } catch (slackErr) {
+        console.warn('Slack notification failed:', slackErr.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       ghlSynced: !!ghlContactId
