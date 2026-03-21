@@ -706,7 +706,7 @@ body {
 /* ====== KEY PEOPLE ====== */
 .people-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
   gap: 20px;
 }
 
@@ -828,60 +828,6 @@ body {
 }
 
 /* ====== NOTES ====== */
-.notes-textarea {
-  width: 100%;
-  min-height: 140px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text-dark);
-  background: var(--off-white);
-  resize: vertical;
-  outline: none;
-  transition: border-color var(--transition);
-}
-.notes-textarea:focus { border-color: var(--primary); }
-
-.notes-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 14px;
-}
-
-.notes-timestamp {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-.btn-save {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 24px;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition);
-  background: var(--primary);
-  color: #fff;
-  border: none;
-}
-.btn-save:hover {
-  background: var(--primary-hover);
-}
-.btn-save:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-save svg { width: 14px; height: 14px; }
 
 /* ====== EMPTY STATE ====== */
 .empty-inline {
@@ -1170,22 +1116,6 @@ body {
         </div>
       </div>
 
-      <!-- My Notes -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">My Notes</div>
-        </div>
-        <div class="section-body">
-          <textarea class="notes-textarea" id="myNotes" placeholder="Write your personal notes about this sponsor here..."></textarea>
-          <div class="notes-footer">
-            <span class="notes-timestamp" id="notesTimestamp"></span>
-            <button class="btn-save" id="saveNotesBtn" onclick="saveNotes()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-              Save Notes
-            </button>
-          </div>
-        </div>
-      </div>
 
     </div><!-- /loaded-wrap -->
   </div><!-- /content-wrap -->
@@ -1562,18 +1492,6 @@ function renderSponsor(data) {
 
   researchGrid.innerHTML = researchHtml;
 
-  // Load saved notes
-  const savedNotes = localStorage.getItem('gycSponsorNotes_' + s.id);
-  if (savedNotes) {
-    try {
-      const parsed = JSON.parse(savedNotes);
-      document.getElementById('myNotes').value = parsed.text || '';
-      if (parsed.timestamp) {
-        document.getElementById('notesTimestamp').textContent = 'Last saved: ' + new Date(parsed.timestamp).toLocaleString();
-      }
-    } catch (e) {}
-  }
-
   // Show content
   document.body.classList.add('page-loaded');
 }
@@ -1596,22 +1514,6 @@ function handleGetIntroduced() {
   alert('Request submitted! We will connect you with ' + sponsorName + '. Check your email (' + email + ') for next steps.');
 }
 
-function saveNotes() {
-  const params = getSponsorParams();
-  const sponsorId = params.id || params.company || 'unknown';
-  const text = document.getElementById('myNotes').value;
-  const timestamp = new Date().toISOString();
-  localStorage.setItem('gycSponsorNotes_' + sponsorId, JSON.stringify({ text, timestamp }));
-  document.getElementById('notesTimestamp').textContent = 'Last saved: ' + new Date(timestamp).toLocaleString();
-
-  const btn = document.getElementById('saveNotesBtn');
-  btn.textContent = 'Saved!';
-  btn.disabled = true;
-  setTimeout(() => {
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Notes';
-    btn.disabled = false;
-  }, 1500);
-}
 
 // ========== BOOT ==========
 async function init() {
