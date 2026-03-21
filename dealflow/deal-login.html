@@ -661,6 +661,8 @@ async function handleSignIn() {
       document.getElementById('sentEmail').textContent = email;
       document.getElementById('signinSent').classList.add('show');
       renderMailCta('signinMailCta', email);
+      // Auto-open mail app on mobile after a brief delay so user sees the confirmation
+      autoOpenMailApp(email);
       return;
     }
     showErr('signinError', data.error || 'Could not send login link. Try again.');
@@ -707,6 +709,8 @@ async function handleSignUp() {
       document.getElementById('signupSentEmail').textContent = email;
       document.getElementById('signupSent').classList.add('show');
       renderMailCta('signupMailCta', email);
+      // Auto-open mail app on mobile after a brief delay so user sees the confirmation
+      autoOpenMailApp(email);
       return;
     }
     showErr('signupError', data.error || 'Sign up failed.');
@@ -761,6 +765,14 @@ function openMailApp(email) {
   // intercept and open the native app if installed (e.g., Gmail app handles
   // mail.google.com links). No custom scheme needed.
   window.location.href = p.url;
+}
+
+function autoOpenMailApp(email) {
+  const info = getMailAppInfo(email);
+  if (!info.isMobile || !info.provider) return;
+  // Brief 600ms delay so the user sees the "Check your email" confirmation
+  // before being redirected to their mail app
+  setTimeout(function() { openMailApp(email); }, 600);
 }
 
 function renderMailCta(containerId, email) {
