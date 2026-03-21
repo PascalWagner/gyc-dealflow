@@ -786,50 +786,84 @@ export default async function handler(req, res) {
         .select('*')
         .order('deal_name');
 
+      // Stop words that cause false-positive matches
+      const STOP_WORDS = new Set([
+        'fund','capital','group','partners','investment','investments','real','estate',
+        'properties','holdings','income','equity','the','and','for','llc','lp','inc',
+        'asset','management','opportunity','opportunities','advisors','ventures',
+        'realty','development','financial','trust','portfolio','credit','lending',
+        'senior','bridge','growth','value','core','plus','one','two','three',
+      ]);
+
+      function fuzzyMatch(dealName, fileName) {
+        const dn = dealName.toLowerCase().trim();
+        const fn = fileName.toLowerCase().trim();
+        if (!dn || !fn || dn.length < 3 || fn.length < 3) return { match: false, score: 0 };
+        // Exact match
+        if (fn === dn) return { match: true, score: 100 };
+        // Substring match (either direction, but require at least 5 chars)
+        if (dn.length >= 5 && fn.includes(dn)) return { match: true, score: 90 };
+        if (fn.length >= 5 && dn.includes(fn)) return { match: true, score: 85 };
+        // Word overlap: filter out stop words, require ≥2 significant words
+        const dealWords = dn.split(/[\s\-_,]+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+        const fileWords = fn.split(/[\s\-_,]+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+        if (dealWords.length === 0 || fileWords.length === 0) return { match: false, score: 0 };
+        const overlap = dealWords.filter(w => fileWords.some(fw => fw === w));
+        const minWords = Math.min(dealWords.length, fileWords.length);
+        // Require at least 2 non-stop-word exact matches, and ≥50% of the shorter name's words
+        if (overlap.length >= 2 && overlap.length >= minWords * 0.5) {
+          return { match: true, score: 50 + Math.round((overlap.length / minWords) * 30) };
+        }
+        return { match: false, score: 0 };
+      }
+
+      // Detect broken Airtable CDN links
+      function isBrokenUrl(url) {
+        if (!url) return false;
+        return url.includes('airtableusercontent.com') || url.includes('dl.airtable.com');
+      }
+
       const withDeck = [];
       const withoutDeck = [];
+      const brokenDeck = [];
 
       for (const d of (deals || [])) {
         const hasDeck = !!d.deck_url;
+        const broken = isBrokenUrl(d.deck_url);
         const hasPpm = !!d.ppm_url;
-        const dealName = (d.investment_name || '').toLowerCase().trim();
+        const dealName = (d.investment_name || '');
         const operatorName = d.management_company?.operator_name || '';
 
-        // Find matching GDrive files (fuzzy match)
-        const matches = (gdriveFiles || []).filter(f => {
-          const fn = f.deal_name.toLowerCase().trim();
-          if (!dealName || !fn) return false;
-          // Exact match
-          if (fn === dealName) return true;
-          // Substring match (either direction)
-          if (fn.includes(dealName) || dealName.includes(fn)) return true;
-          // Word overlap: check if ≥2 significant words match
-          const dealWords = dealName.split(/[\s\-_,]+/).filter(w => w.length > 2);
-          const fileWords = fn.split(/[\s\-_,]+/).filter(w => w.length > 2);
-          const overlap = dealWords.filter(w => fileWords.some(fw => fw.includes(w) || w.includes(fw)));
-          return overlap.length >= 2;
-        }).map(f => ({
-          gdrive_id: f.gdrive_id,
-          file_name: f.file_name,
-          doc_type: f.doc_type,
-          file_size: f.file_size,
-          folder: f.folder,
-          view_url: `https://drive.google.com/file/d/${f.gdrive_id}/view`,
-        }));
+        // Find matching GDrive files (fuzzy match with scoring)
+        const matches = (gdriveFiles || []).map(f => {
+          const result = fuzzyMatch(dealName, f.deal_name);
+          if (!result.match) return null;
+          return {
+            gdrive_id: f.gdrive_id,
+            file_name: f.file_name,
+            doc_type: f.doc_type,
+            file_size: f.file_size,
+            folder: f.folder,
+            score: result.score,
+            view_url: `https://drive.google.com/file/d/${f.gdrive_id}/view`,
+          };
+        }).filter(Boolean).sort((a, b) => b.score - a.score);
 
         const entry = {
           id: d.id,
           investment_name: d.investment_name || '—',
           asset_class: d.asset_class || '',
           operator_name: operatorName,
-          has_deck: hasDeck,
+          has_deck: hasDeck && !broken,
           has_ppm: hasPpm,
           deck_url: d.deck_url || '',
+          broken_url: broken,
           gdrive_matches: matches,
           match_count: matches.length,
         };
 
-        if (hasDeck) withDeck.push(entry);
+        if (broken) brokenDeck.push(entry);
+        else if (hasDeck) withDeck.push(entry);
         else withoutDeck.push(entry);
       }
 
@@ -839,12 +873,55 @@ export default async function handler(req, res) {
           total: deals.length,
           with_deck: withDeck.length,
           without_deck: withoutDeck.length,
+          broken_deck: brokenDeck.length,
           gdrive_files: (gdriveFiles || []).length,
-          auto_matchable: withoutDeck.filter(d => d.match_count > 0).length,
+          auto_matchable: [...withoutDeck, ...brokenDeck].filter(d => d.match_count > 0).length,
         },
         without_deck: withoutDeck,
         with_deck: withDeck,
+        broken_deck: brokenDeck,
       });
+    }
+
+    // Action: search GDrive files index by keyword
+    if (action === 'search-gdrive') {
+      const { query } = req.body;
+      if (!query || query.length < 2) return res.status(400).json({ error: 'Query too short' });
+
+      const { data: files } = await supabase
+        .from('gdrive_deck_files')
+        .select('*')
+        .ilike('deal_name', `%${query}%`)
+        .order('deal_name')
+        .limit(20);
+
+      return res.status(200).json({
+        success: true,
+        results: (files || []).map(f => ({
+          gdrive_id: f.gdrive_id,
+          file_name: f.file_name,
+          doc_type: f.doc_type,
+          file_size: f.file_size,
+          deal_name: f.deal_name,
+          view_url: `https://drive.google.com/file/d/${f.gdrive_id}/view`,
+        })),
+      });
+    }
+
+    // Action: clear a broken deck_url from a deal
+    if (action === 'clear-deck') {
+      const { dealId } = req.body;
+      if (!dealId) return res.status(400).json({ error: 'Missing dealId' });
+
+      const { data, error } = await supabase
+        .from('opportunities')
+        .update({ deck_url: null, updated_at: new Date().toISOString() })
+        .eq('id', dealId)
+        .select('id, investment_name')
+        .single();
+
+      if (error) throw error;
+      return res.status(200).json({ success: true, data });
     }
 
     // Action: attach a GDrive file as a deal's deck_url
@@ -866,7 +943,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, data, field_updated: field });
     }
 
-    return res.status(400).json({ error: 'Unknown action. Valid: get-queue, enrich-deal, apply-enrichment, deck-audit, attach-deck' });
+    return res.status(400).json({ error: 'Unknown action. Valid: get-queue, enrich-deal, apply-enrichment, deck-audit, attach-deck, search-gdrive, clear-deck' });
 
   } catch (err) {
     console.error('Deal cleanup error:', err);
