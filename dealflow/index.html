@@ -1108,6 +1108,45 @@ html.dark .academy-gate-cta {
   gap: 8px;
   border-top: 1px solid var(--border-light);
 }
+.card-share-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+.card-share-btn:hover { background: var(--bg-cream); border-color: var(--primary); }
+.card-share-btn svg { width: 14px; height: 14px; color: var(--text-secondary); }
+.card-share-btn:hover svg { color: var(--primary); }
+.share-toast-idx {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--teal-midnight, #0A1E21);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.share-toast-idx.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* Compare page */
 .compare-search-wrap { position:relative; margin-bottom:12px; }
@@ -5135,6 +5174,21 @@ const _supa = window.supabase.createClient(
           </label>
         </div>
 
+        <div class="settings-card" style="margin-top:16px">
+          <div class="settings-card-title">Consultation Booking</div>
+          <div class="settings-card-desc">Add your calendar link so GPs and other members can book time with you directly on the platform</div>
+          <div class="profile-field">
+            <div class="profile-label">Calendar Link</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="url" class="profile-input" id="calendarLinkInput" placeholder="https://calendly.com/your-name" style="flex:1;">
+              <a id="calendarLinkPreview" href="#" target="_blank" rel="noopener" style="display:none;padding:8px 12px;background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;white-space:nowrap;" title="Test your link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Test
+              </a>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;">Paste a link from Calendly, Cal.com, or any scheduling tool. This will appear as a "Book a Call" button on your profile and deal interactions.</div>
+          </div>
+        </div>
+
         <div class="settings-save-bar">
           <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Profile</button>
         </div>
@@ -8678,6 +8732,9 @@ function renderCreditCard(deal) {
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
+        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
         ${renderGridCardActions(deal, stage, isInterested)}
       </div>
     </div>
@@ -8969,6 +9026,9 @@ function renderCard(deal) {
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
+        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
         ${renderGridCardActions(deal, stage, isInterested)}
       </div>
     </div>
@@ -10265,6 +10325,7 @@ function resetBuyBox() {
 }
 
 function showSaveStatus() {
+  saveCalendarLink();
   const el = document.getElementById('saveStatus');
   if (!el) return;
   el.classList.add('show');
@@ -10284,6 +10345,31 @@ function loadSharePortfolioSetting() {
   var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
   var toggle = document.getElementById('sharePortfolioToggle');
   if (toggle) toggle.checked = !!u.sharePortfolio;
+}
+
+// Calendar link preview
+(function() {
+  var inp = document.getElementById('calendarLinkInput');
+  var preview = document.getElementById('calendarLinkPreview');
+  if (!inp || !preview) return;
+  // Load saved value
+  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  if (u.calendarLink) { inp.value = u.calendarLink; preview.href = u.calendarLink; preview.style.display = ''; }
+  inp.addEventListener('input', function() {
+    var v = inp.value.trim();
+    if (v && /^https?:\/\/.+/.test(v)) { preview.href = v; preview.style.display = ''; }
+    else { preview.style.display = 'none'; }
+  });
+})();
+
+function saveCalendarLink() {
+  var inp = document.getElementById('calendarLinkInput');
+  if (!inp) return;
+  var v = inp.value.trim();
+  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  u.calendarLink = v;
+  localStorage.setItem('gycUser', JSON.stringify(u));
+  syncToBackend('profile', { calendar_link: v });
 }
 
 function switchSettingsTab(el) {
@@ -10547,11 +10633,11 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 // Flow v3: 0=goal, 1=capital timeline, 2/3/4=branch target, 5=risk & concentration,
 //   6=asset classes, 7=strategies, 8=deal prefs, 9=LP network, 10/11/12=plan, 13=done
 const ONBOARDING_FLOW = {
-  common_start: [0, 1],
-  cashflow: [2, 5, 6, 7, 8, 9, 10],
-  growth: [3, 5, 6, 7, 8, 9, 11],
-  tax: [4, 5, 6, 7, 8, 9, 12],
-  common_end: [13]
+  common_start: [0, 1, 2],
+  cashflow: [3, 6, 7, 8, 9, 10, 11],
+  growth: [4, 6, 7, 8, 9, 10, 12],
+  tax: [5, 6, 7, 8, 9, 10, 13],
+  common_end: [14]
 };
 
 function getStepSequence() {
@@ -10559,7 +10645,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Income Target', 'Growth Target', 'Tax Target', 'Risk', 'Asset Classes', 'Strategy', 'Preferences', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Risk', 'Asset Classes', 'Strategy', 'Preferences', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -10572,7 +10658,9 @@ const WIZARD_STEPS = [
   { type: 'goalSelect' },
   // 1: Capital timeline (all paths)
   { type: 'capitalTimeline' },
-  // 2: Cash flow target
+  // 2: Capital source (all paths)
+  { type: 'capitalSource' },
+  // 3: Cash flow target
   { type: 'targetInput', branch: 'cashflow',
     title: 'How much passive income do you want?',
     suffix: '/ year',
@@ -10586,7 +10674,7 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 3: Growth target
+  // 4: Growth target
   { type: 'targetInput', branch: 'growth',
     title: 'How much do you want to grow your portfolio to?',
     suffix: '',
@@ -10600,25 +10688,25 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 4: Tax target (with income structure + RE pro status)
+  // 5: Tax target (with income structure + RE pro status)
   { type: 'taxTarget' },
-  // 5: Risk & concentration
+  // 6: Risk & concentration
   { type: 'riskConcentration' },
-  // 6: Asset class preferences (goal-contextualized)
+  // 7: Asset class preferences (goal-contextualized)
   { type: 'assetClassSelect' },
-  // 7: Strategy preferences (goal-contextualized)
+  // 8: Strategy preferences (goal-contextualized)
   { type: 'strategySelect' },
-  // 8: Deal structure preferences (lockup, distributions, accreditation)
+  // 9: Deal structure preferences (lockup, distributions, accreditation)
   { type: 'dealPrefs' },
-  // 9: LP Network opt-in
+  // 10: LP Network opt-in
   { type: 'lpNetwork' },
-  // 10: Plan — cash flow
+  // 11: Plan — cash flow
   { type: 'planOutput', branch: 'cashflow' },
-  // 11: Plan — growth
+  // 12: Plan — growth
   { type: 'planOutput', branch: 'growth' },
-  // 12: Plan — tax
+  // 13: Plan — tax
   { type: 'planOutput', branch: 'tax' },
-  // 13: Completion
+  // 14: Completion
   { type: 'completion' }
 ];
 
@@ -10933,24 +11021,6 @@ function renderWizardStep() {
     });
     html += '</div></div>';
 
-    // Trigger event
-    html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s making this possible? <span style="font-weight:400;text-transform:none;">(optional)</span></div>';
-    var triggerOptions = [
-      { val: 'business_exit', label: 'Sold a business' },
-      { val: 'inheritance', label: 'Inheritance / windfall' },
-      { val: 'savings', label: 'Savings over time' },
-      { val: 'refi', label: 'Refinanced property' },
-      { val: '1031', label: '1031 exchange' },
-      { val: 'other', label: 'Something else' }
-    ];
-    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-    triggerOptions.forEach(function(opt) {
-      var isSel = wizardData.triggerEvent === opt.val;
-      html += '<div onclick="wizardData.triggerEvent=\'' + opt.val + '\';renderWizardStep();" style="padding:8px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:20px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';font-size:13px;font-weight:600;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';transition:all 0.2s;">' + opt.label + '</div>';
-    });
-    html += '</div></div>';
-
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
@@ -10960,7 +11030,42 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 2/3: TARGET INPUT (cashflow & growth) =====
+  // ===== SCREEN 2: CAPITAL SOURCE =====
+  if (step.type === 'capitalSource') {
+    html += '<div class="wizard-card-title">What\'s making this possible?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Understanding your capital source helps us match you with the right deal structures.</div>';
+
+    var triggerOptions = [
+      { val: 'business_exit', label: 'Sold a business', icon: '\uD83C\uDFE2' },
+      { val: 'property_sale', label: 'Sold / refinanced property', icon: '\uD83C\uDFE0' },
+      { val: 'inheritance', label: 'Inheritance / windfall', icon: '\uD83C\uDF81' },
+      { val: 'savings', label: 'Savings over time', icon: '\uD83D\uDCB0' },
+      { val: '1031', label: '1031 exchange', icon: '\uD83D\uDD04' },
+      { val: 'w2_income', label: 'W-2 / professional income', icon: '\uD83D\uDCBC' },
+      { val: 'other', label: 'Something else', icon: '\u2728' }
+    ];
+
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    triggerOptions.forEach(function(opt) {
+      var isSel = wizardData.triggerEvent === opt.val;
+      html += '<div onclick="wizardData.triggerEvent=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
+      html += '<div style="font-size:20px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      if (isSel) html += '<div style="margin-left:auto;color:var(--primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Nav
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()"' + (!wizardData.triggerEvent ? ' disabled style="opacity:0.5;pointer-events:none;"' : '') + '>Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 3/4: TARGET INPUT (cashflow & growth) =====
   if (step.type === 'targetInput') {
     const val = wizardData[step.key] || step.defaultVal;
     const numVal = parseDollar(val);
@@ -19936,6 +20041,32 @@ function renderIncomeFund() {
       }
     });
   }
+}
+
+// ====== SHARE FUNCTIONALITY ======
+function shareDealCard(dealId) {
+  var url = window.location.origin + '/deal.html?id=' + dealId;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function() { showShareToastIdx('Link copied — share it with a friend!'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showShareToastIdx('Link copied — share it with a friend!');
+  }
+}
+function showShareToastIdx(msg) {
+  var existing = document.querySelector('.share-toast-idx');
+  if (existing) existing.remove();
+  var toast = document.createElement('div');
+  toast.className = 'share-toast-idx';
+  toast.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>' + msg;
+  document.body.appendChild(toast);
+  requestAnimationFrame(function() { toast.classList.add('show'); });
+  setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 200); }, 2500);
 }
 </script>
 
