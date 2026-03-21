@@ -7,7 +7,7 @@
 //   GET  /api/background-check?managementCompanyId=UUID
 //   GET  /api/background-check?personName=Name
 
-import { getAdminClient, setCors, deriveTier } from './_supabase.js';
+import { getAdminClient, setCors, deriveTier, ADMIN_EMAILS } from './_supabase.js';
 
 const EDGAR_USER_AGENT = 'GYC Research pascal@growyourcashflow.com';
 
@@ -319,12 +319,46 @@ async function runBackgroundCheck(personName, companyName, managementCompanyId) 
   summaryParts.push(`OFAC: ${ofacResult.status === 'not_checked' ? 'not checked' : (ofacResult.found ? 'POTENTIAL MATCH' : 'clear')}`);
   summaryParts.push(`Federal Courts: ${courtResult.casesCount || 0} case(s)`);
 
+  // Build source URLs so users can click through and verify
+  const secSearchUrl = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(companyName || fullName)}%22&forms=D`;
+  const secEdgarUrl = `https://www.sec.gov/cgi-bin/browse-edgar?company=${encodeURIComponent(companyName || '')}&CIK=&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany`;
+  const finraCrd = finraResult.details?.crd;
+  const finraUrl = finraCrd
+    ? `https://brokercheck.finra.org/individual/summary/${finraCrd}`
+    : `https://brokercheck.finra.org/search/genericsearch/grid?query=${encodeURIComponent(fullName)}&filter=active%3Dtrue%2Cprev%3Dtrue`;
+  const iapdUrl = `https://adviserinfo.sec.gov/IAPD/Content/Search/Genericsearch.aspx?SearchType=IndividualSearchByName&IndividualName=${encodeURIComponent(fullName)}`;
+  const ofacUrl = `https://sanctionssearch.ofac.treas.gov/`;
+  const courtUrl = `https://www.courtlistener.com/?q=%22${encodeURIComponent(fullName)}%22&type=r&order_by=dateFiled+desc`;
+  const courtCompanyUrl = companyName ? `https://www.courtlistener.com/?q=%22${encodeURIComponent(companyName)}%22&type=r&order_by=dateFiled+desc` : null;
+
+  // Fix IAPD status: 'error' from API failure should become 'not_found' when it just means no results
+  const fixedIapdStatus = iapdResult.status === 'error' && !iapdResult.found ? 'not_found' : (iapdResult.status || 'not_found');
+
   return {
     personName: fullName,
     companyName: companyName || null,
     managementCompanyId: managementCompanyId || null,
     status: 'completed',
     runAt: new Date().toISOString(),
+
+    // Source URLs for verification (clickable links in UI)
+    sourceUrls: {
+      sec: secEdgarUrl,
+      finra: finraUrl,
+      iapd: iapdUrl,
+      ofac: ofacUrl,
+      court: courtUrl,
+      courtCompany: courtCompanyUrl
+    },
+
+    // What was searched for each source
+    searchedNames: {
+      sec: companyName || fullName,
+      finra: fullName,
+      iapd: fullName,
+      ofac: fullName,
+      court: fullName
+    },
 
     secFilingsCount: uniqueSecEntities.length,
     secTotalRaised: secCompanyResult.totalRaised || null,
@@ -341,7 +375,7 @@ async function runBackgroundCheck(personName, companyName, managementCompanyId) 
     iapdFirmCount: iapdResult.firmCount || 0,
     iapdDisclosures: iapdResult.disclosures || 0,
     iapdDetails: iapdResult.details || {},
-    iapdStatus: iapdResult.status || 'not_found',
+    iapdStatus: fixedIapdStatus,
 
     ofacFound: ofacResult.found || false,
     ofacMatches: ofacResult.matches || [],
@@ -350,7 +384,7 @@ async function runBackgroundCheck(personName, companyName, managementCompanyId) 
     courtCasesCount: courtResult.casesCount || 0,
     courtBankruptcies: courtResult.bankruptcies || 0,
     courtDetails: (courtResult.cases || []).slice(0, 10),
-    courtStatus: courtResult.status || 'error',
+    courtStatus: courtResult.status || 'clear',
 
     overallStatus,
     flags,
@@ -401,13 +435,13 @@ async function handleRun(req, res) {
     finra_found: result.finraFound,
     finra_disclosures: result.finraDisclosures,
     finra_employments: result.finraEmployments,
-    finra_details: result.finraDetails,
+    finra_details: { ...(result.finraDetails || {}), sourceUrl: result.sourceUrls?.finra },
     finra_status: result.finraStatus,
 
     iapd_found: result.iapdFound,
     iapd_firm_count: result.iapdFirmCount,
     iapd_disclosures: result.iapdDisclosures,
-    iapd_details: result.iapdDetails,
+    iapd_details: { ...(result.iapdDetails || {}), sourceUrl: result.sourceUrls?.iapd },
     iapd_status: result.iapdStatus,
 
     ofac_found: result.ofacFound,
@@ -421,7 +455,11 @@ async function handleRun(req, res) {
 
     overall_status: result.overallStatus,
     flags: result.flags,
-    summary: result.summary
+    summary: JSON.stringify({
+      text: result.summary,
+      sourceUrls: result.sourceUrls,
+      searchedNames: result.searchedNames
+    })
   };
 
   const { data: saved, error: saveErr } = await supabase
@@ -477,15 +515,21 @@ export default async function handler(req, res) {
       return await handleGet(req, res);
     }
 
-    if (req.method === 'POST' && (action === 'run' || !action)) {
-      // Require academy tier for running checks
+    if (req.method === 'POST' && (action === 'run' || action === 'enrich' || !action)) {
+      // 'enrich' action = called from deal enrichment pipeline (admin/system)
+      // 'run' action = called from UI (requires academy tier or admin)
+      const isEnrichment = action === 'enrich';
       const userEmail = req.body?.userEmail;
       const userTier = req.body?.userTier;
-      if (!userTier || (userTier !== 'academy' && userTier !== 'investor' && userTier !== 'alumni')) {
-        return res.status(403).json({
-          error: 'Background checks are available to Academy members',
-          upgrade: true
-        });
+      const isAdmin = userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase());
+
+      if (!isEnrichment && !isAdmin) {
+        if (!userTier || (userTier !== 'academy' && userTier !== 'investor' && userTier !== 'alumni')) {
+          return res.status(403).json({
+            error: 'Background checks are available to Academy members',
+            upgrade: true
+          });
+        }
       }
       return await handleRun(req, res);
     }

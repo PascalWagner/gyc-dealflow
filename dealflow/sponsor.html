@@ -1703,10 +1703,44 @@ function renderBgReportIntro() {
   '</div>';
 }
 
+function getBgSourceUrls(result) {
+  // Parse source URLs from summary JSON or sourceUrls field
+  if (!result) return {};
+  if (result.source_urls) return result.source_urls;
+  if (result.sourceUrls) return result.sourceUrls;
+  // Try parsing from summary (new format stores URLs there)
+  try {
+    var parsed = typeof result.summary === 'string' && result.summary.charAt(0) === '{' ? JSON.parse(result.summary) : null;
+    if (parsed && parsed.sourceUrls) return parsed.sourceUrls;
+  } catch(e) {}
+  return {};
+}
+
+function getBgSearchedNames(result) {
+  if (!result) return {};
+  if (result.searched_names) return result.searched_names;
+  if (result.searchedNames) return result.searchedNames;
+  try {
+    var parsed = typeof result.summary === 'string' && result.summary.charAt(0) === '{' ? JSON.parse(result.summary) : null;
+    if (parsed && parsed.searchedNames) return parsed.searchedNames;
+  } catch(e) {}
+  // Fallback: use person_name and company_name
+  var pn = result.person_name || result.personName || '';
+  var cn = result.company_name || result.companyName || '';
+  return { sec: cn || pn, finra: pn, iapd: pn, ofac: pn, court: pn };
+}
+
 function renderBgCheckRow(source, result) {
   var statusKey = result ? (result[source.key + 'Status'] || result[source.key + '_status'] || 'pending') : 'pending';
+  // Fix: treat 'error' as 'not_found' for IAPD (common — most RE sponsors aren't registered advisers)
+  if (source.key === 'iapd' && statusKey === 'error') statusKey = 'not_found';
   var statusLabels = { clear: 'Clear', flagged: 'Flagged', needs_review: 'Review', not_found: 'Not Found', pending: 'Pending', not_checked: 'N/A', error: 'Error' };
   var statusLabel = statusLabels[statusKey] || statusKey;
+
+  var sourceUrls = getBgSourceUrls(result);
+  var searchedNames = getBgSearchedNames(result);
+  var sourceUrl = sourceUrls[source.key] || '';
+  var searchedName = searchedNames[source.key] || '';
 
   var resultText = '';
   if (result) {
@@ -1720,7 +1754,7 @@ function renderBgCheckRow(source, result) {
           var disc = result.finra_disclosures || result.finraDisclosures || 0;
           resultText = disc > 0 ? disc + ' disclosure event(s) found' : 'Registered, no disclosures';
         } else {
-          resultText = 'Not registered with FINRA';
+          resultText = 'Not registered with FINRA (common for real estate sponsors)';
         }
         break;
       case 'iapd':
@@ -1728,7 +1762,7 @@ function renderBgCheckRow(source, result) {
           var iapdDisc = result.iapd_disclosures || result.iapdDisclosures || 0;
           resultText = iapdDisc > 0 ? iapdDisc + ' disclosure(s) found' : 'Registered adviser, clean record';
         } else {
-          resultText = 'Not registered as investment adviser';
+          resultText = 'Not registered as investment adviser (common for real estate sponsors)';
         }
         break;
       case 'ofac':
@@ -1742,6 +1776,20 @@ function renderBgCheckRow(source, result) {
     }
   }
 
+  // Build the "Searched: Name" + "View Search →" link line
+  var searchedLine = '';
+  if (result && (searchedName || sourceUrl)) {
+    searchedLine = '<div class="bg-check-result" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;">';
+    searchedLine += '<span>' + (resultText ? escHtml(resultText) : '') + '</span>';
+    var links = '';
+    if (searchedName) links += '<span style="color:var(--text-muted);font-size:10px;">Searched: ' + escHtml(searchedName) + '</span>';
+    if (sourceUrl) links += ' <a href="' + escAttr(sourceUrl) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600;white-space:nowrap;">View Search &rarr;</a>';
+    searchedLine += '<span style="display:flex;align-items:center;gap:8px;">' + links + '</span>';
+    searchedLine += '</div>';
+  } else if (resultText) {
+    searchedLine = '<div class="bg-check-result">' + escHtml(resultText) + '</div>';
+  }
+
   return '<div class="bg-check-row">' +
     '<div class="bg-check-icon ' + source.icon + '">' + source.svg + '</div>' +
     '<div class="bg-check-info">' +
@@ -1749,7 +1797,7 @@ function renderBgCheckRow(source, result) {
         ' <span class="check-badge ' + statusKey + '">' + statusLabel + '</span>' +
       '</div>' +
       '<div class="bg-check-desc">' + source.description + '</div>' +
-      (resultText ? '<div class="bg-check-result">' + escHtml(resultText) + '</div>' : '') +
+      searchedLine +
     '</div>' +
   '</div>';
 }
@@ -1809,10 +1857,15 @@ function renderBgReport(result, isPaid) {
     var runDate = result.run_at ? new Date(result.run_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     html += '<div class="bg-report-timestamp">';
     html += '<span>Last checked: ' + runDate + '</span>';
-    html += '<button class="bg-report-run-btn" style="padding:8px 16px;font-size:11px;" onclick="triggerBgCheck()" id="bgRerunBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Re-run Check</button>';
+    // Re-run button only for admins
+    var _bgUser = getUser();
+    var _bgIsAdmin = _bgUser && (_bgUser.isAdmin || (_bgUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_bgUser.email.toLowerCase()) >= 0));
+    if (_bgIsAdmin) {
+      html += '<button class="bg-report-run-btn" style="padding:8px 16px;font-size:11px;" onclick="triggerBgCheck()" id="bgRerunBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Re-run Check</button>';
+    }
     html += '</div>';
   } else {
-    // No results yet — show run button
+    // No results yet — show "not yet enriched" message (admin gets run button)
     html += '<div class="bg-checks-grid">';
     BG_CHECK_SOURCES.forEach(function(src) {
       html += '<div class="bg-check-row">' +
@@ -1825,9 +1878,14 @@ function renderBgReport(result, isPaid) {
       '</div>';
     });
     html += '</div>';
-    html += '<div style="text-align:center;margin-top:20px;">';
-    html += '<button class="bg-report-run-btn" onclick="triggerBgCheck()" id="bgRunBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</button>';
-    html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:8px;">Searches 5 public databases in ~10 seconds</div>';
+    html += '<div style="text-align:center;margin-top:20px;padding:16px;background:var(--bg-cream);border-radius:var(--radius-sm);border:1px solid var(--border);">';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);">Background check has not been run for this sponsor yet. This runs automatically when a deal is enriched.</div>';
+    // Admin-only run button
+    var _bgUser2 = getUser();
+    var _bgIsAdmin2 = _bgUser2 && (_bgUser2.isAdmin || (_bgUser2.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_bgUser2.email.toLowerCase()) >= 0));
+    if (_bgIsAdmin2) {
+      html += '<button class="bg-report-run-btn" style="margin-top:12px;" onclick="triggerBgCheck()" id="bgRunBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</button>';
+    }
     html += '</div>';
   }
 

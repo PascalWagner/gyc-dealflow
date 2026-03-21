@@ -235,13 +235,49 @@ export default async function handler(req, res) {
       }
     }
 
+    // Trigger background check if we have a management company + CEO
+    let bgCheckResult = null;
+    if (extracted.managementCompany || extracted.ceo) {
+      try {
+        const bgPersonName = extracted.ceo || extracted.managementCompany;
+        const bgCompanyName = extracted.managementCompany || '';
+
+        // Find management company ID if we have a dealId
+        let mcId = null;
+        if (dealId) {
+          const supabase = getAdminClient();
+          const { data: deal } = await supabase.from('opportunities').select('management_company_id').eq('id', dealId).single();
+          mcId = deal?.management_company_id || null;
+        }
+
+        // Call the background check API internally
+        const bgUrl = `https://${req.headers.host}/api/background-check`;
+        const bgResp = await fetch(bgUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'enrich',
+            personName: bgPersonName,
+            companyName: bgCompanyName,
+            managementCompanyId: mcId
+          })
+        });
+        if (bgResp.ok) {
+          bgCheckResult = await bgResp.json();
+        }
+      } catch (bgErr) {
+        console.warn('Background check during enrichment failed (non-fatal):', bgErr.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       extracted,
       fieldsFound: Object.keys(extracted).filter(k => extracted[k] !== null).length,
       totalFields: Object.keys(extracted).length,
       inputLength: truncated.length,
-      model: 'claude-sonnet-4-20250514'
+      model: 'claude-sonnet-4-20250514',
+      backgroundCheck: bgCheckResult ? { status: bgCheckResult.result?.overall_status || 'completed' } : null
     });
 
   } catch (err) {
