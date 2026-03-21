@@ -5412,8 +5412,8 @@ async function renderDeal() {
 
     // Toggle
     cashFlowHtml += '<div class="cf-toggle">';
-    cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_chart\').style.display=\'block\';document.getElementById(\'' + uid + '_table\').style.display=\'none\';this.classList.add(\'active\');this.nextElementSibling.classList.remove(\'active\');">Chart</button>';
-    cashFlowHtml += '<button onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
+    cashFlowHtml += '<button onclick="document.getElementById(\'' + uid + '_chart\').style.display=\'block\';document.getElementById(\'' + uid + '_table\').style.display=\'none\';this.classList.add(\'active\');this.nextElementSibling.classList.remove(\'active\');">Chart</button>';
+    cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
     cashFlowHtml += '</div>';
 
     // --- Chart view (annual bar chart) ---
@@ -5422,7 +5422,7 @@ async function renderDeal() {
       var rv = rows[i].dist + rows[i].capReturn;
       if (rv > maxVal) maxVal = rv;
     }
-    cashFlowHtml += '<div id="' + uid + '_chart" class="cf-chart-wrap">';
+    cashFlowHtml += '<div id="' + uid + '_chart" class="cf-chart-wrap" style="display:none;">';
     cashFlowHtml += '<div class="cf-chart-grid">';
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
@@ -5448,7 +5448,7 @@ async function renderDeal() {
     cashFlowHtml += '</div>';
 
         // --- Table view ---
-    cashFlowHtml += '<div id="' + uid + '_table" style="display:none;">';
+    cashFlowHtml += '<div id="' + uid + '_table">';
     cashFlowHtml += '<table class="cf-table">';
     var _hasCapReturn = rows.some(function(r) { return r.capReturn > 0; });
     cashFlowHtml += '<tr><th>Year</th><th>Capital</th><th>Distributions</th><th>% Cash Flow</th><th>Total Cash</th><th>Cumulative</th><th>Notes</th></tr>';
