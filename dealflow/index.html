@@ -5897,6 +5897,10 @@ const _supa = window.supabase.createClient(
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           Data Cleanup
         </button>
+        <button id="adminDeckFinderBtn" onclick="deckFinderStart()" class="admin-btn secondary" style="font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:5px;" title="Find and attach pitch decks from Google Drive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+          Deck Finder
+        </button>
         <span id="adminResultCount" style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);font-weight:500;"></span>
       </div>
       <div id="adminQualityBanner" style="display:none;padding:14px 18px;background:var(--bg-cream);border-radius:12px;margin-bottom:16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">
@@ -14958,6 +14962,8 @@ function adminShowTab(tab, btn) {
   if (qBtn) { qBtn.style.display = (tab === 'deals' || tab === 'operators') ? '' : 'none'; qBtn.style.background = ''; qBtn.style.color = ''; qBtn.classList.remove('primary'); qBtn.classList.add('secondary'); }
   var cBtn = document.getElementById('adminCleanupBtn');
   if (cBtn) cBtn.style.display = tab === 'deals' ? '' : 'none';
+  var dfBtn = document.getElementById('adminDeckFinderBtn');
+  if (dfBtn) dfBtn.style.display = tab === 'deals' ? '' : 'none';
   var qStats = document.getElementById('adminQualityStats');
   if (qStats) qStats.style.display = 'none';
   var qBanner = document.getElementById('adminQualityBanner');
@@ -15734,6 +15740,193 @@ function cleanupRenderComplete() {
     '</div>';
 
   footer.innerHTML = '<div style="flex:1;"></div><button class="admin-btn primary" onclick="cleanupClose()">Done</button>';
+}
+
+// ========== DECK FINDER ==========
+var _deckFinderData = null, _deckFinderFilter = 'missing', _deckFinderAttaching = {};
+
+async function deckFinderStart() {
+  var ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'deckFinderModal';
+  ov.onclick = function(e) { if (e.target === ov) ov.remove(); };
+  ov.innerHTML = '<div class="modal-card" style="max-width:860px;max-height:90vh;overflow-y:auto;padding:0;">' +
+    '<div class="admin-modal-header"><h2 style="display:flex;align-items:center;gap:8px;">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>' +
+    'Deck Finder</h2>' +
+    '<button class="admin-modal-close" onclick="deckFinderClose()">&#x2715;</button></div>' +
+    '<div id="deckFinderBody" style="padding:24px;"><div style="text-align:center;padding:40px;"><div class="loading-spinner" style="margin:0 auto 12px;"></div><div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">Auditing deck coverage...</div></div></div>' +
+    '</div>';
+  document.body.appendChild(ov);
+
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/deal-cleanup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'deck-audit' })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Failed');
+    _deckFinderData = result;
+    _deckFinderFilter = 'missing';
+    _deckFinderAttaching = {};
+    deckFinderRender();
+  } catch (e) {
+    document.getElementById('deckFinderBody').innerHTML =
+      '<div style="text-align:center;padding:40px;font-family:var(--font-ui);color:var(--red);">Failed: ' + e.message + '</div>';
+  }
+}
+
+function deckFinderClose() {
+  document.getElementById('deckFinderModal')?.remove();
+  _deckFinderData = null;
+}
+
+function deckFinderRender() {
+  var body = document.getElementById('deckFinderBody');
+  if (!body || !_deckFinderData) return;
+  var s = _deckFinderData.stats;
+
+  // Stats cards
+  var sc = function(label, val, color, icon) {
+    return '<div style="background:var(--bg-cream);border-radius:12px;padding:16px;text-align:center;">' +
+      (icon ? '<div style="font-size:18px;margin-bottom:4px;">' + icon + '</div>' : '') +
+      '<div style="font-family:var(--font-ui);font-size:24px;font-weight:800;color:' + (color || 'var(--text-dark)') + ';">' + val + '</div>' +
+      '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;">' + label + '</div></div>';
+  };
+
+  var statsHtml = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">' +
+    sc('Total Deals', s.total, '', '') +
+    sc('Have Deck', s.with_deck, 'var(--primary)', '') +
+    sc('Missing Deck', s.without_deck, 'var(--red)', '') +
+    sc('GDrive Files', s.gdrive_files, 'var(--text-secondary)', '') +
+    sc('Auto-Matchable', s.auto_matchable, 'var(--orange)', '') +
+    '</div>';
+
+  // Coverage bar
+  var pct = s.total > 0 ? Math.round((s.with_deck / s.total) * 100) : 0;
+  var barColor = pct >= 80 ? 'var(--primary)' : pct >= 50 ? 'var(--orange)' : 'var(--red)';
+  statsHtml += '<div style="margin-bottom:20px;">' +
+    '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+    '<span style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);">DECK COVERAGE</span>' +
+    '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + barColor + ';">' + pct + '%</span></div>' +
+    '<div style="height:6px;background:var(--border-light);border-radius:3px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:' + barColor + ';border-radius:3px;transition:width 0.5s;"></div></div></div>';
+
+  // Filter tabs
+  var tabs = [
+    { key: 'missing', label: 'Missing Deck (' + s.without_deck + ')' },
+    { key: 'matched', label: 'Auto-Matched (' + s.auto_matchable + ')' },
+    { key: 'has_deck', label: 'Has Deck (' + s.with_deck + ')' },
+  ];
+  var tabsHtml = '<div style="display:flex;gap:4px;margin-bottom:16px;">' +
+    tabs.map(function(t) {
+      var active = _deckFinderFilter === t.key;
+      return '<button onclick="_deckFinderFilter=\'' + t.key + '\';deckFinderRender()" style="padding:6px 14px;border-radius:8px;border:1px solid ' +
+        (active ? 'var(--primary)' : 'var(--border)') + ';background:' + (active ? 'var(--primary)' : 'var(--bg-card)') +
+        ';color:' + (active ? '#fff' : 'var(--text-secondary)') + ';font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;">' + t.label + '</button>';
+    }).join('') + '</div>';
+
+  // Deal list
+  var deals = [];
+  if (_deckFinderFilter === 'missing') deals = _deckFinderData.without_deck;
+  else if (_deckFinderFilter === 'matched') deals = _deckFinderData.without_deck.filter(function(d) { return d.match_count > 0; });
+  else deals = _deckFinderData.with_deck;
+
+  var listHtml = '';
+  if (deals.length === 0) {
+    listHtml = '<div style="text-align:center;padding:32px;font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">No deals in this category.</div>';
+  } else {
+    listHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:420px;overflow-y:auto;">';
+    listHtml += deals.slice(0, 100).map(function(d) {
+      var matchBadge = '';
+      var matchDetails = '';
+      var attached = _deckFinderAttaching[d.id] === 'done';
+
+      if (attached) {
+        matchBadge = '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:6px;background:var(--green-bg);font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);">&#10003; Attached</span>';
+      } else if (_deckFinderFilter === 'has_deck') {
+        var deckDomain = '';
+        try { deckDomain = new URL(d.deck_url).hostname; } catch(e) { deckDomain = 'link'; }
+        matchBadge = '<a href="' + d.deck_url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:6px;background:var(--green-bg);font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);text-decoration:none;" title="' + d.deck_url.replace(/"/g, '&quot;') + '">&#10003; ' + deckDomain + '</a>';
+      } else if (d.match_count > 0) {
+        matchBadge = '<span style="display:inline-flex;padding:3px 10px;border-radius:6px;background:var(--orange-bg);font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--orange);">' + d.match_count + ' match' + (d.match_count !== 1 ? 'es' : '') + '</span>';
+        matchDetails = '<div style="padding:0 14px 10px 38px;display:flex;flex-wrap:wrap;gap:6px;">';
+        matchDetails += d.gdrive_matches.map(function(m) {
+          var sizeStr = m.file_size > 1048576 ? Math.round(m.file_size / 1048576) + 'MB' : Math.round(m.file_size / 1024) + 'KB';
+          var typeColor = m.doc_type === 'deck' ? 'var(--primary)' : m.doc_type === 'om' ? 'var(--orange)' : 'var(--text-muted)';
+          var typeBg = m.doc_type === 'deck' ? 'var(--green-bg)' : m.doc_type === 'om' ? 'var(--orange-bg)' : 'var(--bg-cream)';
+          var isAttaching = _deckFinderAttaching[d.id] === m.gdrive_id;
+
+          return '<div style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:' + typeBg + ';border-radius:8px;flex:1;min-width:200px;">' +
+            '<span style="font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;color:' + typeColor + ';min-width:28px;">' + m.doc_type + '</span>' +
+            '<span style="flex:1;font-family:var(--font-body);font-size:11px;color:var(--text-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + m.file_name.replace(/"/g, '&quot;') + '">' + m.file_name + '</span>' +
+            '<span style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">' + sizeStr + '</span>' +
+            '<a href="' + m.view_url + '" target="_blank" rel="noopener" style="font-family:var(--font-ui);font-size:10px;color:var(--primary);text-decoration:none;font-weight:600;">View</a>' +
+            '<button onclick="deckFinderAttach(\'' + d.id + '\',\'' + m.view_url + '\',\'' + m.gdrive_id + '\',\'' + m.doc_type + '\')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--primary);background:' + (isAttaching ? 'var(--primary)' : '#fff') + ';color:' + (isAttaching ? '#fff' : 'var(--primary)') + ';font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">' + (isAttaching ? 'Saving...' : 'Attach') + '</button></div>';
+        }).join('');
+        matchDetails += '</div>';
+      } else {
+        matchBadge = '<span style="display:inline-flex;padding:3px 10px;border-radius:6px;background:var(--bg-cream);font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">No match</span>';
+      }
+
+      return '<div style="border-bottom:1px solid var(--border-light);">' +
+        '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;">' +
+        '<div style="flex:1;min-width:0;">' +
+        '<div style="font-family:var(--font-body);font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + d.investment_name + '</div>' +
+        '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:1px;">' + d.operator_name +
+        (d.asset_class ? ' &middot; ' + d.asset_class : '') + '</div></div>' +
+        matchBadge + '</div>' +
+        matchDetails + '</div>';
+    }).join('');
+
+    if (deals.length > 100) {
+      listHtml += '<div style="padding:12px;text-align:center;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">+ ' + (deals.length - 100) + ' more</div>';
+    }
+    listHtml += '</div>';
+  }
+
+  body.innerHTML = statsHtml + tabsHtml + listHtml;
+}
+
+async function deckFinderAttach(dealId, deckUrl, gdriveId, docType) {
+  if (_deckFinderAttaching[dealId]) return;
+  _deckFinderAttaching[dealId] = gdriveId;
+  deckFinderRender();
+
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/deal-cleanup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+      body: JSON.stringify({ action: 'attach-deck', dealId: dealId, deckUrl: deckUrl, docType: docType === 'ppm' ? 'ppm' : docType === 'sub_agreement' ? 'sub' : 'deck' })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Failed');
+    _deckFinderAttaching[dealId] = 'done';
+
+    // Update stats
+    if (_deckFinderData && _deckFinderData.stats) {
+      _deckFinderData.stats.with_deck++;
+      _deckFinderData.stats.without_deck--;
+    }
+    // Move deal from without_deck to with_deck
+    if (_deckFinderData) {
+      var idx = _deckFinderData.without_deck.findIndex(function(d) { return d.id === dealId; });
+      if (idx >= 0) {
+        var deal = _deckFinderData.without_deck[idx];
+        deal.has_deck = true;
+        deal.deck_url = deckUrl;
+        _deckFinderData.with_deck.push(deal);
+        _deckFinderData.without_deck.splice(idx, 1);
+        _deckFinderData.stats.auto_matchable = _deckFinderData.without_deck.filter(function(d) { return d.match_count > 0; }).length;
+      }
+    }
+  } catch (e) {
+    alert('Failed to attach: ' + e.message);
+    delete _deckFinderAttaching[dealId];
+  }
+  deckFinderRender();
 }
 
 // ========== DEAL INTAKE WIZARD ==========
@@ -17265,8 +17458,40 @@ function renderDashboard() {
       + '</div>';
   })();
 
-  // ===== Render all sections =====
-  container.innerHTML = coachingHtml + heroHtml + momentumRow + statsRow + incomeGapHtml + actionItemsHtml + portfolioHtml + ddHistoryHtml + fundNudgeHtml;
+  // ===== Render: progressive disclosure based on user state =====
+  const dealsReviewedCount = Object.keys(stages).length;
+  const hasPortfolio = portfolio.length > 0;
+  const hasBuyBox = buyBoxComplete || !!branch;
+
+  if (!hasBuyBox && dealsReviewedCount === 0 && !hasPortfolio) {
+    // ===== FIRST-TIME USER: Single focused onboarding card =====
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 120px);padding:24px;">'
+      + '<div style="text-align:center;max-width:480px;">'
+      + '<div style="width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--primary),#2563EB);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;box-shadow:0 8px 32px rgba(81,190,123,0.25);"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="width:32px;height:32px;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>'
+      + '<h1 style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin:0 0 12px;line-height:1.3;">' + (firstName ? firstName + ', let\u2019s find' : 'Let\u2019s find') + '<br>your perfect deals.</h1>'
+      + '<p style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin:0 0 32px;">Tell us what you\u2019re looking for in 2 minutes.<br>We\u2019ll match you with deals that fit.</p>'
+      + '<button onclick="openBuyBoxWizard()" style="padding:16px 40px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 4px 16px rgba(81,190,123,0.3)\'" onmouseout="this.style.transform=\'none\';this.style.boxShadow=\'none\'">Build My Buy Box \u2192</button>'
+      + '<div style="margin-top:16px;font-family:var(--font-body);font-size:12px;color:var(--text-muted);">or <a href="#" onclick="event.preventDefault();navigateTo(\'deals\')" style="color:var(--primary);font-weight:600;text-decoration:none;">browse deals first</a></div>'
+      + '</div></div>';
+  } else if (hasBuyBox && dealsReviewedCount === 0 && !hasPortfolio) {
+    // ===== HAS BUY BOX, BUT HASN'T EXPLORED: coaching + deal CTA =====
+    container.innerHTML = coachingHtml + heroHtml
+      + '<div style="display:flex;align-items:center;justify-content:center;padding:60px 24px;">'
+      + '<div style="text-align:center;max-width:440px;">'
+      + '<div style="font-size:40px;margin-bottom:16px;">\uD83C\uDF1F</div>'
+      + '<h2 style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin:0 0 10px;">Your Buy Box is ready</h2>'
+      + '<p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin:0 0 24px;">You have <strong>' + matchingCount + ' deal' + (matchingCount !== 1 ? 's' : '') + '</strong> matching your criteria. Start reviewing to build your pipeline.</p>'
+      + '<button onclick="navigateTo(\'deals\')" style="padding:14px 36px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Explore Deals \u2192</button>'
+      + '</div></div>';
+  } else {
+    // ===== ACTIVE USER: Show relevant sections =====
+    var sections = coachingHtml + heroHtml;
+    // Only show stat rows if they have meaningful data
+    if (dealsReviewedCount > 0) sections += momentumRow;
+    if (hasPortfolio) sections += statsRow;
+    sections += incomeGapHtml + actionItemsHtml + portfolioHtml + ddHistoryHtml + fundNudgeHtml;
+    container.innerHTML = sections;
+  }
 }
 
 // ========== INCOME / DISTRIBUTION TRACKING ==========
