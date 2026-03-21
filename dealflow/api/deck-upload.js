@@ -9,6 +9,7 @@
 //   - Auto-enrichment: PDFs are sent to Claude for field extraction after upload
 
 import { getAdminClient, setCors } from './_supabase.js';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 // ── Extraction prompt (shared with deal-enrich.js) ──────────────────────────
 const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this PPM/offering document text. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
@@ -144,7 +145,7 @@ export default async function handler(req, res) {
         enrichedFields = enrichResult.enrichedFields;
         extractedData = enrichResult.extractedData || null;
       } catch (e) {
-        console.warn('Auto-enrichment failed (upload still succeeded):', e.message);
+        console.error('Auto-enrichment failed (upload still succeeded):', e.message, e.stack);
         enrichmentError = e.message;
       }
     }
@@ -168,8 +169,8 @@ export default async function handler(req, res) {
 // ── PDF text extraction ─────────────────────────────────────────────────────
 // Uses pdf-parse library for proper text extraction from PDF buffers.
 async function extractTextFromPdfBuffer(buffer) {
-  const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
   const result = await pdfParse(buffer);
+  console.log('PDF parsed:', result.numpages, 'pages,', (result.text || '').length, 'chars extracted');
   return (result.text || '').substring(0, 80000);
 }
 
