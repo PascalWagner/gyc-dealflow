@@ -2042,15 +2042,18 @@ html.dark .credit-chart-legend-divider {
   .sidebar.open ~ .sidebar-backdrop { display: block; }
 
   /* ── Mobile: Manager cards ── */
-  .manager-card { padding: 14px !important; }
-  .manager-card-header { gap: 10px !important; margin-bottom: 10px !important; }
+  .manager-card { padding: 12px !important; }
+  .manager-card-header { gap: 10px !important; margin-bottom: 8px !important; }
   .manager-card-avatar { width: 36px !important; height: 36px !important; font-size: 12px !important; border-radius: 8px !important; }
   .manager-card-name { font-size: 14px !important; }
   .manager-card-meta { font-size: 11px !important; }
-  .manager-card-badges { gap: 3px !important; margin-bottom: 8px !important; }
+  .manager-card-badges { gap: 3px !important; margin-bottom: 6px !important; }
   .manager-card-link { font-size: 11px !important; }
   #managersGrid { gap: 8px !important; }
-  #page-managers .content-area { padding: 12px !important; padding-bottom: 80px !important; }
+  #page-managers .content-area { padding: 8px 12px !important; padding-bottom: 80px !important; }
+  #managersStats { margin-bottom: 10px !important; }
+  #managersStats > div { font-size: 11px !important; }
+  #page-managers .filter-bar { padding: 8px 12px !important; }
 }
 
 /* Mobile Bottom Tab Bar */
@@ -2276,6 +2279,7 @@ html.cap-ios .ios-filter-toggle.has-active svg { stroke: var(--primary); }
 html.cap-ios .filter-bar > select,
 html.cap-ios .filter-bar > button,
 html.cap-ios .filter-bar > div:not(.ios-filter-row),
+html.cap-ios .filter-bar > input,
 html.cap-ios .filter-bar > .buybox-toggle,
 html.cap-ios .filter-bar > .buybox-update-btn,
 html.cap-ios .filter-bar > .filter-clear,
@@ -2285,6 +2289,7 @@ html.cap-ios .filter-bar > .filter-count {
 @media (max-width: 767px) {
   .filter-bar > select,
   .filter-bar > button,
+  .filter-bar > input,
   .filter-bar > div:not(.ios-filter-row),
   .filter-bar > .buybox-toggle,
   .filter-bar > .buybox-update-btn,
