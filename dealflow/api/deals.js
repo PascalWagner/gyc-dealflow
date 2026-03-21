@@ -237,6 +237,9 @@ export default async function handler(req, res) {
           dateOfFirstSale: d.date_of_first_sale,
           totalAmountSold: d.total_amount_sold,
           totalInvestors: d.total_investors,
+          pctFunded: (d.total_amount_sold && d.offering_size && d.offering_size > 0)
+            ? Math.round(d.total_amount_sold / d.offering_size * 100)
+            : null,
           is506b: d.is_506b || false,
           issuerEntity: d.issuer_entity || '',
           gpEntity: d.gp_entity || '',
