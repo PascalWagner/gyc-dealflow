@@ -15741,7 +15741,7 @@ function cleanupRenderComplete() {
 }
 
 // ========== DECK FINDER ==========
-var _deckFinderData = null, _deckFinderFilter = 'broken', _deckFinderAttaching = {}, _deckFinderSearching = null;
+var _deckFinderData = null, _deckFinderFilter = 'broken', _deckFinderAttaching = {}, _deckFinderSearching = null, _deckFinderDismissed = {};
 
 async function deckFinderStart() {
   var ov = document.createElement('div');
@@ -15795,7 +15795,8 @@ function _dfMatchCard(m, dealId) {
     scoreHtml +
     '<span style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">' + sizeStr + '</span>' +
     '<a href="' + m.view_url + '" target="_blank" rel="noopener" style="font-family:var(--font-ui);font-size:10px;color:var(--primary);text-decoration:none;font-weight:600;">View</a>' +
-    '<button onclick="deckFinderAttach(\'' + dealId + '\',\'' + m.view_url + '\',\'' + m.gdrive_id + '\',\'' + m.doc_type + '\')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--primary);background:' + (isAttaching ? 'var(--primary)' : '#fff') + ';color:' + (isAttaching ? '#fff' : 'var(--primary)') + ';font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">' + (isAttaching ? 'Saving...' : 'Attach') + '</button></div>';
+    '<button onclick="deckFinderAttach(\'' + dealId + '\',\'' + m.view_url + '\',\'' + m.gdrive_id + '\',\'' + m.doc_type + '\')" style="padding:3px 8px;border-radius:5px;border:1px solid var(--primary);background:' + (isAttaching ? 'var(--primary)' : '#fff') + ';color:' + (isAttaching ? '#fff' : 'var(--primary)') + ';font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">' + (isAttaching ? 'Saving...' : 'Attach') + '</button>' +
+    '<button onclick="deckFinderDismiss(\'' + dealId + '\',\'' + m.gdrive_id + '\')" style="padding:3px 6px;border-radius:5px;border:1px solid #fecaca;background:#fff;color:#ef4444;font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Not a match">&#x2715;</button></div>';
 }
 
 function deckFinderRender() {
@@ -15847,7 +15848,11 @@ function deckFinderRender() {
   var deals = [];
   if (_deckFinderFilter === 'broken') deals = _deckFinderData.broken_deck || [];
   else if (_deckFinderFilter === 'missing') deals = _deckFinderData.without_deck;
-  else if (_deckFinderFilter === 'matched') deals = [...(_deckFinderData.without_deck || []), ...(_deckFinderData.broken_deck || [])].filter(function(d) { return d.match_count > 0; });
+  else if (_deckFinderFilter === 'matched') deals = [...(_deckFinderData.without_deck || []), ...(_deckFinderData.broken_deck || [])].filter(function(d) {
+    var dm = _deckFinderDismissed[d.id] || {};
+    var visible = (d.gdrive_matches || []).filter(function(m) { return !dm[m.gdrive_id]; });
+    return visible.length > 0;
+  });
   else deals = _deckFinderData.with_deck;
 
   var listHtml = '';
@@ -15860,6 +15865,8 @@ function deckFinderRender() {
       var matchDetails = '';
       var attached = _deckFinderAttaching[d.id] === 'done';
       var searchId = 'dfSearch_' + d.id.replace(/-/g,'');
+      var dismissedSet = _deckFinderDismissed[d.id] || {};
+      var visibleCount = (d.gdrive_matches || []).filter(function(m) { return !dismissedSet[m.gdrive_id]; }).length;
 
       if (attached) {
         matchBadge = '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:6px;background:var(--green-bg);font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);">&#10003; Attached</span>';
@@ -15869,16 +15876,17 @@ function deckFinderRender() {
         matchBadge = '<a href="' + d.deck_url.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:6px;background:var(--green-bg);font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);text-decoration:none;" title="' + d.deck_url.replace(/"/g, '&quot;') + '">&#10003; ' + deckDomain + '</a>';
       } else if (d.broken_url) {
         matchBadge = '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:6px;background:#fef2f2;font-family:var(--font-ui);font-size:10px;font-weight:700;color:#ef4444;">Broken Airtable Link</span>';
-      } else if (d.match_count > 0) {
-        matchBadge = '<span style="display:inline-flex;padding:3px 10px;border-radius:6px;background:#f3f0ff;font-family:var(--font-ui);font-size:10px;font-weight:700;color:#8b5cf6;">' + d.match_count + ' match' + (d.match_count !== 1 ? 'es' : '') + '</span>';
+      } else if (visibleCount > 0) {
+        matchBadge = '<span style="display:inline-flex;padding:3px 10px;border-radius:6px;background:#f3f0ff;font-family:var(--font-ui);font-size:10px;font-weight:700;color:#8b5cf6;">' + visibleCount + ' match' + (visibleCount !== 1 ? 'es' : '') + '</span>';
       } else {
         matchBadge = '<span style="display:inline-flex;padding:3px 10px;border-radius:6px;background:var(--bg-cream);font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">No match</span>';
       }
 
-      // Match cards (auto-matched files)
-      if (!attached && d.match_count > 0) {
+      // Match cards (auto-matched files, excluding dismissed)
+      var visibleMatches = (d.gdrive_matches || []).filter(function(m) { return !dismissedSet[m.gdrive_id]; });
+      if (!attached && visibleMatches.length > 0) {
         matchDetails = '<div style="padding:0 14px 8px 38px;display:flex;flex-wrap:wrap;gap:6px;">';
-        matchDetails += d.gdrive_matches.map(function(m) { return _dfMatchCard(m, d.id); }).join('');
+        matchDetails += visibleMatches.map(function(m) { return _dfMatchCard(m, d.id); }).join('');
         matchDetails += '</div>';
       }
 
@@ -16009,6 +16017,12 @@ async function deckFinderClearBroken(dealId) {
     alert('Failed: ' + e.message);
     delete _deckFinderAttaching[dealId];
   }
+  deckFinderRender();
+}
+
+function deckFinderDismiss(dealId, gdriveId) {
+  if (!_deckFinderDismissed[dealId]) _deckFinderDismissed[dealId] = {};
+  _deckFinderDismissed[dealId][gdriveId] = true;
   deckFinderRender();
 }
 
