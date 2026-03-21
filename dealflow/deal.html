@@ -713,9 +713,7 @@ body {
 /* ====== DEAL HEADER ====== */
 
 .deal-header {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--primary);
+  background: linear-gradient(145deg, #1a1f2e 0%, #252b3b 100%);
   border-radius: var(--radius);
   padding: 36px 40px;
   margin-bottom: 24px;
@@ -723,10 +721,10 @@ body {
   overflow: hidden;
 }
 .deal-header.hero-lending {
-  border-top-color: #3b82f6;
+  background: linear-gradient(145deg, #1a2433 0%, #1e2d3d 100%);
 }
 .deal-header.hero-equity {
-  border-top-color: var(--primary);
+  background: linear-gradient(145deg, #1a1f2e 0%, #252b3b 100%);
 }
 .deal-header::after { display: none; }
 .deal-header.hero-lending::before { display: none; }
@@ -737,13 +735,13 @@ body {
   position: absolute;
   bottom: 20px;
   right: 24px;
-  opacity: 0.05;
+  opacity: 0.06;
   z-index: 0;
 }
 .hero-type-icon svg {
   width: 120px;
   height: 120px;
-  stroke: var(--text-muted);
+  stroke: #fff;
   stroke-width: 1;
   fill: none;
 }
@@ -776,8 +774,8 @@ body {
   align-items: center;
   gap: 10px;
   padding: 14px 28px;
-  background: var(--primary);
-  color: #fff;
+  background: var(--accent-green);
+  color: #0a1628;
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
@@ -787,22 +785,22 @@ body {
   transition: background 0.15s, transform 0.1s;
   white-space: nowrap;
 }
-.hero-deck-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+.hero-deck-btn:hover { background: #34d399; transform: translateY(-1px); }
 .hero-deck-btn.hero-deck-locked {
-  background: var(--bg-main);
-  color: var(--text-muted);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
   cursor: default;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 .hero-deck-btn.hero-deck-locked[onclick] { cursor: pointer; }
-.hero-deck-btn.hero-deck-locked[onclick]:hover { background: var(--bg-cream); }
+.hero-deck-btn.hero-deck-locked[onclick]:hover { background: rgba(255,255,255,0.14); }
 .hero-share-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0;
   background: none;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.5);
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 600;
@@ -811,7 +809,7 @@ body {
   transition: color 0.15s;
   white-space: nowrap;
 }
-.hero-share-btn:hover { color: var(--text-dark); }
+.hero-share-btn:hover { color: rgba(255,255,255,0.85); }
 .hero-share-btn svg { opacity: 0.7; }
 .hero-share-btn:hover svg { opacity: 1; }
 .share-dropdown {
@@ -880,10 +878,10 @@ body {
   justify-content: center;
   font-family: var(--font-ui);
   font-weight: 800;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.9);
   font-size: 26px;
   letter-spacing: -0.5px;
-  border: 2px solid var(--border);
+  border: 2px solid rgba(255,255,255,0.15);
 }
 .hero-operator-photo img {
   width: 100%;
@@ -895,12 +893,12 @@ body {
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-dark);
+  color: #fff;
 }
 .hero-operator-title {
   font-family: var(--font-ui);
   font-size: 11px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.55);
 }
 .hero-metrics {
   display: flex;
@@ -916,18 +914,18 @@ body {
   font-family: var(--font-ui);
   font-size: 22px;
   font-weight: 800;
-  color: var(--text-dark);
+  color: #fff;
   letter-spacing: -0.5px;
   line-height: 1.1;
 }
-.hero-metric-value.highlight { color: var(--primary); }
+.hero-metric-value.highlight { color: var(--accent-green); }
 .hero-metric-label {
   font-family: var(--font-ui);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.45);
   margin-top: 2px;
 }
 
@@ -1015,7 +1013,7 @@ body {
 .deal-name {
   font-family: var(--font-headline);
   font-size: 32px;
-  color: var(--text-dark);
+  color: #fff;
   line-height: 1.2;
   letter-spacing: -0.5px;
   margin-bottom: 8px;
@@ -1028,14 +1026,14 @@ body {
   font-size: 15px;
   font-weight: 500;
   margin-bottom: 16px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.7);
 }
 .deal-company a {
-  color: var(--primary);
+  color: var(--accent-green);
   text-decoration: none;
   transition: color var(--transition);
 }
-.deal-company a:hover { color: var(--primary-hover); text-decoration: underline; }
+.deal-company a:hover { color: #fff; text-decoration: underline; }
 
 
 
@@ -1080,8 +1078,8 @@ body {
 }
 
 .deal-badge.deal-type {
-  background: rgba(37,99,235,0.08);
-  color: #2563EB;
+  background: rgba(37,99,235,0.15);
+  color: #93C5FD;
 }
 
 .deal-badge.status-open {
@@ -1093,12 +1091,12 @@ body {
 }
 
 .deal-badge.status-evergreen {
-  background: rgba(37,99,235,0.08);
-  color: #2563EB;
+  background: rgba(37,99,235,0.15);
+  color: #93C5FD;
 }
 .deal-badge.status-closed {
-  background: rgba(208,64,64,0.08);
-  color: #dc2626;
+  background: rgba(208,64,64,0.15);
+  color: #FCA5A5;
 }
 
 
@@ -2640,7 +2638,7 @@ body {
   margin-top: 16px;
   font-family: var(--font-ui);
   font-size: 13px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.7);
 }
 .hero-social-proof .sp-avatars {
   display: flex;
@@ -2650,7 +2648,7 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2px solid var(--bg-card);
+  border: 2px solid #252b3b;
   background: linear-gradient(135deg, #51BE7B 0%, #2d8a54 100%);
   color: #fff;
   font-size: 10px;
@@ -4812,7 +4810,7 @@ async function renderDeal() {
     var _heroStrat = deal.investmentStrategy;
     var _heroDot = _heroStrat.indexOf('. ');
     var _heroSummary = _heroDot > 0 ? _heroStrat.substring(0, _heroDot + 1) : (_heroStrat.length > 200 ? _heroStrat.substring(0, 200) + '...' : _heroStrat);
-    heroHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:12px;max-width:560px;">' + esc(_heroSummary) + '</div>';
+    heroHtml += '<div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.65);line-height:1.5;margin-top:12px;max-width:560px;">' + esc(_heroSummary) + '</div>';
   }
 
   heroHtml += '<div id="dealSocialProof" class="hero-social-proof"></div>';
