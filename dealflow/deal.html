@@ -2494,21 +2494,57 @@ body {
 /* ====== HERO SOCIAL PROOF ====== */
 .hero-social-proof {
   display: flex;
-  gap: 16px;
-  margin-top: 12px;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
   font-family: var(--font-ui);
-  font-size: 12px;
-  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
 }
-.hero-social-proof .sp-stat {
+.hero-social-proof .sp-avatars {
+  display: flex;
+  flex-shrink: 0;
+}
+.hero-social-proof .sp-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--teal-deep, #1F5159);
+  background: linear-gradient(135deg, #51BE7B 0%, #2d8a54 100%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  margin-left: -8px;
+  position: relative;
+  overflow: hidden;
 }
-.hero-social-proof svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
+.hero-social-proof .sp-avatar:first-child {
+  margin-left: 0;
+}
+.hero-social-proof .sp-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.hero-social-proof .sp-avatar.sp-count {
+  background: rgba(255,255,255,0.15);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.hero-social-proof .sp-text {
+  line-height: 1.4;
+}
+.hero-social-proof .sp-text strong {
+  color: #fff;
+  font-weight: 700;
+}
+.hero-social-proof .sp-text .sp-dim {
+  color: rgba(255,255,255,0.55);
 }
 
 /* ====== GP INSIGHTS PANEL ====== */
@@ -2520,31 +2556,8 @@ body {
   border-bottom-color: rgba(59,130,246,0.15);
 }
 
-/* ====== SOCIAL PROOF ====== */
-
-.deal-social-proof {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: rgba(255,255,255,0.75);
-  margin: 12px 0;
-  padding: 10px 16px;
-  background: rgba(255,255,255,0.04);
-  border-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-.deal-social-proof svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-.deal-social-proof strong {
-  color: #4ade80;
-  font-weight: 700;
-}
+/* ====== SOCIAL PROOF (named investors row) ====== */
+/* No longer used — named investors are integrated into hero-social-proof */
 
 /* ====== RETURNS CHART ====== */
 
@@ -2686,7 +2699,8 @@ body {
     font-size: 11px;
   }
   .journey-connector { width: 8px; min-width: 8px; }
-  .deal-social-proof { font-size: 11px; }
+  .hero-social-proof { font-size: 12px; gap: 10px; }
+  .hero-social-proof .sp-avatar { width: 26px; height: 26px; font-size: 9px; }
   .dd-perspective-links {
     flex-direction: column;
   }
@@ -4753,9 +4767,8 @@ async function renderDeal() {
     buyBoxHtml += '</div>';
   }
 
-  // --- 2b. Social Proof (loaded async into hero) ---
+  // --- 2b. Social Proof — LinkedIn-style avatar stack (loaded async into hero) ---
   var socialProofHtml = '';
-  // Fetch social proof stats + named investors
   (function loadDealSocialProof() {
     fetch('/api/deal-stats?dealId=' + encodeURIComponent(deal.id))
       .then(function(r) { return r.ok ? r.json() : null; })
@@ -4767,35 +4780,68 @@ async function renderDeal() {
         var total = saved + vetting + invested;
         var namedInvestors = stats.namedInvestors || [];
         var namedWatchers = stats.namedWatchers || [];
-        if (total === 0 && namedInvestors.length === 0) return;
+        var allNamed = namedInvestors.concat(namedWatchers);
+        if (total === 0 && allNamed.length === 0) return;
+
         var el = document.getElementById('dealSocialProof');
         if (!el) return;
-        var parts = [];
-        var eyeSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-        var ddSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>';
-        var investSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
-        var peopleSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>';
-        if (total > 0) parts.push(eyeSvg + ' <strong>' + total + '</strong> GYC member' + (total !== 1 ? 's' : '') + ' watching');
-        if (vetting > 0) parts.push(ddSvg + ' <strong>' + vetting + '</strong> in due diligence');
-        if (invested > 0) parts.push(investSvg + ' <strong>' + invested + '</strong> invested');
-        el.innerHTML = parts.join('<span style="opacity:0.3;margin:0 6px;">|</span>');
-        el.style.display = 'flex';
 
-        // Named investors section (below stats in hero)
-        if (namedInvestors.length > 0 || namedWatchers.length > 0) {
-          var namesEl = document.createElement('div');
-          namesEl.className = 'deal-social-proof';
-          namesEl.innerHTML = peopleSvg + ' ';
-          var nameParts = [];
-          if (namedInvestors.length > 0) {
-            nameParts.push('<strong>' + esc(namedInvestors.join('</strong>, <strong>')) + '</strong> invested');
-          }
-          if (namedWatchers.length > 0) {
-            nameParts.push('<strong>' + esc(namedWatchers.join('</strong>, <strong>')) + '</strong> ' + (namedWatchers.length === 1 ? 'is' : 'are') + ' watching');
-          }
-          namesEl.innerHTML += nameParts.join('<span style="opacity:0.3;margin:0 6px;">·</span>');
-          el.parentNode.insertBefore(namesEl, el.nextSibling);
+        // Build avatar stack (show up to 5 avatars)
+        function getInitialsFromName(name) {
+          return name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
         }
+        // Avatar colors — rotate through a palette
+        var avatarColors = ['#51BE7B', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444'];
+        var avatarHtml = '<div class="sp-avatars">';
+        var showMax = 5;
+        var shown = allNamed.slice(0, showMax);
+        var remaining = total - shown.length;
+
+        shown.forEach(function(name, i) {
+          var initials = getInitialsFromName(name);
+          var color = avatarColors[i % avatarColors.length];
+          avatarHtml += '<div class="sp-avatar" style="background:' + color + ';" title="' + esc(name) + '">' + initials + '</div>';
+        });
+
+        // If there are anonymous users beyond the named ones, show a +N circle
+        if (remaining > 0) {
+          avatarHtml += '<div class="sp-avatar sp-count" title="' + remaining + ' more">+' + remaining + '</div>';
+        }
+        avatarHtml += '</div>';
+
+        // Build text
+        var textHtml = '<div class="sp-text">';
+        if (allNamed.length > 0) {
+          // "Pascal Wagner, John Doe, and 3 others are reviewing this deal"
+          var nameStr = '';
+          if (allNamed.length === 1) {
+            nameStr = '<strong>' + esc(allNamed[0]) + '</strong>';
+          } else if (allNamed.length === 2) {
+            nameStr = '<strong>' + esc(allNamed[0]) + '</strong> and <strong>' + esc(allNamed[1]) + '</strong>';
+          } else {
+            nameStr = '<strong>' + esc(allNamed[0]) + '</strong>, <strong>' + esc(allNamed[1]) + '</strong>';
+            var othersCount = total - 2;
+            if (othersCount > 0) {
+              nameStr += ', and <strong>' + othersCount + ' other' + (othersCount !== 1 ? 's' : '') + '</strong>';
+            }
+          }
+
+          // Choose verb based on what people are doing
+          if (namedInvestors.length > 0 && namedWatchers.length > 0) {
+            textHtml += nameStr + ' <span class="sp-dim">invested in or are reviewing this deal</span>';
+          } else if (namedInvestors.length > 0) {
+            textHtml += nameStr + ' <span class="sp-dim">invested in this deal</span>';
+          } else {
+            textHtml += nameStr + ' <span class="sp-dim">' + (allNamed.length === 1 ? 'is' : 'are') + ' reviewing this deal</span>';
+          }
+        } else {
+          // Anonymous only
+          textHtml += '<strong>' + total + '</strong> <span class="sp-dim">GYC member' + (total !== 1 ? 's are' : ' is') + ' reviewing this deal</span>';
+        }
+        textHtml += '</div>';
+
+        el.innerHTML = avatarHtml + textHtml;
+        el.style.display = 'flex';
       })
       .catch(function() {});
   })();
@@ -5416,33 +5462,91 @@ async function renderDeal() {
     cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
     cashFlowHtml += '</div>';
 
-    // --- Chart view (annual bar chart) ---
+    // --- Chart view (annual line chart) ---
+    var hasCapReturn = rows.some(function(r) { return r.capReturn > 0; });
+    var annualPts = [];
     var maxVal = 0;
     for (var i = 0; i < rows.length; i++) {
-      var rv = rows[i].dist + rows[i].capReturn;
-      if (rv > maxVal) maxVal = rv;
+      var total = rows[i].dist + rows[i].capReturn;
+      annualPts.push({ year: rows[i].year, dist: rows[i].dist, capReturn: rows[i].capReturn, total: total });
+      if (total > maxVal) maxVal = total;
     }
+    // Round max up to nice grid
+    var gridStep;
+    if (maxVal <= 10000) gridStep = 2500;
+    else if (maxVal <= 50000) gridStep = 10000;
+    else if (maxVal <= 200000) gridStep = 50000;
+    else gridStep = 100000;
+    var gridMax = Math.ceil(maxVal / gridStep) * gridStep;
+    if (gridMax === 0) gridMax = 10000;
+
+    var n = annualPts.length;
+    var svgW = 560, svgH = 140, padL = 52, padR = 16, padT = 24, padB = 28;
+    var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
+
+    function lX(idx) { return padL + (n > 1 ? (idx / (n - 1)) * plotW : plotW / 2); }
+    function lY(val) { return padT + plotH - (val / gridMax) * plotH; }
+
     cashFlowHtml += '<div id="' + uid + '_chart" class="cf-chart-wrap" style="display:none;">';
-    cashFlowHtml += '<div class="cf-chart-grid">';
-    for (var i = 0; i < rows.length; i++) {
-      var r = rows[i];
-      var distH = maxVal > 0 ? Math.round((r.dist / maxVal) * 120) : 0;
-      var capH = maxVal > 0 ? Math.round((r.capReturn / maxVal) * 120) : 0;
-      var totalVal = r.dist + r.capReturn;
-      cashFlowHtml += '<div class="cf-bar-group">';
-      cashFlowHtml += '<div class="cf-bar-value">$' + Math.round(totalVal / 1000) + 'K</div>';
-      cashFlowHtml += '<div class="cf-bar-container">';
-      if (r.capReturn > 0) cashFlowHtml += '<div class="cf-bar cf-bar-cap" style="height:' + Math.max(capH, 2) + 'px;" title="Capital return: $' + Math.round(r.capReturn).toLocaleString() + '"></div>';
-      cashFlowHtml += '<div class="cf-bar cf-bar-dist" style="height:' + Math.max(distH, 2) + 'px;" title="Distributions: $' + Math.round(r.dist).toLocaleString() + '"></div>';
-      cashFlowHtml += '</div>';
-      cashFlowHtml += '<div class="cf-bar-label">Yr ' + r.year + '</div>';
-      cashFlowHtml += '</div>';
+    cashFlowHtml += '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;height:auto;overflow:visible;" xmlns="http://www.w3.org/2000/svg">';
+
+    // Grid lines
+    var gridCount = Math.round(gridMax / gridStep);
+    for (var g = 0; g <= gridCount; g++) {
+      var gVal = g * gridStep;
+      var gy = lY(gVal);
+      cashFlowHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (svgW - padR) + '" y2="' + gy + '" stroke="#f0f0f0" stroke-width="1"/>';
+      var gLabel = gVal >= 1000000 ? '$' + (gVal / 1000000).toFixed(1) + 'M' : gVal >= 1000 ? '$' + Math.round(gVal / 1000) + 'K' : '$' + gVal;
+      cashFlowHtml += '<text x="' + (padL - 6) + '" y="' + (gy + 4) + '" text-anchor="end" fill="#9ca3af" font-family="var(--font-ui)" font-size="9">' + gLabel + '</text>';
     }
-    cashFlowHtml += '</div>';
-    cashFlowHtml += '<div class="cf-legend">';
-    cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:var(--primary);"></div>Distributions</div>';
-    if (rows.some(function(r) { return r.capReturn > 0; })) {
-      cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:rgba(81,190,123,0.25);"></div>Capital Return</div>';
+
+    // X-axis baseline
+    cashFlowHtml += '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (svgW - padR) + '" y2="' + (padT + plotH) + '" stroke="#e5e7eb" stroke-width="1"/>';
+
+    // Area fill under distribution line
+    var areaPath = 'M' + lX(0) + ',' + lY(annualPts[0].dist);
+    for (var i = 1; i < n; i++) areaPath += ' L' + lX(i) + ',' + lY(annualPts[i].dist);
+    areaPath += ' L' + lX(n - 1) + ',' + (padT + plotH) + ' L' + lX(0) + ',' + (padT + plotH) + ' Z';
+    cashFlowHtml += '<defs><linearGradient id="' + uid + '_areaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#51be7b" stop-opacity="0.25"/><stop offset="100%" stop-color="#51be7b" stop-opacity="0.03"/></linearGradient></defs>';
+    cashFlowHtml += '<path d="' + areaPath + '" fill="url(#' + uid + '_areaGrad)"/>';
+
+    // Distribution line
+    var linePath = 'M' + lX(0) + ',' + lY(annualPts[0].dist);
+    for (var i = 1; i < n; i++) linePath += ' L' + lX(i) + ',' + lY(annualPts[i].dist);
+    cashFlowHtml += '<path d="' + linePath + '" fill="none" stroke="#51be7b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+
+    // Total line (if capital return exists — dashed, darker)
+    if (hasCapReturn) {
+      var totalPath = 'M' + lX(0) + ',' + lY(annualPts[0].total);
+      for (var i = 1; i < n; i++) totalPath += ' L' + lX(i) + ',' + lY(annualPts[i].total);
+      cashFlowHtml += '<path d="' + totalPath + '" fill="none" stroke="#2d8a54" stroke-width="2" stroke-dasharray="4,3"/>';
+    }
+
+    // Data points + value labels
+    for (var i = 0; i < n; i++) {
+      var px = lX(i), py = lY(annualPts[i].dist);
+      cashFlowHtml += '<circle cx="' + px + '" cy="' + py + '" r="3.5" fill="#fff" stroke="#51be7b" stroke-width="2"/>';
+      var valLabel = annualPts[i].dist >= 1000 ? '$' + Math.round(annualPts[i].dist / 1000) + 'K' : '$' + Math.round(annualPts[i].dist);
+      cashFlowHtml += '<text x="' + px + '" y="' + (py - 8) + '" text-anchor="middle" fill="#374151" font-family="var(--font-ui)" font-size="9" font-weight="600">' + valLabel + '</text>';
+
+      // Total dot + label (on dashed line)
+      if (hasCapReturn && annualPts[i].capReturn > 0) {
+        var tpy = lY(annualPts[i].total);
+        cashFlowHtml += '<circle cx="' + px + '" cy="' + tpy + '" r="3.5" fill="#fff" stroke="#2d8a54" stroke-width="2"/>';
+        var totLabel = annualPts[i].total >= 1000 ? '$' + Math.round(annualPts[i].total / 1000) + 'K' : '$' + Math.round(annualPts[i].total);
+        cashFlowHtml += '<text x="' + px + '" y="' + (tpy - 8) + '" text-anchor="middle" fill="#2d8a54" font-family="var(--font-ui)" font-size="9" font-weight="600">' + totLabel + '</text>';
+      }
+
+      // Year label
+      cashFlowHtml += '<text x="' + px + '" y="' + (padT + plotH + 16) + '" text-anchor="middle" fill="#9ca3af" font-family="var(--font-ui)" font-size="9">Yr ' + annualPts[i].year + '</text>';
+    }
+
+    cashFlowHtml += '</svg>';
+    // Legend
+    cashFlowHtml += '<div style="display:flex;gap:16px;margin-top:6px;justify-content:flex-end;">';
+    cashFlowHtml += '<span style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:3px;border-radius:2px;background:#51be7b;display:inline-block;"></span>Annual Distributions</span>';
+    if (hasCapReturn) {
+      cashFlowHtml += '<span style="font-size:11px;color:#6b7280;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:3px;border-radius:2px;background:#2d8a54;display:inline-block;border-top:1px dashed #2d8a54;"></span>Total w/ Capital Return</span>';
     }
     cashFlowHtml += '</div>';
     cashFlowHtml += '</div>';
