@@ -17193,7 +17193,8 @@ function renderDashboard() {
 
   // ===== Contextual Coaching Message =====
   const user = typeof getUser === 'function' ? getUser() : null;
-  const firstName = user?.firstName || (user?.name || '').split(' ')[0] || '';
+  const _rawFirst = user?.firstName || (user?.name || '').split(' ')[0] || '';
+  const firstName = _rawFirst ? _rawFirst.charAt(0).toUpperCase() + _rawFirst.slice(1).toLowerCase() : '';
   const buyBoxComplete = localStorage.getItem('gycBuyBoxComplete') === 'true';
 
   let coachMsg = '', coachCta = '', coachCtaAction = '';
