@@ -10968,8 +10968,10 @@ function getRealityCheckText() {
 // ---- Render wizard step ----
 function renderWizardStep() {
   const seq = getStepSequence();
+  if (wizardStepIndex >= seq.length) wizardStepIndex = seq.length - 1;
   wizardStep = seq[wizardStepIndex];
   const step = WIZARD_STEPS[wizardStep];
+  if (!step) { console.error('Wizard: no step at index', wizardStep, 'seq', seq, 'stepIdx', wizardStepIndex); return; }
   const total = seq.length;
   const pct = ((wizardStepIndex) / (total - 1) * 100).toFixed(0);
   document.getElementById('wizardProgress').style.width = pct + '%';
