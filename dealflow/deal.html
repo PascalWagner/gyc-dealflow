@@ -6126,6 +6126,10 @@ async function renderDeal() {
     if (!hasFeeData) return;
 
     // Get peers (same logic as benchmark section)
+    var allDeals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+    if (allDeals.length === 0) {
+      try { allDeals = JSON.parse(sessionStorage.getItem('gycDealsCache') || '[]'); } catch(e) {}
+    }
     var _isCredit = isCreditFund(deal);
     var peerLabel = _isCredit ? 'Lending' : (deal.assetClass || 'Similar');
     var peers = allDeals.filter(function(d) {
@@ -7790,7 +7794,14 @@ function copyGPAgenda(dealId) {
 
 initAuth();
 
-renderDeal();
+renderDeal().catch(function(err) {
+  console.error('renderDeal failed:', err);
+  var container = document.getElementById('loadedContent');
+  if (container && !container.innerHTML) {
+    container.innerHTML = '<div style="text-align:center;padding:60px;color:#c00;">Something went wrong loading this deal.<br><small>' + err.message + '</small></div>';
+    document.body.classList.add('page-loaded');
+  }
+});
 
 // Init stress test calculator after render
 setTimeout(function() {
