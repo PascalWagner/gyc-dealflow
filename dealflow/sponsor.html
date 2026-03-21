@@ -705,9 +705,13 @@ body {
 
 /* ====== KEY PEOPLE ====== */
 .people-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
+}
+.people-grid .person-card {
+  width: 340px;
+  max-width: 100%;
 }
 
 .person-card {
