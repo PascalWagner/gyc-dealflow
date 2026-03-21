@@ -713,70 +713,37 @@ body {
 /* ====== DEAL HEADER ====== */
 
 .deal-header {
-
-  background: linear-gradient(145deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
-
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--primary);
   border-radius: var(--radius);
-
   padding: 36px 40px;
-
   margin-bottom: 24px;
-
   position: relative;
-
   overflow: hidden;
-
 }
-
 .deal-header.hero-lending {
-  background: linear-gradient(145deg, #263a4d 0%, #2a4f60 50%, #264555 100%);
+  border-top-color: #3b82f6;
 }
-.deal-header.hero-lending::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: repeating-linear-gradient(90deg, rgba(81,190,123,0.03) 0px, rgba(81,190,123,0.03) 1px, transparent 1px, transparent 60px);
-  pointer-events: none;
-}
-
 .deal-header.hero-equity {
-  background: linear-gradient(145deg, #3a5a3e 0%, #2d4f3a 50%, #3a6045 100%);
+  border-top-color: var(--primary);
 }
-
-.deal-header::after {
-
-  content: '';
-
-  position: absolute;
-
-  top: -60%; right: -10%;
-
-  width: 300px; height: 300px;
-
-  background: radial-gradient(circle, rgba(81,190,123,0.1) 0%, transparent 70%);
-
-  border-radius: 50%;
-
-  pointer-events: none;
-
-}
-
-.deal-header.hero-lending::after {
-  background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
-}
+.deal-header::after { display: none; }
+.deal-header.hero-lending::before { display: none; }
+.deal-header.hero-lending::after { display: none; }
 
 /* Hero type icon */
 .hero-type-icon {
   position: absolute;
   bottom: 20px;
   right: 24px;
-  opacity: 0.06;
+  opacity: 0.05;
   z-index: 0;
 }
 .hero-type-icon svg {
   width: 120px;
   height: 120px;
-  stroke: #fff;
+  stroke: var(--text-muted);
   stroke-width: 1;
   fill: none;
 }
@@ -809,8 +776,8 @@ body {
   align-items: center;
   gap: 10px;
   padding: 14px 28px;
-  background: var(--accent-green);
-  color: #0a1628;
+  background: var(--primary);
+  color: #fff;
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
@@ -820,22 +787,22 @@ body {
   transition: background 0.15s, transform 0.1s;
   white-space: nowrap;
 }
-.hero-deck-btn:hover { background: #34d399; transform: translateY(-1px); }
+.hero-deck-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
 .hero-deck-btn.hero-deck-locked {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.5);
+  background: var(--bg-main);
+  color: var(--text-muted);
   cursor: default;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--border);
 }
 .hero-deck-btn.hero-deck-locked[onclick] { cursor: pointer; }
-.hero-deck-btn.hero-deck-locked[onclick]:hover { background: rgba(255,255,255,0.14); }
+.hero-deck-btn.hero-deck-locked[onclick]:hover { background: var(--bg-cream); }
 .hero-share-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0;
   background: none;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 600;
@@ -844,7 +811,7 @@ body {
   transition: color 0.15s;
   white-space: nowrap;
 }
-.hero-share-btn:hover { color: rgba(255,255,255,0.85); }
+.hero-share-btn:hover { color: var(--text-dark); }
 .hero-share-btn svg { opacity: 0.7; }
 .hero-share-btn:hover svg { opacity: 1; }
 .share-dropdown {
@@ -913,10 +880,10 @@ body {
   justify-content: center;
   font-family: var(--font-ui);
   font-weight: 800;
-  color: rgba(255,255,255,0.9);
+  color: var(--text-muted);
   font-size: 26px;
   letter-spacing: -0.5px;
-  border: 2px solid rgba(255,255,255,0.15);
+  border: 2px solid var(--border);
 }
 .hero-operator-photo img {
   width: 100%;
@@ -928,12 +895,12 @@ body {
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-dark);
 }
 .hero-operator-title {
   font-family: var(--font-ui);
   font-size: 11px;
-  color: rgba(255,255,255,0.55);
+  color: var(--text-muted);
 }
 .hero-metrics {
   display: flex;
@@ -949,18 +916,18 @@ body {
   font-family: var(--font-ui);
   font-size: 22px;
   font-weight: 800;
-  color: #fff;
+  color: var(--text-dark);
   letter-spacing: -0.5px;
   line-height: 1.1;
 }
-.hero-metric-value.highlight { color: var(--accent-green); }
+.hero-metric-value.highlight { color: var(--primary); }
 .hero-metric-label {
   font-family: var(--font-ui);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: rgba(255,255,255,0.45);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -1046,48 +1013,29 @@ body {
 }
 
 .deal-name {
-
   font-family: var(--font-headline);
-
   font-size: 32px;
-
-  color: #fff;
-
+  color: var(--text-dark);
   line-height: 1.2;
-
   letter-spacing: -0.5px;
-
   margin-bottom: 8px;
-
 }
 
 
 
 .deal-company {
-
   font-family: var(--font-ui);
-
   font-size: 15px;
-
   font-weight: 500;
-
   margin-bottom: 16px;
-
-  color: rgba(255,255,255,0.85);
-
+  color: var(--text-secondary);
 }
-
 .deal-company a {
-
-  color: var(--accent-green);
-
+  color: var(--primary);
   text-decoration: none;
-
   transition: color var(--transition);
-
 }
-
-.deal-company a:hover { color: #fff; text-decoration: underline; }
+.deal-company a:hover { color: var(--primary-hover); text-decoration: underline; }
 
 
 
@@ -1132,11 +1080,8 @@ body {
 }
 
 .deal-badge.deal-type {
-
-  background: rgba(37,99,235,0.15);
-
-  color: #93C5FD;
-
+  background: rgba(37,99,235,0.08);
+  color: #2563EB;
 }
 
 .deal-badge.status-open {
@@ -1148,19 +1093,12 @@ body {
 }
 
 .deal-badge.status-evergreen {
-
-  background: rgba(37,99,235,0.15);
-
-  color: #93C5FD;
-
+  background: rgba(37,99,235,0.08);
+  color: #2563EB;
 }
-
 .deal-badge.status-closed {
-
-  background: rgba(208,64,64,0.15);
-
-  color: #FCA5A5;
-
+  background: rgba(208,64,64,0.08);
+  color: #dc2626;
 }
 
 
@@ -2702,7 +2640,7 @@ body {
   margin-top: 16px;
   font-family: var(--font-ui);
   font-size: 13px;
-  color: rgba(255,255,255,0.8);
+  color: var(--text-secondary);
 }
 .hero-social-proof .sp-avatars {
   display: flex;
@@ -2712,7 +2650,7 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2px solid var(--teal-deep, #1F5159);
+  border: 2px solid var(--bg-card);
   background: linear-gradient(135deg, #51BE7B 0%, #2d8a54 100%);
   color: #fff;
   font-size: 10px;
@@ -4874,7 +4812,7 @@ async function renderDeal() {
     var _heroStrat = deal.investmentStrategy;
     var _heroDot = _heroStrat.indexOf('. ');
     var _heroSummary = _heroDot > 0 ? _heroStrat.substring(0, _heroDot + 1) : (_heroStrat.length > 200 ? _heroStrat.substring(0, 200) + '...' : _heroStrat);
-    heroHtml += '<div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.75);line-height:1.5;margin-top:12px;max-width:560px;">' + esc(_heroSummary) + '</div>';
+    heroHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:12px;max-width:560px;">' + esc(_heroSummary) + '</div>';
   }
 
   heroHtml += '<div id="dealSocialProof" class="hero-social-proof"></div>';
