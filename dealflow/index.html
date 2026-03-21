@@ -2900,6 +2900,12 @@ html.cap-ios .debt-metric-select-mobile {
 @keyframes wizShake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
 .wizard-footer { display: none; }
 
+/* Glossary tooltips for jargon terms */
+.wiz-tip { position: relative; border-bottom: 1px dotted var(--text-muted); cursor: help; }
+.wiz-tip::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--bg-sidebar); color: #fff; font-size: 11px; font-weight: 400; line-height: 1.4; padding: 8px 12px; border-radius: 8px; white-space: normal; width: max-content; max-width: 240px; opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.wiz-tip:hover::after, .wiz-tip:focus::after { opacity: 1; }
+@media (max-width: 767px) { .wiz-tip::after { left: 0; transform: none; } }
+
 /* ===== Screen 0: Goal Selection Cards ===== */
 .wizard-goal-cards {
   display: grid;
@@ -10663,7 +10669,7 @@ const ONBOARDING_FLOW = {
   common_start: [0, 1, 2, 3],
   cashflow: [4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
   growth: [5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17],
-  tax: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18],
+  tax: [6, 20, 21, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18],
   common_end: [19]
 };
 
@@ -10672,7 +10678,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -10744,7 +10750,11 @@ const WIZARD_STEPS = [
   // 18: Plan — tax
   { type: 'planOutput', branch: 'tax' },
   // 19: Completion
-  { type: 'completion' }
+  { type: 'completion' },
+  // 20: Income source (tax branch only)
+  { type: 'incomeSource' },
+  // 21: RE Professional status (tax branch only)
+  { type: 'reProfessional' }
 ];
 
 // Asset class definitions with goal-specific context
@@ -11019,7 +11029,7 @@ function renderWizardStep() {
   if (step.type === 'goalSelect') {
     html += '<div class="wizard-trust"><div class="wizard-trust-avatar">PW</div><div class="wizard-trust-name">Pascal Wagner &middot; Grow Your Cashflow</div></div>';
     html += '<div class="wizard-card-title">What\u2019s your investing goal?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Pick one and we\u2019ll build a personalized plan in under 60 seconds.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Pick one and we\u2019ll build your personalized investment plan.</div>';
     html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:32px;">Built on $3.3M in personal investments across 23 deals</div>';
     html += '<div class="wizard-goal-cards">';
     const goals = [
@@ -11214,43 +11224,6 @@ function renderWizardStep() {
     var taxSaved = Math.round(taxVal * 0.37).toLocaleString();
     html += '<div class="wizard-live-calc" id="wizLiveCalc">At a 37% bracket, that\u2019s ~$' + taxSaved + ' back in your pocket.</div>';
 
-    // Income structure
-    html += '<div style="margin-top:24px;margin-bottom:20px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Where does your income come from?</div>';
-    var incomeOptions = [
-      { val: 'w2', label: 'W-2 (employed)', desc: 'Salary or wages from an employer' },
-      { val: 'self_employed', label: 'Self-employed / 1099', desc: 'Business owner or independent contractor' },
-      { val: 'mixed', label: 'Both W-2 and self-employed', desc: 'Multiple income sources' },
-      { val: 'passive', label: 'Mostly passive / investment income', desc: 'Rental income, dividends, etc.' }
-    ];
-    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
-    incomeOptions.forEach(function(opt) {
-      var isSel = wizardData.incomeStructure === opt.val;
-      html += '<div onclick="wizardData.incomeStructure=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
-      html += '<div style="width:20px;height:20px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSel ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (isSel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-      html += '<div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
-      html += '</div>';
-    });
-    html += '</div></div>';
-
-    // Real estate professional status
-    html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Do you (or your spouse) qualify as a Real Estate Professional?</div>';
-    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">750+ hours/yr in RE activities. This unlocks unlimited passive loss deductions against W-2 income.</div>';
-    var reProOptions = [
-      { val: 'yes', label: 'Yes' },
-      { val: 'no', label: 'No' },
-      { val: 'unsure', label: 'Not sure' }
-    ];
-    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
-    reProOptions.forEach(function(opt) {
-      var isSel = wizardData.reProfessional === opt.val;
-      html += '<div onclick="wizardData.reProfessional=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 8px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
-      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '</div>';
-    });
-    html += '</div></div>';
-
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
@@ -11270,6 +11243,69 @@ function renderWizardStep() {
       taxInp.addEventListener('blur', function() { var n = parseDollar(this.value); if (n > 0) this.value = fmtDollar(n); });
       taxInp.addEventListener('focus', function() { var n = parseDollar(this.value); if (n > 0) this.value = String(n); });
     }
+    return;
+  }
+
+  // ===== SCREEN 20: INCOME SOURCE (tax branch) =====
+  if (step.type === 'incomeSource') {
+    html += '<div class="wizard-card-title">Where does your income come from?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Your income type determines which depreciation strategies are available to you.</div>';
+    var incomeOptions = [
+      { val: 'w2', label: 'W-2 (employed)', desc: 'Salary or wages from an employer', icon: '\uD83D\uDCBC' },
+      { val: 'self_employed', label: 'Self-employed / 1099', desc: 'Business owner or independent contractor', icon: '\uD83D\uDEE0\uFE0F' },
+      { val: 'mixed', label: 'Both W-2 and self-employed', desc: 'Multiple income sources', icon: '\uD83D\uDD00' },
+      { val: 'passive', label: 'Mostly passive / investment income', desc: 'Rental income, dividends, etc.', icon: '\uD83C\uDFD6\uFE0F' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    incomeOptions.forEach(function(opt) {
+      var isSel = wizardData.incomeStructure === opt.val;
+      html += '<div onclick="wizardData.incomeStructure=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 21: RE PROFESSIONAL STATUS (tax branch) =====
+  if (step.type === 'reProfessional') {
+    html += '<div class="wizard-card-title">Do you (or your spouse) qualify as a Real Estate Professional?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">750+ hours/yr in RE activities. This unlocks unlimited passive loss deductions against W-2 income.</div>';
+    var reProOptions = [
+      { val: 'yes', label: 'Yes, I qualify', desc: 'I or my spouse spend 750+ hours/yr in real estate', icon: '\u2705' },
+      { val: 'no', label: 'No', desc: 'I don\u2019t meet the hours requirement', icon: '\u274C' },
+      { val: 'unsure', label: 'Not sure', desc: 'I\u2019d like to learn more about this', icon: '\u2753' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    reProOptions.forEach(function(opt) {
+      var isSel = wizardData.reProfessional === opt.val;
+      html += '<div onclick="wizardData.reProfessional=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    // Educational note for W-2 earners
+    if (wizardData.incomeStructure === 'w2') {
+      html += '<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:12px;color:var(--text-secondary);line-height:1.5;">';
+      html += '<strong style="color:#f59e0b;">Why this matters for W-2 earners:</strong> Without RE Pro status, passive losses from depreciation can only offset passive income \u2014 not your salary. RE Pro status removes that limitation.';
+      html += '</div>';
+    }
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
     return;
   }
 
@@ -11454,7 +11490,7 @@ function renderWizardStep() {
 
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (selected.length > 0 ? 'Next' : 'Skip') + '</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -11470,7 +11506,7 @@ function renderWizardStep() {
     });
     const branchLabel = { cashflow: 'cash flow', tax: 'tax reduction', growth: 'equity growth' }[branch];
     html += '<div class="wizard-card-title">What strategies appeal to you?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy affects your returns differently. Best for <strong>' + branchLabel + '</strong> highlighted first.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy affects your returns differently. Best for <strong>' + branchLabel + '</strong> shown first.</div>';
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     sorted.forEach(function(entry) {
       var key = entry[0];
@@ -11493,7 +11529,7 @@ function renderWizardStep() {
     html += '</div>';
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (selected.length > 0 ? 'Next' : 'Skip') + '</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -11502,7 +11538,7 @@ function renderWizardStep() {
   // ===== SCREEN 12: LOCKUP PREFERENCE =====
   if (step.type === 'lockupPrefs') {
     html += '<div class="wizard-card-title">How long can your capital be locked up?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are illiquid \u2014 you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are <span class="wiz-tip" data-tip="You cannot sell or withdraw your investment before the hold period ends. Your capital is locked in until the deal completes.">illiquid</span> \u2014 you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
     // Count deals by hold period
     var lockActiveDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
     var lockTotal = lockActiveDeals.length;
@@ -11598,8 +11634,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 11: ACCREDITATION STATUS =====
   if (step.type === 'accreditationPrefs') {
-    html += '<div class="wizard-card-title">Are you an accredited investor?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private placements require accreditation. This determines which deals we can show you.</div>';
+    html += '<div class="wizard-card-title">Are you an <span class="wiz-tip" data-tip="SEC designation for investors who meet income ($200K+) or net worth ($1M+) thresholds, allowing access to private investments.">accredited investor</span>?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most <span class="wiz-tip" data-tip="Investment offerings not registered with the SEC, typically only available to accredited investors. Higher return potential but less liquidity.">private placements</span> require accreditation. This determines which deals we can show you.</div>';
     var accOptions = [
       { val: 'net_worth', label: 'Yes \u2014 Net worth over $1M', desc: 'Excluding primary residence' },
       { val: 'income', label: 'Yes \u2014 Income over $200K', desc: '$200K individual or $300K with spouse' },
@@ -11627,7 +11663,7 @@ function renderWizardStep() {
 
   // ===== SCREEN 9: LP NETWORK OPT-IN =====
   if (step.type === 'lpNetwork') {
-    html += '<div class="wizard-card-title">Join the LP Network</div>';
+    html += '<div class="wizard-card-title">Join the <span class="wiz-tip" data-tip="LP = Limited Partner. That\'s you \u2014 the investor. The LP Network lets you see other investors in the same deals.">LP Network</span></div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:20px;">See who else is investing in the same deals \u2014 and let them see you.</div>';
 
     html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px 24px;margin-bottom:20px;">';
@@ -11699,8 +11735,32 @@ function renderWizardStep() {
     html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);line-height:1.6;max-width:360px;margin:0 auto;">' + heroSub + '</div>';
     html += '</div>';
 
+    // Quick buy box summary
+    var planAssets = (wizardData.assetClasses || []).slice(0, 3).join(', ');
+    var planStrategies = (wizardData.strategies || []).slice(0, 2).join(', ');
+    var planLockup = wizardData.lockup || '';
+    var planDist = wizardData.distributions || '';
+    html += '<div style="background:var(--bg-cream);border:1px solid var(--border-light);border-radius:10px;padding:16px 20px;margin-top:8px;text-align:left;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Your Buy Box</div>';
+    if (planAssets) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><strong>Assets:</strong> ' + planAssets + '</div>';
+    if (planStrategies) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><strong>Strategy:</strong> ' + planStrategies + '</div>';
+    if (planLockup) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><strong>Lockup:</strong> ' + planLockup + ' years</div>';
+    if (planDist) html += '<div style="font-size:13px;color:var(--text-secondary);"><strong>Distributions:</strong> ' + planDist + '</div>';
+    html += '</div>';
+
+    // Concentration warning
+    var planCap = { '<$100k': 75000, '$100k-$250k': 175000, '$250k-$500k': 375000, '$500k-$1M': 750000, '$1M+': 1500000 };
+    var planCapAmt = planCap[wizardData.capital12mo] || 200000;
+    var planCheckAmt = parseInt(wizardData.checkSize) || 50000;
+    var concPct = Math.round(planCheckAmt / planCapAmt * 100);
+    if (concPct > 30) {
+      html += '<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--text-secondary);line-height:1.5;">';
+      html += '<strong style="color:#f59e0b;">Heads up:</strong> At $' + planCheckAmt.toLocaleString() + '/deal, each investment is ~' + concPct + '% of your deployable capital. Consider spreading across more deals or reducing your check size for better diversification.';
+      html += '</div>';
+    }
+
     // Nav
-    html += '<div class="wizard-inline-nav" style="margin-top:40px;">';
+    html += '<div class="wizard-inline-nav" style="margin-top:24px;">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Browse my deals \u2192</button>';
     html += '</div>';
@@ -11936,9 +11996,18 @@ function wizardNext() {
     lossTolerance: 'maxOperatorPct',
     lockupPrefs: 'lockup',
     distributionPrefs: 'distributions',
-    accreditationPrefs: 'accreditation'
+    accreditationPrefs: 'accreditation',
+    incomeSource: 'incomeStructure',
+    reProfessional: 'reProfessional'
   };
   var reqField = curStep ? requiredMap[curStep.type] : null;
+  // Asset classes and strategies are arrays — require at least 1
+  if (curStep && curStep.type === 'assetClassSelect' && (!wizardData.assetClasses || wizardData.assetClasses.length === 0)) {
+    reqField = '_forceShake';
+  }
+  if (curStep && curStep.type === 'strategySelect' && (!wizardData.strategies || wizardData.strategies.length === 0)) {
+    reqField = '_forceShake';
+  }
   if (reqField && !wizardData[reqField]) {
     // Shake the Next button to indicate selection required
     var nextBtn = document.querySelector('.wizard-btn-next');
