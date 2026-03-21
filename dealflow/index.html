@@ -4796,10 +4796,9 @@ const _supa = window.supabase.createClient(
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
       My Portfolio
     </a>
-    <a class="nav-item nav-item-disabled" href="#" data-page="taxprep" id="navTaxPrep" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('taxprep'); return false">
+    <a class="nav-item" href="#" data-page="taxprep" id="navTaxPrep" onclick="navigateTo('taxprep'); return false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
       Tax Prep
-      <span class="nav-coming-soon" style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;">COMING SOON</span>
     </a>
     <div class="nav-section-label">Support</div>
     <a class="nav-item nav-item-disabled" href="#" data-page="officehours" id="navOfficeHours" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('officehours'); return false">
@@ -17377,7 +17376,7 @@ function showAdminNav() {
     gpNav.style.display = isGP ? 'block' : 'none';
   }
   // Enable/disable Coming Soon nav items for admins
-  ['navAssets', 'navOfficeHours', 'navAcademy', 'navTaxPrep'].forEach(id => {
+  ['navAssets', 'navOfficeHours', 'navAcademy'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const label = el.querySelector('.nav-coming-soon') || document.getElementById(id.replace('nav', '').toLowerCase() + 'ComingSoon');
@@ -19197,7 +19196,7 @@ function viewAsUser(email, name, contactId, tier) {
   if (sidebarEmailEl2) sidebarEmailEl2.textContent = email;
 
   // Gray out Coming Soon items for non-admin impersonated users + hide admin nav
-  ['navAssets', 'navOfficeHours', 'navAcademy', 'navTaxPrep'].forEach(id => {
+  ['navAssets', 'navOfficeHours', 'navAcademy'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.classList.add('nav-item-disabled');
