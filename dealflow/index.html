@@ -18197,12 +18197,10 @@ function renderDashboard() {
       + '<button onclick="navigateTo(\'deals\')" style="padding:14px 36px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Explore Deals \u2192</button>'
       + '</div></div>';
   } else {
-    // ===== ACTIVE USER: Show relevant sections =====
-    var sections = coachingHtml + heroHtml;
-    // Only show stat rows if they have meaningful data
-    if (dealsReviewedCount > 0) sections += momentumRow;
+    // ===== ACTIVE USER: Goal → Portfolio → Coaching =====
+    var sections = heroHtml;
     if (hasPortfolio) sections += statsRow;
-    sections += portfolioHtml + ddHistoryHtml + fundNudgeHtml;
+    sections += portfolioHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
 }
