@@ -2299,6 +2299,44 @@ body {
   font-weight: 700;
   color: var(--primary);
 }
+.share-class-table th.sc-active {
+  background: rgba(81,190,123,0.08);
+  border-bottom-color: var(--primary);
+}
+.share-class-table td.sc-active {
+  background: rgba(81,190,123,0.04);
+}
+
+/* Share class toggle pills (in hero) */
+.sc-toggle-bar {
+  display: flex;
+  gap: 0;
+  margin-top: 14px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+.sc-toggle-pill {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.sc-toggle-pill:hover {
+  color: rgba(255,255,255,0.85);
+}
+.sc-toggle-pill.active {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
 
 
 
@@ -4586,6 +4624,55 @@ async function geocodeAndMap(locationStr, containerId) {
 
 
 
+// ========== SHARE CLASS SWITCHER ==========
+window._activeShareClassIdx = null;
+window._originalDealValues = null;
+
+function switchShareClass(idx) {
+  var deal = window._currentDeal;
+  if (!deal || !deal.shareClasses || deal.shareClasses.length === 0) return;
+
+  // Save original values on first call
+  if (!window._originalDealValues) {
+    window._originalDealValues = {
+      targetIRR: deal.targetIRR,
+      preferredReturn: deal.preferredReturn,
+      investmentMinimum: deal.investmentMinimum,
+      holdPeriod: deal.holdPeriod,
+      cashOnCash: deal.cashOnCash,
+      equityMultiple: deal.equityMultiple,
+      lpGpSplit: deal.lpGpSplit
+    };
+  }
+
+  if (idx === null || idx === undefined) {
+    // Restore original values
+    var orig = window._originalDealValues;
+    deal.targetIRR = orig.targetIRR;
+    deal.preferredReturn = orig.preferredReturn;
+    deal.investmentMinimum = orig.investmentMinimum;
+    deal.holdPeriod = orig.holdPeriod;
+    deal.cashOnCash = orig.cashOnCash;
+    deal.equityMultiple = orig.equityMultiple;
+    deal.lpGpSplit = orig.lpGpSplit;
+    window._activeShareClassIdx = null;
+  } else {
+    var sc = deal.shareClasses[idx];
+    if (!sc) return;
+    // Overlay share class values (only override if share class has the value)
+    if (sc.targetReturn !== null && sc.targetReturn !== undefined) deal.targetIRR = sc.targetReturn;
+    if (sc.preferredReturn !== null && sc.preferredReturn !== undefined) deal.preferredReturn = sc.preferredReturn;
+    if (sc.investmentMinimum !== null && sc.investmentMinimum !== undefined) deal.investmentMinimum = sc.investmentMinimum;
+    if (sc.lockup !== null && sc.lockup !== undefined) deal.holdPeriod = sc.lockup;
+    if (sc.cashOnCash !== null && sc.cashOnCash !== undefined) deal.cashOnCash = sc.cashOnCash;
+    if (sc.lpGpSplit) deal.lpGpSplit = sc.lpGpSplit;
+    window._activeShareClassIdx = idx;
+  }
+
+  // Re-render (skip data fetch, deal is already loaded)
+  renderDeal();
+}
+
 // ========== RENDER PAGE ==========
 
 async function renderDeal() {
@@ -4670,8 +4757,10 @@ async function renderDeal() {
 
 
 
-  // Set page title
+  // Store deal reference for share class switcher
+  window._currentDeal = deal;
 
+  // Set page title
   document.title = deal.investmentName + ' - GYC Dealflow';
 
   document.getElementById('mobileTitle').textContent = deal.investmentName;
@@ -4765,6 +4854,17 @@ async function renderDeal() {
     if (deal.holdPeriod) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div><div class="hero-metric-label">Hold Period</div></div>';
   }
   heroHtml += '</div>';
+
+  // Share class toggle pills
+  if (deal.shareClasses && deal.shareClasses.length > 0) {
+    var activeIdx = window._activeShareClassIdx;
+    heroHtml += '<div class="sc-toggle-bar">';
+    heroHtml += '<button class="sc-toggle-pill' + (activeIdx == null ? ' active' : '') + '" onclick="switchShareClass(null)">' + esc(deal.investmentName).replace(/\s*(Fund|Capital|Investors|Investment).*/i, '') + ' (Default)</button>';
+    for (var sci = 0; sci < deal.shareClasses.length; sci++) {
+      heroHtml += '<button class="sc-toggle-pill' + (activeIdx === sci ? ' active' : '') + '" onclick="switchShareClass(' + sci + ')">' + esc(deal.shareClasses[sci].label) + '</button>';
+    }
+    heroHtml += '</div>';
+  }
 
   // Overview sentence in hero
   if (deal.investmentStrategy) {
@@ -5884,27 +5984,28 @@ async function renderDeal() {
     chartHtml += '<div class="section">';
     chartHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg><span class="section-title">Share Classes</span></div>';
     chartHtml += '<div class="section-body"><div class="share-class-table-wrap"><table class="share-class-table">';
+    var _scActiveIdx = window._activeShareClassIdx;
     chartHtml += '<tr><th></th>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
-      chartHtml += '<th>' + esc(deal.shareClasses[i].label) + '</th>';
+      chartHtml += '<th class="' + (_scActiveIdx === i ? 'sc-active' : '') + '" style="cursor:pointer;" onclick="switchShareClass(' + i + ')">' + esc(deal.shareClasses[i].label) + '</th>';
     }
     chartHtml += '</tr>';
     chartHtml += '<tr><td>Target Return</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      chartHtml += '<td><span class="value-highlight">' + esc(fmt(sc.targetReturn, 'pct')) + '</span></td>';
+      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '"><span class="value-highlight">' + esc(fmt(sc.targetReturn, 'pct')) + '</span></td>';
     }
     chartHtml += '</tr>';
     chartHtml += '<tr><td>Lockup</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      chartHtml += '<td>' + esc(formatHoldPeriod(sc.lockup)) + '</td>';
+      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(formatHoldPeriod(sc.lockup)) + '</td>';
     }
     chartHtml += '</tr>';
     chartHtml += '<tr><td>Min Investment</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      chartHtml += '<td>' + esc(fmt(sc.investmentMinimum, 'money')) + '</td>';
+      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(fmt(sc.investmentMinimum, 'money')) + '</td>';
     }
     chartHtml += '</tr>';
     var anyPref = deal.shareClasses.some(function(sc) { return sc.preferredReturn; });
@@ -5912,14 +6013,14 @@ async function renderDeal() {
       chartHtml += '<tr><td>Pref Return</td>';
       for (var i = 0; i < deal.shareClasses.length; i++) {
         var sc = deal.shareClasses[i];
-        chartHtml += '<td>' + esc(fmt(sc.preferredReturn, 'pct')) + '</td>';
+        chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(fmt(sc.preferredReturn, 'pct')) + '</td>';
       }
       chartHtml += '</tr>';
     }
     chartHtml += '<tr><td>Financials</td>';
     for (var i = 0; i < deal.shareClasses.length; i++) {
       var sc = deal.shareClasses[i];
-      chartHtml += '<td>' + esc(sc.financials || '---') + '</td>';
+      chartHtml += '<td class="' + (_scActiveIdx === i ? 'sc-active' : '') + '">' + esc(sc.financials || '---') + '</td>';
     }
     chartHtml += '</tr>';
     chartHtml += '</table></div></div></div>';
