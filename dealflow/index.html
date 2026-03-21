@@ -10369,8 +10369,21 @@ function initAuth() {
 // Fetch deal stages, goals, and portfolio from Supabase and populate localStorage
 async function fetchUserDataFromSupabase(email) {
   if (!email) return;
-  const token = getUserToken();
+  // Refresh token upfront — stored JWT may be expired (Supabase tokens expire in 60 min)
+  let token = getUserToken();
   if (!token) return;
+  const user = getUser();
+  if (user && user.refreshToken && typeof _supa !== 'undefined') {
+    try {
+      const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
+      if (data?.session) {
+        user.token = data.session.access_token;
+        user.refreshToken = data.session.refresh_token;
+        localStorage.setItem('gycUser', JSON.stringify(user));
+        token = data.session.access_token;
+      }
+    } catch (e) { /* use existing token as fallback */ }
+  }
   const authHeaders = { 'Authorization': 'Bearer ' + token };
   try {
     const [stagesResp, goalsResp, portfolioResp] = await Promise.all([
@@ -14382,6 +14395,14 @@ function renderPortfolio() {
   const tableC = document.getElementById('portfolioTableContainer');
   const summaryC = document.getElementById('portfolioSummaryCards');
   const chartArea = summaryC?.parentElement?.querySelector('[style*="grid-template-columns:1fr 1fr"]') || summaryC?.nextElementSibling;
+  // If portfolio is empty but user is logged in, try fetching from Supabase (handles expired-token / slow-network cases)
+  if (portfolioInvestments.length === 0 && !renderPortfolio._fetchAttempted) {
+    renderPortfolio._fetchAttempted = true;
+    const user = getUser();
+    if (user && user.email) {
+      fetchUserDataFromSupabase(user.email);
+    }
+  }
   if (portfolioInvestments.length === 0) {
     empty.style.display = 'block';
     tableC.style.display = 'none';
