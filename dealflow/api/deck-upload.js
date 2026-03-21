@@ -165,60 +165,49 @@ export default async function handler(req, res) {
   }
 }
 
-// ── PDF text extraction ─────────────────────────────────────────────────────
-// Uses pdf-parse library for proper text extraction from PDF buffers.
-async function extractTextFromPdfBuffer(buffer) {
-  // Dynamic import — pdf-parse is CJS and its default export tries to load
-  // a test PDF at require time, so we must import the inner module directly.
-  let pdfParse;
-  try {
-    const mod = await import('pdf-parse/lib/pdf-parse.js');
-    pdfParse = mod.default || mod;
-  } catch (e1) {
-    console.warn('pdf-parse/lib/pdf-parse.js import failed, trying pdf-parse:', e1.message);
-    try {
-      const mod2 = await import('pdf-parse');
-      pdfParse = mod2.default || mod2;
-    } catch (e2) {
-      console.error('All pdf-parse imports failed:', e2.message);
-      throw new Error('PDF parser not available');
-    }
-  }
-  const result = await pdfParse(buffer);
-  console.log('PDF parsed:', result.numpages, 'pages,', (result.text || '').length, 'chars extracted');
-  return (result.text || '').substring(0, 80000);
-}
-
 // ── Claude enrichment logic ─────────────────────────────────────────────────
+// Sends PDF directly to Claude as base64 — no pdf-parse dependency needed.
+// Claude can natively read PDF documents via its document understanding API.
 async function enrichFromPdfBuffer(fileBuffer) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const pdfText = await extractTextFromPdfBuffer(fileBuffer);
+  const pdfBase64 = fileBuffer.toString('base64');
 
-  if (!pdfText || pdfText.length < 100) {
-    return { enriched: false, enrichedFields: [], reason: 'Insufficient text extracted from PDF' };
-  }
-
-  // Call Claude API for extraction
+  // Claude's PDF support: send as a document content block
   const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'x-api-key': anthropicKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'pdfs-2024-09-25',
       'content-type': 'application/json'
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [{
         role: 'user',
-        content: EXTRACTION_PROMPT + '\n\nDOCUMENT TEXT:\n' + pdfText
+        content: [
+          {
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: pdfBase64
+            }
+          },
+          {
+            type: 'text',
+            text: EXTRACTION_PROMPT
+          }
+        ]
       }]
     })
   });
 
   if (!claudeResp.ok) {
     const errText = await claudeResp.text();
-    throw new Error('Claude API error: ' + claudeResp.status + ' ' + errText);
+    console.error('Claude API error:', claudeResp.status, errText.substring(0, 500));
+    throw new Error('Claude API error: ' + claudeResp.status);
   }
 
   const claudeData = await claudeResp.json();
@@ -236,8 +225,6 @@ async function enrichFromPdfBuffer(fileBuffer) {
     return { enriched: false, enrichedFields: [], reason: 'No fields extracted' };
   }
 
-  // Return extracted fields for frontend confirmation — don't auto-write
-  // The frontend will show a review wizard and call /api/deal-confirm-enrichment
   return {
     enriched: true,
     enrichedFields: fieldsFound,
