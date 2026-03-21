@@ -2307,21 +2307,20 @@ body {
   background: rgba(81,190,123,0.04);
 }
 
-/* Share class toggle pills (in hero) */
+/* Share class toggle pills */
 .sc-toggle-bar {
-  display: flex;
+  display: inline-flex;
   gap: 0;
-  margin-top: 14px;
-  background: rgba(255,255,255,0.1);
+  background: var(--bg-main);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 3px;
-  width: fit-content;
 }
 .sc-toggle-pill {
   padding: 6px 16px;
   border: none;
   background: transparent;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 600;
@@ -2331,11 +2330,12 @@ body {
   white-space: nowrap;
 }
 .sc-toggle-pill:hover {
-  color: rgba(255,255,255,0.85);
+  color: var(--text-dark);
 }
 .sc-toggle-pill.active {
-  background: rgba(255,255,255,0.2);
+  background: var(--primary);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(81,190,123,0.3);
 }
 
 
@@ -4760,6 +4760,20 @@ async function renderDeal() {
   // Store deal reference for share class switcher
   window._currentDeal = deal;
 
+  // Auto-select first share class (sorted by highest min) on initial load
+  if (deal.shareClasses && deal.shareClasses.length > 0 && window._activeShareClassIdx === null && !window._originalDealValues) {
+    // Find the share class with the highest min investment (A-1 tier)
+    var _bestIdx = 0, _bestMin = 0;
+    for (var _si = 0; _si < deal.shareClasses.length; _si++) {
+      if ((deal.shareClasses[_si].investmentMinimum || 0) > _bestMin) {
+        _bestMin = deal.shareClasses[_si].investmentMinimum || 0;
+        _bestIdx = _si;
+      }
+    }
+    switchShareClass(_bestIdx);
+    return; // switchShareClass calls renderDeal again
+  }
+
   // Set page title
   document.title = deal.investmentName + ' - GYC Dealflow';
 
@@ -4854,17 +4868,6 @@ async function renderDeal() {
     if (deal.holdPeriod) heroHtml += '<div class="hero-metric"><div class="hero-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div><div class="hero-metric-label">Hold Period</div></div>';
   }
   heroHtml += '</div>';
-
-  // Share class toggle pills
-  if (deal.shareClasses && deal.shareClasses.length > 0) {
-    var activeIdx = window._activeShareClassIdx;
-    heroHtml += '<div class="sc-toggle-bar">';
-    heroHtml += '<button class="sc-toggle-pill' + (activeIdx == null ? ' active' : '') + '" onclick="switchShareClass(null)">' + esc(deal.investmentName).replace(/\s*(Fund|Capital|Investors|Investment).*/i, '') + ' (Default)</button>';
-    for (var sci = 0; sci < deal.shareClasses.length; sci++) {
-      heroHtml += '<button class="sc-toggle-pill' + (activeIdx === sci ? ' active' : '') + '" onclick="switchShareClass(' + sci + ')">' + esc(deal.shareClasses[sci].label) + '</button>';
-    }
-    heroHtml += '</div>';
-  }
 
   // Overview sentence in hero
   if (deal.investmentStrategy) {
@@ -6030,6 +6033,19 @@ async function renderDeal() {
   var detailsHtml = '';
   detailsHtml += '<div class="section">';
   detailsHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span class="section-title">Deal Terms</span></div>';
+  // Share class toggle inside deal terms
+  if (deal.shareClasses && deal.shareClasses.length > 0) {
+    var _scIdx = window._activeShareClassIdx;
+    // Sort: highest min investment first (A-1 before A-2)
+    var _scSorted = deal.shareClasses.map(function(sc, i) { return { sc: sc, origIdx: i }; })
+      .sort(function(a, b) { return (b.sc.investmentMinimum || 0) - (a.sc.investmentMinimum || 0); });
+    detailsHtml += '<div style="padding:0 20px 12px;"><div class="sc-toggle-bar">';
+    for (var sci = 0; sci < _scSorted.length; sci++) {
+      var _origI = _scSorted[sci].origIdx;
+      detailsHtml += '<button class="sc-toggle-pill' + (_scIdx === _origI ? ' active' : '') + '" onclick="switchShareClass(' + _origI + ')">' + esc(_scSorted[sci].sc.label) + '</button>';
+    }
+    detailsHtml += '</div></div>';
+  }
   detailsHtml += '<div class="section-body"><div class="details-grid">';
   detailsHtml += detailItem('Distributions', deal.distributions);
   detailsHtml += detailItem('Available To', deal.availableTo);
