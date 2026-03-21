@@ -1479,6 +1479,17 @@ function renderNearby(nearbyDeals) {
   }).join('') + '</div>';
 }
 
+async function geocodeAddress(address) {
+  try {
+    var res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address));
+    var data = await res.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  } catch(e) { console.warn('Geocode failed:', e); }
+  return null;
+}
+
 function renderMap(lat, lng, label) {
   if (!lat || !lng) return;
   var mapEl = document.getElementById('propertyMap');
@@ -1592,12 +1603,17 @@ async function init() {
   var nearby = findNearbyDeals(allDeals, location, assetClass, matchIds, state);
   renderNearby(nearby);
 
-  // RentCast enrichment (async, non-blocking)
+  // Geocode address for map (fast, non-blocking)
   if (propertyAddress && propertyAddress.length > 10) {
+    geocodeAddress(propertyAddress).then(function(coords) {
+      if (coords) renderMap(coords.lat, coords.lng, propertyAddress);
+    });
+
+    // RentCast enrichment (async, non-blocking — may also update map with more precise coords)
     var rc = await enrichWithRentCast(propertyAddress);
     if (rc) {
       renderRentCast(rc);
-      // Re-render price history with unit count for $/unit calculation
+      if (rc.latitude && rc.longitude) renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
       if (rc.unitCount) renderPriceHistory(matchingDeals, rc.unitCount);
     }
   }
