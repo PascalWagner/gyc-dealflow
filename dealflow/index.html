@@ -8137,7 +8137,7 @@ function matchBadgeInfo(deal) {
   const reasons = typeof result === 'object' ? result.reasons : [];
   if (ratio >= 0.8) return { text: 'STRONG MATCH', cls: 'green', reasons: reasons };
   if (ratio >= 0.5) return { text: 'GOOD MATCH', cls: 'green', reasons: reasons };
-  if (ratio >= 0.3) return { text: 'PARTIAL', cls: 'orange', reasons: reasons };
+  if (ratio >= 0.3) return { text: '', cls: '', reasons: [] };
   return { text: '', cls: '', reasons: [] };
 }
 
