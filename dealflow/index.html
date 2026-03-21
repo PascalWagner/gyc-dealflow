@@ -5086,7 +5086,7 @@ const _supa = window.supabase.createClient(
     <div class="office-hours-banner">
       <div class="office-hours-pulse"></div>
       <div class="office-hours-text">Live Office Hours every <span>Thursday 12-1pm ET</span> - Get your deals reviewed by Pascal</div>
-      <button class="office-hours-join" onclick="navigateTo('officehours')">Join This Week</button>
+      <button class="office-hours-join" onclick="window.open('https://link.growyourcashflow.io/widget/booking/YmA8P5FLDzAIFXaSoCnE','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})">Join This Week</button>
     </div>
     <div class="filter-bar">
       <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
@@ -5145,6 +5145,7 @@ const _supa = window.supabase.createClient(
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
     <div class="content-area">
+      <div id="dealsMilestoneChecklist"></div>
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
       <div class="card-grid" id="cardGrid"></div>
       <div id="tableViewWrap" style="display:none;overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow-card);">
@@ -8043,6 +8044,7 @@ function setDealStage(id, stage) {
   else { dealStages[id] = stage; }
   saveDealStages();
   if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
+  if (typeof updateDealsChecklist === 'function') updateDealsChecklist();
 }
 // Migrate old savedDeals → saved
 const _oldSaved = JSON.parse(localStorage.getItem('gycSavedDeals') || '[]');
@@ -10200,6 +10202,7 @@ function navigateTo(page) {
   // Update cashflow gap bar on every page
   if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
   // Render page-specific content
+  if (page === 'deals') { updateDealsChecklist(); }
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
   if (page === 'settings') initBuyBox();
@@ -12034,7 +12037,7 @@ function wizardNext() {
     }
     if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
     syncBuyBoxToGHL();
-    navigateTo('dashboard');
+    navigateTo('deals');
     return;
   }
   wizardStepIndex++;
@@ -17866,39 +17869,29 @@ function renderDashboard() {
   }
 
   // Build next action from milestone
-  let actionIcon = '', actionTitle = '', actionDesc = '', actionBtnText = '', actionPage = 'deals';
+  let actionIcon = '', actionTitle = '', actionDesc = '', actionBtnText = '', actionPage = 'deals', actionOnclick = '';
   if (nextMilestone) {
     switch (nextMilestone.id) {
       case 'onboarding_complete':
-        actionIcon = '\u2713'; actionTitle = 'Complete Your Investor Profile';
+        actionIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>';
+        actionTitle = 'Complete Your Investor Profile';
         actionDesc = 'Set up your preferences in 60 seconds to get personalized deal flow.';
-        actionBtnText = 'Start Wizard \u2192'; actionPage = 'dashboard'; break;
+        actionBtnText = 'Start Wizard \u2192'; actionOnclick = 'openBuyBoxWizard()'; break;
       case 'saved_3_deals': {
         const saved = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
-        actionIcon = '\uD83D\uDD16'; actionTitle = 'Save ' + (3 - saved) + ' More Deal' + ((3 - saved) !== 1 ? 's' : '');
-        actionDesc = 'You\u2019ve saved ' + saved + ' so far. Swipe through deals and save ones that catch your eye.';
+        actionIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+        actionTitle = 'Save ' + (3 - saved) + ' More Deal' + ((3 - saved) !== 1 ? 's' : '');
+        actionDesc = 'You\u2019ve saved ' + saved + ' so far. Browse deals and save ones that match your buy box.';
         actionBtnText = 'Browse Deals \u2192'; break;
       }
-      case 'first_dd':
-        actionIcon = '\uD83D\uDD0D'; actionTitle = 'Move a Deal to Due Diligence';
-        actionDesc = 'You have ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' saved. Pick one to dive deeper.';
-        actionBtnText = 'Review Saved Deals \u2192'; break;
-      case 'viewed_5_deals': {
-        const vc = parseInt(localStorage.getItem('gycViewCount') || '0');
-        actionIcon = '\uD83D\uDC41'; actionTitle = 'Explore More Deals';
-        actionDesc = 'You\u2019ve viewed ' + vc + ' deal page' + (vc !== 1 ? 's' : '') + '. View ' + (5 - vc) + ' more to unlock this milestone.';
-        actionBtnText = 'Explore Deals \u2192'; break;
-      }
-      case 'booked_office_hours':
-        actionIcon = '\uD83D\uDCC5'; actionTitle = 'Book an Office Hours Session';
-        actionDesc = 'Get your questions answered live with a portfolio strategist.';
-        actionBtnText = 'Book Office Hours \u2192'; break;
-      case 'first_investment':
-        actionIcon = '\uD83D\uDCB0'; actionTitle = 'Track Your First Investment';
-        actionDesc = 'Move a deal to your portfolio or add an existing investment to start tracking.';
-        actionBtnText = 'View Pipeline \u2192'; break;
+      case 'booked_onboarding':
+        actionIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+        actionTitle = 'Book Your Onboarding Call';
+        actionDesc = 'Join a live deal flow walkthrough to learn how to evaluate and deploy capital.';
+        actionBtnText = 'Book a Call \u2192'; actionOnclick = "window.open('https://link.growyourcashflow.io/widget/booking/YmA8P5FLDzAIFXaSoCnE','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})"; break;
       default:
-        actionIcon = '\uD83D\uDE80'; actionTitle = 'Keep Going';
+        actionIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+        actionTitle = 'Keep Going';
         actionDesc = 'You\u2019re making great progress.';
         actionBtnText = 'Explore Deals \u2192';
     }
@@ -18303,7 +18296,7 @@ function renderDashboard() {
     // ===== HAS BUY BOX, BUT HASN'T EXPLORED: coaching + thesis + deal CTA =====
     var thesisHtml2 = buildDashThesis(wd, branch);
     var pathHtml2 = buildDashPathToGoal(wd, branch, deals);
-    container.innerHTML = coachingHtml + heroHtml + thesisHtml2 + pathHtml2
+    container.innerHTML = renderMilestoneTracker() + coachingHtml + heroHtml + thesisHtml2 + pathHtml2
       + '<div style="display:flex;align-items:center;justify-content:center;padding:60px 24px;">'
       + '<div style="text-align:center;max-width:440px;">'
       + '<div style="font-size:40px;margin-bottom:16px;">\uD83C\uDF1F</div>'
@@ -18315,7 +18308,7 @@ function renderDashboard() {
     // ===== ACTIVE USER: Goal → Thesis → Path to Goal → Portfolio → Coaching =====
     var thesisHtml = buildDashThesis(wd, branch);
     var pathHtml = buildDashPathToGoal(wd, branch, deals);
-    var sections = heroHtml;
+    var sections = renderMilestoneTracker() + heroHtml;
     sections += thesisHtml + pathHtml + portfolioHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
@@ -19719,12 +19712,9 @@ function deleteCaseStudy(displayIndex) {
 
 // ========== ACTIVATION MILESTONES ==========
 const ACTIVATION_MILESTONES = [
-  { id: 'onboarding_complete', label: 'Completed Onboarding', description: 'Finished the 5-screen wizard', icon: '\u2713' },
-  { id: 'saved_3_deals', label: 'Saved 3+ Deals', description: 'Moved 3 or more deals to Interested', icon: '\uD83D\uDD16' },
-  { id: 'first_dd', label: 'First Due Diligence', description: 'Moved a deal to Due Diligence stage', icon: '\uD83D\uDD0D' },
-  { id: 'viewed_5_deals', label: 'Viewed 5+ Deal Pages', description: 'Opened 5 or more deal detail pages', icon: '\uD83D\uDC41' },
-  { id: 'booked_office_hours', label: 'Booked Office Hours', description: 'Clicked to join office hours', icon: '\uD83D\uDCC5' },
-  { id: 'first_investment', label: 'First Investment', description: 'Moved a deal to My Portfolio', icon: '\uD83D\uDCB0' },
+  { id: 'onboarding_complete', label: 'Build Your Buy Box', description: 'Complete the investor profile wizard', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>' },
+  { id: 'saved_3_deals', label: 'Save 3 Deals', description: 'Browse and save deals that match your criteria', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' },
+  { id: 'booked_onboarding', label: 'Book Onboarding Call', description: 'Join a live deal flow walkthrough with our team', icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' },
 ];
 
 function checkActivationMilestones() {
@@ -19733,40 +19723,21 @@ function checkActivationMilestones() {
   const wizardComplete = localStorage.getItem('gycBuyBoxComplete') === 'true';
   const events = JSON.parse(localStorage.getItem('gycAnalyticsEvents') || '[]');
 
-  // 1. Onboarding complete
+  // 1. Onboarding complete (wizard finished)
   if (wizardComplete && !milestones.onboarding_complete) {
     milestones.onboarding_complete = new Date().toISOString();
   }
 
-  // 2. Saved 3+ deals (interested stage)
-  const interestedCount = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
-  if (interestedCount >= 3 && !milestones.saved_3_deals) {
+  // 2. Saved 3+ deals
+  const savedCount = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
+  if (savedCount >= 3 && !milestones.saved_3_deals) {
     milestones.saved_3_deals = new Date().toISOString();
   }
 
-  // 3. First due diligence
-  const ddCount = Object.values(stages).filter(s => s === 'vetting' || s === 'duediligence').length;
-  if (ddCount >= 1 && !milestones.first_dd) {
-    milestones.first_dd = new Date().toISOString();
-  }
-
-  // 4. Viewed 5+ deal pages
-  const viewCount = parseInt(localStorage.getItem('gycViewCount') || '0');
-  if (viewCount >= 5 && !milestones.viewed_5_deals) {
-    milestones.viewed_5_deals = new Date().toISOString();
-  }
-
-  // 5. Booked office hours (check activity log)
-  const bookedOH = events.some(e => e.action === 'office_hours_click' || e.action === 'booked_office_hours');
-  if (bookedOH && !milestones.booked_office_hours) {
-    milestones.booked_office_hours = new Date().toISOString();
-  }
-
-  // 6. First investment
-  const portfolioCount = Object.values(stages).filter(s => s === 'invested' || s === 'portfolio').length;
-  const manualPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-  if ((portfolioCount >= 1 || manualPortfolio.length >= 1) && !milestones.first_investment) {
-    milestones.first_investment = new Date().toISOString();
+  // 3. Booked onboarding call
+  const bookedOnboarding = events.some(e => e.action === 'booked_onboarding' || e.action === 'booked_office_hours' || e.action === 'office_hours_click');
+  if (bookedOnboarding && !milestones.booked_onboarding) {
+    milestones.booked_onboarding = new Date().toISOString();
   }
 
   localStorage.setItem('gycMilestones', JSON.stringify(milestones));
@@ -19775,98 +19746,91 @@ function checkActivationMilestones() {
 
 function renderMilestoneTracker() {
   const milestones = checkActivationMilestones();
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  const savedCount = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
+  const doneCount = ACTIVATION_MILESTONES.filter(m => milestones[m.id]).length;
+
+  // Don't show if all complete
+  if (doneCount === ACTIVATION_MILESTONES.length) return '';
+
   let foundNext = false;
 
-  let html = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">'
-    + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Your Activation Journey</div>'
-    + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:20px;">Track progress through key investor milestones</div>'
-    + '<div class="milestone-tracker">';
+  let html = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;box-shadow:var(--shadow-card);">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
+    + '<div>'
+    + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">Get Started</div>'
+    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">Complete these 3 steps to get the most out of your deal flow</div>'
+    + '</div>'
+    + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--primary);">' + doneCount + '/' + ACTIVATION_MILESTONES.length + '</div>'
+    + '</div>';
+
+  // Progress bar
+  var pct = Math.round((doneCount / ACTIVATION_MILESTONES.length) * 100);
+  html += '<div style="height:4px;background:var(--border-light);border-radius:2px;margin-bottom:20px;overflow:hidden;">'
+    + '<div style="height:100%;width:' + pct + '%;background:var(--primary);border-radius:2px;transition:width 0.4s;"></div>'
+    + '</div>';
 
   ACTIVATION_MILESTONES.forEach((m, i) => {
     const done = !!milestones[m.id];
     const isNext = !done && !foundNext;
     if (isNext) foundNext = true;
-    const circleClass = done ? 'done' : isNext ? 'next' : 'future';
-    const statusText = done ? 'Done' : isNext ? 'Next' : '';
-    const statusClass = done ? 'done' : isNext ? 'next' : 'future';
 
-    html += '<div class="milestone-step">';
-    if (i < ACTIVATION_MILESTONES.length - 1) {
-      html += '<div class="milestone-connector' + (done ? ' done' : '') + '"></div>';
+    // Build subtitle for saved_3_deals with progress
+    var subtitle = m.description;
+    if (m.id === 'saved_3_deals' && !done) {
+      subtitle = savedCount + ' of 3 deals saved';
     }
-    html += '<div class="milestone-circle ' + circleClass + '">' + (done ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : m.icon) + '</div>';
-    html += '<div class="milestone-label">' + m.label + '</div>';
-    html += '<div class="milestone-status ' + statusClass + '">' + statusText + '</div>';
+
+    // Action button config
+    var actionOnclick = '';
+    var actionLabel = '';
+    if (isNext) {
+      if (m.id === 'onboarding_complete') { actionOnclick = 'openBuyBoxWizard()'; actionLabel = 'Start'; }
+      else if (m.id === 'saved_3_deals') { actionOnclick = "navigateTo('deals')"; actionLabel = 'Browse'; }
+      else if (m.id === 'booked_onboarding') { actionOnclick = "window.open('https://link.growyourcashflow.io/widget/booking/YmA8P5FLDzAIFXaSoCnE','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})"; actionLabel = 'Book'; }
+    }
+
+    var borderColor = done ? 'var(--primary)' : isNext ? 'var(--border)' : 'var(--border-light)';
+    var bgColor = done ? 'rgba(81,190,123,0.04)' : 'transparent';
+    var opacity = (!done && !isNext) ? '0.5' : '1';
+
+    html += '<div style="display:flex;align-items:center;gap:16px;padding:14px 16px;border:1px solid ' + borderColor + ';border-radius:var(--radius);margin-bottom:' + (i < ACTIVATION_MILESTONES.length - 1 ? '8' : '0') + 'px;background:' + bgColor + ';opacity:' + opacity + ';transition:all 0.2s;">';
+
+    // Checkbox circle
+    if (done) {
+      html += '<div style="width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>';
+    } else {
+      html += '<div style="width:32px;height:32px;border-radius:50%;border:2px solid ' + (isNext ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:' + (isNext ? 'var(--primary)' : 'var(--text-muted)') + ';">' + m.icon + '</div>';
+    }
+
+    // Text
+    html += '<div style="flex:1;min-width:0;">'
+      + '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:' + (done ? 'var(--primary)' : 'var(--text-dark)') + ';' + (done ? 'text-decoration:line-through;opacity:0.7;' : '') + '">' + m.label + '</div>'
+      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">' + subtitle + '</div>'
+      + '</div>';
+
+    // Action button (only for next step)
+    if (isNext && actionLabel) {
+      html += '<button onclick="' + actionOnclick + '" style="padding:8px 20px;border:none;background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;white-space:nowrap;">' + actionLabel + '</button>';
+    }
+
     html += '</div>';
   });
 
-  html += '</div></div>';
+  html += '</div>';
   return html;
 }
 
 function renderDashboardMilestoneProgress() {
-  const milestones = checkActivationMilestones();
-  let nextMilestone = null;
-  for (const m of ACTIVATION_MILESTONES) {
-    if (!milestones[m.id]) { nextMilestone = m; break; }
-  }
-  // If all milestones completed, don't show
-  if (!nextMilestone) return '';
+  // The milestone tracker (renderMilestoneTracker) now handles all display
+  return renderMilestoneTracker();
+}
 
-  // Build progress context
-  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-  const viewCount = parseInt(localStorage.getItem('gycViewCount') || '0');
-  let progressText = '';
-  let actionText = 'Get Started';
-  let actionPage = 'deals';
-
-  switch (nextMilestone.id) {
-    case 'onboarding_complete':
-      progressText = 'Complete the onboarding wizard to personalize your deal flow.';
-      actionText = 'Start Wizard \u2192';
-      actionPage = 'buybox';
-      break;
-    case 'saved_3_deals': {
-      const saved = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
-      progressText = 'You\u2019ve saved ' + saved + ' deal' + (saved !== 1 ? 's' : '') + ' so far. Save ' + (3 - saved) + ' more to unlock this milestone.';
-      actionText = 'Browse Deals \u2192';
-      actionPage = 'deals';
-      break;
-    }
-    case 'first_dd':
-      progressText = 'Move a deal to Due Diligence to start your deep dive.';
-      actionText = 'Review Saved Deals \u2192';
-      actionPage = 'deals';
-      break;
-    case 'viewed_5_deals':
-      progressText = 'You\u2019ve viewed ' + viewCount + ' deal page' + (viewCount !== 1 ? 's' : '') + '. View ' + (5 - viewCount) + ' more to unlock.';
-      actionText = 'Explore Deals \u2192';
-      actionPage = 'deals';
-      break;
-    case 'booked_office_hours':
-      progressText = 'Join an office hours session to get your questions answered live.';
-      actionText = 'Book Office Hours \u2192';
-      actionPage = 'deals';
-      break;
-    case 'first_investment':
-      progressText = 'Move a deal to your portfolio to track your first investment.';
-      actionText = 'View Pipeline \u2192';
-      actionPage = 'deals';
-      break;
-  }
-
-  // Completion count
-  const doneCount = ACTIVATION_MILESTONES.filter(m => milestones[m.id]).length;
-  const totalCount = ACTIVATION_MILESTONES.length;
-
-  return '<div class="dashboard-milestone-card">'
-    + '<div class="dashboard-milestone-icon">' + nextMilestone.icon + '</div>'
-    + '<div class="dashboard-milestone-info">'
-    + '  <div class="dashboard-milestone-title">Next Milestone: ' + nextMilestone.label + ' (' + doneCount + '/' + totalCount + ')</div>'
-    + '  <div class="dashboard-milestone-desc">' + progressText + '</div>'
-    + '</div>'
-    + '<button class="dashboard-milestone-action" onclick="navigateTo(\'' + actionPage + '\')">' + actionText + '</button>'
-    + '</div>';
+function updateDealsChecklist() {
+  var el = document.getElementById('dealsMilestoneChecklist');
+  if (!el) return;
+  el.innerHTML = renderMilestoneTracker();
 }
 
 // ========== NEW USER ONBOARDING (4-step) ==========
