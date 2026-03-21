@@ -2769,7 +2769,7 @@ html.cap-ios .debt-metric-select-mobile {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 24px 12px;
+  padding: 16px 24px 24px;
   gap: 0;
 }
 .wizard-phase {
@@ -10632,6 +10632,57 @@ function getPhaseLabel() {
   return PHASE_LABELS[step] || '';
 }
 
+// Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
+// 0=Goal, 1=Capital, 2=Risk, 3=Preferences, 4=Plan
+const STEP_TO_PHASE = {
+  0: 0,   // goalSelect → Goal
+  1: 1, 2: 1, 3: 1,   // capital amount, readiness, source → Capital
+  4: 1, 5: 1, 6: 1,   // target inputs → Capital
+  20: 1, 21: 1,        // income source, RE pro (tax branch) → Capital
+  7: 2, 8: 2, 9: 2,   // check size, net worth, loss tolerance → Risk
+  10: 3, 11: 3, 12: 3, 13: 3, 14: 3,  // asset class, strategy, lockup, dist, accreditation → Preferences
+  15: 4, 16: 4, 17: 4, 18: 4, 19: 4   // LP network, plan outputs, completion → Plan
+};
+const PHASE_NAMES = ['Goal', 'Capital', 'Risk', 'Preferences', 'Plan'];
+
+function updateWizardPhases(seq, currentIdx) {
+  var container = document.getElementById('wizardPhases');
+  if (!container) return;
+
+  // Hide on goal screen
+  if (currentIdx === 0) { container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+
+  var currentStep = seq[currentIdx];
+  var currentPhase = STEP_TO_PHASE[currentStep] !== undefined ? STEP_TO_PHASE[currentStep] : 0;
+
+  var html = '';
+  for (var i = 0; i < PHASE_NAMES.length; i++) {
+    if (i > 0) {
+      html += '<div class="wizard-phase-connector' + (i <= currentPhase ? ' completed' : '') + '"></div>';
+    }
+    var nodeClass = 'wizard-phase-node';
+    var labelClass = 'wizard-phase-label';
+    var nodeContent = '';
+    if (i < currentPhase) {
+      nodeClass += ' completed';
+      labelClass += ' completed';
+      nodeContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    } else if (i === currentPhase) {
+      nodeClass += ' active';
+      labelClass += ' active';
+      nodeContent = (i + 1);
+    } else {
+      nodeContent = (i + 1);
+    }
+    html += '<div class="wizard-phase-wrap">'
+      + '<div class="' + nodeClass + '">' + nodeContent + '</div>'
+      + '<div class="' + labelClass + '">' + PHASE_NAMES[i] + '</div>'
+      + '</div>';
+  }
+  container.innerHTML = html;
+}
+
 const WIZARD_STEPS = [
   // 0: Goal selection (all paths) — auto-advance on tap
   { type: 'goalSelect' },
@@ -10963,15 +11014,8 @@ function renderWizardStep() {
   if (!step) { console.error('Wizard: no step at index', wizardStep, 'seq', seq, 'stepIdx', wizardStepIndex); return; }
   const total = seq.length;
   const pct = ((wizardStepIndex) / (total - 1) * 100).toFixed(0);
-  document.getElementById('wizardProgress').style.width = pct + '%';
-
-  // Update step indicator
-  var stepLabel = document.getElementById('wizardStepLabel');
-  var stepCount = document.getElementById('wizardStepCount');
-  var stepIndicator = document.getElementById('wizardStepIndicator');
-  if (stepLabel) stepLabel.textContent = getPhaseLabel();
-  if (stepCount) stepCount.textContent = (wizardStepIndex + 1) + ' of ' + total;
-  if (stepIndicator) stepIndicator.style.display = wizardStepIndex === 0 ? 'none' : 'flex';
+  // Update phase stepper
+  updateWizardPhases(seq, wizardStepIndex);
 
   // Show/hide exit button (hidden on first screen)
   const exitBtn = document.getElementById('wizardExit');
