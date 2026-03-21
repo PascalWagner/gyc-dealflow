@@ -10634,10 +10634,10 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 //   6=asset classes, 7=strategies, 8=deal prefs, 9=LP network, 10/11/12=plan, 13=done
 const ONBOARDING_FLOW = {
   common_start: [0, 1, 2],
-  cashflow: [3, 6, 7, 8, 9, 10, 11],
-  growth: [4, 6, 7, 8, 9, 10, 12],
-  tax: [5, 6, 7, 8, 9, 10, 13],
-  common_end: [14]
+  cashflow: [3, 6, 7, 8, 9, 10, 11, 12, 13],
+  growth: [4, 6, 7, 8, 9, 10, 11, 12, 14],
+  tax: [5, 6, 7, 8, 9, 10, 11, 12, 15],
+  common_end: [16]
 };
 
 function getStepSequence() {
@@ -10645,7 +10645,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Risk', 'Asset Classes', 'Strategy', 'Preferences', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Risk', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -10696,17 +10696,21 @@ const WIZARD_STEPS = [
   { type: 'assetClassSelect' },
   // 8: Strategy preferences (goal-contextualized)
   { type: 'strategySelect' },
-  // 9: Deal structure preferences (lockup, distributions, accreditation)
-  { type: 'dealPrefs' },
-  // 10: LP Network opt-in
+  // 9: Lockup preference
+  { type: 'lockupPrefs' },
+  // 10: Distribution preference
+  { type: 'distributionPrefs' },
+  // 11: Accreditation status
+  { type: 'accreditationPrefs' },
+  // 12: LP Network opt-in
   { type: 'lpNetwork' },
-  // 11: Plan — cash flow
+  // 13: Plan — cash flow
   { type: 'planOutput', branch: 'cashflow' },
-  // 12: Plan — growth
+  // 14: Plan — growth
   { type: 'planOutput', branch: 'growth' },
-  // 13: Plan — tax
+  // 15: Plan — tax
   { type: 'planOutput', branch: 'tax' },
-  // 14: Completion
+  // 16: Completion
   { type: 'completion' }
 ];
 
@@ -10714,60 +10718,80 @@ const WIZARD_STEPS = [
 const ASSET_CLASS_OPTIONS = {
   'Multi-Family': {
     icon: '\uD83C\uDFE2', label: 'Multi-Family',
+    oneLiner: 'Apartment complexes (50\u2013300+ units)',
+    yieldRange: '6\u201310%', holdYears: '3\u20137', risk: 'Medium',
     cashflow: { fit: 'good', why: 'Stable rental income with 6\u201310% cash yields' },
-    tax: { fit: 'great', why: 'Bonus depreciation + cost seg can offset 60\u201380% of investment in year 1' },
-    growth: { fit: 'great', why: 'Value-add renovations drive 15\u201320%+ IRRs in growing markets' }
+    tax: { fit: 'great', why: 'Cost segregation can offset 60\u201380% of investment in year 1' },
+    growth: { fit: 'great', why: 'Value-add renovations drive 15\u201320%+ IRRs' }
   },
   'Self Storage': {
     icon: '\uD83D\uDCE6', label: 'Self Storage',
+    oneLiner: 'Storage facilities with month-to-month tenants',
+    yieldRange: '8\u201312%', holdYears: '3\u20135', risk: 'Low\u2013Med',
     cashflow: { fit: 'good', why: 'Recession-resistant with 8\u201312% cash-on-cash returns' },
     tax: { fit: 'good', why: 'Depreciation benefits similar to multi-family' },
-    growth: { fit: 'great', why: 'Highest appreciation potential in commercial RE \u2014 20%+ IRRs common' }
+    growth: { fit: 'great', why: 'Highest appreciation potential in commercial RE' }
   },
   'Industrial': {
     icon: '\uD83C\uDFED', label: 'Industrial',
+    oneLiner: 'Warehouses, logistics, and distribution centers',
+    yieldRange: '6\u20139%', holdYears: '5\u201310', risk: 'Low\u2013Med',
     cashflow: { fit: 'good', why: 'Long-term NNN leases provide predictable monthly income' },
-    tax: { fit: 'okay', why: 'Standard depreciation benefits, less aggressive than residential' },
+    tax: { fit: 'okay', why: 'Standard depreciation, less aggressive than residential' },
     growth: { fit: 'good', why: 'E-commerce tailwinds driving strong appreciation' }
   },
   'Hotels/Hospitality': {
     icon: '\uD83C\uDFE8', label: 'Hotels / Hospitality',
-    cashflow: { fit: 'okay', why: 'Higher yields possible but more volatile than other asset classes' },
+    oneLiner: 'Hotels, resorts, and short-term lodging',
+    yieldRange: '8\u201315%', holdYears: '3\u20135', risk: 'High',
+    cashflow: { fit: 'okay', why: 'Higher yields possible but more volatile' },
     tax: { fit: 'good', why: 'Accelerated depreciation on FF&E (furniture, fixtures)' },
     growth: { fit: 'good', why: 'Turnaround plays can deliver outsized returns' }
   },
   'Single Family': {
     icon: '\uD83C\uDFE1', label: 'Single Family',
-    cashflow: { fit: 'good', why: 'Rental income and build-to-rent strategies provide steady cash flow' },
-    tax: { fit: 'good', why: 'Depreciation and interest deductions on residential properties' },
+    oneLiner: 'Build-to-rent communities and SFR portfolios',
+    yieldRange: '5\u20138%', holdYears: '5\u201310', risk: 'Low',
+    cashflow: { fit: 'good', why: 'Build-to-rent strategies provide steady cash flow' },
+    tax: { fit: 'good', why: 'Depreciation and interest deductions on residential' },
     growth: { fit: 'good', why: 'Appreciation in growing suburban markets' }
   },
   'RV/Mobile Home Parks': {
     icon: '\uD83C\uDFD5\uFE0F', label: 'Mobile Home Parks',
+    oneLiner: 'Manufactured housing communities (you own the land)',
+    yieldRange: '8\u201312%', holdYears: '3\u20137', risk: 'Low\u2013Med',
     cashflow: { fit: 'good', why: 'Low vacancy, sticky tenants, 8\u201312% cash yields' },
-    tax: { fit: 'good', why: 'Land improvements and infrastructure eligible for accelerated depreciation' },
-    growth: { fit: 'great', why: 'Highest cap rate compression in RE \u2014 25%+ IRRs in value-add plays' }
+    tax: { fit: 'good', why: 'Infrastructure improvements eligible for accelerated depreciation' },
+    growth: { fit: 'great', why: 'Highest cap rate compression in RE' }
   },
   'Retail': {
     icon: '\uD83D\uDECD\uFE0F', label: 'Retail',
+    oneLiner: 'Shopping centers, strip malls, and NNN-leased retail',
+    yieldRange: '6\u20139%', holdYears: '5\u201310', risk: 'Medium',
     cashflow: { fit: 'good', why: 'NNN leases and percentage rent provide predictable income' },
     tax: { fit: 'okay', why: 'Standard commercial depreciation schedules' },
     growth: { fit: 'okay', why: 'Location-dependent \u2014 strong in neighborhood retail' }
   },
   'Medical Receivables': {
     icon: '\uD83C\uDFE5', label: 'Medical Receivables',
+    oneLiner: 'Short-term loans backed by healthcare invoices',
+    yieldRange: '8\u201312%', holdYears: '1\u20132', risk: 'Low',
     cashflow: { fit: 'great', why: 'Short-duration receivables with 8\u201312% yields' },
-    tax: { fit: 'poor', why: 'Interest income taxed as ordinary income' },
+    tax: { fit: 'poor', why: 'Interest income taxed as ordinary income \u2014 no depreciation' },
     growth: { fit: 'poor', why: 'Returns capped \u2014 income-focused, not appreciation' }
   },
   'Oil & Gas / Energy': {
     icon: '\u26FD', label: 'Oil & Gas / Energy',
+    oneLiner: 'Drilling programs, royalties, and working interests',
+    yieldRange: '10\u201320%+', holdYears: '3\u20137', risk: 'High',
     cashflow: { fit: 'okay', why: 'Royalties and working interests can produce income' },
-    tax: { fit: 'great', why: 'Intangible drilling costs can deduct 60\u2013100% of investment in year 1' },
+    tax: { fit: 'great', why: 'Intangible drilling costs can deduct 60\u2013100% in year 1' },
     growth: { fit: 'okay', why: 'Commodity-linked returns \u2014 higher risk, higher reward' }
   },
   'Business / Other': {
     icon: '\uD83C\uDF3F', label: 'Alternative / Other',
+    oneLiner: 'Equipment leasing, royalties, private credit',
+    yieldRange: 'Varies', holdYears: '1\u20135', risk: 'Varies',
     cashflow: { fit: 'good', why: 'Equipment leasing, royalties, private credit \u2014 diversified income' },
     tax: { fit: 'okay', why: 'Varies by asset type' },
     growth: { fit: 'okay', why: 'Niche opportunities with less competition' }
@@ -10778,30 +10802,35 @@ const ASSET_CLASS_OPTIONS = {
 const STRATEGY_OPTIONS = {
   'Buy & Hold': {
     icon: '\uD83C\uDFE0', label: 'Buy & Hold',
+    lpImpact: 'You receive distributions from day one. Cash flow is predictable and the asset is already stabilized \u2014 lower risk, steady income.',
     cashflow: { fit: 'great', why: 'Stabilized assets with day-one cash flow' },
     tax: { fit: 'good', why: 'Steady depreciation over the hold period' },
     growth: { fit: 'okay', why: 'Lower returns but lower risk' }
   },
   'Value-Add': {
     icon: '\uD83D\uDD27', label: 'Value-Add',
+    lpImpact: 'Expect little or no cash flow the first 1\u20132 years while renovations happen. Distributions typically start after a refinance, then increase as rents grow.',
     cashflow: { fit: 'good', why: 'Cash flow improves as renovations complete' },
     tax: { fit: 'great', why: 'Capital improvements create large depreciation deductions' },
     growth: { fit: 'great', why: 'Forced appreciation through improvements \u2014 15\u201320%+ IRRs' }
   },
   'Distressed': {
     icon: '\u26A1', label: 'Distressed / Turnaround',
+    lpImpact: 'No income during the turnaround (often 1\u20133 years). Higher risk of loss, but buying at deep discounts means outsized upside if the operator executes.',
     cashflow: { fit: 'poor', why: 'Little or no cash flow during turnaround period' },
     tax: { fit: 'good', why: 'Large upfront losses can offset other income' },
     growth: { fit: 'great', why: 'Buy at deep discounts \u2014 highest upside potential' }
   },
   'Development': {
     icon: '\uD83D\uDEA7', label: 'Ground-Up Development',
+    lpImpact: 'Your capital is locked for 2\u20134 years with zero income while the project is built. You get paid when the asset sells or refinances \u2014 highest return potential but highest risk.',
     cashflow: { fit: 'poor', why: 'No income until project completes (2\u20134 years)' },
     tax: { fit: 'okay', why: 'Interest and soft costs may be deductible during construction' },
     growth: { fit: 'great', why: 'Build at cost, sell at market \u2014 20\u201330%+ IRR potential' }
   },
   'Lending': {
     icon: '\uD83E\uDD1D', label: 'Lending / Credit',
+    lpImpact: 'You\u2019re the bank. Interest payments arrive monthly or quarterly from day one. Returns are capped but consistent, and your principal is typically secured by the property.',
     cashflow: { fit: 'great', why: 'Interest payments from day one \u2014 most predictable income' },
     tax: { fit: 'poor', why: 'Interest is ordinary income, no depreciation benefit' },
     growth: { fit: 'poor', why: 'Returns capped at the loan rate' }
@@ -11268,29 +11297,77 @@ function renderWizardStep() {
     const sorted = Object.entries(ASSET_CLASS_OPTIONS).sort(function(a, b) {
       return (fitOrder[a[1][branch].fit] || 3) - (fitOrder[b[1][branch].fit] || 3);
     });
+    // Count deals per asset class from live data
+    const dealCounts = {};
+    const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+    allDeals.forEach(function(d) {
+      var ac = d.assetClass || '';
+      if (!dealCounts[ac]) dealCounts[ac] = 0;
+      dealCounts[ac]++;
+    });
     const branchLabel = { cashflow: 'cash flow', tax: 'tax reduction', growth: 'equity growth' }[branch];
+    // Split into recommended vs other
+    var recommended = sorted.filter(function(e) { return e[1][branch].fit === 'great' || e[1][branch].fit === 'good'; });
+    var other = sorted.filter(function(e) { return e[1][branch].fit === 'okay' || e[1][branch].fit === 'poor'; });
+
     html += '<div class="wizard-card-title">What asset classes interest you?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">We\'ll filter deals to match. Highlighted ones are best for <strong>' + branchLabel + '</strong>.</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-    sorted.forEach(function(entry) {
+    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">Select any that interest you. We\u2019ll prioritize deals in these categories.</div>';
+
+    // Recommended section
+    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Recommended for ' + branchLabel + '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">';
+    recommended.forEach(function(entry) {
       var key = entry[0];
       var ac = entry[1];
       var goalInfo = ac[branch];
       var isSelected = selected.includes(key);
-      var fitColor = goalInfo.fit === 'great' ? '#4ade80' : goalInfo.fit === 'good' ? '#3b82f6' : goalInfo.fit === 'okay' ? '#f59e0b' : '#94a3b8';
-      var fitLabel = goalInfo.fit === 'great' ? 'Top Pick' : goalInfo.fit === 'good' ? 'Good Fit' : goalInfo.fit === 'okay' ? 'Moderate' : 'Low Fit';
-      var dimmed = goalInfo.fit === 'poor' ? 'opacity:0.5;' : '';
-      html += '<div onclick="toggleWizardAsset(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:14px;background:var(--bg-card);border:2px solid ' + (isSelected ? fitColor : 'var(--border)') + ';border-radius:12px;cursor:pointer;position:relative;transition:all 0.2s;' + dimmed + '">';
-      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
-      html += '<span style="font-size:20px;">' + ac.icon + '</span>';
+      var count = dealCounts[key] || dealCounts[ac.label] || 0;
+      html += '<div onclick="toggleWizardAsset(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:14px;background:var(--bg-card);border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;position:relative;transition:all 0.2s;">';
+      // Header row
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+      html += '<span style="font-size:18px;">' + ac.icon + '</span>';
       html += '<span style="font-weight:700;font-size:13px;color:var(--text-dark);">' + ac.label + '</span>';
-      html += '<div style="position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:4px;border:2px solid ' + (isSelected ? fitColor : 'var(--border)') + ';background:' + (isSelected ? fitColor : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:4px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSelected ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '</div>';
-      html += '<div style="font-size:11px;color:var(--text-secondary);line-height:1.4;margin-bottom:4px;">' + goalInfo.why + '</div>';
-      html += '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:' + fitColor + ';">' + fitLabel + '</span>';
+      // One-liner
+      html += '<div style="font-size:11px;color:var(--text-muted);line-height:1.3;margin-bottom:6px;">' + ac.oneLiner + '</div>';
+      // Data chips
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+      html += '<span style="font-size:10px;padding:2px 6px;background:rgba(74,222,128,0.08);color:var(--primary);border-radius:4px;font-weight:600;">' + ac.yieldRange + ' yield</span>';
+      html += '<span style="font-size:10px;padding:2px 6px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.holdYears + ' yr hold</span>';
+      if (count > 0) html += '<span style="font-size:10px;padding:2px 6px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + count + ' deals</span>';
+      html += '</div>';
       html += '</div>';
     });
     html += '</div>';
+
+    // Other section
+    if (other.length > 0) {
+      html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Also available</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
+      other.forEach(function(entry) {
+        var key = entry[0];
+        var ac = entry[1];
+        var goalInfo = ac[branch];
+        var isSelected = selected.includes(key);
+        var count = dealCounts[key] || dealCounts[ac.label] || 0;
+        html += '<div onclick="toggleWizardAsset(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:12px;background:var(--bg-card);border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;position:relative;transition:all 0.2s;opacity:0.75;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+        html += '<span style="font-size:16px;">' + ac.icon + '</span>';
+        html += '<span style="font-weight:700;font-size:12px;color:var(--text-dark);">' + ac.label + '</span>';
+        html += '<div style="position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:4px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSelected ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSelected ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+        html += '</div>';
+        html += '<div style="font-size:10px;color:var(--text-muted);line-height:1.3;margin-bottom:4px;">' + ac.oneLiner + '</div>';
+        html += '<div style="display:flex;gap:4px;">';
+        html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.yieldRange + ' yield</span>';
+        html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.holdYears + ' yr</span>';
+        if (count > 0) html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + count + '</span>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">' + (selected.length > 0 ? 'Next' : 'Skip') + '</button>';
@@ -11309,7 +11386,7 @@ function renderWizardStep() {
     });
     const branchLabel = { cashflow: 'cash flow', tax: 'tax reduction', growth: 'equity growth' }[branch];
     html += '<div class="wizard-card-title">What strategies appeal to you?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy has a different risk/return profile. Best for <strong>' + branchLabel + '</strong> highlighted first.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy affects your returns differently. Best for <strong>' + branchLabel + '</strong> highlighted first.</div>';
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     sorted.forEach(function(entry) {
       var key = entry[0];
@@ -11317,18 +11394,16 @@ function renderWizardStep() {
       var goalInfo = st[branch];
       var isSelected = selected.includes(key);
       var fitColor = goalInfo.fit === 'great' ? '#4ade80' : goalInfo.fit === 'good' ? '#3b82f6' : goalInfo.fit === 'okay' ? '#f59e0b' : '#94a3b8';
-      var fitLabel = goalInfo.fit === 'great' ? 'Top Pick' : goalInfo.fit === 'good' ? 'Good Fit' : goalInfo.fit === 'okay' ? 'Moderate' : 'Low Fit';
-      var dimmed = goalInfo.fit === 'poor' ? 'opacity:0.5;' : '';
-      html += '<div onclick="toggleWizardStrategy(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:16px;background:var(--bg-card);border:2px solid ' + (isSelected ? fitColor : 'var(--border)') + ';border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:all 0.2s;' + dimmed + '">';
-      html += '<span style="font-size:24px;">' + st.icon + '</span>';
-      html += '<div style="flex:1;">';
-      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + st.label + '</div>';
-      html += '<div style="font-size:12px;color:var(--text-secondary);line-height:1.4;">' + goalInfo.why + '</div>';
+      var dimmed = goalInfo.fit === 'poor' ? 'opacity:0.6;' : '';
+      html += '<div onclick="toggleWizardStrategy(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:16px;background:var(--bg-card);border:2px solid ' + (isSelected ? fitColor : 'var(--border)') + ';border-radius:12px;cursor:pointer;transition:all 0.2s;position:relative;' + dimmed + '">';
+      // Header row
+      html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">';
+      html += '<span style="font-size:22px;">' + st.icon + '</span>';
+      html += '<div style="flex:1;font-weight:700;font-size:14px;color:var(--text-dark);">' + st.label + '</div>';
+      html += '<div style="width:22px;height:22px;border-radius:5px;border:2px solid ' + (isSelected ? fitColor : 'var(--border)') + ';background:' + (isSelected ? fitColor : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (isSelected ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '</div>';
-      html += '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">';
-      html += '<div style="width:22px;height:22px;border-radius:5px;border:2px solid ' + (isSelected ? fitColor : 'var(--border)') + ';background:' + (isSelected ? fitColor : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSelected ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-      html += '<span style="font-size:9px;font-weight:700;color:' + fitColor + ';text-transform:uppercase;">' + fitLabel + '</span>';
-      html += '</div>';
+      // LP impact description
+      html += '<div style="font-size:12px;color:var(--text-secondary);line-height:1.5;padding-left:34px;">' + st.lpImpact + '</div>';
       html += '</div>';
     });
     html += '</div>';
@@ -11340,71 +11415,84 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 8: DEAL PREFERENCES =====
-  if (step.type === 'dealPrefs') {
-    const branch = wizardData._branch || 'cashflow';
-    html += '<div class="wizard-card-title">Deal structure preferences</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">These help us filter to deals that fit your situation.</div>';
-
-    // Hold period comfort
-    html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How long are you comfortable locking up capital?</div>';
+  // ===== SCREEN 9: LOCKUP PREFERENCE =====
+  if (step.type === 'lockupPrefs') {
+    html += '<div class="wizard-card-title">How long can your capital be locked up?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are illiquid \u2014 you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
     var lockupOptions = [
-      { val: 'flexible', label: 'Flexible', desc: 'Monthly/quarterly redemptions' },
-      { val: '1-3', label: '1\u20133 years', desc: 'Short-term holds' },
-      { val: '3-5', label: '3\u20135 years', desc: 'Standard fund terms' },
-      { val: '5+', label: '5+ years', desc: 'Long-term, highest returns' }
+      { val: 'flexible', label: 'Flexible', desc: 'Monthly/quarterly redemptions', detail: 'Lending funds and open-ended vehicles' },
+      { val: '1-3', label: '1\u20133 years', desc: 'Short-term holds', detail: 'Bridge loans, short-duration credit' },
+      { val: '3-5', label: '3\u20135 years', desc: 'Standard fund terms', detail: 'Most syndications and value-add deals' },
+      { val: '5+', label: '5+ years', desc: 'Long-term, highest returns', detail: 'Development, ground-up, opportunistic' }
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     lockupOptions.forEach(function(opt) {
       var isSel = wizardData.lockup === opt.val;
-      html += '<div onclick="wizardData.lockup=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 8px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
-      html += '<div style="font-weight:700;font-size:13px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
+      html += '<div onclick="wizardData.lockup=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
       html += '</div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
 
-    // Minimum distribution frequency
-    html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s the minimum frequency you want to receive distributions?</div>';
+  // ===== SCREEN 10: DISTRIBUTION PREFERENCE =====
+  if (step.type === 'distributionPrefs') {
+    html += '<div class="wizard-card-title">How often do you want to get paid?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Distributions are the cash payments you receive from your investments. Not all deals pay on the same schedule.</div>';
     var distOptions = [
-      { val: 'Monthly', label: 'Monthly', desc: 'Most frequent' },
-      { val: 'Quarterly', label: 'Quarterly', desc: 'Standard' },
-      { val: 'Annual', label: 'Annually', desc: 'Growth-focused' },
-      { val: 'Any', label: 'No minimum', desc: 'Open to anything' }
+      { val: 'Monthly', label: 'Monthly', desc: 'Lending funds, stabilized assets', icon: '\uD83D\uDCC5' },
+      { val: 'Quarterly', label: 'Quarterly', desc: 'Most common for syndications and funds', icon: '\uD83D\uDCC6' },
+      { val: 'Annual', label: 'Annually', desc: 'Growth-focused deals, development', icon: '\uD83D\uDCC8' },
+      { val: 'Any', label: 'No preference', desc: 'I\u2019ll evaluate each deal on its own merits', icon: '\u2705' }
     ];
-    html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     distOptions.forEach(function(opt) {
       var isSel = wizardData.distributions === opt.val;
-      html += '<div onclick="wizardData.distributions=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 8px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
-      html += '<div style="font-weight:700;font-size:13px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
+      html += '<div onclick="wizardData.distributions=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
       html += '</div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
 
-    // Accreditation status
-    html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Are you an accredited investor?</div>';
+  // ===== SCREEN 11: ACCREDITATION STATUS =====
+  if (step.type === 'accreditationPrefs') {
+    html += '<div class="wizard-card-title">Are you an accredited investor?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private placements require accreditation. This determines which deals we can show you.</div>';
     var accOptions = [
       { val: 'net_worth', label: 'Yes \u2014 Net worth over $1M', desc: 'Excluding primary residence' },
       { val: 'income', label: 'Yes \u2014 Income over $200K', desc: '$200K individual or $300K with spouse' },
       { val: 'licensed', label: 'Yes \u2014 Licensed professional', desc: 'Series 7, 65, 82, or equivalent' },
       { val: 'entity', label: 'Yes \u2014 Through an entity', desc: 'LLC, trust, or fund with $5M+ assets' },
       { val: 'not_accredited', label: 'Not yet accredited', desc: 'We\'ll show you deals open to all investors (Reg A+, Reg CF)' },
-      { val: 'unsure', label: "Not sure", desc: 'We can help you figure it out' }
+      { val: 'unsure', label: 'Not sure', desc: 'We can help you figure it out' }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:8px;">';
     accOptions.forEach(function(opt) {
       var isSel = wizardData.accreditation === opt.val;
-      html += '<div onclick="wizardData.accreditation=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;">';
+      html += '<div onclick="wizardData.accreditation=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
       html += '</div>';
     });
-    html += '</div></div>';
-
+    html += '</div>';
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
@@ -11432,8 +11520,9 @@ function renderWizardStep() {
     html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">When you opt in, other members can see your name on deals you\'ve invested in. This helps LPs coordinate, share due diligence, and connect with co-investors. You can toggle individual deals on or off anytime.</div>';
     html += '</div>';
 
-    // Opt-in toggle
+    // Opt-in toggle (default to opted in)
     html += '<label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:16px 0;margin:0 4px;">';
+    if (wizardData.sharePortfolio === undefined) wizardData.sharePortfolio = true;
     var isOptedIn = wizardData.sharePortfolio === true;
     html += '<input type="checkbox" id="wizSharePortfolio" ' + (isOptedIn ? 'checked' : '') + ' onchange="wizardData.sharePortfolio=this.checked;" style="width:22px;height:22px;cursor:pointer;accent-color:var(--green);flex-shrink:0;">';
     html += '<div>';
