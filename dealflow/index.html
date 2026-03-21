@@ -4659,41 +4659,61 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 }
 
 /* ========== BUY BOX REPORT RESPONSIVE ========== */
+/* Buy Box v2 */
 .bb-report { max-width:860px; margin:0 auto; padding:24px; }
-.bb-sticky-header { position:sticky; top:0; z-index:10; background:var(--bg-main); padding:16px 0 20px; margin:-24px 0 20px; border-bottom:1px solid var(--border); }
-.bb-sticky-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-.bb-sticky-left { display:flex; align-items:center; gap:12px; min-width:0; }
-.bb-sticky-headline { font-family:var(--font-ui); font-size:16px; font-weight:700; color:var(--text-dark); white-space:nowrap; }
-.bb-sticky-btns { display:flex; gap:8px; flex-shrink:0; }
-.bb-income-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-.bb-income-amount { font-family:var(--font-headline); font-size:28px; }
+.bb-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:32px 36px; margin-bottom:24px; box-shadow:var(--shadow-card); }
+.bb-label { font-family:var(--font-ui); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-muted); margin-bottom:20px; }
+.bb-thesis { font-family:var(--font-body); font-size:17px; line-height:1.8; color:var(--text-secondary); }
+.bb-thesis strong { color:var(--text-dark); font-weight:700; }
+.bb-goal-line { font-family:var(--font-headline); font-size:28px; color:var(--text-dark); margin-bottom:8px; }
+.bb-goal-sub { font-family:var(--font-body); font-size:14px; color:var(--text-muted); }
+.bb-edit-link { font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--primary); cursor:pointer; background:none; border:none; padding:0; }
+.bb-edit-link:hover { text-decoration:underline; }
+
+/* Market Snapshot table */
+.bb-snapshot-table { width:100%; border-collapse:collapse; }
+.bb-snapshot-table th { font-family:var(--font-ui); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); text-align:left; padding:0 12px 12px 0; border-bottom:1px solid var(--border-light); }
+.bb-snapshot-table th:not(:first-child) { text-align:center; }
+.bb-snapshot-table td { font-family:var(--font-ui); font-size:14px; font-weight:600; color:var(--text-dark); padding:14px 12px 14px 0; border-bottom:1px solid var(--border-light); }
+.bb-snapshot-table td:not(:first-child) { text-align:center; }
+.bb-snapshot-table tr:last-child td { border-bottom:none; }
+.bb-snapshot-table .bb-ac-name { display:flex; align-items:center; gap:10px; }
+.bb-snapshot-table .bb-ac-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.bb-snapshot-table .bb-ac-count { font-size:12px; font-weight:600; color:var(--text-muted); }
+.bb-snapshot-summary { display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:16px; border-top:1px solid var(--border-light); }
+.bb-snapshot-total { font-family:var(--font-ui); font-size:15px; font-weight:700; color:var(--text-dark); }
+.bb-snapshot-new { font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--primary); }
+
+/* Path to Goal */
 .bb-ptg-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
 .bb-ptg-cell { background:var(--bg-cream); border-radius:var(--radius-sm); padding:14px 18px; text-align:center; flex:1; min-width:100px; }
 .bb-ptg-cell-adj { background:var(--bg-cream); border-radius:var(--radius-sm); padding:10px 14px; text-align:center; flex:1; min-width:120px; }
 .bb-ptg-op { font-family:var(--font-body); font-size:18px; color:var(--text-muted); }
 .bb-ptg-big { font-family:var(--font-headline); font-size:24px; }
-.bb-specs-grid { display:grid; gap:12px; margin-bottom:20px; }
-.bb-deals-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-.bb-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 28px; margin-bottom:24px; }
-.bb-office-cta { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+
+/* Drift detection */
+.bb-drift-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-light); }
+.bb-drift-row:last-child { border-bottom:none; }
+.bb-drift-pill { display:inline-block; padding:4px 12px; border-radius:100px; font-family:var(--font-ui); font-size:11px; font-weight:700; }
+.bb-drift-aligned { background:var(--green-bg); color:var(--green); }
+.bb-drift-new { background:rgba(37,99,235,0.08); color:#2563EB; }
+.bb-drift-check { width:20px; height:20px; border-radius:50%; background:var(--green-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+/* Office Hours CTA */
+.bb-office-cta { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 36px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
 
 @media (max-width: 600px) {
   .bb-report { padding:16px; }
-  .bb-sticky-header { padding:12px 0 14px; margin:-16px 0 16px; }
-  .bb-sticky-row { flex-direction:column; align-items:stretch; gap:8px; }
-  .bb-sticky-left { flex-wrap:wrap; gap:8px; }
-  .bb-sticky-headline { font-size:14px; white-space:normal !important; }
-  .bb-sticky-btns { width:100%; }
-  .bb-sticky-btns .btn-cta { flex:1; text-align:center; font-size:11px !important; padding:8px 12px !important; }
-  .bb-income-amount { font-size:22px; }
-  .bb-card { padding:18px 16px; margin-bottom:16px; }
+  .bb-card { padding:24px 20px; margin-bottom:16px; }
+  .bb-goal-line { font-size:22px; }
+  .bb-thesis { font-size:15px; }
+  .bb-snapshot-table th, .bb-snapshot-table td { padding:10px 6px 10px 0; font-size:12px; }
+  .bb-snapshot-table .bb-ac-icon { width:26px; height:26px; font-size:13px; border-radius:6px; }
   .bb-ptg-row { gap:8px; }
   .bb-ptg-cell, .bb-ptg-cell-adj { min-width:0; flex-basis:calc(50% - 20px); padding:10px 8px; }
   .bb-ptg-big { font-size:18px; }
   .bb-ptg-op { font-size:14px; }
-  .bb-specs-grid { grid-template-columns:repeat(2,1fr) !important; }
-  .bb-deals-grid { grid-template-columns:1fr !important; gap:12px; }
-  .bb-office-cta { flex-direction:column; align-items:stretch; text-align:center; }
+  .bb-office-cta { flex-direction:column; align-items:stretch; text-align:center; padding:20px; }
   .bb-office-cta .btn-cta { width:100% !important; }
 }
 
@@ -12121,281 +12141,298 @@ function renderReport() {
   const d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
   if (!d.firstName && !d.goal) return;
 
-  const name = (d.firstName || 'Investor');
-  const matchCount = getMatchingDealCount(d);
   const branch = d._branch || (d.goal && d.goal.includes('Cash') ? 'cashflow' : d.goal && d.goal.includes('Equity') ? 'growth' : d.goal && d.goal.includes('Tax') ? 'tax' : 'cashflow');
-
   const branchConfig = {
-    cashflow: { label: 'Cash Flow', color: '#51BE7B', colorBg: 'rgba(81,190,123,0.08)', icon: '&#128176;',
-      headline: 'Build Predictable Passive Income',
-      subtext: 'You\'re focused on consistent distributions from day one. Here\'s your roadmap to get there.' },
-    growth: { label: 'Equity Growth', color: '#2563EB', colorBg: 'rgba(37,99,235,0.08)', icon: '&#128200;',
-      headline: 'Grow Your Wealth Through Real Estate',
-      subtext: 'You\'re focused on equity appreciation and higher total returns. Here are the deals that fit.' },
-    tax: { label: 'Tax Optimization', color: '#CF7A30', colorBg: 'rgba(207,122,48,0.08)', icon: '&#128737;',
-      headline: 'Reduce Your Tax Burden',
-      subtext: 'You\'re focused on sheltering income through depreciation and tax-advantaged structures.' }
+    cashflow: { label: 'Cash Flow', color: '#51BE7B', colorBg: 'rgba(81,190,123,0.08)' },
+    growth: { label: 'Equity Growth', color: '#2563EB', colorBg: 'rgba(37,99,235,0.08)' },
+    tax: { label: 'Tax Optimization', color: '#CF7A30', colorBg: 'rgba(207,122,48,0.08)' }
   };
   const bc = branchConfig[branch] || branchConfig.cashflow;
+  const _bbGated = isGated();
 
-  // Get top matching deals
+  // Resolve user asset classes
   const allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
   const assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
   const _stratAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
   const userAssets = (d.assetClasses || []).filter(a => !_stratAliases.includes(a)).map(a => assetMap[a] || a);
   const wantsLending = (d.assetClasses || []).some(a => _stratAliases.includes(a));
-  const matchedDeals = allDeals.filter(deal => {
-    if (wantsLending && deal.strategy === 'Lending') return true;
-    if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false;
-    const stage = getDealStage(deal.id);
-    if (stage === 'passed') return false;
-    return true;
-  }).slice(0, 3);
-
-  // Build criteria pills
-  function pill(label) { return `<span style="display:inline-block;padding:6px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:100px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);margin:3px 4px 3px 0;">${label}</span>`; }
-  const assetPills = (d.assetClasses || []).map(pill).join('') || '<span style="color:var(--text-muted);font-size:13px;">All asset classes</span>';
-  const stratPills = [...(d.strategies || []), ...(d.instruments || [])].map(pill).join('');
-
-  // Quick specs
-  const specs = [];
-  if (d.checkSize) specs.push({ label: 'Check Size', value: d.checkSize });
-  if (d.lockup) specs.push({ label: 'Lockup', value: d.lockup });
-  if (d.distributions) specs.push({ label: 'Distributions', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
-  if (d.accreditation) specs.push({ label: 'Accreditation', value: d.accreditation.split(' (')[0].split(' based')[0] });
-
-  // Matching deal cards
-  // Build match reason badges helper
-  const userCheckSizeNum = parseDollar(d.checkSize) || 0;
   const userStrategies = [...(d.strategies || []), ...(d.instruments || [])];
+  const userCheckSizeNum = parseDollar(d.checkSize) || 0;
 
-  let dealCardsHtml = '';
-  const _bbGated = isGated();
-  if (_bbGated && matchedDeals.length > 0) {
-    dealCardsHtml = `<div style="text-align:center;padding:32px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
-      <div style="font-size:32px;margin-bottom:12px;">&#128274;</div>
-      <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">${matchedDeals.length} Deal${matchedDeals.length !== 1 ? 's' : ''} Match Your Buy Box</div>
-      <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;max-width:360px;margin-left:auto;margin-right:auto;">Academy members get personalized deal matching, showing exactly which deals fit your criteria.</div>
-      <button onclick="window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Join Academy to Unlock &rarr;</button>
-    </div>`;
-  } else if (matchedDeals.length > 0) {
-    dealCardsHtml = matchedDeals.map(deal => {
-      const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(deal.assetClass) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
-      // Match reason badges
-      const badges = [];
-      if (deal.assetClass && userAssets.includes(deal.assetClass)) {
-        badges.push(deal.assetClass);
-      }
-      if (deal.strategy && userStrategies.some(s => s && deal.strategy && s.toLowerCase() === deal.strategy.toLowerCase())) {
-        badges.push(deal.strategy);
-      }
-      if (deal.instrument && userStrategies.some(s => s && deal.instrument && s.toLowerCase() === deal.instrument.toLowerCase())) {
-        badges.push(deal.instrument);
-      }
-      if (userCheckSizeNum > 0 && deal.investmentMinimum && deal.investmentMinimum <= userCheckSizeNum) {
-        badges.push('Within budget');
-      }
-      const badgeStyle = 'display:inline-block;padding:2px 8px;background:rgba(81,190,123,0.1);border-radius:100px;font-family:var(--font-ui);font-size:9px;font-weight:600;color:var(--green);margin:2px 3px 0 0;';
-      const badgesHtml = badges.length > 0 ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;">' + badges.map(b => '<span style="' + badgeStyle + '">\u2713 ' + b + '</span>').join('') + '</div>' : '';
+  // Active (non-stale) deals
+  const activeDeals = allDeals.filter(deal => !deal.isStale);
 
-      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="navigateTo('deals'); setTimeout(() => openPanel('${deal.id}'), 300);">
-        <div style="height:80px;background:${ph.bg};display:flex;align-items:center;justify-content:center;position:relative;">
-          <span style="font-size:28px;opacity:0.3;">${ph.icon}</span>
-          <span style="position:absolute;top:8px;left:8px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;">${deal.assetClass || ''}</span>
-        </div>
-        <div style="padding:14px 16px;">
-          <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${deal.investmentName}</div>
-          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:8px;">${deal.managementCompany || ''}</div>${badgesHtml}
-          <div style="display:flex;gap:12px;${badges.length > 0 ? 'margin-top:8px;' : ''}">
-            ${deal.targetIRR ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">IRR</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--green);">${fmt(deal.targetIRR,'pct')}</span></div>` : ''}
-            ${deal.investmentMinimum ? `<div><span style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;">Min</span><br><span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);">${fmt(deal.investmentMinimum,'money')}</span></div>` : ''}
-          </div>
-        </div>
-      </div>`;
-    }).join('');
+  // ===== SECTION 1: INVESTMENT THESIS =====
+  // Build goal line
+  let goalLine = '';
+  const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  if (branch === 'cashflow') {
+    const target = (goals && goals.targetIncome > 0) ? goals.targetIncome : (parseDollar(d.targetCashFlow) || 0);
+    if (target > 0) goalLine = 'Build $' + target.toLocaleString() + '/yr in passive income';
+    else goalLine = 'Build predictable passive income';
+  } else if (branch === 'growth') {
+    const capital = parseDollar(d.growthCapital) || 0;
+    const minIRR = d.minIRR || '';
+    goalLine = capital > 0 ? 'Deploy $' + capital.toLocaleString() + (minIRR ? ' into ' + minIRR + '+ IRR deals' : ' into high-growth real estate') : 'Grow wealth through real estate equity';
+  } else if (branch === 'tax') {
+    const taxable = d.taxableIncome || '';
+    const offset = d.taxOffset || '';
+    goalLine = taxable ? 'Offset ' + offset + ' of ' + taxable + ' in taxable income' : 'Reduce tax burden through real estate depreciation';
   }
 
-  const container = document.getElementById('reportContent');
-  container.innerHTML = `
-    <div class="bb-report">
+  // Build thesis statement from wizard data
+  const assetList = (d.assetClasses || []);
+  const stratList = userStrategies.filter(Boolean);
+  let thesisParts = [];
+  if (assetList.length > 0) {
+    const bold = assetList.slice(0, 3).map(a => '<strong>' + a + '</strong>').join(', ') + (assetList.length > 3 ? ' + ' + (assetList.length - 3) + ' more' : '');
+    thesisParts.push('I invest in ' + bold);
+  } else {
+    thesisParts.push('I invest across <strong>all asset classes</strong>');
+  }
+  if (stratList.length > 0) {
+    thesisParts.push('through <strong>' + stratList.join('</strong> and <strong>') + '</strong> strategies');
+  }
+  if (d.checkSize) thesisParts.push('I write <strong>' + d.checkSize + '</strong> checks');
+  if (d.lockup) thesisParts.push('with <strong>' + d.lockup + '</strong> lockups');
+  if (d.distributions) {
+    const dist = typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions);
+    thesisParts.push('and need <strong>' + dist.toLowerCase() + ' or better</strong> distributions');
+  }
+  const thesisText = thesisParts.join('. ') + '.';
 
-      <!-- Sticky Header -->
-      <div class="bb-sticky-header">
-        <div class="bb-sticky-row">
-          <div class="bb-sticky-left">
-            <span style="display:inline-block;padding:4px 12px;border-radius:100px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:${bc.colorBg};color:${bc.color};border:1px solid ${bc.color}20;white-space:nowrap;">${bc.icon} ${bc.label}</span>
-            <div class="bb-sticky-headline">${bc.headline}</div>
-          </div>
-          <div class="bb-sticky-btns">
-            <button onclick="openBuyBoxWizard()" class="btn-cta btn-cta-primary" style="width:auto;padding:8px 20px;font-size:11px;">Edit My Buy Box</button>
-            ${_bbGated ? `<button onclick="window.open('https://growyourcashflow.io/cashflow-academy','_blank')" class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px;">&#128274; Unlock Matching</button>` : `<button onclick="navigateTo('deals')" class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px;">${matchCount} Matching Deals &rarr;</button>`}
-          </div>
-        </div>
-      </div>
+  const thesisHtml = '<div class="bb-card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">'
+    + '<div>'
+    + '<span style="display:inline-block;padding:4px 12px;border-radius:100px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:' + bc.colorBg + ';color:' + bc.color + ';border:1px solid ' + bc.color + '20;margin-bottom:16px;">' + bc.label + '</span>'
+    + '<div class="bb-goal-line">' + goalLine + '</div>'
+    + '</div>'
+    + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
+    + '</div>'
+    + '<div class="bb-thesis">' + thesisText + '</div>'
+    + '</div>';
 
-      <!-- Income Gap -->
-      ${(() => {
-        const goals2 = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-        const hasGoals2 = goals2 && goals2.targetIncome > 0;
-        const currentInc = hasGoals2 ? (goals2.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
-        const targetInc = hasGoals2 ? goals2.targetIncome : (parseDollar(d.targetCashFlow) || 0);
-        const gap = Math.max(0, targetInc - currentInc);
-        const pct = targetInc > 0 ? Math.min(100, Math.round((currentInc / targetInc) * 100)) : 0;
+  // ===== SECTION 2: MARKET SNAPSHOT =====
+  // Aggregate stats per asset class the user cares about
+  const snapshotClasses = [];
+  const relevantAssets = userAssets.length > 0 ? [...userAssets] : [...new Set(activeDeals.map(d2 => d2.assetClass).filter(Boolean))].slice(0, 6);
+  if (wantsLending) relevantAssets.push('Lending');
 
-        if (targetInc > 0 && branch === 'cashflow') {
-          return '<div class="bb-card">'
-            + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Income Gap</div>'
-            + '<div class="bb-income-row">'
-            + '<span class="bb-income-amount" style="color:var(--text-dark);">$' + currentInc.toLocaleString() + '</span>'
-            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">/yr earning now</span>'
-            + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:18px;height:18px;margin:0 4px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
-            + '<span class="bb-income-amount" style="color:' + bc.color + ';">$' + targetInc.toLocaleString() + '</span>'
-            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">/yr goal</span>'
-            + '</div>'
-            + '<div style="height:10px;background:var(--bg-cream);border-radius:99px;overflow:hidden;margin-bottom:10px;">'
-            + '<div style="height:100%;width:' + pct + '%;background:' + bc.color + ';border-radius:99px;transition:width 0.5s;' + (pct > 0 ? 'min-width:6px;' : '') + '"></div>'
-            + '</div>'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-            + '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">' + pct + '% of goal</span>'
-            + (gap > 0 ? '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + bc.color + ';">You need $' + gap.toLocaleString() + ' more/yr</span>' : '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + bc.color + ';">Goal reached!</span>')
-            + '</div>'
-            + '</div>';
-        } else if (branch === 'growth') {
-          const capital = parseDollar(d.growthCapital) || 0;
-          const minIRR2 = d.minIRR || 'Not set';
-          return '<div class="bb-card">'
-            + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Growth Target</div>'
-            + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">'
-            + '<span style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);">$' + capital.toLocaleString() + '</span>'
-            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">to deploy</span>'
-            + (minIRR2 !== 'Not set' ? '<span style="font-family:var(--font-ui);font-size:14px;color:var(--text-muted);margin-left:8px;">targeting</span><span style="font-family:var(--font-headline);font-size:28px;color:' + bc.color + ';">' + minIRR2 + '</span><span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">IRR+</span>' : '')
-            + '</div>'
-            + '</div>';
-        } else if (branch === 'tax') {
-          const taxable2 = d.taxableIncome || 'Not set';
-          const offset2 = d.taxOffset || 'Not set';
-          const taxNum = parseDollar(taxable2) || 0;
-          const offNum = parseDollar(offset2) || 0;
-          const taxPct = taxNum > 0 && offNum > 0 ? Math.min(100, Math.round((offNum / taxNum) * 100)) : 0;
-          return '<div class="bb-card">'
-            + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Tax Offset Target</div>'
-            + '<div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'
-            + '<span style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);">' + taxable2 + '</span>'
-            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">taxable income</span>'
-            + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:18px;height:18px;margin:0 4px;"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>'
-            + '<span style="font-family:var(--font-headline);font-size:28px;color:' + bc.color + ';">' + offset2 + '</span>'
-            + '<span style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);">offset goal</span>'
-            + '</div>'
-            + (taxPct > 0 ? '<div style="height:10px;background:var(--bg-cream);border-radius:99px;overflow:hidden;"><div style="height:100%;width:' + taxPct + '%;background:' + bc.color + ';border-radius:99px;min-width:6px;"></div></div>' : '')
-            + '</div>';
-        }
-        return '';
-      })()}
+  relevantAssets.forEach(ac => {
+    const isLending = ac === 'Lending';
+    const classDeals = activeDeals.filter(deal => isLending ? deal.strategy === 'Lending' : deal.assetClass === ac);
+    if (classDeals.length === 0) return;
+    const irrs = classDeals.map(x => x.targetIRR).filter(v => v && v > 0);
+    const cocs = classDeals.map(x => x.cashOnCash).filter(v => v && v > 0);
+    const mins = classDeals.map(x => x.investmentMinimum).filter(v => v && v > 0);
+    const affordable = userCheckSizeNum > 0 ? classDeals.filter(x => x.investmentMinimum && x.investmentMinimum <= userCheckSizeNum).length : null;
+    const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(isLending ? 'Lending' : ac) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
 
-      <!-- Your Path to Goal (cashflow branch only) -->
-      ${(() => {
-        if (branch !== 'cashflow') return '';
-        const goals2b = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-        const hasGoals2b = goals2b && goals2b.targetIncome > 0;
-        const currentIncB = hasGoals2b ? (goals2b.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
-        const targetIncB = hasGoals2b ? goals2b.targetIncome : (parseDollar(d.targetCashFlow) || 0);
-        const gapB = Math.max(0, targetIncB - currentIncB);
-        if (gapB <= 0 || targetIncB <= 0) return '';
-        const checkSizeRaw = d.checkSize || (hasGoals2b ? goals2b.checkSize : 0) || '$100,000';
-        const checkSizeNum = parseDollar(checkSizeRaw) || 100000;
-        // Calculate avg CoC from matching deals or default 8%
-        const matchingForAvg = allDeals.filter(deal => { if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false; return true; });
-        const cocValues = matchingForAvg.map(deal => deal.cashOnCash || 0).filter(v => v > 0);
-        const avgCoC = cocValues.length > 0 ? cocValues.reduce((a,b) => a+b, 0) / cocValues.length : 0.08;
-        const cocPct = Math.round(avgCoC * 100);
-        const annualPerDeal = Math.round(checkSizeNum * avgCoC);
-        const dealsNeededB = Math.ceil(gapB / annualPerDeal);
-        const totalAnnual = dealsNeededB * annualPerDeal;
-        // Store initial values for interactive calculator
-        window._ptgGap = gapB;
-        window._ptgCheckSize = checkSizeNum;
-        window._ptgCoC = cocPct;
-        window._ptgCoCValues = cocValues;
+    snapshotClasses.push({
+      name: ac, count: classDeals.length, ph: ph,
+      irrRange: irrs.length >= 2 ? fmt(Math.min(...irrs), 'pct') + ' \u2013 ' + fmt(Math.max(...irrs), 'pct') : irrs.length === 1 ? fmt(irrs[0], 'pct') : '\u2014',
+      avgCoC: cocs.length > 0 ? fmt(cocs.reduce((a, b) => a + b, 0) / cocs.length, 'pct') : '\u2014',
+      typicalMin: mins.length > 0 ? '$' + Math.round(mins.reduce((a, b) => a + b, 0) / mins.length).toLocaleString() : '\u2014',
+      affordable: affordable
+    });
+  });
 
-        return '<div class="bb-card">'
-          + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">Your Path to Goal</div>'
-          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">'
-          + 'To close your <strong style="color:var(--text-dark);">$' + gapB.toLocaleString() + '/yr</strong> income gap:'
+  // Count total matching and new this month
+  const totalMatching = getMatchingDealCount(d);
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const newThisMonth = activeDeals.filter(deal => {
+    if (!deal.addedDate) return false;
+    const ad = new Date(deal.addedDate);
+    return ad.getMonth() === thisMonth && ad.getFullYear() === thisYear;
+  }).length;
+
+  let snapshotTableRows = snapshotClasses.map(sc => {
+    return '<tr>'
+      + '<td><div class="bb-ac-name"><div class="bb-ac-icon" style="background:' + sc.ph.bg + ';">' + sc.ph.icon + '</div><div><div style="font-weight:700;">' + sc.name + '</div><div class="bb-ac-count">' + sc.count + ' deal' + (sc.count !== 1 ? 's' : '') + '</div></div></div></td>'
+      + '<td>' + sc.irrRange + '</td>'
+      + '<td>' + sc.avgCoC + '</td>'
+      + '<td>' + sc.typicalMin + '</td>'
+      + (userCheckSizeNum > 0 ? '<td>' + (sc.affordable !== null ? '<span style="font-weight:800;color:var(--primary);">' + sc.affordable + '</span>' : '\u2014') + '</td>' : '')
+      + '</tr>';
+  }).join('');
+
+  let snapshotHtml = '';
+  if (snapshotClasses.length > 0) {
+    snapshotHtml = '<div class="bb-card">'
+      + '<div class="bb-label">Market Snapshot</div>'
+      + (_bbGated
+        ? '<div style="text-align:center;padding:24px 0;">'
+          + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">' + totalMatching + ' deals match your criteria</div>'
+          + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;max-width:360px;margin:0 auto 16px;">Academy members see detailed market intelligence for each asset class.</div>'
+          + '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Unlock Market Data &rarr;</button>'
           + '</div>'
-          + '<div class="bb-ptg-row">'
-          // Deals (auto-calculated)
-          + '<div class="bb-ptg-cell"><div id="ptgDeals" class="bb-ptg-big" style="color:var(--text-dark);">' + dealsNeededB + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
-          + '<div class="bb-ptg-op">&times;</div>'
-          // Check size (adjustable)
-          + '<div class="bb-ptg-cell-adj">'
-          + '<div style="display:flex;align-items:center;justify-content:center;gap:6px;">'
-          + '<button onclick="ptgAdjust(\'check\',-25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button>'
-          + '<div id="ptgCheckSize" class="bb-ptg-big" style="color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div>'
-          + '<button onclick="ptgAdjust(\'check\',25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button>'
+        : '<table class="bb-snapshot-table">'
+          + '<thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Min</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
+          + '<tbody>' + snapshotTableRows + '</tbody>'
+          + '</table>'
+          + '<div class="bb-snapshot-summary">'
+          + '<div class="bb-snapshot-total">' + totalMatching + ' total deals match</div>'
+          + (newThisMonth > 0 ? '<div class="bb-snapshot-new">' + newThisMonth + ' new this month</div>' : '')
           + '</div>'
-          + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">EACH</div></div>'
-          + '<div class="bb-ptg-op">@</div>'
-          // CoC (adjustable)
-          + '<div class="bb-ptg-cell-adj">'
-          + '<div style="display:flex;align-items:center;justify-content:center;gap:6px;">'
-          + '<button onclick="ptgAdjust(\'coc\',-1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button>'
-          + '<div id="ptgCoC" class="bb-ptg-big" style="color:var(--primary);">~' + cocPct + '%</div>'
-          + '<button onclick="ptgAdjust(\'coc\',1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button>'
+          + '<div style="margin-top:16px;text-align:center;">'
+          + '<button onclick="navigateTo(\'deals\')" class="btn-cta btn-cta-primary" style="width:auto;padding:10px 28px;font-size:12px;">Browse Matching Deals &rarr;</button>'
           + '</div>'
-          + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CASH-ON-CASH</div></div>'
-          + '<div class="bb-ptg-op">=</div>'
-          // Total (auto-calculated)
-          + '<div class="bb-ptg-cell"><div id="ptgTotal" class="bb-ptg-big" style="color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
-          + '</div>'
-          + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Adjust your check size and target return to build your plan. ' + (cocValues.length > 0 ? 'Default CoC is based on your matching deals.' : '') + ' Actual returns vary by deal.</div>'
+        )
+      + '</div>';
+  }
+
+  // ===== SECTION 3: PATH TO GOAL =====
+  let pathHtml = '';
+  if (branch === 'cashflow') {
+    const goals2b = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+    const hasGoals2b = goals2b && goals2b.targetIncome > 0;
+    const currentIncB = hasGoals2b ? (goals2b.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
+    const targetIncB = hasGoals2b ? goals2b.targetIncome : (parseDollar(d.targetCashFlow) || 0);
+    const gapB = Math.max(0, targetIncB - currentIncB);
+    if (gapB > 0 && targetIncB > 0) {
+      const checkSizeRaw = d.checkSize || (hasGoals2b ? goals2b.checkSize : 0) || '$100,000';
+      const checkSizeNum = parseDollar(checkSizeRaw) || 100000;
+      const matchingForAvg = allDeals.filter(deal => { if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false; return true; });
+      const cocValues = matchingForAvg.map(deal => deal.cashOnCash || 0).filter(v => v > 0);
+      const avgCoC = cocValues.length > 0 ? cocValues.reduce((a, b) => a + b, 0) / cocValues.length : 0.08;
+      const cocPct = Math.round(avgCoC * 100);
+      const annualPerDeal = Math.round(checkSizeNum * avgCoC);
+      const dealsNeededB = Math.ceil(gapB / annualPerDeal);
+      const totalAnnual = dealsNeededB * annualPerDeal;
+      window._ptgGap = gapB; window._ptgCheckSize = checkSizeNum; window._ptgCoC = cocPct; window._ptgCoCValues = cocValues;
+
+      pathHtml = '<div class="bb-card">'
+        + '<div class="bb-label">Your Path to Goal</div>'
+        + '<div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">'
+        + 'To close your <strong style="color:var(--text-dark);">$' + gapB.toLocaleString() + '/yr</strong> income gap:'
+        + '</div>'
+        + '<div class="bb-ptg-row">'
+        + '<div class="bb-ptg-cell"><div id="ptgDeals" class="bb-ptg-big" style="color:var(--text-dark);">' + dealsNeededB + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
+        + '<div class="bb-ptg-op">&times;</div>'
+        + '<div class="bb-ptg-cell-adj"><div style="display:flex;align-items:center;justify-content:center;gap:6px;"><button onclick="ptgAdjust(\'check\',-25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button><div id="ptgCheckSize" class="bb-ptg-big" style="color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div><button onclick="ptgAdjust(\'check\',25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button></div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">EACH</div></div>'
+        + '<div class="bb-ptg-op">@</div>'
+        + '<div class="bb-ptg-cell-adj"><div style="display:flex;align-items:center;justify-content:center;gap:6px;"><button onclick="ptgAdjust(\'coc\',-1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button><div id="ptgCoC" class="bb-ptg-big" style="color:var(--primary);">~' + cocPct + '%</div><button onclick="ptgAdjust(\'coc\',1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button></div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CASH-ON-CASH</div></div>'
+        + '<div class="bb-ptg-op">=</div>'
+        + '<div class="bb-ptg-cell"><div id="ptgTotal" class="bb-ptg-big" style="color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
+        + '</div>'
+        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Adjust check size and target yield to model your plan.' + (cocValues.length > 0 ? ' Default CoC is based on your matching deals.' : '') + '</div>'
+        + '</div>';
+    }
+  } else if (branch === 'growth') {
+    const capital = parseDollar(d.growthCapital) || 0;
+    const minIRR = d.minIRR || '';
+    const irrNum = parseFloat(minIRR) || 18;
+    if (capital > 0) {
+      const yr5 = Math.round(capital * Math.pow(1 + irrNum / 100, 5));
+      const yr10 = Math.round(capital * Math.pow(1 + irrNum / 100, 10));
+      pathHtml = '<div class="bb-card">'
+        + '<div class="bb-label">Growth Projection</div>'
+        + '<div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">'
+        + 'At <strong style="color:var(--text-dark);">' + irrNum + '% IRR</strong>, your <strong style="color:var(--text-dark);">$' + capital.toLocaleString() + '</strong> could become:'
+        + '</div>'
+        + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
+        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">$' + yr5.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">IN 5 YEARS</div></div>'
+        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">$' + yr10.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">IN 10 YEARS</div></div>'
+        + '</div>'
+        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:12px;">Compound growth projection. Actual returns depend on deal selection and timing.</div>'
+        + '</div>';
+    }
+  } else if (branch === 'tax') {
+    const taxable = parseDollar(d.taxableIncome) || 0;
+    const offset = parseDollar(d.taxOffset) || 0;
+    if (taxable > 0 && offset > 0) {
+      const depDeals = activeDeals.filter(x => x.firstYrDepreciation && x.firstYrDepreciation > 0);
+      const avgDep = depDeals.length > 0 ? depDeals.reduce((s, x) => s + x.firstYrDepreciation, 0) / depDeals.length : 0.6;
+      const capitalNeeded = Math.round(offset / avgDep);
+      pathHtml = '<div class="bb-card">'
+        + '<div class="bb-label">Tax Shelter Path</div>'
+        + '<div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">'
+        + 'To shelter <strong style="color:var(--text-dark);">$' + offset.toLocaleString() + '</strong> at ~' + Math.round(avgDep * 100) + '% first-year depreciation:'
+        + '</div>'
+        + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
+        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">$' + capitalNeeded.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CAPITAL NEEDED</div></div>'
+        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">' + depDeals.length + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">DEALS WITH BONUS DEPRECIATION</div></div>'
+        + '</div>'
+        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:12px;">Based on average first-year depreciation across matching deals. Consult your CPA for specific tax advice.</div>'
+        + '</div>';
+    }
+  }
+
+  // ===== SECTION 4: PORTFOLIO VS BUY BOX (DRIFT DETECTION) =====
+  let driftHtml = '';
+  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+
+  // Get asset classes from saved/dd/portfolio deals
+  const engagedDeals = allDeals.filter(deal => {
+    const stage = getDealStage(deal.id);
+    return stage === 'saved' || stage === 'interested' || stage === 'vetting' || stage === 'duediligence' || stage === 'ready' || stage === 'invested';
+  });
+  const portfolioAssets = portfolio.map(p => p.assetClass).filter(Boolean);
+  const engagedAssets = engagedDeals.map(x => x.assetClass).filter(Boolean);
+  const allEngagedAssets = [...new Set([...engagedAssets, ...portfolioAssets])];
+
+  if (allEngagedAssets.length > 0 || engagedDeals.length > 0) {
+    let driftRows = '';
+    let hasNewInterests = false;
+    let allAligned = true;
+
+    // Check each engaged asset class against buy box
+    const buyBoxAssets = new Set(userAssets);
+    if (wantsLending) buyBoxAssets.add('Lending');
+
+    allEngagedAssets.forEach(ac => {
+      const inBuyBox = buyBoxAssets.has(ac);
+      const count = allEngagedAssets.filter(a => a === ac).length;
+      if (inBuyBox) {
+        driftRows += '<div class="bb-drift-row">'
+          + '<div class="bb-drift-check"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></div>'
+          + '<div style="flex:1;font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">' + ac + '</div>'
+          + '<span class="bb-drift-pill bb-drift-aligned">In your buy box</span>'
           + '</div>';
-      })()}
+      } else {
+        hasNewInterests = true;
+        allAligned = false;
+        driftRows += '<div class="bb-drift-row">'
+          + '<div style="width:20px;height:20px;border-radius:50%;background:rgba(37,99,235,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" style="width:12px;height:12px;"><circle cx="12" cy="12" r="3"/></svg></div>'
+          + '<div style="flex:1;font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">' + ac + '</div>'
+          + '<span class="bb-drift-pill bb-drift-new">New interest</span>'
+          + '</div>';
+      }
+    });
 
-      <!-- What I'm Looking For -->
-      <div class="bb-card" style="margin-bottom:20px;">
-        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">What I'm Looking For</div>
-        <div style="margin-bottom:16px;">
-          <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Asset Classes</div>
-          <div style="display:flex;flex-wrap:wrap;">${assetPills}</div>
-        </div>
-        ${stratPills ? `<div>
-          <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">Strategies</div>
-          <div style="display:flex;flex-wrap:wrap;">${stratPills}</div>
-        </div>` : ''}
-      </div>
+    const driftSummary = allAligned
+      ? '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Your portfolio is tracking your thesis</span></div>'
+      : '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;">You\'ve been exploring outside your buy box. Consider updating your criteria.</div>';
 
-      <!-- Quick Specs -->
-      ${specs.length > 0 ? `
-      <div class="bb-specs-grid" style="grid-template-columns:repeat(${Math.min(specs.length, 4)},1fr);">
-        ${specs.map(s => `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;">
-          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">${s.label}</div>
-          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">${s.value}</div>
-        </div>`).join('')}
-      </div>` : ''}
+    driftHtml = '<div class="bb-card">'
+      + '<div class="bb-label">Portfolio vs. Buy Box</div>'
+      + driftSummary
+      + driftRows
+      + (hasNewInterests ? '<div style="margin-top:16px;text-align:center;"><button onclick="openBuyBoxWizard()" class="bb-edit-link" style="font-size:13px;">Update your buy box to match &rarr;</button></div>' : '')
+      + '</div>';
+  }
 
-      <!-- Top Matching Deals -->
-      ${matchedDeals.length > 0 ? `
-      <div style="margin-bottom:20px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Top Deals For You</div>
-          ${_bbGated ? '' : `<button onclick="navigateTo('deals')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;">See all ${matchCount} &rarr;</button>`}
-        </div>
-        <div class="bb-deals-grid">
-          ${dealCardsHtml}
-        </div>
-      </div>` : ''}
+  // ===== SECTION 5: OFFICE HOURS CTA =====
+  const ctaHtml = '<div class="bb-office-cta">'
+    + '<div>'
+    + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>'
+    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Join live office hours with Pascal every Thursday 12-1pm ET.</div>'
+    + '</div>'
+    + '<button onclick="navigateTo(\'officehours\')" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;">Join Office Hours</button>'
+    + '</div>';
 
-      <!-- Office Hours CTA -->
-      <div class="bb-office-cta">
-        <div>
-          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>
-          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Join live office hours with Pascal every Thursday 12-1pm ET.</div>
-        </div>
-        <button onclick="navigateTo('officehours')" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;">Join Office Hours</button>
-      </div>
-
-    </div>
-  `;
+  // ===== RENDER =====
+  const container = document.getElementById('reportContent');
+  container.innerHTML = '<div class="bb-report">'
+    + thesisHtml
+    + snapshotHtml
+    + pathHtml
+    + driftHtml
+    + ctaHtml
+    + '</div>';
 }
 
 function safeJoin(val) {
