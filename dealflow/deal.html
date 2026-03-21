@@ -6478,6 +6478,8 @@ async function renderDeal() {
     if (highlightedStates.length > 0) {
       geoMapHtml += '<div style="margin-bottom:12px;"><span style="display:inline-block;padding:4px 12px;background:rgba(81,190,123,0.08);border:1px solid rgba(81,190,123,0.2);border-radius:20px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);">'
         + (isNationwide ? 'Nationwide' : esc(geoLabel)) + '</span></div>';
+    } else {
+      geoMapHtml += '<div style="margin-bottom:12px;"><span style="display:inline-block;padding:4px 12px;background:rgba(200,200,200,0.12);border:1px solid rgba(200,200,200,0.3);border-radius:20px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);">Not Disclosed</span></div>';
     }
     // Address
     if (deal.address) {
@@ -6500,6 +6502,10 @@ async function renderDeal() {
     } else if (highlightedStates.length === 1) {
       var _stateNames1 = { 'AL':'Alabama','AK':'Alaska','AZ':'Arizona','AR':'Arkansas','CA':'California','CO':'Colorado','CT':'Connecticut','DE':'Delaware','FL':'Florida','GA':'Georgia','HI':'Hawaii','ID':'Idaho','IL':'Illinois','IN':'Indiana','IA':'Iowa','KS':'Kansas','KY':'Kentucky','LA':'Louisiana','ME':'Maine','MD':'Maryland','MA':'Massachusetts','MI':'Michigan','MN':'Minnesota','MS':'Mississippi','MO':'Missouri','MT':'Montana','NE':'Nebraska','NV':'Nevada','NH':'New Hampshire','NJ':'New Jersey','NM':'New Mexico','NY':'New York','NC':'North Carolina','ND':'North Dakota','OH':'Ohio','OK':'Oklahoma','OR':'Oregon','PA':'Pennsylvania','RI':'Rhode Island','SC':'South Carolina','SD':'South Dakota','TN':'Tennessee','TX':'Texas','UT':'Utah','VT':'Vermont','VA':'Virginia','WA':'Washington','WV':'West Virginia','WI':'Wisconsin','WY':'Wyoming' };
       _geoDesc = 'This deal is concentrated in ' + (_stateNames1[highlightedStates[0]] || highlightedStates[0]) + '.';
+    } else {
+      // No states matched — show a helpful fallback
+      var _creditLabel = isCreditFund(deal) ? 'providing loans' : 'investing';
+      _geoDesc = 'Specific geographic data is not yet available for this deal. The operator has not disclosed which states they are ' + _creditLabel + ' in, or the geography data is still being processed.';
     }
     if (_geoDesc) {
       geoMapHtml += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;">' + _geoDesc + '</div>';
