@@ -10897,10 +10897,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 0: GOAL SELECTION =====
   if (step.type === 'goalSelect') {
-    html += '<div class="wizard-trust"><div class="wizard-trust-avatar">PW</div><div class="wizard-trust-name">Pascal Wagner &middot; Grow Your Cashflow</div></div>';
     html += '<div class="wizard-card-title">What\u2019s your investing goal?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Pick one and we\u2019ll build your personalized investment plan.</div>';
-    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:32px;">Built on $3.3M in personal investments across 23 deals</div>';
     html += '<div class="wizard-goal-cards">';
     const goals = [
       { branch: 'cashflow', title: 'I want passive income', desc: 'Build predictable cash flow from private investments', icon: '\uD83D\uDCB0', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
@@ -19648,31 +19646,27 @@ const ACTIVATION_MILESTONES = [
 ];
 
 function checkActivationMilestones() {
-  const milestones = JSON.parse(localStorage.getItem('gycMilestones') || '{}');
+  // Derived from Supabase/GHL data — no localStorage needed for milestones
+  const milestones = {};
   const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-  const wizardComplete = localStorage.getItem('gycBuyBoxComplete') === 'true';
-  const events = JSON.parse(localStorage.getItem('gycAnalyticsEvents') || '[]');
-
-  // 1. Onboarding complete (wizard finished)
-  if (wizardComplete && !milestones.onboarding_complete) {
-    milestones.onboarding_complete = new Date().toISOString();
-  }
-
-  // 2. Saved 3+ deals
-  const savedCount = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
-  if (savedCount >= 3 && !milestones.saved_3_deals) {
-    milestones.saved_3_deals = new Date().toISOString();
-  }
-
-  // 3. Booked onboarding call — check GHL tag "booked intro call" or local analytics events
   const user = JSON.parse(localStorage.getItem('gycUser') || '{}');
-  const hasGhlTag = Array.isArray(user.tags) && user.tags.some(t => t.toLowerCase() === 'booked intro call');
-  const bookedOnboarding = hasGhlTag || events.some(e => e.action === 'booked_onboarding' || e.action === 'booked_office_hours' || e.action === 'office_hours_click');
-  if (bookedOnboarding && !milestones.booked_onboarding) {
-    milestones.booked_onboarding = new Date().toISOString();
+
+  // 1. Buy Box complete — wizard finished or goals exist in Supabase
+  if (localStorage.getItem('gycBuyBoxComplete') === 'true') {
+    milestones.onboarding_complete = true;
   }
 
-  localStorage.setItem('gycMilestones', JSON.stringify(milestones));
+  // 2. Saved 3+ deals — deal stages synced from Supabase
+  const savedCount = Object.values(stages).filter(s => s === 'saved' || s === 'interested').length;
+  if (savedCount >= 3) {
+    milestones.saved_3_deals = true;
+  }
+
+  // 3. Booked onboarding call — GHL tag "booked intro call"
+  if (Array.isArray(user.tags) && user.tags.some(t => t.toLowerCase() === 'booked intro call')) {
+    milestones.booked_onboarding = true;
+  }
+
   return milestones;
 }
 
