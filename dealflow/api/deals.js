@@ -43,6 +43,42 @@ export default async function handler(req, res) {
 
     if (dealsError) throw dealsError;
 
+    // Fetch deal sponsors (multi-sponsor support)
+    const { data: sponsorRows } = await supabase
+      .from('deal_sponsors')
+      .select(`
+        deal_id, role, is_primary, display_order,
+        company:management_companies (
+          id, operator_name, ceo, website, linkedin_ceo,
+          invest_clearly_profile, founding_year, type,
+          asset_classes, total_investors, booking_url,
+          investment_criteria, portfolio_snapshot
+        )
+      `)
+      .order('display_order', { ascending: true });
+
+    // Build lookup: deal_id → sponsors[]
+    const sponsorsByDeal = {};
+    for (const row of (sponsorRows || [])) {
+      if (!row.company) continue;
+      if (!sponsorsByDeal[row.deal_id]) sponsorsByDeal[row.deal_id] = [];
+      sponsorsByDeal[row.deal_id].push({
+        id: row.company.id,
+        name: row.company.operator_name,
+        ceo: row.company.ceo,
+        role: row.role,
+        isPrimary: row.is_primary,
+        website: row.company.website || '',
+        linkedin: row.company.linkedin_ceo || '',
+        investClearly: row.company.invest_clearly_profile || '',
+        foundingYear: row.company.founding_year,
+        type: row.company.type || '',
+        bookingUrl: row.company.booking_url || '',
+        investmentCriteria: row.company.investment_criteria || [],
+        portfolioSnapshot: row.company.portfolio_snapshot || []
+      });
+    }
+
     // Group share classes under parent deals
     const parentMap = {};
     const childIds = new Set();
@@ -202,7 +238,8 @@ export default async function handler(req, res) {
           dateOfFirstSale: d.date_of_first_sale,
           totalAmountSold: d.total_amount_sold,
           totalInvestors: d.total_investors,
-          is506b: d.is_506b || false
+          is506b: d.is_506b || false,
+          sponsors: sponsorsByDeal[d.id] || []
         };
       });
 

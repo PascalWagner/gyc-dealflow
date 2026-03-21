@@ -5393,55 +5393,59 @@ async function renderDeal() {
 
   thesisHtml += '</div></div></div>';
 
-  // --- Operator Profile ---
+  // --- Who's Behind This Deal (multi-sponsor) ---
   var operatorHtml = '';
-  (function buildOperatorProfile() {
-    if (!deal.managementCompany) return;
-    operatorHtml += '<div class="section">';
-    operatorHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="section-title">About the Operator</span></div>';
-    operatorHtml += '<div class="section-body">';
-    operatorHtml += '<div class="operator-profile">';
+  (function buildSponsorSection() {
+    // Determine operator and capital raiser from sponsors array, fallback to legacy fields
+    var sponsors = deal.sponsors || [];
+    var operator = sponsors.find(function(s) { return s.role === 'operator'; });
+    var capitalRaiser = sponsors.find(function(s) { return s.role === 'capital_raiser'; });
 
-    // Photo or initials avatar
-    if (deal.ceoPhotoUrl) {
-      operatorHtml += '<img class="operator-photo" src="' + escAttr(deal.ceoPhotoUrl) + '" alt="' + escAttr(deal.ceo || '') + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" />';
-      operatorHtml += '<div class="operator-photo" style="display:none;">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
-    } else {
-      operatorHtml += '<div class="operator-photo">' + getInitials(deal.ceo || deal.managementCompany) + '</div>';
+    // Fallback: if no sponsors array, use legacy fields
+    if (!operator && deal.managementCompany) {
+      operator = {
+        id: deal.managementCompanyId, name: deal.managementCompany, ceo: deal.ceo,
+        website: deal.mcWebsite, linkedin: deal.mcLinkedin, investClearly: deal.mcInvestClearly,
+        foundingYear: deal.mcFoundingYear, type: deal.mcType, bookingUrl: deal.mcBookingUrl,
+        investmentCriteria: deal.mcInvestmentCriteria || [], portfolioSnapshot: deal.mcPortfolioSnapshot || [],
+        role: 'operator', isPrimary: true
+      };
     }
+    if (!operator) return;
 
+    var hasMultipleSponsors = !!capitalRaiser;
+    var sectionTitle = hasMultipleSponsors ? "Who\u2019s Behind This Deal" : "About the Operator";
+
+    operatorHtml += '<div class="section">';
+    operatorHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="section-title">' + sectionTitle + '</span></div>';
+    operatorHtml += '<div class="section-body">';
+
+    // Operator label (only when multi-sponsor)
+    if (hasMultipleSponsors) {
+      operatorHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Operator \u2014 Manages the Deal</div>';
+    }
+    operatorHtml += '<div class="operator-profile">';
+    operatorHtml += '<div class="operator-photo">' + getInitials(operator.ceo || operator.name) + '</div>';
     operatorHtml += '<div class="operator-details">';
 
-    // Name and title — always link to operator page
-    var _opUrl = 'sponsor.html?company=' + encodeURIComponent(deal.managementCompany);
-    if (deal.ceo) {
-      operatorHtml += '<div class="operator-name"><a href="person.html?name=' + encodeURIComponent(deal.ceo) + '" style="color:var(--text-dark);text-decoration:none;">' + esc(deal.ceo) + '</a></div>';
-      operatorHtml += '<div class="operator-title">CEO, <a href="' + _opUrl + '" style="color:var(--primary);text-decoration:none;">' + esc(deal.managementCompany) + '</a></div>';
+    var _opUrl = 'sponsor.html?company=' + encodeURIComponent(operator.name);
+    if (operator.ceo) {
+      operatorHtml += '<div class="operator-name"><a href="person.html?name=' + encodeURIComponent(operator.ceo) + '" style="color:var(--text-dark);text-decoration:none;">' + esc(operator.ceo) + '</a></div>';
+      operatorHtml += '<div class="operator-title">CEO, <a href="' + _opUrl + '" style="color:var(--primary);text-decoration:none;">' + esc(operator.name) + '</a></div>';
     } else {
-      operatorHtml += '<div class="operator-name"><a href="' + _opUrl + '" style="color:var(--text-dark);text-decoration:none;">' + esc(deal.managementCompany) + '</a></div>';
+      operatorHtml += '<div class="operator-name"><a href="' + _opUrl + '" style="color:var(--text-dark);text-decoration:none;">' + esc(operator.name) + '</a></div>';
       operatorHtml += '<div class="operator-title">Sponsor / Operator</div>';
     }
 
-    // Bio if available
     if (deal.sponsorBio) {
       operatorHtml += '<div class="operator-bio">' + esc(deal.sponsorBio) + '</div>';
     }
 
-    // Key stats row
     var opStats = [];
-    if (deal.mcFoundingYear) {
-      var yrsInBiz = new Date().getFullYear() - deal.mcFoundingYear;
-      opStats.push({ value: yrsInBiz + '+', label: 'Years' });
-    }
-    if (deal.fundAUM) {
-      opStats.push({ value: '$' + (deal.fundAUM >= 1000000000 ? (deal.fundAUM / 1000000000).toFixed(1) + 'B' : (deal.fundAUM / 1000000).toFixed(0) + 'M'), label: 'AUM' });
-    }
-    if (deal.operatorDealCount) {
-      opStats.push({ value: deal.operatorDealCount, label: 'Deals' });
-    }
-    if (deal.operatorTotalRaised) {
-      opStats.push({ value: '$' + (deal.operatorTotalRaised >= 1000000000 ? (deal.operatorTotalRaised / 1000000000).toFixed(1) + 'B' : (deal.operatorTotalRaised / 1000000).toFixed(0) + 'M'), label: 'Total Raised' });
-    }
+    var opFoundingYear = operator.foundingYear || deal.mcFoundingYear;
+    if (opFoundingYear) opStats.push({ value: (new Date().getFullYear() - opFoundingYear) + '+', label: 'Years' });
+    if (deal.fundAUM) opStats.push({ value: '$' + (deal.fundAUM >= 1000000000 ? (deal.fundAUM / 1000000000).toFixed(1) + 'B' : (deal.fundAUM / 1000000).toFixed(0) + 'M'), label: 'AUM' });
+    if (deal.operatorDealCount) opStats.push({ value: deal.operatorDealCount, label: 'Deals' });
 
     if (opStats.length > 0) {
       operatorHtml += '<div class="operator-stats">';
@@ -5452,37 +5456,68 @@ async function renderDeal() {
     }
 
     // Links
-    var hasLinks = deal.mcWebsite || deal.mcLinkedin || deal.mcInvestClearly;
-    if (hasLinks) {
+    var opWebsite = operator.website || deal.mcWebsite;
+    var opLinkedin = operator.linkedin || deal.mcLinkedin;
+    var opInvestClearly = operator.investClearly || deal.mcInvestClearly;
+    if (opWebsite || opLinkedin || opInvestClearly) {
       operatorHtml += '<div class="operator-links">';
-      if (deal.mcWebsite) {
-        operatorHtml += '<a href="' + escAttr(deal.mcWebsite) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>';
-      }
-      if (deal.mcLinkedin) {
-        operatorHtml += '<a href="' + escAttr(deal.mcLinkedin) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>';
-      }
-      if (deal.mcInvestClearly) {
-        operatorHtml += '<a href="' + escAttr(deal.mcInvestClearly) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Reviews</a>';
-      }
+      if (opWebsite) operatorHtml += '<a href="' + escAttr(opWebsite) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>';
+      if (opLinkedin) operatorHtml += '<a href="' + escAttr(opLinkedin) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>LinkedIn</a>';
+      if (opInvestClearly) operatorHtml += '<a href="' + escAttr(opInvestClearly) + '" target="_blank" rel="noopener" class="operator-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Reviews</a>';
       operatorHtml += '</div>';
     }
 
-    // Request Introduction button
+    // Request Introduction
     operatorHtml += '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">';
-    operatorHtml += '<button onclick="requestIntroduction(\'' + escAttr(deal.managementCompany) + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName) + '\', this)" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</button>';
-    if (deal.mcBookingUrl) {
-      operatorHtml += '<a href="' + escAttr(deal.mcBookingUrl) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Book with ' + esc(deal.ceo || deal.managementCompany) + '</a>';
+    operatorHtml += '<button onclick="requestIntroduction(\'' + escAttr(operator.name) + '\', \'' + escAttr(operator.ceo || '') + '\', \'' + escAttr(deal.investmentName) + '\', this)" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</button>';
+    var opBooking = operator.bookingUrl || deal.mcBookingUrl;
+    if (opBooking) {
+      operatorHtml += '<a href="' + escAttr(opBooking) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Book with ' + esc(operator.ceo || operator.name) + '</a>';
     }
     operatorHtml += '</div>';
-
     operatorHtml += '</div></div>'; // close operator-details, operator-profile
+
+    // --- Capital Raiser card (secondary, smaller) ---
+    if (capitalRaiser) {
+      operatorHtml += '<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border-light);">';
+      operatorHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">';
+      operatorHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">Capital Raiser</div>';
+      operatorHtml += '<div style="cursor:help;" title="This company markets the deal to investors and raises capital. The operator above manages the actual assets. Your returns depend on the operator\'s execution.">';
+      operatorHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+      operatorHtml += '</div></div>';
+      operatorHtml += '<div style="display:flex;align-items:center;gap:14px;">';
+      operatorHtml += '<div style="width:44px;height:44px;border-radius:50%;background:var(--bg-main);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-weight:700;font-size:14px;color:var(--text-muted);flex-shrink:0;">' + getInitials(capitalRaiser.ceo || capitalRaiser.name) + '</div>';
+      operatorHtml += '<div>';
+      var _crUrl = 'sponsor.html?company=' + encodeURIComponent(capitalRaiser.name);
+      if (capitalRaiser.ceo) {
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">' + esc(capitalRaiser.ceo) + '</div>';
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);"><a href="' + _crUrl + '" style="color:var(--text-secondary);text-decoration:none;">' + esc(capitalRaiser.name) + '</a> &middot; Raising capital for this offering</div>';
+      } else {
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);"><a href="' + _crUrl + '" style="color:var(--text-dark);text-decoration:none;">' + esc(capitalRaiser.name) + '</a></div>';
+        operatorHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);">Raising capital for this offering</div>';
+      }
+      operatorHtml += '</div></div></div>';
+    }
+
+    // LP explainer (only when multiple sponsors)
+    if (hasMultipleSponsors) {
+      operatorHtml += '<div style="margin-top:16px;padding:12px 16px;background:rgba(37,99,235,0.04);border:1px solid rgba(37,99,235,0.12);border-radius:var(--radius-sm);display:flex;align-items:flex-start;gap:10px;">';
+      operatorHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" width="16" height="16" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+      operatorHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;"><strong style="color:var(--text-dark);">What\u2019s the difference?</strong> The <strong>operator</strong> finds, underwrites, and manages the deal \u2014 your returns depend on their execution. The <strong>capital raiser</strong> markets the offering and connects investors. They may brand the deck, but they don\u2019t operate the assets.</div>';
+      operatorHtml += '</div>';
+    }
+
     operatorHtml += '</div></div>'; // close section-body, section
+
+    // Store operator for Investment Criteria / Portfolio
+    window._dealOperatorSponsor = operator;
   })();
 
   // --- Investment Criteria ---
   var investCriteriaHtml = '';
   (function buildInvestmentCriteria() {
-    var criteria = deal.mcInvestmentCriteria;
+    var opSponsor = window._dealOperatorSponsor || {};
+    var criteria = opSponsor.investmentCriteria || deal.mcInvestmentCriteria;
     if (!criteria || !Array.isArray(criteria) || criteria.length === 0) return;
 
     var iconMap = {
@@ -5517,7 +5552,8 @@ async function renderDeal() {
   // --- Portfolio Snapshot ---
   var portfolioSnapshotHtml = '';
   (function buildPortfolioSnapshot() {
-    var portfolio = deal.mcPortfolioSnapshot;
+    var opSponsor = window._dealOperatorSponsor || {};
+    var portfolio = opSponsor.portfolioSnapshot || deal.mcPortfolioSnapshot;
     if (!portfolio || !Array.isArray(portfolio) || portfolio.length === 0) return;
 
     // Build summary stats
