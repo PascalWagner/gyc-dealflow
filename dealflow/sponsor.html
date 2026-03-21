@@ -1113,6 +1113,43 @@ body {
         </div>
       </div>
 
+      <!-- Investment Criteria -->
+      <div class="section-card" id="investCriteriaSection" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">Investment Criteria</div>
+        </div>
+        <div class="section-body">
+          <div id="investCriteriaGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+        </div>
+      </div>
+
+      <!-- Existing Portfolio -->
+      <div class="section-card" id="portfolioSnapshotSection" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">Existing Portfolio</div>
+          <span class="section-badge" id="portfolioCount">0</span>
+        </div>
+        <div class="section-body">
+          <div id="portfolioSummaryStats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;"></div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;">
+              <thead>
+                <tr style="border-bottom:2px solid var(--border);text-align:left;">
+                  <th style="padding:8px 10px;font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Property</th>
+                  <th style="padding:8px 10px;font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Location</th>
+                  <th style="padding:8px 10px;font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;text-align:right;">Sq Ft</th>
+                  <th style="padding:8px 10px;font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;text-align:right;">Purchase Price</th>
+                  <th style="padding:8px 10px;font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;text-align:right;">Cap Rate</th>
+                  <th style="padding:8px 10px;font-family:var(--font-ui);font-weight:700;font-size:11px;color:var(--text-muted);text-transform:uppercase;text-align:right;">Est. Value</th>
+                </tr>
+              </thead>
+              <tbody id="portfolioTableBody"></tbody>
+              <tfoot id="portfolioTableFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Key People -->
       <div class="section-card">
         <div class="section-header">
@@ -1375,7 +1412,7 @@ function renderSponsor(data) {
   } else {
     dealsGrid.innerHTML = deals.map(d => {
       const sc = statusClass(d.status);
-      return '<a href="index.html#deal-' + escAttr(d.id) + '" class="deal-card">' +
+      return '<a href="deal.html?id=' + escAttr(d.id) + '" class="deal-card">' +
         '<div class="deal-card-header">' +
           '<div class="deal-card-badges">' +
             '<span class="deal-badge ' + sc + '">' + escHtml(d.status || 'Open') + '</span>' +
@@ -1396,6 +1433,74 @@ function renderSponsor(data) {
         '</div>' +
       '</a>';
     }).join('');
+  }
+
+  // Investment Criteria
+  if (s.investmentCriteria && Array.isArray(s.investmentCriteria) && s.investmentCriteria.length > 0) {
+    document.getElementById('investCriteriaSection').style.display = '';
+    var iconSvgs = {
+      building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V12h6v10"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01"/></svg>',
+      percent: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>',
+      medical: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+      traffic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+      star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      dollar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      lease: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+      shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+      users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+    };
+    var defaultIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+    document.getElementById('investCriteriaGrid').innerHTML = s.investmentCriteria.map(function(item) {
+      var icon = iconSvgs[item.icon] || defaultIcon;
+      return '<div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--bg-cream);border-radius:var(--radius-sm);border:1px solid var(--border);">'
+        + '<div style="flex-shrink:0;width:36px;height:36px;border-radius:8px;background:rgba(81,190,123,0.1);display:flex;align-items:center;justify-content:center;color:var(--primary);">' + icon + '</div>'
+        + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">' + escHtml(item.text) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // Existing Portfolio
+  if (s.portfolioSnapshot && Array.isArray(s.portfolioSnapshot) && s.portfolioSnapshot.length > 0) {
+    document.getElementById('portfolioSnapshotSection').style.display = '';
+    document.getElementById('portfolioCount').textContent = s.portfolioSnapshot.length;
+    var totalPurchase = 0, totalValue = 0, totalSqft = 0, capSum = 0, capCount = 0;
+    s.portfolioSnapshot.forEach(function(p) {
+      totalPurchase += (p.purchasePrice || 0);
+      totalValue += (p.estimatedValue || p.purchasePrice || 0);
+      totalSqft += (p.sqft || 0);
+      if (p.capRate) { capSum += p.capRate; capCount++; }
+    });
+    var avgCap = capCount > 0 ? (capSum / capCount).toFixed(1) : null;
+    function fmtMoney(n) { if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M'; if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K'; return '$' + n.toLocaleString(); }
+
+    var summaryHtml = '';
+    if (totalPurchase > 0) summaryHtml += '<div style="text-align:center;padding:14px;background:var(--bg-cream);border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">' + fmtMoney(totalPurchase) + '</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">Total Invested</div></div>';
+    if (totalValue > 0 && totalValue !== totalPurchase) summaryHtml += '<div style="text-align:center;padding:14px;background:var(--bg-cream);border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--primary);">' + fmtMoney(totalValue) + '</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">Est. Value</div></div>';
+    if (totalSqft > 0) summaryHtml += '<div style="text-align:center;padding:14px;background:var(--bg-cream);border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">' + totalSqft.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">Total Sq Ft</div></div>';
+    if (avgCap) summaryHtml += '<div style="text-align:center;padding:14px;background:var(--bg-cream);border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);">' + avgCap + '%</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">Avg Cap Rate</div></div>';
+    document.getElementById('portfolioSummaryStats').innerHTML = summaryHtml;
+
+    document.getElementById('portfolioTableBody').innerHTML = s.portfolioSnapshot.map(function(row, i) {
+      var bg = i % 2 === 0 ? 'transparent' : 'var(--bg-cream)';
+      return '<tr style="border-bottom:1px solid var(--border-light);background:' + bg + ';">'
+        + '<td style="padding:8px 10px;font-weight:600;color:var(--text-dark);white-space:nowrap;">' + escHtml(row.name || '') + '</td>'
+        + '<td style="padding:8px 10px;color:var(--text-secondary);">' + escHtml(row.location || '') + '</td>'
+        + '<td style="padding:8px 10px;text-align:right;color:var(--text-secondary);">' + (row.sqft ? row.sqft.toLocaleString() : '--') + '</td>'
+        + '<td style="padding:8px 10px;text-align:right;color:var(--text-dark);">' + (row.purchasePrice ? '$' + row.purchasePrice.toLocaleString() : '--') + '</td>'
+        + '<td style="padding:8px 10px;text-align:right;color:var(--text-dark);">' + (row.capRate ? row.capRate + '%' : '--') + '</td>'
+        + '<td style="padding:8px 10px;text-align:right;color:var(--primary);font-weight:600;">' + (row.estimatedValue ? '$' + row.estimatedValue.toLocaleString() : '--') + '</td>'
+        + '</tr>';
+    }).join('');
+
+    // Total row
+    document.getElementById('portfolioTableFoot').innerHTML = '<tr style="border-top:2px solid var(--border);font-weight:700;">'
+      + '<td style="padding:10px;font-family:var(--font-ui);">Total</td><td></td>'
+      + '<td style="padding:10px;text-align:right;">' + (totalSqft > 0 ? totalSqft.toLocaleString() : '') + '</td>'
+      + '<td style="padding:10px;text-align:right;">' + (totalPurchase > 0 ? '$' + totalPurchase.toLocaleString() : '') + '</td>'
+      + '<td style="padding:10px;text-align:right;">' + (avgCap ? avgCap + '%' : '') + '</td>'
+      + '<td style="padding:10px;text-align:right;color:var(--primary);">' + (totalValue > 0 ? '$' + totalValue.toLocaleString() : '') + '</td>'
+      + '</tr>';
   }
 
   // Key People

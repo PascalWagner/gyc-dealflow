@@ -106,6 +106,8 @@ export default async function handler(req, res) {
         assetClasses: mc.asset_classes || [],
         yearsInBusiness,
         totalAUM: stats.totalAUM,
+        investmentCriteria: mc.investment_criteria || [],
+        portfolioSnapshot: mc.portfolio_snapshot || [],
         deals: transformedDeals,
         stats
       }
