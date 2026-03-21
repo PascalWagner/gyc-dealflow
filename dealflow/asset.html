@@ -617,6 +617,106 @@ body {
   height: 220px;
 }
 
+/* ====== ASSET OVERVIEW ====== */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+.overview-item {
+  padding: 16px;
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+.overview-value {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.overview-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.overview-strategy {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+}
+.overview-strategy-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.overview-strategy-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* ====== OPERATOR COMPARISON ====== */
+.op-comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.op-comp-table thead th {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  padding: 16px 20px;
+  text-align: center;
+  border-bottom: 2px solid var(--border);
+}
+.op-comp-table thead th:first-child {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  width: 160px;
+}
+.op-comp-table td {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-dark);
+}
+.op-comp-table td:first-child {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+.op-comp-table tr:last-child td { border-bottom: none; }
+.op-comp-table tr:hover { background: rgba(81,190,123,0.03); }
+.op-comp-value { font-weight: 700; }
+.op-comp-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.op-comp-best { color: var(--green); font-weight: 800; }
+.op-comp-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+.op-comp-link:hover { text-decoration: underline; }
+.op-comp-fees { text-align: left !important; font-size: 12px; }
+.op-comp-fee-item { margin-bottom: 3px; }
+
 /* ====== PUBLIC RECORDS ====== */
 .records-grid {
   display: grid;
@@ -909,6 +1009,22 @@ body {
               <canvas id="valuationChart"></canvas>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Asset Overview -->
+      <div class="section" id="assetOverviewSection" style="display:none;">
+        <div class="section-label">Asset Overview</div>
+        <div class="section-card">
+          <div id="assetOverviewContent" style="padding:24px;"></div>
+        </div>
+      </div>
+
+      <!-- Operator Comparison -->
+      <div class="section" id="operatorCompSection" style="display:none;">
+        <div class="section-label">Operator Comparison</div>
+        <div class="section-card">
+          <div id="operatorCompContent"></div>
         </div>
       </div>
 
@@ -1418,6 +1534,183 @@ function renderPriceHistory(deals, unitCount) {
   });
 }
 
+function extractPropertyDetails(deals) {
+  // Mine deal strategy text for property details
+  var details = {};
+  deals.forEach(function(d) {
+    var text = (d.investmentStrategy || '') + ' ' + (d.investmentName || '');
+    // Units
+    if (!details.units) {
+      var m = text.match(/(\d{2,4})[\s-]*(?:unit|apt|apartment)/i);
+      if (m) details.units = parseInt(m[1]);
+    }
+    // City, State
+    if (!details.city) {
+      var m = text.match(/\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?),\s*([A-Z]{2})\b/);
+      if (m) { details.city = m[1]; details.state = m[2]; }
+    }
+    // Occupancy
+    if (!details.occupancy) {
+      var m = text.match(/(\d{1,3})%\s*(?:occupan|occupied|leased)/i);
+      if (m) details.occupancy = parseInt(m[1]);
+    }
+    // Property type from strategy
+    if (!details.propertyType) {
+      if (/\b(?:condo|condominium)\b/i.test(text)) details.propertyType = 'Condominium';
+      else if (/\b(?:townhome|townhouse)\b/i.test(text)) details.propertyType = 'Townhome';
+      else if (/\b(?:garden[\s-]?style)\b/i.test(text)) details.propertyType = 'Garden Style';
+      else if (/\b(?:mid[\s-]?rise)\b/i.test(text)) details.propertyType = 'Mid-Rise';
+      else if (/\b(?:high[\s-]?rise)\b/i.test(text)) details.propertyType = 'High-Rise';
+    }
+    // Value-add indicator
+    if (/value[\s-]?add/i.test(text)) details.strategy = 'Value-Add';
+    else if (/core[\s-]?plus/i.test(text)) details.strategy = 'Core Plus';
+    else if (/opportunistic/i.test(text)) details.strategy = 'Opportunistic';
+    else if (/stabilized/i.test(text)) details.strategy = 'Stabilized';
+    // Deal fields
+    if (!details.holdPeriod && d.holdPeriod) details.holdPeriod = d.holdPeriod;
+    if (!details.offeringType && d.offeringType) details.offeringType = d.offeringType;
+  });
+  return details;
+}
+
+function renderAssetOverview(deals, propertyDetails) {
+  var section = document.getElementById('assetOverviewSection');
+  var el = document.getElementById('assetOverviewContent');
+  var pd = propertyDetails || {};
+
+  var items = [];
+  if (pd.units) items.push({ v: pd.units.toLocaleString(), l: 'Units' });
+  if (pd.city) items.push({ v: pd.city + ', ' + (pd.state || ''), l: 'Location' });
+  if (pd.occupancy) items.push({ v: pd.occupancy + '%', l: 'Occupancy' });
+  if (pd.strategy) items.push({ v: pd.strategy, l: 'Strategy' });
+  if (pd.holdPeriod) items.push({ v: pd.holdPeriod + ' Yrs', l: 'Hold Period' });
+  if (pd.offeringType) items.push({ v: pd.offeringType, l: 'Offering Type' });
+  if (pd.propertyType) items.push({ v: pd.propertyType, l: 'Property Type' });
+
+  // Get best strategy text
+  var strategyTexts = deals
+    .filter(function(d) { return d.investmentStrategy && d.investmentStrategy.length > 50; })
+    .map(function(d) { return { text: d.investmentStrategy, op: d.managementCompany }; });
+
+  if (!items.length && !strategyTexts.length) return;
+
+  section.style.display = 'block';
+
+  var html = '';
+  if (items.length) {
+    html += '<div class="overview-grid">' +
+      items.map(function(i) {
+        return '<div class="overview-item"><div class="overview-value">' + esc(i.v) + '</div><div class="overview-label">' + esc(i.l) + '</div></div>';
+      }).join('') + '</div>';
+  }
+
+  // Show each operator's strategy
+  strategyTexts.forEach(function(s) {
+    html += '<div class="overview-strategy">' +
+      '<div class="overview-strategy-label">Investment Thesis — ' + esc(s.op || 'Operator') + '</div>' +
+      '<div class="overview-strategy-text">' + esc(s.text) + '</div>' +
+    '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function renderOperatorComparison(deals) {
+  var section = document.getElementById('operatorCompSection');
+  var el = document.getElementById('operatorCompContent');
+
+  // Need 2+ deals to compare
+  if (deals.length < 2) return;
+
+  // Sort by date (oldest first)
+  var sorted = deals.slice().sort(function(a, b) {
+    return new Date(a.addedDate || 0) - new Date(b.addedDate || 0);
+  });
+
+  section.style.display = 'block';
+
+  // Build comparison rows
+  var rows = [
+    { label: 'Operator', key: 'managementCompany', fmt: function(d) {
+      var html = '<div class="op-comp-value">' + esc(d.managementCompany || '--') + '</div>';
+      if (d.mcType) html += '<div class="op-comp-sub">' + esc(d.mcType) + '</div>';
+      return html;
+    }},
+    { label: 'Offering Size', key: 'offeringSize', fmt: function(d) {
+      return d.offeringSize ? '<div class="op-comp-value">' + currency(d.offeringSize) + '</div>' : '--';
+    }},
+    { label: 'Target IRR', key: 'targetIRR', fmt: function(d) {
+      return d.targetIRR ? '<div class="op-comp-value">' + pct(d.targetIRR) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'Equity Multiple', key: 'equityMultiple', fmt: function(d) {
+      return d.equityMultiple ? '<div class="op-comp-value">' + multiple(d.equityMultiple) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'Preferred Return', key: 'preferredReturn', fmt: function(d) {
+      return d.preferredReturn ? '<div class="op-comp-value">' + pct(d.preferredReturn) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'LP/GP Split', key: 'lpGpSplit', fmt: function(d) {
+      return d.lpGpSplit ? '<div class="op-comp-value">' + esc(d.lpGpSplit) + '</div>' : '--';
+    }},
+    { label: 'Min Investment', key: 'investmentMinimum', fmt: function(d) {
+      return d.investmentMinimum ? '<div class="op-comp-value">' + currency(d.investmentMinimum) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Cash-on-Cash', key: 'cashOnCash', fmt: function(d) {
+      return d.cashOnCash ? '<div class="op-comp-value">' + pct(d.cashOnCash) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'Hold Period', key: 'holdPeriod', fmt: function(d) {
+      return d.holdPeriod ? '<div class="op-comp-value">' + d.holdPeriod + ' Years</div>' : '--';
+    }},
+    { label: 'Offering Type', key: 'offeringType', fmt: function(d) {
+      return d.offeringType ? '<div class="op-comp-value">' + esc(d.offeringType) + '</div>' : '--';
+    }},
+    { label: 'Status', key: 'status', fmt: function(d) {
+      var ev = statusToEvent(d.status);
+      return '<span class="event-tag ' + ev.cls + '">' + ev.label + '</span>';
+    }},
+    { label: 'Fees', key: 'fees', fmt: function(d) {
+      if (!d.fees || !d.fees.length) return '--';
+      return '<div class="op-comp-fees">' + d.fees.map(function(f) {
+        return '<div class="op-comp-fee-item">' + esc(f) + '</div>';
+      }).join('') + '</div>';
+    }},
+    { label: 'Website', key: 'mcWebsite', fmt: function(d) {
+      if (!d.mcWebsite) return '--';
+      var domain = d.mcWebsite.replace(/https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
+      return '<a href="' + escAttr(d.mcWebsite) + '" target="_blank" rel="noopener" class="op-comp-link">' + esc(domain) + '</a>';
+    }},
+    { label: 'Deck', key: 'deckUrl', fmt: function(d) {
+      if (!d.deckUrl) return '--';
+      return '<a href="' + escAttr(d.deckUrl) + '" target="_blank" rel="noopener" class="op-comp-link">View Deck</a>';
+    }}
+  ];
+
+  // Filter out rows where ALL deals have no data
+  rows = rows.filter(function(row) {
+    return sorted.some(function(d) {
+      var v = d[row.key];
+      if (Array.isArray(v)) return v.length > 0;
+      return v != null && v !== '' && v !== 0;
+    });
+  });
+
+  var html = '<table class="op-comp-table"><thead><tr><th>Metric</th>' +
+    sorted.map(function(d) {
+      return '<th>' + esc(d.managementCompany || 'Operator') + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+
+  rows.forEach(function(row) {
+    html += '<tr><td>' + row.label + '</td>';
+    sorted.forEach(function(d) {
+      html += '<td>' + row.fmt(d) + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
 function renderRentCast(rc) {
   if (!rc) return;
 
@@ -1697,9 +1990,25 @@ async function init() {
   if (!assetClass && matchingDeals.length) assetClass = matchingDeals[0].assetClass || '';
   if (!location && matchingDeals.length) location = matchingDeals[0].investingGeography || matchingDeals[0].location || '';
 
+  // Extract property details from deal strategy text
+  var propertyDetails = extractPropertyDetails(matchingDeals);
+
+  // If no address but we extracted a city from strategy, use it for geocoding and location
+  if (!propertyAddress && propertyDetails.city) {
+    propertyAddress = propertyDetails.city + ', ' + (propertyDetails.state || '');
+  }
+  if ((!location || location === 'USA') && propertyDetails.city) {
+    location = propertyDetails.city + ', ' + (propertyDetails.state || '');
+  }
+  if (!state && propertyDetails.state) {
+    state = propertyDetails.state;
+  }
+
   // Render
   renderHero(propertyName, propertyAddress, assetClass, location, status, matchingDeals);
   renderPriceHistory(matchingDeals, null);
+  renderAssetOverview(matchingDeals, propertyDetails);
+  renderOperatorComparison(matchingDeals);
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';
@@ -1711,7 +2020,7 @@ async function init() {
 
   // Geocode address for hero map + nearby map
   var currentCoords = null;
-  if (propertyAddress && propertyAddress.length > 10) {
+  if (propertyAddress && propertyAddress.length > 5) {
     currentCoords = await geocodeAddress(propertyAddress);
     if (currentCoords) renderMap(currentCoords.lat, currentCoords.lng, propertyAddress);
   }
