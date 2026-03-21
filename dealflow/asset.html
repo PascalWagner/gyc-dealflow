@@ -1127,7 +1127,8 @@ async function fetchAllDeals() {
   }
 
   // Try local API first, fall back to production
-  var urls = ['/api/deals', PROD_API];
+  // Include 506(b) deals since the asset page is accessed by authenticated users
+  var urls = ['/api/deals?include506b=true', PROD_API + '?include506b=true'];
   for (var i = 0; i < urls.length; i++) {
     try {
       var resp = await fetch(urls[i]);
