@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Property History - GYC Dealflow</title>
+<title>Asset Detail - GYC Dealflow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -15,7 +15,6 @@
 :root {
   --primary: #51BE7B;
   --primary-hover: #45A86C;
-  --primary-light: #32C583;
   --bg-cream: #FAF9F5;
   --bg-card: #FFFFFF;
   --bg-sidebar: #0A1E21;
@@ -43,10 +42,7 @@
   --teal-deep: #1F5159;
   --teal-midnight: #0A1E21;
   --accent-green: #40E47F;
-  --mint-bg: #E7F5F0;
-  --off-white: #FAF9F5;
   --charcoal: #141413;
-  --slate: #607179;
   --transition: 0.2s ease;
   --font-headline: 'DM Serif Display', Georgia, serif;
   --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
@@ -75,7 +71,6 @@ body {
   z-index: 100;
   transition: transform 0.3s ease;
 }
-
 .sidebar-logo {
   padding: 20px 24px;
   display: flex;
@@ -83,7 +78,6 @@ body {
   gap: 12px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-
 .sidebar-logo-icon {
   width: 36px; height: 36px;
   background: var(--primary);
@@ -95,23 +89,17 @@ body {
   font-weight: 700;
   color: #fff;
   font-size: 12px;
-  letter-spacing: -0.5px;
 }
-
 .sidebar-logo-text {
   font-family: var(--font-headline);
   font-size: 18px;
-  font-weight: 400;
   color: #fff;
-  letter-spacing: -0.3px;
 }
-
 .sidebar-nav {
   flex: 1;
   padding: 12px 0;
   overflow-y: auto;
 }
-
 .nav-back {
   display: flex;
   align-items: center;
@@ -128,7 +116,6 @@ body {
 }
 .nav-back:hover { background: var(--bg-sidebar-hover); color: #fff; }
 .nav-back svg { width: 16px; height: 16px; }
-
 .nav-section-label {
   padding: 16px 24px 8px;
   font-family: var(--font-ui);
@@ -138,7 +125,6 @@ body {
   letter-spacing: 1.5px;
   color: rgba(255,255,255,0.3);
 }
-
 .nav-item {
   display: flex;
   align-items: center;
@@ -153,7 +139,6 @@ body {
   position: relative;
   text-decoration: none;
 }
-
 .nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
 .nav-item.active {
   background: var(--bg-sidebar-active);
@@ -167,22 +152,8 @@ body {
   background: var(--primary);
   border-radius: 0 2px 2px 0;
 }
-
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
 .nav-item.active svg, .nav-item:hover svg { opacity: 1; }
-
-.nav-badge {
-  margin-left: auto;
-  background: var(--primary);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
-}
-
 .sidebar-user {
   padding: 16px 24px;
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -190,7 +161,6 @@ body {
   align-items: center;
   gap: 10px;
 }
-
 .sidebar-user-avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
@@ -204,7 +174,6 @@ body {
   font-size: 12px;
   flex-shrink: 0;
 }
-
 .sidebar-user-info { flex: 1; min-width: 0; }
 .sidebar-user-name {
   font-family: var(--font-ui);
@@ -215,15 +184,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sidebar-user-tier {
-  font-family: var(--font-ui);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--accent-green);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .sidebar-logout {
   background: none;
   border: none;
@@ -234,30 +194,23 @@ body {
 }
 .sidebar-logout:hover { color: #fff; }
 .sidebar-logout svg { width: 16px; height: 16px; }
-
 .sidebar-footer {
   padding: 16px 24px;
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 
-/* ====== MAIN CONTENT ====== */
+/* ====== MAIN ====== */
 .main {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
-  transition: margin-left 0.3s ease;
+}
+.content-wrap {
+  max-width: 1060px;
+  padding: 40px 40px 80px;
+  margin: 0 auto;
 }
 
-/* Mobile menu button */
-.mobile-menu-btn {
-  display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-dark);
-  padding: 4px;
-}
-.mobile-menu-btn svg { width: 24px; height: 24px; }
-
+/* ====== MOBILE ====== */
 .mobile-topbar {
   display: none;
   position: sticky;
@@ -270,18 +223,22 @@ body {
   gap: 12px;
   z-index: 50;
 }
-
 .mobile-topbar-title {
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
   color: var(--text-dark);
   flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dark);
+  padding: 4px;
+}
+.mobile-menu-btn svg { width: 24px; height: 24px; }
 .sidebar-overlay {
   display: none;
   position: fixed;
@@ -290,487 +247,230 @@ body {
   z-index: 99;
 }
 
-/* ====== CONTENT AREA ====== */
-.content-wrap {
-  max-width: 1200px;
-  padding: 32px 40px 64px;
-  margin: 0 auto;
+/* ====== LOADING ====== */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
-
-/* ====== LOADING SKELETON ====== */
-.skeleton {
-  position: relative;
-  overflow: hidden;
+.loading-wrap { display: block; }
+.loaded-wrap { display: none; }
+.skeleton-block {
   background: var(--border-light);
   border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
 }
-.skeleton::after {
+.skeleton-block::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
   animation: shimmer 1.5s infinite;
 }
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+
+/* ====== BREADCRUMB ====== */
+.breadcrumb {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.skeleton-header { height: 160px; margin-bottom: 20px; }
-.skeleton-stats { height: 80px; margin-bottom: 20px; }
-.skeleton-card { height: 200px; margin-bottom: 20px; }
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.breadcrumb a:hover { color: var(--primary); }
+.breadcrumb svg { width: 14px; height: 14px; opacity: 0.4; }
 
-.loading-wrap { display: block; }
-.loaded-wrap { display: none; }
-
-/* ====== PROPERTY HEADER ====== */
-.property-header {
+/* ====== PROPERTY HERO CARD ====== */
+.hero-card {
   background: var(--bg-card);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  padding: 32px;
-  margin-bottom: 20px;
   box-shadow: var(--shadow-card);
+  overflow: hidden;
+  margin-bottom: 32px;
 }
-
-.property-header-inner {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
+.hero-top {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  min-height: 240px;
 }
-
-.property-icon {
-  width: 72px; height: 72px;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--teal-deep), var(--teal-midnight));
+.hero-info {
+  padding: 36px 40px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-  flex-shrink: 0;
 }
-.property-icon svg {
-  width: 36px; height: 36px;
-  color: var(--accent-green);
-}
-
-.property-header-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.property-name {
-  font-family: var(--font-headline);
-  font-size: 32px;
-  color: var(--text-dark);
-  letter-spacing: -0.5px;
-  line-height: 1.2;
-  margin-bottom: 8px;
-}
-
-.property-address {
-  font-family: var(--font-body);
-  font-size: 16px;
-  color: var(--text-secondary);
+.hero-asset-type {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--primary);
   margin-bottom: 12px;
 }
-
-.property-tags {
+.hero-name {
+  font-family: var(--font-headline);
+  font-size: 36px;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.hero-address {
+  font-family: var(--font-body);
+  font-size: 17px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+.hero-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-
-.property-tag {
+.tag {
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 600;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+}
+.tag-green { background: var(--green-bg); color: var(--green); }
+.tag-blue { background: var(--blue-bg); color: var(--blue); }
+.tag-orange { background: var(--orange-bg); color: var(--orange); }
+.tag-purple { background: var(--purple-bg); color: var(--purple); }
+
+.hero-map {
+  position: relative;
+  background: var(--border-light);
+}
+.hero-map #propertyMap {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
 }
 
-.property-tag.asset-class {
-  background: var(--green-bg);
-  color: var(--green);
-}
-
-.property-tag.location-tag {
-  background: var(--blue-bg);
-  color: var(--blue);
-}
-
-.property-tag.status-active {
-  background: var(--green-bg);
-  color: var(--green);
-}
-
-.property-tag.status-closed {
-  background: var(--orange-bg);
-  color: var(--orange);
-}
-
-/* ====== STATS STRIP ====== */
-.stats-strip {
+/* Stats row inside hero card */
+.hero-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 24px;
-  box-shadow: var(--shadow-card);
+  border-top: 1px solid var(--border-light);
 }
-
-.stat-item {
-  background: var(--bg-card);
+.hero-stat {
   padding: 20px 24px;
   text-align: center;
+  border-right: 1px solid var(--border-light);
 }
-
-.stat-value {
+.hero-stat:last-child { border-right: none; }
+.hero-stat-value {
   font-family: var(--font-ui);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text-dark);
-  letter-spacing: -0.5px;
-  margin-bottom: 4px;
+  letter-spacing: -0.3px;
 }
-
-.stat-label {
+.hero-stat-label {
   font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: 2px;
 }
 
-/* ====== DISCLAIMER BANNER ====== */
-.disclaimer-banner {
-  background: var(--orange-bg);
-  border: 1px solid rgba(207,122,48,0.2);
-  border-radius: var(--radius-sm);
-  padding: 12px 20px;
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ====== SECTION ====== */
+.section {
+  margin-bottom: 32px;
+}
+.section-label {
   font-family: var(--font-ui);
-  font-size: 13px;
-  color: var(--orange);
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.3px;
+  margin-bottom: 16px;
 }
-
-.disclaimer-banner .icon {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-/* ====== SECTION CARDS ====== */
 .section-card {
   background: var(--bg-card);
   border-radius: var(--radius);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-card);
-  margin-bottom: 24px;
   overflow: hidden;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.section-title {
-  font-family: var(--font-ui);
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-
-.section-badge {
-  background: var(--primary);
-  color: #fff;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 22px;
+/* ====== EMPTY STATE ====== */
+.empty-state {
+  padding: 56px 40px;
   text-align: center;
 }
-
-.section-body {
-  padding: 24px;
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--bg-cream);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
 }
-
-/* ====== PRICE HISTORY TIMELINE ====== */
-.timeline {
-  position: relative;
-  padding-left: 40px;
-}
-
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 15px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--border);
-}
-
-.timeline-event {
-  position: relative;
-  padding-bottom: 32px;
-}
-
-.timeline-event:last-child {
-  padding-bottom: 0;
-}
-
-.timeline-dot {
-  position: absolute;
-  left: -40px;
-  top: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 3px solid;
-  background: var(--bg-card);
-  z-index: 1;
-}
-
-.timeline-dot.listed { border-color: var(--blue); }
-.timeline-dot.sold { border-color: var(--green); }
-.timeline-dot.refinanced { border-color: var(--purple); }
-.timeline-dot.offering { border-color: var(--orange); }
-
-.timeline-dot::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.timeline-dot.listed::after { background: var(--blue); }
-.timeline-dot.sold::after { background: var(--green); }
-.timeline-dot.refinanced::after { background: var(--purple); }
-.timeline-dot.offering::after { background: var(--orange); }
-
-.timeline-date {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
+.empty-state-icon svg {
+  width: 28px;
+  height: 28px;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  opacity: 0.5;
 }
-
-.timeline-type {
+.empty-state-title {
   font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 12px;
-  display: inline-block;
-  margin-bottom: 8px;
-}
-
-.timeline-type.listed { background: var(--blue-bg); color: var(--blue); }
-.timeline-type.sold { background: var(--green-bg); color: var(--green); }
-.timeline-type.refinanced { background: var(--purple-bg); color: var(--purple); }
-.timeline-type.offering { background: var(--orange-bg); color: var(--orange); }
-
-.timeline-detail {
-  font-family: var(--font-body);
   font-size: 15px;
+  font-weight: 700;
   color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.empty-state-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 380px;
+  margin: 0 auto;
   line-height: 1.6;
 }
 
-.timeline-detail strong {
-  font-weight: 600;
-}
-
-.timeline-price {
-  font-family: var(--font-ui);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-dark);
-  margin: 4px 0;
-}
-
-.timeline-sponsor-link {
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-  font-family: var(--font-ui);
-  font-size: 13px;
-}
-.timeline-sponsor-link:hover {
-  color: var(--primary-hover);
-  text-decoration: underline;
-}
-
-/* ====== VALUATION CHART ====== */
-.valuation-chart-wrap {
-  position: relative;
-  width: 100%;
-  max-height: 340px;
-}
-.valuation-chart-wrap canvas {
-  width: 100% !important;
-  max-height: 320px;
-}
-.chart-subtitle {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-.chart-subtitle .positive { color: var(--green); font-weight: 600; }
-.chart-subtitle .negative { color: var(--red); font-weight: 600; }
-
-/* ====== PRICE HISTORY TABLE ====== */
-.price-history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--font-body);
-  font-size: 14px;
-}
-.price-history-table thead th {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 10px 14px;
-  text-align: left;
-  border-bottom: 2px solid var(--border);
-  white-space: nowrap;
-}
-.price-history-table tbody tr {
-  border-bottom: 1px solid var(--border-light);
-  transition: background var(--transition);
-}
-.price-history-table tbody tr:hover {
-  background: var(--bg-cream);
-}
-.price-history-table tbody td {
-  padding: 14px 14px;
-  vertical-align: middle;
-}
-.price-history-table .ph-date {
-  font-family: var(--font-ui);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-dark);
-  white-space: nowrap;
-}
-.price-history-table .ph-event {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 10px;
-}
-.ph-event.listed { background: var(--blue-bg); color: var(--blue); }
-.ph-event.sold { background: var(--green-bg); color: var(--green); }
-.ph-event.refinanced { background: var(--purple-bg); color: var(--purple); }
-.ph-event.offering { background: var(--orange-bg); color: var(--orange); }
-.ph-event.price-change { background: #FFF3E6; color: var(--orange); }
-.ph-event.acquired { background: var(--green-bg); color: #1a7a4c; }
-.price-history-table .ph-price-main {
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--text-dark);
-}
-.price-history-table .ph-price-unit {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-.price-history-table .ph-change {
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 14px;
-}
-.ph-change.positive { color: var(--green); }
-.ph-change.negative { color: var(--red); }
-.ph-change.neutral { color: var(--text-muted); }
-.price-history-table .ph-buyer-link {
-  color: var(--primary);
-  text-decoration: none;
-  font-family: var(--font-ui);
-  font-weight: 600;
-  font-size: 13px;
-}
-.price-history-table .ph-buyer-link:hover {
-  color: var(--primary-hover);
-  text-decoration: underline;
-}
-
-@media (max-width: 768px) {
-  .price-history-table {
-    font-size: 13px;
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .price-history-table thead th,
-  .price-history-table tbody td {
-    padding: 10px 10px;
-  }
-}
-
-/* ====== DEAL HISTORY CARDS ====== */
-.deals-grid {
+/* ====== DEAL CARDS ====== */
+.deal-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
+  padding: 24px;
 }
-
 .deal-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 20px;
   transition: all var(--transition);
-  cursor: pointer;
   text-decoration: none;
   display: block;
   color: inherit;
 }
-
 .deal-card:hover {
   border-color: var(--primary);
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-1px);
 }
-
-.deal-card-header {
+.deal-card-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
-
 .deal-card-name {
   font-family: var(--font-ui);
   font-size: 15px;
@@ -778,7 +478,6 @@ body {
   color: var(--text-dark);
   line-height: 1.3;
 }
-
 .deal-card-status {
   font-family: var(--font-ui);
   font-size: 10px;
@@ -788,22 +487,14 @@ body {
   white-space: nowrap;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
-
-.deal-card-status.green { background: var(--green-bg); color: var(--green); }
-.deal-card-status.orange { background: var(--orange-bg); color: var(--orange); }
-.deal-card-status.blue { background: var(--blue-bg); color: var(--blue); }
-
 .deal-card-sponsor {
   font-family: var(--font-ui);
   font-size: 12px;
   color: var(--text-secondary);
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  margin-bottom: 16px;
 }
-
 .deal-card-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -811,7 +502,6 @@ body {
   padding-top: 14px;
   border-top: 1px solid var(--border-light);
 }
-
 .deal-metric-label {
   font-family: var(--font-ui);
   font-size: 10px;
@@ -821,14 +511,12 @@ body {
   letter-spacing: 0.5px;
   margin-bottom: 2px;
 }
-
 .deal-metric-value {
   font-family: var(--font-ui);
   font-size: 15px;
   font-weight: 700;
   color: var(--text-dark);
 }
-
 .deal-card-footer {
   display: flex;
   align-items: center;
@@ -837,164 +525,149 @@ body {
   padding-top: 12px;
   border-top: 1px solid var(--border-light);
 }
-
 .deal-card-type {
   font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
 }
-
 .deal-card-date {
   font-family: var(--font-ui);
   font-size: 11px;
   color: var(--text-muted);
 }
 
-/* ====== COMPARABLE PROPERTIES ====== */
-.comps-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+/* ====== VALUATION CHART ====== */
+.chart-wrap {
+  padding: 24px;
+}
+.chart-subtitle {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.chart-subtitle .positive { color: var(--green); font-weight: 700; }
+.chart-subtitle .negative { color: var(--red); font-weight: 700; }
+.chart-container {
+  position: relative;
+  height: 220px;
 }
 
-.comp-card {
+/* ====== PUBLIC RECORDS ====== */
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 24px;
+}
+.record-item {
+  padding: 14px 16px;
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+}
+.record-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.record-value {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+/* Tax table inside records */
+.tax-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.tax-table th {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+.tax-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.tax-table tr:last-child td { border-bottom: none; }
+
+/* ====== NEARBY DEALS ====== */
+.nearby-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 24px;
+}
+.nearby-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 18px;
-  transition: all var(--transition);
+  padding: 16px;
   text-decoration: none;
-  display: block;
   color: inherit;
+  transition: all var(--transition);
 }
-.comp-card:hover {
+.nearby-card:hover {
   border-color: var(--primary);
   box-shadow: var(--shadow-card-hover);
 }
-
-.comp-card-name {
+.nearby-name {
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 700;
   color: var(--text-dark);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
-
-.comp-card-location {
+.nearby-loc {
   font-family: var(--font-ui);
   font-size: 12px;
   color: var(--text-secondary);
   margin-bottom: 10px;
 }
-
-.comp-card-meta {
+.nearby-meta {
   display: flex;
-  gap: 16px;
-}
-
-.comp-card-meta span {
+  gap: 14px;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
-
-.comp-card-meta strong {
-  color: var(--text-dark);
-  font-weight: 700;
-}
-
-/* ====== MAP ====== */
-.map-container {
-  height: 350px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-#propertyMap {
-  width: 100%;
-  height: 100%;
-}
-
-/* ====== EMPTY STATE ====== */
-.empty-inline {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-muted);
-  font-family: var(--font-ui);
-  font-size: 14px;
-}
+.nearby-meta strong { color: var(--text-dark); font-weight: 700; }
 
 /* ====== RESPONSIVE ====== */
-@media (max-width: 1024px) {
-  .stats-strip {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .deals-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  .sidebar-overlay.open {
-    display: block;
-  }
-  .mobile-topbar {
-    display: flex;
-  }
-  .main {
-    margin-left: 0;
-  }
-  .content-wrap {
-    padding: 20px 16px 48px;
-  }
-  .property-header {
-    padding: 24px 20px;
-  }
-  .property-header-inner {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 16px;
-  }
-  .property-tags { justify-content: center; }
-  .property-name { font-size: 24px; }
-  .stats-strip {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .section-body {
-    padding: 20px 18px;
-  }
-  .section-header {
-    padding: 16px 18px;
-  }
-  .comps-grid {
-    grid-template-columns: 1fr;
-  }
-  .map-container {
-    height: 260px;
-  }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .mobile-topbar { display: flex; }
+  .main { margin-left: 0; }
+  .content-wrap { padding: 20px 16px 48px; }
+  .hero-top { grid-template-columns: 1fr; }
+  .hero-map { height: 200px; }
+  .hero-info { padding: 24px 20px; }
+  .hero-name { font-size: 28px; }
+  .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  .hero-stat { border-bottom: 1px solid var(--border-light); }
+  .deal-grid { grid-template-columns: 1fr; padding: 16px; }
+  .records-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; }
+  .nearby-grid { grid-template-columns: 1fr; padding: 16px; }
 }
-
 @media (max-width: 480px) {
-  .stats-strip {
-    grid-template-columns: 1fr 1fr;
-  }
-  .deals-grid {
-    grid-template-columns: 1fr;
-  }
-  .deal-card-metrics {
-    grid-template-columns: 1fr 1fr;
-  }
-  .property-header-inner {
-    gap: 12px;
-  }
+  .hero-stats { grid-template-columns: 1fr 1fr; }
+  .deal-card-metrics { grid-template-columns: 1fr 1fr; }
 }
 </style>
 </head>
@@ -1058,8 +731,8 @@ body {
   <div class="sidebar-user" id="sidebarUser" style="display:none">
     <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
     <div class="sidebar-user-info">
-      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
-      <div class="sidebar-user-email" id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+      <div class="sidebar-user-name" id="sidebarName"></div>
+      <div id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
     </div>
     <button class="sidebar-logout" onclick="logout()" title="Sign out">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1070,15 +743,13 @@ body {
   </div>
 </aside>
 
-<!-- Sidebar overlay for mobile -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-<!-- Mobile top bar -->
 <div class="mobile-topbar">
   <button class="mobile-menu-btn" onclick="toggleSidebar()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
-  <div class="mobile-topbar-title" id="mobileTitle">Property History</div>
+  <div class="mobile-topbar-title" id="mobileTitle">Asset Detail</div>
   <a href="index.html" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">Deals</a>
 </div>
 
@@ -1086,195 +757,138 @@ body {
 <div class="main">
   <div class="content-wrap">
 
-    <!-- Loading Skeleton -->
-    <div class="loading-wrap" id="loadingSkeleton">
-      <div class="skeleton skeleton-header"></div>
-      <div class="skeleton skeleton-stats"></div>
-      <div class="skeleton skeleton-card"></div>
-      <div class="skeleton skeleton-card"></div>
+    <!-- Loading -->
+    <div id="loadingSkeleton" class="loading-wrap">
+      <div class="skeleton-block" style="height:300px;"></div>
+      <div class="skeleton-block" style="height:200px;"></div>
+      <div class="skeleton-block" style="height:160px;"></div>
     </div>
 
     <!-- Loaded Content -->
-    <div class="loaded-wrap" id="loadedContent">
+    <div id="loadedContent" class="loaded-wrap">
 
-      <!-- Hero Image -->
-      <div id="assetHero" style="height:220px;border-radius:var(--radius);overflow:hidden;margin-bottom:20px;position:relative;display:flex;align-items:center;justify-content:center;">
-        <!-- JS will set background gradient or image -->
+      <!-- Breadcrumb -->
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <a href="index.html#assets">Assets</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span id="breadcrumbName" style="color:var(--text-dark);font-weight:600;"></span>
       </div>
 
-      <!-- Property Header + Map Side by Side -->
-      <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;margin-bottom:20px;">
-        <!-- Property Header -->
-        <div class="property-header" style="margin-bottom:0;">
-          <div class="property-header-inner">
-            <div class="property-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <div class="property-header-info">
-              <h1 class="property-name" id="propertyName">Loading...</h1>
-              <p class="property-address" id="propertyAddress"></p>
-              <div class="property-tags" id="propertyTags"></div>
-            </div>
+      <!-- Hero Card -->
+      <div class="hero-card">
+        <div class="hero-top">
+          <div class="hero-info">
+            <div class="hero-asset-type" id="heroAssetType"></div>
+            <h1 class="hero-name" id="heroName">Loading...</h1>
+            <div class="hero-address" id="heroAddress"></div>
+            <div class="hero-tags" id="heroTags"></div>
           </div>
-          <!-- Stats Strip inline -->
-          <div class="stats-strip" id="statsStrip" style="margin-top:16px;"></div>
-        </div>
-
-        <!-- Location Map Card -->
-        <div class="section-card" style="margin-bottom:0;">
-          <div class="section-body" style="padding:0;">
-            <div class="map-container" style="height:100%;min-height:200px;">
-              <div id="propertyMap" style="height:100%;min-height:200px;"></div>
+          <div class="hero-map" id="heroMapWrap">
+            <div id="propertyMap"></div>
+            <div id="mapPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#1F5159,#0A1E21);color:rgba(255,255,255,0.4);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin-bottom:8px;opacity:0.4;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;">Map loads with address data</div>
             </div>
           </div>
         </div>
+        <div class="hero-stats" id="heroStats"></div>
       </div>
 
-      <!-- Disclaimer Banner -->
-      <div class="disclaimer-banner" style="margin-bottom:20px;">
-        <span class="icon">&#9888;&#65039;</span>
-        Property history and location data are approximate. We're working on verifying exact details.
-      </div>
-
-      <!-- Deal History (moved up) -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Deal History</div>
-          <span class="section-badge" id="dealsCount">0</span>
-        </div>
-        <div class="section-body">
-          <div class="deals-grid" id="dealsGrid"></div>
-          <div class="empty-inline" id="dealsEmpty" style="display:none;">
-            <p>No deals recorded for this property yet.</p>
-          </div>
+      <!-- Deals at this Property -->
+      <div class="section">
+        <div class="section-label">Deals at this Property</div>
+        <div class="section-card">
+          <div id="dealsSection"></div>
         </div>
       </div>
 
-      <!-- Price History Table (compact) -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Price History</div>
-        </div>
-        <div class="section-body" style="padding:0;">
-          <table class="price-history-table" id="priceHistoryTable">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Event</th>
-                <th>Price</th>
-                <th>% Change</th>
-                <th>Buyer / Operator</th>
-                <th>Deck / PPM</th>
-              </tr>
-            </thead>
-            <tbody id="priceHistoryBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Valuation History Chart (compact) -->
-      <div class="section-card">
-        <div class="section-header">
-          <div>
-            <div class="section-title">Valuation History</div>
+      <!-- Valuation History -->
+      <div class="section" id="valuationSection" style="display:none;">
+        <div class="section-label">Valuation History</div>
+        <div class="section-card">
+          <div class="chart-wrap">
             <div class="chart-subtitle" id="chartSubtitle"></div>
+            <div class="chart-container">
+              <canvas id="valuationChart"></canvas>
+            </div>
           </div>
         </div>
-        <div class="section-body">
-          <div class="valuation-chart-wrap" style="height:200px;">
-            <canvas id="valuationChart"></canvas>
-          </div>
+      </div>
+
+      <!-- Public Records (RentCast) -->
+      <div class="section" id="recordsSection" style="display:none;">
+        <div class="section-label">Public Records</div>
+        <div class="section-card">
+          <div id="recordsContent"></div>
         </div>
       </div>
 
-      <!-- Price History Timeline (compact) -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Transaction Timeline</div>
-        </div>
-        <div class="section-body" style="max-height:240px;overflow-y:auto;">
-          <div class="timeline" id="priceTimeline"></div>
+      <!-- Nearby Deals -->
+      <div class="section" id="nearbySection" style="display:none;">
+        <div class="section-label">Nearby Deals</div>
+        <div class="section-card">
+          <div id="nearbyContent"></div>
         </div>
       </div>
 
-      <!-- Comparable Properties -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Nearby Deals</div>
-        </div>
-        <div class="section-body">
-          <div class="comps-grid" id="compsGrid"></div>
-        </div>
-      </div>
-
-    </div><!-- /loaded-wrap -->
-  </div><!-- /content-wrap -->
-</div><!-- /main -->
+    </div>
+  </div>
+</div>
 
 <script>
-// ========== AUTH GATE ==========
+// ========== AUTH ==========
 (function enforceAuth() {
-  const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+  var user = JSON.parse(localStorage.getItem('gycUser') || 'null');
   if (!user || !user.token || user.token === 'local-session') {
     localStorage.removeItem('gycUser');
     window.location.href = 'deal-login.html';
   }
 })();
 
-function getUser() {
-  return JSON.parse(localStorage.getItem('gycUser') || 'null');
-}
-
-function logout() {
-  localStorage.removeItem('gycUser');
-  window.location.href = 'deal-login.html';
-}
-
-// ========== SIDEBAR ==========
+function getUser() { return JSON.parse(localStorage.getItem('gycUser') || 'null'); }
+function logout() { localStorage.removeItem('gycUser'); window.location.href = 'deal-login.html'; }
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
-
 function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('open');
 }
 
-// ========== INIT AUTH UI ==========
 function initAuth() {
-  const user = getUser();
-  const userEl = document.getElementById('sidebarUser');
+  var user = getUser();
+  var el = document.getElementById('sidebarUser');
   if (user && user.email) {
-    userEl.style.display = 'flex';
-    const name = user.name || user.email.split('@')[0];
-    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    el.style.display = 'flex';
+    var name = user.name || user.email.split('@')[0];
+    var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
     document.getElementById('sidebarAvatar').textContent = initials;
     document.getElementById('sidebarName').textContent = name;
-    const sidebarEmailEl = document.getElementById('sidebarEmail');
-    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
+    var emailEl = document.getElementById('sidebarEmail');
+    if (emailEl) emailEl.textContent = user.email;
   }
 }
 
 // ========== HELPERS ==========
-function escHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function escAttr(str) {
-  return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function esc(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
 }
 
 function currency(val) {
   if (val == null) return '--';
   if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
-  return '$' + val.toLocaleString();
+  if (val >= 1000) return '$' + Math.round(val).toLocaleString();
+  return '$' + val;
 }
 
 function pct(val) {
   if (val == null) return '--';
+  if (val > 1) return val.toFixed(1) + '%';
   return (val * 100).toFixed(1) + '%';
 }
 
@@ -1283,353 +897,285 @@ function multiple(val) {
   return val.toFixed(1) + 'x';
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return '--';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+function fmtDate(str) {
+  if (!str) return '--';
+  var d = new Date(str);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatMonthYear(dateStr) {
-  if (!dateStr) return '--';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-}
-
-function statusClass(status) {
+function statusColor(status) {
   if (!status) return 'green';
-  const s = status.toLowerCase();
-  if (s.includes('active') || s.includes('open')) return 'green';
-  if (s.includes('closed') || s.includes('sold')) return 'orange';
+  var s = status.toLowerCase();
+  if (s.includes('open') || s.includes('active') || s.includes('evergreen')) return 'green';
+  if (s.includes('closed') || s.includes('fully funded') || s.includes('completed')) return 'orange';
   return 'green';
 }
 
-// ========== SAMPLE DATA ==========
-// Structured for easy API swap later
-function getPropertyData(address) {
-  // In the future, fetch from API using address param
-  // For now, return hardcoded sample data
-  const SAMPLE_DATA = {
-    'highland hills apartments, georgia': {
-      name: 'Highland Hills Apartments',
-      address: '1234 Highland Hills Dr, Macon, GA 31204',
-      propertyType: 'Multi Family',
-      location: 'Macon, Georgia',
-      lat: 32.8407,
-      lng: -83.6324,
-      currentStatus: 'Active',
-      totalDealsSeen: 3,
-      firstListed: '2018-01-10',
-      lastActivity: '2025-11-14',
-      timeline: [
-        {
-          date: '2018-01-10',
-          type: 'sold',
-          label: 'Acquired',
-          price: 8500000,
-          pricePerUnit: 75893,
-          units: 112,
-          pctChange: null,
-          description: 'Acquired by Southeastern Properties LLC',
-          sponsor: 'Southeastern Properties LLC',
-          sponsorId: null,
-          sponsorCompany: 'Southeastern Properties LLC'
-        },
-        {
-          date: '2020-03-15',
-          type: 'listed',
-          label: 'Listed for Sale',
-          price: 15000000,
-          pricePerUnit: 133929,
-          units: 112,
-          pctChange: 76.5,
-          description: 'Property listed for syndication offering',
-          sponsor: 'Original Sponsor Group',
-          sponsorId: null,
-          sponsorCompany: 'Original Sponsor Group'
-        },
-        {
-          date: '2021-09-01',
-          type: 'sold',
-          label: 'Sold',
-          price: 18200000,
-          pricePerUnit: 162500,
-          units: 112,
-          pctChange: 21.3,
-          description: 'Sold to Midtown Capital Partners',
-          sponsor: 'Midtown Capital Partners',
-          sponsorId: null,
-          sponsorCompany: 'Midtown Capital Partners'
-        },
-        {
-          date: '2023-06-15',
-          type: 'refinanced',
-          label: 'Refinanced',
-          price: 20000000,
-          pricePerUnit: 178571,
-          units: 112,
-          pctChange: 9.9,
-          description: 'Refinanced at updated valuation',
-          sponsor: 'Midtown Capital Partners',
-          sponsorId: null,
-          sponsorCompany: 'Midtown Capital Partners'
-        },
-        {
-          date: '2025-11-14',
-          type: 'offering',
-          label: 'New Offering',
-          price: 22500000,
-          pricePerUnit: 200893,
-          units: 112,
-          pctChange: 12.5,
-          description: 'New syndication offering listed on GYC Dealflow',
-          sponsor: 'Cohen Investment Group',
-          sponsorId: 'rec04XU06Qn5rIRJP',
-          sponsorCompany: 'Cohen Investment Group'
-        }
-      ],
-      deals: [
-        {
-          id: 'rec_old_highland',
-          name: 'Highland Hills Apartments - 2020 Syndication',
-          sponsor: 'Original Sponsor',
-          sponsorId: null,
-          assetClass: 'Multi Family',
-          dealType: 'Syndication',
-          targetIRR: 0.12,
-          equityMultiple: 1.8,
-          minInvestment: 50000,
-          status: 'Closed',
-          strategy: 'Value-Add',
-          addedDate: '2020-03-15'
-        },
-        {
-          id: 'rec0ZkWEkJd7kvA5l',
-          name: 'Highland Hills Apartments',
-          sponsor: 'Cohen Investment Group',
-          sponsorId: 'rec04XU06Qn5rIRJP',
-          assetClass: 'Multi Family',
-          dealType: 'Syndication',
-          targetIRR: 0.15,
-          equityMultiple: 2.0,
-          minInvestment: 25000,
-          status: 'Open to invest',
-          strategy: 'Value-Add',
-          addedDate: '2025-11-14'
-        }
-      ],
-      comparables: [
-        {
-          name: 'River Bend Apartments',
-          address: '5678 River Bend Way, Macon, GA 31201',
-          location: 'Macon, Georgia',
-          propertyType: 'Multi Family',
-          deals: 1,
-          lastActivity: '2024-09-01'
-        },
-        {
-          name: 'Peach Grove Residences',
-          address: '910 Peach Grove Ln, Warner Robins, GA 31088',
-          location: 'Warner Robins, Georgia',
-          propertyType: 'Multi Family',
-          deals: 1,
-          lastActivity: '2025-02-20'
-        },
-        {
-          name: 'Magnolia Pointe Industrial',
-          address: '2200 Industrial Blvd, Macon, GA 31206',
-          location: 'Macon, Georgia',
-          propertyType: 'Industrial',
-          deals: 2,
-          lastActivity: '2025-06-10'
-        }
-      ]
-    }
-  };
+function emptyState(icon, title, desc) {
+  return '<div class="empty-state">' +
+    '<div class="empty-state-icon">' + icon + '</div>' +
+    '<div class="empty-state-title">' + esc(title) + '</div>' +
+    '<div class="empty-state-desc">' + esc(desc) + '</div>' +
+    '</div>';
+}
 
-  // Normalize address for lookup
-  const normalized = (address || '').toLowerCase().trim();
+// ========== DATA FETCHING ==========
+var PROD_API = 'https://dealflow.growyourcashflow.io/api/deals';
 
-  // Try exact match first, then partial
-  if (SAMPLE_DATA[normalized]) return SAMPLE_DATA[normalized];
+async function fetchAllDeals() {
+  // Try session cache first
+  var cached = sessionStorage.getItem('gycDealsCache');
+  var cacheTime = sessionStorage.getItem('gycDealsCacheTime');
+  var CACHE_TTL = 5 * 60 * 1000;
 
-  for (const key in SAMPLE_DATA) {
-    if (normalized.includes(key) || key.includes(normalized)) {
-      return SAMPLE_DATA[key];
-    }
+  if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
+    try { return JSON.parse(cached); } catch(e) {}
   }
 
-  // Default: return the Highland Hills data
-  return SAMPLE_DATA['highland hills apartments, georgia'];
+  // Try local API first, fall back to production
+  var urls = ['/api/deals', PROD_API];
+  for (var i = 0; i < urls.length; i++) {
+    try {
+      var resp = await fetch(urls[i]);
+      if (!resp.ok) continue;
+      var data = await resp.json();
+      if (data && data.deals) {
+        sessionStorage.setItem('gycDealsCache', JSON.stringify(data.deals));
+        sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
+        return data.deals;
+      }
+    } catch(e) {
+      continue;
+    }
+  }
+  console.warn('Failed to fetch deals from any source');
+  return [];
+}
+
+// Extract a street address from a deal name like "Nu Partners – 6317 Shanda Dr, Raleigh, NC 27609"
+function extractAddress(dealName) {
+  if (!dealName) return '';
+  // Match patterns like "123 Street Name" within the deal name
+  var m = dealName.match(/(\d{2,5}\s+[A-Za-z][\w\s]+(?:Dr|St|Ave|Blvd|Rd|Ln|Way|Ct|Cir|Pl|Pkwy|Loop)[^,]*(?:,\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5})?)/i);
+  return m ? m[1].trim() : '';
+}
+
+// Extract state abbreviation from deal name or location
+function extractState(text) {
+  if (!text) return '';
+  var m = text.match(/\b([A-Z]{2})\s*\d{5}\b/) || text.match(/,\s*([A-Z]{2})\b/);
+  return m ? m[1] : '';
+}
+
+function findMatchingDeals(allDeals, propertyName, propertyAddress) {
+  if (!allDeals.length) return [];
+
+  var nameNorm = (propertyName || '').toLowerCase().trim();
+  var addrNorm = (propertyAddress || '').toLowerCase().trim();
+
+  // Also try to extract an address from the property name
+  var extractedAddr = extractAddress(propertyName).toLowerCase();
+
+  return allDeals.filter(function(d) {
+    var dName = (d.investmentName || '').toLowerCase();
+    var dAddr = (d.address || '').toLowerCase();
+    var dExtracted = extractAddress(d.investmentName).toLowerCase();
+
+    // Match by explicit address field
+    if (addrNorm && dAddr && dAddr === addrNorm) return true;
+    // Match by extracted address from name (e.g. "6317 Shanda Dr")
+    if (extractedAddr && dExtracted && extractedAddr === dExtracted) return true;
+    // Match by name containing property name or vice versa
+    if (nameNorm && dName.includes(nameNorm)) return true;
+    if (nameNorm && nameNorm.includes(dName) && dName.length > 8) return true;
+    // Match by street number + street name overlap
+    if (extractedAddr && dExtracted && extractedAddr.length > 5) {
+      var streetNum = extractedAddr.match(/^\d+/);
+      if (streetNum && dExtracted.startsWith(streetNum[0])) return true;
+    }
+    return false;
+  });
+}
+
+function findNearbyDeals(allDeals, location, assetClass, excludeIds, state) {
+  if (!allDeals.length) return [];
+
+  var locNorm = (location || '').toLowerCase();
+  var stateNorm = (state || '').toUpperCase();
+  var exclude = new Set(excludeIds || []);
+
+  // Find deals in same geography (by state from location, address, or deal name)
+  var nearby = allDeals.filter(function(d) {
+    if (exclude.has(d.id)) return false;
+    // Check state match via location fields
+    var dLoc = (d.investingGeography || d.location || '').toLowerCase();
+    if (locNorm && dLoc) {
+      var locParts = locNorm.split(',').map(function(s) { return s.trim(); });
+      var dParts = dLoc.split(',').map(function(s) { return s.trim(); });
+      if (locParts.length > 1 && dParts.length > 1 && locParts[locParts.length - 1] === dParts[dParts.length - 1]) return true;
+    }
+    // Check state match via address in deal name
+    if (stateNorm) {
+      var dState = extractState(d.investmentName) || extractState(d.investingGeography || d.location);
+      if (dState === stateNorm) return true;
+    }
+    return false;
+  });
+
+  // Sort: same asset class first, then by date
+  nearby.sort(function(a, b) {
+    var aMatch = (a.assetClass || '') === assetClass ? 1 : 0;
+    var bMatch = (b.assetClass || '') === assetClass ? 1 : 0;
+    if (aMatch !== bMatch) return bMatch - aMatch;
+    return new Date(b.addedDate || 0) - new Date(a.addedDate || 0);
+  });
+
+  return nearby.slice(0, 6);
+}
+
+// ========== RENTCAST ENRICHMENT ==========
+async function enrichWithRentCast(address) {
+  if (!address || address.length < 10) return null;
+  try {
+    var resp = await fetch('/api/property?address=' + encodeURIComponent(address));
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    if (data.success && data.properties && data.properties.length > 0) {
+      return data.properties[0];
+    }
+  } catch(e) {
+    console.log('RentCast enrichment failed:', e);
+  }
+  return null;
 }
 
 // ========== RENDER ==========
-function renderProperty(data) {
-  // Page title
-  document.title = data.name + ' - Property History - GYC Dealflow';
-  document.getElementById('mobileTitle').textContent = data.name;
+function renderHero(propertyName, address, assetClass, location, status, deals) {
+  document.title = propertyName + ' - Asset Detail - GYC Dealflow';
+  document.getElementById('mobileTitle').textContent = propertyName;
+  document.getElementById('breadcrumbName').textContent = propertyName;
 
-  // Hero image
-  const heroEl = document.getElementById('assetHero');
-  if (heroEl) {
-    const assetColors = {
-      'Multi Family': 'linear-gradient(135deg,#14532d,#22c55e)',
-      'Self Storage': 'linear-gradient(135deg,#713f12,#f59e0b)',
-      'Hotels/Hospitality': 'linear-gradient(135deg,#4a1d96,#8b5cf6)',
-      'Industrial': 'linear-gradient(135deg,#3f3f46,#71717a)',
-      'Lending': 'linear-gradient(135deg,#1a365d,#2563EB)',
-      'RV/Mobile Home Parks': 'linear-gradient(135deg,#065f46,#10b981)',
-      'Short Term Rental': 'linear-gradient(135deg,#9d174d,#ec4899)',
-      'Mixed-Use': 'linear-gradient(135deg,#1e3a5f,#0ea5e9)',
-    };
-    const assetIcons = {
-      'Multi Family': '&#127970;', 'Self Storage': '&#128230;', 'Hotels/Hospitality': '&#127976;',
-      'Industrial': '&#127981;', 'Lending': '&#128178;', 'RV/Mobile Home Parks': '&#127957;',
-      'Short Term Rental': '&#127965;', 'Mixed-Use': '&#127959;',
-    };
-    const bg = assetColors[data.propertyType] || 'linear-gradient(135deg,#1F5159,#0A1E21)';
-    const icon = assetIcons[data.propertyType] || '&#128200;';
-    heroEl.style.background = bg;
-    heroEl.innerHTML = '<span style="font-size:72px;opacity:0.25;">' + icon + '</span>' +
-      '<div style="position:absolute;bottom:16px;left:20px;color:#fff;font-family:var(--font-ui);">' +
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.7;margin-bottom:4px;">Asset Detail</div>' +
-      '<div style="font-size:22px;font-weight:800;">' + escHtml(data.name) + '</div>' +
-      '</div>';
-  }
-
-  // Property header
-  document.getElementById('propertyName').textContent = data.name;
-  document.getElementById('propertyAddress').textContent = data.address;
+  document.getElementById('heroAssetType').textContent = assetClass || 'Property';
+  document.getElementById('heroName').textContent = propertyName;
+  document.getElementById('heroAddress').textContent = address || location || '';
 
   // Tags
-  const tagsEl = document.getElementById('propertyTags');
-  let tagsHtml = '';
-  if (data.propertyType) {
-    tagsHtml += '<span class="property-tag asset-class">' + escHtml(data.propertyType) + '</span>';
+  var tagsHtml = '';
+  if (assetClass) tagsHtml += '<span class="tag tag-green">' + esc(assetClass) + '</span>';
+  if (location) tagsHtml += '<span class="tag tag-blue">' + esc(location) + '</span>';
+  if (status) {
+    var sc = statusColor(status);
+    tagsHtml += '<span class="tag tag-' + sc + '">' + esc(status) + '</span>';
   }
-  if (data.location) {
-    tagsHtml += '<span class="property-tag location-tag">' + escHtml(data.location) + '</span>';
-  }
-  if (data.currentStatus) {
-    const sc = statusClass(data.currentStatus);
-    tagsHtml += '<span class="property-tag status-' + (sc === 'green' ? 'active' : 'closed') + '">' + escHtml(data.currentStatus) + '</span>';
-  }
-  tagsEl.innerHTML = tagsHtml;
+  document.getElementById('heroTags').innerHTML = tagsHtml;
 
-  // Stats strip
-  const statsEl = document.getElementById('statsStrip');
-  const stats = [
-    { label: 'Total Deals Seen', value: data.totalDealsSeen || 0 },
-    { label: 'First Listed', value: formatDate(data.firstListed) },
-    { label: 'Last Activity', value: formatDate(data.lastActivity) },
-    { label: 'Current Status', value: data.currentStatus || '--' }
+  // Stats
+  var activeDeal = deals.find(function(d) {
+    var s = (d.status || '').toLowerCase();
+    return s.includes('open') || s.includes('active') || s.includes('evergreen');
+  });
+
+  var dates = deals.map(function(d) { return d.addedDate; }).filter(Boolean).sort();
+  var firstSeen = dates.length ? dates[0] : null;
+  var lastSeen = dates.length ? dates[dates.length - 1] : null;
+
+  var stats = [
+    { value: deals.length, label: 'Deals Tracked' },
+    { value: firstSeen ? fmtDate(firstSeen) : '--', label: 'First Seen' },
+    { value: lastSeen ? fmtDate(lastSeen) : '--', label: 'Last Activity' },
+    { value: activeDeal ? 'Open' : (deals.length ? 'Closed' : '--'), label: 'Status' }
   ];
-  statsEl.innerHTML = stats.map(s =>
-    '<div class="stat-item"><div class="stat-value">' + escHtml(String(s.value)) + '</div><div class="stat-label">' + escHtml(s.label) + '</div></div>'
-  ).join('');
 
-  // Price History Timeline
-  renderTimeline(data.timeline || []);
-
-  // Valuation Chart
-  renderValuationChart(data.timeline || []);
-
-  // Price History Table
-  renderPriceHistoryTable(data.timeline || []);
-
-  // Deal History
-  renderDeals(data.deals || []);
-
-  // Comparable Properties
-  renderComps(data.comparables || []);
-
-  // Map
-  renderMap(data.lat, data.lng, data.name);
-}
-
-function renderTimeline(events) {
-  const el = document.getElementById('priceTimeline');
-  if (!events.length) {
-    el.innerHTML = '<div class="empty-inline"><p>No price history available.</p></div>';
-    return;
-  }
-
-  // Sort chronologically (oldest first for timeline)
-  const sorted = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  el.innerHTML = sorted.map(ev => {
-    const typeClass = ev.type || 'listed';
-    let priceHtml = '';
-    if (ev.price) {
-      priceHtml = '<div class="timeline-price">' + currency(ev.price) + '</div>';
-    }
-
-    let sponsorHtml = '';
-    if (ev.sponsor) {
-      if (ev.sponsorId) {
-        sponsorHtml = '<a class="timeline-sponsor-link" href="sponsor.html?id=' + escAttr(ev.sponsorId) + '">' + escHtml(ev.sponsor) + '</a>';
-      } else if (ev.sponsorCompany) {
-        sponsorHtml = '<a class="timeline-sponsor-link" href="sponsor.html?company=' + encodeURIComponent(ev.sponsorCompany) + '">' + escHtml(ev.sponsor) + '</a>';
-      } else {
-        sponsorHtml = '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);">' + escHtml(ev.sponsor) + '</span>';
-      }
-    }
-
-    return '<div class="timeline-event">' +
-      '<div class="timeline-dot ' + typeClass + '"></div>' +
-      '<div class="timeline-date">' + formatMonthYear(ev.date) + '</div>' +
-      '<span class="timeline-type ' + typeClass + '">' + escHtml(ev.label) + '</span>' +
-      priceHtml +
-      '<div class="timeline-detail">' + escHtml(ev.description) + '</div>' +
-      (sponsorHtml ? '<div style="margin-top:6px;">' + sponsorHtml + '</div>' : '') +
-    '</div>';
+  document.getElementById('heroStats').innerHTML = stats.map(function(s) {
+    return '<div class="hero-stat"><div class="hero-stat-value">' + esc(String(s.value)) + '</div><div class="hero-stat-label">' + esc(s.label) + '</div></div>';
   }).join('');
 }
 
-function renderValuationChart(events) {
-  const sorted = [...events].filter(e => e.price).sort((a, b) => new Date(a.date) - new Date(b.date));
-  if (sorted.length < 2) return;
+function renderDeals(deals) {
+  var el = document.getElementById('dealsSection');
 
-  const labels = sorted.map(e => {
-    const d = new Date(e.date);
-    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  });
-  const prices = sorted.map(e => e.price);
-  const pointColors = sorted.map(e => {
-    if (e.type === 'offering' || e.type === 'listed') return '#51BE7B';
-    return '#8A9AA0';
-  });
-  const pointBorders = sorted.map(e => {
-    if (e.type === 'offering' || e.type === 'listed') return '#51BE7B';
-    return '#8A9AA0';
+  if (!deals.length) {
+    el.innerHTML = emptyState(
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>',
+      'No deals linked yet',
+      'As we track more deals at this address, they\'ll appear here with full metrics and sponsor details.'
+    );
+    return;
+  }
+
+  var sorted = deals.slice().sort(function(a, b) {
+    return new Date(b.addedDate || 0) - new Date(a.addedDate || 0);
   });
 
-  // Subtitle: total % change
-  const first = sorted[0].price;
-  const last = sorted[sorted.length - 1].price;
-  const totalPct = ((last - first) / first * 100).toFixed(1);
-  const subtitleEl = document.getElementById('chartSubtitle');
-  const sign = totalPct > 0 ? '+' : '';
-  const cls = totalPct >= 0 ? 'positive' : 'negative';
-  subtitleEl.innerHTML = '<span class="' + cls + '">' + sign + totalPct + '%</span> since ' + labels[0] +
-    ' (' + currency(first) + ' &rarr; ' + currency(last) + ')';
+  el.innerHTML = '<div class="deal-grid">' + sorted.map(function(d) {
+    var sc = statusColor(d.status);
+    var href = 'deal.html?id=' + encodeURIComponent(d.id);
+    return '<a class="deal-card" href="' + href + '">' +
+      '<div class="deal-card-top">' +
+        '<div class="deal-card-name">' + esc(d.investmentName) + '</div>' +
+        '<span class="deal-card-status tag-' + sc + '">' + esc(d.status || 'Open to Invest') + '</span>' +
+      '</div>' +
+      '<div class="deal-card-sponsor">' + esc(d.managementCompany || '') + '</div>' +
+      '<div class="deal-card-metrics">' +
+        '<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">' + pct(d.targetIRR) + '</div></div>' +
+        '<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">' + multiple(d.equityMultiple) + '</div></div>' +
+        '<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">' + currency(d.investmentMinimum) + '</div></div>' +
+      '</div>' +
+      '<div class="deal-card-footer">' +
+        '<span class="deal-card-type">' + esc(d.dealType || '') + (d.strategy ? ' &middot; ' + esc(d.strategy) : '') + '</span>' +
+        '<span class="deal-card-date">' + fmtDate(d.addedDate) + '</span>' +
+      '</div>' +
+    '</a>';
+  }).join('') + '</div>';
+}
 
-  const ctx = document.getElementById('valuationChart').getContext('2d');
+function renderValuationChart(deals) {
+  // Only show if we have 2+ deals with different dates and investment data
+  var points = deals
+    .filter(function(d) { return d.addedDate && d.offeringSize; })
+    .sort(function(a, b) { return new Date(a.addedDate) - new Date(b.addedDate); });
+
+  if (points.length < 2) {
+    // Show empty state for valuation
+    document.getElementById('valuationSection').style.display = 'block';
+    document.querySelector('#valuationSection .section-card').innerHTML = emptyState(
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+      'Valuation history coming soon',
+      'When multiple offerings are tracked at this property over time, you\'ll see valuation trends and price changes here.'
+    );
+    return;
+  }
+
+  document.getElementById('valuationSection').style.display = 'block';
+
+  var labels = points.map(function(d) {
+    return new Date(d.addedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  });
+  var values = points.map(function(d) { return d.offeringSize; });
+
+  var first = values[0];
+  var last = values[values.length - 1];
+  var totalPct = ((last - first) / first * 100).toFixed(1);
+  var sign = totalPct > 0 ? '+' : '';
+  var cls = totalPct >= 0 ? 'positive' : 'negative';
+  document.getElementById('chartSubtitle').innerHTML = '<span class="' + cls + '">' + sign + totalPct + '%</span> from ' + currency(first) + ' to ' + currency(last);
+
+  var ctx = document.getElementById('valuationChart').getContext('2d');
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Valuation',
-        data: prices,
+        data: values,
         borderColor: '#51BE7B',
-        backgroundColor: 'rgba(81, 190, 123, 0.08)',
+        backgroundColor: 'rgba(81,190,123,0.06)',
         fill: true,
-        tension: 0.3,
+        tension: 0.35,
         borderWidth: 3,
-        pointRadius: 7,
-        pointHoverRadius: 10,
-        pointBackgroundColor: pointColors,
-        pointBorderColor: pointBorders,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+        pointBackgroundColor: '#51BE7B',
+        pointBorderColor: '#fff',
         pointBorderWidth: 2
       }]
     },
@@ -1645,40 +1191,21 @@ function renderValuationChart(events) {
           padding: 12,
           cornerRadius: 8,
           callbacks: {
-            label: function(ctx) {
-              var val = ctx.parsed.y;
-              if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
-              if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
-              return '$' + val;
-            },
-            afterLabel: function(ctx) {
-              var ev = sorted[ctx.dataIndex];
-              var parts = [ev.label];
-              if (ev.pricePerUnit) parts.push('$' + ev.pricePerUnit.toLocaleString() + '/unit');
-              if (ev.pctChange !== null && ev.pctChange !== undefined) parts.push((ev.pctChange > 0 ? '+' : '') + ev.pctChange + '%');
-              return parts.join(' | ');
-            }
+            label: function(ctx) { return currency(ctx.parsed.y); }
           }
         }
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: {
-            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
-            color: '#8A9AA0'
-          }
+          ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
         },
         y: {
           grid: { color: '#EDF1F2' },
           ticks: {
-            font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+            font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
             color: '#8A9AA0',
-            callback: function(val) {
-              if (val >= 1000000) return '$' + (val / 1000000).toFixed(0) + 'M';
-              if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'K';
-              return '$' + val;
-            }
+            callback: function(val) { return currency(val); }
           }
         }
       }
@@ -1686,271 +1213,123 @@ function renderValuationChart(events) {
   });
 }
 
-function renderPriceHistoryTable(events) {
-  const tbody = document.getElementById('priceHistoryBody');
-  const sorted = [...events].filter(e => e.price).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  if (!sorted.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">No price history available.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = sorted.map(function(ev) {
-    var dateStr = new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    var typeClass = ev.type || 'listed';
-    if (ev.label === 'Acquired') typeClass = 'acquired';
-
-    var priceHtml = '<div class="ph-price-main">' + currency(ev.price) + '</div>';
-    if (ev.pricePerUnit) {
-      priceHtml += '<div class="ph-price-unit">$' + ev.pricePerUnit.toLocaleString() + '/unit</div>';
-    }
-
-    var changeHtml = '';
-    if (ev.pctChange !== null && ev.pctChange !== undefined) {
-      var sign = ev.pctChange > 0 ? '+' : '';
-      var changeCls = ev.pctChange > 0 ? 'positive' : (ev.pctChange < 0 ? 'negative' : 'neutral');
-      changeHtml = '<span class="ph-change ' + changeCls + '">' + sign + ev.pctChange + '%</span>';
-    } else {
-      changeHtml = '<span class="ph-change neutral">&mdash;</span>';
-    }
-
-    var buyerHtml = '';
-    if (ev.sponsor) {
-      if (ev.sponsorId) {
-        buyerHtml = '<a class="ph-buyer-link" href="sponsor.html?id=' + escAttr(ev.sponsorId) + '">' + escHtml(ev.sponsor) + '</a>';
-      } else if (ev.sponsorCompany) {
-        buyerHtml = '<a class="ph-buyer-link" href="sponsor.html?company=' + encodeURIComponent(ev.sponsorCompany) + '">' + escHtml(ev.sponsor) + '</a>';
-      } else {
-        buyerHtml = escHtml(ev.sponsor);
-      }
-    }
-
-    var deckHtml = '';
-    if (ev.deckUrl) {
-      deckHtml = '<a href="' + escAttr(ev.deckUrl) + '" target="_blank" style="color:var(--primary);font-weight:600;font-size:12px;text-decoration:none;">View PPM &rarr;</a>';
-    } else if (ev.dealId) {
-      deckHtml = '<a href="deal.html?id=' + escAttr(ev.dealId) + '" style="color:var(--primary);font-weight:600;font-size:12px;text-decoration:none;">View Deal &rarr;</a>';
-    }
-
-    return '<tr>' +
-      '<td class="ph-date">' + dateStr + '</td>' +
-      '<td><span class="ph-event ' + typeClass + '">' + escHtml(ev.label) + '</span></td>' +
-      '<td>' + priceHtml + '</td>' +
-      '<td>' + changeHtml + '</td>' +
-      '<td>' + buyerHtml + '</td>' +
-      '<td>' + deckHtml + '</td>' +
-    '</tr>';
-  }).join('');
-}
-
-function renderDeals(deals) {
-  const gridEl = document.getElementById('dealsGrid');
-  const countEl = document.getElementById('dealsCount');
-  const emptyEl = document.getElementById('dealsEmpty');
-
-  countEl.textContent = deals.length;
-
-  if (!deals.length) {
-    gridEl.style.display = 'none';
-    emptyEl.style.display = 'block';
-    return;
-  }
-
-  // Sort newest first
-  const sorted = [...deals].sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
-
-  gridEl.innerHTML = sorted.map(d => {
-    const sc = statusClass(d.status);
-    const href = d.id ? 'deal.html?id=' + encodeURIComponent(d.id) : '#';
-
-    return '<a class="deal-card" href="' + href + '">' +
-      '<div class="deal-card-header">' +
-        '<div class="deal-card-name">' + escHtml(d.name) + '</div>' +
-        '<span class="deal-card-status ' + sc + '">' + escHtml(d.status || 'Unknown') + '</span>' +
-      '</div>' +
-      '<div class="deal-card-sponsor">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' +
-        escHtml(d.sponsor) +
-      '</div>' +
-      '<div class="deal-card-metrics">' +
-        '<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">' + pct(d.targetIRR) + '</div></div>' +
-        '<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">' + multiple(d.equityMultiple) + '</div></div>' +
-        '<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">' + currency(d.minInvestment) + '</div></div>' +
-      '</div>' +
-      '<div class="deal-card-footer">' +
-        '<span class="deal-card-type">' + escHtml(d.dealType || '') + (d.strategy ? ' &middot; ' + escHtml(d.strategy) : '') + '</span>' +
-        '<span class="deal-card-date">' + formatDate(d.addedDate) + '</span>' +
-      '</div>' +
-    '</a>';
-  }).join('');
-}
-
-function renderComps(comps) {
-  const gridEl = document.getElementById('compsGrid');
-
-  if (!comps.length) {
-    gridEl.innerHTML = '<div class="empty-inline"><p>No nearby deals found.</p></div>';
-    return;
-  }
-
-  gridEl.innerHTML = comps.map(c => {
-    const href = 'asset.html?address=' + encodeURIComponent(c.address || c.name);
-    return '<a class="comp-card" href="' + href + '">' +
-      '<div class="comp-card-name">' + escHtml(c.name) + '</div>' +
-      '<div class="comp-card-location">' + escHtml(c.location || c.address) + '</div>' +
-      '<div class="comp-card-meta">' +
-        '<span><strong>' + c.deals + '</strong> deal' + (c.deals !== 1 ? 's' : '') + '</span>' +
-        '<span>' + escHtml(c.propertyType || '') + '</span>' +
-        '<span>Last: ' + formatDate(c.lastActivity) + '</span>' +
-      '</div>' +
-    '</a>';
-  }).join('');
-}
-
-function renderMap(lat, lng, name) {
-  if (!lat || !lng) {
-    document.getElementById('propertyMap').innerHTML = '<div class="empty-inline"><p>Location data not available.</p></div>';
-    return;
-  }
-
-  try {
-    const map = L.map('propertyMap').setView([lat, lng], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18
-    }).addTo(map);
-
-    L.marker([lat, lng]).addTo(map)
-      .bindPopup('<strong>' + escHtml(name) + '</strong>')
-      .openPopup();
-  } catch (e) {
-    console.warn('Map init failed:', e);
-  }
-}
-
-// ========== RENTCAST ENRICHMENT ==========
-async function enrichWithRentCast(address) {
-  if (!address) return null;
-  try {
-    const resp = await fetch('/api/property?address=' + encodeURIComponent(address));
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (data.success && data.properties && data.properties.length > 0) {
-      return data.properties[0];
-    }
-  } catch (e) {
-    console.log('RentCast enrichment failed:', e);
-  }
-  return null;
-}
-
-function renderRentCastData(rc) {
+function renderRentCast(rc) {
   if (!rc) return;
 
-  // Update hero with real coordinates if available
-  const heroEl = document.getElementById('assetHero');
-  if (heroEl && rc.yearBuilt) {
-    const existingContent = heroEl.innerHTML;
-    heroEl.innerHTML = existingContent +
-      '<div style="position:absolute;top:16px;right:20px;display:flex;gap:8px;">' +
-      (rc.yearBuilt ? '<span style="padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:700;backdrop-filter:blur(8px);">Built ' + rc.yearBuilt + '</span>' : '') +
-      (rc.squareFootage ? '<span style="padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:700;backdrop-filter:blur(8px);">' + rc.squareFootage.toLocaleString() + ' sqft</span>' : '') +
-      (rc.unitCount ? '<span style="padding:4px 12px;border-radius:100px;background:rgba(0,0,0,0.5);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:700;backdrop-filter:blur(8px);">' + rc.unitCount + ' units</span>' : '') +
-      '</div>';
+  document.getElementById('recordsSection').style.display = 'block';
+  var content = document.getElementById('recordsContent');
+
+  // Property details grid
+  var items = [];
+  if (rc.propertyType) items.push({ l: 'Property Type', v: rc.propertyType });
+  if (rc.unitCount) items.push({ l: 'Units', v: rc.unitCount });
+  if (rc.squareFootage) items.push({ l: 'Square Footage', v: rc.squareFootage.toLocaleString() + ' sqft' });
+  if (rc.lotSize) items.push({ l: 'Lot Size', v: rc.lotSize.toLocaleString() + ' sqft' });
+  if (rc.yearBuilt) items.push({ l: 'Year Built', v: rc.yearBuilt });
+  if (rc.floorCount) items.push({ l: 'Floors', v: rc.floorCount });
+  if (rc.lastSaleDate) items.push({ l: 'Last Sale', v: fmtDate(rc.lastSaleDate) });
+  if (rc.lastSalePrice) items.push({ l: 'Last Sale Price', v: '$' + rc.lastSalePrice.toLocaleString() });
+
+  var html = '';
+  if (items.length) {
+    html += '<div class="records-grid">' +
+      items.map(function(d) {
+        return '<div class="record-item"><div class="record-label">' + d.l + '</div><div class="record-value">' + d.v + '</div></div>';
+      }).join('') +
+    '</div>';
   }
 
-  // Add RentCast data card after stats
-  const statsEl = document.getElementById('statsStrip');
-  if (!statsEl) return;
-
-  // Build tax assessment rows
-  let taxRows = '';
+  // Tax assessments
   if (rc.taxAssessments) {
-    const years = Object.keys(rc.taxAssessments).sort().reverse().slice(0, 5);
-    taxRows = years.map(yr => {
-      const a = rc.taxAssessments[yr];
-      const tax = rc.propertyTaxes && rc.propertyTaxes[yr] ? rc.propertyTaxes[yr].total : null;
-      return '<tr>' +
-        '<td style="padding:8px 12px;font-weight:600;">' + yr + '</td>' +
-        '<td style="padding:8px 12px;">$' + (a.value || 0).toLocaleString() + '</td>' +
-        '<td style="padding:8px 12px;">$' + (a.land || 0).toLocaleString() + '</td>' +
-        '<td style="padding:8px 12px;">$' + ((a.improvements || a.value - a.land) || 0).toLocaleString() + '</td>' +
-        '<td style="padding:8px 12px;">' + (tax ? '$' + tax.toLocaleString() : '—') + '</td>' +
-        '</tr>';
-    }).join('');
+    var years = Object.keys(rc.taxAssessments).sort().reverse().slice(0, 5);
+    if (years.length) {
+      html += '<div style="padding:0 24px 24px;"><div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Tax Assessment History</div>' +
+        '<div style="overflow-x:auto;"><table class="tax-table"><thead><tr>' +
+        '<th>Year</th><th>Total Value</th><th>Land</th><th>Improvements</th><th>Tax</th>' +
+        '</tr></thead><tbody>' +
+        years.map(function(yr) {
+          var a = rc.taxAssessments[yr];
+          var tax = rc.propertyTaxes && rc.propertyTaxes[yr] ? rc.propertyTaxes[yr].total : null;
+          return '<tr>' +
+            '<td style="font-weight:600;">' + yr + '</td>' +
+            '<td>$' + (a.value || 0).toLocaleString() + '</td>' +
+            '<td>$' + (a.land || 0).toLocaleString() + '</td>' +
+            '<td>$' + ((a.improvements || (a.value - a.land)) || 0).toLocaleString() + '</td>' +
+            '<td>' + (tax ? '$' + tax.toLocaleString() : '--') + '</td>' +
+          '</tr>';
+        }).join('') +
+        '</tbody></table></div></div>';
+    }
   }
 
   // Owner info
-  let ownerHtml = '';
-  if (rc.owner && rc.owner.names && rc.owner.names.length > 0) {
-    ownerHtml = '<div style="margin-top:16px;padding:16px;background:var(--bg-cream);border-radius:var(--radius-sm);">' +
-      '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Owner of Record</div>' +
-      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + escHtml(rc.owner.names.join(', ')) + '</div>' +
-      (rc.owner.type ? '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + rc.owner.type + '</div>' : '') +
-      '</div>';
+  if (rc.owner && rc.owner.names && rc.owner.names.length) {
+    html += '<div style="padding:0 24px 24px;"><div style="padding:16px;background:var(--bg-cream);border-radius:var(--radius-sm);">' +
+      '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Owner of Record</div>' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + esc(rc.owner.names.join(', ')) + '</div>' +
+      (rc.owner.type ? '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + esc(rc.owner.type) + '</div>' : '') +
+    '</div></div>';
   }
 
-  // Build property details card
-  const detailItems = [];
-  if (rc.propertyType) detailItems.push({ l: 'Property Type', v: rc.propertyType });
-  if (rc.unitCount) detailItems.push({ l: 'Units', v: rc.unitCount });
-  if (rc.squareFootage) detailItems.push({ l: 'Square Footage', v: rc.squareFootage.toLocaleString() + ' sqft' });
-  if (rc.lotSize) detailItems.push({ l: 'Lot Size', v: rc.lotSize.toLocaleString() + ' sqft' });
-  if (rc.yearBuilt) detailItems.push({ l: 'Year Built', v: rc.yearBuilt });
-  if (rc.floorCount) detailItems.push({ l: 'Floors', v: rc.floorCount });
-  if (rc.lastSaleDate) detailItems.push({ l: 'Last Sale Date', v: new Date(rc.lastSaleDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
-  if (rc.lastSalePrice) detailItems.push({ l: 'Last Sale Price', v: '$' + rc.lastSalePrice.toLocaleString() });
-  if (rc.zoning) detailItems.push({ l: 'Zoning', v: rc.zoning });
-  if (rc.assessorID) detailItems.push({ l: 'Assessor ID', v: rc.assessorID });
-
-  const rcCard = document.createElement('div');
-  rcCard.className = 'section-card';
-  rcCard.style.marginTop = '20px';
-  rcCard.innerHTML = `
-    <div class="section-header" style="display:flex;align-items:center;gap:8px;">
-      <div class="section-title">Public Records</div>
-      <span style="font-family:var(--font-ui);font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px;background:rgba(37,99,235,0.08);color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;">via RentCast</span>
-    </div>
-    <div class="section-body">
-      ${detailItems.length > 0 ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:16px;">' +
-        detailItems.map(d => '<div style="padding:12px 16px;background:var(--bg-cream);border-radius:var(--radius-sm);"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">' + d.l + '</div><div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">' + d.v + '</div></div>').join('') +
-        '</div>' : ''}
-      ${taxRows ? '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;margin-top:16px;">Tax Assessment History</div>' +
-        '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">' +
-        '<thead><tr style="border-bottom:2px solid var(--border);">' +
-        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Year</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Total Value</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Land</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Improvements</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);">Tax</th>' +
-        '</tr></thead><tbody>' + taxRows + '</tbody></table></div>' : ''}
-      ${ownerHtml}
-    </div>
-  `;
-
-  // Insert after the Deal History section
-  const dealHistoryCard = document.getElementById('dealsGrid')?.closest('.section-card');
-  if (dealHistoryCard && dealHistoryCard.nextSibling) {
-    dealHistoryCard.parentNode.insertBefore(rcCard, dealHistoryCard.nextSibling);
-  } else {
-    statsEl.parentElement.appendChild(rcCard);
+  if (!html) {
+    html = emptyState(
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+      'No public records found',
+      'Property details from county records will appear here when available.'
+    );
   }
+
+  // Add source badge
+  html = '<div style="padding:16px 24px 0;"><span style="font-family:var(--font-ui);font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(37,99,235,0.08);color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;">via RentCast</span></div>' + html;
+
+  content.innerHTML = html;
 
   // Update map with real coordinates
-  if (rc.latitude && rc.longitude && typeof L !== 'undefined') {
-    try {
-      const mapEl = document.getElementById('propertyMap');
-      if (mapEl && mapEl._leaflet_id) {
-        // Map already initialized, update view
-      } else if (mapEl) {
-        const map = L.map(mapEl).setView([rc.latitude, rc.longitude], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap', maxZoom: 18
-        }).addTo(map);
-        L.marker([rc.latitude, rc.longitude]).addTo(map)
-          .bindPopup('<strong>' + escHtml(rc.address || 'Property') + '</strong>').openPopup();
-      }
-    } catch (e) { console.log('Map update failed:', e); }
+  if (rc.latitude && rc.longitude) {
+    renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
+  }
+}
+
+function renderNearby(nearbyDeals) {
+  if (!nearbyDeals.length) return;
+
+  document.getElementById('nearbySection').style.display = 'block';
+  var el = document.getElementById('nearbyContent');
+
+  el.innerHTML = '<div class="nearby-grid">' + nearbyDeals.map(function(d) {
+    var href = 'deal.html?id=' + encodeURIComponent(d.id);
+    return '<a class="nearby-card" href="' + href + '">' +
+      '<div class="nearby-name">' + esc(d.investmentName) + '</div>' +
+      '<div class="nearby-loc">' + esc(d.investingGeography || d.location || '') + '</div>' +
+      '<div class="nearby-meta">' +
+        '<span>' + esc(d.assetClass || '') + '</span>' +
+        '<span>' + esc(d.managementCompany || '') + '</span>' +
+        (d.targetIRR ? '<span>IRR: ' + pct(d.targetIRR) + '</span>' : '') +
+      '</div>' +
+    '</a>';
+  }).join('') + '</div>';
+}
+
+function renderMap(lat, lng, label) {
+  if (!lat || !lng) return;
+  var mapEl = document.getElementById('propertyMap');
+  var placeholder = document.getElementById('mapPlaceholder');
+  // Hide placeholder
+  if (placeholder) placeholder.style.display = 'none';
+  // Destroy existing map if any
+  if (mapEl._leaflet_id) {
+    mapEl._leaflet_id = null;
+    mapEl.innerHTML = '';
+  }
+  try {
+    var map = L.map(mapEl).setView([lat, lng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
+    L.marker([lat, lng]).addTo(map);
+  } catch(e) {
+    console.warn('Map failed:', e);
   }
 }
 
@@ -1958,32 +1337,96 @@ function renderRentCastData(rc) {
 async function init() {
   initAuth();
 
-  // Get params from URL
-  const params = new URLSearchParams(window.location.search);
-  const address = params.get('address') || '';
-  const dealId = params.get('id') || '';
+  var params = new URLSearchParams(window.location.search);
+  var dealId = params.get('id') || '';
+  var addressParam = params.get('address') || '';
+  var nameParam = params.get('name') || '';
 
-  // Load base property data (sample/hardcoded for now)
-  const data = getPropertyData(address || dealId);
+  // Fetch all deals from the database
+  var allDeals = await fetchAllDeals();
 
-  // Brief delay to show loading skeleton
-  await new Promise(r => setTimeout(r, 300));
+  // Find the anchor deal (if coming from a deal link)
+  var anchorDeal = null;
+  if (dealId) {
+    anchorDeal = allDeals.find(function(d) { return d.id === dealId; });
+  }
 
-  // Render with base data
-  renderProperty(data);
+  // Determine property identity
+  var dealName = anchorDeal ? anchorDeal.investmentName : '';
+  var propertyAddress = addressParam || (anchorDeal ? anchorDeal.address : '') || '';
+
+  // Try to extract a real address from the deal name if address field is empty
+  if (!propertyAddress && dealName) {
+    propertyAddress = extractAddress(dealName);
+  }
+
+  // Build a clean property name — strip sponsor prefix like "Nu Partners – " when address is separate
+  var propertyName = nameParam || dealName || addressParam || 'Unknown Property';
+  if (propertyAddress && propertyName.length > 30) {
+    // Try to extract just the property/address part after a separator
+    var sepMatch = propertyName.match(/^[^–\-\/]+[–\-\/]\s*(.+)/);
+    if (sepMatch) {
+      var afterSep = sepMatch[1].trim();
+      // If what's after the separator contains the address, use it as property name
+      if (afterSep.length > 10 && propertyAddress.substring(0, 8) && afterSep.includes(propertyAddress.substring(0, 8))) {
+        propertyName = afterSep;
+      }
+    }
+  }
+
+  var assetClass = anchorDeal ? anchorDeal.assetClass : '';
+  var location = anchorDeal ? (anchorDeal.investingGeography || anchorDeal.location) : '';
+
+  // Extract state from address or deal name for nearby matching
+  var state = extractState(propertyAddress) || extractState(dealName) || extractState(location);
+  if (!location && state) {
+    // Build location from address parts
+    var addrParts = (propertyAddress || dealName).match(/,\s*([A-Za-z\s]+),\s*[A-Z]{2}/);
+    location = addrParts ? addrParts[1].trim() + ', ' + state : state;
+  }
+
+  // Find all deals at this property
+  var matchingDeals = findMatchingDeals(allDeals, propertyName, propertyAddress);
+
+  // If we have an anchor deal but it wasn't in the matches, add it
+  if (anchorDeal && !matchingDeals.find(function(d) { return d.id === anchorDeal.id; })) {
+    matchingDeals.unshift(anchorDeal);
+  }
+
+  // If still no matching deals but we have an anchor, just show that one
+  if (!matchingDeals.length && anchorDeal) {
+    matchingDeals = [anchorDeal];
+  }
+
+  // Derive status from deals
+  var hasActive = matchingDeals.some(function(d) {
+    var s = (d.status || '').toLowerCase();
+    return s.includes('open') || s.includes('active') || s.includes('evergreen');
+  });
+  var status = hasActive ? 'Active' : (matchingDeals.length ? 'Closed' : '');
+
+  // If no asset class from anchor deal, try to get from matching deals
+  if (!assetClass && matchingDeals.length) assetClass = matchingDeals[0].assetClass || '';
+  if (!location && matchingDeals.length) location = matchingDeals[0].investingGeography || matchingDeals[0].location || '';
+
+  // Render
+  renderHero(propertyName, propertyAddress, assetClass, location, status, matchingDeals);
+  renderDeals(matchingDeals);
+  renderValuationChart(matchingDeals);
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';
   document.getElementById('loadedContent').style.display = 'block';
 
-  // Enrich with RentCast if we have a real address
-  const lookupAddress = data.address || address;
-  if (lookupAddress && lookupAddress.length > 5) {
-    const rc = await enrichWithRentCast(lookupAddress);
-    if (rc) {
-      renderRentCastData(rc);
-      console.log('RentCast enrichment successful:', rc);
-    }
+  // Find and render nearby deals
+  var matchIds = matchingDeals.map(function(d) { return d.id; });
+  var nearby = findNearbyDeals(allDeals, location, assetClass, matchIds, state);
+  renderNearby(nearby);
+
+  // RentCast enrichment (async, non-blocking)
+  if (propertyAddress && propertyAddress.length > 10) {
+    var rc = await enrichWithRentCast(propertyAddress);
+    if (rc) renderRentCast(rc);
   }
 }
 
