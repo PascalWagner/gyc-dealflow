@@ -4764,6 +4764,10 @@ async function renderDeal() {
   heroHtml += '<div id="dealSocialProof" class="hero-social-proof"></div>';
   heroHtml += '</div>'; // close hero-left
 
+  // Admin check (needed for deck gating below)
+  var _compUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var _compIsAdmin = _compUser && _compUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_compUser.email.toLowerCase()) >= 0;
+
   // Right column: View Deck CTA
   heroHtml += '<div class="hero-right">';
   var _heroPerm = deal.operatorPermission || {};
@@ -5503,7 +5507,9 @@ async function renderDeal() {
       secFilingHtml += '<div style="text-align:center;padding:8px 0;">';
       secFilingHtml += '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="opacity:0.4;margin-bottom:6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
       secFilingHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">No SEC Form D match found</div>';
-      secFilingHtml += '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);line-height:1.5;">We couldn\u2019t match this deal to a filing on EDGAR. This may mean the offering hasn\u2019t filed yet, uses a different entity name, or is exempt from filing.</div>';
+      secFilingHtml += '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;">We couldn\u2019t match this deal to a filing on EDGAR. This may mean the offering hasn\u2019t filed yet, uses a different entity name, or is exempt from filing.</div>';
+      var _edgarSearchName = encodeURIComponent(deal.managementCompany || deal.investmentName || '');
+      secFilingHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=' + _edgarSearchName + '&forms=D" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search EDGAR manually</a>';
       secFilingHtml += '</div>';
     }
     secFilingHtml += '</div></div>';
