@@ -7407,6 +7407,15 @@ async function renderDeal() {
   }
 
   // --- Deal Fit Summary (personalized per user + deal) ---
+  function parseDollar(v) {
+    if (typeof v === 'number') return v;
+    if (!v) return 0;
+    var s = String(v).replace(/[$,\s]/g, '').toLowerCase();
+    var mult = 1;
+    if (s.indexOf('k') !== -1) { mult = 1000; s = s.replace('k', ''); }
+    else if (s.indexOf('m') !== -1) { mult = 1000000; s = s.replace('m', ''); }
+    return (parseFloat(s) || 0) * mult;
+  }
   var dealFitHtml = '';
   (function buildDealFit() {
     var bb = null;
