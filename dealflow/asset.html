@@ -717,6 +717,63 @@ body {
 .op-comp-fees { text-align: left !important; font-size: 12px; }
 .op-comp-fee-item { margin-bottom: 3px; }
 
+/* ====== DEAL ECONOMICS ====== */
+.econ-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .econ-grid { grid-template-columns: 1fr; }
+}
+.econ-card {
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+}
+.econ-card-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.econ-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 14px;
+}
+.econ-row:last-child { border-bottom: none; }
+.econ-row-label { color: var(--text-secondary); }
+.econ-row-value { font-weight: 700; color: var(--text-dark); }
+.econ-row-total {
+  font-weight: 800;
+  font-size: 15px;
+  border-top: 2px solid var(--text-dark);
+  border-bottom: none;
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.econ-row-total .econ-row-label,
+.econ-row-total .econ-row-value { color: var(--text-dark); }
+.econ-bar-wrap {
+  margin-top: 16px;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+.econ-bar-seg {
+  height: 100%;
+  transition: width 0.6s ease;
+}
+
 /* ====== PUBLIC RECORDS ====== */
 .records-grid {
   display: grid;
@@ -995,14 +1052,18 @@ body {
         <div class="hero-stats" id="heroStats"></div>
       </div>
 
-      <!-- Price History (chart + table) -->
-      <div class="section" id="priceHistorySection" style="display:none;">
-        <div class="section-label">Price History</div>
-        <div class="section-card" id="priceTableCard">
-          <div id="priceTableContent"></div>
+      <!-- Asset Overview -->
+      <div class="section" id="assetOverviewSection" style="display:none;">
+        <div class="section-label">Asset Overview</div>
+        <div class="section-card">
+          <div id="assetOverviewContent" style="padding:24px;"></div>
         </div>
-        <div class="section-card" id="valuationChartCard" style="margin-top:16px;">
-          <div class="section-label" style="padding:24px 24px 0 24px;font-size:18px;margin-bottom:0;">Valuation History</div>
+      </div>
+
+      <!-- Valuation History (chart) -->
+      <div class="section" id="valuationChartSection" style="display:none;">
+        <div class="section-label">Valuation History</div>
+        <div class="section-card" id="valuationChartCard">
           <div class="chart-wrap">
             <div class="chart-subtitle" id="chartSubtitle"></div>
             <div class="chart-container">
@@ -1012,11 +1073,11 @@ body {
         </div>
       </div>
 
-      <!-- Asset Overview -->
-      <div class="section" id="assetOverviewSection" style="display:none;">
-        <div class="section-label">Asset Overview</div>
-        <div class="section-card">
-          <div id="assetOverviewContent" style="padding:24px;"></div>
+      <!-- Transaction History (table) -->
+      <div class="section" id="priceHistorySection" style="display:none;">
+        <div class="section-label">Transaction History</div>
+        <div class="section-card" id="priceTableCard">
+          <div id="priceTableContent"></div>
         </div>
       </div>
 
@@ -1025,6 +1086,14 @@ body {
         <div class="section-label">Operator Comparison</div>
         <div class="section-card">
           <div id="operatorCompContent"></div>
+        </div>
+      </div>
+
+      <!-- Deal Economics -->
+      <div class="section" id="dealEconSection" style="display:none;">
+        <div class="section-label">Deal Economics</div>
+        <div class="section-card">
+          <div id="dealEconContent" style="padding:24px;"></div>
         </div>
       </div>
 
@@ -1304,12 +1373,16 @@ function renderHero(propertyName, address, assetClass, location, status, deals) 
     if (mc && !opSet[mc]) { opSet[mc] = true; operators.push(mc); }
   });
 
+  // Purchase price for hero stat
+  var ppDeal = deals.find(function(d) { return d.purchasePrice; });
+  var ppValue = ppDeal ? currency(ppDeal.purchasePrice) : null;
+
   var stats = [
-    { value: deals.length, label: deals.length === 1 ? 'Offering' : 'Offerings' },
-    { value: operators.length || '--', label: operators.length === 1 ? 'Operator' : 'Operators' },
-    { value: firstSeen ? fmtDate(firstSeen) : '--', label: 'First Offering' },
-    { value: lastSeen ? fmtDate(lastSeen) : '--', label: 'Latest Offering' }
+    { value: operators.length || '--', label: operators.length === 1 ? 'Owner' : 'Owners' }
   ];
+  if (ppValue) stats.push({ value: ppValue, label: 'Purchase Price' });
+  if (firstSeen) stats.push({ value: fmtDate(firstSeen), label: 'First Acquired' });
+  if (lastSeen && lastSeen !== firstSeen) stats.push({ value: fmtDate(lastSeen), label: 'Latest Transaction' });
 
   document.getElementById('heroStats').innerHTML = stats.map(function(s) {
     return '<div class="hero-stat"><div class="hero-stat-value">' + esc(String(s.value)) + '</div><div class="hero-stat-label">' + esc(s.label) + '</div></div>';
@@ -1355,11 +1428,11 @@ function renderDeals(deals) {
 }
 
 function statusToEvent(status) {
-  if (!status) return { label: 'New Offering', cls: 'new-offering' };
+  if (!status) return { label: 'Acquired', cls: 'new-offering' };
   var s = status.toLowerCase();
-  if (s.includes('closed') || s.includes('fully subscribed')) return { label: 'Closed', cls: 'closed' };
-  if (s.includes('open') || s.includes('active')) return { label: 'New Offering', cls: 'new-offering' };
-  if (s.includes('evergreen')) return { label: 'Open', cls: 'open' };
+  if (s.includes('closed') || s.includes('fully subscribed')) return { label: 'Acquired', cls: 'closed' };
+  if (s.includes('open') || s.includes('active')) return { label: 'Raising', cls: 'new-offering' };
+  if (s.includes('evergreen')) return { label: 'Active', cls: 'open' };
   if (s.includes('sold') || s.includes('exited')) return { label: 'Sold', cls: 'sold' };
   if (s.includes('refinanc')) return { label: 'Refinanced', cls: 'refinanced' };
   if (s.includes('listed')) return { label: 'Listed for Sale', cls: 'listed' };
@@ -1370,7 +1443,6 @@ function statusToEvent(status) {
 function renderPriceHistory(deals, unitCount) {
   var section = document.getElementById('priceHistorySection');
   var tableEl = document.getElementById('priceTableContent');
-  var chartCard = document.getElementById('valuationChartCard');
 
   // Sort deals chronologically (newest first for table)
   var sorted = deals
@@ -1392,16 +1464,19 @@ function renderPriceHistory(deals, unitCount) {
     var ev = statusToEvent(deal.status);
     var date = new Date(deal.addedDate);
     var dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    var price = deal.offeringSize;
+    // Use purchase price (actual building cost) when available, fall back to offering size
+    var price = deal.purchasePrice || deal.offeringSize;
+    var priceLabel = deal.purchasePrice ? 'Purchase' : 'Raise';
 
-    // Calculate % change relative to previous (chronologically earlier) offering
+    // Calculate % change relative to previous (chronologically earlier) transaction
     var pctChange = null;
     if (price) {
       var idx = chronological.findIndex(function(d) { return d.id === deal.id; });
       if (idx > 0) {
         var prev = chronological[idx - 1];
-        if (prev.offeringSize) {
-          pctChange = ((price - prev.offeringSize) / prev.offeringSize * 100);
+        var prevPrice = prev.purchasePrice || prev.offeringSize;
+        if (prevPrice) {
+          pctChange = ((price - prevPrice) / prevPrice * 100);
         }
       }
     }
@@ -1431,7 +1506,7 @@ function renderPriceHistory(deals, unitCount) {
     return '<tr style="cursor:pointer;" onclick="window.location.href=\'' + dealHref + '\'">' +
       '<td><span class="price-date">' + dateStr + '</span></td>' +
       '<td><span class="event-tag ' + ev.cls + '">' + ev.label + '</span></td>' +
-      '<td>' + (price ? '<div class="price-amount">' + currency(price) + '</div>' + (perUnit ? '<div class="price-per-unit">$' + Math.round(perUnit).toLocaleString() + '/unit</div>' : '') : '&mdash;') + '</td>' +
+      '<td>' + (price ? '<div class="price-amount">' + currency(price) + '</div>' + (perUnit ? '<div class="price-per-unit">$' + Math.round(perUnit).toLocaleString() + '/unit</div>' : '') + (deal.purchasePrice && deal.offeringSize ? '<div class="price-per-unit" style="color:var(--text-muted);font-size:11px;">Raise: ' + currency(deal.offeringSize) + '</div>' : '') : '&mdash;') + '</td>' +
       '<td>' + pctHtml + '</td>' +
       '<td>' + operatorHtml + '</td>' +
       '<td class="col-deck">' + (deckHtml || '&mdash;') + '</td>' +
@@ -1443,7 +1518,7 @@ function renderPriceHistory(deals, unitCount) {
       '<thead><tr>' +
         '<th>Date</th>' +
         '<th>Event</th>' +
-        '<th>Price</th>' +
+        '<th>Purchase Price</th>' +
         '<th>% Change</th>' +
         '<th>Buyer / Operator</th>' +
         '<th class="col-deck">Deck / PPM</th>' +
@@ -1451,20 +1526,21 @@ function renderPriceHistory(deals, unitCount) {
       '<tbody>' + rows + '</tbody>' +
     '</table>';
 
-  // --- Valuation Chart (below table) ---
-  var points = chronological.filter(function(d) { return d.offeringSize; });
+  // --- Valuation Chart (separate section) ---
+  var chartSection = document.getElementById('valuationChartSection');
+  var points = chronological.filter(function(d) { return d.purchasePrice || d.offeringSize; });
 
   if (points.length < 2) {
-    chartCard.style.display = 'none';
+    chartSection.style.display = 'none';
     return;
   }
 
-  chartCard.style.display = '';
+  chartSection.style.display = 'block';
 
   var labels = points.map(function(d) {
     return new Date(d.addedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   });
-  var values = points.map(function(d) { return d.offeringSize; });
+  var values = points.map(function(d) { return d.purchasePrice || d.offeringSize; });
 
   var first = values[0];
   var last = values[values.length - 1];
@@ -1579,14 +1655,25 @@ function renderAssetOverview(deals, propertyDetails) {
   var el = document.getElementById('assetOverviewContent');
   var pd = propertyDetails || {};
 
+  // Merge structured DB fields with regex-mined details
+  var d0 = deals[0] || {};
+  var units = d0.unitCount || pd.units;
+  var yrBuilt = d0.yearBuilt;
+  var sqft = d0.squareFootage;
+  var occ = d0.occupancyPct ? Math.round(d0.occupancyPct * 100) : pd.occupancy;
+  var propType = d0.propertyType || pd.propertyType;
+  var strat = d0.strategy || pd.strategy;
+
   var items = [];
-  if (pd.units) items.push({ v: pd.units.toLocaleString(), l: 'Units' });
+  if (units) items.push({ v: Number(units).toLocaleString(), l: 'Units' });
+  if (yrBuilt) items.push({ v: String(yrBuilt), l: 'Year Built' });
+  if (sqft) items.push({ v: Number(sqft).toLocaleString() + ' SF', l: 'Square Footage' });
   if (pd.city) items.push({ v: pd.city + ', ' + (pd.state || ''), l: 'Location' });
-  if (pd.occupancy) items.push({ v: pd.occupancy + '%', l: 'Occupancy' });
-  if (pd.strategy) items.push({ v: pd.strategy, l: 'Strategy' });
-  if (pd.holdPeriod) items.push({ v: pd.holdPeriod + ' Yrs', l: 'Hold Period' });
-  if (pd.offeringType) items.push({ v: pd.offeringType, l: 'Offering Type' });
-  if (pd.propertyType) items.push({ v: pd.propertyType, l: 'Property Type' });
+  if (occ) items.push({ v: occ + '%', l: 'Occupancy' });
+  if (strat) items.push({ v: strat, l: 'Strategy' });
+  if (d0.holdPeriod || pd.holdPeriod) items.push({ v: (d0.holdPeriod || pd.holdPeriod) + ' Yrs', l: 'Hold Period' });
+  if (d0.offeringType || pd.offeringType) items.push({ v: d0.offeringType || pd.offeringType, l: 'Offering Type' });
+  if (propType) items.push({ v: propType, l: 'Property Type' });
 
   // Get best strategy text
   var strategyTexts = deals
@@ -1637,7 +1724,10 @@ function renderOperatorComparison(deals) {
       if (d.mcType) html += '<div class="op-comp-sub">' + esc(d.mcType) + '</div>';
       return html;
     }},
-    { label: 'Offering Size', key: 'offeringSize', fmt: function(d) {
+    { label: 'Purchase Price', key: 'purchasePrice', fmt: function(d) {
+      return d.purchasePrice ? '<div class="op-comp-value">' + currency(d.purchasePrice) + '</div>' : '--';
+    }},
+    { label: 'Equity Raise', key: 'offeringSize', fmt: function(d) {
       return d.offeringSize ? '<div class="op-comp-value">' + currency(d.offeringSize) + '</div>' : '--';
     }},
     { label: 'Target IRR', key: 'targetIRR', fmt: function(d) {
@@ -1668,6 +1758,19 @@ function renderOperatorComparison(deals) {
       var ev = statusToEvent(d.status);
       return '<span class="event-tag ' + ev.cls + '">' + ev.label + '</span>';
     }},
+    { label: 'Acquisition Fee', key: 'acquisitionFeePct', fmt: function(d) {
+      return d.acquisitionFeePct ? '<div class="op-comp-value">' + pct(d.acquisitionFeePct) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Asset Mgmt Fee', key: 'assetMgmtFeePct', fmt: function(d) {
+      return d.assetMgmtFeePct ? '<div class="op-comp-value">' + pct(d.assetMgmtFeePct) + ' / yr</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Property Mgmt Fee', key: 'propertyMgmtFeePct', fmt: function(d) {
+      return d.propertyMgmtFeePct ? '<div class="op-comp-value">' + pct(d.propertyMgmtFeePct) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Disposition Fee', key: 'dispositionFeePct', fmt: function(d) {
+      var fee = d.dispositionFeePct || d.capitalEventFeePct;
+      return fee ? '<div class="op-comp-value">' + pct(fee) + '</div>' : '--';
+    }, compare: 'lower'},
     { label: 'Fees', key: 'fees', fmt: function(d) {
       if (!d.fees || !d.fees.length) return '--';
       return '<div class="op-comp-fees">' + d.fees.map(function(f) {
@@ -1708,6 +1811,119 @@ function renderOperatorComparison(deals) {
   });
 
   html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderDealEconomics(deals) {
+  var section = document.getElementById('dealEconSection');
+  var el = document.getElementById('dealEconContent');
+
+  var hasPurchasePrice = deals.some(function(d) { return d.purchasePrice; });
+  var hasDetailedFees = deals.some(function(d) { return d.fees && d.fees.length > 0 || d.acquisitionFeePct || d.assetMgmtFeePct; });
+  var hasReturns = deals.some(function(d) { return d.preferredReturn || d.targetIRR || d.equityMultiple; });
+  var hasLoan = deals.some(function(d) { return d.acquisitionLoan || d.loanToValue; });
+
+  if (!hasPurchasePrice && !hasDetailedFees && !hasReturns) return;
+
+  section.style.display = 'block';
+
+  var deal = deals.find(function(d) { return d.purchasePrice; }) || deals[0];
+  var html = '<div class="econ-grid">';
+
+  // ─── Sources & Uses card ───
+  if (hasPurchasePrice || hasLoan) {
+    html += '<div class="econ-card">';
+    html += '<div class="econ-card-title">Sources & Uses</div>';
+
+    var pp = deal.purchasePrice;
+    var equity = deal.offeringSize || 0;
+    var debt = deal.acquisitionLoan || (pp && pp > equity ? pp - equity : 0);
+    var ltv = deal.loanToValue ? (deal.loanToValue * 100).toFixed(0) : (pp && debt > 0 ? (debt / pp * 100).toFixed(0) : null);
+
+    if (pp) html += '<div class="econ-row"><span class="econ-row-label">Purchase Price</span><span class="econ-row-value">' + currency(pp) + '</span></div>';
+    if (debt > 0) html += '<div class="econ-row"><span class="econ-row-label">Acquisition Loan' + (deal.acquisitionLoan ? '' : ' (est.)') + '</span><span class="econ-row-value">' + currency(debt) + '</span></div>';
+    if (equity) html += '<div class="econ-row"><span class="econ-row-label">LP Equity Raise</span><span class="econ-row-value">' + currency(equity) + '</span></div>';
+    if (deal.capexBudget) html += '<div class="econ-row"><span class="econ-row-label">Capex / Renovation</span><span class="econ-row-value">' + currency(deal.capexBudget) + '</span></div>';
+    if (deal.closingCosts) html += '<div class="econ-row"><span class="econ-row-label">Closing Costs</span><span class="econ-row-value">' + currency(deal.closingCosts) + '</span></div>';
+
+    // LTV bar
+    if (ltv && ltv > 0) {
+      html += '<div class="econ-row" style="border-bottom:none;"><span class="econ-row-label">LTV' + (deal.loanToValue ? '' : ' (est.)') + '</span><span class="econ-row-value">' + ltv + '%</span></div>';
+      html += '<div class="econ-bar-wrap">' +
+        '<div class="econ-bar-seg" style="width:' + ltv + '%;background:var(--blue);"></div>' +
+        '<div class="econ-bar-seg" style="width:' + (100 - ltv) + '%;background:var(--green);"></div>' +
+      '</div>';
+      html += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;"><span>Debt ' + ltv + '%</span><span>Equity ' + (100 - ltv) + '%</span></div>';
+    }
+
+    // Loan details
+    if (deal.loanRate || deal.loanTermYears || deal.loanIOYears) {
+      html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Loan Terms</div>';
+      if (deal.loanRate) html += '<div class="econ-row"><span class="econ-row-label">Interest Rate</span><span class="econ-row-value">' + pct(deal.loanRate) + '</span></div>';
+      if (deal.loanTermYears) html += '<div class="econ-row"><span class="econ-row-label">Loan Term</span><span class="econ-row-value">' + deal.loanTermYears + ' Years</span></div>';
+      if (deal.loanIOYears) html += '<div class="econ-row"><span class="econ-row-label">Interest-Only Period</span><span class="econ-row-value">' + deal.loanIOYears + ' Years</span></div>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  // ─── Returns & Fees card ───
+  if (hasReturns || hasDetailedFees) {
+    html += '<div class="econ-card">';
+    html += '<div class="econ-card-title">Returns & Fees</div>';
+
+    if (deal.preferredReturn) html += '<div class="econ-row"><span class="econ-row-label">Preferred Return</span><span class="econ-row-value">' + pct(deal.preferredReturn) + '</span></div>';
+    if (deal.targetIRR) html += '<div class="econ-row"><span class="econ-row-label">Target IRR</span><span class="econ-row-value">' + pct(deal.targetIRR) + '</span></div>';
+    if (deal.equityMultiple) html += '<div class="econ-row"><span class="econ-row-label">Equity Multiple</span><span class="econ-row-value">' + multiple(deal.equityMultiple) + '</span></div>';
+    if (deal.cashOnCash) html += '<div class="econ-row"><span class="econ-row-label">Cash-on-Cash</span><span class="econ-row-value">' + pct(deal.cashOnCash) + '</span></div>';
+    if (deal.lpGpSplit) html += '<div class="econ-row"><span class="econ-row-label">LP / GP Split</span><span class="econ-row-value">' + esc(deal.lpGpSplit) + '</span></div>';
+    if (deal.holdPeriod) html += '<div class="econ-row"><span class="econ-row-label">Hold Period</span><span class="econ-row-value">' + deal.holdPeriod + ' Years</span></div>';
+    if (deal.distributions) html += '<div class="econ-row"><span class="econ-row-label">Distributions</span><span class="econ-row-value">' + esc(deal.distributions) + '</span></div>';
+    if (deal.investmentMinimum) html += '<div class="econ-row"><span class="econ-row-label">Minimum Investment</span><span class="econ-row-value">' + currency(deal.investmentMinimum) + '</span></div>';
+
+    // Waterfall details
+    if (deal.waterfallDetails && deal.waterfallDetails.length > 0) {
+      html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Distribution Waterfall</div>';
+      deal.waterfallDetails.forEach(function(tier) {
+        html += '<div class="econ-row"><span class="econ-row-label">' + esc(tier.tier || tier.threshold || '') + '</span><span class="econ-row-value">' + esc(tier.split || '') + '</span></div>';
+      });
+      html += '</div>';
+    }
+
+    // Fee breakdown — prefer structured fields, fallback to text array
+    var hasStructuredFees = deal.acquisitionFeePct || deal.assetMgmtFeePct || deal.propertyMgmtFeePct || deal.capitalEventFeePct || deal.dispositionFeePct || deal.constructionMgmtFeePct;
+    if (hasStructuredFees || (deal.fees && deal.fees.length > 0)) {
+      html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
+      html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Fee Structure</div>';
+
+      if (hasStructuredFees) {
+        if (deal.acquisitionFeePct) html += '<div class="econ-row"><span class="econ-row-label">Acquisition Fee</span><span class="econ-row-value">' + pct(deal.acquisitionFeePct) + '</span></div>';
+        if (deal.assetMgmtFeePct) html += '<div class="econ-row"><span class="econ-row-label">Asset Management</span><span class="econ-row-value">' + pct(deal.assetMgmtFeePct) + ' / yr</span></div>';
+        if (deal.propertyMgmtFeePct) html += '<div class="econ-row"><span class="econ-row-label">Property Management</span><span class="econ-row-value">' + pct(deal.propertyMgmtFeePct) + '</span></div>';
+        if (deal.capitalEventFeePct) html += '<div class="econ-row"><span class="econ-row-label">Capital Event Fee</span><span class="econ-row-value">' + pct(deal.capitalEventFeePct) + '</span></div>';
+        if (deal.dispositionFeePct) html += '<div class="econ-row"><span class="econ-row-label">Disposition Fee</span><span class="econ-row-value">' + pct(deal.dispositionFeePct) + '</span></div>';
+        if (deal.constructionMgmtFeePct) html += '<div class="econ-row"><span class="econ-row-label">Construction Mgmt</span><span class="econ-row-value">' + pct(deal.constructionMgmtFeePct) + '</span></div>';
+      } else {
+        deal.fees.forEach(function(f) {
+          html += '<div class="econ-row"><span class="econ-row-label">' + esc(f) + '</span></div>';
+        });
+      }
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  html += '</div>';
+
+  if (deals.length > 1 && hasPurchasePrice) {
+    var dealLabel = deal.managementCompany || 'latest deal';
+    html += '<div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;">Showing economics for ' + esc(dealLabel) + '</div>';
+  }
+
   el.innerHTML = html;
 }
 
@@ -2031,6 +2247,7 @@ async function init() {
   renderPriceHistory(matchingDeals, null);
   renderAssetOverview(matchingDeals, propertyDetails);
   renderOperatorComparison(matchingDeals);
+  renderDealEconomics(matchingDeals);
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';

@@ -20,7 +20,8 @@
     "@capacitor/splash-screen": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
     "@supabase/supabase-js": "^2.99.3",
-    "fast-xml-parser": "^4.5.4"
+    "fast-xml-parser": "^4.5.4",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",

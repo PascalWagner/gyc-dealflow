@@ -175,6 +175,28 @@ export default async function handler(req, res) {
           shareClasses: parentMap[d.id] || null,
           isStale: staleness.isStale,
           stalenessReason: staleness.reason,
+          // Property details
+          unitCount: d.unit_count,
+          yearBuilt: d.year_built,
+          squareFootage: d.square_footage,
+          occupancyPct: d.occupancy_pct,
+          propertyType: d.property_type,
+          // Sources & Uses / Loan
+          acquisitionLoan: d.acquisition_loan,
+          loanToValue: d.loan_to_value,
+          loanRate: d.loan_rate,
+          loanTermYears: d.loan_term_years,
+          loanIOYears: d.loan_io_years,
+          capexBudget: d.capex_budget,
+          closingCosts: d.closing_costs,
+          // Fee structure
+          acquisitionFeePct: d.acquisition_fee_pct,
+          assetMgmtFeePct: d.asset_mgmt_fee_pct,
+          propertyMgmtFeePct: d.property_mgmt_fee_pct,
+          capitalEventFeePct: d.capital_event_fee_pct,
+          dispositionFeePct: d.disposition_fee_pct,
+          constructionMgmtFeePct: d.construction_mgmt_fee_pct,
+          waterfallDetails: d.waterfall_details,
           // SEC EDGAR fields
           secCik: d.sec_cik || '',
           dateOfFirstSale: d.date_of_first_sale,

@@ -22,7 +22,8 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "equityMultiple": "Target equity multiple (e.g. 2.0)",
   "investmentMinimum": "Minimum investment in dollars (number only)",
   "holdPeriod": "Hold period / lockup in years (number only)",
-  "offeringSize": "Total offering size in dollars (number only)",
+  "offeringSize": "Total offering size / equity raise in dollars (number only)",
+  "purchasePrice": "Actual property purchase price from Sources & Uses table (number only). This is the total acquisition cost of the property, NOT the equity raise",
   "offeringType": "506(b) or 506(c)",
   "availableTo": "Accredited Investors, Qualified Purchasers, etc.",
   "distributions": "Monthly, Quarterly, Annual, or None",
@@ -35,14 +36,37 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "fundAUM": "Current AUM in dollars if mentioned",
   "redemption": "Redemption terms if mentioned",
   "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
-  "taxForm": "K-1, 1099, etc."
+  "taxForm": "K-1, 1099, etc.",
+  "propertyAddress": "Full street address of the property if a single-asset deal",
+  "unitCount": "Number of units (apartments, storage units, etc.)",
+  "yearBuilt": "Year the property was built",
+  "squareFootage": "Total square footage",
+  "occupancyPct": "Current occupancy as decimal (0.92 = 92%)",
+  "propertyType": "Garden Style, Mid-Rise, High-Rise, Townhome, etc.",
+  "acquisitionLoan": "Senior debt / acquisition loan amount (number only)",
+  "loanToValue": "Loan-to-value ratio as decimal (0.75 = 75%)",
+  "loanRate": "Interest rate on acquisition loan as decimal",
+  "loanTermYears": "Loan term in years",
+  "loanIOYears": "Interest-only period in years",
+  "capexBudget": "Capital expenditure / renovation budget in dollars",
+  "closingCosts": "Closing costs in dollars",
+  "acquisitionFeePct": "One-time acquisition fee as decimal (0.02 = 2%)",
+  "assetMgmtFeePct": "Annual asset management fee as decimal",
+  "propertyMgmtFeePct": "Property management fee as decimal",
+  "capitalEventFeePct": "Capital event / disposition fee as decimal",
+  "dispositionFeePct": "Disposition fee as decimal (if separate from capital event fee)",
+  "constructionMgmtFeePct": "Construction management fee as decimal",
+  "waterfallDetails": "Array of waterfall tiers, e.g. [{\"tier\": \"First\", \"threshold\": \"8% pref\", \"split\": \"100/0 LP/GP\"}, {\"tier\": \"Second\", \"threshold\": \"above 8%\", \"split\": \"80/20 LP/GP\"}]"
 }
 
 IMPORTANT:
 - For percentages, convert to decimals (15% → 0.15)
 - For dollar amounts, return raw numbers (no $ or commas)
 - If a field clearly doesn't apply to this deal type, use null
-- Be precise — only extract what's explicitly stated, don't infer`;
+- Be precise — only extract what's explicitly stated, don't infer
+- For the waterfall, return a JSON array of tier objects with "tier", "threshold", and "split" keys
+- purchasePrice is the PROPERTY acquisition cost from Sources & Uses, NOT the equity raise (offeringSize)
+- For fees, extract BOTH the "fees" field (full text description) AND the individual fee percentage fields`;
 
 // Map Claude extraction keys → Supabase column names
 const SUPABASE_FIELD_MAP = {
@@ -58,6 +82,7 @@ const SUPABASE_FIELD_MAP = {
   investmentMinimum:   'investment_minimum',
   holdPeriod:          'hold_period_years',
   offeringSize:        'offering_size',
+  purchasePrice:       'purchase_price',
   offeringType:        'offering_type',
   availableTo:         'available_to',
   distributions:       'distributions',
@@ -69,6 +94,26 @@ const SUPABASE_FIELD_MAP = {
   debtPosition:        'debt_position',
   fundAUM:             'fund_aum',
   sponsorCoinvest:     'sponsor_in_deal_pct',
+  propertyAddress:        'property_address',
+  unitCount:              'unit_count',
+  yearBuilt:              'year_built',
+  squareFootage:          'square_footage',
+  occupancyPct:           'occupancy_pct',
+  propertyType:           'property_type',
+  acquisitionLoan:        'acquisition_loan',
+  loanToValue:            'loan_to_value',
+  loanRate:               'loan_rate',
+  loanTermYears:          'loan_term_years',
+  loanIOYears:            'loan_io_years',
+  capexBudget:            'capex_budget',
+  closingCosts:           'closing_costs',
+  acquisitionFeePct:      'acquisition_fee_pct',
+  assetMgmtFeePct:        'asset_mgmt_fee_pct',
+  propertyMgmtFeePct:     'property_mgmt_fee_pct',
+  capitalEventFeePct:     'capital_event_fee_pct',
+  dispositionFeePct:      'disposition_fee_pct',
+  constructionMgmtFeePct: 'construction_mgmt_fee_pct',
+  waterfallDetails:       'waterfall_details',
 };
 
 export default async function handler(req, res) {
@@ -100,7 +145,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 4000,
         messages: [{
           role: 'user',
           content: EXTRACTION_PROMPT + '\n\nDOCUMENT TEXT:\n' + truncated
