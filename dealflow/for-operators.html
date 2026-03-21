@@ -74,27 +74,181 @@ body {
   text-align: center;
   max-width: 800px;
   margin: 0 auto;
+  position: relative;
+}
+.hero-dark {
+  background: linear-gradient(135deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
+  padding: 120px 24px 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero-dark::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(81,190,123,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 20%, rgba(64,228,127,0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+.hero-dark-inner {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 .hero-eyebrow {
   font-family: var(--font-ui);
   font-size: 13px; font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: var(--primary);
+  color: var(--accent-green);
   margin-bottom: 16px;
 }
-.hero h1 {
+.hero-dark h1 {
   font-family: var(--font-headline);
   font-size: clamp(36px, 5vw, 56px);
   line-height: 1.15;
-  color: var(--teal-midnight);
+  color: #fff;
   margin-bottom: 24px;
 }
-.hero p {
+.hero-dark > p, .hero-dark .hero-desc {
   font-size: 20px;
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.6);
   max-width: 600px;
   margin: 0 auto 40px;
+}
+.hero-optin {
+  max-width: 520px;
+  margin: 0 auto;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 32px;
+  backdrop-filter: blur(8px);
+}
+.hero-optin-title {
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.hero-optin-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 20px;
+}
+.hero-optin-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.hero-optin-input {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 15px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  transition: border-color 0.2s;
+}
+.hero-optin-input::placeholder { color: rgba(255,255,255,0.35); }
+.hero-optin-input:focus {
+  outline: none;
+  border-color: var(--accent-green);
+  background: rgba(255,255,255,0.12);
+}
+.hero-optin-select {
+  font-family: var(--font-body);
+  font-size: 15px;
+  padding: 14px 36px 14px 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.5)' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  transition: border-color 0.2s;
+  min-width: 160px;
+}
+.hero-optin-select:focus {
+  outline: none;
+  border-color: var(--accent-green);
+}
+.hero-optin-select option { color: var(--text-dark); background: #fff; }
+.hero-optin-btn {
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 16px; font-weight: 700;
+  background: var(--accent-green); color: var(--teal-midnight);
+  border: none; border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  letter-spacing: 0.3px;
+}
+.hero-optin-btn:hover { background: #4df590; transform: translateY(-1px); }
+.hero-optin-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.hero-optin-fine {
+  font-size: 12px;
+  color: rgba(255,255,255,0.3);
+  margin-top: 12px;
+}
+.hero-optin-result {
+  display: none;
+  text-align: center;
+  padding: 8px 0;
+}
+.hero-optin-result-amount {
+  font-family: var(--font-headline);
+  font-size: clamp(40px, 5vw, 56px);
+  color: var(--accent-green);
+  margin-bottom: 4px;
+}
+.hero-optin-result-label {
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+.hero-optin-result-investors {
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 20px;
+}
+.hero-optin-result-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 15px; font-weight: 600;
+  background: var(--accent-green); color: var(--teal-midnight);
+  border: none; border-radius: var(--radius-sm);
+  padding: 14px 28px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.hero-optin-result-cta:hover { background: #4df590; }
+.hero-trust-row {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+}
+.hero-trust-item {
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  display: flex; align-items: center; gap: 6px;
+}
+.hero-trust-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
 }
 .hero-cta {
   display: inline-flex; align-items: center; gap: 8px;
@@ -771,6 +925,9 @@ body {
   .demand-callout { flex-direction: column; text-align: center; padding: 36px 24px; }
   .preview-metrics { grid-template-columns: repeat(2, 1fr); }
   .section { padding: 60px 20px; }
+  .hero-optin-row { flex-direction: column; }
+  .hero-optin-select { min-width: unset; }
+  .hero-trust-row { gap: 16px; }
   .webinar-inner { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
 }
@@ -789,12 +946,50 @@ body {
 </nav>
 
 <!-- Hero -->
-<section class="hero">
-  <div class="hero-eyebrow">For Sponsors & Operators</div>
-  <h1>Get your deals in front of investors who are ready to write checks</h1>
-  <p>Our investors have completed buy-box exercises. They know what they want. When your deal matches, they act.</p>
-  <a href="#submit-deal" class="hero-cta">Submit Your First Deal &rarr;</a>
-  <div class="hero-sub">Free to list. Always.</div>
+<section class="hero-dark">
+  <div class="hero-dark-inner">
+    <div class="hero-eyebrow">For Sponsors & Operators</div>
+    <h1>Your investors are already here. They told us what they want.</h1>
+    <p class="hero-desc">600+ accredited investors have completed buy-box exercises on our platform. They've told us their target asset class, check size, and return threshold. See how much capital is waiting for deals like yours.</p>
+
+    <div class="hero-optin" id="heroOptin">
+      <div class="hero-optin-title">See investor demand for your asset class</div>
+      <div class="hero-optin-sub">Instant results — no sales call required</div>
+      <form id="heroOptinForm" onsubmit="return handleHeroOptin(event)">
+        <div class="hero-optin-row">
+          <input type="email" class="hero-optin-input" name="email" required placeholder="you@company.com">
+          <select class="hero-optin-select" name="assetClass" required>
+            <option value="">Asset class...</option>
+            <option value="multifamily">Multifamily</option>
+            <option value="industrial">Industrial</option>
+            <option value="self-storage">Self-Storage</option>
+            <option value="mobile-home">Mobile Home Parks</option>
+            <option value="lending">Private Credit / Lending</option>
+            <option value="dst">DST / 1031</option>
+            <option value="opportunity-zone">Opportunity Zone</option>
+            <option value="mixed">Mixed / Diversified</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <button type="submit" class="hero-optin-btn" id="heroOptinBtn">Show Me the Demand &rarr;</button>
+        <div class="hero-optin-fine">Free. No spam. Just data.</div>
+      </form>
+
+      <div class="hero-optin-result" id="heroOptinResult">
+        <div class="hero-optin-result-amount" id="heroResultAmount">$5.2M</div>
+        <div class="hero-optin-result-label" id="heroResultLabel">ready to deploy into multifamily</div>
+        <div class="hero-optin-result-investors" id="heroResultInvestors">from 47 investors actively looking for this asset class</div>
+        <a href="#submit-deal" class="hero-optin-result-cta">List Your Deal Now &rarr;</a>
+      </div>
+    </div>
+
+    <div class="hero-trust-row">
+      <div class="hero-trust-item"><span class="hero-trust-dot"></span> Free to list</div>
+      <div class="hero-trust-item"><span class="hero-trust-dot"></span> Live in 48 hours</div>
+      <div class="hero-trust-item"><span class="hero-trust-dot"></span> Not a broker-dealer</div>
+      <div class="hero-trust-item"><span class="hero-trust-dot"></span> 600+ accredited investors</div>
+    </div>
+  </div>
 </section>
 
 <!-- Social proof stats -->
@@ -1330,6 +1525,50 @@ function showSuccess() {
   document.getElementById('formSuccess').style.display = 'block';
   document.getElementById('submitBtn').disabled = false;
   document.getElementById('submitBtn').textContent = 'Submit Deal for Review';
+}
+
+// Hero opt-in — show demand data by asset class
+var demandData = {
+  'multifamily': { amount: '$5.2M', investors: 47, label: 'ready to deploy into multifamily' },
+  'industrial': { amount: '$3.8M', investors: 31, label: 'ready to deploy into industrial' },
+  'self-storage': { amount: '$2.1M', investors: 24, label: 'ready to deploy into self-storage' },
+  'mobile-home': { amount: '$1.6M', investors: 18, label: 'ready to deploy into mobile home parks' },
+  'lending': { amount: '$4.7M', investors: 39, label: 'ready to deploy into private credit' },
+  'dst': { amount: '$2.9M', investors: 22, label: 'looking for DST / 1031 exchanges' },
+  'opportunity-zone': { amount: '$1.3M', investors: 11, label: 'looking for opportunity zone deals' },
+  'mixed': { amount: '$3.4M', investors: 28, label: 'ready to deploy into diversified funds' },
+  'other': { amount: '$1.8M', investors: 15, label: 'exploring alternative investments' }
+};
+
+function handleHeroOptin(e) {
+  e.preventDefault();
+  var btn = document.getElementById('heroOptinBtn');
+  var form = document.getElementById('heroOptinForm');
+  var result = document.getElementById('heroOptinResult');
+  var email = form.querySelector('[name="email"]').value;
+  var assetClass = form.querySelector('[name="assetClass"]').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+
+  // Send lead to API (fire and forget)
+  fetch('/api/deck-submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, assetClass: assetClass, source: 'hero-optin' })
+  }).catch(function() {});
+
+  // Show demand data after brief delay for effect
+  setTimeout(function() {
+    var data = demandData[assetClass] || demandData['other'];
+    document.getElementById('heroResultAmount').textContent = data.amount;
+    document.getElementById('heroResultLabel').textContent = data.label;
+    document.getElementById('heroResultInvestors').textContent = 'from ' + data.investors + ' investors actively looking for this asset class';
+    form.style.display = 'none';
+    result.style.display = 'block';
+  }, 800);
+
+  return false;
 }
 
 // Smooth scroll for anchor links
