@@ -4814,11 +4814,11 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   display: none;
   position: relative;
   width: 100%;
-  height: calc(100vh - 210px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  height: calc(100vh - 180px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   min-height: 420px;
   overflow: hidden;
   touch-action: pan-y;
-  padding: 0 0 8px;
+  padding: 0;
 }
 .swipe-card-stack {
   position: relative;
@@ -5054,7 +5054,7 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   font-family: var(--font-ui);
   font-size: 11px;
   color: var(--text-muted);
-  padding: 8px 0 4px;
+  padding: 2px 0;
   font-weight: 600;
 }
 
@@ -5063,7 +5063,7 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   display: none;
   justify-content: center;
   gap: 0;
-  padding: 8px 16px;
+  padding: 6px 16px 2px;
   background: var(--bg-cream);
 }
 .mobile-view-toggle-btn {
@@ -5121,6 +5121,8 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 /* Show mobile view toggle only on mobile */
 @media (max-width: 768px) {
   .mobile-view-toggle { display: flex; }
+  /* Tighten content-area when swipe is visible */
+  #page-deals .content-area { padding-top: 4px; }
 }
 
 /* Undo toast */
@@ -5360,7 +5362,7 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
-    <!-- Mobile View Toggle: Swipe vs Speed -->
+    <!-- Mobile View Toggle: Swipe vs Feed -->
     <div class="mobile-view-toggle" id="mobileViewToggle">
       <button class="mobile-view-toggle-btn active" data-mobile-view="swipe" onclick="switchMobileView('swipe')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
@@ -5368,7 +5370,7 @@ const _supa = window.supabase.createClient(
       </button>
       <button class="mobile-view-toggle-btn" data-mobile-view="speed" onclick="switchMobileView('speed')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Speed View
+        Feed
       </button>
     </div>
     <div class="content-area">
