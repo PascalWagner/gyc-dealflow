@@ -166,53 +166,17 @@ export default async function handler(req, res) {
 }
 
 // ── PDF text extraction ─────────────────────────────────────────────────────
-// Extracts readable text from a PDF buffer using a lightweight approach:
-// strips binary content and pulls out text runs between stream markers and
-// plain text sequences. Not perfect, but gives Claude enough to work with.
-function extractTextFromPdfBuffer(buffer) {
-  const raw = buffer.toString('latin1');
-  const textChunks = [];
-
-  // Method 1: Extract text between BT (Begin Text) and ET (End Text) operators
-  const btEtRegex = /BT\s([\s\S]*?)ET/g;
-  let match;
-  while ((match = btEtRegex.exec(raw)) !== null) {
-    // Pull out strings in parentheses (PDF literal strings)
-    const parenStrings = match[1].match(/\(([^)]*)\)/g);
-    if (parenStrings) {
-      for (const s of parenStrings) {
-        const cleaned = s.slice(1, -1)
-          .replace(/\\n/g, '\n')
-          .replace(/\\r/g, '')
-          .replace(/\\\(/g, '(')
-          .replace(/\\\)/g, ')')
-          .replace(/\\\\/g, '\\');
-        if (cleaned.trim()) textChunks.push(cleaned);
-      }
-    }
-  }
-
-  // Method 2: Also try extracting from stream objects (for text-heavy PDFs)
-  if (textChunks.join('').length < 500) {
-    // Fallback: grab anything that looks like readable text
-    const readableRegex = /[\x20-\x7E]{10,}/g;
-    let readMatch;
-    while ((readMatch = readableRegex.exec(raw)) !== null) {
-      const chunk = readMatch[0].trim();
-      // Filter out binary-looking sequences
-      if (chunk && !/^[A-Fa-f0-9\s]+$/.test(chunk) && !/^[\/\[\]<>{}]+$/.test(chunk)) {
-        textChunks.push(chunk);
-      }
-    }
-  }
-
-  return textChunks.join(' ').substring(0, 50000);
+// Uses pdf-parse library for proper text extraction from PDF buffers.
+async function extractTextFromPdfBuffer(buffer) {
+  const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
+  const result = await pdfParse(buffer);
+  return (result.text || '').substring(0, 80000);
 }
 
 // ── Claude enrichment logic ─────────────────────────────────────────────────
 async function enrichFromPdfBuffer(fileBuffer) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const pdfText = extractTextFromPdfBuffer(fileBuffer);
+  const pdfText = await extractTextFromPdfBuffer(fileBuffer);
 
   if (!pdfText || pdfText.length < 100) {
     return { enriched: false, enrichedFields: [], reason: 'Insufficient text extracted from PDF' };

@@ -2,6 +2,9 @@
   "buildCommand": "",
   "installCommand": "",
   "framework": null,
+  "functions": {
+    "api/deck-upload.js": { "maxDuration": 60 }
+  },
   "headers": [
     {
       "source": "/(.*)",

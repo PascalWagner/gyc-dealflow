@@ -8271,7 +8271,8 @@ async function submitDeck(dealId, dealName) {
   }
 
   submitBtn.disabled = true;
-  submitBtn.textContent = hasFile ? 'Uploading...' : 'Submitting...';
+  var isPpm = docType === 'ppm';
+  submitBtn.textContent = hasFile ? (isPpm ? 'Uploading & analyzing PPM...' : 'Uploading...') : 'Submitting...';
 
   var userEmail = '';
   var userName = '';
@@ -8313,7 +8314,8 @@ async function submitDeck(dealId, dealName) {
           showEnrichmentWizard(dealId, data.extractedData, data.driveUrl, docLabel, userEmail);
         } else {
           var successMsg = document.getElementById('deckSuccessMsg');
-          if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '');
+          var enrichNote = (docType === 'ppm' && data.enrichmentError) ? '<br><span style="font-size:12px;color:var(--text-muted);">Auto-extraction couldn\u2019t parse this document. You can fill in the fields manually.</span>' : '';
+          if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '') + enrichNote;
           document.getElementById('deckModalSuccess').style.display = 'block';
         }
       } else {
