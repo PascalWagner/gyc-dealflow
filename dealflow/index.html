@@ -11510,22 +11510,39 @@ function renderWizardStep() {
 
   // ===== SCREEN 10: DISTRIBUTION PREFERENCE =====
   if (step.type === 'distributionPrefs') {
-    html += '<div class="wizard-card-title">How often do you want to get paid?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Distributions are the cash payments you receive from your investments. Not all deals pay on the same schedule.</div>';
+    html += '<div class="wizard-card-title">What\u2019s the minimum payout frequency you\u2019d accept?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">More frequent payouts narrows your options. Monthly limits you mostly to lending funds. Being flexible opens up more deals.</div>';
+    // Count active deals by distribution frequency from loaded data
+    var distCounts = { monthly: 0, quarterly: 0, annual: 0, other: 0 };
+    var activeDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
+    activeDeals.forEach(function(d) {
+      var dist = (d.distributions || '').toLowerCase().trim();
+      if (dist === 'monthly') distCounts.monthly++;
+      else if (dist === 'quarterly') distCounts.quarterly++;
+      else if (dist === 'annually' || dist === 'annual') distCounts.annual++;
+      else distCounts.other++;
+    });
+    // Cumulative: selecting quarterly means you'd accept monthly OR quarterly
+    var monthlyTotal = distCounts.monthly;
+    var quarterlyTotal = distCounts.monthly + distCounts.quarterly;
+    var annualTotal = quarterlyTotal + distCounts.annual;
+    var anyTotal = activeDeals.length;
     var distOptions = [
-      { val: 'Monthly', label: 'Monthly', desc: 'Lending funds, stabilized assets', icon: '\uD83D\uDCC5' },
-      { val: 'Quarterly', label: 'Quarterly', desc: 'Most common for syndications and funds', icon: '\uD83D\uDCC6' },
-      { val: 'Annual', label: 'Annually', desc: 'Growth-focused deals, development', icon: '\uD83D\uDCC8' },
-      { val: 'Any', label: 'No preference', desc: 'I\u2019ll evaluate each deal on its own merits', icon: '\u2705' }
+      { val: 'Monthly', label: 'Monthly or more often', desc: 'Mostly lending funds and stabilized assets', count: monthlyTotal },
+      { val: 'Quarterly', label: 'Quarterly or more often', desc: 'Opens up most syndications and funds', count: quarterlyTotal },
+      { val: 'Annual', label: 'Annually or more often', desc: 'Includes development and growth deals', count: annualTotal },
+      { val: 'Any', label: 'No minimum \u2014 I\u2019m flexible', desc: 'Includes at-exit and event-driven payouts', count: anyTotal }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     distOptions.forEach(function(opt) {
       var isSel = wizardData.distributions === opt.val;
       html += '<div onclick="wizardData.distributions=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
-      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
-      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '<div style="flex-shrink:0;text-align:right;">';
+      if (opt.count > 0) html += '<div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + '</div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">deals</div>';
+      if (isSel) html += '<div style="color:var(--primary);margin-top:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '</div>';
       html += '</div>';
     });
     html += '</div>';
