@@ -10463,9 +10463,9 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 //   6=asset classes, 7=strategies, 8=deal prefs, 9=LP network, 10/11/12=plan, 13=done
 const ONBOARDING_FLOW = {
   common_start: [0, 1, 2, 3],
-  cashflow: [4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  growth: [5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17],
-  tax: [6, 20, 21, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18],
+  cashflow: [4, 22, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+  growth: [5, 22, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17],
+  tax: [6, 20, 21, 22, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18],
   common_end: [19]
 };
 
@@ -10474,7 +10474,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', 'Income Target', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -10489,6 +10489,7 @@ const STEP_TO_PHASE = {
   1: 1, 2: 1, 3: 1,   // capital amount, readiness, source → Capital
   4: 1, 5: 1, 6: 1,   // target inputs → Capital
   20: 1, 21: 1,        // income source, RE pro (tax branch) → Capital
+  22: 1,               // baseline income → Capital
   7: 2, 8: 2, 9: 2,   // check size, net worth, loss tolerance → Risk
   10: 3, 11: 3, 12: 3, 13: 3, 14: 3,  // asset class, strategy, lockup, dist, accreditation → Preferences
   15: 4, 16: 4, 17: 4, 18: 4, 19: 4   // LP network, plan outputs, completion → Plan
@@ -10599,7 +10600,21 @@ const WIZARD_STEPS = [
   // 20: Income source (tax branch only)
   { type: 'incomeSource' },
   // 21: RE Professional status (tax branch only)
-  { type: 'reProfessional' }
+  { type: 'reProfessional' },
+  // 22: Current passive income baseline (all paths)
+  { type: 'targetInput',
+    title: 'What\u2019s your current passive income?',
+    suffix: '/ year',
+    key: 'baselineIncome',
+    defaultVal: '0',
+    presets: [0, 12000, 25000, 50000, 100000],
+    presetLabels: ['$0','$12K','$25K','$50K','$100K+'],
+    calcFn: function(v) {
+      var mo = Math.round(v / 12).toLocaleString();
+      return v === 0 ? 'No worries \u2014 everyone starts somewhere.' : 'That\u2019s $' + mo + '/mo. Let\u2019s grow it.';
+    },
+    timerSec: 30
+  }
 ];
 
 // Asset class definitions with goal-specific context
@@ -11868,6 +11883,12 @@ function wizardNext() {
   if (wizardStepIndex >= seq.length - 1) {
     // Finish
     localStorage.setItem('gycBuyBoxComplete', 'true');
+    // Save baseline income with timestamp for progress tracking
+    if (wizardData.baselineIncome !== undefined) {
+      var baseline = { amount: parseInt(wizardData.baselineIncome) || 0, date: new Date().toISOString() };
+      localStorage.setItem('gycBaselineIncome', JSON.stringify(baseline));
+      if (typeof syncToBackend === 'function') syncToBackend('baseline', baseline);
+    }
     syncWizardToBuyBox();
     // Save LP Network opt-in
     if (wizardData.sharePortfolio) {
@@ -11971,7 +11992,7 @@ function syncWizardToBuyBox() {
     const branchToType = { cashflow: 'passive_income', tax: 'reduce_taxes', growth: 'build_wealth' };
     const seededGoals = {
       type: branchToType[d._branch] || 'passive_income',
-      currentIncome: parseFloat(d.currentCashFlow) || 0,
+      currentIncome: parseFloat(d.baselineIncome) || 0,
       targetIncome: parseFloat(d.targetCashFlow) || 100000,
       capital: numberToCapitalLabel(parseFloat(d.growthCapital || d.checkSize) || 500000),
       checkSize: parseFloat(d.checkSize) || 100000,
