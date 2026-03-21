@@ -1496,17 +1496,7 @@ function renderRentCast(rc) {
 }
 
 function shortLabel(deal) {
-  // Try to get a short location label like "Raleigh, NC"
-  var loc = deal.investingGeography || deal.location || '';
-  if (loc) return loc;
-  // Try to extract city, state from address
-  var addr = deal.address || '';
-  var m = addr.match(/,\s*([^,]+),\s*([A-Z]{2})/);
-  if (m) return m[1].trim() + ', ' + m[2];
-  // Try from deal name
-  m = (deal.investmentName || '').match(/,\s*([A-Z]{2})\b/);
-  if (m) return m[0].replace(/^,\s*/, '');
-  return deal.investmentName || '';
+  return deal.investmentName || deal.address || '';
 }
 
 async function renderNearby(nearbyDeals, currentCoords, currentName) {
