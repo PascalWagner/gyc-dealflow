@@ -5759,13 +5759,7 @@ async function renderDeal() {
   if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
   if (deal.avgLoanLTV) detailsHtml += detailItem('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
   if (deal.financials) detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">' + esc('Financials') + '</div><div class="detail-value">' + esc(String(deal.financials)) + '</div></div>';
-  if (deal.fees && deal.fees.length > 0) {
-    detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">Fees</div><div class="detail-value"><ul class="fees-list">';
-    deal.fees.forEach(function(fee) {
-      detailsHtml += '<li>' + esc(fee) + '</li>';
-    });
-    detailsHtml += '</ul></div></div>';
-  }
+  // Fees moved to Fee Benchmark section
   detailsHtml += '</div>';
   // Geography moved to dedicated map card
   detailsHtml += '</div></div>';
@@ -6130,7 +6124,9 @@ async function renderDeal() {
 
     var dealFees = parseFees(deal.fees);
     var dealSplitLP = parseSplit(deal.lpGpSplit);
-    var hasFeeData = Object.keys(dealFees).length > 0 || dealSplitLP !== null;
+    var hasRawFees = deal.fees && deal.fees.length > 0;
+    var hasParsedFees = Object.keys(dealFees).length > 0;
+    var hasFeeData = hasRawFees || hasParsedFees || dealSplitLP !== null;
     if (!hasFeeData) return;
 
     // Get peers (same logic as benchmark section)
@@ -6258,42 +6254,68 @@ async function renderDeal() {
       });
     }
 
-    if (rows.length === 0) return;
+    var hasPeerComparison = rows.length > 0;
 
     feeCompareHtml = '<div class="section">';
-    feeCompareHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Fee Benchmark</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span></div>';
+    feeCompareHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Fees &amp; Compensation</span>' + (hasPeerComparison ? '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span>' : '') + '</div>';
     feeCompareHtml += '<div class="section-body">';
-    feeCompareHtml += '<div style="overflow-x:auto;">';
-    feeCompareHtml += '<table style="width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:13px;">';
-    feeCompareHtml += '<thead><tr style="border-bottom:2px solid var(--border-light);">'
-      + '<th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Fee Type</th>'
-      + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">This Deal</th>'
-      + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Market Median</th>'
-      + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Verdict</th>'
-      + '</tr></thead><tbody>';
 
-    for (var r = 0; r < rows.length; r++) {
-      var row = rows[r];
-      var dealCellStyle = row.notCharged
-        ? 'color:#10b981;font-weight:700;'
-        : 'color:var(--text-dark);font-weight:700;';
-      feeCompareHtml += '<tr style="border-bottom:1px solid var(--border-light);">'
-        + '<td style="padding:10px 12px;font-weight:600;color:var(--text-dark);">' + row.label + '</td>'
-        + '<td style="padding:10px 12px;text-align:center;' + dealCellStyle + '">' + esc(String(row.dealVal)) + '</td>'
-        + '<td style="padding:10px 12px;text-align:center;color:var(--text-muted);">' + row.marketVal + (row.peerCount > 0 ? '<div style="font-size:9px;">' + row.peerCount + ' peers</div>' : '') + '</td>'
-        + '<td style="padding:10px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:' + row.verdictColor + ';background:' + row.verdictBg + ';">' + row.verdict + '</span></td>'
-        + '</tr>';
+    // Always show the raw fee list from the deal
+    if (hasRawFees) {
+      // Identify fees that weren't parsed into categories (uncategorized)
+      var categorizedRaw = {};
+      for (var ck in dealFees) { if (dealFees[ck] && dealFees[ck].raw) categorizedRaw[dealFees[ck].raw] = true; }
+      var uncategorized = deal.fees.filter(function(f) { return !categorizedRaw[f]; });
+
+      feeCompareHtml += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:' + (hasPeerComparison ? '16px' : '0') + ';">';
+      for (var fi = 0; fi < deal.fees.length; fi++) {
+        feeCompareHtml += '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:8px;font-family:var(--font-ui);font-size:12px;color:var(--text-dark);font-weight:600;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="12" height="12"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'
+          + esc(deal.fees[fi])
+          + '</div>';
+      }
+      if (deal.lpGpSplit) {
+        feeCompareHtml += '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:8px;font-family:var(--font-ui);font-size:12px;color:var(--text-dark);font-weight:600;">'
+          + '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="12" height="12"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>'
+          + 'LP/GP Split: ' + esc(deal.lpGpSplit)
+          + '</div>';
+      }
+      feeCompareHtml += '</div>';
     }
 
-    feeCompareHtml += '</tbody></table></div>';
+    // Show comparison table if we have peer data
+    if (hasPeerComparison) {
+      feeCompareHtml += '<div style="overflow-x:auto;">';
+      feeCompareHtml += '<table style="width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:13px;">';
+      feeCompareHtml += '<thead><tr style="border-bottom:2px solid var(--border-light);">'
+        + '<th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Fee Type</th>'
+        + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">This Deal</th>'
+        + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Market Median</th>'
+        + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Verdict</th>'
+        + '</tr></thead><tbody>';
 
-    // Add context note
-    feeCompareHtml += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg-cream);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);line-height:1.5;">'
-      + '<strong style="color:var(--text-secondary);">How to read this:</strong> Fees are compared against '
-      + peers.length + ' ' + esc(peerLabel) + ' deals in the database. '
-      + '"Not Charged" means this deal doesn\'t have a fee that\'s common in the market — that\'s usually a positive for LPs. '
-      + 'Market medians are based on deals with disclosed fee data.'
-      + '</div>';
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
+        var dealCellStyle = row.notCharged
+          ? 'color:#10b981;font-weight:700;'
+          : 'color:var(--text-dark);font-weight:700;';
+        feeCompareHtml += '<tr style="border-bottom:1px solid var(--border-light);">'
+          + '<td style="padding:10px 12px;font-weight:600;color:var(--text-dark);">' + row.label + '</td>'
+          + '<td style="padding:10px 12px;text-align:center;' + dealCellStyle + '">' + esc(String(row.dealVal)) + '</td>'
+          + '<td style="padding:10px 12px;text-align:center;color:var(--text-muted);">' + row.marketVal + (row.peerCount > 0 ? '<div style="font-size:9px;">' + row.peerCount + ' peers</div>' : '') + '</td>'
+          + '<td style="padding:10px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:' + row.verdictColor + ';background:' + row.verdictBg + ';">' + row.verdict + '</span></td>'
+          + '</tr>';
+      }
+
+      feeCompareHtml += '</tbody></table></div>';
+
+      feeCompareHtml += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg-cream);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);line-height:1.5;">'
+        + '<strong style="color:var(--text-secondary);">How to read this:</strong> Fees are compared against '
+        + peers.length + ' ' + esc(peerLabel) + ' deals in the database. '
+        + '"Not Charged" means this deal doesn\'t have a fee that\'s common in the market — that\'s usually a positive for LPs. '
+        + 'Market medians are based on deals with disclosed fee data.'
+        + '</div>';
+    }
 
     feeCompareHtml += '</div></div>';
   })();
