@@ -537,6 +537,69 @@ body {
   color: var(--text-muted);
 }
 
+/* ====== PRICE HISTORY TABLE ====== */
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.price-table th {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+.price-table td {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+.price-table tr:last-child td { border-bottom: none; }
+.price-table tr:hover { background: rgba(81,190,123,0.03); }
+.price-date { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); white-space: nowrap; }
+.price-amount { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); }
+.price-per-unit { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.price-change { font-family: var(--font-ui); font-size: 14px; font-weight: 700; }
+.price-change.positive { color: var(--green); }
+.price-change.negative { color: var(--red); }
+.price-operator { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--primary); }
+.price-operator a { color: var(--primary); text-decoration: none; }
+.price-operator a:hover { text-decoration: underline; }
+.event-tag {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.event-tag.new-offering { background: #FEE2E2; color: #DC2626; }
+.event-tag.refinanced { background: #FEF3C7; color: #D97706; }
+.event-tag.sold { background: #D1FAE5; color: #059669; }
+.event-tag.listed { background: #D1FAE5; color: #059669; }
+.event-tag.acquired { background: #DBEAFE; color: #2563EB; }
+.event-tag.closed { background: #F3F4F6; color: #6B7280; }
+.event-tag.open { background: #D1FAE5; color: #059669; }
+.deck-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+.deck-link:hover { text-decoration: underline; }
+.deck-link svg { width: 14px; height: 14px; }
+
 /* ====== VALUATION CHART ====== */
 .chart-wrap {
   padding: 24px;
@@ -664,6 +727,10 @@ body {
   .deal-grid { grid-template-columns: 1fr; padding: 16px; }
   .records-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; }
   .nearby-grid { grid-template-columns: 1fr; padding: 16px; }
+  .price-table { font-size: 12px; }
+  .price-table th, .price-table td { padding: 12px 12px; }
+  .price-table .col-deck { display: none; }
+  .price-amount { font-size: 14px; }
 }
 @media (max-width: 480px) {
   .hero-stats { grid-template-columns: 1fr 1fr; }
@@ -804,10 +871,14 @@ body {
         </div>
       </div>
 
-      <!-- Valuation History -->
-      <div class="section" id="valuationSection" style="display:none;">
-        <div class="section-label">Valuation History</div>
-        <div class="section-card">
+      <!-- Price History (chart + table) -->
+      <div class="section" id="priceHistorySection" style="display:none;">
+        <div class="section-label">Price History</div>
+        <div class="section-card" id="priceTableCard">
+          <div id="priceTableContent"></div>
+        </div>
+        <div class="section-card" id="valuationChartCard" style="margin-top:16px;">
+          <div class="section-label" style="padding:24px 24px 0 24px;font-size:18px;margin-bottom:0;">Valuation History</div>
           <div class="chart-wrap">
             <div class="chart-subtitle" id="chartSubtitle"></div>
             <div class="chart-container">
@@ -877,6 +948,9 @@ function esc(str) {
   var d = document.createElement('div');
   d.textContent = str || '';
   return d.innerHTML;
+}
+function escAttr(str) {
+  return esc(str).replace(/"/g, '&quot;');
 }
 
 function currency(val) {
@@ -1129,24 +1203,111 @@ function renderDeals(deals) {
   }).join('') + '</div>';
 }
 
-function renderValuationChart(deals) {
-  // Only show if we have 2+ deals with different dates and investment data
-  var points = deals
-    .filter(function(d) { return d.addedDate && d.offeringSize; })
-    .sort(function(a, b) { return new Date(a.addedDate) - new Date(b.addedDate); });
+function statusToEvent(status) {
+  if (!status) return { label: 'New Offering', cls: 'new-offering' };
+  var s = status.toLowerCase();
+  if (s.includes('closed') || s.includes('fully subscribed')) return { label: 'Closed', cls: 'closed' };
+  if (s.includes('open') || s.includes('active')) return { label: 'New Offering', cls: 'new-offering' };
+  if (s.includes('evergreen')) return { label: 'Open', cls: 'open' };
+  if (s.includes('sold') || s.includes('exited')) return { label: 'Sold', cls: 'sold' };
+  if (s.includes('refinanc')) return { label: 'Refinanced', cls: 'refinanced' };
+  if (s.includes('listed')) return { label: 'Listed for Sale', cls: 'listed' };
+  if (s.includes('acquired') || s.includes('purchas')) return { label: 'Acquired', cls: 'acquired' };
+  return { label: status, cls: 'closed' };
+}
+
+function renderPriceHistory(deals, unitCount) {
+  var section = document.getElementById('priceHistorySection');
+  var tableEl = document.getElementById('priceTableContent');
+  var chartCard = document.getElementById('valuationChartCard');
+
+  // Sort deals chronologically (newest first for table)
+  var sorted = deals
+    .filter(function(d) { return d.addedDate; })
+    .slice()
+    .sort(function(a, b) { return new Date(b.addedDate) - new Date(a.addedDate); });
+
+  if (!sorted.length) return;
+
+  section.style.display = 'block';
+
+  // --- Price History Table ---
+  var docIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+  // For % change calculation, sort oldest-first
+  var chronological = sorted.slice().reverse();
+
+  var rows = sorted.map(function(deal) {
+    var ev = statusToEvent(deal.status);
+    var date = new Date(deal.addedDate);
+    var dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    var price = deal.offeringSize;
+
+    // Calculate % change relative to previous (chronologically earlier) offering
+    var pctChange = null;
+    if (price) {
+      var idx = chronological.findIndex(function(d) { return d.id === deal.id; });
+      if (idx > 0) {
+        var prev = chronological[idx - 1];
+        if (prev.offeringSize) {
+          pctChange = ((price - prev.offeringSize) / prev.offeringSize * 100);
+        }
+      }
+    }
+
+    var perUnit = (price && unitCount && unitCount > 0) ? price / unitCount : null;
+
+    var pctHtml = '&mdash;';
+    if (pctChange !== null) {
+      var cls = pctChange >= 0 ? 'positive' : 'negative';
+      var sign = pctChange >= 0 ? '+' : '';
+      pctHtml = '<span class="price-change ' + cls + '">' + sign + pctChange.toFixed(1) + '%</span>';
+    }
+
+    var deckHtml = '';
+    if (deal.deckUrl) {
+      deckHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="deck-link">' + docIcon + 'Deck</a>';
+    }
+    if (deal.ppmUrl) {
+      deckHtml += (deckHtml ? ' ' : '') + '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="deck-link">' + docIcon + 'PPM</a>';
+    }
+
+    var operatorHtml = deal.managementCompany
+      ? '<span class="price-operator">' + esc(deal.managementCompany) + '</span>'
+      : '&mdash;';
+
+    return '<tr>' +
+      '<td><span class="price-date">' + dateStr + '</span></td>' +
+      '<td><span class="event-tag ' + ev.cls + '">' + ev.label + '</span></td>' +
+      '<td>' + (price ? '<div class="price-amount">' + currency(price) + '</div>' + (perUnit ? '<div class="price-per-unit">$' + Math.round(perUnit).toLocaleString() + '/unit</div>' : '') : '&mdash;') + '</td>' +
+      '<td>' + pctHtml + '</td>' +
+      '<td>' + operatorHtml + '</td>' +
+      '<td class="col-deck">' + (deckHtml || '&mdash;') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  tableEl.innerHTML =
+    '<table class="price-table">' +
+      '<thead><tr>' +
+        '<th>Date</th>' +
+        '<th>Event</th>' +
+        '<th>Price</th>' +
+        '<th>% Change</th>' +
+        '<th>Buyer / Operator</th>' +
+        '<th class="col-deck">Deck / PPM</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+
+  // --- Valuation Chart (below table) ---
+  var points = chronological.filter(function(d) { return d.offeringSize; });
 
   if (points.length < 2) {
-    // Show empty state for valuation
-    document.getElementById('valuationSection').style.display = 'block';
-    document.querySelector('#valuationSection .section-card').innerHTML = emptyState(
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
-      'Valuation history coming soon',
-      'When multiple offerings are tracked at this property over time, you\'ll see valuation trends and price changes here.'
-    );
+    chartCard.style.display = 'none';
     return;
   }
 
-  document.getElementById('valuationSection').style.display = 'block';
+  chartCard.style.display = '';
 
   var labels = points.map(function(d) {
     return new Date(d.addedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -1158,10 +1319,15 @@ function renderValuationChart(deals) {
   var totalPct = ((last - first) / first * 100).toFixed(1);
   var sign = totalPct > 0 ? '+' : '';
   var cls = totalPct >= 0 ? 'positive' : 'negative';
-  document.getElementById('chartSubtitle').innerHTML = '<span class="' + cls + '">' + sign + totalPct + '%</span> from ' + currency(first) + ' to ' + currency(last);
+  document.getElementById('chartSubtitle').innerHTML =
+    '<span class="' + cls + '">' + sign + totalPct + '%</span> since ' +
+    labels[0] + ' (' + currency(first) + ' &rarr; ' + currency(last) + ')';
 
-  var ctx = document.getElementById('valuationChart').getContext('2d');
-  new Chart(ctx, {
+  var canvas = document.getElementById('valuationChart');
+  // Destroy previous chart instance if re-rendering
+  if (canvas._chartInstance) canvas._chartInstance.destroy();
+  var ctx = canvas.getContext('2d');
+  canvas._chartInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
@@ -1174,7 +1340,10 @@ function renderValuationChart(deals) {
         borderWidth: 3,
         pointRadius: 6,
         pointHoverRadius: 9,
-        pointBackgroundColor: '#51BE7B',
+        pointBackgroundColor: function(context) {
+          // Last point is green, others are gray
+          return context.dataIndex === values.length - 1 ? '#51BE7B' : '#8A9AA0';
+        },
         pointBorderColor: '#fff',
         pointBorderWidth: 2
       }]
@@ -1412,7 +1581,7 @@ async function init() {
   // Render
   renderHero(propertyName, propertyAddress, assetClass, location, status, matchingDeals);
   renderDeals(matchingDeals);
-  renderValuationChart(matchingDeals);
+  renderPriceHistory(matchingDeals, null);
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';
@@ -1426,7 +1595,11 @@ async function init() {
   // RentCast enrichment (async, non-blocking)
   if (propertyAddress && propertyAddress.length > 10) {
     var rc = await enrichWithRentCast(propertyAddress);
-    if (rc) renderRentCast(rc);
+    if (rc) {
+      renderRentCast(rc);
+      // Re-render price history with unit count for $/unit calculation
+      if (rc.unitCount) renderPriceHistory(matchingDeals, rc.unitCount);
+    }
   }
 }
 
