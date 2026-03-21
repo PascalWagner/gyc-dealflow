@@ -1395,18 +1395,15 @@ body {
 .cf-table .cf-total-row td { border-top: 2px solid var(--border); background: rgba(81,190,123,0.04); font-weight: 700; }
 .cf-table .cf-summary-row td { border-top: 2px solid var(--border); font-weight: normal; }
 
-.cf-chart-wrap { position: relative; height: 220px; }
+.cf-chart-wrap { position: relative; }
+.cf-chart-grid { display: flex; align-items: flex-end; gap: 4px; padding: 0 8px; justify-content: space-around; }
 .cf-bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-.cf-bar-container { display: flex; align-items: flex-end; gap: 3px; height: 160px; width: 100%; justify-content: center; }
-.cf-bar {
-  width: 18px; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s;
-  position: relative;
-}
+.cf-bar-container { display: flex; align-items: flex-end; gap: 3px; height: 120px; width: 100%; justify-content: center; }
+.cf-bar { width: 18px; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; }
 .cf-bar-dist { background: var(--primary); }
 .cf-bar-cap { background: rgba(81,190,123,0.25); }
 .cf-bar-label { font-family: var(--font-ui); font-size: 10px; color: var(--text-muted); }
 .cf-bar-value { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--text-dark); white-space: nowrap; }
-.cf-chart-grid { display: flex; align-items: flex-end; gap: 4px; padding: 0 8px; justify-content: space-around; }
 .cf-legend { display: flex; gap: 16px; justify-content: center; margin-top: 12px; }
 .cf-legend-item { display: flex; align-items: center; gap: 5px; font-family: var(--font-ui); font-size: 11px; color: var(--text-secondary); }
 .cf-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
@@ -1448,6 +1445,10 @@ body {
 
 
 .detail-item {}
+
+.detail-item-wide {
+  grid-column: 1 / -1;
+}
 
 
 
@@ -2503,6 +2504,11 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+.hero-social-proof svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 /* ====== GP INSIGHTS PANEL ====== */
@@ -5406,84 +5412,43 @@ async function renderDeal() {
 
     // Toggle
     cashFlowHtml += '<div class="cf-toggle">';
-    cashFlowHtml += '<button onclick="document.getElementById(\'' + uid + '_chart\').style.display=\'block\';document.getElementById(\'' + uid + '_table\').style.display=\'none\';this.classList.add(\'active\');this.nextElementSibling.classList.remove(\'active\');">Chart</button>';
-    cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
+    cashFlowHtml += '<button class="active" onclick="document.getElementById(\'' + uid + '_chart\').style.display=\'block\';document.getElementById(\'' + uid + '_table\').style.display=\'none\';this.classList.add(\'active\');this.nextElementSibling.classList.remove(\'active\');">Chart</button>';
+    cashFlowHtml += '<button onclick="document.getElementById(\'' + uid + '_table\').style.display=\'block\';document.getElementById(\'' + uid + '_chart\').style.display=\'none\';this.classList.add(\'active\');this.previousElementSibling.classList.remove(\'active\');">Table</button>';
     cashFlowHtml += '</div>';
 
-    // --- Chart view (compact annual bar chart) ---
-    var annualCash = [];
-    var hasCapReturn = false;
+    // --- Chart view (annual bar chart) ---
+    var maxVal = 0;
     for (var i = 0; i < rows.length; i++) {
-      annualCash.push({ year: rows[i].year, dist: rows[i].dist, capReturn: rows[i].capReturn, total: rows[i].dist + rows[i].capReturn });
-      if (rows[i].capReturn > 0) hasCapReturn = true;
+      var rv = rows[i].dist + rows[i].capReturn;
+      if (rv > maxVal) maxVal = rv;
     }
-    var maxAnnual = Math.max.apply(null, annualCash.map(function(a) { return a.total; })) || 1;
-    var n = rows.length;
-    var svgW = 560, svgH = 110, padL = 44, padR = 12, padT = 22, padB = 20;
-    var plotW = svgW - padL - padR, plotH = svgH - padT - padB;
-    var barGap = Math.max(4, plotW * 0.08 / n);
-    var barW = Math.min(40, (plotW - barGap * (n + 1)) / n);
-    var barGroupW = barW + barGap;
-    var totalBarsW = barGroupW * n - barGap;
-    var barOffsetX = padL + (plotW - totalBarsW) / 2;
-
-    function bX(idx) { return barOffsetX + idx * barGroupW; }
-    function bH(val) { return (val / maxAnnual) * plotH; }
-    function bY(val) { return padT + plotH - bH(val); }
-
-    cashFlowHtml += '<div id="' + uid + '_chart" style="display:none;">';
-    cashFlowHtml += '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;max-width:560px;height:auto;overflow:visible;" xmlns="http://www.w3.org/2000/svg">';
-
-    // Subtle horizontal grid
-    var gridVals = [Math.round(maxAnnual * 0.5), maxAnnual];
-    for (var g = 0; g < gridVals.length; g++) {
-      var gy = bY(gridVals[g]);
-      cashFlowHtml += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (svgW - padR) + '" y2="' + gy + '" stroke="#f0f0f0" stroke-width="1"/>';
-      cashFlowHtml += '<text x="' + (padL - 5) + '" y="' + (gy + 3) + '" text-anchor="end" fill="#b0b0b0" font-family="var(--font-ui)" font-size="9">$' + Math.round(gridVals[g] / 1000) + 'K</text>';
+    cashFlowHtml += '<div id="' + uid + '_chart" class="cf-chart-wrap">';
+    cashFlowHtml += '<div class="cf-chart-grid">';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var distH = maxVal > 0 ? Math.round((r.dist / maxVal) * 120) : 0;
+      var capH = maxVal > 0 ? Math.round((r.capReturn / maxVal) * 120) : 0;
+      var totalVal = r.dist + r.capReturn;
+      cashFlowHtml += '<div class="cf-bar-group">';
+      cashFlowHtml += '<div class="cf-bar-value">$' + Math.round(totalVal / 1000) + 'K</div>';
+      cashFlowHtml += '<div class="cf-bar-container">';
+      if (r.capReturn > 0) cashFlowHtml += '<div class="cf-bar cf-bar-cap" style="height:' + Math.max(capH, 2) + 'px;" title="Capital return: $' + Math.round(r.capReturn).toLocaleString() + '"></div>';
+      cashFlowHtml += '<div class="cf-bar cf-bar-dist" style="height:' + Math.max(distH, 2) + 'px;" title="Distributions: $' + Math.round(r.dist).toLocaleString() + '"></div>';
+      cashFlowHtml += '</div>';
+      cashFlowHtml += '<div class="cf-bar-label">Yr ' + r.year + '</div>';
+      cashFlowHtml += '</div>';
     }
-
-    // Baseline
-    cashFlowHtml += '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (svgW - padR) + '" y2="' + (padT + plotH) + '" stroke="#e5e7eb" stroke-width="1"/>';
-
-    // Bars + labels
-    for (var i = 0; i < n; i++) {
-      var ac = annualCash[i];
-      var x = bX(i);
-      var distH = bH(ac.dist);
-      var capH = bH(ac.capReturn);
-
-      // Distribution bar (green)
-      if (ac.dist > 0) {
-        var dy = padT + plotH - distH - capH;
-        cashFlowHtml += '<rect x="' + x + '" y="' + dy + '" width="' + barW + '" height="' + distH + '" rx="2" fill="#51be7b" opacity="0.85"/>';
-      }
-      // Capital return bar (stacked, darker)
-      if (ac.capReturn > 0) {
-        var cy = padT + plotH - capH;
-        cashFlowHtml += '<rect x="' + x + '" y="' + cy + '" width="' + barW + '" height="' + capH + '" rx="2" fill="#2d8a54"/>';
-      }
-
-      // Value label above bar
-      var labelVal = ac.total >= 1000 ? '$' + Math.round(ac.total / 1000) + 'K' : '$' + Math.round(ac.total);
-      var labelY = bY(ac.total) - 5;
-      cashFlowHtml += '<text x="' + (x + barW / 2) + '" y="' + labelY + '" text-anchor="middle" fill="#374151" font-family="var(--font-ui)" font-size="9" font-weight="600">' + labelVal + '</text>';
-
-      // Year label below
-      cashFlowHtml += '<text x="' + (x + barW / 2) + '" y="' + (svgH - 5) + '" text-anchor="middle" fill="#9ca3af" font-family="var(--font-ui)" font-size="9">' + ac.year + '</text>';
-    }
-
-    cashFlowHtml += '</svg>';
-    // Compact legend
-    cashFlowHtml += '<div style="display:flex;gap:12px;margin-top:4px;justify-content:flex-end;">';
-    cashFlowHtml += '<span style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#51be7b;display:inline-block;"></span>Distributions</span>';
-    if (hasCapReturn) {
-      cashFlowHtml += '<span style="font-size:10px;color:#9ca3af;display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:2px;background:#2d8a54;display:inline-block;"></span>Capital Return</span>';
+    cashFlowHtml += '</div>';
+    cashFlowHtml += '<div class="cf-legend">';
+    cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:var(--primary);"></div>Distributions</div>';
+    if (rows.some(function(r) { return r.capReturn > 0; })) {
+      cashFlowHtml += '<div class="cf-legend-item"><div class="cf-legend-dot" style="background:rgba(81,190,123,0.25);"></div>Capital Return</div>';
     }
     cashFlowHtml += '</div>';
     cashFlowHtml += '</div>';
 
-    // --- Table view ---
-    cashFlowHtml += '<div id="' + uid + '_table">';
+        // --- Table view ---
+    cashFlowHtml += '<div id="' + uid + '_table" style="display:none;">';
     cashFlowHtml += '<table class="cf-table">';
     var _hasCapReturn = rows.some(function(r) { return r.capReturn > 0; });
     cashFlowHtml += '<tr><th>Year</th><th>Capital</th><th>Distributions</th><th>% Cash Flow</th><th>Total Cash</th><th>Cumulative</th><th>Notes</th></tr>';
@@ -5606,22 +5571,20 @@ async function renderDeal() {
     detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
   }
   detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
-  detailsHtml += '</div>';
-  // Summary rows below the grid
-  detailsHtml += summaryRow('Strategy', deal.strategy);
-  detailsHtml += summaryRow('Instrument', deal.instrument);
-  if (deal.debtPosition) detailsHtml += summaryRow('Debt Position', deal.debtPosition);
-  if (deal.financials) detailsHtml += summaryRow('Financials', deal.financials);
-  if (deal.fundAUM) detailsHtml += summaryRow('Fund AUM', fmt(deal.fundAUM, 'money'));
-  if (deal.loanCount) detailsHtml += summaryRow('Loan Count', deal.loanCount);
-  if (deal.avgLoanLTV) detailsHtml += summaryRow('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
+  detailsHtml += detailItem('Strategy', deal.strategy);
+  if (deal.debtPosition) detailsHtml += detailItem('Debt Position', deal.debtPosition);
+  if (deal.fundAUM) detailsHtml += detailItem('Fund AUM', fmt(deal.fundAUM, 'money'));
+  if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
+  if (deal.avgLoanLTV) detailsHtml += detailItem('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
+  if (deal.financials) detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">' + esc('Financials') + '</div><div class="detail-value">' + esc(String(deal.financials)) + '</div></div>';
   if (deal.fees && deal.fees.length > 0) {
-    detailsHtml += '<div class="summary-row"><div class="summary-label">Fees</div><div class="summary-value"><ul class="fees-list">';
+    detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">Fees</div><div class="detail-value"><ul class="fees-list">';
     deal.fees.forEach(function(fee) {
       detailsHtml += '<li>' + esc(fee) + '</li>';
     });
     detailsHtml += '</ul></div></div>';
   }
+  detailsHtml += '</div>';
   // Geography moved to dedicated map card
   detailsHtml += '</div></div>';
 
