@@ -18371,7 +18371,7 @@ function renderDashboard() {
     // Only show stat rows if they have meaningful data
     if (dealsReviewedCount > 0) sections += momentumRow;
     if (hasPortfolio) sections += statsRow;
-    sections += incomeGapHtml + actionItemsHtml + portfolioHtml + ddHistoryHtml + fundNudgeHtml;
+    sections += actionItemsHtml + portfolioHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
 }
