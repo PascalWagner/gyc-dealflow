@@ -863,14 +863,6 @@ body {
         <div class="hero-stats" id="heroStats"></div>
       </div>
 
-      <!-- Deals at this Asset -->
-      <div class="section">
-        <div class="section-label">Deals at this Asset</div>
-        <div class="section-card">
-          <div id="dealsSection"></div>
-        </div>
-      </div>
-
       <!-- Price History (chart + table) -->
       <div class="section" id="priceHistorySection" style="display:none;">
         <div class="section-label">Price History</div>
@@ -896,11 +888,14 @@ body {
         </div>
       </div>
 
-      <!-- Nearby Assets -->
+      <!-- Nearby Assets Map -->
       <div class="section" id="nearbySection" style="display:none;">
         <div class="section-label">Nearby Assets</div>
         <div class="section-card">
-          <div id="nearbyContent"></div>
+          <div id="nearbyMapWrap" style="position:relative;height:400px;">
+            <div id="nearbyMap" style="width:100%;height:100%;"></div>
+          </div>
+          <div id="nearbyList" style="padding:16px 20px;border-top:1px solid var(--border-light);"></div>
         </div>
       </div>
 
@@ -1153,11 +1148,19 @@ function renderHero(propertyName, address, assetClass, location, status, deals) 
   var firstSeen = dates.length ? dates[0] : null;
   var lastSeen = dates.length ? dates[dates.length - 1] : null;
 
+  // Get unique operators across all deals
+  var operators = [];
+  var opSet = {};
+  deals.forEach(function(d) {
+    var mc = d.managementCompany;
+    if (mc && !opSet[mc]) { opSet[mc] = true; operators.push(mc); }
+  });
+
   var stats = [
-    { value: deals.length, label: 'Deals Tracked' },
-    { value: firstSeen ? fmtDate(firstSeen) : '--', label: 'First Seen' },
-    { value: lastSeen ? fmtDate(lastSeen) : '--', label: 'Last Activity' },
-    { value: activeDeal ? 'Open' : (deals.length ? 'Closed' : '--'), label: 'Status' }
+    { value: deals.length, label: deals.length === 1 ? 'Offering' : 'Offerings' },
+    { value: operators.length || '--', label: operators.length === 1 ? 'Operator' : 'Operators' },
+    { value: firstSeen ? fmtDate(firstSeen) : '--', label: 'First Offering' },
+    { value: lastSeen ? fmtDate(lastSeen) : '--', label: 'Latest Offering' }
   ];
 
   document.getElementById('heroStats').innerHTML = stats.map(function(s) {
@@ -1272,11 +1275,12 @@ function renderPriceHistory(deals, unitCount) {
       deckHtml += (deckHtml ? ' ' : '') + '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="deck-link">' + docIcon + 'PPM</a>';
     }
 
+    var dealHref = 'deal.html?id=' + encodeURIComponent(deal.id);
     var operatorHtml = deal.managementCompany
-      ? '<span class="price-operator">' + esc(deal.managementCompany) + '</span>'
+      ? '<a href="' + dealHref + '" class="price-operator">' + esc(deal.managementCompany) + '</a>'
       : '&mdash;';
 
-    return '<tr>' +
+    return '<tr style="cursor:pointer;" onclick="window.location.href=\'' + dealHref + '\'">' +
       '<td><span class="price-date">' + dateStr + '</span></td>' +
       '<td><span class="event-tag ' + ev.cls + '">' + ev.label + '</span></td>' +
       '<td>' + (price ? '<div class="price-amount">' + currency(price) + '</div>' + (perUnit ? '<div class="price-per-unit">$' + Math.round(perUnit).toLocaleString() + '/unit</div>' : '') : '&mdash;') + '</td>' +
@@ -1459,24 +1463,98 @@ function renderRentCast(rc) {
   }
 }
 
-function renderNearby(nearbyDeals) {
+async function renderNearby(nearbyDeals, currentCoords, currentName) {
   if (!nearbyDeals.length) return;
 
   document.getElementById('nearbySection').style.display = 'block';
-  var el = document.getElementById('nearbyContent');
 
-  el.innerHTML = '<div class="nearby-grid">' + nearbyDeals.map(function(d) {
-    var href = 'deal.html?id=' + encodeURIComponent(d.id);
-    return '<a class="nearby-card" href="' + href + '">' +
-      '<div class="nearby-name">' + esc(d.investmentName) + '</div>' +
-      '<div class="nearby-loc">' + esc(d.investingGeography || d.location || '') + '</div>' +
-      '<div class="nearby-meta">' +
-        '<span>' + esc(d.assetClass || '') + '</span>' +
-        '<span>' + esc(d.managementCompany || '') + '</span>' +
-        (d.targetIRR ? '<span>IRR: ' + pct(d.targetIRR) + '</span>' : '') +
-      '</div>' +
-    '</a>';
-  }).join('') + '</div>';
+  // Build a compact list below the map
+  var listEl = document.getElementById('nearbyList');
+  listEl.innerHTML = '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">' + nearbyDeals.length + ' nearby asset' + (nearbyDeals.length !== 1 ? 's' : '') + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + nearbyDeals.map(function(d) {
+      var href = 'deal.html?id=' + encodeURIComponent(d.id);
+      return '<a href="' + href + '" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;padding:4px 10px;border:1px solid var(--border);border-radius:6px;white-space:nowrap;">' + esc(d.investmentName) + '</a>';
+    }).join('') + '</div>';
+
+  // Initialize the nearby map
+  var mapEl = document.getElementById('nearbyMap');
+  try {
+    var nearbyMap = L.map(mapEl);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(nearbyMap);
+
+    var markers = [];
+
+    // Add current asset marker (green)
+    if (currentCoords) {
+      var greenIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:28px;height:28px;background:#51BE7B;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -16]
+      });
+      var m = L.marker([currentCoords.lat, currentCoords.lng], { icon: greenIcon }).addTo(nearbyMap);
+      m.bindPopup('<div style="font-family:var(--font-ui);"><strong>' + esc(currentName) + '</strong><br><span style="color:#51BE7B;font-size:11px;font-weight:700;">This Asset</span></div>');
+      markers.push(m);
+    }
+
+    // Geocode and add nearby deal markers
+    var blueIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:20px;height:20px;background:#2563EB;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+      popupAnchor: [0, -12]
+    });
+
+    // Extract addresses from nearby deals and geocode them
+    var geocoded = 0;
+    for (var i = 0; i < nearbyDeals.length; i++) {
+      var deal = nearbyDeals[i];
+      var addr = deal.address || '';
+      // Try to extract address from deal name if no address field
+      if (!addr || addr.length < 10) {
+        addr = extractAddress(deal.investmentName) || deal.investingGeography || '';
+      }
+      if (!addr || addr.length < 5) continue;
+
+      // Geocode with small delay to respect Nominatim rate limits (1 req/sec)
+      (function(d, a, idx) {
+        setTimeout(function() {
+          geocodeAddress(a).then(function(coords) {
+            if (!coords) return;
+            geocoded++;
+            var href = 'deal.html?id=' + encodeURIComponent(d.id);
+            var popup = '<div style="font-family:var(--font-ui);font-size:13px;">' +
+              '<a href="' + href + '" style="font-weight:700;color:var(--text-dark);text-decoration:none;">' + esc(d.investmentName) + '</a>' +
+              '<div style="font-size:11px;color:#6B7280;margin-top:4px;">' + esc(d.managementCompany || '') + '</div>' +
+              (d.assetClass ? '<div style="font-size:11px;color:#6B7280;">' + esc(d.assetClass) + '</div>' : '') +
+              (d.targetIRR ? '<div style="font-size:11px;color:#51BE7B;font-weight:600;margin-top:2px;">IRR: ' + pct(d.targetIRR) + '</div>' : '') +
+            '</div>';
+            var mk = L.marker([coords.lat, coords.lng], { icon: blueIcon }).addTo(nearbyMap);
+            mk.bindPopup(popup);
+            markers.push(mk);
+            // Fit bounds to include all markers
+            if (markers.length > 1) {
+              var group = L.featureGroup(markers);
+              nearbyMap.fitBounds(group.getBounds().pad(0.15));
+            }
+          });
+        }, idx * 1100); // 1.1s between geocode requests
+      })(deal, addr, i);
+    }
+
+    // Initial view — center on current asset or first nearby
+    if (currentCoords) {
+      nearbyMap.setView([currentCoords.lat, currentCoords.lng], 10);
+    }
+
+  } catch(e) {
+    console.warn('Nearby map failed:', e);
+  }
 }
 
 async function geocodeAddress(address) {
@@ -1591,25 +1669,28 @@ async function init() {
 
   // Render
   renderHero(propertyName, propertyAddress, assetClass, location, status, matchingDeals);
-  renderDeals(matchingDeals);
   renderPriceHistory(matchingDeals, null);
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';
   document.getElementById('loadedContent').style.display = 'block';
 
-  // Find and render nearby deals
+  // Find nearby deals
   var matchIds = matchingDeals.map(function(d) { return d.id; });
   var nearby = findNearbyDeals(allDeals, location, assetClass, matchIds, state);
-  renderNearby(nearby);
 
-  // Geocode address for map (fast, non-blocking)
+  // Geocode address for hero map + nearby map
+  var currentCoords = null;
   if (propertyAddress && propertyAddress.length > 10) {
-    geocodeAddress(propertyAddress).then(function(coords) {
-      if (coords) renderMap(coords.lat, coords.lng, propertyAddress);
-    });
+    currentCoords = await geocodeAddress(propertyAddress);
+    if (currentCoords) renderMap(currentCoords.lat, currentCoords.lng, propertyAddress);
+  }
 
-    // RentCast enrichment (async, non-blocking — may also update map with more precise coords)
+  // Render nearby assets map (needs current coords)
+  renderNearby(nearby, currentCoords, propertyName);
+
+  // RentCast enrichment (async, non-blocking — may also update hero map with more precise coords)
+  if (propertyAddress && propertyAddress.length > 10) {
     var rc = await enrichWithRentCast(propertyAddress);
     if (rc) {
       renderRentCast(rc);
