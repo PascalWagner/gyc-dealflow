@@ -5240,6 +5240,12 @@ async function renderDeal() {
       operatorHtml += '</div>';
     }
 
+    // Request Introduction button
+    operatorHtml += '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">';
+    operatorHtml += '<button onclick="requestIntroduction(\'' + escAttr(deal.managementCompany) + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName) + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</button>';
+    operatorHtml += '<a href="https://growyourcashflow.com/consultation" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Book Consultation</a>';
+    operatorHtml += '</div>';
+
     operatorHtml += '</div></div>'; // close operator-details, operator-profile
     operatorHtml += '</div></div>'; // close section-body, section
   })();
@@ -6367,6 +6373,12 @@ async function renderDeal() {
   }
   // Sponsor Website, CEO LinkedIn, and InvestClearly Reviews moved to About the Operator card
   // SEC EDGAR link removed — now in dedicated SEC Filing card
+  // Always show "Add Document" tile for logged-in users
+  if (isPaidUser || _compIsAdmin) {
+    materialsHtml += '<div class="material-tile" style="border-style:dashed;cursor:pointer;color:var(--text-muted);" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\', \'deck\')">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+      'Add Document</div>';
+  }
   materialsHtml += '</div>';
   materialsHtml += '</div></div>';
 
@@ -7357,6 +7369,33 @@ function initDealReturnsChart(deal) {
       }
     }]
   });
+}
+
+// ========== REQUEST INTRODUCTION ==========
+
+function requestIntroduction(company, ceo, dealName) {
+  if (!requireAuth('request an introduction')) return;
+  var personName = ceo || company;
+  var subject = encodeURIComponent('Introduction Request: ' + personName + ' (' + dealName + ')');
+  var body = encodeURIComponent('Hi Pascal,\n\nI\'m interested in ' + dealName + ' by ' + company + '. Could you facilitate an introduction to ' + personName + '?\n\nI\'d like to learn more about the deal and ask some questions directly.\n\nThanks!');
+  // Track the intro request
+  try {
+    var introKey = 'gycIntroRequests';
+    var intros = JSON.parse(localStorage.getItem(introKey) || '[]');
+    intros.push({
+      company: company,
+      person: ceo,
+      deal: dealName,
+      timestamp: Date.now(),
+      userEmail: window._gycUser ? window._gycUser.email : 'unknown'
+    });
+    localStorage.setItem(introKey, JSON.stringify(intros));
+  } catch(e) {}
+  // Also fire analytics event
+  if (typeof gtag === 'function') {
+    gtag('event', 'request_introduction', { company: company, person: ceo, deal: dealName });
+  }
+  window.open('mailto:pascal@growyourcashflow.com?subject=' + subject + '&body=' + body);
 }
 
 // ========== DECK SUBMIT MODAL ==========
