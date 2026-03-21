@@ -9,7 +9,6 @@
 //   - Auto-enrichment: PDFs are sent to Claude for field extraction after upload
 
 import { getAdminClient, setCors } from './_supabase.js';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 // ── Extraction prompt (shared with deal-enrich.js) ──────────────────────────
 const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this PPM/offering document text. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
@@ -169,6 +168,22 @@ export default async function handler(req, res) {
 // ── PDF text extraction ─────────────────────────────────────────────────────
 // Uses pdf-parse library for proper text extraction from PDF buffers.
 async function extractTextFromPdfBuffer(buffer) {
+  // Dynamic import — pdf-parse is CJS and its default export tries to load
+  // a test PDF at require time, so we must import the inner module directly.
+  let pdfParse;
+  try {
+    const mod = await import('pdf-parse/lib/pdf-parse.js');
+    pdfParse = mod.default || mod;
+  } catch (e1) {
+    console.warn('pdf-parse/lib/pdf-parse.js import failed, trying pdf-parse:', e1.message);
+    try {
+      const mod2 = await import('pdf-parse');
+      pdfParse = mod2.default || mod2;
+    } catch (e2) {
+      console.error('All pdf-parse imports failed:', e2.message);
+      throw new Error('PDF parser not available');
+    }
+  }
   const result = await pdfParse(buffer);
   console.log('PDF parsed:', result.numpages, 'pages,', (result.text || '').length, 'chars extracted');
   return (result.text || '').substring(0, 80000);
