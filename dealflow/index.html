@@ -4824,165 +4824,10 @@ const _supa = window.supabase.createClient(
   </div>
 </div>
 
-<!-- Sidebar -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="sidebar-logo-text">Grow Your Cashflow</div>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Home</div>
-    <a class="nav-item" href="#" data-page="dashboard" onclick="navigateTo('dashboard'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
-      Dashboard
-    </a>
-    <div class="nav-section-label">Research</div>
-    <a class="nav-item active" href="#" data-page="deals" onclick="navigateTo('deals'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Deal Flow
-      <span class="nav-badge" id="dealCountBadge"></span>
-    </a>
-    <a class="nav-item" href="#" data-page="debtfunds" onclick="navigateTo('debtfunds'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
-      Debt Funds
-    </a>
-    <a class="nav-item" href="#" data-page="managers" onclick="navigateTo('managers'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      Operators
-    </a>
-    <a class="nav-item" href="#" data-page="compare" onclick="navigateTo('compare'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
-      Compare
-      <span class="nav-badge" id="compareCountBadge" style="display:none;">0</span>
-    </a>
-    <a class="nav-item nav-item-disabled" href="#" data-page="assets" id="navAssets" onclick="if(this.classList.contains('nav-item-disabled')){return false;}navigateTo('assets'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Assets
-      <span style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;" id="assetsComingSoon">COMING SOON</span>
-    </a>
-    <div class="nav-section-label">My Investments</div>
-    <a class="nav-item" href="#" data-page="portfolio" onclick="navigateTo('portfolio'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-      My Portfolio
-    </a>
-    <a class="nav-item" href="#" data-page="taxprep" id="navTaxPrep" onclick="navigateTo('taxprep'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Tax Prep
-    </a>
-    <div class="nav-section-label">Support</div>
-    <a class="nav-item" href="#" data-page="academy" id="navAcademy" onclick="navigateTo('academy'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      Cash Flow Academy
-    </a>
-    <a class="nav-item" href="#" id="navIncomeFund" onclick="event.preventDefault();navigateTo('incomefund')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      GYC Income Fund
-    </a>
-    <div class="nav-section-label" style="margin-top:auto;">Account</div>
-    <a class="nav-item" href="#" data-page="subscription" onclick="navigateTo('subscription'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-      Subscription
-    </a>
-    <a class="nav-item" href="#" data-page="settings" onclick="navigateTo('settings'); return false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Settings
-    </a>
-    <div id="gpNav" style="display:none;">
-      <div class="nav-section-label">GP Portal</div>
-      <a class="nav-item" href="gp-dashboard.html">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        GP Dashboard
-      </a>
-    </div>
-    <div id="adminNav" style="display:none;">
-      <div class="nav-section-label">Admin</div>
-      <a class="nav-item" href="#" data-page="dealflow" onclick="navigateTo('dealflow'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Deal Flow Analytics
-      </a>
-      <a class="nav-item" href="#" data-page="analytics" onclick="navigateTo('analytics'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-        Analytics
-      </a>
-      <a class="nav-item" href="#" data-page="devnotes" onclick="navigateTo('devnotes'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l2-2-2-2"/><path d="M8 18l-2-2 2-2"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><polyline points="4 8 4 2 20 2 20 8"/><polyline points="4 16 4 22 20 22 20 16"/><rect x="2" y="8" width="20" height="8" rx="1"/></svg>
-        Dev Notes
-      </a>
-      <a class="nav-item" href="#" data-page="schema" onclick="navigateTo('schema'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-        Database Schema
-      </a>
-      <a class="nav-item" href="#" data-page="casestudies" onclick="navigateTo('casestudies'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Case Studies
-      </a>
-      <a class="nav-item" href="#" data-page="admin-manage" onclick="navigateTo('admin-manage'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Manage Data
-      </a>
-      <a class="nav-item" href="#" data-page="outreach" onclick="navigateTo('outreach'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        Operator Outreach
-      </a>
-      <a class="nav-item" href="#" data-page="network-moat" onclick="navigateTo('network-moat'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        Network &amp; Moat
-      </a>
-      <a class="nav-item" href="#" data-page="transactions" onclick="navigateTo('transactions'); return false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        Transaction Strategy
-      </a>
-    </div>
-  </nav>
-  <!-- Admin: View As User (hidden by default) -->
-  <div id="adminViewAs" style="display:none;padding:0 16px;margin-bottom:4px;">
-    <div id="viewAsImpersonating" style="display:none;background:#f59e0b22;border:1px solid #f59e0b44;border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:4px;">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span style="font-size:10px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px;">Viewing as</span>
-      </div>
-      <div style="font-size:12px;font-weight:700;color:var(--text-dark);" id="viewAsName"></div>
-      <div style="font-size:10px;color:var(--text-muted);margin-bottom:6px;" id="viewAsEmail"></div>
-      <button onclick="exitViewAs()" style="width:100%;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:10px;font-weight:700;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;gap:4px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="15 18 9 12 15 6"/></svg>
-        Back to My Account
-      </button>
-    </div>
-    <div id="viewAsSearch" style="position:relative;">
-      <div style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0;" onclick="toggleViewAsDropdown()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        <span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">View as another user</span>
-      </div>
-      <div id="viewAsDropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 -8px 24px rgba(0,0,0,0.15);z-index:100;margin-bottom:4px;overflow:hidden;min-width:200px;">
-        <div style="padding:8px;">
-          <input id="viewAsInput" type="text" placeholder="Search by name or email..." oninput="searchViewAsUsers(this.value)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);font-family:var(--font-body);font-size:12px;color:var(--text-dark);box-sizing:border-box;" />
-        </div>
-        <div id="viewAsResults" style="max-height:200px;overflow-y:auto;"></div>
-      </div>
-    </div>
-  </div>
-  <div class="sidebar-footer">
-    <a href="#" onclick="event.preventDefault();showFeedbackModal();" style="font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--text-sidebar);text-decoration:none;display:flex;align-items:center;gap:10px;padding:4px 0;transition:opacity var(--transition);opacity:0.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      Send Feedback
-    </a>
-    <div class="theme-toggle" onclick="toggleTheme()" style="padding:4px 0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      <span>Light Mode</span>
-      <div class="toggle-track" id="themeToggle">
-        <div class="toggle-thumb"></div>
-      </div>
-    </div>
-  </div>
-  <div class="sidebar-user" id="sidebarUser" style="display:none;cursor:pointer;" onclick="navigateTo('settings')">
-    <div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>
-    <div class="sidebar-user-info">
-      <div class="sidebar-user-name" id="sidebarName">Pascal Wagner</div>
-      <div class="sidebar-user-email" id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-    </div>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;opacity:0.4;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  </div>
-</aside>
-
+<!-- Sidebar (injected by sidebar.js) -->
+<script>window.SIDEBAR_SPA = true;</script>
+<div id="sidebar-root"></div>
+<script src="sidebar.js" data-page="deals"></script>
 <!-- Feedback Modal -->
 <div id="feedbackModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeFeedbackModal()">
   <div style="background:var(--bg-card);border-radius:var(--radius);width:100%;max-width:520px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
@@ -5032,8 +4877,7 @@ const _supa = window.supabase.createClient(
   <div id="panelContent" style="flex:1;overflow-y:auto;"></div>
 </div>
 
-<!-- Mobile sidebar backdrop -->
-<div class="sidebar-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:99;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none';"></div>
+<!-- Mobile sidebar backdrop is now injected by sidebar.js -->
 
 <!-- Main Content -->
 <div class="main">
@@ -5949,6 +5793,7 @@ const _supa = window.supabase.createClient(
           <button class="admin-seg active" onclick="adminShowTab('deals',this)">Deals</button>
           <button class="admin-seg" onclick="adminShowTab('operators',this)">Operators</button>
           <button class="admin-seg" onclick="adminShowTab('users',this)">Users</button>
+          <button class="admin-seg" onclick="adminShowTab('submissions',this)">Uploads</button>
         </div>
       </div>
     </div>
@@ -9558,12 +9403,24 @@ function getFilteredDeals() {
     });
   }
 
-  // Secondary sort: deals with pitch deck first, then PPM only, then no docs
+  // Re-sort with priority: 1) has deck, 2) buybox match, 3) primary sort preserved
+  const _primaryOrder = new Map(filtered.map((d, i) => [d.id, i]));
+  const _wd = wd || getCachedWizardData();
   filtered.sort((a, b) => {
-    const aScore = a.deckUrl ? 2 : (a.ppmUrl || a.subAgreementUrl) ? 1 : 0;
-    const bScore = b.deckUrl ? 2 : (b.ppmUrl || b.subAgreementUrl) ? 1 : 0;
-    if (bScore !== aScore) return bScore - aScore;
-    return 0; // preserve primary sort order within same tier
+    // Tier 1: document availability (deck > PPM/sub > none)
+    const aDoc = a.deckUrl ? 2 : (a.ppmUrl || a.subAgreementUrl) ? 1 : 0;
+    const bDoc = b.deckUrl ? 2 : (b.ppmUrl || b.subAgreementUrl) ? 1 : 0;
+    if (bDoc !== aDoc) return bDoc - aDoc;
+    // Tier 2: buybox match score (higher = better match)
+    if (_wd && _wd._branch) {
+      const aMatch = computeMatchScore(a);
+      const bMatch = computeMatchScore(b);
+      const aMs = typeof aMatch === 'object' ? aMatch.score : aMatch;
+      const bMs = typeof bMatch === 'object' ? bMatch.score : bMatch;
+      if (bMs !== aMs) return bMs - aMs;
+    }
+    // Tier 3: preserve primary sort order
+    return (_primaryOrder.get(a.id) || 0) - (_primaryOrder.get(b.id) || 0);
   });
 
   updateGoalSortIndicator(useGoalSort);
@@ -10168,11 +10025,8 @@ function closePanel() {
 }
 
 function toggleTheme() {
-  document.documentElement.classList.toggle('dark');
-  const track = document.getElementById('themeToggle');
-  track.classList.toggle('on');
-  const label = track.parentElement.querySelector('span');
-  label.textContent = document.documentElement.classList.contains('dark') ? 'Dark Mode' : 'Light Mode';
+  // Theme toggling is handled by sidebar.js (sidebarToggleTheme)
+  // This function is kept for any page-specific theme callbacks if needed
 }
 
 // Close panel on Escape
@@ -10440,24 +10294,18 @@ function getUser() {
 })();
 
 function initAuth() {
-  const user = getUser();
-  const userEl = document.getElementById('sidebarUser');
-  if (user && user.email) {
-    userEl.style.display = 'flex';
-    let name = user.name || ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.email.split('@')[0];
-    // Capitalize each word
-    name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    document.getElementById('sidebarAvatar').textContent = initials;
-    document.getElementById('sidebarName').textContent = name;
-    const sidebarEmailEl = document.getElementById('sidebarEmail');
-    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
+  // Sidebar UI (avatar, name, email, admin nav, GP nav) handled by sidebar.js
+  // sidebarInitAuth() already ran on script load; re-run to pick up any changes
+  if (typeof sidebarInitAuth === 'function') sidebarInitAuth();
 
+  const user = getUser();
+  if (user && user.email) {
     // Populate profile fields if available
     const firstInput = document.querySelector('#stab-profile .profile-input[type="text"]');
     if (firstInput && user.firstName) firstInput.value = user.firstName;
 
     // If name looks like email prefix (no space, matches email), fetch real name — once per session
+    let name = user.name || ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.email.split('@')[0];
     const emailPrefix = user.email.split('@')[0].toLowerCase();
     const _lookupDone = sessionStorage.getItem('gycLookupDone');
     if (!_lookupDone && (!user.id || name.toLowerCase() === emailPrefix)) {
@@ -10489,8 +10337,6 @@ function initAuth() {
     fetchUserDataFromSupabase(user.email);
     loadSharePortfolioSetting();
   }
-  // New user onboarding is handled by the dashboard's progressive disclosure card
-  // (no auto-launching wizard overlay — the dashboard "Build My Buy Box" CTA drives it)
   // Clear isNewUser flag if set
   if (user && user.isNewUser) {
     user.isNewUser = false;
@@ -15715,11 +15561,54 @@ async function adminLoadData() {
     } catch (e) { adminRenderEmptyState('Could not connect to database'); }
     return;
   }
+  // Submissions tab has its own data source
+  if (_adminTab === 'submissions') {
+    try {
+      var resp = await fetch('/api/deal-submissions?dealId=all');
+      var subData = await resp.json();
+      adminRenderSubmissions(subData.submissions || []);
+    } catch (e) { adminRenderEmptyState('Could not load submissions'); }
+    return;
+  }
   try {
     const result = await adminFetch({ action: 'list-' + _adminTab, page: _adminPage, limit: 25, search });
     if (!result.success) { adminRenderEmptyState('Load failed: ' + (result.error || 'Unknown error')); return; }
     adminRenderTable(result.data, result.total);
   } catch (e) { adminRenderEmptyState('Could not connect to database'); }
+}
+
+function adminRenderSubmissions(submissions) {
+  var head = document.querySelector('#adminTableHead tr');
+  var body = document.getElementById('adminTableBody');
+  var countEl = document.getElementById('adminResultCount');
+  if (countEl) countEl.textContent = submissions.length + ' uploads';
+  if (head) head.innerHTML = '<th>Date</th><th>Deal</th><th>Type</th><th>Uploaded By</th><th>Document</th>';
+  if (!body) return;
+  if (submissions.length === 0) {
+    body.innerHTML = '<tr><td colspan="5" style="padding:40px;text-align:center;color:var(--text-muted);">No document uploads yet</td></tr>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < submissions.length; i++) {
+    var s = submissions[i];
+    var date = s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    var time = s.created_at ? new Date(s.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+    var dealName = s.deal_name || '—';
+    var docType = (s.notes || '').indexOf('[PPM document]') >= 0 ? 'PPM' : 'Deck';
+    var who = s.submitted_by_name || s.submitted_by_email || 'Unknown';
+    var email = s.submitted_by_email || '';
+    html += '<tr>';
+    html += '<td style="white-space:nowrap;"><div style="font-weight:600;">' + date + '</div><div style="font-size:11px;color:var(--text-muted);">' + time + '</div></td>';
+    html += '<td>' + (s.deal_id ? '<a href="deal.html?id=' + encodeURIComponent(s.deal_id) + '" style="color:var(--primary);text-decoration:none;font-weight:600;">' + dealName.replace(/ - PPM$/, '') + '</a>' : dealName) + '</td>';
+    html += '<td><span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;' + (docType === 'PPM' ? 'background:#EFF6FF;color:#2563EB;' : 'background:var(--green-bg);color:var(--green);') + '">' + docType + '</span></td>';
+    html += '<td><div style="font-weight:600;">' + who + '</div>' + (email && email !== who ? '<div style="font-size:11px;color:var(--text-muted);">' + email + '</div>' : '') + '</td>';
+    html += '<td>' + (s.deck_url ? '<a href="' + s.deck_url + '" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>View</a>' : '—') + '</td>';
+    html += '</tr>';
+  }
+  body.innerHTML = html;
+  // Hide pagination for submissions
+  var pagEl = document.getElementById('adminPagination');
+  if (pagEl) pagEl.style.display = 'none';
 }
 
 function adminRenderEmptyState(msg) {

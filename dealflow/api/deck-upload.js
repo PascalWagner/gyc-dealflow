@@ -162,6 +162,7 @@ export default async function handler(req, res) {
     const isPdf = (filename || '').toLowerCase().endsWith('.pdf');
     let enriched = false;
     let enrichedFields = [];
+    let extractedData = null;
     let enrichmentError = null;
 
     if (isPdf && dealId && process.env.ANTHROPIC_API_KEY) {
@@ -169,6 +170,7 @@ export default async function handler(req, res) {
         const enrichResult = await enrichFromPdfBuffer(fileBuffer, dealId, userEmail, supabase);
         enriched = enrichResult.enriched;
         enrichedFields = enrichResult.enrichedFields;
+        extractedData = enrichResult.extractedData || null;
       } catch (e) {
         console.warn('Auto-enrichment failed (upload still succeeded):', e.message);
         enrichmentError = e.message;
@@ -177,10 +179,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      driveUrl: deckUrl,      // keeping same field name for frontend compat
+      driveUrl: deckUrl,
       dealUpdated,
       enriched,
       enrichedFields,
+      extractedData,
       ...(enrichmentError ? { enrichmentError } : {})
     });
 
@@ -295,51 +298,13 @@ async function enrichFromPdfBuffer(fileBuffer, dealId, userEmail, supabase) {
     return { enriched: false, enrichedFields: [], reason: 'No fields extracted' };
   }
 
-  // Save to Supabase — only update fields that are currently empty/null
-  // Fetch current record first to avoid overwriting human edits
-  const { data: currentDeal } = await supabase
-    .from('opportunities')
-    .select('*')
-    .eq('id', dealId)
-    .single();
-
-  const safeUpdate = {};
-  const actuallyUpdated = [];
-
-  for (const [col, val] of Object.entries(supabaseUpdate)) {
-    const current = currentDeal?.[col];
-    // Only update if the field is empty/null/zero/blank
-    const isEmpty = current === null
-      || current === undefined
-      || current === ''
-      || current === 0
-      || (Array.isArray(current) && current.length === 0);
-
-    if (isEmpty) {
-      safeUpdate[col] = val;
-      actuallyUpdated.push(col);
-    }
-  }
-
-  if (Object.keys(safeUpdate).length > 0) {
-    safeUpdate.updated_at = new Date().toISOString();
-
-    const { error: updateErr } = await supabase
-      .from('opportunities')
-      .update(safeUpdate)
-      .eq('id', dealId);
-
-    if (updateErr) {
-      console.warn('Supabase enrichment update failed:', updateErr.message);
-    }
-  }
-
+  // Return extracted fields for frontend confirmation — don't auto-write
+  // The frontend will show a review wizard and call /api/deal-confirm-enrichment
   return {
     enriched: true,
-    enrichedFields: actuallyUpdated,
-    extractedTotal: fieldsFound.length,
-    updatedCount: actuallyUpdated.length,
-    skippedCount: fieldsFound.length - actuallyUpdated.length
+    enrichedFields: fieldsFound,
+    extractedData: extracted,      // raw Claude extraction for frontend review
+    extractedTotal: fieldsFound.length
   };
 }
 
