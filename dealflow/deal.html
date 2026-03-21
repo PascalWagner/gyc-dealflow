@@ -6039,7 +6039,7 @@ async function renderDeal() {
     // Sort: highest min investment first (A-1 before A-2)
     var _scSorted = deal.shareClasses.map(function(sc, i) { return { sc: sc, origIdx: i }; })
       .sort(function(a, b) { return (b.sc.investmentMinimum || 0) - (a.sc.investmentMinimum || 0); });
-    detailsHtml += '<div style="padding:0 20px 12px;"><div class="sc-toggle-bar">';
+    detailsHtml += '<div style="padding:4px 20px 16px;"><div class="sc-toggle-bar">';
     for (var sci = 0; sci < _scSorted.length; sci++) {
       var _origI = _scSorted[sci].origIdx;
       detailsHtml += '<button class="sc-toggle-pill' + (_scIdx === _origI ? ' active' : '') + '" onclick="switchShareClass(' + _origI + ')">' + esc(_scSorted[sci].sc.label) + '</button>';
