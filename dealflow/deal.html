@@ -5999,6 +5999,223 @@ async function renderDeal() {
     feeBenchHtml += '</div></div></div>';
   })();
 
+  // --- 6c. Fee Benchmark: parse fees, compare to peers ---
+  var feeCompareHtml = '';
+  (function buildFeeComparison() {
+    // Known fee categories and their regex patterns
+    var feeCategories = [
+      { key: 'mgmt', label: 'Management Fee', patterns: [/management\s*fee/i, /asset\s*management/i, /annual\s*(?:fund\s*)?management/i, /mgmt\s*fee/i], lowerBetter: true },
+      { key: 'acq', label: 'Acquisition Fee', patterns: [/acquisition\s*fee/i, /acq(?:uisition)?\s*fee/i, /origination\s*fee/i], lowerBetter: true },
+      { key: 'disp', label: 'Disposition Fee', patterns: [/disposition\s*fee/i, /exit\s*fee/i, /disp(?:osition)?\s*fee/i], lowerBetter: true },
+      { key: 'const', label: 'Construction Mgmt', patterns: [/construction\s*(?:management|mgmt|oversight)\s*fee/i], lowerBetter: true },
+      { key: 'prop', label: 'Property Mgmt', patterns: [/property\s*(?:management|mgmt)\s*fee/i], lowerBetter: true },
+      { key: 'perf', label: 'Performance Fee', patterns: [/performance\s*fee/i, /incentive\s*fee/i], lowerBetter: true },
+      { key: 'setup', label: 'Setup / Org Fee', patterns: [/setup\s*fee/i, /org(?:anization(?:al)?)?\s*fee/i, /formation\s*fee/i], lowerBetter: true },
+      { key: 'serv', label: 'Servicing Fee', patterns: [/servic(?:e|ing)\s*fee/i, /loan\s*servicing/i], lowerBetter: true },
+      { key: 'carry', label: 'Carried Interest', patterns: [/carri(?:ed|y)\s*interest/i, /carry/i, /promote/i], lowerBetter: true }
+    ];
+
+    // Extract percentage from a fee string
+    function extractPct(str) {
+      if (!str) return null;
+      var m = str.match(/(\d+(?:\.\d+)?)\s*%/);
+      return m ? parseFloat(m[1]) : null;
+    }
+
+    // Parse a deal's fees array into structured object { mgmt: 2.0, acq: 1.5, ... }
+    function parseFees(feeArr) {
+      var result = {};
+      if (!feeArr || !feeArr.length) return result;
+      for (var i = 0; i < feeArr.length; i++) {
+        var feeStr = feeArr[i];
+        for (var c = 0; c < feeCategories.length; c++) {
+          var cat = feeCategories[c];
+          for (var p = 0; p < cat.patterns.length; p++) {
+            if (cat.patterns[p].test(feeStr)) {
+              var pct = extractPct(feeStr);
+              if (pct !== null) result[cat.key] = { pct: pct, raw: feeStr };
+              else result[cat.key] = { pct: null, raw: feeStr };
+              break;
+            }
+          }
+        }
+      }
+      return result;
+    }
+
+    // Parse LP/GP split into LP percentage
+    function parseSplit(splitStr) {
+      if (!splitStr) return null;
+      var m = String(splitStr).match(/(\d+)\s*[\/\-]\s*(\d+)/);
+      return m ? parseInt(m[1]) : null;
+    }
+
+    var dealFees = parseFees(deal.fees);
+    var dealSplitLP = parseSplit(deal.lpGpSplit);
+    var hasFeeData = Object.keys(dealFees).length > 0 || dealSplitLP !== null;
+    if (!hasFeeData) return;
+
+    // Get peers (same logic as benchmark section)
+    var _isCredit = isCreditFund(deal);
+    var peerLabel = _isCredit ? 'Lending' : (deal.assetClass || 'Similar');
+    var peers = allDeals.filter(function(d) {
+      if (d.id === deal.id) return false;
+      if (_isCredit) return isCreditFund(d);
+      return d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
+    });
+
+    // Parse all peer fees
+    var peerFeesParsed = peers.map(function(d) {
+      return { fees: parseFees(d.fees), splitLP: parseSplit(d.lpGpSplit) };
+    });
+
+    // For each fee category, gather peer values
+    function peerFeeVals(key) {
+      return peerFeesParsed.map(function(p) { return p.fees[key] ? p.fees[key].pct : null; }).filter(function(v) { return v !== null; });
+    }
+    function median(arr) {
+      if (!arr.length) return null;
+      arr.sort(function(a, b) { return a - b; });
+      var mid = Math.floor(arr.length / 2);
+      return arr.length % 2 !== 0 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+    }
+    // How many peers charge this fee at all?
+    function peerChargeRate(key) {
+      var total = peerFeesParsed.filter(function(p) { return p.fees && Object.keys(p.fees).length > 0; }).length;
+      var charging = peerFeesParsed.filter(function(p) { return p.fees[key]; }).length;
+      return total > 0 ? { charging: charging, total: total, pct: Math.round((charging / total) * 100) } : null;
+    }
+
+    var rows = [];
+
+    // Build rows for each fee category
+    for (var c = 0; c < feeCategories.length; c++) {
+      var cat = feeCategories[c];
+      var dealFee = dealFees[cat.key];
+      var peerVals = peerFeeVals(cat.key);
+      var peerMed = median(peerVals.slice());
+      var chargeRate = peerChargeRate(cat.key);
+
+      if (dealFee) {
+        // This deal charges this fee
+        var verdict, verdictColor, verdictBg;
+        if (dealFee.pct !== null && peerMed !== null && peerVals.length >= 2) {
+          if (dealFee.pct <= peerMed) {
+            verdict = 'At or Below Market';
+            verdictColor = '#10b981';
+            verdictBg = 'rgba(16,185,129,0.08)';
+          } else if (dealFee.pct <= peerMed * 1.25) {
+            verdict = 'Slightly Above Market';
+            verdictColor = '#f59e0b';
+            verdictBg = 'rgba(245,158,11,0.08)';
+          } else {
+            verdict = 'Above Market';
+            verdictColor = '#ef4444';
+            verdictBg = 'rgba(239,68,68,0.08)';
+          }
+        } else {
+          verdict = 'Limited Data';
+          verdictColor = 'var(--text-muted)';
+          verdictBg = 'var(--bg-cream)';
+        }
+        rows.push({
+          label: cat.label,
+          dealVal: dealFee.pct !== null ? dealFee.pct.toFixed(1) + '%' : dealFee.raw,
+          marketVal: peerMed !== null ? peerMed.toFixed(1) + '%' : '—',
+          peerCount: peerVals.length,
+          verdict: verdict,
+          verdictColor: verdictColor,
+          verdictBg: verdictBg,
+          raw: dealFee.raw
+        });
+      } else if (chargeRate && chargeRate.pct >= 30) {
+        // This deal does NOT charge a common fee — that's a positive
+        rows.push({
+          label: cat.label,
+          dealVal: 'Not Charged',
+          marketVal: peerMed !== null ? peerMed.toFixed(1) + '%' : '—',
+          peerCount: peerVals.length,
+          verdict: chargeRate.pct + '% of peers charge this',
+          verdictColor: '#10b981',
+          verdictBg: 'rgba(16,185,129,0.08)',
+          notCharged: true,
+          chargeRate: chargeRate
+        });
+      }
+    }
+
+    // LP/GP split row
+    var peerSplitVals = peerFeesParsed.map(function(p) { return p.splitLP; }).filter(function(v) { return v !== null; });
+    var splitMed = median(peerSplitVals.slice());
+    if (dealSplitLP !== null) {
+      var splitVerdict, splitColor, splitBg;
+      if (splitMed !== null && peerSplitVals.length >= 2) {
+        if (dealSplitLP >= splitMed) {
+          splitVerdict = 'LP-Favorable';
+          splitColor = '#10b981';
+          splitBg = 'rgba(16,185,129,0.08)';
+        } else {
+          splitVerdict = 'Below Market for LPs';
+          splitColor = '#f59e0b';
+          splitBg = 'rgba(245,158,11,0.08)';
+        }
+      } else {
+        splitVerdict = 'Limited Data';
+        splitColor = 'var(--text-muted)';
+        splitBg = 'var(--bg-cream)';
+      }
+      rows.push({
+        label: 'LP / GP Split',
+        dealVal: deal.lpGpSplit,
+        marketVal: splitMed !== null ? splitMed + '/' + (100 - splitMed) : '—',
+        peerCount: peerSplitVals.length,
+        verdict: splitVerdict,
+        verdictColor: splitColor,
+        verdictBg: splitBg,
+        isSplit: true
+      });
+    }
+
+    if (rows.length === 0) return;
+
+    feeCompareHtml = '<div class="section">';
+    feeCompareHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Fee Benchmark</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span></div>';
+    feeCompareHtml += '<div class="section-body">';
+    feeCompareHtml += '<div style="overflow-x:auto;">';
+    feeCompareHtml += '<table style="width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:13px;">';
+    feeCompareHtml += '<thead><tr style="border-bottom:2px solid var(--border-light);">'
+      + '<th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Fee Type</th>'
+      + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">This Deal</th>'
+      + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Market Median</th>'
+      + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Verdict</th>'
+      + '</tr></thead><tbody>';
+
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r];
+      var dealCellStyle = row.notCharged
+        ? 'color:#10b981;font-weight:700;'
+        : 'color:var(--text-dark);font-weight:700;';
+      feeCompareHtml += '<tr style="border-bottom:1px solid var(--border-light);">'
+        + '<td style="padding:10px 12px;font-weight:600;color:var(--text-dark);">' + row.label + '</td>'
+        + '<td style="padding:10px 12px;text-align:center;' + dealCellStyle + '">' + esc(String(row.dealVal)) + '</td>'
+        + '<td style="padding:10px 12px;text-align:center;color:var(--text-muted);">' + row.marketVal + (row.peerCount > 0 ? '<div style="font-size:9px;">' + row.peerCount + ' peers</div>' : '') + '</td>'
+        + '<td style="padding:10px 12px;text-align:center;"><span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:' + row.verdictColor + ';background:' + row.verdictBg + ';">' + row.verdict + '</span></td>'
+        + '</tr>';
+    }
+
+    feeCompareHtml += '</tbody></table></div>';
+
+    // Add context note
+    feeCompareHtml += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg-cream);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);line-height:1.5;">'
+      + '<strong style="color:var(--text-secondary);">How to read this:</strong> Fees are compared against '
+      + peers.length + ' ' + esc(peerLabel) + ' deals in the database. '
+      + '"Not Charged" means this deal doesn\'t have a fee that\'s common in the market — that\'s usually a positive for LPs. '
+      + 'Market medians are based on deals with disclosed fee data.'
+      + '</div>';
+
+    feeCompareHtml += '</div></div>';
+  })();
+
   // --- 7. Supporting Materials ---
   var materialsHtml = '';
   var hasMaterials = deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl || deal.mcWebsite || deal.mcInvestClearly || deal.mcLinkedin;
@@ -6752,6 +6969,7 @@ async function renderDeal() {
     // --- Job 5: How does it compare? ---
     + cashFlowHtml
     + feeBenchHtml
+    + feeCompareHtml
     + chartHtml
     + similarHtml
     // --- Job 6: SEC filing + Buy Box (1/3 + 2/3), Supporting Materials full width ---
