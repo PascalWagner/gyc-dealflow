@@ -832,27 +832,26 @@ body {
 .hero-share-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.8);
+  gap: 6px;
+  padding: 0;
+  background: none;
+  color: rgba(255,255,255,0.5);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255,255,255,0.15);
+  border: none;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: color 0.15s;
   white-space: nowrap;
 }
-.hero-share-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
-.hero-share-btn svg { opacity: 0.8; }
+.hero-share-btn:hover { color: rgba(255,255,255,0.85); }
+.hero-share-btn svg { opacity: 0.7; }
 .hero-share-btn:hover svg { opacity: 1; }
 .share-dropdown {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   right: 0;
-  margin-top: 6px;
+  margin-bottom: 8px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -3371,6 +3370,8 @@ body {
   padding: 24px;
 }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+
 </style>
 
 </head>
@@ -5397,7 +5398,7 @@ async function renderDeal() {
 
     // Request Introduction button
     operatorHtml += '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">';
-    operatorHtml += '<button onclick="requestIntroduction(\'' + escAttr(deal.managementCompany) + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName) + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</button>';
+    operatorHtml += '<button onclick="requestIntroduction(\'' + escAttr(deal.managementCompany) + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName) + '\', this)" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</button>';
     if (deal.mcBookingUrl) {
       operatorHtml += '<a href="' + escAttr(deal.mcBookingUrl) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:opacity 0.15s;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Book with ' + esc(deal.ceo || deal.managementCompany) + '</a>';
     }
@@ -6499,20 +6500,7 @@ async function renderDeal() {
   var _ppmExpired = isExpiredAirtableUrl(deal.ppmUrl);
   var _subExpired = isExpiredAirtableUrl(deal.subAgreementUrl);
 
-  if (deal.deckUrl) {
-    if (_deckExpired) {
-      // Expired Airtable URL — show grayed-out tile for everyone, admin gets extra detail
-      materialsHtml += '<div class="material-tile" style="opacity:0.45;cursor:not-allowed;pointer-events:none;border-color:var(--border);">' + _docIcon + 'Investment Deck<span style="font-size:9px;color:var(--text-muted);display:block;margin-top:2px;">Unavailable</span></div>';
-    } else if (_compIsAdmin) {
-      materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile"' + (_deckBlocked ? ' style="border-color:#f59e0b44;"' : '') + '>' + _docIcon + 'Investment Deck' + (_deckBlocked ? '<span style="font-size:9px;color:#f59e0b;display:block;margin-top:2px;">No permission</span>' : '') + '</a>';
-    } else if (_deckBlocked) {
-      materialsHtml += '<div class="material-tile-locked" style="border-color:#f59e0b44;background:rgba(245,158,11,0.04);">' + _shieldIcon + 'Investment Deck<span class="lock-badge" style="background:#f59e0b;">Pending Approval</span></div>';
-    } else if (isPaidUser) {
-      materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile">' + _docIcon + 'Investment Deck</a>';
-    } else {
-      materialsHtml += '<div class="material-tile-locked">' + _docIcon + 'Investment Deck<span class="lock-badge">Academy</span></div>';
-    }
-  }
+  // Investment Deck is shown in the hero section — not duplicated here
   if (deal.ppmUrl) {
     if (_ppmExpired) {
       materialsHtml += '<div class="material-tile" style="opacity:0.45;cursor:not-allowed;pointer-events:none;border-color:var(--border);">' + _ppmIcon + 'PPM<span style="font-size:9px;color:var(--text-muted);display:block;margin-top:2px;">Unavailable</span></div>';
@@ -6531,12 +6519,7 @@ async function renderDeal() {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
       'Upload PPM</div>';
   }
-  if (!deal.deckUrl) {
-    // No deck — show upload tile
-    materialsHtml += '<div class="material-tile" style="border-style:dashed;cursor:pointer;color:var(--text-muted);" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\', \'deck\')">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
-      'Upload Deck</div>';
-  }
+  // Upload Deck option is handled in the hero section
   if (deal.subAgreementUrl) {
     if (_subExpired) {
       materialsHtml += '<div class="material-tile" style="opacity:0.45;cursor:not-allowed;pointer-events:none;border-color:var(--border);">' + _subIcon + 'Subscription Agreement<span style="font-size:9px;color:var(--text-muted);display:block;margin-top:2px;">Unavailable</span></div>';
@@ -7573,29 +7556,61 @@ function initDealReturnsChart(deal) {
 
 // ========== REQUEST INTRODUCTION ==========
 
-function requestIntroduction(company, ceo, dealName) {
+function requestIntroduction(company, ceo, dealName, btnEl) {
   if (!requireAuth('request an introduction')) return;
-  var personName = ceo || company;
-  var subject = encodeURIComponent('Introduction Request: ' + personName + ' (' + dealName + ')');
-  var body = encodeURIComponent('Hi Pascal,\n\nI\'m interested in ' + dealName + ' by ' + company + '. Could you facilitate an introduction to ' + personName + '?\n\nI\'d like to learn more about the deal and ask some questions directly.\n\nThanks!');
-  // Track the intro request
+
+  // Disable button immediately and show loading
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="animation:spin 1s linear infinite;"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg>Requesting...';
+  }
+
+  var token = '';
   try {
-    var introKey = 'gycIntroRequests';
-    var intros = JSON.parse(localStorage.getItem(introKey) || '[]');
-    intros.push({
-      company: company,
-      person: ceo,
-      deal: dealName,
-      timestamp: Date.now(),
-      userEmail: window._gycUser ? window._gycUser.email : 'unknown'
-    });
-    localStorage.setItem(introKey, JSON.stringify(intros));
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('-auth-token') > -1) {
+        var v = JSON.parse(localStorage.getItem(k) || '{}');
+        if (v.access_token) { token = v.access_token; break; }
+      }
+    }
   } catch(e) {}
-  // Also fire analytics event
+
+  var dealId = new URLSearchParams(window.location.search).get('id') || '';
+  var restoreBtn = function() {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction';
+    }
+  };
+
+  fetch('/api/intro-request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ dealId: dealId, dealName: dealName, operatorName: company, operatorCeo: ceo || '' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      if (btnEl) {
+        btnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>Request Sent';
+        btnEl.style.background = 'rgba(81,190,123,0.15)';
+        btnEl.style.color = 'var(--primary)';
+        btnEl.style.border = '1px solid var(--primary)';
+      }
+    } else {
+      restoreBtn();
+      alert('Something went wrong. Please try again.');
+    }
+  })
+  .catch(function() {
+    restoreBtn();
+    alert('Something went wrong. Please try again.');
+  });
+
   if (typeof gtag === 'function') {
     gtag('event', 'request_introduction', { company: company, person: ceo, deal: dealName });
   }
-  window.open('mailto:pascal@growyourcashflow.com?subject=' + subject + '&body=' + body);
 }
 
 // ========== DECK SUBMIT MODAL ==========
