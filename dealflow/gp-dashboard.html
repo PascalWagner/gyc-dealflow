@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GP Dashboard - GYC Dealflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --primary-light: #32C583;
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0A1E21;
+  --bg-sidebar-hover: #14333A;
+  --bg-sidebar-active: #1F5159;
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --text-sidebar: rgba(255,255,255,0.55);
+  --text-sidebar-active: #FFFFFF;
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-width: 240px;
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --orange: #CF7A30;
+  --orange-bg: #FFF3E6;
+  --red: #D04040;
+  --blue: #2563EB;
+  --blue-bg: #EFF6FF;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --mint-bg: #E7F5F0;
+  --off-white: #FAF9F5;
+  --charcoal: #141413;
+  --slate: #607179;
+  --transition: 0.2s ease;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ====== SIDEBAR ====== */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+.sidebar-logo {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar-logo-icon {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: -0.5px;
+}
+.sidebar-logo-text {
+  font-family: var(--font-headline);
+  font-size: 18px;
+  font-weight: 400;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+.nav-section-label {
+  padding: 16px 24px 8px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.3);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--text-sidebar);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-item.active {
+  background: var(--bg-sidebar-active);
+  color: var(--text-sidebar-active);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+}
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+.sidebar-user {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-user-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-email {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-logout {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.sidebar-logout:hover { color: #fff; }
+.sidebar-logout svg { width: 16px; height: 16px; }
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ====== MAIN CONTENT ====== */
+.main {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dark);
+  padding: 4px;
+}
+.mobile-menu-btn svg { width: 24px; height: 24px; }
+.mobile-topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  height: 56px;
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  z-index: 50;
+}
+.mobile-topbar-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+/* ====== CONTENT AREA ====== */
+.content-wrap {
+  max-width: 1200px;
+  padding: 32px 40px 64px;
+  margin: 0 auto;
+}
+
+/* ====== LOADING SKELETON ====== */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border-light);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%);
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.skeleton-header { height: 180px; margin-bottom: 24px; }
+.skeleton-stats { height: 80px; margin-bottom: 24px; }
+.skeleton-card { height: 200px; margin-bottom: 20px; }
+.loading-wrap { display: block; }
+.loaded-wrap { display: none; }
+.page-loaded .loading-wrap { display: none; }
+.page-loaded .loaded-wrap { display: block; }
+
+/* ====== GP HEADER ====== */
+.gp-header {
+  background: linear-gradient(145deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
+  border-radius: var(--radius);
+  padding: 36px 40px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.gp-header::after {
+  content: '';
+  position: absolute;
+  top: -60%; right: -10%;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(81,190,123,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.gp-header-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  position: relative;
+  z-index: 1;
+}
+.gp-header-avatar {
+  width: 80px; height: 80px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  color: #fff;
+  font-size: 24px;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+  overflow: hidden;
+  border: 3px solid rgba(255,255,255,0.15);
+}
+.gp-header-avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.gp-header-info { flex: 1; }
+.gp-header-company {
+  font-family: var(--font-headline);
+  font-size: 32px;
+  color: #fff;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.gp-header-meta {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 6px;
+}
+.gp-header-meta strong {
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+}
+.gp-header-subtitle {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 16px;
+}
+.gp-header-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gp-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(81,190,123,0.2);
+  color: var(--accent-green);
+}
+.gp-tag.type-tag {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+}
+
+/* ====== STATS BAR ====== */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+.stat-card-value {
+  font-family: var(--font-headline);
+  font-size: 26px;
+  color: var(--teal-deep);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-card-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+}
+
+/* ====== SECTION CARDS ====== */
+.section-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border-light);
+}
+.section-title {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--primary);
+}
+.section-badge {
+  background: var(--green-bg);
+  color: var(--green);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.section-body {
+  padding: 24px 28px;
+}
+
+/* ====== DEALS GRID ====== */
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+.deal-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+.deal-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+  border-color: #D4C9AD;
+}
+.deal-card-header {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.deal-card-badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.deal-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.deal-badge.green { background: var(--green-bg); color: var(--green); }
+.deal-badge.blue { background: var(--blue-bg); color: var(--blue); }
+.deal-badge.orange { background: var(--orange-bg); color: var(--orange); }
+.deal-card-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+  line-height: 1.3;
+  letter-spacing: -0.2px;
+}
+.deal-card-subtitle {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.deal-card-metrics {
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  flex: 1;
+}
+.deal-metric-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.deal-metric-value {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.deal-card-actions {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-deal-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  border: none;
+  text-align: center;
+}
+.btn-deal-action svg { width: 13px; height: 13px; }
+.btn-deal-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-deal-primary:hover { background: var(--primary-hover); }
+.btn-deal-outline {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.btn-deal-outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--green-bg);
+}
+.btn-deal-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  margin-left: auto;
+  text-decoration: none;
+}
+.btn-deal-link:hover { color: var(--primary-hover); }
+
+/* ====== SETTINGS ====== */
+.settings-group {
+  margin-bottom: 28px;
+}
+.settings-group:last-child { margin-bottom: 0; }
+.settings-label {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.settings-hint {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.settings-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.settings-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-dark);
+  background: var(--off-white);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.settings-input:focus { border-color: var(--primary); }
+.settings-input::placeholder { color: var(--text-muted); }
+.btn-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  white-space: nowrap;
+}
+.btn-save:hover { background: var(--primary-hover); }
+.btn-save:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.btn-save svg { width: 14px; height: 14px; }
+.save-status {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--green);
+  margin-top: 8px;
+  min-height: 18px;
+}
+.email-list {
+  list-style: none;
+  margin-bottom: 12px;
+}
+.email-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  background: var(--off-white);
+}
+.email-list-addr {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+.email-list-primary {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  margin-left: 8px;
+}
+.btn-remove-email {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+.btn-remove-email:hover { color: var(--red); }
+.btn-remove-email svg { width: 16px; height: 16px; }
+
+/* ====== ACCESS DENIED ====== */
+.access-denied {
+  text-align: center;
+  padding: 80px 20px;
+}
+.access-denied-icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 20px;
+  background: var(--orange-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--orange);
+}
+.access-denied-icon svg { width: 28px; height: 28px; }
+.access-denied h2 {
+  font-family: var(--font-headline);
+  font-size: 24px;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.access-denied p {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+.btn-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 28px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  text-decoration: none;
+}
+.btn-back-home:hover { background: var(--primary-hover); }
+
+/* ====== EMPTY STATE ====== */
+.empty-inline {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.empty-inline p {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ====== TOAST ====== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--teal-midnight);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  z-index: 1000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 1024px) {
+  .stats-strip { grid-template-columns: repeat(2, 1fr); }
+  .deals-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .mobile-topbar { display: flex; }
+  .main { margin-left: 0; }
+  .content-wrap { padding: 20px 16px 48px; }
+  .gp-header { padding: 24px 20px; }
+  .gp-header-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  .gp-header-tags { justify-content: center; }
+  .gp-header-company { font-size: 24px; }
+  .section-body { padding: 20px 18px; }
+  .section-header { padding: 16px 18px; }
+  .settings-input-row { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .stats-strip { grid-template-columns: 1fr 1fr; }
+  .deal-card-actions { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">GYC</div>
+    <div class="sidebar-logo-text">Grow Your Cashflow</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">GP Portal</div>
+    <a class="nav-item active" href="gp-dashboard.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      GP Dashboard
+    </a>
+    <div class="nav-section-label">Marketplace</div>
+    <a class="nav-item" href="index.html#dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" href="index.html#deals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>
+      Live Deals
+    </a>
+    <a class="nav-item" href="index.html#managers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Investment Managers
+    </a>
+    <a class="nav-item" href="index.html#assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Assets
+    </a>
+    <div class="nav-section-label">Support</div>
+    <a class="nav-item" href="index.html#officehours">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
+      Office Hours
+    </a>
+  </nav>
+  <div class="sidebar-user" id="sidebarUser" style="display:none">
+    <div class="sidebar-user-avatar" id="sidebarAvatar">GP</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarName">GP User</div>
+      <div class="sidebar-user-email" id="sidebarEmail"></div>
+    </div>
+    <button class="sidebar-logout" onclick="logout()" title="Sign out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    <div style="font-family:var(--font-ui);font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:0.5px;">GYC Dealflow v1.0</div>
+  </div>
+</aside>
+
+<!-- Sidebar overlay for mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Mobile top bar -->
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="mobile-topbar-title">GP Dashboard</div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="content-wrap">
+
+    <!-- Access Denied (hidden by default) -->
+    <div id="accessDenied" style="display:none;">
+      <div class="access-denied">
+        <div class="access-denied-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h2>GP Access Required</h2>
+        <p>You don't have GP access. This dashboard is available to General Partners with active deals on the platform.</p>
+        <a href="index.html" class="btn-back-home">Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Loading Skeleton -->
+    <div class="loading-wrap" id="loadingSkeleton">
+      <div class="skeleton skeleton-header"></div>
+      <div class="skeleton skeleton-stats"></div>
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    </div>
+
+    <!-- Loaded Content -->
+    <div class="loaded-wrap" id="loadedContent">
+
+      <!-- GP Header -->
+      <div class="gp-header">
+        <div class="gp-header-inner">
+          <div class="gp-header-avatar" id="gpAvatar">GP</div>
+          <div class="gp-header-info">
+            <h1 class="gp-header-company" id="gpCompanyName">Loading...</h1>
+            <p class="gp-header-meta" id="gpUserMeta"></p>
+            <p class="gp-header-subtitle">Manage your deals and track investor interest</p>
+            <div class="gp-header-tags" id="gpTags"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Strip -->
+      <div class="stats-strip" id="statsStrip">
+        <div class="stat-card">
+          <div class="stat-card-value" id="statDeals">--</div>
+          <div class="stat-card-label">Total Deals</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="statViews">--</div>
+          <div class="stat-card-label">Total Views</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="statIntros">--</div>
+          <div class="stat-card-label">Intro Requests</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="statSaved">--</div>
+          <div class="stat-card-label">Saved by Investors</div>
+        </div>
+      </div>
+
+      <!-- Deals Section -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Your Deals</div>
+          <span class="section-badge" id="dealsCount">0</span>
+        </div>
+        <div class="section-body">
+          <div class="deals-grid" id="dealsGrid"></div>
+          <div class="empty-inline" id="dealsEmpty" style="display:none;">
+            <p>No deals found. Your deals will appear here once they are added to the platform.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Settings</div>
+        </div>
+        <div class="section-body">
+
+          <!-- Calendar Booking URL -->
+          <div class="settings-group">
+            <div class="settings-label">Calendar Booking URL</div>
+            <div class="settings-hint">Investors who request an intro will be directed to this link to schedule a meeting.</div>
+            <div class="settings-input-row">
+              <input type="url" class="settings-input" id="calendarUrl" placeholder="https://calendly.com/your-link" />
+              <button class="btn-save" id="btnSaveCalendar" onclick="saveCalendarUrl()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save
+              </button>
+            </div>
+            <div class="save-status" id="calendarSaveStatus"></div>
+          </div>
+
+          <!-- Authorized Emails -->
+          <div class="settings-group">
+            <div class="settings-label">Authorized Emails</div>
+            <div class="settings-hint">These email addresses can sign in and manage your GP portal. The primary email cannot be removed.</div>
+            <ul class="email-list" id="emailList"></ul>
+            <div class="settings-input-row">
+              <input type="email" class="settings-input" id="newEmailInput" placeholder="team-member@yourcompany.com" onkeydown="if(event.key==='Enter')addEmail()" />
+              <button class="btn-save" id="btnAddEmail" onclick="addEmail()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+              </button>
+            </div>
+            <div class="save-status" id="emailSaveStatus"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /loaded-wrap -->
+  </div><!-- /content-wrap -->
+</div><!-- /main -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== AUTH GATE ==========
+(function enforceAuth() {
+  var user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+  if (!user || !user.token || user.token === 'local-session') {
+    localStorage.removeItem('gycUser');
+    window.location.href = 'deal-login.html';
+  }
+})();
+
+function getUser() {
+  return JSON.parse(localStorage.getItem('gycUser') || 'null');
+}
+
+function logout() {
+  localStorage.removeItem('gycUser');
+  window.location.href = 'deal-login.html';
+}
+
+// ========== SIDEBAR ==========
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ========== INIT AUTH UI ==========
+function initAuth() {
+  var user = getUser();
+  var userEl = document.getElementById('sidebarUser');
+  if (user && user.email) {
+    userEl.style.display = 'flex';
+    var name = user.name || user.email.split('@')[0];
+    var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
+    document.getElementById('sidebarAvatar').textContent = initials;
+    document.getElementById('sidebarName').textContent = name;
+    var sidebarEmailEl = document.getElementById('sidebarEmail');
+    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
+  }
+}
+
+// ========== HELPERS ==========
+function pct(val) {
+  if (val == null) return '--';
+  return (val * 100).toFixed(1) + '%';
+}
+function currency(val) {
+  if (val == null) return '--';
+  return '$' + val.toLocaleString();
+}
+function getInitials(name) {
+  if (!name) return '?';
+  return name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 3);
+}
+function statusClass(status) {
+  if (!status) return 'green';
+  var s = status.toLowerCase();
+  if (s.includes('open')) return 'green';
+  if (s.includes('evergreen')) return 'blue';
+  if (s.includes('closed')) return 'orange';
+  return 'green';
+}
+function escHtml(str) {
+  if (!str) return '';
+  var el = document.createElement('span');
+  el.textContent = str;
+  return el.innerHTML;
+}
+function escAttr(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(message) {
+  var toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 3000);
+}
+
+// ========== GP STATE ==========
+var gpState = {
+  companyId: null,
+  companyName: '',
+  deals: [],
+  calendarUrl: '',
+  authorizedEmails: []
+};
+
+// ========== CHECK GP ACCESS ==========
+function checkGPAccess() {
+  var user = getUser();
+  if (!user) return false;
+
+  // Check for gp_type in the user record
+  if (user.gp_type || user.gpType || user.is_gp) {
+    gpState.companyId = user.management_company_id || user.managementCompanyId || null;
+    gpState.companyName = user.management_company_name || user.managementCompanyName || user.company || '';
+    return true;
+  }
+
+  // Also check if they have a management_company_id set
+  if (user.management_company_id || user.managementCompanyId) {
+    gpState.companyId = user.management_company_id || user.managementCompanyId;
+    gpState.companyName = user.management_company_name || user.managementCompanyName || user.company || '';
+    return true;
+  }
+
+  return false;
+}
+
+// ========== FETCH DEALS ==========
+function fetchGPDeals() {
+  var user = getUser();
+  var headers = { 'Content-Type': 'application/json' };
+  if (user && user.token) {
+    headers['Authorization'] = 'Bearer ' + user.token;
+  }
+
+  var url = '/api/deals';
+  if (gpState.companyId) {
+    url += '?management_company_id=' + encodeURIComponent(gpState.companyId);
+  } else if (gpState.companyName) {
+    url += '?management_company=' + encodeURIComponent(gpState.companyName);
+  }
+
+  return fetch(url, { headers: headers })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      return resp.json();
+    })
+    .then(function(data) {
+      var deals = data.deals || data.records || data || [];
+      if (Array.isArray(deals)) return deals;
+      return [];
+    })
+    .catch(function(e) {
+      console.warn('Deals API unavailable:', e.message);
+      return [];
+    });
+}
+
+// ========== FETCH GP SETTINGS ==========
+function fetchGPSettings() {
+  var user = getUser();
+  var headers = { 'Content-Type': 'application/json' };
+  if (user && user.token) {
+    headers['Authorization'] = 'Bearer ' + user.token;
+  }
+
+  if (!gpState.companyId) return Promise.resolve({});
+
+  return fetch('/api/management-companies/' + encodeURIComponent(gpState.companyId) + '/settings', { headers: headers })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      return resp.json();
+    })
+    .catch(function(e) {
+      console.warn('GP settings API unavailable:', e.message);
+      return {};
+    });
+}
+
+// ========== COUNT INTRO REQUESTS ==========
+function countIntroRequests() {
+  try {
+    var requests = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
+    if (!Array.isArray(requests)) return 0;
+    var companyName = gpState.companyName.toLowerCase();
+    if (!companyName) return requests.length;
+    return requests.filter(function(r) {
+      var rCompany = (r.company || r.management_company || r.companyName || '').toLowerCase();
+      return rCompany === companyName || rCompany.includes(companyName) || companyName.includes(rCompany);
+    }).length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+// ========== RENDER ==========
+function renderGPDashboard(deals, settings) {
+  var user = getUser();
+
+  // Update GP header
+  var avatarEl = document.getElementById('gpAvatar');
+  avatarEl.textContent = getInitials(gpState.companyName || 'GP');
+
+  document.getElementById('gpCompanyName').textContent = gpState.companyName || 'Your Company';
+
+  var userName = user.name || user.email.split('@')[0];
+  var gpType = user.gp_type || user.gpType || 'General Partner';
+  document.getElementById('gpUserMeta').innerHTML = '<strong>' + escHtml(userName) + '</strong> &middot; ' + escHtml(gpType);
+
+  // Tags
+  var tagsEl = document.getElementById('gpTags');
+  var assetClasses = {};
+  deals.forEach(function(d) {
+    var ac = d.assetClass || d.asset_class;
+    if (ac) assetClasses[ac] = true;
+  });
+  var tagsHtml = Object.keys(assetClasses).map(function(ac) {
+    return '<span class="gp-tag">' + escHtml(ac) + '</span>';
+  }).join('');
+  tagsHtml += '<span class="gp-tag type-tag">GP Portal</span>';
+  tagsEl.innerHTML = tagsHtml;
+
+  // Stats
+  document.getElementById('statDeals').textContent = deals.length;
+  document.getElementById('statIntros').textContent = countIntroRequests();
+  // Views and Saved are placeholders
+  document.getElementById('statViews').textContent = '--';
+  document.getElementById('statSaved').textContent = '--';
+
+  // Deals
+  gpState.deals = deals;
+  document.getElementById('dealsCount').textContent = deals.length;
+  var dealsGrid = document.getElementById('dealsGrid');
+  var dealsEmpty = document.getElementById('dealsEmpty');
+
+  if (deals.length === 0) {
+    dealsGrid.style.display = 'none';
+    dealsEmpty.style.display = 'block';
+  } else {
+    dealsGrid.innerHTML = deals.map(function(d) {
+      var id = d.id || d.airtable_id || '';
+      var name = d.name || d.deal_name || d.Name || 'Untitled Deal';
+      var status = d.status || d.Status || '';
+      var sc = statusClass(status);
+      var assetClass = d.assetClass || d.asset_class || '';
+      var dealType = d.dealType || d.deal_type || '';
+      var strategy = d.strategy || d.Strategy || '';
+      var targetIRR = d.targetIRR || d.target_irr || d.targetIrr || null;
+      var minInvestment = d.minInvestment || d.min_investment || d.minimumInvestment || null;
+      var prefReturn = d.prefReturn || d.pref_return || d.preferredReturn || null;
+      var equityMultiple = d.equityMultiple || d.equity_multiple || null;
+
+      return '<div class="deal-card">' +
+        '<div class="deal-card-header">' +
+          '<div class="deal-card-badges">' +
+            (status ? '<span class="deal-badge ' + sc + '">' + escHtml(status) + '</span>' : '') +
+            (strategy ? '<span class="deal-badge orange">' + escHtml(strategy) + '</span>' : '') +
+          '</div>' +
+          '<div class="deal-card-title">' + escHtml(name) + '</div>' +
+          '<div class="deal-card-subtitle">' + escHtml(assetClass) + (dealType ? ' &middot; ' + escHtml(dealType) : '') + '</div>' +
+        '</div>' +
+        '<div class="deal-card-metrics">' +
+          '<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">' + pct(targetIRR) + '</div></div>' +
+          '<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">' + currency(minInvestment) + '</div></div>' +
+          '<div><div class="deal-metric-label">Pref Return</div><div class="deal-metric-value">' + pct(prefReturn) + '</div></div>' +
+          '<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">' + (equityMultiple ? equityMultiple.toFixed(1) + 'x' : '--') + '</div></div>' +
+        '</div>' +
+        '<div class="deal-card-actions">' +
+          '<a href="deal.html?id=' + escAttr(id) + '" class="btn-deal-action btn-deal-primary">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+            'Edit Deal' +
+          '</a>' +
+          '<button class="btn-deal-action btn-deal-outline" onclick="uploadDeck(\'' + escAttr(id) + '\')">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+            'Upload Deck' +
+          '</button>' +
+          '<a href="deal.html?id=' + escAttr(id) + '&tab=analytics" class="btn-deal-link">View Analytics &rarr;</a>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Settings
+  gpState.calendarUrl = settings.calendar_url || settings.calendarUrl || '';
+  gpState.authorizedEmails = settings.authorized_emails || settings.authorizedEmails || [];
+
+  // If no authorized emails from API, use the current user's email
+  if (gpState.authorizedEmails.length === 0 && user && user.email) {
+    gpState.authorizedEmails = [user.email];
+  }
+
+  document.getElementById('calendarUrl').value = gpState.calendarUrl;
+  renderEmailList();
+}
+
+// ========== RENDER EMAIL LIST ==========
+function renderEmailList() {
+  var user = getUser();
+  var primaryEmail = user ? user.email : '';
+  var listEl = document.getElementById('emailList');
+
+  if (gpState.authorizedEmails.length === 0) {
+    listEl.innerHTML = '<li style="justify-content:center;color:var(--text-muted);font-family:var(--font-ui);font-size:13px;">No authorized emails configured.</li>';
+    return;
+  }
+
+  listEl.innerHTML = gpState.authorizedEmails.map(function(email) {
+    var isPrimary = email.toLowerCase() === primaryEmail.toLowerCase();
+    return '<li>' +
+      '<div>' +
+        '<span class="email-list-addr">' + escHtml(email) + '</span>' +
+        (isPrimary ? '<span class="email-list-primary">Primary</span>' : '') +
+      '</div>' +
+      (isPrimary ? '' : '<button class="btn-remove-email" onclick="removeEmail(\'' + escAttr(email) + '\')" title="Remove email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>') +
+    '</li>';
+  }).join('');
+}
+
+// ========== SAVE CALENDAR URL ==========
+function saveCalendarUrl() {
+  var url = document.getElementById('calendarUrl').value.trim();
+  var statusEl = document.getElementById('calendarSaveStatus');
+  var btn = document.getElementById('btnSaveCalendar');
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  statusEl.textContent = '';
+
+  var user = getUser();
+  var headers = { 'Content-Type': 'application/json' };
+  if (user && user.token) {
+    headers['Authorization'] = 'Bearer ' + user.token;
+  }
+
+  if (!gpState.companyId) {
+    // Store locally as fallback
+    gpState.calendarUrl = url;
+    try {
+      var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+      gpSettings.calendarUrl = url;
+      localStorage.setItem('gycGPSettings', JSON.stringify(gpSettings));
+    } catch (e) {}
+
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save';
+    statusEl.textContent = 'Saved locally.';
+    showToast('Calendar URL saved');
+    return;
+  }
+
+  fetch('/api/management-companies/' + encodeURIComponent(gpState.companyId) + '/settings', {
+    method: 'PATCH',
+    headers: headers,
+    body: JSON.stringify({ calendar_url: url })
+  })
+  .then(function(resp) {
+    if (!resp.ok) throw new Error('Failed to save');
+    return resp.json();
+  })
+  .then(function() {
+    gpState.calendarUrl = url;
+    statusEl.textContent = 'Saved successfully.';
+    statusEl.style.color = 'var(--green)';
+    showToast('Calendar URL saved');
+  })
+  .catch(function(e) {
+    console.warn('Save failed, storing locally:', e.message);
+    // Fallback: save to localStorage
+    try {
+      var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+      gpSettings.calendarUrl = url;
+      localStorage.setItem('gycGPSettings', JSON.stringify(gpSettings));
+    } catch (ex) {}
+    gpState.calendarUrl = url;
+    statusEl.textContent = 'Saved locally (API unavailable).';
+    statusEl.style.color = 'var(--orange)';
+    showToast('Calendar URL saved locally');
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save';
+  });
+}
+
+// ========== ADD EMAIL ==========
+function addEmail() {
+  var input = document.getElementById('newEmailInput');
+  var email = input.value.trim().toLowerCase();
+  var statusEl = document.getElementById('emailSaveStatus');
+  statusEl.textContent = '';
+
+  if (!email || !email.includes('@')) {
+    statusEl.textContent = 'Please enter a valid email address.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+
+  // Check for duplicates
+  var exists = gpState.authorizedEmails.some(function(e) { return e.toLowerCase() === email; });
+  if (exists) {
+    statusEl.textContent = 'This email is already authorized.';
+    statusEl.style.color = 'var(--orange)';
+    return;
+  }
+
+  gpState.authorizedEmails.push(email);
+  input.value = '';
+  renderEmailList();
+  saveAuthorizedEmails('Email added.');
+}
+
+// ========== REMOVE EMAIL ==========
+function removeEmail(email) {
+  gpState.authorizedEmails = gpState.authorizedEmails.filter(function(e) {
+    return e.toLowerCase() !== email.toLowerCase();
+  });
+  renderEmailList();
+  saveAuthorizedEmails('Email removed.');
+}
+
+// ========== SAVE AUTHORIZED EMAILS ==========
+function saveAuthorizedEmails(successMsg) {
+  var statusEl = document.getElementById('emailSaveStatus');
+  var user = getUser();
+  var headers = { 'Content-Type': 'application/json' };
+  if (user && user.token) {
+    headers['Authorization'] = 'Bearer ' + user.token;
+  }
+
+  if (!gpState.companyId) {
+    // Store locally as fallback
+    try {
+      var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+      gpSettings.authorizedEmails = gpState.authorizedEmails;
+      localStorage.setItem('gycGPSettings', JSON.stringify(gpSettings));
+    } catch (e) {}
+    statusEl.textContent = (successMsg || 'Saved') + ' (stored locally)';
+    statusEl.style.color = 'var(--green)';
+    showToast(successMsg || 'Saved');
+    return;
+  }
+
+  fetch('/api/management-companies/' + encodeURIComponent(gpState.companyId) + '/settings', {
+    method: 'PATCH',
+    headers: headers,
+    body: JSON.stringify({ authorized_emails: gpState.authorizedEmails })
+  })
+  .then(function(resp) {
+    if (!resp.ok) throw new Error('Failed to save');
+    return resp.json();
+  })
+  .then(function() {
+    statusEl.textContent = successMsg || 'Saved successfully.';
+    statusEl.style.color = 'var(--green)';
+    showToast(successMsg || 'Saved');
+  })
+  .catch(function(e) {
+    console.warn('Save failed, storing locally:', e.message);
+    try {
+      var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+      gpSettings.authorizedEmails = gpState.authorizedEmails;
+      localStorage.setItem('gycGPSettings', JSON.stringify(gpSettings));
+    } catch (ex) {}
+    statusEl.textContent = (successMsg || 'Saved') + ' (API unavailable, stored locally)';
+    statusEl.style.color = 'var(--orange)';
+    showToast(successMsg || 'Saved locally');
+  });
+}
+
+// ========== UPLOAD DECK ==========
+function uploadDeck(dealId) {
+  // Create a hidden file input and trigger it
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.pptx,.ppt,.key';
+  input.onchange = function() {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('deal_id', dealId);
+
+    var user = getUser();
+    var headers = {};
+    if (user && user.token) {
+      headers['Authorization'] = 'Bearer ' + user.token;
+    }
+
+    showToast('Uploading ' + file.name + '...');
+
+    fetch('/api/deals/' + encodeURIComponent(dealId) + '/deck', {
+      method: 'POST',
+      headers: headers,
+      body: formData
+    })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('Upload failed');
+      return resp.json();
+    })
+    .then(function() {
+      showToast('Deck uploaded successfully!');
+    })
+    .catch(function(e) {
+      console.warn('Deck upload failed:', e.message);
+      showToast('Upload failed. Please try again later.');
+    });
+  };
+  input.click();
+}
+
+// ========== LOAD LOCAL SETTINGS ==========
+function loadLocalSettings() {
+  try {
+    var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+    return {
+      calendarUrl: gpSettings.calendarUrl || '',
+      authorizedEmails: gpSettings.authorizedEmails || []
+    };
+  } catch (e) {
+    return {};
+  }
+}
+
+// ========== INIT ==========
+function init() {
+  initAuth();
+
+  var hasGPAccess = checkGPAccess();
+
+  if (!hasGPAccess) {
+    document.getElementById('loadingSkeleton').style.display = 'none';
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+
+  // Fetch deals and settings in parallel
+  Promise.all([fetchGPDeals(), fetchGPSettings()])
+    .then(function(results) {
+      var deals = results[0];
+      var settings = results[1] || {};
+
+      // Merge local settings as fallback
+      var localSettings = loadLocalSettings();
+      if (!settings.calendar_url && !settings.calendarUrl && localSettings.calendarUrl) {
+        settings.calendarUrl = localSettings.calendarUrl;
+      }
+      if ((!settings.authorized_emails || settings.authorized_emails.length === 0) &&
+          (!settings.authorizedEmails || settings.authorizedEmails.length === 0) &&
+          localSettings.authorizedEmails && localSettings.authorizedEmails.length > 0) {
+        settings.authorizedEmails = localSettings.authorizedEmails;
+      }
+
+      renderGPDashboard(deals, settings);
+      document.body.classList.add('page-loaded');
+    })
+    .catch(function(e) {
+      console.error('Failed to load GP dashboard:', e);
+      // Render with empty data
+      renderGPDashboard([], loadLocalSettings());
+      document.body.classList.add('page-loaded');
+    });
+}
+
+init();
+</script>
+</body>
+</html>

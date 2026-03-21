@@ -79,16 +79,54 @@ export default async function handler(req, res) {
     const ghl = await getGhlTier(email);
     const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
 
+    // ── GP Detection ────────────────────────────────────────────────
+    // Check if user is a GP (operator/sponsor) by matching email against
+    // management_companies.authorized_emails array or ceo field
+    let gpInfo = null;
+    try {
+      const emailLower = email.toLowerCase();
+
+      // Check authorized_emails array (contains operator)
+      const { data: authMatch } = await adminSupabase
+        .from('management_companies')
+        .select('id, operator_name')
+        .contains('authorized_emails', [emailLower])
+        .limit(1)
+        .single();
+
+      // Check CEO field (case-insensitive)
+      const { data: ceoMatch } = await adminSupabase
+        .from('management_companies')
+        .select('id, operator_name')
+        .ilike('ceo', emailLower)
+        .limit(1)
+        .single();
+
+      if (ceoMatch) {
+        gpInfo = { gp_type: 'founder', management_company_id: ceoMatch.id, managementCompanyName: ceoMatch.operator_name };
+      } else if (authMatch) {
+        gpInfo = { gp_type: 'sponsor', management_company_id: authMatch.id, managementCompanyName: authMatch.operator_name };
+      }
+    } catch {
+      // GP detection is best-effort; don't block auth
+    }
+
     if (user) {
-      // Update profile with latest tier from GHL
-      await adminSupabase.from('user_profiles').upsert({
+      // Update profile with latest tier from GHL + GP info
+      const profileData = {
         id: user.id,
         email: email.toLowerCase(),
         full_name: ghl.name || user.user_metadata?.full_name || email.split('@')[0],
         tier: isAdmin ? 'academy' : ghl.tier,
         is_admin: isAdmin,
         ghl_contact_id: ghl.contactId
-      }, { onConflict: 'id' });
+      };
+      if (gpInfo) {
+        profileData.gp_type = gpInfo.gp_type;
+        profileData.management_company_id = gpInfo.management_company_id;
+        profileData.gp_verified = true;
+      }
+      await adminSupabase.from('user_profiles').upsert(profileData, { onConflict: 'id' });
 
       return res.status(200).json({
         success: true,
@@ -98,17 +136,27 @@ export default async function handler(req, res) {
         tier: isAdmin ? 'academy' : ghl.tier,
         isAdmin,
         tags: ghl.tags,
-        token: user.id // placeholder — real flow uses Supabase session tokens
+        token: user.id, // placeholder — real flow uses Supabase session tokens
+        ...(gpInfo && {
+          gpType: gpInfo.gp_type,
+          managementCompanyId: gpInfo.management_company_id,
+          managementCompanyName: gpInfo.managementCompanyName
+        })
       });
     }
 
-    // User not in Supabase yet — return free tier
+    // User not in Supabase yet — return free tier (still include GP info if detected)
     return res.status(200).json({
       success: true,
       email,
       name: ghl.name || email.split('@')[0],
       tier: 'free',
-      token: 'pending'
+      token: 'pending',
+      ...(gpInfo && {
+        gpType: gpInfo.gp_type,
+        managementCompanyId: gpInfo.management_company_id,
+        managementCompanyName: gpInfo.managementCompanyName
+      })
     });
   }
 
@@ -127,14 +175,43 @@ export default async function handler(req, res) {
     const ghl = await getGhlTier(email);
     const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
 
-    await adminSupabase.from('user_profiles').upsert({
+    // GP detection (same logic as lookup)
+    let gpInfo = null;
+    try {
+      const emailLower = email.toLowerCase();
+      const { data: authMatch } = await adminSupabase
+        .from('management_companies')
+        .select('id, operator_name')
+        .contains('authorized_emails', [emailLower])
+        .limit(1)
+        .single();
+      const { data: ceoMatch } = await adminSupabase
+        .from('management_companies')
+        .select('id, operator_name')
+        .ilike('ceo', emailLower)
+        .limit(1)
+        .single();
+      if (ceoMatch) {
+        gpInfo = { gp_type: 'founder', management_company_id: ceoMatch.id, managementCompanyName: ceoMatch.operator_name };
+      } else if (authMatch) {
+        gpInfo = { gp_type: 'sponsor', management_company_id: authMatch.id, managementCompanyName: authMatch.operator_name };
+      }
+    } catch {}
+
+    const loginProfile = {
       id: data.user.id,
       email: email.toLowerCase(),
       full_name: ghl.name || data.user.user_metadata?.full_name || email.split('@')[0],
       tier: isAdmin ? 'academy' : ghl.tier,
       is_admin: isAdmin,
       ghl_contact_id: ghl.contactId
-    }, { onConflict: 'id' });
+    };
+    if (gpInfo) {
+      loginProfile.gp_type = gpInfo.gp_type;
+      loginProfile.management_company_id = gpInfo.management_company_id;
+      loginProfile.gp_verified = true;
+    }
+    await adminSupabase.from('user_profiles').upsert(loginProfile, { onConflict: 'id' });
 
     return res.status(200).json({
       success: true,
@@ -144,7 +221,12 @@ export default async function handler(req, res) {
       tier: isAdmin ? 'academy' : ghl.tier,
       isAdmin,
       token: data.session.access_token,        // real JWT for API calls
-      refreshToken: data.session.refresh_token  // for token refresh
+      refreshToken: data.session.refresh_token, // for token refresh
+      ...(gpInfo && {
+        gpType: gpInfo.gp_type,
+        managementCompanyId: gpInfo.management_company_id,
+        managementCompanyName: gpInfo.managementCompanyName
+      })
     });
   }
 

@@ -4804,6 +4804,13 @@ const _supa = window.supabase.createClient(
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings
     </a>
+    <div id="gpNav" style="display:none;">
+      <div class="nav-section-label">GP Portal</div>
+      <a class="nav-item" href="gp-dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        GP Dashboard
+      </a>
+    </div>
     <div id="adminNav" style="display:none;">
       <div class="nav-section-label">Admin</div>
       <a class="nav-item" href="#" data-page="dealflow" onclick="navigateTo('dealflow'); return false">
@@ -17418,6 +17425,13 @@ function showAdminNav() {
   const admin = isAdmin();
   const adminNav = document.getElementById('adminNav');
   if (adminNav) adminNav.style.display = admin ? 'block' : 'none';
+  // Show GP nav if user is a GP
+  const gpNav = document.getElementById('gpNav');
+  if (gpNav) {
+    const user = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    const isGP = user.gpType || (admin); // Admin also sees GP nav
+    gpNav.style.display = isGP ? 'block' : 'none';
+  }
   // Enable/disable Coming Soon nav items for admins
   ['navAssets', 'navOfficeHours', 'navAcademy', 'navTaxPrep'].forEach(id => {
     const el = document.getElementById(id);

@@ -34,7 +34,8 @@ export default async function handler(req, res) {
           founding_year,
           type,
           asset_classes,
-          total_investors
+          total_investors,
+          authorized_emails
         )
       `)
       .not('investment_name', 'eq', '')
@@ -151,6 +152,7 @@ export default async function handler(req, res) {
           mcInvestClearly: mc.invest_clearly_profile || '',
           mcTotalInvestors: mc.total_investors,
           mcBookingUrl: mc.booking_url || '',
+          mcAuthorizedEmails: mc.authorized_emails || [],
           fees: d.fees || [],
           firstYrDepreciation: d.first_yr_depreciation,
           strategy: d.strategy,
@@ -198,7 +200,8 @@ export default async function handler(req, res) {
       assetClasses: mc.asset_classes || [],
       type: mc.type,
       investClearlyProfile: mc.invest_clearly_profile,
-      totalInvestors: mc.total_investors
+      totalInvestors: mc.total_investors,
+      authorizedEmails: mc.authorized_emails || []
     }));
 
     return res.status(200).json({
