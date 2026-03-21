@@ -5086,7 +5086,7 @@ const _supa = window.supabase.createClient(
     <div class="office-hours-banner">
       <div class="office-hours-pulse"></div>
       <div class="office-hours-text">Live Office Hours every <span>Thursday 12-1pm ET</span> - Get your deals reviewed by Pascal</div>
-      <button class="office-hours-join" onclick="window.open('https://link.growyourcashflow.io/widget/booking/YmA8P5FLDzAIFXaSoCnE','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})">Join This Week</button>
+      <button class="office-hours-join" onclick="window.open('http://growyourcashflow.io/introcall','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})">Join This Week</button>
     </div>
     <div class="filter-bar">
       <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
@@ -17888,7 +17888,7 @@ function renderDashboard() {
         actionIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
         actionTitle = 'Book Your Onboarding Call';
         actionDesc = 'Join a live deal flow walkthrough to learn how to evaluate and deploy capital.';
-        actionBtnText = 'Book a Call \u2192'; actionOnclick = "window.open('https://link.growyourcashflow.io/widget/booking/YmA8P5FLDzAIFXaSoCnE','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})"; break;
+        actionBtnText = 'Book a Call \u2192'; actionOnclick = "window.open('http://growyourcashflow.io/introcall','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})"; break;
       default:
         actionIcon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
         actionTitle = 'Keep Going';
@@ -19787,7 +19787,7 @@ function renderMilestoneTracker() {
     if (isNext) {
       if (m.id === 'onboarding_complete') { actionOnclick = 'openBuyBoxWizard()'; actionLabel = 'Start'; }
       else if (m.id === 'saved_3_deals') { actionOnclick = "navigateTo('deals')"; actionLabel = 'Browse'; }
-      else if (m.id === 'booked_onboarding') { actionOnclick = "window.open('https://link.growyourcashflow.io/widget/booking/YmA8P5FLDzAIFXaSoCnE','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})"; actionLabel = 'Book'; }
+      else if (m.id === 'booked_onboarding') { actionOnclick = "window.open('http://growyourcashflow.io/introcall','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})"; actionLabel = 'Book'; }
     }
 
     var borderColor = done ? 'var(--primary)' : isNext ? 'var(--border)' : 'var(--border-light)';
