@@ -4789,6 +4789,357 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   .bb-office-cta .btn-cta { width:100% !important; }
 }
 
+/* ========== MOBILE SWIPE FEED ========== */
+.swipe-feed-container {
+  display: none;
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 210px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 420px;
+  overflow: hidden;
+  touch-action: pan-y;
+  padding: 0 0 8px;
+}
+.swipe-card-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.swipe-card {
+  position: absolute;
+  width: calc(100% - 32px);
+  max-width: 400px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+  transition: box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.swipe-card.active {
+  z-index: 10;
+  cursor: grab;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+}
+.swipe-card.active:active { cursor: grabbing; }
+.swipe-card.behind {
+  z-index: 5;
+  transform: scale(0.95) translateY(8px) !important;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.swipe-card.behind-2 {
+  z-index: 1;
+  transform: scale(0.9) translateY(16px) !important;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.swipe-card.swiping-left { box-shadow: 0 8px 32px rgba(208,64,64,0.25); }
+.swipe-card.swiping-right { box-shadow: 0 8px 32px rgba(81,190,123,0.25); }
+
+/* Swipe overlay indicators */
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+  border: 3px solid;
+}
+.swipe-indicator.skip {
+  right: 20px;
+  color: #D04040;
+  border-color: #D04040;
+  background: rgba(208,64,64,0.08);
+  transform: translateY(-50%) rotate(12deg);
+}
+.swipe-indicator.save {
+  left: 20px;
+  color: #51BE7B;
+  border-color: #51BE7B;
+  background: rgba(81,190,123,0.08);
+  transform: translateY(-50%) rotate(-12deg);
+}
+
+/* Swipe card hero */
+.swipe-hero {
+  height: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.swipe-hero-badges {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 80%;
+}
+.swipe-hero-irr {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+}
+.swipe-hero-irr-value {
+  font-family: var(--font-ui);
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  line-height: 1;
+}
+.swipe-hero-irr-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.swipe-hero-icon {
+  width: 100px;
+  height: 100px;
+  opacity: 0.2;
+}
+.swipe-hero-icon svg { width: 100%; height: 100%; }
+
+/* Swipe card body */
+.swipe-body {
+  padding: 18px 20px 14px;
+  flex: 1;
+  overflow-y: auto;
+}
+.swipe-title {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.swipe-manager {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.swipe-strategy {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.swipe-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.swipe-metric-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+.swipe-metric-value {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.2;
+}
+.swipe-info-row {
+  display: flex;
+  gap: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.swipe-info-row .swipe-metric-value { font-size: 13px; font-weight: 700; }
+
+/* Bottom action buttons */
+.swipe-actions {
+  display: flex;
+  gap: 12px;
+  padding: 14px 20px 18px;
+  justify-content: center;
+  align-items: center;
+}
+.swipe-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.swipe-btn:active { transform: scale(0.92); }
+.swipe-btn-skip {
+  width: 56px;
+  height: 56px;
+  background: #fff;
+  border: 2px solid #e57373;
+  color: #D04040;
+  box-shadow: 0 2px 12px rgba(208,64,64,0.15);
+}
+.swipe-btn-info {
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.swipe-btn-save {
+  width: 56px;
+  height: 56px;
+  background: #fff;
+  border: 2px solid var(--green);
+  color: var(--green);
+  box-shadow: 0 2px 12px rgba(81,190,123,0.2);
+}
+.swipe-btn svg { width: 24px; height: 24px; }
+.swipe-btn-info svg { width: 20px; height: 20px; }
+
+/* Swipe counter */
+.swipe-counter {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 8px 0 4px;
+  font-weight: 600;
+}
+
+/* Mobile view toggle bar */
+.mobile-view-toggle {
+  display: none;
+  justify-content: center;
+  gap: 0;
+  padding: 8px 16px;
+  background: var(--bg-cream);
+}
+.mobile-view-toggle-btn {
+  flex: 1;
+  max-width: 160px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-view-toggle-btn:first-child { border-radius: 8px 0 0 8px; border-right: none; }
+.mobile-view-toggle-btn:last-child { border-radius: 0 8px 8px 0; }
+.mobile-view-toggle-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.mobile-view-toggle-btn svg { width: 16px; height: 16px; }
+
+/* Empty state for swipe */
+.swipe-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px 32px;
+}
+.swipe-empty-icon { font-size: 48px; margin-bottom: 16px; }
+.swipe-empty-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.swipe-empty-sub {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+/* Show mobile view toggle only on mobile */
+@media (max-width: 768px) {
+  .mobile-view-toggle { display: flex; }
+}
+
+/* Undo toast */
+.swipe-undo-toast {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #1a1a2e;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 500;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.swipe-undo-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.swipe-undo-btn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -4988,10 +5339,37 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
+    <!-- Mobile View Toggle: Swipe vs Speed -->
+    <div class="mobile-view-toggle" id="mobileViewToggle">
+      <button class="mobile-view-toggle-btn active" data-mobile-view="swipe" onclick="switchMobileView('swipe')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+        Swipe
+      </button>
+      <button class="mobile-view-toggle-btn" data-mobile-view="speed" onclick="switchMobileView('speed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Speed View
+      </button>
+    </div>
     <div class="content-area">
       <div id="dealsMilestoneChecklist"></div>
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
       <div class="card-grid" id="cardGrid"></div>
+      <!-- Mobile Swipe Feed -->
+      <div class="swipe-feed-container" id="swipeFeedContainer">
+        <div class="swipe-counter" id="swipeCounter"></div>
+        <div class="swipe-card-stack" id="swipeCardStack"></div>
+        <div class="swipe-actions" id="swipeActions">
+          <button class="swipe-btn swipe-btn-skip" onclick="swipeAction('skip')" title="Skip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <button class="swipe-btn swipe-btn-info" onclick="swipeAction('info')" title="View details">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </button>
+          <button class="swipe-btn swipe-btn-save" onclick="swipeAction('save')" title="Save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        </div>
+      </div>
       <div id="tableViewWrap" style="display:none;overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow-card);">
         <table class="table-view" id="tableView" style="display:table;">
           <thead id="tableHead"></thead>
@@ -9568,6 +9946,28 @@ function renderAll() {
   const grid = document.getElementById('cardGrid');
   const table = document.getElementById('tableViewWrap');
   const mapContainer = document.getElementById('mapView');
+  const swipeFeed = document.getElementById('swipeFeedContainer');
+  const mobileToggle = document.getElementById('mobileViewToggle');
+
+  // Show/hide mobile view toggle (only on browse tab, mobile only via CSS)
+  if (mobileToggle) {
+    mobileToggle.style.display = (currentTab === 'browse') ? '' : 'none';
+  }
+
+  // Mobile swipe feed view
+  var showSwipe = isMobileScreen() && mobileView === 'swipe' && currentTab === 'browse';
+  if (swipeFeed) swipeFeed.style.display = showSwipe ? 'block' : 'none';
+  // Hide filter bar in swipe mode for max card space
+  var filterBar = document.querySelector('.filter-bar');
+  if (filterBar) filterBar.style.display = showSwipe ? 'none' : '';
+
+  if (showSwipe) {
+    grid.style.display = 'none';
+    table.style.display = 'none';
+    mapContainer.style.display = 'none';
+    initSwipeFeed();
+    return;
+  }
 
   // Invested tab: show portfolio summary view instead of deal cards
   if (currentTab === 'invested') {
@@ -20248,6 +20648,362 @@ function showShareToastIdx(msg) {
   requestAnimationFrame(function() { toast.classList.add('show'); });
   setTimeout(function() { toast.classList.remove('show'); setTimeout(function() { toast.remove(); }, 200); }, 2500);
 }
+
+// ========== MOBILE SWIPE FEED ==========
+var mobileView = 'swipe'; // 'swipe' or 'speed'
+var swipeDeals = [];
+var swipeIndex = 0;
+var swipeHistory = []; // for undo
+var _swipeDragging = false;
+var _swipeStartX = 0;
+var _swipeStartY = 0;
+var _swipeCurrentX = 0;
+var _swipeMoved = false;
+
+function isMobileScreen() {
+  return window.innerWidth <= 768;
+}
+
+function switchMobileView(view) {
+  mobileView = view;
+  document.querySelectorAll('.mobile-view-toggle-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.mobileView === view);
+  });
+  renderAll();
+}
+
+function renderSwipeCard(deal) {
+  var isCredit = isCreditFund(deal);
+  var hero = isCredit ? getAssetHero('lending') : getAssetHero(deal.assetClass);
+  var heroBg = deal.propertyImageUrl
+    ? 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.45) 100%), url(' + deal.propertyImageUrl + '); background-size:cover; background-position:center'
+    : hero.gradient;
+  var strategy = getEquityStrategy(deal);
+  var mgr = getManagerTier(deal);
+  var hasDocs = !!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl);
+  var primaryBadge = isCredit ? creditBadgeLabel(deal) : (deal.assetClass || 'Real Estate');
+
+  return '<div class="swipe-card" data-deal-id="' + deal.id + '">'
+    + '<div class="swipe-indicator skip">SKIP</div>'
+    + '<div class="swipe-indicator save">SAVE</div>'
+    // Hero
+    + '<div class="swipe-hero" style="background:' + heroBg + ';">'
+    + (deal.propertyImageUrl ? '' : '<div class="swipe-hero-icon">' + hero.icon + '</div>')
+    + '<div class="swipe-hero-badges">'
+    + '<span class="credit-badge">' + primaryBadge + '</span>'
+    + (deal.dealType ? '<span class="credit-badge">' + deal.dealType + '</span>' : '')
+    + (!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : '')
+    + renderFreshnessBadge(deal)
+    + renderMatchBadge(deal)
+    + '</div>'
+    + (deal.targetIRR ? '<div class="swipe-hero-irr"><span class="swipe-hero-irr-value">' + fmt(deal.targetIRR, 'pct') + '</span><span class="swipe-hero-irr-label">Target IRR</span></div>' : '')
+    + '</div>'
+    // Body
+    + '<div class="swipe-body">'
+    + '<div class="swipe-title">' + deal.investmentName + '</div>'
+    + '<div class="swipe-manager">' + (deal.managementCompany || '') + (deal.location ? ' &middot; ' + deal.location : '') + '</div>'
+    + (strategy ? '<div class="swipe-strategy">' + strategy + '</div>' : '')
+    + buildHighlightPills(deal)
+    + '<div class="swipe-metrics">'
+    + '<div><div class="swipe-metric-label">Equity Multiple</div><div class="swipe-metric-value" style="color:var(--green);">' + (deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Minimum</div><div class="swipe-metric-value">' + (deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Hold Period</div><div class="swipe-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div></div>'
+    + '<div><div class="swipe-metric-label">Pref Return</div><div class="swipe-metric-value">' + (deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—') + '</div></div>'
+    + '</div>'
+    + '<div class="swipe-info-row">'
+    + '<div><div class="swipe-metric-label">Manager Size</div><div class="swipe-metric-value">' + (mgr.label !== '—' ? mgr.label + ' <span style="color:var(--text-muted);font-weight:500;font-size:10px;">' + mgr.range + '</span>' : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Fund Founded</div><div class="swipe-metric-value">' + (deal.mcFoundingYear || '—') + '</div></div>'
+    + '</div>'
+    + renderSocialProof(deal.id)
+    + '</div>'
+    + '</div>';
+}
+
+function initSwipeFeed() {
+  swipeDeals = getFilteredDeals();
+  // Skip deals user has already acted on (saved, passed, etc.) when on browse tab
+  if (currentTab === 'browse') {
+    swipeDeals = swipeDeals.filter(function(d) {
+      var stage = getDealStage(d.id);
+      return !stage || stage === 'browse';
+    });
+  }
+  swipeIndex = 0;
+  swipeHistory = [];
+  renderSwipeStack();
+}
+
+function renderSwipeStack() {
+  var stack = document.getElementById('swipeCardStack');
+  var counter = document.getElementById('swipeCounter');
+  var actions = document.getElementById('swipeActions');
+  if (!stack) return;
+
+  if (swipeDeals.length === 0 || swipeIndex >= swipeDeals.length) {
+    stack.innerHTML = '<div class="swipe-empty">'
+      + '<div class="swipe-empty-icon">&#x1f3af;</div>'
+      + '<div class="swipe-empty-title">' + (swipeDeals.length === 0 ? 'No deals to swipe' : 'All caught up!') + '</div>'
+      + '<div class="swipe-empty-sub">' + (swipeDeals.length === 0 ? 'Try adjusting your filters or switching tabs.' : 'You\'ve reviewed all available deals. Check back later for new ones!') + '</div>'
+      + '</div>';
+    if (counter) counter.textContent = '';
+    if (actions) actions.style.display = 'none';
+    return;
+  }
+
+  if (actions) actions.style.display = 'flex';
+  if (counter) counter.textContent = (swipeIndex + 1) + ' of ' + swipeDeals.length;
+
+  var html = '';
+  // Render up to 3 stacked cards
+  for (var i = Math.min(swipeIndex + 2, swipeDeals.length - 1); i >= swipeIndex; i--) {
+    html += renderSwipeCard(swipeDeals[i]);
+  }
+  stack.innerHTML = html;
+
+  // Classify cards
+  var cards = stack.querySelectorAll('.swipe-card');
+  cards.forEach(function(card, idx) {
+    var cardIdx = swipeIndex + (cards.length - 1 - idx);
+    if (cardIdx === swipeIndex) {
+      card.classList.add('active');
+      attachSwipeGestures(card);
+    } else if (cardIdx === swipeIndex + 1) {
+      card.classList.add('behind');
+    } else {
+      card.classList.add('behind-2');
+    }
+  });
+}
+
+function attachSwipeGestures(card) {
+  card.addEventListener('touchstart', onSwipeTouchStart, { passive: true });
+  card.addEventListener('touchmove', onSwipeTouchMove, { passive: false });
+  card.addEventListener('touchend', onSwipeTouchEnd, { passive: true });
+  // Mouse support for testing
+  card.addEventListener('mousedown', onSwipeMouseDown);
+}
+
+function onSwipeTouchStart(e) {
+  var touch = e.touches[0];
+  _swipeStartX = touch.clientX;
+  _swipeStartY = touch.clientY;
+  _swipeCurrentX = 0;
+  _swipeDragging = true;
+  _swipeMoved = false;
+  this.style.transition = 'none';
+}
+
+function onSwipeTouchMove(e) {
+  if (!_swipeDragging) return;
+  var touch = e.touches[0];
+  var dx = touch.clientX - _swipeStartX;
+  var dy = touch.clientY - _swipeStartY;
+
+  // If mostly vertical, don't interfere with scrolling
+  if (!_swipeMoved && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+    _swipeDragging = false;
+    return;
+  }
+
+  if (Math.abs(dx) > 10) {
+    _swipeMoved = true;
+    e.preventDefault();
+  }
+
+  _swipeCurrentX = dx;
+  var rotation = dx * 0.08;
+  this.style.transform = 'translateX(' + dx + 'px) rotate(' + rotation + 'deg)';
+
+  // Show indicators
+  var skipEl = this.querySelector('.swipe-indicator.skip');
+  var saveEl = this.querySelector('.swipe-indicator.save');
+  var threshold = 60;
+  if (dx < -threshold) {
+    if (skipEl) skipEl.style.opacity = Math.min(1, (Math.abs(dx) - threshold) / 60);
+    if (saveEl) saveEl.style.opacity = 0;
+    this.classList.add('swiping-left');
+    this.classList.remove('swiping-right');
+  } else if (dx > threshold) {
+    if (saveEl) saveEl.style.opacity = Math.min(1, (dx - threshold) / 60);
+    if (skipEl) skipEl.style.opacity = 0;
+    this.classList.add('swiping-right');
+    this.classList.remove('swiping-left');
+  } else {
+    if (skipEl) skipEl.style.opacity = 0;
+    if (saveEl) saveEl.style.opacity = 0;
+    this.classList.remove('swiping-left', 'swiping-right');
+  }
+}
+
+function onSwipeTouchEnd(e) {
+  if (!_swipeDragging) return;
+  _swipeDragging = false;
+  var card = this;
+  var dx = _swipeCurrentX;
+  var swipeThreshold = 100;
+
+  if (dx < -swipeThreshold) {
+    animateSwipeOut(card, 'left');
+  } else if (dx > swipeThreshold) {
+    animateSwipeOut(card, 'right');
+  } else {
+    // Snap back
+    card.style.transition = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    card.style.transform = '';
+    card.classList.remove('swiping-left', 'swiping-right');
+    var skipEl = card.querySelector('.swipe-indicator.skip');
+    var saveEl = card.querySelector('.swipe-indicator.save');
+    if (skipEl) skipEl.style.opacity = 0;
+    if (saveEl) saveEl.style.opacity = 0;
+  }
+}
+
+// Mouse support
+function onSwipeMouseDown(e) {
+  e.preventDefault();
+  var card = this;
+  _swipeStartX = e.clientX;
+  _swipeCurrentX = 0;
+  _swipeDragging = true;
+  _swipeMoved = false;
+  card.style.transition = 'none';
+
+  function onMouseMove(ev) {
+    if (!_swipeDragging) return;
+    var dx = ev.clientX - _swipeStartX;
+    _swipeCurrentX = dx;
+    _swipeMoved = true;
+    var rotation = dx * 0.08;
+    card.style.transform = 'translateX(' + dx + 'px) rotate(' + rotation + 'deg)';
+
+    var skipEl = card.querySelector('.swipe-indicator.skip');
+    var saveEl = card.querySelector('.swipe-indicator.save');
+    var threshold = 60;
+    if (dx < -threshold) {
+      if (skipEl) skipEl.style.opacity = Math.min(1, (Math.abs(dx) - threshold) / 60);
+      if (saveEl) saveEl.style.opacity = 0;
+      card.classList.add('swiping-left');
+      card.classList.remove('swiping-right');
+    } else if (dx > threshold) {
+      if (saveEl) saveEl.style.opacity = Math.min(1, (dx - threshold) / 60);
+      if (skipEl) skipEl.style.opacity = 0;
+      card.classList.add('swiping-right');
+      card.classList.remove('swiping-left');
+    } else {
+      if (skipEl) skipEl.style.opacity = 0;
+      if (saveEl) saveEl.style.opacity = 0;
+      card.classList.remove('swiping-left', 'swiping-right');
+    }
+  }
+
+  function onMouseUp() {
+    _swipeDragging = false;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    var dx = _swipeCurrentX;
+    if (dx < -100) {
+      animateSwipeOut(card, 'left');
+    } else if (dx > 100) {
+      animateSwipeOut(card, 'right');
+    } else {
+      card.style.transition = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      card.style.transform = '';
+      card.classList.remove('swiping-left', 'swiping-right');
+      var skipEl = card.querySelector('.swipe-indicator.skip');
+      var saveEl = card.querySelector('.swipe-indicator.save');
+      if (skipEl) skipEl.style.opacity = 0;
+      if (saveEl) saveEl.style.opacity = 0;
+    }
+  }
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function animateSwipeOut(card, direction) {
+  var deal = swipeDeals[swipeIndex];
+  var targetX = direction === 'left' ? -window.innerWidth * 1.5 : window.innerWidth * 1.5;
+  var rotation = direction === 'left' ? -30 : 30;
+
+  card.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s';
+  card.style.transform = 'translateX(' + targetX + 'px) rotate(' + rotation + 'deg)';
+  card.style.opacity = '0';
+
+  // Apply action
+  if (direction === 'left') {
+    // Skip / Pass
+    swipeHistory.push({ dealId: deal.id, prevStage: getDealStage(deal.id) });
+    setDealStage(deal.id, 'passed');
+    showSwipeUndoToast('Skipped ' + truncateText(deal.investmentName, 24));
+  } else {
+    // Save
+    swipeHistory.push({ dealId: deal.id, prevStage: getDealStage(deal.id) });
+    setDealStage(deal.id, 'saved');
+    showSwipeUndoToast('Saved ' + truncateText(deal.investmentName, 24));
+  }
+
+  swipeIndex++;
+  setTimeout(function() {
+    renderSwipeStack();
+  }, 300);
+}
+
+function truncateText(text, max) {
+  if (!text) return '';
+  return text.length > max ? text.substring(0, max) + '…' : text;
+}
+
+function swipeAction(action) {
+  if (swipeIndex >= swipeDeals.length) return;
+  var card = document.querySelector('.swipe-card.active');
+  if (!card) return;
+
+  if (action === 'info') {
+    var deal = swipeDeals[swipeIndex];
+    window.location.href = 'deal.html?id=' + deal.id;
+    return;
+  }
+
+  if (action === 'skip') {
+    animateSwipeOut(card, 'left');
+  } else if (action === 'save') {
+    animateSwipeOut(card, 'right');
+  }
+}
+
+function showSwipeUndoToast(msg) {
+  var existing = document.querySelector('.swipe-undo-toast');
+  if (existing) existing.remove();
+
+  var toast = document.createElement('div');
+  toast.className = 'swipe-undo-toast';
+  toast.innerHTML = '<span>' + msg + '</span><button class="swipe-undo-btn" onclick="undoLastSwipe()">Undo</button>';
+  document.body.appendChild(toast);
+  requestAnimationFrame(function() { toast.classList.add('show'); });
+  setTimeout(function() {
+    if (toast.parentElement) {
+      toast.classList.remove('show');
+      setTimeout(function() { if (toast.parentElement) toast.remove(); }, 300);
+    }
+  }, 4000);
+}
+
+function undoLastSwipe() {
+  if (swipeHistory.length === 0) return;
+  var last = swipeHistory.pop();
+  if (last.prevStage && last.prevStage !== 'browse') {
+    setDealStage(last.dealId, last.prevStage);
+  } else {
+    delete dealStages[last.dealId];
+    saveDealStages();
+  }
+  swipeIndex = Math.max(0, swipeIndex - 1);
+  renderSwipeStack();
+  var toast = document.querySelector('.swipe-undo-toast');
+  if (toast) { toast.classList.remove('show'); setTimeout(function() { if (toast.parentElement) toast.remove(); }, 200); }
+}
+
+// ========== END MOBILE SWIPE FEED ==========
 </script>
 
 <!-- Mobile Bottom Tab Bar -->
