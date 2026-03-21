@@ -3631,26 +3631,24 @@ function closeSidebar() {
 // ========== INIT AUTH UI ==========
 
 function initAuth() {
-
   const user = getUser();
-
   const userEl = document.getElementById('sidebarUser');
 
-  if (user && (user.firstName || user.name || user.email || user.token)) {
-
-    var displayName = user.firstName ? (user.firstName + ' ' + (user.lastName || '')).trim() : (user.name || user.email || 'User');
-    var nameParts = displayName.split(' ');
-    var initials = (nameParts[0]?.[0] || '?').toUpperCase() + (nameParts[1]?.[0] || '').toUpperCase();
-
-    document.getElementById('sidebarAvatar').textContent = initials;
-
-    document.getElementById('sidebarName').textContent = displayName;
-
-    var emailEl = document.getElementById('sidebarEmail');
-    if (emailEl) emailEl.textContent = user.email || '';
-
+  if (user && user.email) {
     userEl.style.display = 'flex';
+    let name = user.name || ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.email.split('@')[0];
+    name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('sidebarAvatar').textContent = initials;
+    document.getElementById('sidebarName').textContent = name;
+    const sidebarEmailEl = document.getElementById('sidebarEmail');
+    if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
 
+    // Show admin "View as" section
+    if (user.isAdmin) {
+      var viewAsSection = document.getElementById('viewAsSection');
+      if (viewAsSection) viewAsSection.style.display = 'block';
+    }
   } else {
     // Show sign-in prompt for non-logged-in users
     userEl.innerHTML = '<a href="deal-login.html" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--primary);border-radius:8px;text-decoration:none;color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:700;width:100%;box-sizing:border-box;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Sign Up / Log In</a>';
@@ -3662,6 +3660,44 @@ function initAuth() {
   if (gpNavEl && user) {
     var isGP = user.gpType || (user.isAdmin);
     gpNavEl.style.display = isGP ? 'block' : 'none';
+  }
+}
+
+// Theme toggle for deal page
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+  var isDark = document.documentElement.classList.contains('dark');
+  localStorage.setItem('gycTheme', isDark ? 'dark' : 'light');
+  var label = document.getElementById('themeLabel');
+  if (label) label.textContent = isDark ? 'Dark Mode' : 'Light Mode';
+}
+// Apply saved theme
+(function() {
+  var saved = localStorage.getItem('gycTheme');
+  if (saved === 'dark') {
+    document.documentElement.classList.add('dark');
+    var label = document.getElementById('themeLabel');
+    if (label) label.textContent = 'Dark Mode';
+  }
+})();
+
+// View-as stub functions (full implementation in index.html)
+function toggleViewAsDropdown() {
+  var dd = document.getElementById('viewAsDropdown');
+  if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+function searchViewAsUsers(q) {
+  // Simplified: redirect to index with view-as
+  if (!q) return;
+  var results = document.getElementById('viewAsResults');
+  if (results) results.innerHTML = '<div style="padding:12px;text-align:center;font-size:12px;color:var(--text-muted);">Use the main dashboard for full view-as functionality</div>';
+}
+function exitViewAs() {
+  var user = JSON.parse(localStorage.getItem('gycAdminUser') || 'null');
+  if (user) {
+    localStorage.setItem('gycUser', JSON.stringify(user));
+    localStorage.removeItem('gycAdminUser');
+    window.location.reload();
   }
 }
 
@@ -3760,7 +3796,7 @@ var DD_CHECKLIST_CREDIT = {
       { q: 'How many funds or vehicles have they launched to date?' },
       { q: 'Has the manager ever lost investor capital?' },
       { q: 'Is there a key person succession/backup plan in place?' },
-      { q: 'Are there any pending litigation issues?' }
+      { q: 'Are there any pending litigation issues?', autoField: 'bgCheck_litigation' }
     ]},
     { title: 'Fund Basics', questions: [
       { q: 'What is the name of the fund?', autoField: 'investmentName' },
@@ -3829,7 +3865,11 @@ var DD_CHECKLIST_CREDIT = {
       { q: 'Were you initially referred to this sponsor from someone you know, like, trust?' },
       { q: 'Do you know investors that have invested with this operator in the past with positive results?' },
       { q: 'Does Google search show any negative/positive publicity in past 12 months?' },
-      { q: 'Did background checks on key principals produce any concerns?' },
+      { q: 'Did background checks on key principals produce any concerns?', autoField: 'bgCheck_overall' },
+      { q: 'SEC EDGAR filings found?', autoField: 'bgCheck_sec' },
+      { q: 'FINRA BrokerCheck — any disclosures?', autoField: 'bgCheck_finra' },
+      { q: 'OFAC sanctions screening', autoField: 'bgCheck_ofac' },
+      { q: 'Federal court records found?', autoField: 'bgCheck_court' },
       { q: 'Does the sponsor have an InvestClearly profile and are all reviews positive?' },
       { q: 'Is the sponsor active on LinkedIn or other professional platforms?' },
       { q: 'What do WE believe the biggest risks in the deal are?' }
@@ -3867,7 +3907,10 @@ var DD_CHECKLIST_SYNDICATION = {
       { q: 'Were you initially referred to this sponsor from someone you know, like, trust?' },
       { q: 'Do you know investors that have invested with this operator in the past?' },
       { q: 'Does Google search show any negative/positive publicity?' },
-      { q: 'Does the sponsor have any negative/positive reviews on InvestClearly?' }
+      { q: 'Does the sponsor have any negative/positive reviews on InvestClearly?' },
+      { q: 'SEC EDGAR filings found?', autoField: 'bgCheck_sec' },
+      { q: 'FINRA BrokerCheck — any disclosures?', autoField: 'bgCheck_finra' },
+      { q: 'Federal court records found?', autoField: 'bgCheck_court' }
     ]},
     { title: 'Deal Basics', questions: [
       { q: 'What is the address of the property?', autoField: 'address' },
@@ -3917,12 +3960,16 @@ var DD_CHECKLIST_SYNDICATION = {
       { q: 'Who would take over management if the CEO passed away?' },
       { q: 'How much is the firm or the CEO investing in this deal?', autoField: 'sponsorInDeal', format: 'pct' },
       { q: 'How frequent do you expect to send out email updates?' },
-      { q: 'Have you or are you currently in any litigation?' }
+      { q: 'Have you or are you currently in any litigation?', autoField: 'bgCheck_litigation' }
     ]},
     { title: 'Post-Research Questions', questions: [
       { q: 'What do WE believe the biggest risks in the deal are?' },
       { q: 'Do we believe the sponsor wealthy enough to save the deal if things go wrong?' },
-      { q: 'Did background checks on key principals produce any concerns?' }
+      { q: 'Did background checks on key principals produce any concerns?', autoField: 'bgCheck_overall' },
+      { q: 'SEC EDGAR filings found?', autoField: 'bgCheck_sec' },
+      { q: 'FINRA BrokerCheck — any disclosures?', autoField: 'bgCheck_finra' },
+      { q: 'OFAC sanctions screening', autoField: 'bgCheck_ofac' },
+      { q: 'Federal court records found?', autoField: 'bgCheck_court' }
     ]}
   ]
 };
@@ -3932,7 +3979,49 @@ function getChecklistForDeal(deal) {
   return DD_CHECKLIST_SYNDICATION;
 }
 
+// Background check cache for DD auto-population
+var _bgCheckCache = null;
+
 function getAutoValue(deal, field, format) {
+  // Handle background check auto-fields
+  if (field && field.indexOf('bgCheck_') === 0) {
+    if (!_bgCheckCache) return null;
+    var bgKey = field.replace('bgCheck_', '');
+    switch (bgKey) {
+      case 'overall':
+        var os = _bgCheckCache.overall_status;
+        if (os === 'clear') return 'All clear — no flags across 5 public databases';
+        if (os === 'flagged') return 'FLAGS FOUND — review background report';
+        if (os === 'needs_review') return 'Items to review — see background report';
+        return null;
+      case 'sec':
+        var sc = _bgCheckCache.sec_filings_count || 0;
+        return sc > 0 ? sc + ' SEC Form D filing(s) found' : 'No Form D filings found';
+      case 'finra':
+        if (!_bgCheckCache.finra_found) return 'Not registered with FINRA (common for real estate sponsors)';
+        return _bgCheckCache.finra_disclosures > 0
+          ? _bgCheckCache.finra_disclosures + ' disclosure event(s) — review recommended'
+          : 'Registered, no disclosures';
+      case 'iapd':
+        if (!_bgCheckCache.iapd_found) return 'Not registered as investment adviser';
+        return _bgCheckCache.iapd_disclosures > 0
+          ? _bgCheckCache.iapd_disclosures + ' disclosure(s) found'
+          : 'Registered adviser, clean record';
+      case 'ofac':
+        return _bgCheckCache.ofac_found ? 'POTENTIAL MATCH — verify identity immediately' : 'Clear — no sanctions matches';
+      case 'court':
+        var cc = _bgCheckCache.court_cases_count || 0;
+        var bk = _bgCheckCache.court_bankruptcies || 0;
+        if (cc === 0) return 'No federal court records found';
+        return cc + ' case(s)' + (bk > 0 ? ', including ' + bk + ' bankruptcy' : '');
+      case 'litigation':
+        var lc = _bgCheckCache.court_cases_count || 0;
+        return lc > 0 ? lc + ' federal court case(s) found — review details' : 'No federal litigation found';
+      default:
+        return null;
+    }
+  }
+
   var val = deal[field];
   if (val === undefined || val === null || val === '' || val === 0) return null;
   if (format === 'pct') return (val * 100).toFixed(1) + '%';
@@ -4727,6 +4816,21 @@ async function renderDeal() {
 
   // Store deal reference for share class switcher
   window._currentDeal = deal;
+
+  // Pre-load background check data for DD checklist auto-population
+  if (deal.managementCompanyId && !_bgCheckCache) {
+    try {
+      var bgResp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(deal.managementCompanyId));
+      if (bgResp.ok) {
+        var bgData = await bgResp.json();
+        if (bgData.results && bgData.results.length > 0) {
+          _bgCheckCache = bgData.results[0];
+        }
+      }
+    } catch (e) {
+      console.warn('Could not pre-load background check:', e.message);
+    }
+  }
 
   // Auto-select first share class (sorted by highest min) on initial load
   if (deal.shareClasses && deal.shareClasses.length > 0 && window._activeShareClassIdx === null && !window._originalDealValues) {
@@ -5543,6 +5647,52 @@ async function renderDeal() {
 
     // Store operator for Investment Criteria / Portfolio
     window._dealOperatorSponsor = operator;
+  })();
+
+  // --- Sponsor Background Report (summary card on deal page) ---
+  var bgReportDealHtml = '';
+  (function buildBgReportCard() {
+    var opSponsor = window._dealOperatorSponsor;
+    if (!opSponsor) return;
+
+    var _bgUser = typeof getUser === 'function' ? getUser() : null;
+    var _bgTier = (_bgUser && _bgUser.tier) || 'free';
+    var _bgIsAdmin = _bgUser && (_bgUser.isAdmin || (_bgUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_bgUser.email.toLowerCase()) >= 0));
+    var _bgIsPaid = _bgTier === 'academy' || _bgTier === 'investor' || _bgTier === 'alumni' || _bgIsAdmin;
+
+    bgReportDealHtml += '<div class="section">';
+    bgReportDealHtml += '<div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">';
+    bgReportDealHtml += '<div style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Sponsor Background Report</span></div>';
+    bgReportDealHtml += '<span id="dealBgStatus" style="display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--bg-main);color:var(--text-muted);">Loading...</span>';
+    bgReportDealHtml += '</div>';
+    bgReportDealHtml += '<div class="section-body" id="dealBgBody">';
+
+    if (!_bgIsPaid) {
+      // Gate for free users
+      bgReportDealHtml += '<div style="text-align:center;padding:24px 16px;">';
+      bgReportDealHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Automated Public Records Search</div>';
+      bgReportDealHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;max-width:480px;margin:0 auto 12px;">We search SEC EDGAR, FINRA BrokerCheck, Investment Adviser records, OFAC sanctions, and federal court records on every sponsor. Academy members get full results.</div>';
+      bgReportDealHtml += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:16px;">';
+      var _bgSources = ['SEC EDGAR', 'FINRA BrokerCheck', 'SEC IAPD', 'OFAC Sanctions', 'Federal Courts'];
+      _bgSources.forEach(function(s) {
+        bgReportDealHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg-main);border:1px solid var(--border);border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">' + s + '</span>';
+      });
+      bgReportDealHtml += '</div>';
+      bgReportDealHtml += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 20px;background:linear-gradient(135deg,#3b82f6,#4ade80);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;">Unlock with Academy</button>';
+      bgReportDealHtml += '</div>';
+    } else {
+      // Paid user — load data async
+      bgReportDealHtml += '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;" id="dealBgLoading">Loading background report...</div>';
+    }
+
+    bgReportDealHtml += '</div></div>';
+
+    // Async load for paid users
+    if (_bgIsPaid && opSponsor.id) {
+      setTimeout(function() {
+        loadDealBgReport(opSponsor);
+      }, 500);
+    }
   })();
 
   // --- Investment Criteria ---
@@ -7719,6 +7869,7 @@ async function renderDeal() {
     + thesisHtml
     + dealFitHtml
     + operatorDealsHtml
+    + bgReportDealHtml
     // --- Job 7: Decide ---
     + memoHtml
     + officeHoursHtml
@@ -8030,6 +8181,90 @@ function initDealReturnsChart(deal) {
 
 // ========== REQUEST INTRODUCTION ==========
 
+// ========== DEAL PAGE: BACKGROUND REPORT LOADER ==========
+async function loadDealBgReport(sponsor) {
+  var statusEl = document.getElementById('dealBgStatus');
+  var bodyEl = document.getElementById('dealBgBody');
+  if (!bodyEl) return;
+
+  try {
+    var resp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(sponsor.id));
+    if (!resp.ok) throw new Error('API ' + resp.status);
+    var data = await resp.json();
+
+    if (data.results && data.results.length > 0) {
+      var r = data.results[0];
+      var overall = r.overall_status || 'clear';
+      var flags = r.flags || [];
+
+      // Update status badge
+      var statusColors = { clear: 'background:#E7F5F0;color:#51BE7B;', flagged: 'background:#FEE2E2;color:#DC2626;', needs_review: 'background:#FFF3E6;color:#CF7A30;' };
+      var statusLabels = { clear: 'All Clear', flagged: 'Flags Found', needs_review: 'Needs Review' };
+      var statusIcons = {
+        clear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        flagged: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>',
+        needs_review: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>'
+      };
+      if (statusEl) {
+        statusEl.style.cssText = (statusColors[overall] || '') + 'display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;';
+        statusEl.innerHTML = (statusIcons[overall] || '') + (statusLabels[overall] || overall);
+      }
+
+      // Render compact summary
+      var html = '';
+      var sources = [
+        { label: 'SEC EDGAR', count: r.sec_filings_count || 0, status: r.sec_status, detail: (r.sec_filings_count || 0) + ' filing(s)' },
+        { label: 'FINRA', count: r.finra_disclosures || 0, status: r.finra_status, detail: r.finra_found ? (r.finra_disclosures > 0 ? r.finra_disclosures + ' disclosure(s)' : 'No disclosures') : 'Not registered' },
+        { label: 'IAPD', count: r.iapd_disclosures || 0, status: r.iapd_status, detail: r.iapd_found ? (r.iapd_disclosures > 0 ? r.iapd_disclosures + ' disclosure(s)' : 'Clean') : 'Not found' },
+        { label: 'OFAC', count: 0, status: r.ofac_status, detail: r.ofac_found ? 'Match found' : 'Clear' },
+        { label: 'Courts', count: r.court_cases_count || 0, status: r.court_status, detail: (r.court_cases_count || 0) + ' case(s)' }
+      ];
+
+      html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">';
+      sources.forEach(function(s) {
+        var badgeColor = s.status === 'clear' ? '#E7F5F0;color:#51BE7B' : s.status === 'flagged' ? '#FEE2E2;color:#DC2626' : s.status === 'needs_review' ? '#FFF3E6;color:#CF7A30' : 'var(--bg-main);color:var(--text-muted)';
+        html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:' + badgeColor.split(';')[0] + ';border-radius:20px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:' + (badgeColor.split('color:')[1] || 'var(--text-muted)') + ';">' + s.label + ': ' + s.detail + '</div>';
+      });
+      html += '</div>';
+
+      // Flags
+      if (flags.length > 0) {
+        html += '<div style="padding:10px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius-sm);margin-bottom:12px;">';
+        flags.forEach(function(f) {
+          html += '<div style="font-family:var(--font-ui);font-size:11px;color:#991B1B;line-height:1.6;"><strong>' + esc(f.source) + ':</strong> ' + esc(f.message) + '</div>';
+        });
+        html += '</div>';
+      }
+
+      // Link to full report
+      var sponsorUrl = 'sponsor.html?id=' + encodeURIComponent(sponsor.id);
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;">';
+      html += '<a href="' + sponsorUrl + '#bgReportSection" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">View Full Report &rarr;</a>';
+      var runDate = r.run_at ? new Date(r.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      html += '<span style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">Checked: ' + runDate + '</span>';
+      html += '</div>';
+
+      bodyEl.innerHTML = html;
+    } else {
+      // No results — show CTA to run on sponsor page
+      var sponsorUrl2 = 'sponsor.html?id=' + encodeURIComponent(sponsor.id);
+      bodyEl.innerHTML = '<div style="text-align:center;padding:16px;">' +
+        '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);margin-bottom:10px;">No background check has been run yet for this sponsor.</div>' +
+        '<a href="' + sponsorUrl2 + '#bgReportSection" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;text-decoration:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a>' +
+      '</div>';
+      if (statusEl) {
+        statusEl.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--bg-main);color:var(--text-muted);';
+        statusEl.innerHTML = 'Not Run';
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load background report:', e.message);
+    if (bodyEl) {
+      bodyEl.innerHTML = '<div style="text-align:center;padding:12px;font-size:12px;color:var(--text-muted);">Background report unavailable</div>';
+    }
+  }
+}
+
 function requestIntroduction(company, ceo, dealName, btnEl) {
   if (!requireAuth('request an introduction')) return;
 
@@ -8127,7 +8362,7 @@ function openDeckSubmitModal(dealId, dealName, defaultDocType) {
       '<div id="deckModalSuccess" style="display:none;" class="deck-modal-success">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="48" height="48"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
         '<p id="deckSuccessMsg">Thanks! We\'ll review and add this.</p>' +
-        '<button class="btn-cancel" onclick="location.reload()" style="margin-top:16px;">Close</button>' +
+        '<button class="btn-cancel" onclick="closeDeckSubmitModal();renderDeal();" style="margin-top:16px;">Close</button>' +
       '</div>' +
     '</div>';
 
@@ -8238,6 +8473,12 @@ async function submitDeck(dealId, dealName) {
 
       if (resp.ok) {
         var data = await resp.json();
+        // Update local deal object so Documents card reflects the upload immediately
+        var localDeal = DEALS.find(function(d) { return d.id === dealId; });
+        if (localDeal && data.driveUrl) {
+          if (docType === 'ppm') localDeal.ppmUrl = data.driveUrl;
+          else localDeal.deckUrl = data.driveUrl;
+        }
         document.getElementById('deckModalForm').style.display = 'none';
         var successMsg = document.getElementById('deckSuccessMsg');
         if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '');
