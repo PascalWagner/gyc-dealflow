@@ -2336,6 +2336,25 @@ html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex
   gap: 8px !important;
   padding: 10px 12px !important;
 }
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > div:not(.ios-filter-row) {
+  width: calc(50% - 4px) !important;
+  min-width: 0 !important;
+  flex-shrink: 0;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > div:not(.ios-filter-row) select,
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > div:not(.ios-filter-row) input {
+  width: 100% !important;
+  box-sizing: border-box;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > .buybox-toggle {
+  width: 100% !important;
+}
+html.cap-ios #page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"].ios-filters-open > button:last-child {
+  width: 100% !important;
+}
 
 /* ── Stats bar: single row, no wrapping ───────────── */
 html.cap-ios .stats-bar {
@@ -20031,6 +20050,24 @@ fetchBuyBoxFromGHL();
         </select>
       `;
       dealsFilter.insertBefore(row, dealsFilter.firstChild);
+    }
+
+    // Debt Fund Explorer filter bar
+    const debtFilter = document.querySelector('#page-debtfunds div[style*="display:flex"][style*="align-items:flex-end"]');
+    if (debtFilter) {
+      const drow = document.createElement('div');
+      drow.className = 'ios-filter-row';
+      drow.style.cssText = 'display:flex!important;width:100%;gap:6px;padding:6px 0;align-items:center;flex-wrap:nowrap!important;';
+      drow.innerHTML = `
+        <input type="text" placeholder="Search funds..."
+          oninput="document.getElementById('debtSearchInput').value=this.value;syncDebtFilters();"
+          style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
+        <button class="ios-filter-toggle" style="flex:1;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');this.closest('div[style]').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+      `;
+      debtFilter.insertBefore(drow, debtFilter.firstChild);
     }
 
     // Managers page filter toggle
