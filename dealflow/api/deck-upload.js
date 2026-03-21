@@ -50,34 +50,6 @@ IMPORTANT:
 - If a field clearly doesn't apply to this deal type, use null
 - Be precise — only extract what's explicitly stated, don't infer`;
 
-// ── Map Claude extraction keys → Supabase column names ──────────────────────
-const SUPABASE_FIELD_MAP = {
-  investmentName:      'investment_name',
-  assetClass:          'asset_class',
-  dealType:            'deal_type',
-  strategy:            'strategy',
-  investmentStrategy:  'investment_strategy',
-  targetIRR:           'target_irr',
-  preferredReturn:     'preferred_return',
-  cashOnCash:          'cash_on_cash',
-  equityMultiple:      'equity_multiple',
-  investmentMinimum:   'investment_minimum',
-  holdPeriod:          'hold_period_years',
-  offeringSize:        'offering_size',
-  purchasePrice:       'purchase_price',
-  offeringType:        'offering_type',
-  availableTo:         'available_to',
-  distributions:       'distributions',
-  lpGpSplit:           'lp_gp_split',
-  fees:                'fees',
-  financials:          'financials',
-  investingGeography:  'investing_geography',
-  instrument:          'instrument',
-  debtPosition:        'debt_position',
-  fundAUM:             'fund_aum',
-  sponsorCoinvest:     'sponsor_in_deal_pct',
-};
-
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -167,7 +139,7 @@ export default async function handler(req, res) {
 
     if (isPdf && dealId && process.env.ANTHROPIC_API_KEY) {
       try {
-        const enrichResult = await enrichFromPdfBuffer(fileBuffer, dealId, userEmail, supabase);
+        const enrichResult = await enrichFromPdfBuffer(fileBuffer);
         enriched = enrichResult.enriched;
         enrichedFields = enrichResult.enrichedFields;
         extractedData = enrichResult.extractedData || null;
@@ -238,7 +210,7 @@ function extractTextFromPdfBuffer(buffer) {
 }
 
 // ── Claude enrichment logic ─────────────────────────────────────────────────
-async function enrichFromPdfBuffer(fileBuffer, dealId, userEmail, supabase) {
+async function enrichFromPdfBuffer(fileBuffer) {
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const pdfText = extractTextFromPdfBuffer(fileBuffer);
 
@@ -277,22 +249,8 @@ async function enrichFromPdfBuffer(fileBuffer, dealId, userEmail, supabase) {
   if (!jsonMatch) throw new Error('No JSON found in Claude response');
   const extracted = JSON.parse(jsonMatch[0]);
 
-  // Build Supabase update from extracted fields
-  const supabaseUpdate = {};
-  const fieldsFound = [];
-
-  for (const [jsonKey, dbCol] of Object.entries(SUPABASE_FIELD_MAP)) {
-    const val = extracted[jsonKey];
-    if (val !== null && val !== undefined) {
-      // Special handling for fees — Supabase expects text[]
-      if (dbCol === 'fees' && typeof val === 'string') {
-        supabaseUpdate[dbCol] = [val];
-      } else {
-        supabaseUpdate[dbCol] = val;
-      }
-      fieldsFound.push(dbCol);
-    }
-  }
+  // Count fields with values
+  const fieldsFound = Object.keys(extracted).filter(k => extracted[k] !== null && extracted[k] !== undefined);
 
   if (fieldsFound.length === 0) {
     return { enriched: false, enrichedFields: [], reason: 'No fields extracted' };
@@ -303,7 +261,7 @@ async function enrichFromPdfBuffer(fileBuffer, dealId, userEmail, supabase) {
   return {
     enriched: true,
     enrichedFields: fieldsFound,
-    extractedData: extracted,      // raw Claude extraction for frontend review
+    extractedData: extracted,
     extractedTotal: fieldsFound.length
   };
 }
