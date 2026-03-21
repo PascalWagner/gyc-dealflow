@@ -843,13 +843,14 @@ html.dark .admin-search-input { background: var(--bg-sidebar-hover); }
   border-color: #D4C9AD;
 }
 
-.deal-card.no-deck {
-  opacity: 0.4;
-  filter: grayscale(0.6);
-}
-.deal-card.no-deck:hover {
-  opacity: 0.7;
-  filter: grayscale(0.3);
+.no-deck-bubble {
+  background: #fbbf24;
+  color: #78350f;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.3px;
 }
 
 .card-header {
@@ -6689,10 +6690,17 @@ function renderSocialProof(dealId) {
   if (total >= 5) {
     parts.push('<span class="hot-deal-badge">' + fireSvg + 'Hot</span>');
   }
-  if (total > 0) parts.push('<span class="sp-item">' + eyeSvg + total + ' watching</span>');
+  if ((stats.invested || 0) > 0) {
+    var othersInvested = stats.invested - 1;
+    if (othersInvested > 0) {
+      parts.push('<span class="sp-item">' + investSvg + 'Pascal + ' + othersInvested + ' other' + (othersInvested > 1 ? 's' : '') + ' invested</span>');
+    } else {
+      parts.push('<span class="sp-item">' + investSvg + 'Pascal invested</span>');
+    }
+  }
+  if (total > 0) parts.push((parts.length ? '<span class="sp-dot"></span>' : '') + '<span class="sp-item">' + eyeSvg + total + ' watching</span>');
   var ddCount = (stats.vetting || 0) + (stats.ready || 0);
   if (ddCount > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + ddSvg + ddCount + ' in DD</span>');
-  if ((stats.invested || 0) > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + investSvg + stats.invested + ' invested</span>');
   return '<div class="card-social-proof">' + parts.join('') + '</div>';
 }
 
@@ -8613,7 +8621,7 @@ function renderCreditCard(deal) {
 
   const showCmpCheck = (currentTab === 'saved' || currentTab === 'vetting');
   const html = `
-    <div class="deal-card${hasDocs ? '' : ' no-deck'}" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
+    <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
       ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
@@ -8627,7 +8635,7 @@ function renderCreditCard(deal) {
           ${renderFreshnessBadge(deal)}
           ${renderMatchBadge(deal)}
           ${renderSearchStageBadge(deal)}
-          ${isAdmin() ? renderPermissionBadge(deal) : ''}
+          ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
         </div>
         ${heroContent}
       </div>
@@ -8903,7 +8911,7 @@ function renderCard(deal) {
 
   var showCompareCheck = (currentTab === 'saved' || currentTab === 'vetting');
   return `
-    <div class="deal-card${hasDocs ? '' : ' no-deck'}" data-id="${deal.id}">
+    <div class="deal-card" data-id="${deal.id}">
       ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
@@ -8914,6 +8922,7 @@ function renderCard(deal) {
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${deal.strategy && deal.strategy !== 'Value-Add' ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
+          ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
           ${renderFreshnessBadge(deal)}
           ${renderMatchBadge(deal)}
           ${renderSearchStageBadge(deal)}
@@ -9506,6 +9515,14 @@ function getFilteredDeals() {
       return 0;
     });
   }
+
+  // Secondary sort: deals with pitch deck first, then PPM only, then no docs
+  filtered.sort((a, b) => {
+    const aScore = a.deckUrl ? 2 : (a.ppmUrl || a.subAgreementUrl) ? 1 : 0;
+    const bScore = b.deckUrl ? 2 : (b.ppmUrl || b.subAgreementUrl) ? 1 : 0;
+    if (bScore !== aScore) return bScore - aScore;
+    return 0; // preserve primary sort order within same tier
+  });
 
   updateGoalSortIndicator(useGoalSort);
   return filtered;
@@ -10578,9 +10595,8 @@ const WIZARD_STEPS = [
     presets: [250000, 500000, 1000000, 2000000, 5000000],
     presetLabels: ['$250K','$500K','$1M','$2M','$5M+'],
     calcFn: function(v) {
-      const cap12 = parseDollar(wizardData.capital12mo) || v;
-      const mult = cap12 > 0 ? (v / cap12).toFixed(1) : '2.0';
-      return '$' + cap12.toLocaleString() + ' \u2192 $' + v.toLocaleString() + ' (' + mult + 'x target)';
+      const doubled = (v * 2);
+      return '$' + v.toLocaleString() + ' \u2192 $' + doubled.toLocaleString() + ' (2x in 5 years \u2248 15% IRR)';
     },
     timerSec: 30
   },
@@ -10874,7 +10890,77 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 1/2/3: TARGET INPUT =====
+  // ===== SCREEN 1: CAPITAL TIMELINE =====
+  if (step.type === 'capitalTimeline') {
+    html += '<div class="wizard-card-title">Let\'s talk about your capital.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">No commitments \u2014 just helps us size recommendations.</div>';
+
+    // 12-month deploy amount
+    html += '<div style="margin-bottom:24px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How much can you deploy in the next 12 months?</div>';
+    var capOptions = [
+      { val: '<$100k', label: 'Under $100K' },
+      { val: '$100k-$250k', label: '$100K \u2013 $250K' },
+      { val: '$250k-$500k', label: '$250K \u2013 $500K' },
+      { val: '$500k-$1M', label: '$500K \u2013 $1M' },
+      { val: '$1M+', label: '$1M+' }
+    ];
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    capOptions.forEach(function(opt) {
+      var isSel = wizardData.capital12mo === opt.val;
+      html += '<div onclick="wizardData.capital12mo=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 12px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
+      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // 90-day readiness
+    html += '<div style="margin-bottom:24px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How soon could you write your first check?</div>';
+    var readyOptions = [
+      { val: 'now', label: 'Ready now', desc: 'Capital is liquid and waiting' },
+      { val: '30days', label: 'Within 30 days', desc: 'Just need the right deal' },
+      { val: '90days', label: '1\u20133 months', desc: 'Still moving funds around' },
+      { val: 'exploring', label: 'Just exploring', desc: 'Learning first, investing later' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    readyOptions.forEach(function(opt) {
+      var isSel = wizardData.capitalReadiness === opt.val;
+      html += '<div onclick="wizardData.capitalReadiness=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
+      html += '<div style="width:20px;height:20px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSel ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (isSel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // Trigger event
+    html += '<div style="margin-bottom:16px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s making this possible? <span style="font-weight:400;text-transform:none;">(optional)</span></div>';
+    var triggerOptions = [
+      { val: 'business_exit', label: 'Sold a business' },
+      { val: 'inheritance', label: 'Inheritance / windfall' },
+      { val: 'savings', label: 'Savings over time' },
+      { val: 'refi', label: 'Refinanced property' },
+      { val: '1031', label: '1031 exchange' },
+      { val: 'other', label: 'Something else' }
+    ];
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    triggerOptions.forEach(function(opt) {
+      var isSel = wizardData.triggerEvent === opt.val;
+      html += '<div onclick="wizardData.triggerEvent=\'' + opt.val + '\';renderWizardStep();" style="padding:8px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:20px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';font-size:13px;font-weight:600;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';transition:all 0.2s;">' + opt.label + '</div>';
+    });
+    html += '</div></div>';
+
+    // Nav
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 2/3: TARGET INPUT (cashflow & growth) =====
   if (step.type === 'targetInput') {
     const val = wizardData[step.key] || step.defaultVal;
     const numVal = parseDollar(val);
@@ -10934,37 +11020,135 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 4: SENTENCE-STYLE CAPITAL + CHECK SIZE =====
-  if (step.type === 'sentenceInput') {
-    html += '<div class="wizard-card-title">Two quick questions.</div>';
-    html += '<div class="wizard-sentence">';
-    html += 'I have about <br>';
-    const capitalOptions = ['$50-100K','$100-250K','$250-500K','$500K-1M','$1M+'];
-    const capitalKeys = ['50000-100000','100000-250000','250000-500000','500000-1000000','1000000+'];
-    html += '<span class="wizard-sentence-chips">';
-    capitalOptions.forEach((opt, i) => {
-      const sel = wizardData._capitalRange === capitalKeys[i] ? 'selected' : '';
-      html += `<span class="wizard-sentence-chip ${sel}" onclick="selectSentenceChip(this, '_capitalRange', '${capitalKeys[i]}')">${opt}</span>`;
-    });
-    html += '</span>';
-    html += ' to invest<br>and the most I\u2019d put in one deal is<br>';
-    const checkOptions = ['$25K','$50K','$100K','$200K','$500K+'];
-    const checkKeys = ['25000','50000','100000','200000','500000'];
-    html += '<span class="wizard-sentence-chips">';
-    checkOptions.forEach((opt, i) => {
-      const sel = wizardData.checkSize === checkKeys[i] ? 'selected' : '';
-      html += `<span class="wizard-sentence-chip ${sel}" onclick="selectSentenceChip(this, 'checkSize', '${checkKeys[i]}')">${opt}</span>`;
-    });
-    html += '</span>';
+  // ===== SCREEN 4: TAX TARGET (with income structure + RE pro) =====
+  if (step.type === 'taxTarget') {
+    html += '<div class="wizard-card-title">How much taxable income do you want to offset?</div>';
+    // Amount input
+    var taxVal = parseDollar(wizardData.taxableIncome) || 200000;
+    html += '<div class="wizard-target-input">';
+    html += '<input type="text" id="wizTargetInput" value="' + fmtDollar(taxVal) + '" data-key="taxableIncome" inputmode="numeric" autocomplete="off">';
     html += '</div>';
-    // Helper text
-    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:4px;margin-bottom:16px;">Most first-time investors start with $25\u201350K per deal.</div>';
-    // Reality check
-    html += `<div class="wizard-reality-check" id="wizRealityCheck">${getRealityCheckText()}</div>`;
+    var taxPresets = [50000, 100000, 200000, 500000, 1000000];
+    var taxLabels = ['$50K','$100K','$200K','$500K','$1M+'];
+    html += '<div class="wizard-preset-chips">';
+    taxPresets.forEach(function(p, i) {
+      var sel = taxVal === p ? 'selected' : '';
+      html += '<div class="wizard-chip ' + sel + '" onclick="selectWizardPreset(' + p + ', \'taxableIncome\')">' + taxLabels[i] + '</div>';
+    });
+    html += '</div>';
+    var taxSaved = Math.round(taxVal * 0.37).toLocaleString();
+    html += '<div class="wizard-live-calc" id="wizLiveCalc">At a 37% bracket, that\u2019s ~$' + taxSaved + ' back in your pocket.</div>';
+
+    // Income structure
+    html += '<div style="margin-top:24px;margin-bottom:20px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Where does your income come from?</div>';
+    var incomeOptions = [
+      { val: 'w2', label: 'W-2 (employed)', desc: 'Salary or wages from an employer' },
+      { val: 'self_employed', label: 'Self-employed / 1099', desc: 'Business owner or independent contractor' },
+      { val: 'mixed', label: 'Both W-2 and self-employed', desc: 'Multiple income sources' },
+      { val: 'passive', label: 'Mostly passive / investment income', desc: 'Rental income, dividends, etc.' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    incomeOptions.forEach(function(opt) {
+      var isSel = wizardData.incomeStructure === opt.val;
+      html += '<div onclick="wizardData.incomeStructure=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
+      html += '<div style="width:20px;height:20px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSel ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (isSel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div><div style="font-weight:700;font-size:13px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // Real estate professional status
+    html += '<div style="margin-bottom:16px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Do you (or your spouse) qualify as a Real Estate Professional?</div>';
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">750+ hours/yr in RE activities. This unlocks unlimited passive loss deductions against W-2 income.</div>';
+    var reProOptions = [
+      { val: 'yes', label: 'Yes' },
+      { val: 'no', label: 'No' },
+      { val: 'unsure', label: 'Not sure' }
+    ];
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    reProOptions.forEach(function(opt) {
+      var isSel = wizardData.reProfessional === opt.val;
+      html += '<div onclick="wizardData.reProfessional=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 8px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
+      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += `<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Show me my plan \u2192</button>`;
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    // Wire up tax input live formatting
+    var taxInp = document.getElementById('wizTargetInput');
+    if (taxInp) {
+      taxInp.addEventListener('input', function() {
+        var n = parseDollar(this.value);
+        wizardData.taxableIncome = String(n);
+        var calcEl = document.getElementById('wizLiveCalc');
+        if (calcEl && n > 0) calcEl.textContent = 'At a 37% bracket, that\u2019s ~$' + Math.round(n * 0.37).toLocaleString() + ' back in your pocket.';
+        document.querySelectorAll('.wizard-preset-chips .wizard-chip').forEach(function(c) { c.classList.remove('selected'); });
+      });
+      taxInp.addEventListener('blur', function() { var n = parseDollar(this.value); if (n > 0) this.value = fmtDollar(n); });
+      taxInp.addEventListener('focus', function() { var n = parseDollar(this.value); if (n > 0) this.value = String(n); });
+    }
+    return;
+  }
+
+  // ===== SCREEN 5: RISK & CONCENTRATION =====
+  if (step.type === 'riskConcentration') {
+    html += '<div class="wizard-card-title">How do you want to size your investments?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">This helps us recommend the right deals for your portfolio.</div>';
+
+    // Check size
+    html += '<div style="margin-bottom:24px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s the most you\'d put in a single deal?</div>';
+    var checkOptions = [
+      { val: '25000', label: '$25K' },
+      { val: '50000', label: '$50K' },
+      { val: '100000', label: '$100K' },
+      { val: '200000', label: '$200K' },
+      { val: '500000', label: '$500K+' }
+    ];
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
+    checkOptions.forEach(function(opt) {
+      var isSel = wizardData.checkSize === opt.val;
+      html += '<div onclick="wizardData.checkSize=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 8px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
+      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;">Most first-time LP investors start with $25\u201350K per deal.</div>';
+    html += '</div>';
+
+    // Max operator concentration
+    html += '<div style="margin-bottom:16px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How much of your portfolio would you put with one operator?</div>';
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Concentration risk: if one sponsor fails, how much of your portfolio is at risk?</div>';
+    var concOptions = [
+      { val: '10', label: '10%', desc: 'Very diversified' },
+      { val: '20', label: '20%', desc: 'Moderate' },
+      { val: '33', label: '33%', desc: 'Concentrated' },
+      { val: '50', label: '50%+', desc: 'High conviction' },
+      { val: 'no_limit', label: 'No limit', desc: 'Trust my picks' }
+    ];
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">';
+    concOptions.forEach(function(opt) {
+      var isSel = wizardData.maxOperatorPct === opt.val;
+      html += '<div onclick="wizardData.maxOperatorPct=\'' + opt.val + '\';renderWizardStep();" style="padding:12px 6px;text-align:center;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';transition:all 0.2s;">';
+      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // Nav
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -11050,15 +11234,15 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 11: DEAL PREFERENCES =====
+  // ===== SCREEN 8: DEAL PREFERENCES =====
   if (step.type === 'dealPrefs') {
     const branch = wizardData._branch || 'cashflow';
-    html += '<div class="wizard-card-title">A few more preferences</div>';
+    html += '<div class="wizard-card-title">Deal structure preferences</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">These help us filter to deals that fit your situation.</div>';
 
-    // Lockup tolerance
+    // Hold period comfort
     html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How long can your money be locked up?</div>';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How long are you comfortable locking up capital?</div>';
     var lockupOptions = [
       { val: 'flexible', label: 'Flexible', desc: 'Monthly/quarterly redemptions' },
       { val: '1-3', label: '1\u20133 years', desc: 'Short-term holds' },
@@ -11075,14 +11259,14 @@ function renderWizardStep() {
     });
     html += '</div></div>';
 
-    // Distribution frequency
+    // Minimum distribution frequency
     html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How often do you want to get paid?</div>';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What\'s the minimum frequency you want to receive distributions?</div>';
     var distOptions = [
       { val: 'Monthly', label: 'Monthly', desc: 'Most frequent' },
       { val: 'Quarterly', label: 'Quarterly', desc: 'Standard' },
       { val: 'Annual', label: 'Annually', desc: 'Growth-focused' },
-      { val: 'Any', label: 'Any', desc: 'No preference' }
+      { val: 'Any', label: 'No minimum', desc: 'Open to anything' }
     ];
     html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
     distOptions.forEach(function(opt) {
@@ -11094,36 +11278,16 @@ function renderWizardStep() {
     });
     html += '</div></div>';
 
-    // Investment type (debt vs equity)
-    html += '<div style="margin-bottom:24px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">What type of returns do you prefer?</div>';
-    var instrOptions = [
-      { val: 'Debt', label: '\uD83D\uDCB5 Steady Income', desc: 'Debt / lending positions \u2014 predictable, lower risk', fit: branch === 'cashflow' ? 'Recommended for your goal' : '' },
-      { val: 'Equity', label: '\uD83D\uDCC8 Higher Upside', desc: 'Equity positions \u2014 more growth potential, less predictable', fit: branch === 'growth' ? 'Recommended for your goal' : '' },
-      { val: 'Both', label: '\u2696\uFE0F Both', desc: 'Mix of debt and equity for diversification', fit: '' }
-    ];
-    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
-    instrOptions.forEach(function(opt) {
-      var isSel = (wizardData.instruments || []).includes(opt.val) || wizardData._instrPref === opt.val;
-      html += '<div onclick="wizardData._instrPref=\'' + opt.val + '\';wizardData.instruments=[\'' + opt.val + '\'];renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
-      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '<div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">' + opt.desc + '</div>';
-      if (opt.fit) html += '<div style="font-size:10px;color:var(--primary);font-weight:600;margin-top:3px;">' + opt.fit + '</div>';
-      html += '</div>';
-      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSel ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSel ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-      html += '</div>';
-    });
-    html += '</div></div>';
-
-    // Accreditation
+    // Accreditation status
     html += '<div style="margin-bottom:16px;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">How do you qualify as an accredited investor?</div>';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Are you an accredited investor?</div>';
     var accOptions = [
-      { val: 'net_worth', label: 'Net worth over $1M', desc: 'Excluding primary residence' },
-      { val: 'income', label: 'Income over $200K', desc: '$200K individual or $300K with spouse' },
-      { val: 'licensed', label: 'Licensed professional', desc: 'Series 7, 65, 82, or equivalent' },
-      { val: 'entity', label: 'Through an entity', desc: 'LLC, trust, or fund with $5M+ assets' },
-      { val: 'unsure', label: "I'm not sure yet", desc: 'We can help you figure it out' }
+      { val: 'net_worth', label: 'Yes \u2014 Net worth over $1M', desc: 'Excluding primary residence' },
+      { val: 'income', label: 'Yes \u2014 Income over $200K', desc: '$200K individual or $300K with spouse' },
+      { val: 'licensed', label: 'Yes \u2014 Licensed professional', desc: 'Series 7, 65, 82, or equivalent' },
+      { val: 'entity', label: 'Yes \u2014 Through an entity', desc: 'LLC, trust, or fund with $5M+ assets' },
+      { val: 'not_accredited', label: 'Not yet accredited', desc: 'We\'ll show you deals open to all investors (Reg A+, Reg CF)' },
+      { val: 'unsure', label: "Not sure", desc: 'We can help you figure it out' }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:8px;">';
     accOptions.forEach(function(opt) {
@@ -11143,21 +11307,62 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 5/6/7: PLAN OUTPUT =====
+  // ===== SCREEN 9: LP NETWORK OPT-IN =====
+  if (step.type === 'lpNetwork') {
+    html += '<div class="wizard-card-title">Join the LP Network</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">See who else is investing in the same deals \u2014 and let them see you.</div>';
+
+    html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px 24px;margin-bottom:20px;">';
+    // Avatar stack preview
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">';
+    html += '<div style="display:flex;">';
+    html += '<div style="width:36px;height:36px;border-radius:50%;background:#51BE7B;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid rgba(81,190,123,0.06);">PW</div>';
+    html += '<div style="width:36px;height:36px;border-radius:50%;background:#3b82f6;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">JR</div>';
+    html += '<div style="width:36px;height:36px;border-radius:50%;background:#f59e0b;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">CR</div>';
+    html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--border);color:var(--text-muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">+8</div>';
+    html += '</div>';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.4;"><strong style="color:var(--text-dark);">Pascal Wagner</strong>, <strong style="color:var(--text-dark);">Joseph Root</strong>, and 9 others invested</div>';
+    html += '</div>';
+    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">When you opt in, other members can see your name on deals you\'ve invested in. This helps LPs coordinate, share due diligence, and connect with co-investors. You can toggle individual deals on or off anytime.</div>';
+    html += '</div>';
+
+    // Opt-in toggle
+    html += '<label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:16px 0;margin:0 4px;">';
+    var isOptedIn = wizardData.sharePortfolio === true;
+    html += '<input type="checkbox" id="wizSharePortfolio" ' + (isOptedIn ? 'checked' : '') + ' onchange="wizardData.sharePortfolio=this.checked;" style="width:22px;height:22px;cursor:pointer;accent-color:var(--green);flex-shrink:0;">';
+    html += '<div>';
+    html += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Yes, show my name on deals I invest in</div>';
+    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">You can only see others if you also opt in (reciprocal)</div>';
+    html += '</div>';
+    html += '</label>';
+
+    // Nav
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Show me my plan \u2192</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 10/11/12: PLAN OUTPUT =====
   if (step.type === 'planOutput') {
     const branch = step.branch;
     const deals = getWizardPlanDeals(branch);
 
-    // Helper to parse capital range like "$250-500K" or "$1M+"
+    // Helper to parse capital range like "$250k-$500k", "$250-500K", or "$1M+"
     function parseCapitalRange(str) {
       if (!str) return { low: 0, high: 0, mid: 0 };
-      const s = str.replace(/\$/g, '').replace(/\+/g, '');
+      // Handle "<$100k" format
+      var isUnder = str.indexOf('<') >= 0;
+      const s = str.replace(/[\$<>+]/g, '');
       const parts = s.split('-');
       function parseVal(v) {
         v = v.trim();
-        if (v.endsWith('M')) return parseFloat(v) * 1000000;
-        if (v.endsWith('K')) return parseFloat(v) * 1000;
-        return parseFloat(v) * 1000; // assume K if no suffix
+        if (v.endsWith('M') || v.endsWith('m')) return parseFloat(v) * 1000000;
+        if (v.endsWith('K') || v.endsWith('k')) return parseFloat(v) * 1000;
+        var n = parseFloat(v);
+        return n > 10000 ? n : n * 1000; // assume K if small number without suffix
       }
       const low = parseVal(parts[0]) || 0;
       const high = parts[1] ? parseVal(parts[1]) : low;
@@ -11166,7 +11371,7 @@ function renderWizardStep() {
 
     if (branch === 'cashflow') {
       const target = parseDollar(wizardData.targetCashFlow) || 100000;
-      const cap = parseCapitalRange(wizardData._capitalRange);
+      const cap = parseCapitalRange(wizardData.capital12mo || wizardData._capitalRange);
       const capitalMid = cap.mid > 0 ? cap.mid : Math.round(target / 0.09);
       const yr1Raw = Math.round(capitalMid * 0.09);
       const yr1 = Math.min(target, yr1Raw);
@@ -11223,7 +11428,7 @@ function renderWizardStep() {
       const taxable = parseDollar(wizardData.taxableIncome) || 200000;
       const estRate = taxable > 500000 ? 0.37 : (taxable > 200000 ? 0.35 : 0.32);
       const currentBill = Math.round(taxable * estRate);
-      const capT = parseCapitalRange(wizardData._capitalRange);
+      const capT = parseCapitalRange(wizardData.capital12mo || wizardData._capitalRange);
       const capitalMid = capT.mid > 0 ? capT.mid : Math.round(taxable * 1.5);
       const depreciation = Math.round(capitalMid * 0.7);
       const afterBill = Math.max(0, Math.round((taxable - depreciation) * estRate));
@@ -11254,7 +11459,7 @@ function renderWizardStep() {
     } else {
       const cap = parseDollar(wizardData.growthCapital) || 500000;
       const doubled = cap * 2;
-      const capG = parseCapitalRange(wizardData._capitalRange);
+      const capG = parseCapitalRange(wizardData.capital12mo || wizardData._capitalRange);
       const capitalMid = capG.mid > 0 ? capG.mid : cap;
       html += `<div class="wizard-card-title">Double your $${(cap/1000).toLocaleString()}K in 5 years</div>`;
       // Growth bar chart — Today vs Goal
@@ -11365,7 +11570,7 @@ function renderWizardStep() {
       const t = parseDollar(wizardData.growthCapital) || 500000;
       goalSummary = 'Grow $' + t.toLocaleString() + ' to $' + (t * 2).toLocaleString();
     }
-    const capLabel = wizardData._capitalRange || 'Not set';
+    const capLabel = wizardData.capital12mo || wizardData._capitalRange || 'Not set';
     const checkLabel = wizardData.checkSize ? '$' + parseInt(wizardData.checkSize).toLocaleString() : 'Not set';
     const savedCount = typeof window._wizardSavedDeals !== 'undefined' ? window._wizardSavedDeals.size : 0;
     html += '<div class="wizard-plan-summary">';
@@ -11377,8 +11582,8 @@ function renderWizardStep() {
     html += '</div>';
 
     // Deployment timeline
-    var capMap = { '$50-100K': 75000, '$100-250K': 175000, '$250-500K': 375000, '$500K-1M': 750000, '$1M+': 1500000 };
-    var totalCap = capMap[wizardData._capitalRange] || 200000;
+    var capMap = { '<$100k': 75000, '$100k-$250k': 175000, '$250k-$500k': 375000, '$500k-$1M': 750000, '$1M+': 1500000, '$50-100K': 75000, '$100-250K': 175000, '$250-500K': 375000, '$500K-1M': 750000 };
+    var totalCap = capMap[wizardData.capital12mo] || capMap[wizardData._capitalRange] || 200000;
     var checkAmt = parseInt(wizardData.checkSize) || 100000;
     var numDeals = Math.ceil(totalCap / checkAmt);
     var avgYield = summaryBranch === 'cashflow' ? 0.09 : summaryBranch === 'tax' ? 0.06 : 0.15;
@@ -11564,6 +11769,13 @@ function wizardNext() {
     // Finish
     localStorage.setItem('gycBuyBoxComplete', 'true');
     syncWizardToBuyBox();
+    // Save LP Network opt-in
+    if (wizardData.sharePortfolio) {
+      var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+      u.sharePortfolio = true;
+      localStorage.setItem('gycUser', JSON.stringify(u));
+      if (typeof syncToBackend === 'function') syncToBackend('profile', { share_portfolio: true });
+    }
     document.getElementById('wizardOverlay').classList.remove('active');
     if (typeof trackActivity === 'function') {
       trackActivity('onboarding_complete', { branch: wizardData._branch, wizardData: JSON.stringify(wizardData).substring(0, 200) });
@@ -11640,9 +11852,16 @@ function syncWizardToBuyBox() {
   if (d._branch) buyBox._branch = d._branch;
   if (d.lockup) buyBox.holdMin = d.lockup;
   if (d.distributions) {
-    // If distributions is a string (from radio), convert to appropriate format
     if (typeof d.distributions === 'string') buyBox.distributions = d.distributions;
   }
+  // v3 wizard fields
+  if (d.capital12mo) buyBox.capital12mo = d.capital12mo;
+  if (d.capitalReadiness) buyBox.capitalReadiness = d.capitalReadiness;
+  if (d.triggerEvent) buyBox.triggerEvent = d.triggerEvent;
+  if (d.incomeStructure) buyBox.incomeStructure = d.incomeStructure;
+  if (d.reProfessional) buyBox.reProfessional = d.reProfessional;
+  if (d.maxOperatorPct) buyBox.maxOperatorPct = d.maxOperatorPct;
+  if (d.accreditation) buyBox.accreditation = d.accreditation;
 
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
   if (typeof renderReport === 'function') renderReport();
