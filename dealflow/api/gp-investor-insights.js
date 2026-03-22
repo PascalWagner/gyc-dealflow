@@ -279,23 +279,25 @@ export default async function handler(req, res) {
       .sort((a, b) => b.count - a.count)[0]?.label || 'Not enough data';
 
     // ---- AGGREGATE: Investor Goals ----
-    // Normalize all goal values to 3 canonical options
+    // Normalize all goal values to 3 canonical options with original labels
+    const GOAL_LABELS = ['Cash Flow (income now)', 'Tax Savings (shelter income)', 'Wealth Growth (long-term)'];
     const GOAL_MAP = {
-      'passive_income': 'Passive Income',
-      'income': 'Passive Income',
-      'Cash Flow (income now)': 'Passive Income',
-      'cash_flow': 'Passive Income',
-      'tax_reduction': 'Tax Benefits',
-      'tax_benefits': 'Tax Benefits',
-      'Tax Savings (shelter income)': 'Tax Benefits',
-      'tax': 'Tax Benefits',
-      'growth': 'Growth',
-      'capital_growth': 'Growth',
-      'Wealth Growth (long-term)': 'Growth',
-      'appreciation': 'Growth',
+      'passive_income': GOAL_LABELS[0],
+      'income': GOAL_LABELS[0],
+      'Cash Flow (income now)': GOAL_LABELS[0],
+      'cash_flow': GOAL_LABELS[0],
+      'tax_reduction': GOAL_LABELS[1],
+      'tax_benefits': GOAL_LABELS[1],
+      'Tax Savings (shelter income)': GOAL_LABELS[1],
+      'tax': GOAL_LABELS[1],
+      'growth': GOAL_LABELS[2],
+      'capital_growth': GOAL_LABELS[2],
+      'Wealth Growth (long-term)': GOAL_LABELS[2],
+      'appreciation': GOAL_LABELS[2],
     };
 
-    const goalCounts = { 'Passive Income': 0, 'Tax Benefits': 0, 'Growth': 0 };
+    const goalCounts = {};
+    for (const label of GOAL_LABELS) goalCounts[label] = 0;
 
     // From user_goals
     for (const g of goals) {
