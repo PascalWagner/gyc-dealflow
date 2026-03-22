@@ -5652,6 +5652,10 @@ async function renderDeal() {
 
     var _opName2 = (opSponsor.name || deal.managementCompany || 'this operator');
     portfolioSnapshotHtml += '<div class="section"' + (!hasPortfolio ? ' style="opacity:0.5;"' : '') + '><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><h2 class="section-title">Operator Track Record</h2>' + (hasPortfolio ? '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-left:auto;">' + portfolio.length + ' properties</span>' : '') + '</div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      portfolioSnapshotHtml += academyGateOverlay('Unlock Operator Track Record', 'See this operator\'s full portfolio, property details, and performance history.');
+      portfolioSnapshotHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">';
+    }
     portfolioSnapshotHtml += '<div class="section-body">';
 
     if (!hasPortfolio) {
@@ -5744,6 +5748,9 @@ async function renderDeal() {
       portfolioSnapshotHtml += renderTable(otherClass, 0.7);
     }
 
+    if (!isPaidUser && !_compIsAdmin) {
+      portfolioSnapshotHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
     portfolioSnapshotHtml += '</div></div>';
   })();
 
@@ -7791,15 +7798,15 @@ async function renderDeal() {
     + '<div>' + operatorHtml + chartHtml + materialsHtml + '</div>'
     + '</div>'
     + buildDealEconomicsHtml(deal)
-    // --- Job 5: How does it compare? ---
+    // --- Free-visible sections first ---
+    + secFilingHtml
+    + similarHtml
+    // --- Paid sections ---
     + cashFlowHtml
     + feeBenchHtml
     + feeCompareHtml
     + portfolioSnapshotHtml
-    + similarHtml
     + geoMapHtml
-    // --- Job 6: SEC filing ---
-    + secFilingHtml
     + thesisHtml
     + dealFitHtml
     + bgReportDealHtml
