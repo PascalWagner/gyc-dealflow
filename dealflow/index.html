@@ -5261,7 +5261,7 @@ const _supa = window.supabase.createClient(
 <!-- Sidebar (injected by sidebar.js) -->
 <script>window.SIDEBAR_SPA = true;</script>
 <div id="sidebar-root"></div>
-<script src="js/sidebar.js" data-page="deals"></script>
+<script src="js/sidebar.js?v=20260322" data-page="deals"></script>
 <!-- Feedback Modal -->
 <div id="feedbackModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:none;align-items:center;justify-content:center;" onclick="if(event.target===this)closeFeedbackModal()">
   <div style="background:var(--bg-card);border-radius:var(--radius);width:100%;max-width:520px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
@@ -6647,56 +6647,151 @@ const _supa = window.supabase.createClient(
 
       <!-- TAB: Network & Moat -->
       <div id="admindash-tab-network" style="display:none;">
-        <div class="settings-page-desc" style="margin-top:0;">Building defensible network effects. The moat is the people, not the software.</div>
 
-        <div class="section" style="margin-top:20px;">
-          <div class="section-header"><span class="section-title">Introduction Analytics</span></div>
-          <div class="section-body">
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;" id="introStatsGrid">
-              <div class="stat-card"><div class="stat-value" id="introTotalCount">0</div><div class="stat-label">Total Intros</div></div>
-              <div class="stat-card"><div class="stat-value" id="introUniqueGPs">0</div><div class="stat-label">Unique GPs</div></div>
-              <div class="stat-card"><div class="stat-value" id="introUniqueLPs">0</div><div class="stat-label">Unique LPs</div></div>
-              <div class="stat-card"><div class="stat-value" id="introThisMonth">0</div><div class="stat-label">This Month</div></div>
-            </div>
-            <div id="introRequestsList" style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">No introduction requests tracked yet. When LPs request intros from deal pages, they&rsquo;ll appear here.</div>
+        <!-- Thesis Banner -->
+        <div style="background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02));border:1px solid rgba(81,190,123,0.2);border-radius:var(--radius);padding:20px 24px;margin-bottom:24px;">
+          <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:6px;">Moat Thesis</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);line-height:1.6;font-weight:600;">The moat is the people, not the software.</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.6;margin-top:4px;">Every intro made, every DD checklist completed, every buy box configured creates proprietary data a competitor can&rsquo;t replicate. The network compounds &mdash; more LPs attract more GPs, which attract more LPs.</div>
+        </div>
+
+        <!-- Intro Analytics Stats -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;" id="introStatsGrid">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Intros</div><div style="font-size:22px;font-weight:800;color:var(--primary);" id="introTotalCount">0</div></div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Unique GPs</div><div style="font-size:22px;font-weight:800;color:var(--text-dark);" id="introUniqueGPs">0</div></div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Unique LPs</div><div style="font-size:22px;font-weight:800;color:var(--text-dark);" id="introUniqueLPs">0</div></div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">This Month</div><div style="font-size:22px;font-weight:800;color:var(--text-dark);" id="introThisMonth">0</div></div>
+        </div>
+
+        <!-- Intro Request Log -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;"></span>
+            <span style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Introduction Requests</span>
+          </div>
+          <div style="padding:16px 20px;" id="introRequestsList">
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);text-align:center;padding:20px 0;">No introduction requests tracked yet. When LPs request intros from deal pages, they&rsquo;ll appear here.</div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-header"><span class="section-title">Network Effects Playbook</span></div>
-          <div class="section-body">
-            <div style="display:grid;gap:16px;">
-              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">1. LP Network Lock-In</div>
-                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">More LPs &rarr; more intro requests &rarr; GPs get warm leads for free &rarr; GPs list more deals &rarr; more LPs join. Track: LP signups, active users, intros requested per month.</div>
+        <!-- Flywheel Diagram -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;flex-shrink:0;"></span>
+            <span style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Network Flywheel</span>
+          </div>
+          <div style="padding:24px 20px;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:nowrap;">
+              <div style="text-align:center;flex:1;">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#2C6E49);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">More<br>LPs</div>
               </div>
-              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">2. GP Recruitment via Data</div>
-                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Show GPs not on the platform: &ldquo;We made X intros that led to $Y in capital deployed through our network.&rdquo; Prove value with data, then onboard them. Track: capital attributed to intros, GP conversion rate.</div>
+              <div style="font-size:20px;color:var(--primary);flex-shrink:0;">&rarr;</div>
+              <div style="text-align:center;flex:1;">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">More<br>Intros</div>
               </div>
-              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">3. Data Moat</div>
-                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Every deal reviewed, every DD checklist completed, every buy box configured creates proprietary data. Competitor would need to replicate the database AND the community. Track: deals in DB, DD completions, buy box profiles.</div>
+              <div style="font-size:20px;color:var(--primary);flex-shrink:0;">&rarr;</div>
+              <div style="text-align:center;flex:1;">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">GPs Get<br>Warm Leads</div>
               </div>
-              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">4. Academy as Trust Engine</div>
-                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Academy members get intros, deal access, DD tools. Non-members see deals but can&rsquo;t act. Upsell path: free browse &rarr; consultation &rarr; Academy &rarr; Fund LP. Track: free-to-paid conversion, Academy retention.</div>
+              <div style="font-size:20px;color:var(--primary);flex-shrink:0;">&rarr;</div>
+              <div style="text-align:center;flex:1;">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">GPs List<br>More Deals</div>
+              </div>
+              <div style="font-size:20px;color:var(--primary);flex-shrink:0;">&rarr;</div>
+              <div style="text-align:center;flex:1;">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#2C6E49);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">More LPs<br>Join</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-header"><span class="section-title">Key Metrics to Track</span></div>
-          <div class="section-body">
-            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
-              <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Metric</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Current</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Target</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Why It Matters</th></tr></thead>
+        <!-- 4 Moat Pillars -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:var(--radius);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--primary);">1</span>
+              <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">LP Network Lock-In</span>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">More LPs means more intro requests. GPs get warm leads for free, so they list more deals, which attracts more LPs. The cycle compounds.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: LP signups, active users, intros/month</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid #3b82f6;border-radius:var(--radius);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#3b82f6;">2</span>
+              <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">GP Recruitment via Data</span>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">Show GPs: &ldquo;We made X intros that led to $Y in capital deployed.&rdquo; Prove value with attribution data, then onboard them.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: capital attributed, GP conversion rate</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid #f59e0b;border-radius:var(--radius);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#f59e0b;">3</span>
+              <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Data Moat</span>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">Every deal reviewed, DD checklist completed, and buy box configured creates proprietary data. A competitor would need to replicate the database AND the community.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: deals in DB, DD completions, buy box profiles</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid #8b5cf6;border-radius:var(--radius);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#8b5cf6;">4</span>
+              <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Academy as Trust Engine</span>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">Academy members get intros, deal access, DD tools. Non-members see deals but can&rsquo;t act. Upsell: free browse &rarr; consultation &rarr; Academy &rarr; Fund LP.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: free-to-paid conversion, Academy retention</div>
+          </div>
+        </div>
+
+        <!-- Key Metrics Scorecard -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;"></span>
+            <span style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Moat Scorecard</span>
+          </div>
+          <div style="padding:0;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;">
+              <thead><tr style="border-bottom:2px solid var(--border);">
+                <th style="text-align:left;padding:12px 20px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Metric</th>
+                <th style="text-align:center;padding:12px 16px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Current</th>
+                <th style="text-align:center;padding:12px 16px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Target</th>
+                <th style="text-align:left;padding:12px 20px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Progress</th>
+                <th style="text-align:left;padding:12px 20px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Why It Matters</th>
+              </tr></thead>
               <tbody>
-                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Active LPs</td><td style="padding:10px 12px;" id="moatMetricLPs">--</td><td style="padding:10px 12px;">500</td><td style="padding:10px 12px;color:var(--text-secondary);">Critical mass for GP interest</td></tr>
-                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">GP Partners</td><td style="padding:10px 12px;" id="moatMetricGPs">--</td><td style="padding:10px 12px;">50</td><td style="padding:10px 12px;color:var(--text-secondary);">Supply side of marketplace</td></tr>
-                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Intros / Month</td><td style="padding:10px 12px;" id="moatMetricIntros">--</td><td style="padding:10px 12px;">25</td><td style="padding:10px 12px;color:var(--text-secondary);">Engagement proof for GPs</td></tr>
-                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Capital Attributed</td><td style="padding:10px 12px;" id="moatMetricCapital">$0</td><td style="padding:10px 12px;">$5M</td><td style="padding:10px 12px;color:var(--text-secondary);">Proves platform value</td></tr>
-                <tr><td style="padding:10px 12px;">Deals in Database</td><td style="padding:10px 12px;" id="moatMetricDeals">--</td><td style="padding:10px 12px;">500</td><td style="padding:10px 12px;color:var(--text-secondary);">Content moat depth</td></tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:12px 20px;font-weight:600;color:var(--text-dark);">Active LPs</td>
+                  <td style="padding:12px 16px;text-align:center;font-weight:700;" id="moatMetricLPs">--</td>
+                  <td style="padding:12px 16px;text-align:center;color:var(--text-muted);">500</td>
+                  <td style="padding:12px 20px;"><div style="background:var(--border);border-radius:4px;height:6px;width:100px;overflow:hidden;"><div style="background:var(--primary);height:100%;width:0%;border-radius:4px;" id="moatBarLPs"></div></div></td>
+                  <td style="padding:12px 20px;color:var(--text-secondary);">Critical mass for GP interest</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:12px 20px;font-weight:600;color:var(--text-dark);">GP Partners</td>
+                  <td style="padding:12px 16px;text-align:center;font-weight:700;" id="moatMetricGPs">--</td>
+                  <td style="padding:12px 16px;text-align:center;color:var(--text-muted);">50</td>
+                  <td style="padding:12px 20px;"><div style="background:var(--border);border-radius:4px;height:6px;width:100px;overflow:hidden;"><div style="background:#3b82f6;height:100%;width:0%;border-radius:4px;" id="moatBarGPs"></div></div></td>
+                  <td style="padding:12px 20px;color:var(--text-secondary);">Supply side of marketplace</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:12px 20px;font-weight:600;color:var(--text-dark);">Intros / Month</td>
+                  <td style="padding:12px 16px;text-align:center;font-weight:700;" id="moatMetricIntros">--</td>
+                  <td style="padding:12px 16px;text-align:center;color:var(--text-muted);">25</td>
+                  <td style="padding:12px 20px;"><div style="background:var(--border);border-radius:4px;height:6px;width:100px;overflow:hidden;"><div style="background:#f59e0b;height:100%;width:0%;border-radius:4px;" id="moatBarIntros"></div></div></td>
+                  <td style="padding:12px 20px;color:var(--text-secondary);">Engagement proof for GPs</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                  <td style="padding:12px 20px;font-weight:600;color:var(--text-dark);">Capital Attributed</td>
+                  <td style="padding:12px 16px;text-align:center;font-weight:700;" id="moatMetricCapital">$0</td>
+                  <td style="padding:12px 16px;text-align:center;color:var(--text-muted);">$5M</td>
+                  <td style="padding:12px 20px;"><div style="background:var(--border);border-radius:4px;height:6px;width:100px;overflow:hidden;"><div style="background:#8b5cf6;height:100%;width:0%;border-radius:4px;" id="moatBarCapital"></div></div></td>
+                  <td style="padding:12px 20px;color:var(--text-secondary);">Proves platform value</td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 20px;font-weight:600;color:var(--text-dark);">Deals in Database</td>
+                  <td style="padding:12px 16px;text-align:center;font-weight:700;" id="moatMetricDeals">--</td>
+                  <td style="padding:12px 16px;text-align:center;color:var(--text-muted);">500</td>
+                  <td style="padding:12px 20px;"><div style="background:var(--border);border-radius:4px;height:6px;width:100px;overflow:hidden;"><div style="background:var(--primary);height:100%;width:0%;border-radius:4px;" id="moatBarDeals"></div></div></td>
+                  <td style="padding:12px 20px;color:var(--text-secondary);">Content moat depth</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -19067,6 +19162,24 @@ function renderNetworkMoat() {
       var el2 = document.getElementById('moatMetricDeals');
       if (el2) el2.textContent = deals.length;
     }
+  } catch(e) {}
+  // Update progress bars
+  try {
+    var bars = [
+      ['moatBarLPs', 'moatMetricLPs', 500],
+      ['moatBarGPs', 'moatMetricGPs', 50],
+      ['moatBarIntros', 'moatMetricIntros', 25],
+      ['moatBarDeals', 'moatMetricDeals', 500]
+    ];
+    bars.forEach(function(b) {
+      var bar = document.getElementById(b[0]);
+      var val = document.getElementById(b[1]);
+      if (bar && val) {
+        var n = parseInt(val.textContent) || 0;
+        var pct = Math.min(100, Math.round(n / b[2] * 100));
+        bar.style.width = pct + '%';
+      }
+    });
   } catch(e) {}
 }
 
