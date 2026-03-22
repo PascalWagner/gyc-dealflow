@@ -9,29 +9,16 @@
 import { getAdminClient, getUserClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
 
 // GHL field mapping (for sync): Supabase column → GHL custom field key
+// Only active v3 wizard fields — v1/v2 dead fields removed
 const GHL_FIELD_MAP = {
   trigger_event: 'contact.investment_trigger_event',
-  check_size: 'contact.investment_amount',
   net_worth: 'contact.networth',
-  capital_ready: 'contact.capital_availability',
-  urgency: 'contact.deployment_urgency',
   asset_classes: 'contact.asset_class_preference',
-  entity: 'contact.how_will_you_be_making_this_investment',
-  min_cash_yield: 'contact.minimum_1st_year_cash_on_cash_return',
-  min_irr: 'contact.minimum_total_return_requirement_irr',
-  instruments: 'contact.investing_instrument',
   lockup: 'contact.lockup_period_tolerance',
-  deal_structure: 'contact.firm_focus_preference',
   strategies: 'contact.strategy_preference',
-  operator_size: 'contact.operator_size_preference',
-  redemption: 'contact.redemptions',
   distributions: 'contact.distribution_frequency_options',
-  operator_strategy: 'contact.diversification_preference',
-  financial_reporting: 'contact.audited_financials_requirement',
   accreditation: 'contact.accreditation_type',
   goal: 'contact.primary_investment_objective',
-  fund_source: 'contact.where_is_the_money_coming_from',
-  // New fields synced to GHL
   branch: 'contact.onboarding_branch',
   income_structure: 'contact.income_source_type',
   re_professional: 'contact.re_professional_status',
@@ -49,30 +36,16 @@ const GHL_FIELD_MAP = {
 };
 
 // Map frontend wizard keys → Supabase column names
+// Only active v3 wizard fields — v1/v2 dead mappings removed
 const WIZARD_TO_COLUMN = {
-  triggerEvent: 'trigger_event',       // was 'trigger' — fixed to match frontend key
-  trigger: 'trigger_event',           // keep backwards compat for old data
-  checkSize: 'check_size',
+  triggerEvent: 'trigger_event',
   networth: 'net_worth',
-  capitalReady: 'capital_ready',
-  urgency: 'urgency',
   assetClasses: 'asset_classes',
-  entity: 'entity',
-  minCashYield: 'min_cash_yield',
-  minIRR: 'min_irr',
-  instruments: 'instruments',
   lockup: 'lockup',
-  dealStructure: 'deal_structure',
   strategies: 'strategies',
-  operatorSize: 'operator_size',
-  redemption: 'redemption',
   distributions: 'distributions',
-  operatorStrategy: 'operator_strategy',
-  financialReporting: 'financial_reporting',
   accreditation: 'accreditation',
   goal: 'goal',
-  fundSource: 'fund_source',
-  // New onboarding fields (migration 030)
   _branch: 'branch',
   baselineIncome: 'baseline_income',
   targetCashFlow: 'target_cashflow',
@@ -86,7 +59,8 @@ const WIZARD_TO_COLUMN = {
   capital90Day: 'capital_90day',
   capitalReadiness: 'capital_readiness',
   operatorFocus: 'operator_focus',
-  sharePortfolio: 'share_portfolio'
+  sharePortfolio: 'share_portfolio',
+  diversificationPref: 'diversification_pref'
 };
 
 // Reverse: column → wizard key (for GET response)

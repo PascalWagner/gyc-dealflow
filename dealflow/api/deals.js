@@ -32,7 +32,8 @@ export default async function handler(req, res) {
         .from('opportunities')
         .select(`*, management_company:management_companies (
           id, operator_name, ceo, website, linkedin_ceo, invest_clearly_profile,
-          founding_year, type, asset_classes, total_investors, authorized_emails, booking_url
+          founding_year, type, asset_classes, total_investors, authorized_emails, booking_url,
+          ir_contact_name, ir_contact_email
         )`)
         .eq('id', singleId)
         .single();
@@ -80,6 +81,7 @@ export default async function handler(req, res) {
         mcLinkedin: mc.linkedin_ceo || '', mcInvestClearly: mc.invest_clearly_profile || '',
         mcTotalInvestors: mc.total_investors, mcBookingUrl: mc.booking_url || '',
         mcAuthorizedEmails: mc.authorized_emails || [],
+        mcIrContactName: mc.ir_contact_name || '', mcIrContactEmail: mc.ir_contact_email || '',
         fees: row.fees || [], firstYrDepreciation: row.first_yr_depreciation,
         strategy: row.strategy, instrument: row.instrument, cashOnCash: row.cash_on_cash,
         debtPosition: row.debt_position, fundAUM: row.fund_aum, loanCount: row.loan_count,
@@ -126,7 +128,9 @@ export default async function handler(req, res) {
           asset_classes,
           total_investors,
           authorized_emails,
-          booking_url
+          booking_url,
+          ir_contact_name,
+          ir_contact_email
         )
       `)
       .not('investment_name', 'eq', '')
@@ -280,6 +284,8 @@ export default async function handler(req, res) {
           mcTotalInvestors: mc.total_investors,
           mcBookingUrl: mc.booking_url || '',
           mcAuthorizedEmails: mc.authorized_emails || [],
+          mcIrContactName: mc.ir_contact_name || '',
+          mcIrContactEmail: mc.ir_contact_email || '',
           fees: d.fees || [],
           firstYrDepreciation: d.first_yr_depreciation,
           strategy: d.strategy,

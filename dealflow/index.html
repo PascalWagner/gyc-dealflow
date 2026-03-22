@@ -9960,6 +9960,13 @@ function renderCardStageExtras(deal) {
   } else if (stage === 'diligence') {
     // Due Diligence: request intro to operator
     const operatorName = deal.managementCompany || 'the Operator';
+    const alreadyRequested = !!localStorage.getItem('gycIntroRequested_' + deal.id);
+    if (alreadyRequested) {
+      return '<div style="margin:8px 16px 0;text-align:center;">' +
+        '<span style="' + linkStyle + 'color:var(--text-muted);">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+        'Intro requested \u2014 check your email</span></div>';
+    }
     return '<div style="margin:8px 16px 0;text-align:center;">' +
       '<a href="#" onclick="event.stopPropagation(); event.preventDefault(); requestIntro(\'' + deal.id.replace(/'/g, "\\'") + '\');" style="' + linkStyle + 'color:#f97316;cursor:pointer;">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
@@ -11686,7 +11693,7 @@ function updateStageDescription() {
     browse: { title: 'Deal Flow', text: 'Browse vetted opportunities. Swipe right or click Save to add a deal to your Saved list.', color: 'var(--primary)' },
     saved: { title: 'Saved', text: 'Deals you\'re interested in. Review the investment deck and decide if you want to dig deeper. If it looks promising, move it to Vetting.', color: 'var(--primary)' },
     vetting: { title: 'Vetting', text: 'Read through everything on the deal page \u2014 understand this deal intimately. If you like what you see, move it to Due Diligence.', color: '#2563EB' },
-    diligence: { title: 'Due Diligence', text: 'Time to talk to the operator. Schedule a call, ask clarifying questions, and fill in any gaps. Once you\'ve spoken with them, move it to Decision.', color: '#f97316' },
+    diligence: { title: 'Due Diligence', text: 'Time to talk to the operator. Request an intro and we\'ll connect you via email. Ask clarifying questions and fill in any gaps. Once you\'ve spoken with them, move it to Decision.', color: '#f97316' },
     decision: { title: 'Decision Time', text: 'Compare deals side by side. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7', cta: { label: 'Join Office Hours', action: "navigateTo('officehours')" } },
     invested: { title: 'Your Portfolio', text: 'Deals you\'ve committed capital to. Track distributions, K-1s, and hold periods.', color: '#059669' },
     passed: { title: 'Not Interested', text: 'Deals you decided weren\'t right for you. You can always click Reconsider to move one back.', color: 'var(--text-muted)' }
@@ -11954,6 +11961,61 @@ function toggleStageDropdown(dealId, btn) {
     };
     document.addEventListener('click', closer, true);
   }, 10);
+}
+
+async function requestIntro(dealId) {
+  const deal = DEALS.find(d => d.id === dealId);
+  if (!deal) return;
+  const operatorName = deal.managementCompany || 'Unknown Operator';
+
+  // Check if already requested (localStorage)
+  const introKey = 'gycIntroRequested_' + dealId;
+  if (localStorage.getItem(introKey)) {
+    showToast('You\'ve already requested an intro to ' + operatorName, 'info');
+    return;
+  }
+
+  if (!confirm('Request an introduction to ' + operatorName + ' for ' + deal.investmentName + '?\n\nPascal will connect you via email.')) return;
+
+  try {
+    const session = typeof supabase !== 'undefined' ? await supabase.auth.getSession() : null;
+    const token = session?.data?.session?.access_token;
+    if (!token) {
+      showToast('Please log in to request an introduction', 'error');
+      return;
+    }
+
+    const resp = await fetch('/api/intro-request', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        dealId: deal.id,
+        dealName: deal.investmentName,
+        operatorName: operatorName,
+        operatorCeo: deal.ceo || '',
+        managementCompanyId: deal.managementCompanyId || ''
+      })
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      localStorage.setItem(introKey, Date.now().toString());
+      if (data.introSent) {
+        showToast('Introduction sent! Check your email \u2014 you\'ve been CC\'d.', 'success');
+      } else {
+        showToast('Intro requested! Pascal will connect you shortly.', 'success');
+      }
+      renderAll();
+    } else {
+      showToast('Something went wrong. Please try again.', 'error');
+    }
+  } catch (err) {
+    console.error('requestIntro error:', err);
+    showToast('Something went wrong. Please try again.', 'error');
+  }
 }
 
 function changeDealStage(dealId, newStage) {
