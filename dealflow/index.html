@@ -1551,10 +1551,10 @@ html.dark .credit-chart-legend-divider {
   height: 100%;
   border-radius: 3px;
 }
-.card-funding-no-data, .swipe-funding-no-data {
-  font-family: var(--font-ui);
-  font-size: 10px;
+.card-funding-labels span:only-child,
+.swipe-funding-labels span:only-child {
   color: var(--text-muted);
+  font-weight: 500;
   font-style: italic;
 }
 
@@ -10094,7 +10094,10 @@ function renderCreditCard(deal) {
           var raised = deal.totalAmountSold;
           var total = deal.offeringSize;
           var pct = deal.pctFunded;
-          if (!raised || !total || !pct) return '<div class="card-funding-bar"><div class="card-funding-no-data">SEC filing data not available</div></div>';
+          if (!raised || !total || !pct) return '<div class="card-funding-bar">'
+            + '<div class="card-funding-labels"><span>SEC filing data not available</span><span></span></div>'
+            + '<div class="card-funding-track"><div class="card-funding-fill" style="width:100%;background:var(--border);"></div></div>'
+            + '</div>';
           return '<div class="card-funding-bar">'
             + '<div class="card-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
             + '<div class="card-funding-track"><div class="card-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:var(--primary);"></div></div>'
@@ -10393,7 +10396,10 @@ function renderCard(deal) {
           var raised = deal.totalAmountSold;
           var total = deal.offeringSize;
           var pct = deal.pctFunded;
-          if (!raised || !total || !pct) return '<div class="card-funding-bar"><div class="card-funding-no-data">SEC filing data not available</div></div>';
+          if (!raised || !total || !pct) return '<div class="card-funding-bar">'
+            + '<div class="card-funding-labels"><span>SEC filing data not available</span><span></span></div>'
+            + '<div class="card-funding-track"><div class="card-funding-fill" style="width:100%;background:var(--border);"></div></div>'
+            + '</div>';
           return '<div class="card-funding-bar">'
             + '<div class="card-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
             + '<div class="card-funding-track"><div class="card-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:var(--primary);"></div></div>'
@@ -23904,7 +23910,10 @@ function renderSwipeCard(deal) {
         var raised = deal.totalAmountSold;
         var total = deal.offeringSize;
         var pct = deal.pctFunded;
-        if (!raised || !total || !pct) return '<div class="swipe-funding-bar"><div class="swipe-funding-no-data">SEC filing data not available</div></div>';
+        if (!raised || !total || !pct) return '<div class="swipe-funding-bar">'
+          + '<div class="swipe-funding-labels"><span>SEC filing data not available</span><span></span></div>'
+          + '<div class="swipe-funding-track"><div class="swipe-funding-fill" style="width:100%;background:var(--border);"></div></div>'
+          + '</div>';
         return '<div class="swipe-funding-bar">'
           + '<div class="swipe-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
           + '<div class="swipe-funding-track"><div class="swipe-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:var(--primary);"></div></div>'
