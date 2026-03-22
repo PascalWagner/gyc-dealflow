@@ -7568,6 +7568,7 @@ const DEALS_API_URL = '/api/deals';
 
 // All deal data comes from Supabase — no hardcoded fallback
 let DEALS = [];
+window.DEALS = DEALS; // expose for wizard steps
 let _dealsLoaded = false;
 
 // Show loading skeleton in the card grid while deals load
@@ -7629,6 +7630,7 @@ async function loadDeals() {
       const cachedDeals = JSON.parse(cached);
       if (cachedDeals.length > 0) {
         DEALS = cachedDeals;
+        window.DEALS = DEALS;
         _dealsLoaded = true;
         const cachedCompanies = sessionStorage.getItem('gycCompaniesCache');
         if (cachedCompanies) {
@@ -7648,6 +7650,7 @@ async function loadDeals() {
     const freshDeals = await fetchDeals();
     if (freshDeals && freshDeals.length > 0) {
       DEALS = freshDeals;
+      window.DEALS = DEALS;
       _dealsLoaded = true;
       mergeUserDeals();
       sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS));
