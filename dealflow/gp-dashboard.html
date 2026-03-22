@@ -35,6 +35,9 @@
   --orange: #CF7A30;
   --orange-bg: #FFF3E6;
   --red: #D04040;
+  --red-bg: #FEF2F2;
+  --yellow: #CA8A04;
+  --yellow-bg: #FEFCE8;
   --blue: #2563EB;
   --blue-bg: #EFF6FF;
   --teal-deep: #1F5159;
@@ -445,37 +448,125 @@ body {
   padding: 24px 28px;
 }
 
-/* ====== DEALS GRID ====== */
-.deals-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-}
-.deal-card {
+/* ====== ACTION ITEMS ====== */
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
   background: var(--bg-card);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-light);
+  margin-bottom: 8px;
+  transition: all var(--transition);
+}
+.action-item:last-child { margin-bottom: 0; }
+.action-item:hover { border-color: var(--border); box-shadow: var(--shadow-card); }
+.action-item.urgency-red { border-left: 4px solid var(--red); }
+.action-item.urgency-orange { border-left: 4px solid var(--orange); }
+.action-item.urgency-yellow { border-left: 4px solid var(--yellow); }
+.action-item-icon {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.action-item-icon svg { width: 16px; height: 16px; }
+.action-item-icon.icon-red { background: var(--red-bg); color: var(--red); }
+.action-item-icon.icon-orange { background: var(--orange-bg); color: var(--orange); }
+.action-item-icon.icon-yellow { background: var(--yellow-bg); color: var(--yellow); }
+.action-item-info { flex: 1; min-width: 0; }
+.action-item-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  white-space: nowrap;
   overflow: hidden;
-  transition: all 0.25s ease;
-  display: flex;
-  flex-direction: column;
+  text-overflow: ellipsis;
 }
-.deal-card:hover {
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
-  border-color: #D4C9AD;
+.action-item-desc {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
-.deal-card-header {
-  padding: 16px 18px 12px;
+.action-item-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.action-item-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--green-bg);
+}
+.action-item-btn svg { width: 12px; height: 12px; }
+
+/* ====== DEAL HEALTH TABLE ====== */
+.health-table-wrap {
+  overflow-x: auto;
+  margin: -4px -4px;
+}
+.health-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  min-width: 700px;
+}
+.health-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: color var(--transition);
+}
+.health-table th:hover { color: var(--text-dark); }
+.health-table th .sort-arrow {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.4;
+}
+.health-table th.sorted .sort-arrow { opacity: 1; color: var(--primary); }
+.health-table td {
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
 }
-.deal-card-badges {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+.health-table tr:last-child td { border-bottom: none; }
+.health-table tr:hover td { background: var(--off-white); }
+.health-table-name {
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition);
 }
+.health-table-name:hover { color: var(--primary-hover); }
 .deal-badge {
   display: inline-flex;
   align-items: center;
@@ -490,95 +581,37 @@ body {
 .deal-badge.green { background: var(--green-bg); color: var(--green); }
 .deal-badge.blue { background: var(--blue-bg); color: var(--blue); }
 .deal-badge.orange { background: var(--orange-bg); color: var(--orange); }
-.deal-card-title {
-  font-family: var(--font-ui);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-dark);
-  margin-bottom: 4px;
-  line-height: 1.3;
-  letter-spacing: -0.2px;
-}
-.deal-card-subtitle {
-  font-family: var(--font-body);
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-.deal-card-metrics {
-  padding: 14px 18px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 16px;
-  flex: 1;
-}
-.deal-metric-label {
-  font-family: var(--font-ui);
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.deal-metric-value {
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-.deal-card-actions {
-  padding: 12px 18px;
-  border-top: 1px solid var(--border-light);
+.progress-bar-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.btn-deal-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
-  font-family: var(--font-ui);
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 60px;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.progress-bar-fill.pct-low { background: var(--red); }
+.progress-bar-fill.pct-mid { background: var(--orange); }
+.progress-bar-fill.pct-high { background: var(--green); }
+.progress-pct {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.3px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition);
-  text-decoration: none;
-  border: none;
-  text-align: center;
+  color: var(--text-muted);
+  min-width: 32px;
+  text-align: right;
 }
-.btn-deal-action svg { width: 13px; height: 13px; }
-.btn-deal-primary {
-  background: var(--primary);
-  color: #fff;
-}
-.btn-deal-primary:hover { background: var(--primary-hover); }
-.btn-deal-outline {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-}
-.btn-deal-outline:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  background: var(--green-bg);
-}
-.btn-deal-link {
-  background: none;
-  border: none;
-  color: var(--primary);
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  margin-left: auto;
-  text-decoration: none;
-}
-.btn-deal-link:hover { color: var(--primary-hover); }
+.check-icon { color: var(--green); }
+.x-icon { color: var(--red); }
+.check-icon svg, .x-icon svg { width: 16px; height: 16px; vertical-align: middle; }
 
 /* ====== SETTINGS ====== */
 .settings-group {
@@ -774,7 +807,6 @@ body {
 /* ====== RESPONSIVE ====== */
 @media (max-width: 1024px) {
   .stats-strip { grid-template-columns: repeat(2, 1fr); }
-  .deals-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
@@ -795,10 +827,11 @@ body {
   .section-body { padding: 20px 18px; }
   .section-header { padding: 16px 18px; }
   .settings-input-row { flex-direction: column; }
+  .action-item { flex-wrap: wrap; }
+  .action-item-btn { margin-left: auto; }
 }
 @media (max-width: 480px) {
   .stats-strip { grid-template-columns: 1fr 1fr; }
-  .deal-card-actions { flex-wrap: wrap; }
 }
 </style>
 </head>
@@ -863,27 +896,55 @@ body {
           <div class="stat-card-label">Total Deals</div>
         </div>
         <div class="stat-card">
-          <div class="stat-card-value" id="statViews">--</div>
-          <div class="stat-card-label">Total Views</div>
+          <div class="stat-card-value" id="statMissing">--</div>
+          <div class="stat-card-label">Missing Data</div>
         </div>
         <div class="stat-card">
           <div class="stat-card-value" id="statIntros">--</div>
           <div class="stat-card-label">Intro Requests</div>
         </div>
         <div class="stat-card">
-          <div class="stat-card-value" id="statSaved">--</div>
-          <div class="stat-card-label">Saved by Investors</div>
+          <div class="stat-card-value" id="statOperators">--</div>
+          <div class="stat-card-label">Operators</div>
         </div>
       </div>
 
-      <!-- Deals Section -->
-      <div class="section-card">
+      <!-- Action Items Section -->
+      <div class="section-card" id="actionItemsCard">
         <div class="section-header">
-          <div class="section-title">Your Deals</div>
-          <span class="section-badge" id="dealsCount">0</span>
+          <div class="section-title">Action Items</div>
+          <span class="section-badge" id="actionItemsCount">0</span>
         </div>
         <div class="section-body">
-          <div class="deals-grid" id="dealsGrid"></div>
+          <div id="actionItemsList"></div>
+          <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
+            <p>All deals look good! No action items at this time.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deal Health Table -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Deal Health</div>
+          <span class="section-badge" id="dealsCount">0</span>
+        </div>
+        <div class="section-body" style="padding-bottom:16px;">
+          <div class="health-table-wrap">
+            <table class="health-table" id="healthTable">
+              <thead>
+                <tr>
+                  <th data-sort="name">Deal Name <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="status">Status <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="assetClass">Asset Class <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="completeness" class="sorted">Completeness <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="ppm">PPM <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="deck">Deck <span class="sort-arrow">&#9650;</span></th>
+                </tr>
+              </thead>
+              <tbody id="healthTableBody"></tbody>
+            </table>
+          </div>
           <div class="empty-inline" id="dealsEmpty" style="display:none;">
             <p>No deals found. Your deals will appear here once they are added to the platform.</p>
           </div>
@@ -989,6 +1050,71 @@ function showToast(message) {
   setTimeout(function() { toast.classList.remove('show'); }, 3000);
 }
 
+// ========== DEAL FIELD HELPERS ==========
+function getDealName(d) {
+  return d.investmentName || d.investment_name || d.name || d.deal_name || d.Name || 'Untitled Deal';
+}
+function getDealAssetClass(d) {
+  return d.assetClass || d.asset_class || '';
+}
+function getDealStatus(d) {
+  return d.status || d.Status || '';
+}
+function getDealId(d) {
+  return d.id || d.airtable_id || '';
+}
+function hasPPM(d) {
+  return !!(d.ppmUrl || d.ppm_url);
+}
+function hasDeck(d) {
+  return !!(d.deckUrl || d.deck_url);
+}
+function hasStrategy(d) {
+  return !!(d.investmentStrategy || d.investment_strategy || d.strategy || d.Strategy);
+}
+function hasTargetIRR(d) {
+  return d.targetIRR != null || d.target_irr != null || d.targetIrr != null;
+}
+function hasPrefReturn(d) {
+  return d.preferredReturn != null || d.pref_return != null || d.prefReturn != null;
+}
+function hasMinInvestment(d) {
+  return d.investmentMinimum != null || d.investment_minimum != null || d.minInvestment != null || d.min_investment != null || d.minimumInvestment != null;
+}
+function hasDealType(d) {
+  return !!(d.dealType || d.deal_type);
+}
+function hasOfferingType(d) {
+  return !!(d.offeringType || d.offering_type);
+}
+function hasDistributions(d) {
+  return !!(d.distributions || d.Distributions);
+}
+
+// Calculate data completeness (10 key fields)
+function dealCompleteness(d) {
+  var filled = 0;
+  if (getDealName(d) && getDealName(d) !== 'Untitled Deal') filled++;
+  if (getDealAssetClass(d)) filled++;
+  if (hasDealType(d)) filled++;
+  if (hasTargetIRR(d) || hasPrefReturn(d)) filled++;
+  if (hasMinInvestment(d)) filled++;
+  if (hasPPM(d)) filled++;
+  if (hasDeck(d)) filled++;
+  if (hasStrategy(d)) filled++;
+  if (hasOfferingType(d)) filled++;
+  if (hasDistributions(d)) filled++;
+  return Math.round((filled / 10) * 100);
+}
+
+// ========== SVG ICONS ==========
+var SVG_CHECK = '<span class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+var SVG_X = '<span class="x-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';
+var SVG_UPLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+var SVG_FILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+var SVG_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+var SVG_LIST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+
 // ========== GP STATE ==========
 var gpState = {
   companyId: null,
@@ -996,7 +1122,9 @@ var gpState = {
   isAdmin: false,
   deals: [],
   calendarUrl: '',
-  authorizedEmails: []
+  authorizedEmails: [],
+  sortCol: 'completeness',
+  sortAsc: true
 };
 
 // ========== CHECK GP ACCESS ==========
@@ -1101,6 +1229,207 @@ function countIntroRequests() {
   }
 }
 
+// ========== BUILD ACTION ITEMS ==========
+function buildActionItems(deals) {
+  var items = [];
+
+  deals.forEach(function(d) {
+    var name = getDealName(d);
+    var id = getDealId(d);
+
+    if (!hasPPM(d)) {
+      items.push({
+        urgency: 'red',
+        icon: 'red',
+        name: name,
+        desc: 'Missing PPM document',
+        btnLabel: 'Upload PPM',
+        btnAction: 'uploadPPM(\'' + escAttr(id) + '\')',
+        btnIcon: SVG_UPLOAD
+      });
+    }
+
+    if (!hasDeck(d)) {
+      items.push({
+        urgency: 'orange',
+        icon: 'orange',
+        name: name,
+        desc: 'Missing investor deck',
+        btnLabel: 'Upload Deck',
+        btnAction: 'uploadDeck(\'' + escAttr(id) + '\')',
+        btnIcon: SVG_UPLOAD
+      });
+    }
+
+    if (!hasStrategy(d)) {
+      items.push({
+        urgency: 'yellow',
+        icon: 'yellow',
+        name: name,
+        desc: 'No investment strategy description',
+        btnHref: 'deal.html?id=' + encodeURIComponent(id),
+        btnLabel: 'Add Description',
+        btnIcon: SVG_EDIT
+      });
+    }
+
+    if (!hasTargetIRR(d) && !hasPrefReturn(d)) {
+      items.push({
+        urgency: 'yellow',
+        icon: 'yellow',
+        name: name,
+        desc: 'Missing key terms (IRR / Pref Return)',
+        btnHref: 'deal.html?id=' + encodeURIComponent(id),
+        btnLabel: 'Complete Terms',
+        btnIcon: SVG_LIST
+      });
+    }
+  });
+
+  // Sort: red first, then orange, then yellow
+  var urgencyOrder = { red: 0, orange: 1, yellow: 2 };
+  items.sort(function(a, b) { return (urgencyOrder[a.urgency] || 9) - (urgencyOrder[b.urgency] || 9); });
+
+  return items.slice(0, 10);
+}
+
+// ========== RENDER ACTION ITEMS ==========
+function renderActionItems(deals) {
+  var items = buildActionItems(deals);
+  var listEl = document.getElementById('actionItemsList');
+  var emptyEl = document.getElementById('actionItemsEmpty');
+  var countEl = document.getElementById('actionItemsCount');
+  var cardEl = document.getElementById('actionItemsCard');
+
+  countEl.textContent = items.length;
+
+  if (items.length === 0) {
+    listEl.style.display = 'none';
+    emptyEl.style.display = 'block';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+  listEl.style.display = 'block';
+
+  listEl.innerHTML = items.map(function(item) {
+    var btnHtml;
+    if (item.btnHref) {
+      btnHtml = '<a href="' + escAttr(item.btnHref) + '" class="action-item-btn">' + item.btnIcon + ' ' + escHtml(item.btnLabel) + '</a>';
+    } else {
+      btnHtml = '<button class="action-item-btn" onclick="' + escAttr(item.btnAction) + '">' + item.btnIcon + ' ' + escHtml(item.btnLabel) + '</button>';
+    }
+
+    return '<div class="action-item urgency-' + item.urgency + '">' +
+      '<div class="action-item-icon icon-' + item.icon + '">' +
+        (item.urgency === 'red' ? SVG_FILE : item.urgency === 'orange' ? SVG_FILE : SVG_EDIT) +
+      '</div>' +
+      '<div class="action-item-info">' +
+        '<div class="action-item-name">' + escHtml(item.name) + '</div>' +
+        '<div class="action-item-desc">' + escHtml(item.desc) + '</div>' +
+      '</div>' +
+      btnHtml +
+    '</div>';
+  }).join('');
+}
+
+// ========== RENDER HEALTH TABLE ==========
+function renderHealthTable(deals) {
+  var tbody = document.getElementById('healthTableBody');
+  var emptyEl = document.getElementById('dealsEmpty');
+  document.getElementById('dealsCount').textContent = deals.length;
+
+  if (deals.length === 0) {
+    tbody.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+
+  emptyEl.style.display = 'none';
+
+  // Enrich deals with computed fields for sorting
+  var enriched = deals.map(function(d) {
+    return {
+      raw: d,
+      name: getDealName(d),
+      status: getDealStatus(d),
+      assetClass: getDealAssetClass(d),
+      completeness: dealCompleteness(d),
+      ppm: hasPPM(d),
+      deck: hasDeck(d),
+      id: getDealId(d)
+    };
+  });
+
+  // Sort
+  sortDeals(enriched);
+
+  tbody.innerHTML = enriched.map(function(e) {
+    var sc = statusClass(e.status);
+    var pctClass = e.completeness < 40 ? 'pct-low' : e.completeness < 70 ? 'pct-mid' : 'pct-high';
+
+    return '<tr>' +
+      '<td><a href="deal.html?id=' + escAttr(e.id) + '" class="health-table-name">' + escHtml(e.name) + '</a></td>' +
+      '<td>' + (e.status ? '<span class="deal-badge ' + sc + '">' + escHtml(e.status) + '</span>' : '<span style="color:var(--text-muted)">--</span>') + '</td>' +
+      '<td>' + (e.assetClass ? escHtml(e.assetClass) : '<span style="color:var(--text-muted)">--</span>') + '</td>' +
+      '<td>' +
+        '<div class="progress-bar-wrap">' +
+          '<div class="progress-bar"><div class="progress-bar-fill ' + pctClass + '" style="width:' + e.completeness + '%"></div></div>' +
+          '<span class="progress-pct">' + e.completeness + '%</span>' +
+        '</div>' +
+      '</td>' +
+      '<td style="text-align:center;">' + (e.ppm ? SVG_CHECK : SVG_X) + '</td>' +
+      '<td style="text-align:center;">' + (e.deck ? SVG_CHECK : SVG_X) + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function sortDeals(enriched) {
+  var col = gpState.sortCol;
+  var asc = gpState.sortAsc;
+  enriched.sort(function(a, b) {
+    var va = a[col];
+    var vb = b[col];
+    // Booleans: true > false
+    if (typeof va === 'boolean') {
+      va = va ? 1 : 0;
+      vb = vb ? 1 : 0;
+    }
+    // Strings
+    if (typeof va === 'string') {
+      va = va.toLowerCase();
+      vb = (vb || '').toLowerCase();
+    }
+    if (va < vb) return asc ? -1 : 1;
+    if (va > vb) return asc ? 1 : -1;
+    return 0;
+  });
+}
+
+// Column header click sorting
+document.addEventListener('click', function(e) {
+  var th = e.target.closest('.health-table th');
+  if (!th) return;
+  var col = th.getAttribute('data-sort');
+  if (!col) return;
+
+  // Toggle direction if same col, else default asc
+  if (gpState.sortCol === col) {
+    gpState.sortAsc = !gpState.sortAsc;
+  } else {
+    gpState.sortCol = col;
+    gpState.sortAsc = true;
+  }
+
+  // Update header classes
+  var allTh = document.querySelectorAll('.health-table th');
+  allTh.forEach(function(h) { h.classList.remove('sorted'); });
+  th.classList.add('sorted');
+  th.querySelector('.sort-arrow').innerHTML = gpState.sortAsc ? '&#9650;' : '&#9660;';
+
+  renderHealthTable(gpState.deals);
+});
+
 // ========== RENDER ==========
 function renderGPDashboard(deals, settings) {
   var user = getUser();
@@ -1119,7 +1448,7 @@ function renderGPDashboard(deals, settings) {
   var tagsEl = document.getElementById('gpTags');
   var assetClasses = {};
   deals.forEach(function(d) {
-    var ac = d.assetClass || d.asset_class;
+    var ac = getDealAssetClass(d);
     if (ac) assetClasses[ac] = true;
   });
   var tagsHtml = Object.keys(assetClasses).map(function(ac) {
@@ -1132,72 +1461,24 @@ function renderGPDashboard(deals, settings) {
   document.getElementById('statDeals').textContent = deals.length;
   document.getElementById('statIntros').textContent = countIntroRequests();
 
-  if (gpState.isAdmin) {
-    // Admin: show platform-wide stats from real data
-    var activeDeals = deals.filter(function(d) { var s = (d.status || '').toLowerCase(); return s === 'active' || s === 'open' || s === 'fundraising'; });
-    var operators = {};
-    deals.forEach(function(d) { var mc = d.managementCompany || d.management_company; if (mc) operators[mc] = true; });
-    document.getElementById('statViews').textContent = activeDeals.length;
-    document.querySelector('#statViews + .stat-card-label').textContent = 'Active Deals';
-    document.getElementById('statSaved').textContent = Object.keys(operators).length;
-    document.querySelector('#statSaved + .stat-card-label').textContent = 'Operators';
-  } else {
-    document.getElementById('statViews').textContent = '--';
-    document.getElementById('statSaved').textContent = '--';
-  }
+  // Deals missing data (no ppmUrl or deckUrl)
+  var missingCount = deals.filter(function(d) { return !hasPPM(d) || !hasDeck(d); }).length;
+  document.getElementById('statMissing').textContent = missingCount;
 
-  // Deals
+  // Operators (unique managementCompany values)
+  var operators = {};
+  deals.forEach(function(d) {
+    var mc = d.managementCompany || d.management_company;
+    if (mc) operators[mc] = true;
+  });
+  document.getElementById('statOperators').textContent = Object.keys(operators).length;
+
+  // Store deals for sorting
   gpState.deals = deals;
-  document.getElementById('dealsCount').textContent = deals.length;
-  var dealsGrid = document.getElementById('dealsGrid');
-  var dealsEmpty = document.getElementById('dealsEmpty');
 
-  if (deals.length === 0) {
-    dealsGrid.style.display = 'none';
-    dealsEmpty.style.display = 'block';
-  } else {
-    dealsGrid.innerHTML = deals.map(function(d) {
-      var id = d.id || d.airtable_id || '';
-      var name = d.name || d.deal_name || d.Name || 'Untitled Deal';
-      var status = d.status || d.Status || '';
-      var sc = statusClass(status);
-      var assetClass = d.assetClass || d.asset_class || '';
-      var dealType = d.dealType || d.deal_type || '';
-      var strategy = d.strategy || d.Strategy || '';
-      var targetIRR = d.targetIRR || d.target_irr || d.targetIrr || null;
-      var minInvestment = d.minInvestment || d.min_investment || d.minimumInvestment || null;
-      var prefReturn = d.prefReturn || d.pref_return || d.preferredReturn || null;
-      var equityMultiple = d.equityMultiple || d.equity_multiple || null;
-
-      return '<div class="deal-card">' +
-        '<div class="deal-card-header">' +
-          '<div class="deal-card-badges">' +
-            (status ? '<span class="deal-badge ' + sc + '">' + escHtml(status) + '</span>' : '') +
-            (strategy ? '<span class="deal-badge orange">' + escHtml(strategy) + '</span>' : '') +
-          '</div>' +
-          '<div class="deal-card-title">' + escHtml(name) + '</div>' +
-          '<div class="deal-card-subtitle">' + escHtml(assetClass) + (dealType ? ' &middot; ' + escHtml(dealType) : '') + '</div>' +
-        '</div>' +
-        '<div class="deal-card-metrics">' +
-          '<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">' + pct(targetIRR) + '</div></div>' +
-          '<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">' + currency(minInvestment) + '</div></div>' +
-          '<div><div class="deal-metric-label">Pref Return</div><div class="deal-metric-value">' + pct(prefReturn) + '</div></div>' +
-          '<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">' + (equityMultiple ? equityMultiple.toFixed(1) + 'x' : '--') + '</div></div>' +
-        '</div>' +
-        '<div class="deal-card-actions">' +
-          '<a href="deal.html?id=' + escAttr(id) + '" class="btn-deal-action btn-deal-primary">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-            'Edit Deal' +
-          '</a>' +
-          '<button class="btn-deal-action btn-deal-outline" onclick="uploadDeck(\'' + escAttr(id) + '\')">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
-            'Upload Deck' +
-          '</button>' +
-          '<a href="deal.html?id=' + escAttr(id) + '&tab=analytics" class="btn-deal-link">View Analytics &rarr;</a>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  }
+  // Render sections
+  renderActionItems(deals);
+  renderHealthTable(deals);
 
   // Settings
   gpState.calendarUrl = settings.calendar_url || settings.calendarUrl || '';
@@ -1388,7 +1669,6 @@ function saveAuthorizedEmails(successMsg) {
 
 // ========== UPLOAD DECK ==========
 function uploadDeck(dealId) {
-  // Create a hidden file input and trigger it
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = '.pdf,.pptx,.ppt,.key';
@@ -1421,6 +1701,46 @@ function uploadDeck(dealId) {
     })
     .catch(function(e) {
       console.warn('Deck upload failed:', e.message);
+      showToast('Upload failed. Please try again later.');
+    });
+  };
+  input.click();
+}
+
+// ========== UPLOAD PPM ==========
+function uploadPPM(dealId) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf';
+  input.onchange = function() {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('deal_id', dealId);
+
+    var user = getUser();
+    var headers = {};
+    if (user && user.token) {
+      headers['Authorization'] = 'Bearer ' + user.token;
+    }
+
+    showToast('Uploading ' + file.name + '...');
+
+    fetch('/api/deals/' + encodeURIComponent(dealId) + '/ppm', {
+      method: 'POST',
+      headers: headers,
+      body: formData
+    })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('Upload failed');
+      return resp.json();
+    })
+    .then(function() {
+      showToast('PPM uploaded successfully!');
+    })
+    .catch(function(e) {
+      console.warn('PPM upload failed:', e.message);
       showToast('Upload failed. Please try again later.');
     });
   };
