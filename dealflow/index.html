@@ -7686,6 +7686,7 @@ async function loadDeals() {
         console.log('Loaded ' + DEALS.length + ' deals from cache');
         updateDealCount();
         renderAll();
+        if (document.getElementById('wizardOverlay').classList.contains('active')) renderWizardStep();
         return;
       }
     } catch (e) { /* fall through to API */ }
@@ -7707,6 +7708,7 @@ async function loadDeals() {
       console.log('Loaded ' + DEALS.length + ' deals from API');
       updateDealCount();
       renderAll();
+      if (document.getElementById('wizardOverlay').classList.contains('active')) renderWizardStep();
     } else {
       // API returned nothing — show error state
       _dealsLoaded = true;
