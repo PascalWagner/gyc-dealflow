@@ -164,9 +164,8 @@
     + '<div class="nav-section-label">Admin</div>';
   var adminPages = [
     ['admindash', icons.schema, 'Admin Dashboard'],
-    ['admin-manage', icons.manage, 'Manage Data'],
-    // Outreach is now a sub-view inside Manage Data → Operators
-    ['casestudies', icons.casestudies, 'Member Success']
+    ['casestudies', icons.casestudies, 'Member Success'],
+    ['admin-manage', icons.manage, 'Manage Data']
   ];
   adminPages.forEach(function(p) {
     html += navItem(p[0], p[1], p[2]);
