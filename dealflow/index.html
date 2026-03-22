@@ -5042,37 +5042,48 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 
 /* Swipe card body */
 .swipe-body {
-  padding: 18px 20px 14px;
+  padding: 0;
   flex: 1;
   overflow-y: auto;
 }
 .swipe-title {
   font-family: var(--font-ui);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-dark);
   line-height: 1.25;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  padding: 14px 16px 0;
 }
 .swipe-manager {
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 14px;
+  margin-bottom: 4px;
+  padding: 0 16px;
 }
 .swipe-strategy {
   font-family: var(--font-body);
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
-  margin-bottom: 14px;
+  margin-bottom: 4px;
+  padding: 0 16px;
 }
 .swipe-metrics {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-bottom: 0;
+  border-top: 1px solid var(--border);
 }
+.swipe-metrics > div {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.swipe-metrics > div:nth-child(4n) { border-right: none; }
+.swipe-metrics > div:nth-last-child(-n+4) { border-bottom: none; }
 .swipe-metric-label {
   font-family: var(--font-ui);
   font-size: 9px;
@@ -5083,18 +5094,67 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 }
 .swipe-metric-value {
   font-family: var(--font-ui);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--text-dark);
   line-height: 1.2;
 }
-.swipe-info-row {
+.swipe-funding-bar {
+  padding: 10px 16px 12px;
+}
+.swipe-funding-labels {
   display: flex;
-  gap: 24px;
-  padding-top: 12px;
+  justify-content: space-between;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+.swipe-funding-labels span:first-child { color: var(--primary); font-weight: 600; }
+.swipe-funding-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.swipe-funding-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.swipe-card-actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px 14px;
   border-top: 1px solid var(--border);
 }
-.swipe-info-row .swipe-metric-value { font-size: 13px; font-weight: 700; }
+.swipe-card-actions button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 0;
+  border-radius: 24px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.swipe-card-actions button:active { opacity: 0.7; }
+.swipe-card-actions .swipe-card-skip {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  color: #D04040;
+}
+.swipe-card-actions .swipe-card-save {
+  background: var(--primary);
+  color: #fff;
+}
 
 /* Bottom action buttons */
 .swipe-actions {
@@ -23731,7 +23791,7 @@ function renderSwipeCard(deal) {
     + renderFreshnessBadge(deal)
     + renderMatchBadge(deal)
     + '</div>'
-    + (deal.targetIRR ? '<div class="swipe-hero-irr"><span class="swipe-hero-irr-value">' + fmt(deal.targetIRR, 'pct') + '</span><span class="swipe-hero-irr-label">Target IRR</span></div>' : '')
+    + (deal.targetIRR ? '<div class="swipe-hero-irr"><span class="swipe-hero-irr-value">' + fmt(deal.targetIRR, 'pct') + '</span><span class="swipe-hero-irr-label">TARGET IRR</span></div>' : '')
     + '</div>'
     // Body
     + '<div class="swipe-body">'
@@ -23740,16 +23800,31 @@ function renderSwipeCard(deal) {
     + (strategy ? '<div class="swipe-strategy">' + strategy + '</div>' : '')
     + buildHighlightPills(deal)
     + '<div class="swipe-metrics">'
-    + '<div><div class="swipe-metric-label">Equity Multiple</div><div class="swipe-metric-value" style="color:var(--green);">' + (deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Target IRR</div><div class="swipe-metric-value" style="color:var(--primary);">' + (deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Minimum</div><div class="swipe-metric-value">' + (deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—') + '</div></div>'
-    + '<div><div class="swipe-metric-label">Hold Period</div><div class="swipe-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div></div>'
-    + '<div><div class="swipe-metric-label">Pref Return</div><div class="swipe-metric-value">' + (deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Lockup</div><div class="swipe-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div></div>'
+    + '<div><div class="swipe-metric-label">Distribution</div><div class="swipe-metric-value">' + formatDistribution(deal) + '</div></div>'
+    + '<div><div class="swipe-metric-label">LP/GP Split</div><div class="swipe-metric-value">' + (deal.lpGpSplit || '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Equity Mult.</div><div class="swipe-metric-value">' + (deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Manager Size</div><div class="swipe-metric-value">' + (mgr.label !== '—' ? mgr.label : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Founded</div><div class="swipe-metric-value">' + (deal.mcFoundingYear || '—') + '</div></div>'
     + '</div>'
-    + '<div class="swipe-info-row">'
-    + '<div><div class="swipe-metric-label">Manager Size</div><div class="swipe-metric-value">' + (mgr.label !== '—' ? mgr.label + ' <span style="color:var(--text-muted);font-weight:500;font-size:10px;">' + mgr.range + '</span>' : '—') + '</div></div>'
-    + '<div><div class="swipe-metric-label">Fund Founded</div><div class="swipe-metric-value">' + (deal.mcFoundingYear || '—') + '</div></div>'
-    + '</div>'
+    + (function() {
+        var raised = deal.totalAmountSold;
+        var total = deal.offeringSize;
+        var pct = deal.pctFunded;
+        if (!raised || !total || !pct) return '';
+        var barColor = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : 'var(--primary)';
+        return '<div class="swipe-funding-bar">'
+          + '<div class="swipe-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
+          + '<div class="swipe-funding-track"><div class="swipe-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>'
+          + '</div>';
+      })()
     + renderSocialProof(deal.id)
+    + '<div class="swipe-card-actions">'
+    + '<button class="swipe-card-skip" onclick="event.stopPropagation();swipeAction(\'skip\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> SKIP</button>'
+    + '<button class="swipe-card-save" onclick="event.stopPropagation();swipeAction(\'save\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> SAVE</button>'
+    + '</div>'
     + '</div>'
     + '</div>';
 }
