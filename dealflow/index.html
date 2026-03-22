@@ -19005,16 +19005,16 @@ async function outreachLoadStats() {
     const el = document.getElementById('outreachStats');
     if (!el) return;
     el.innerHTML = [
-      { label: 'Backlog', value: s.backlog || 0, color: '#64748b' },
-      { label: 'Researching', value: s.researching || 0, color: '#3b82f6' },
-      { label: 'Ready', value: s.ready_to_contact || 0, color: '#0ea5e9' },
-      { label: 'Contacted', value: s.contacted || 0, color: '#f59e0b' },
-      { label: 'Follow Up', value: s.follow_up || 0, color: '#8b5cf6' },
-      { label: 'Discussing', value: s.in_discussion || 0, color: '#d946ef' },
-      { label: 'Approved', value: s.approved || 0, color: '#10b981' },
-      { label: 'Denied', value: s.denied || 0, color: '#6b7280' },
-      { label: 'Deals Covered', value: (s.deals_covered || 0) + '/' + (s.deals_total || 0), color: 'var(--primary)' }
-    ].map(c => `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
+      { label: 'Backlog', value: s.backlog || 0, color: '#64748b', filter: 'backlog' },
+      { label: 'Researching', value: s.researching || 0, color: '#3b82f6', filter: 'researching' },
+      { label: 'Ready', value: s.ready_to_contact || 0, color: '#0ea5e9', filter: 'ready_to_contact' },
+      { label: 'Contacted', value: s.contacted || 0, color: '#f59e0b', filter: 'contacted' },
+      { label: 'Follow Up', value: s.follow_up || 0, color: '#8b5cf6', filter: 'follow_up' },
+      { label: 'Discussing', value: s.in_discussion || 0, color: '#d946ef', filter: 'in_discussion' },
+      { label: 'Approved', value: s.approved || 0, color: '#10b981', filter: 'approved' },
+      { label: 'Denied', value: s.denied || 0, color: '#6b7280', filter: 'denied' },
+      { label: 'Deals Covered', value: (s.deals_covered || 0) + '/' + (s.deals_total || 0), color: 'var(--primary)', filter: '' }
+    ].map(c => `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;${c.filter ? 'cursor:pointer;transition:box-shadow 0.15s;' : ''}" ${c.filter ? 'onclick="var f=document.getElementById(\'outreachStatusFilter\');if(f){f.value=\'' + c.filter + '\';_outreachPage=1;outreachLoadData();}" onmouseover="this.style.boxShadow=\'0 2px 8px rgba(0,0,0,0.1)\'" onmouseout="this.style.boxShadow=\'none\'"' : ''}>
       <div style="font-family:var(--font-ui);font-size:24px;font-weight:800;color:${c.color};">${c.value}</div>
       <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">${c.label}</div>
     </div>`).join('');
@@ -21223,48 +21223,48 @@ function loadAdminEngagement() {
 }
 
 // ========== DATABASE SCHEMA PAGE ==========
+var _schemaTableIdx = 0;
+var _schemaDataCache = {};
+
 function renderSchemaPage() {
-  const container = document.getElementById('schemaContent');
+  var container = document.getElementById('schemaContent');
   if (!container) return;
+  _schemaTableIdx = 0;
+  _schemaDataCache = {};
 
   try {
-  // Gather live stats
-  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  var dealsCount = (typeof DEALS !== 'undefined' ? DEALS : []).length;
   const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
   const goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
   const user = getUser();
 
-  function badge(type) {
-    const colors = { persistent: '#51BE7B', missing: '#e74c3c' };
-    const labels = { persistent: 'Synced to Backend', missing: 'Not Tracked' };
-    return '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:' + colors[type] + '22;color:' + colors[type] + ';">' + labels[type] + '</span>';
-  }
-
-  function tableCard(title, badgeType, location, fields, recordCount) {
-    let rows = fields.map(f => {
+  function tableCard(title, dbTable, fields) {
+    var idx = _schemaTableIdx++;
+    var rows = fields.map(function(f) {
       return '<tr style="border-bottom:1px solid var(--border);">'
         + '<td style="padding:6px 10px;font-weight:600;font-size:12px;color:var(--text-dark);white-space:nowrap;">' + f.name + '</td>'
         + '<td style="padding:6px 10px;font-size:11px;color:var(--text-muted);">' + f.type + '</td>'
-        + '<td style="padding:6px 10px;font-size:11px;color:var(--text-secondary);">' + (f.example || '—') + '</td>'
+        + '<td style="padding:6px 10px;font-size:11px;color:var(--text-secondary);">' + (f.example || '\u2014') + '</td>'
         + '</tr>';
     }).join('');
-
+    var browseBtn = dbTable
+      ? '<button onclick="schemaToggleData(\'' + dbTable + '\',' + idx + ')" id="schemaBtn' + idx + '" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--primary);cursor:pointer;">Browse Data</button>'
+      : '';
     return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;">'
       + '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
-      + '<div style="display:flex;align-items:center;gap:10px;"><div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">' + title + '</div>' + badge(badgeType) + '</div>'
-      + '<div style="font-size:11px;color:var(--text-muted);">' + location + ' · <strong>' + recordCount + ' records</strong></div>'
-      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;"><div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">' + title + '</div>'
+      + '<span style="padding:3px 8px;border-radius:10px;font-size:9px;font-weight:700;background:#51BE7B22;color:#51BE7B;">Synced</span></div>'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="font-size:11px;color:var(--text-muted);">' + (dbTable || 'External') + '</span>'
+      + browseBtn + '</div></div>'
       + '<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:2px solid var(--border);">'
       + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Field</th>'
       + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Type</th>'
-      + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Sample / Current</th>'
-      + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+      + '<th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Sample</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+      + '<div id="schemaData' + idx + '" style="display:none;border-top:2px solid var(--primary);"></div>'
+      + '</div>';
   }
-
-  const dealsCount = (typeof DEALS !== 'undefined' ? DEALS : []).length;
-  const stageCount = Object.keys(stages).length;
-
-  const bbData = JSON.parse(localStorage.getItem('gycBuyBox') || '{}');
 
   container.innerHTML = `
     <div style="margin-bottom:24px;">
