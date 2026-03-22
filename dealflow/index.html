@@ -9221,26 +9221,14 @@ function renderDecisionCompare() {
   h += cmpRow('Hold Period', deals.map(function(d) { return d.holdPeriod; }), 'yr', false);
   h += cmpRow('Leverage', deals.map(function(d) { return d.avgLoanLTV || d.leverage; }), 'pct', false);
 
-  // Notes
-  h += cmpSection('Your Notes');
-  var savedNotes = {};
-  try { savedNotes = JSON.parse(localStorage.getItem('gycDecisionNotes') || '{}'); } catch(e) {}
-  h += '<tr><td class="col-label">Notes</td>';
-  deals.forEach(function(d, i) {
-    var noteVal = (savedNotes[d.id] || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    h += '<td class="' + colClass(i) + '">';
-    h += '<textarea class="compare-notes-ta" rows="3" data-deal-id="' + d.id + '" placeholder="What do you think?" oninput="saveDecisionNote(this)">' + noteVal + '</textarea>';
-    h += '</td>';
-  });
-  h += '</tr>';
-
-  // Actions
+  // Actions (horizontal layout)
   h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Actions</td>';
   deals.forEach(function(d, i) {
     h += '<td class="' + colClass(i) + '" style="vertical-align:top;">';
-    h += '<button class="compare-action-btn primary" onclick="setDealStage(\'' + d.id + '\',\'invested\');renderDecisionCompare();renderAll();">Mark as Invested</button>';
-    h += '<button class="compare-action-btn" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();">Back to DD</button>';
-    h += '<a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="compare-action-btn" style="color:#3b82f6;border-color:rgba(59,130,246,0.3);">Schedule Review</a>';
+    h += '<div style="display:flex;gap:6px;">';
+    h += '<button class="compare-action-btn primary" style="flex:1;margin-bottom:0;" onclick="setDealStage(\'' + d.id + '\',\'invested\');renderDecisionCompare();renderAll();">Mark as Invested</button>';
+    h += '<button class="compare-action-btn" style="flex:1;margin-bottom:0;" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();">Back to DD</button>';
+    h += '</div>';
     h += '</td>';
   });
   h += '</tr>';
@@ -9970,16 +9958,12 @@ function renderCardStageExtras(deal) {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
       'Review Full Deal Details &rarr;</a></div>';
   } else if (stage === 'diligence') {
-    // Due Diligence: inline link to schedule call with operator
+    // Due Diligence: request intro to operator
     const operatorName = deal.managementCompany || 'the Operator';
-    const bookingUrl = deal.mcBookingUrl || '';
-    var linkHref = bookingUrl || ('deal.html?id=' + deal.id);
-    var linkTarget = bookingUrl ? ' target="_blank"' : '';
-    var linkText = bookingUrl ? 'Schedule a call with ' + operatorName + ' &rarr;' : 'Contact ' + operatorName + ' &rarr;';
     return '<div style="margin:8px 16px 0;text-align:center;">' +
-      '<a href="' + linkHref + '"' + linkTarget + ' onclick="event.stopPropagation()" style="' + linkStyle + 'color:#f97316;">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>' +
-      linkText + '</a></div>';
+      '<a href="#" onclick="event.stopPropagation(); event.preventDefault(); requestIntro(\'' + deal.id.replace(/'/g, "\\'") + '\');" style="' + linkStyle + 'color:#f97316;cursor:pointer;">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
+      'Request intro to ' + operatorName + ' &rarr;</a></div>';
   } else if (stage === 'decision') {
     // Decision: inline link to Office Hours
     return '<div style="margin:8px 16px 0;text-align:center;">' +
@@ -11703,7 +11687,7 @@ function updateStageDescription() {
     saved: { title: 'Saved', text: 'Deals you\'re interested in. Review the investment deck and decide if you want to dig deeper. If it looks promising, move it to Vetting.', color: 'var(--primary)' },
     vetting: { title: 'Vetting', text: 'Read through everything on the deal page \u2014 understand this deal intimately. If you like what you see, move it to Due Diligence.', color: '#2563EB' },
     diligence: { title: 'Due Diligence', text: 'Time to talk to the operator. Schedule a call, ask clarifying questions, and fill in any gaps. Once you\'ve spoken with them, move it to Decision.', color: '#f97316' },
-    decision: { title: 'Decision Time', text: 'Compare deals side by side. Bring your deal to Office Hours to get feedback and address any remaining concerns. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7' },
+    decision: { title: 'Decision Time', text: 'Compare deals side by side. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7', cta: { label: 'Join Office Hours', action: "navigateTo('officehours')" } },
     invested: { title: 'Your Portfolio', text: 'Deals you\'ve committed capital to. Track distributions, K-1s, and hold periods.', color: '#059669' },
     passed: { title: 'Not Interested', text: 'Deals you decided weren\'t right for you. You can always click Reconsider to move one back.', color: 'var(--text-muted)' }
   };
@@ -11711,9 +11695,16 @@ function updateStageDescription() {
   if (!s) { desc.style.display = 'none'; return; }
   desc.style.display = 'block';
   desc.style.borderLeftColor = s.color;
+  var ctaHtml = '';
+  if (s.cta) {
+    ctaHtml = '<button onclick="' + s.cta.action + '" style="flex-shrink:0;padding:6px 16px;background:' + s.color + ';color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;">'
+      + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+      + s.cta.label + '</button>';
+  }
   desc.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
-    + '<div><span style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + s.title + '</span>'
+    + '<div style="flex:1;min-width:0;"><span style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + s.title + '</span>'
     + '<span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-left:12px;">' + s.text + '</span></div>'
+    + ctaHtml
     + '</div>';
 }
 
@@ -12474,10 +12465,11 @@ async function fetchUserDataFromSupabase(email) {
   }
   const authHeaders = { 'Authorization': 'Bearer ' + token };
   try {
-    const [stagesResp, goalsResp, portfolioResp] = await Promise.all([
+    const [stagesResp, goalsResp, portfolioResp, planResp] = await Promise.all([
       fetch(SYNC_API + '?type=stages', { headers: authHeaders }).catch(() => null),
       fetch(SYNC_API + '?type=goals', { headers: authHeaders }).catch(() => null),
-      fetch(SYNC_API + '?type=portfolio', { headers: authHeaders }).catch(() => null)
+      fetch(SYNC_API + '?type=portfolio', { headers: authHeaders }).catch(() => null),
+      fetch(SYNC_API + '?type=plan', { headers: authHeaders }).catch(() => null)
     ]);
 
     // Merge deal stages from Supabase into localStorage
@@ -12557,6 +12549,17 @@ async function fetchUserDataFromSupabase(email) {
     // Always re-render portfolio if viewing it (clears loading state even when no data returned)
     if (typeof renderPortfolio === 'function' && document.getElementById('page-portfolio')?.classList.contains('active')) {
       renderPortfolio();
+    }
+
+    // Restore portfolio plan from Supabase
+    if (planResp && planResp.ok) {
+      var planData = await planResp.json().catch(function() { return {}; });
+      if (planData.records && planData.records.length > 0) {
+        var serverPlan = planData.records[0];
+        if (!localStorage.getItem('gycPortfolioPlan') || localStorage.getItem('gycPortfolioPlan') === 'null') {
+          localStorage.setItem('gycPortfolioPlan', JSON.stringify(serverPlan));
+        }
+      }
     }
 
     // Also fetch buy box from GHL
@@ -12714,6 +12717,8 @@ const WIZARD_STEPS = [
   { type: 'assetClassSelect' },
   // 11: Strategy preferences (goal-contextualized)
   { type: 'strategySelect' },
+  // 11b: Diversification preference
+  { type: 'diversificationPref' },
   // 12: Operator focus preference
   { type: 'operatorFocus' },
   // 13: Lockup preference
@@ -13662,6 +13667,34 @@ function renderWizardStep() {
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
     html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 11b: DIVERSIFICATION PREFERENCE =====
+  if (step.type === 'diversificationPref') {
+    var divSel = wizardData.diversificationPref || '';
+    var assetCount = (wizardData.assetClasses || []).length;
+    html += '<div class="wizard-card-title">How do you want to spread your capital?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">';
+    html += 'You selected <strong>' + assetCount + ' asset class' + (assetCount !== 1 ? 'es' : '') + '</strong>. How concentrated do you want your portfolio to be?</div>';
+    var divOptions = [
+      { val: 'focused', icon: '\uD83C\uDFAF', label: 'Focused', desc: 'Concentrate in 1\u20132 asset classes you know well. Fewer deals, deeper expertise.' },
+      { val: 'balanced', icon: '\u2696\uFE0F', label: 'Balanced', desc: 'Spread across 3\u20134 types for diversification. Most investors start here.' },
+      { val: 'wide', icon: '\uD83C\uDF10', label: 'Maximum Diversification', desc: 'Spread across as many types as possible. Lower concentration risk, more to manage.' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    divOptions.forEach(function(opt) {
+      var isSel = divSel === opt.val;
+      html += '<div onclick="wizardData.diversificationPref=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<span style="font-size:24px;">' + opt.icon + '</span>';
+      html += '<div><div style="font-weight:700;font-size:14px;color:var(--text-dark);margin-bottom:3px;">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);line-height:1.4;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:22px;height:22px;flex-shrink:0;margin-left:auto;"><polyline points="20 6 9 17 4 12"/></svg>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="wizard-inline-nav"><button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button><button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button></div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
   }
@@ -17481,9 +17514,48 @@ function saveInvestmentFromModal(editId, linkDealId) {
   renderPortfolio();
   renderAll();
 
+  // Auto-assign to portfolio plan bucket
+  if (!editId) {
+    assignInvestmentToPlanBucket(data);
+  }
+
   // Show "Next Move" suggestion for new investments
   if (!editId) {
     setTimeout(function() { showNextMoveSuggestion(data); }, 400);
+  }
+}
+
+function assignInvestmentToPlanBucket(investment) {
+  var plan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+  if (!plan || !plan.buckets || plan.buckets.length === 0) return;
+
+  // Auto-match: find the best unfilled bucket for this investment's asset class
+  var investAC = investment.assetClass || '';
+  var bestBucket = null;
+  var bestScore = -1;
+
+  plan.buckets.forEach(function(b) {
+    if ((b.filled_by || []).length >= b.target_deals) return; // bucket full
+    var score = 0;
+    var criteria = b.criteria || {};
+    var bucketACs = criteria.asset_classes || [];
+    // Direct asset class match
+    if (bucketACs.some(function(ac) { return ac === investAC; })) score += 10;
+    // Lending strategy match
+    if (LENDING_ASSETS.includes(investAC) && b.id === 'diversifier') score += 8;
+    // General type match via classification
+    var investType = classifyAssetClass(investAC);
+    if (investType === b.id) score += 5;
+    // Prefer emptier buckets
+    score += (b.target_deals - (b.filled_by || []).length);
+
+    if (score > bestScore) { bestScore = score; bestBucket = b; }
+  });
+
+  if (bestBucket && bestScore > 0) {
+    if (!bestBucket.filled_by) bestBucket.filled_by = [];
+    bestBucket.filled_by.push(investment.id || investment._recordId);
+    savePortfolioPlan(plan);
   }
 }
 
@@ -21986,11 +22058,25 @@ function renderDashboard() {
       + '<button onclick="navigateTo(\'deals\')" style="padding:14px 36px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Explore Deals \u2192</button>'
       + '</div></div>';
   } else {
-    // ===== ACTIVE USER: Goal → Thesis → Path to Goal → Portfolio → Coaching =====
-    var thesisHtml = buildDashThesis(wd, branch);
-    var pathHtml = buildDashPathToGoal(wd, branch, deals);
-    var sections = heroHtml;
-    sections += thesisHtml + pathHtml + portfolioHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
+    // ===== ACTIVE USER: Goal → Blueprint → Actions → Portfolio → Coaching =====
+    var plan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+    var blueprintHtml = buildDashBlueprint(plan, portfolio, deals, stages);
+
+    // Fallback: if no plan exists yet but user has buy box, generate one on the fly
+    if (!blueprintHtml && (buyBoxComplete || branch)) {
+      plan = generatePortfolioPlan(wd, goals);
+      savePortfolioPlan(plan);
+      blueprintHtml = buildDashBlueprint(plan, portfolio, deals, stages);
+    }
+
+    // If still no blueprint (no wizard done), fall back to thesis + path
+    if (!blueprintHtml) {
+      var thesisHtml = buildDashThesis(wd, branch);
+      var pathHtml = buildDashPathToGoal(wd, branch, deals);
+      blueprintHtml = thesisHtml + pathHtml;
+    }
+
+    var sections = heroHtml + blueprintHtml + actionItemsHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
 }
