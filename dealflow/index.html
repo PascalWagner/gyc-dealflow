@@ -12616,33 +12616,23 @@ function renderWizardStep() {
       if (!dealCounts[ac]) dealCounts[ac] = 0;
       dealCounts[ac]++;
     });
-    const branchLabel = { cashflow: 'cash flow', tax: 'tax reduction', growth: 'equity growth' }[branch];
-    // Split into recommended vs other
-    var recommended = sorted.filter(function(e) { return e[1][branch].fit === 'great' || e[1][branch].fit === 'good'; });
-    var other = sorted.filter(function(e) { return e[1][branch].fit === 'okay' || e[1][branch].fit === 'poor'; });
-
     html += '<div class="wizard-card-title">What asset classes interest you?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:20px;">Select any that interest you. We\u2019ll prioritize deals in these categories.</div>';
 
-    // Recommended section
-    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Recommended for ' + branchLabel + '</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">';
-    recommended.forEach(function(entry) {
+    // All asset classes in one flat grid
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
+    sorted.forEach(function(entry) {
       var key = entry[0];
       var ac = entry[1];
-      var goalInfo = ac[branch];
       var isSelected = selected.includes(key);
       var count = dealCounts[key] || dealCounts[ac.label] || 0;
       html += '<div onclick="toggleWizardAsset(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:14px;background:var(--bg-card);border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;position:relative;transition:all 0.2s;">';
-      // Header row
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
       html += '<span style="font-size:18px;">' + ac.icon + '</span>';
       html += '<span style="font-weight:700;font-size:13px;color:var(--text-dark);">' + ac.label + '</span>';
       html += '<div style="position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:4px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSelected ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSelected ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '</div>';
-      // One-liner
       html += '<div style="font-size:11px;color:var(--text-muted);line-height:1.3;margin-bottom:6px;">' + ac.oneLiner + '</div>';
-      // Data chips
       html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
       html += '<span style="font-size:10px;padding:2px 6px;background:rgba(74,222,128,0.08);color:var(--primary);border-radius:4px;font-weight:600;">' + ac.yieldRange + ' yield</span>';
       html += '<span style="font-size:10px;padding:2px 6px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.holdYears + ' yr hold</span>';
@@ -12651,33 +12641,6 @@ function renderWizardStep() {
       html += '</div>';
     });
     html += '</div>';
-
-    // Other section
-    if (other.length > 0) {
-      html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Also available</div>';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
-      other.forEach(function(entry) {
-        var key = entry[0];
-        var ac = entry[1];
-        var goalInfo = ac[branch];
-        var isSelected = selected.includes(key);
-        var count = dealCounts[key] || dealCounts[ac.label] || 0;
-        html += '<div onclick="toggleWizardAsset(\'' + key.replace(/'/g, "\\'") + '\')" style="padding:12px;background:var(--bg-card);border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;position:relative;transition:all 0.2s;opacity:0.75;">';
-        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
-        html += '<span style="font-size:16px;">' + ac.icon + '</span>';
-        html += '<span style="font-weight:700;font-size:12px;color:var(--text-dark);">' + ac.label + '</span>';
-        html += '<div style="position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:4px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';background:' + (isSelected ? 'var(--primary)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;">' + (isSelected ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-        html += '</div>';
-        html += '<div style="font-size:10px;color:var(--text-muted);line-height:1.3;margin-bottom:4px;">' + ac.oneLiner + '</div>';
-        html += '<div style="display:flex;gap:4px;">';
-        html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.yieldRange + ' yield</span>';
-        html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.holdYears + ' yr</span>';
-        if (count > 0) html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + count + ' deals</span>';
-        html += '</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-    }
 
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
@@ -12737,17 +12700,19 @@ function renderWizardStep() {
         return hp >= minYrs && (maxYrs === null || hp <= maxYrs);
       }).length;
     }
-    // Cumulative: flexible = all, 1-3 = holds ≤3, etc
+    // Cumulative: each option includes all deals with hold ≤ that threshold
     var lockCounts = {
       'flexible': lockTotal,
-      '1-3': countLockup(0, 3),
-      '3-5': countLockup(0, 5),
+      '1': countLockup(0, 1),
+      '3': countLockup(0, 3),
+      '5': countLockup(0, 5),
       '5+': lockTotal
     };
     var lockupOptions = [
       { val: 'flexible', label: 'Flexible', detail: 'Lending funds and open-ended vehicles', count: lockCounts['flexible'] },
-      { val: '1-3', label: '1\u20133 years', detail: 'Bridge loans, short-duration credit', count: lockCounts['1-3'] },
-      { val: '3-5', label: '3\u20135 years', detail: 'Most syndications and value-add deals', count: lockCounts['3-5'] },
+      { val: '1', label: '1 year', detail: 'Bridge loans, short-duration credit', count: lockCounts['1'] },
+      { val: '3', label: '3 years', detail: 'Most syndications and value-add deals', count: lockCounts['3'] },
+      { val: '5', label: '5 years', detail: 'Stabilized assets, longer hold syndications', count: lockCounts['5'] },
       { val: '5+', label: '5+ years', detail: 'Development, ground-up, opportunistic', count: lockCounts['5+'] }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
