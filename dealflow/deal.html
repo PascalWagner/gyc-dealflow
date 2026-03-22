@@ -4596,20 +4596,20 @@ async function renderDeal() {
     }).catch(() => {});
   }
 
-  // Pre-load background check data for DD checklist auto-population
-  if (deal.managementCompanyId && !_bgCheckCache) {
-    try {
-      var bgResp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(deal.managementCompanyId));
-      if (bgResp.ok) {
-        var bgData = await bgResp.json();
-        if (bgData.results && bgData.results.length > 0) {
-          _bgCheckCache = bgData.results[0];
-        }
-      }
-    } catch (e) {
-      console.warn('Could not pre-load background check:', e.message);
-    }
-  }
+  // Pre-load background check data for DD checklist auto-population (disabled — Coming Soon)
+  // if (deal.managementCompanyId && !_bgCheckCache) {
+  //   try {
+  //     var bgResp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(deal.managementCompanyId));
+  //     if (bgResp.ok) {
+  //       var bgData = await bgResp.json();
+  //       if (bgData.results && bgData.results.length > 0) {
+  //         _bgCheckCache = bgData.results[0];
+  //       }
+  //     }
+  //   } catch (e) {
+  //     console.warn('Could not pre-load background check:', e.message);
+  //   }
+  // }
 
   // Auto-select first share class (sorted by highest min) on initial load
   if (deal.shareClasses && deal.shareClasses.length > 0 && window._activeShareClassIdx === null && !window._originalDealValues) {
@@ -5381,36 +5381,33 @@ async function renderDeal() {
     bgReportDealHtml += '<div class="section">';
     bgReportDealHtml += '<div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">';
     bgReportDealHtml += '<div style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Sponsor Background Report</span></div>';
-    bgReportDealHtml += '<span id="dealBgStatus" style="display:inline-flex;align-items:center;gap:5px;padding:3px 12px;border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--bg-main);color:var(--text-muted);">Loading...</span>';
+    bgReportDealHtml += '<span id="dealBgStatus" style="display:none;"></span>';
     bgReportDealHtml += '</div>';
-    bgReportDealHtml += '<div class="section-body" id="dealBgBody">';
+    bgReportDealHtml += '<div class="section-body" id="dealBgBody" style="position:relative;min-height:120px;">';
 
-    if (!_bgIsPaid) {
-      // Gate for free users
-      bgReportDealHtml += '<div style="text-align:center;padding:24px 16px;">';
-      bgReportDealHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Automated Public Records Search</div>';
-      bgReportDealHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;max-width:480px;margin:0 auto 12px;">We search SEC EDGAR, FINRA BrokerCheck, Investment Adviser records, OFAC sanctions, and federal court records on every sponsor. Academy members get full results.</div>';
-      bgReportDealHtml += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:16px;">';
-      var _bgSources = ['SEC EDGAR', 'FINRA BrokerCheck', 'SEC IAPD', 'OFAC Sanctions', 'Federal Courts'];
-      _bgSources.forEach(function(s) {
-        bgReportDealHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg-main);border:1px solid var(--border);border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">' + s + '</span>';
-      });
-      bgReportDealHtml += '</div>';
-      bgReportDealHtml += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 20px;background:linear-gradient(135deg,#3b82f6,#4ade80);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;">Unlock with Academy</button>';
-      bgReportDealHtml += '</div>';
-    } else {
-      // Paid user — load data async
-      bgReportDealHtml += '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;" id="dealBgLoading">Loading background report...</div>';
-    }
+    // Coming Soon overlay for all users
+    bgReportDealHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
+    bgReportDealHtml += '<div style="text-align:center;padding:24px 16px;">';
+    bgReportDealHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Automated Public Records Search</div>';
+    bgReportDealHtml += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:16px;">';
+    var _bgSources = ['SEC EDGAR', 'FINRA BrokerCheck', 'SEC IAPD', 'OFAC Sanctions', 'Federal Courts'];
+    _bgSources.forEach(function(s) {
+      bgReportDealHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--bg-main);border:1px solid var(--border);border-radius:20px;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);">' + s + '</span>';
+    });
+    bgReportDealHtml += '</div></div></div>';
+    bgReportDealHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
+    bgReportDealHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
+    bgReportDealHtml += '<div style="font-size:13px;color:var(--text-secondary);">Automated background checks on every sponsor</div>';
+    bgReportDealHtml += '</div>';
 
     bgReportDealHtml += '</div></div>';
 
-    // Async load for paid users
-    if (_bgIsPaid && opSponsor.id) {
-      setTimeout(function() {
-        loadDealBgReport(opSponsor);
-      }, 500);
-    }
+    // Async load for paid users (disabled — Coming Soon)
+    // if (_bgIsPaid && opSponsor.id) {
+    //   setTimeout(function() {
+    //     loadDealBgReport(opSponsor);
+    //   }, 500);
+    // }
   })();
 
   // --- Investment Criteria ---
@@ -5683,10 +5680,15 @@ async function renderDeal() {
       };
     }
 
-    caseStudyHtml += '<div class="section" style="position:relative;">';
+    caseStudyHtml += '<div class="section" style="position:relative;overflow:hidden;">';
     caseStudyHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span class="section-title">Case Study</span>' + (isLive ? '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">From Pitch Deck</span>' : '') + '</div>';
 
-    caseStudyHtml += '<div class="section-body">';
+    caseStudyHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
+    caseStudyHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
+    caseStudyHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
+    caseStudyHtml += '<div style="font-size:13px;color:var(--text-secondary);">Real case studies from the operator\'s track record</div>';
+    caseStudyHtml += '</div>';
+    caseStudyHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
 
     // Title
     caseStudyHtml += '<div style="font-family:var(--font-heading);font-size:20px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">' + esc(data.title) + '</div>';
@@ -5728,6 +5730,7 @@ async function renderDeal() {
     caseStudyHtml += '</div>';
 
     caseStudyHtml += '</div>'; // close grid
+    caseStudyHtml += '</div>'; // close opacity wrapper
     caseStudyHtml += '</div></div>'; // close section-body, section
   })();
 
@@ -6855,7 +6858,12 @@ async function renderDeal() {
   var ddRingSvg = '<svg width="36" height="36" viewBox="0 0 80 80" style="margin-left:auto;flex-shrink:0;"><circle cx="40" cy="40" r="35" fill="none" stroke="var(--border)" stroke-width="6"/><circle cx="40" cy="40" r="35" fill="none" stroke="' + ddRingColor + '" stroke-width="6" stroke-dasharray="' + ddRingDash + ' 251.2" stroke-dashoffset="0" transform="rotate(-90 40 40)" stroke-linecap="round"/><text x="40" y="44" text-anchor="middle" font-size="18" font-weight="700" fill="' + ddRingColor + '" font-family="var(--font-ui)">' + ddPct + '%</text></svg>';
   ddHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   ddHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span>' + ddRingSvg + '</div>';
-  ddHtml += '<div class="section-body">';
+  ddHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
+  ddHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
+  ddHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
+  ddHtml += '<div style="font-size:13px;color:var(--text-secondary);">Interactive due diligence checklist for every deal</div>';
+  ddHtml += '</div>';
+  ddHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
   ddHtml += '<div id="gpAgendaPanel"></div>';
   ddHtml += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
   ddHtml += '<div class="dd-accordion">';
@@ -6915,33 +6923,24 @@ async function renderDeal() {
     ddHtml += '<button class="gate-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy \u2192</button>';
     ddHtml += '</div>';
   }
+  ddHtml += '</div>'; // close opacity wrapper
   ddHtml += '</div></div>';
 
-  // --- 8c. Q&A Section ---
+  // --- 8c. Q&A Section --- (Coming Soon)
   var qaHtml = '';
   qaHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
-  qaHtml += '<div class="section-body">';
-  qaHtml += '<div id="dealQAList" style="margin-bottom:16px;"><div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">Loading questions...</div></div>';
-  if (isPaidUser) {
-    qaHtml += '<div style="background:var(--bg-cream);border-radius:var(--radius-sm);padding:16px;">';
-    qaHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">Ask a question about this deal</div>';
-    qaHtml += '<textarea id="qaNewQuestion" rows="2" placeholder="e.g. What is the redemption policy? How are distributions calculated?" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;background:#fff;box-sizing:border-box;"></textarea>';
-    qaHtml += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">';
-    qaHtml += '<span style="font-size:11px;color:var(--text-muted);">Questions are reviewed and answered by Pascal</span>';
-    qaHtml += '<button onclick="submitDealQuestion(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Submit Question</button>';
-    qaHtml += '</div></div>';
-  } else {
-    qaHtml += '<div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px dashed rgba(59,130,246,0.3);border-radius:var(--radius-sm);padding:16px;text-align:center;">';
-    qaHtml += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Submit questions directly to Pascal</div>';
-    qaHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">Academy members can ask Pascal about any deal and get a personal response.</div>';
-    qaHtml += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:8px 18px;background:#3b82f6;color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Join Academy \u2192</button>';
-    qaHtml += '</div>';
-  }
+  qaHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
+  qaHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
+  qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">What is the redemption policy for this fund?</div>';
+  qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">How are distributions calculated and paid?</div>';
+  qaHtml += '<div style="padding:12px 0;font-size:13px;color:var(--text-secondary);">What happens if the fund doesn\'t hit its raise target?</div>';
+  qaHtml += '</div>';
+  qaHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
+  qaHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
+  qaHtml += '<div style="font-size:13px;color:var(--text-secondary);">Ask questions and get answers from Pascal</div>';
+  qaHtml += '</div>';
   qaHtml += '</div></div>';
-
-  // Load Q&A data async after render
-  setTimeout(function() { loadDealQA(deal.id); }, 200);
 
   // --- 8b. Stress Test Calculator ---
   var stressHtml = '';
@@ -7044,11 +7043,11 @@ async function renderDeal() {
     }) + '</' + 'script>';
 
     // Academy gate: free users see blurred preview
-    if (_stTier === 'free' && !_stIsAdmin) {
+    if (true) { // Coming Soon for all users
       stressHtml = '<div class="section">';
       stressHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="section-title">Stress Test Calculator</span></div>';
-      stressHtml += '<div class="section-body" style="position:relative;">';
-      stressHtml += '<div style="filter:blur(5px);pointer-events:none;user-select:none;max-height:250px;overflow:hidden;">';
+      stressHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
+      stressHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
       stressHtml += '<div style="background:var(--mint-bg);border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--teal-deep);"><strong>Base Case:</strong> IRR 15.0% · CoC 8.0% · EM 2.00x · Hold 5 yrs</div>';
       stressHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
       stressHtml += '<div><div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:8px;">ADJUST ASSUMPTIONS</div>';
@@ -7060,11 +7059,9 @@ async function renderDeal() {
       stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
       stressHtml += '<div style="height:20px;background:#e2e8f0;border-radius:10px;margin-bottom:12px;"></div>';
       stressHtml += '</div></div></div>';
-      stressHtml += '<div style="position:relative;z-index:2;margin-top:-30px;padding:24px;text-align:center;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid rgba(59,130,246,0.3);border-radius:12px;">';
-      stressHtml += '<div style="width:48px;height:48px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>';
-      stressHtml += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Unlock Stress Test Calculator</div>';
-      stressHtml += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.5;">Manipulate assumptions and stress test any deal\'s proforma with Academy.</div>';
-      stressHtml += '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 24px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Join Academy &rarr;</button>';
+      stressHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
+      stressHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
+      stressHtml += '<div style="font-size:13px;color:var(--text-secondary);">Stress test any deal\'s assumptions and returns</div>';
       stressHtml += '</div>';
       stressHtml += '</div></div>';
     }
