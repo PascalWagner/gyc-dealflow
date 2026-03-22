@@ -15720,93 +15720,17 @@ function dismissCta(type) {
 // ========== PHASE 3: SOFT GATING ==========
 
 // Deal detail view counter (5 per month for free users)
-function getDetailViewState() {
-  const state = JSON.parse(localStorage.getItem('gycDetailViews') || '{"count":0,"resetMonth":""}');
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  if (state.resetMonth !== currentMonth) {
-    state.count = 0;
-    state.resetMonth = currentMonth;
-    localStorage.setItem('gycDetailViews', JSON.stringify(state));
-  }
-  return state;
-}
-function incrementDetailViews() {
-  const state = getDetailViewState();
-  state.count++;
-  localStorage.setItem('gycDetailViews', JSON.stringify(state));
-  return state.count;
-}
+// Deal view count limiter removed — per-section gating on deal.html handles monetization.
+// Free users can view unlimited deals but premium data (cash flow, DD, comparisons, etc.) is locked.
 
+// isGated() still used by other components to check if user is free tier
 function isGated() {
   const user = getUser();
   if (!user) return true;
-  // Admin and academy/investor users are never gated
   if (typeof isAdmin === 'function' && isAdmin()) return false;
   if (user.tier === 'academy' || user.tier === 'alumni' || user.tier === 'investor') return false;
   return true;
 }
-
-// Gate overlay for deal.html navigation
-function showDealGateOverlay(dealId) {
-  const deal = DEALS.find(d => d.id === dealId);
-  const dealName = deal ? deal.investmentName : 'this deal';
-  const state = getDetailViewState();
-
-  // Fire tracking event
-  trackActivity('gate_hit', { source: 'detail_limit', dealId: dealId, viewCount: state.count });
-
-  // Show gate modal
-  let overlay = document.getElementById('gateOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'gateOverlay';
-    document.body.appendChild(overlay);
-  }
-  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
-  overlay.innerHTML = `
-    <div style="background:var(--bg-card);border-radius:16px;padding:40px;max-width:480px;width:90%;text-align:center;position:relative;">
-      <button onclick="document.getElementById('gateOverlay').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button>
-      <div style="width:56px;height:56px;background:linear-gradient(135deg,#3b82f6,#4ade80);border-radius:14px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      </div>
-      <div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin-bottom:8px;">You've used your 5 free deal views</div>
-      <div style="font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">
-        Unlock unlimited deal analysis, Pascal's personal scorecard, full DD checklists, and guided deployment with Cashflow Academy.
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button onclick="trackActivity('academy_cta_clicked',{source:'gate_overlay'});window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Join Cashflow Academy &rarr;</button>
-        <button onclick="trackActivity('call_booked',{source:'gate_overlay'});window.open('https://growyourcashflow.io/call','_blank')" style="width:100%;padding:14px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Book a Free Strategy Call</button>
-      </div>
-      <div style="margin-top:16px;font-size:11px;color:var(--text-muted);">Free views reset monthly. ${5 - Math.min(state.count, 5)} of 5 remaining.</div>
-    </div>`;
-}
-
-// Intercept deal.html navigation for gating
-(function interceptDealNavigation() {
-  document.addEventListener('click', function(e) {
-    // Find closest element with onclick or href pointing to deal.html
-    const target = e.target.closest('[onclick*="deal.html"], a[href*="deal.html"]');
-    if (!target) return;
-
-    if (!isGated()) return; // academy/investor users pass through
-
-    const state = getDetailViewState();
-    const newCount = state.count + 1;
-
-    if (newCount > 5) {
-      e.preventDefault();
-      e.stopPropagation();
-      // Extract deal ID from the URL
-      const match = (target.getAttribute('onclick') || target.getAttribute('href') || '').match(/deal\.html\?id=([^'"&]+)/);
-      const dealId = match ? match[1] : null;
-      showDealGateOverlay(dealId);
-      return false;
-    }
-
-    // Allowed — increment counter
-    incrementDetailViews();
-  }, true); // capture phase to intercept before onclick fires
-})();
 
 // ========== PHASE 3B: GATE PASCAL'S ANALYSIS IN PANEL ==========
 // Wrap renderPanel to blur scorecard/analysis for free-tier users
