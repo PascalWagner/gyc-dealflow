@@ -22578,21 +22578,23 @@ function renderPlanBuilder(branch) {
   wizardData.assetClasses = origAssets;
 
   var freshSlots = plan.slots || plan.buckets || [];
+  var currentYear = new Date().getFullYear();
   // Use manually edited slots if available, otherwise use generated
   if (!window._planSlots || window._planSlotsStale) {
+    // Assign years based on deals-per-year on fresh generation only
+    freshSlots.forEach(function(s, i) { s.year = currentYear + Math.floor(i / dealsPerYear); });
     window._planSlots = freshSlots;
     window._planSlotsStale = false;
   }
   var slots = window._planSlots;
-  // Recalculate with the current dealsPerYear
-  var currentYear = new Date().getFullYear();
-  slots.forEach(function(s, i) { s.year = currentYear + Math.floor(i / dealsPerYear); });
 
   var totalSlots = slots.length;
   var totalIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
   var totalCapital = slots.reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
   var blendedPct = slots.length > 0 ? Math.round(slots.reduce(function(s, sl) { return s + (sl.target_coc || 0); }, 0) / slots.length * 100) : 8;
-  var yearsToGoal = slots.length > 0 ? Math.ceil(slots.length / dealsPerYear) : 3;
+  var uniqueYears = [];
+  slots.forEach(function(s) { if (uniqueYears.indexOf(s.year) < 0) uniqueYears.push(s.year); });
+  var yearsToGoal = uniqueYears.length || Math.ceil(slots.length / dealsPerYear) || 3;
 
   // Target label
   var targetLabel = '';
@@ -22702,7 +22704,6 @@ function renderPlanBuilder(branch) {
 
   // Build asset class dropdown options for inline swap
   var allAcKeys = Object.keys(ASSET_CLASS_OPTIONS);
-  var lendingAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
 
   html += '<div id="planTimeline" style="background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;overflow:hidden;">';
 
@@ -22712,20 +22713,20 @@ function renderPlanBuilder(branch) {
     cumulativeIncome += yearIncome;
     var pctOfGoal = plan.target_income > 0 ? Math.min(100, Math.round(cumulativeIncome / plan.target_income * 100)) : 0;
 
-    // Year header
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-card);border-bottom:1px solid var(--border-light);' + (yi > 0 ? 'border-top:1px solid var(--border-light);' : '') + '">';
+    // Year header — also a drop target
+    html += '<div class="plan-year-header" data-year="' + yr + '" style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-card);border-bottom:1px solid var(--border-light);transition:background 0.15s;' + (yi > 0 ? 'border-top:1px solid var(--border-light);' : '') + '">';
     html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">Year ' + (yi + 1) + ' <span style="font-weight:400;color:var(--text-muted);">(' + yr + ')</span></div>';
     html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--primary);font-weight:600;">$' + cumulativeIncome.toLocaleString() + '/yr <span style="color:var(--text-muted);font-weight:400;">' + pctOfGoal + '%</span></div>';
     html += '</div>';
 
     // Slots in this year
-    yearSlots.forEach(function(slot) {
+    yearSlots.forEach(function(slot, slotInYearIdx) {
       var cocPct = Math.round((slot.target_coc || 0) * 100);
       var si = slot._idx;
-      html += '<div class="plan-slot-row" draggable="true" data-slot-idx="' + si + '" style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border-light);font-size:13px;cursor:grab;transition:background 0.15s,opacity 0.15s;" onmouseover="this.style.background=\'rgba(81,190,123,0.03)\'" onmouseout="this.style.background=\'transparent\'">'
+      html += '<div class="plan-slot-row" draggable="true" data-slot-idx="' + si + '" data-year="' + yr + '" style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border-light);font-size:13px;cursor:grab;transition:background 0.15s,opacity 0.15s;" onmouseover="this.style.background=\'rgba(81,190,123,0.03)\'" onmouseout="this.style.background=\'transparent\'">'
         + '<span style="display:flex;flex-direction:column;gap:1px;flex-shrink:0;cursor:grab;color:var(--text-muted);font-size:10px;line-height:1;padding:2px 0;" title="Drag to reorder">\u2261</span>'
         + '<div style="flex:1;position:relative;">'
-        + '<span class="plan-slot-ac" onclick="toggleSlotAcDropdown(' + si + ',\'' + branch + '\')" style="color:var(--text-secondary);cursor:pointer;border-bottom:1px dashed var(--border);padding-bottom:1px;" title="Click to change">' + slot.asset_class + '</span>'
+        + '<span class="plan-slot-ac" onclick="toggleSlotAcDropdown(' + si + ')" style="color:var(--text-secondary);cursor:pointer;border-bottom:1px dashed var(--border);padding-bottom:1px;" title="Click to change">' + slot.asset_class + '</span>'
         + '<div id="slotAcDd_' + si + '" style="display:none;position:absolute;top:22px;left:0;z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.25);width:210px;max-height:240px;overflow-y:auto;padding:4px;">';
 
       // Dropdown options — Lending + all asset classes
@@ -22749,13 +22750,13 @@ function renderPlanBuilder(branch) {
 
   // Timeline note
   html += '<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:14px;line-height:1.5;">'
-    + 'At ' + dealsPerYear + ' deal' + (dealsPerYear !== 1 ? 's' : '') + '/yr with $' + checkSize.toLocaleString() + ' checks, you reach your goal in <strong style="color:var(--text-dark);">~' + yearsToGoal + ' years</strong>.'
+    + 'You reach your goal in <strong style="color:var(--text-dark);">~' + yearsToGoal + ' years</strong>. Drag investments between years to customize your pace.'
     + '</div>';
 
   // Nav
   html += '<div class="wizard-inline-nav" style="margin-top:20px;">';
   html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-  html += '<button class="wizard-btn wizard-btn-next" onclick="window._planCheckSize=' + checkSize + ';wizardData.checkSize=\'' + checkSize + '\';if(window._planAssets)wizardData.assetClasses=window._planAssets.slice();wizardNext()">Looks Good \u2192</button>';
+  html += '<button class="wizard-btn wizard-btn-next" onclick="savePlanAndAdvance(\'' + branch + '\',' + checkSize + ')">Looks Good \u2192</button>';
   html += '</div>';
 
   document.getElementById('wizardContent').innerHTML = html;
@@ -22764,24 +22765,52 @@ function renderPlanBuilder(branch) {
   initPlanSlotDragDrop(branch);
 
   // Close dropdowns on outside click
-  setTimeout(function() {
-    document.addEventListener('click', function _closeDd(e) {
-      var dd = document.getElementById('planAssetDropdown');
-      var btn = document.getElementById('planAddAssetBtn');
-      if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) {
-        dd.style.display = 'none';
-      }
-      // Close slot asset class dropdowns
-      if (!e.target.closest('.plan-slot-ac') && !e.target.closest('[id^="slotAcDd_"]')) {
-        document.querySelectorAll('[id^="slotAcDd_"]').forEach(function(d) { d.style.display = 'none'; });
-      }
-    }, { once: true });
-  }, 0);
+  document.addEventListener('click', function _closeDd(e) {
+    var dd = document.getElementById('planAssetDropdown');
+    var btn = document.getElementById('planAddAssetBtn');
+    if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) {
+      dd.style.display = 'none';
+    }
+    if (!e.target.closest('.plan-slot-ac') && !e.target.closest('[id^="slotAcDd_"]')) {
+      document.querySelectorAll('[id^="slotAcDd_"]').forEach(function(d) { d.style.display = 'none'; });
+    }
+  }, { once: true });
+}
+
+// Save customized plan to localStorage + Supabase, then advance wizard
+function savePlanAndAdvance(branch, checkSize) {
+  window._planCheckSize = checkSize;
+  wizardData.checkSize = String(checkSize);
+  if (window._planAssets) wizardData.assetClasses = window._planAssets.slice();
+
+  // Build plan object from the customized slots
+  var slots = (window._planSlots || []).map(function(s) {
+    // Strip internal tracking field
+    var clean = {};
+    for (var k in s) { if (k !== '_idx') clean[k] = s[k]; }
+    return clean;
+  });
+  var totalIncome = slots.reduce(function(a, s) { return a + (s.est_income || 0); }, 0);
+  var totalCapital = slots.reduce(function(a, s) { return a + (s.check_size || 0); }, 0);
+  var blendedCoc = slots.length > 0 ? slots.reduce(function(a, s) { return a + (s.target_coc || 0); }, 0) / slots.length : 0.08;
+  var targetIncome = parseDollar(wizardData.targetCashFlow) || parseDollar(wizardData.taxableIncome) || 100000;
+
+  var plan = {
+    target_income: targetIncome,
+    total_capital: totalCapital,
+    check_size: checkSize,
+    blended_coc: Math.round(blendedCoc * 100) / 100,
+    slots: slots,
+    buckets: slots,
+    generated_from: 'wizard_custom'
+  };
+  savePortfolioPlan(plan);
+
+  wizardNext();
 }
 
 // Toggle inline asset class dropdown for a slot
-function toggleSlotAcDropdown(slotIdx, branch) {
-  // Close all others first
+function toggleSlotAcDropdown(slotIdx) {
   document.querySelectorAll('[id^="slotAcDd_"]').forEach(function(d) { d.style.display = 'none'; });
   var dd = document.getElementById('slotAcDd_' + slotIdx);
   if (dd) dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
@@ -22809,45 +22838,96 @@ function changeSlotAssetClass(slotIdx, newAc, branch) {
   renderPlanBuilder(branch);
 }
 
-// Drag-and-drop for plan slots
+// Drag-and-drop for plan slots — supports moving between years
 function initPlanSlotDragDrop(branch) {
   var rows = document.querySelectorAll('.plan-slot-row');
-  var dragIdx = null;
+  var yearHeaders = document.querySelectorAll('.plan-year-header');
+  var allDropTargets = document.querySelectorAll('.plan-slot-row, .plan-year-header');
+
+  function clearHighlights() {
+    allDropTargets.forEach(function(el) {
+      el.style.borderTop = '';
+      el.style.background = '';
+    });
+  }
 
   rows.forEach(function(row) {
     row.addEventListener('dragstart', function(e) {
-      dragIdx = parseInt(row.dataset.slotIdx);
       row.style.opacity = '0.4';
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', dragIdx);
+      e.dataTransfer.setData('text/plain', row.dataset.slotIdx);
     });
 
     row.addEventListener('dragend', function() {
       row.style.opacity = '1';
-      rows.forEach(function(r) { r.style.borderTop = ''; });
+      clearHighlights();
     });
 
+    // Drop on a slot row — insert before it in the same year
     row.addEventListener('dragover', function(e) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
-      rows.forEach(function(r) { r.style.borderTop = ''; });
+      clearHighlights();
       row.style.borderTop = '2px solid var(--primary)';
     });
 
-    row.addEventListener('dragleave', function() {
-      row.style.borderTop = '';
-    });
+    row.addEventListener('dragleave', function() { row.style.borderTop = ''; });
 
     row.addEventListener('drop', function(e) {
       e.preventDefault();
-      row.style.borderTop = '';
+      clearHighlights();
       var fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-      var toIdx = parseInt(row.dataset.slotIdx);
-      if (fromIdx === toIdx || isNaN(fromIdx) || isNaN(toIdx)) return;
+      var targetYear = parseInt(row.dataset.year);
+      if (isNaN(fromIdx)) return;
 
-      // Reorder the slots array
+      var slot = window._planSlots[fromIdx];
+      if (!slot) return;
+
+      // Move to the target year
+      slot.year = targetYear;
+
+      // Reorder: remove from old position, insert before target slot
+      var toIdx = parseInt(row.dataset.slotIdx);
+      if (fromIdx !== toIdx) {
+        var moved = window._planSlots.splice(fromIdx, 1)[0];
+        var insertAt = toIdx > fromIdx ? toIdx - 1 : toIdx;
+        window._planSlots.splice(insertAt, 0, moved);
+      }
+
+      renderPlanBuilder(branch);
+    });
+  });
+
+  // Year headers as drop targets — drop onto a year to move slot there
+  yearHeaders.forEach(function(header) {
+    header.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      clearHighlights();
+      header.style.background = 'rgba(81,190,123,0.12)';
+    });
+
+    header.addEventListener('dragleave', function() { header.style.background = ''; });
+
+    header.addEventListener('drop', function(e) {
+      e.preventDefault();
+      clearHighlights();
+      var fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      var targetYear = parseInt(header.dataset.year);
+      if (isNaN(fromIdx) || isNaN(targetYear)) return;
+
+      var slot = window._planSlots[fromIdx];
+      if (!slot) return;
+
+      // Change the slot's year
+      slot.year = targetYear;
+
+      // Move slot to end of that year's group
       var moved = window._planSlots.splice(fromIdx, 1)[0];
-      window._planSlots.splice(toIdx > fromIdx ? toIdx - 1 : toIdx, 0, moved);
+      // Find last slot in target year
+      var insertAfter = -1;
+      window._planSlots.forEach(function(s, i) { if (s.year === targetYear) insertAfter = i; });
+      window._planSlots.splice(insertAfter + 1, 0, moved);
 
       renderPlanBuilder(branch);
     });
