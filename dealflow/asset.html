@@ -2550,23 +2550,10 @@ function renderMarketIntelligence(data, assetClass) {
               tension: 0.35,
               borderWidth: 2.5,
               pointRadius: 4,
+              pointHoverRadius: 7,
               pointBackgroundColor: '#51BE7B',
               pointBorderColor: '#fff',
               pointBorderWidth: 2
-            },
-            {
-              label: 'Vacancy Rate',
-              data: vacRates,
-              borderColor: '#D04040',
-              backgroundColor: 'rgba(208,64,64,0.04)',
-              fill: true,
-              tension: 0.35,
-              borderWidth: 2,
-              pointRadius: 3,
-              pointBackgroundColor: '#D04040',
-              pointBorderColor: '#fff',
-              pointBorderWidth: 2,
-              borderDash: [4, 3]
             }
           ]
         },
@@ -2574,11 +2561,7 @@ function renderMarketIntelligence(data, assetClass) {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: true,
-              position: 'bottom',
-              labels: { font: { family: "'Plus Jakarta Sans'", size: 10, weight: '600' }, boxWidth: 12, padding: 12 }
-            },
+            legend: { display: false },
             tooltip: {
               backgroundColor: '#0A1E21',
               titleFont: { family: "'Plus Jakarta Sans'", size: 12, weight: '600' },
@@ -2586,7 +2569,7 @@ function renderMarketIntelligence(data, assetClass) {
               padding: 10,
               cornerRadius: 8,
               callbacks: {
-                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + '%'; }
+                label: function(ctx) { return 'Occupancy: ' + ctx.parsed.y + '%'; }
               }
             }
           },
@@ -2597,7 +2580,7 @@ function renderMarketIntelligence(data, assetClass) {
             },
             y: {
               grid: { color: '#EDF1F2' },
-              min: 0,
+              min: 70,
               max: 100,
               ticks: {
                 font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
