@@ -11428,6 +11428,7 @@ async function fetchUserDataFromSupabase(email) {
     }
 
     // Merge portfolio from Supabase into localStorage
+    let portfolioRestored = false;
     if (portfolioResp && portfolioResp.ok) {
       const portfolioData = await portfolioResp.json().catch(() => ({}));
       if (portfolioData.records && portfolioData.records.length > 0) {
@@ -11452,12 +11453,13 @@ async function fetchUserDataFromSupabase(email) {
           }));
           localStorage.setItem('gycPortfolio', JSON.stringify(restored));
           if (typeof portfolioInvestments !== 'undefined') portfolioInvestments = restored;
-          // Re-render portfolio if currently viewing it, so restored data appears
-          if (typeof renderPortfolio === 'function' && document.getElementById('page-portfolio')?.classList.contains('active')) {
-            renderPortfolio();
-          }
+          portfolioRestored = true;
         }
       }
+    }
+    // Always re-render portfolio if viewing it (clears loading state even when no data returned)
+    if (typeof renderPortfolio === 'function' && document.getElementById('page-portfolio')?.classList.contains('active')) {
+      renderPortfolio();
     }
 
     // Also fetch buy box from GHL
@@ -15424,8 +15426,17 @@ function renderPortfolio() {
   if (portfolioInvestments.length === 0 && !renderPortfolio._fetchAttempted) {
     renderPortfolio._fetchAttempted = true;
     const user = getUser();
-    if (user && user.email) {
+    if (user && user.email && user.token !== 'impersonated') {
+      // Show loading state while fetching
+      empty.style.display = 'block';
+      tableC.style.display = 'none';
+      summaryC.style.display = 'none';
+      if (chartArea) chartArea.style.display = 'none';
+      empty.innerHTML = '<div class="portfolio-empty-goal">'
+        + '<div style="color:var(--text-muted);font-size:14px;">Loading your investments...</div>'
+        + '</div>';
       fetchUserDataFromSupabase(user.email);
+      return; // fetchUserDataFromSupabase will call renderPortfolio() again after restore
     }
   }
   if (portfolioInvestments.length === 0) {
@@ -19500,12 +19511,12 @@ async function outreachSeedNew() {
 const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'pascal@growyourcashflow.io', 'info@pascalwagner.com'];
 
 function isImpersonating() {
-  return !!(adminRealUser || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser')));
+  return !!(adminRealUser || localStorage.getItem('_gycAdminRealUser'));
 }
 
 function isAdmin() {
   // Check if the real user (or impersonating admin) is an admin
-  const realUser = adminRealUser || (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser') ? JSON.parse(sessionStorage.getItem('gycAdminRealUser')) : null);
+  const realUser = adminRealUser || JSON.parse(localStorage.getItem('_gycAdminRealUser') || 'null');
   if (realUser && realUser.email && ADMIN_EMAILS.includes(realUser.email.toLowerCase())) return true;
   const user = getUser();
   return user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
@@ -21346,7 +21357,7 @@ function renderSchemaPage() {
 }
 
 // ========== ADMIN: VIEW AS USER ==========
-let adminRealUser = null; // stores the admin's real session when impersonating
+let adminRealUser = JSON.parse(localStorage.getItem('_gycAdminRealUser') || 'null'); // stores the admin's real session when impersonating
 let viewAsSearchTimer = null;
 
 function initViewAs() {
@@ -21354,8 +21365,8 @@ function initViewAs() {
   if (!el) return;
   el.style.display = isAdmin() ? 'block' : 'none';
 
-  // Check if we're already impersonating
-  const stored = sessionStorage.getItem('gycAdminRealUser');
+  // Check if we're already impersonating (survives page refresh via localStorage)
+  const stored = localStorage.getItem('_gycAdminRealUser');
   if (stored) {
     adminRealUser = JSON.parse(stored);
     document.getElementById('viewAsSearch').style.display = 'none';
@@ -21424,22 +21435,28 @@ const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyB
 
 function saveUserScopedData(email) {
   // Save current localStorage data under the user's email prefix
+  // Uses localStorage (not sessionStorage) so data survives tab close
   const bundle = {};
   USER_SCOPED_KEYS.forEach(k => {
     const v = localStorage.getItem(k);
     if (v !== null) bundle[k] = v;
   });
-  sessionStorage.setItem('gycScopedData_' + email, JSON.stringify(bundle));
+  localStorage.setItem('_scopedBundle_' + email, JSON.stringify(bundle));
 }
 
 function loadUserScopedData(email) {
   // Clear current per-user data
   USER_SCOPED_KEYS.forEach(k => localStorage.removeItem(k));
-  // Load saved data for this email if it exists
-  const saved = sessionStorage.getItem('gycScopedData_' + email);
+  // Load saved data for this email if it exists (check localStorage, fallback to legacy sessionStorage)
+  const saved = localStorage.getItem('_scopedBundle_' + email) || sessionStorage.getItem('gycScopedData_' + email);
   if (saved) {
     const bundle = JSON.parse(saved);
     Object.keys(bundle).forEach(k => localStorage.setItem(k, bundle[k]));
+    // Migrate from sessionStorage to localStorage if needed
+    if (sessionStorage.getItem('gycScopedData_' + email)) {
+      localStorage.setItem('_scopedBundle_' + email, saved);
+      sessionStorage.removeItem('gycScopedData_' + email);
+    }
   }
   // Refresh in-memory state from localStorage
   dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
@@ -21448,11 +21465,81 @@ function loadUserScopedData(email) {
   wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 }
 
+// Fetch a user's data from Supabase via admin endpoint (for impersonation)
+async function fetchUserDataAsAdmin(targetEmail) {
+  const adminUser = adminRealUser || JSON.parse(localStorage.getItem('_scopedBundle_adminRealUser') || 'null');
+  const token = adminUser?.token;
+  if (!token || token === 'impersonated') return;
+  try {
+    const resp = await fetch(SYNC_API + '?admin=true&email=' + encodeURIComponent(targetEmail), {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) return;
+    const result = await resp.json();
+
+    // Restore portfolio
+    if (result.portfolio && result.portfolio.length > 0) {
+      const restored = result.portfolio.map(r => ({
+        id: r.id || ('inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+        dealId: r.deal_id || '',
+        investmentName: r.investment_name || '',
+        sponsor: r.sponsor || '',
+        assetClass: r.asset_class || '',
+        amountInvested: r.amount_invested || 0,
+        dateInvested: r.date_invested || '',
+        status: r.status || 'active',
+        targetIRR: r.target_irr || '',
+        distributionsReceived: r.distributions_received || 0,
+        holdPeriod: r.hold_period || '',
+        investingEntity: r.investing_entity || '',
+        entityInvestedInto: r.entity_invested_into || '',
+        notes: r.notes || '',
+        _recordId: r.id || undefined
+      }));
+      localStorage.setItem('gycPortfolio', JSON.stringify(restored));
+      portfolioInvestments = restored;
+    }
+
+    // Restore deal stages
+    if (result.stages && result.stages.length > 0) {
+      const stages = {};
+      result.stages.forEach(r => { if (r.deal_id && r.stage) stages[r.deal_id] = r.stage; });
+      localStorage.setItem('gycDealStages', JSON.stringify(stages));
+      dealStages = stages;
+    }
+
+    // Restore goals
+    if (result.goals && result.goals.length > 0) {
+      const g = result.goals[0];
+      const restored = {
+        goalType: g.goal_type || 'passive-income',
+        currentIncome: g.current_income || 0,
+        targetIncome: g.target_income || 0,
+        capitalAvailable: g.capital_available || '',
+        timeline: g.timeline || '5',
+        taxReduction: g.tax_reduction || 0
+      };
+      localStorage.setItem('gycGoals', JSON.stringify(restored));
+      investorGoals = restored;
+    }
+
+    // Re-render current page
+    const activePage = document.querySelector('.page.active');
+    if (activePage) {
+      const pageId = activePage.id.replace('page-', '');
+      navigateTo(pageId);
+    }
+  } catch (e) {
+    console.warn('Admin user data fetch failed:', e.message);
+  }
+}
+
 function viewAsUser(email, name, contactId, tier) {
   // Save admin's real session
   if (!adminRealUser) {
     adminRealUser = JSON.parse(localStorage.getItem('gycUser'));
-    sessionStorage.setItem('gycAdminRealUser', JSON.stringify(adminRealUser));
+    // Persist admin session to localStorage (survives tab close)
+    localStorage.setItem('_gycAdminRealUser', JSON.stringify(adminRealUser));
     // Save admin's per-user data
     saveUserScopedData(adminRealUser.email);
   }
@@ -21508,11 +21595,19 @@ function viewAsUser(email, name, contactId, tier) {
   // Fetch their buy box from GHL
   fetchBuyBoxForUser(email);
 
+  // Fetch their real data from Supabase (portfolio, stages, goals)
+  fetchUserDataAsAdmin(email);
+
   // Navigate to dashboard to see their full view
   navigateTo('dashboard');
 }
 
 function exitViewAs() {
+  // Recover adminRealUser from localStorage if lost (e.g. page refresh during impersonation)
+  if (!adminRealUser) {
+    const saved = localStorage.getItem('_gycAdminRealUser');
+    if (saved) adminRealUser = JSON.parse(saved);
+  }
   if (!adminRealUser) return;
 
   // Save the impersonated user's data before switching back
@@ -21521,10 +21616,16 @@ function exitViewAs() {
 
   // Restore admin session
   localStorage.setItem('gycUser', JSON.stringify(adminRealUser));
-  sessionStorage.removeItem('gycAdminRealUser');
+  localStorage.removeItem('_gycAdminRealUser');
 
   // Restore admin's per-user data (portfolio, deal stages, buy box, etc.)
   loadUserScopedData(adminRealUser.email);
+
+  // If localStorage was empty after restore, fetch from Supabase as fallback
+  const restoredPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  if (restoredPortfolio.length === 0 && adminRealUser.email) {
+    fetchUserDataFromSupabase(adminRealUser.email);
+  }
 
   // Restore sidebar
   const name = adminRealUser.name || 'Admin';

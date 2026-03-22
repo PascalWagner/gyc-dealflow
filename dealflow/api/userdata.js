@@ -7,7 +7,7 @@
 //   - Upsert is native (ON CONFLICT)
 //   - ~10x faster response times
 
-import { getUserClient, setCors, ghlFetch } from './_supabase.js';
+import { getUserClient, getAdminClient, verifyAdmin, setCors, ghlFetch } from './_supabase.js';
 
 const TABLE_MAP = {
   stages: 'user_deal_stages',
@@ -160,6 +160,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Admin impersonation: GET ?admin=true&email=target@example.com&type=...
+    // Returns another user's data using admin client (for "View as user" feature)
+    if (req.method === 'GET' && req.query.admin === 'true' && req.query.email) {
+      const { authorized } = await verifyAdmin(req);
+      if (!authorized) return res.status(403).json({ error: 'Admin access required' });
+      return await handleAdminGet(req, res);
+    }
+
     switch (req.method) {
       case 'GET': return await handleGet(req, res, supabase, user);
       case 'POST': return await handlePost(req, res, supabase, user);
@@ -274,6 +282,37 @@ async function handleGet(req, res, supabase, user) {
     type,
     fetchedAt: new Date().toISOString()
   });
+}
+
+// Admin endpoint: fetch another user's data by email (for impersonation)
+async function handleAdminGet(req, res) {
+  const { type, email } = req.query;
+  const types = type ? [type] : ['portfolio', 'stages', 'goals'];
+  const adminClient = getAdminClient();
+
+  // Look up user_id by email from auth.users
+  const { data: { users }, error: lookupErr } = await adminClient.auth.admin.listUsers();
+  const targetUser = (users || []).find(u => u.email === email);
+  if (!targetUser) {
+    // User hasn't signed up yet — return empty data
+    const result = {};
+    types.forEach(t => { result[t] = []; });
+    return res.status(200).json(result);
+  }
+
+  const result = {};
+  for (const t of types) {
+    const table = TABLE_MAP[t];
+    if (!table) continue;
+    const { data, error } = await adminClient
+      .from(table)
+      .select('*')
+      .eq('user_id', targetUser.id);
+    if (error) throw error;
+    result[t] = data || [];
+  }
+
+  return res.status(200).json(result);
 }
 
 async function handlePost(req, res, supabase, user) {
