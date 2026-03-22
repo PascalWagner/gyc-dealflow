@@ -2053,8 +2053,7 @@ html.dark .credit-chart-legend-divider {
   .manager-card-link { font-size: 11px !important; }
   #managersGrid { gap: 8px !important; }
   #page-managers .content-area { padding: 8px 12px !important; padding-bottom: 80px !important; }
-  #managersStats { margin-bottom: 10px !important; }
-  #managersStats > div { font-size: 11px !important; }
+  #managersStats { display:none !important; }
   #page-managers .filter-bar { padding: 8px 12px !important; }
 }
 
@@ -5889,9 +5888,9 @@ const _supa = window.supabase.createClient(
         <option value="newest">Newest First</option>
       </select>
       <button onclick="document.getElementById('managersNameSearch').value='';document.getElementById('managersAssetFilter').value='';document.getElementById('managersTypeFilter').value='';document.getElementById('managersMinDeals').value='0';document.getElementById('managersSortBy').value='deals';renderManagersPage();" style="padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;">Reset</button>
+      <div id="managersStats" style="margin-left:auto;display:flex;gap:16px;align-items:center;font-size:12px;color:var(--text-muted);white-space:nowrap;"></div>
     </div>
     <div class="content-area" style="padding:24px;">
-      <div id="managersStats" style="margin-bottom:20px;"></div>
       <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
@@ -7279,7 +7278,10 @@ async function fetchDeals() {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    const resp = await fetch(DEALS_API_URL, { signal: controller.signal });
+    // Authenticated users can see 506(b) deals (they've been verified as accredited)
+    const userToken = localStorage.getItem('ghlToken') || localStorage.getItem('sb_token');
+    const dealsUrl = userToken ? DEALS_API_URL + '?include506b=true' : DEALS_API_URL;
+    const resp = await fetch(dealsUrl, { signal: controller.signal });
     clearTimeout(timeout);
     if (!resp.ok) throw new Error('API returned ' + resp.status);
     const data = await resp.json();
@@ -15038,17 +15040,9 @@ function renderManagersPage() {
   const activeFilterCount = (assetFilter ? 1 : 0) + (nameSearch ? 1 : 0) + (typeFilter ? 1 : 0) + (minDeals > 0 ? 1 : 0);
   if (statsEl) {
     statsEl.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);">Managers</div>
-          <span style="padding:2px 10px;border-radius:12px;font-size:12px;font-weight:700;background:var(--primary);color:#fff;">${filtered.length}</span>
-          ${activeFilterCount > 0 ? '<span style="font-size:11px;color:var(--text-muted);">' + activeFilterCount + ' filter' + (activeFilterCount !== 1 ? 's' : '') + ' active</span>' : ''}
-        </div>
-        <div style="display:flex;gap:20px;font-size:12px;color:var(--text-muted);">
-          <span><strong style="color:var(--text-dark);">${[...allAssetClasses].length}</strong> asset classes</span>
-          <span><strong style="color:var(--text-dark);">${filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
-        </div>
-      </div>
+      <span><strong style="color:var(--text-dark);">${filtered.length}</strong> Managers</span>
+      <span><strong style="color:var(--text-dark);">${[...allAssetClasses].length}</strong> asset classes</span>
+      <span><strong style="color:var(--text-dark);">${filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
     `;
   }
 
