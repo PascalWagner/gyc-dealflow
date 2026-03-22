@@ -18902,17 +18902,16 @@ async function outreachLoadStats() {
     const s = result.stats;
     const el = document.getElementById('outreachStats');
     if (!el) return;
-    const preOutreach = (s.backlog || 0) + (s.researching || 0) + (s.ready_to_contact || 0);
-    const inProgress = (s.contacted || 0) + (s.follow_up || 0) + (s.in_discussion || 0);
     el.innerHTML = [
-      { label: 'Total Operators', value: s.total, color: 'var(--text-dark)' },
-      { label: 'Pre-Outreach', value: preOutreach, color: '#3b82f6' },
-      { label: 'Ready to Contact', value: s.ready_to_contact || 0, color: '#0ea5e9' },
-      { label: 'In Progress', value: inProgress, color: '#f59e0b' },
-      { label: 'Approved', value: s.approved, color: '#10b981' },
-      { label: 'Denied', value: s.denied, color: '#6b7280' },
-      { label: 'Approval Rate', value: s.permission_rate + '%', color: 'var(--primary)' },
-      { label: 'Deals Covered', value: s.deals_covered + '/' + s.deals_total, color: 'var(--primary)' }
+      { label: 'Backlog', value: s.backlog || 0, color: '#64748b' },
+      { label: 'Researching', value: s.researching || 0, color: '#3b82f6' },
+      { label: 'Ready', value: s.ready_to_contact || 0, color: '#0ea5e9' },
+      { label: 'Contacted', value: s.contacted || 0, color: '#f59e0b' },
+      { label: 'Follow Up', value: s.follow_up || 0, color: '#8b5cf6' },
+      { label: 'Discussing', value: s.in_discussion || 0, color: '#d946ef' },
+      { label: 'Approved', value: s.approved || 0, color: '#10b981' },
+      { label: 'Denied', value: s.denied || 0, color: '#6b7280' },
+      { label: 'Deals Covered', value: (s.deals_covered || 0) + '/' + (s.deals_total || 0), color: 'var(--primary)' }
     ].map(c => `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
       <div style="font-family:var(--font-ui);font-size:24px;font-weight:800;color:${c.color};">${c.value}</div>
       <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">${c.label}</div>
