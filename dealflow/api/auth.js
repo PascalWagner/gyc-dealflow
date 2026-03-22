@@ -128,6 +128,13 @@ export default async function handler(req, res) {
       }
       await adminSupabase.from('user_profiles').upsert(profileData, { onConflict: 'id' });
 
+      // Fetch onboarding state from profile
+      const { data: existingProfile } = await adminSupabase
+        .from('user_profiles')
+        .select('onboarding_role, gp_onboarding_complete, gp_type')
+        .eq('id', user.id)
+        .single();
+
       return res.status(200).json({
         success: true,
         email,
@@ -137,6 +144,8 @@ export default async function handler(req, res) {
         isAdmin,
         tags: ghl.tags,
         token: user.id, // placeholder — real flow uses Supabase session tokens
+        onboardingRole: existingProfile?.onboarding_role || null,
+        gpOnboardingComplete: existingProfile?.gp_onboarding_complete || false,
         ...(gpInfo && {
           gpType: gpInfo.gp_type,
           managementCompanyId: gpInfo.management_company_id,

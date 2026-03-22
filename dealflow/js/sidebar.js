@@ -144,6 +144,7 @@
   html += '<div id="' + (isSPA ? 'gpNav' : 'gpNavSidebar') + '" style="display:none;">'
     + '<div class="nav-section-label">GP Portal</div>'
     + navItemExt('gp-dashboard.html', icons.gpdashboard, 'GP Dashboard', { page: 'gpdashboard' })
+    + '<a class="nav-item" id="' + (isSPA ? 'gpOnboardingLink' : 'gpOnboardingLinkSidebar') + '" href="gp-onboarding.html" style="display:none;">' + icons.buybox + ' GP Onboarding</a>'
     + '</div>';
 
   // ACCOUNT
@@ -299,8 +300,14 @@
     // Show GP nav
     var gpEl = document.getElementById(isSPA ? 'gpNav' : 'gpNavSidebar');
     if (gpEl) {
-      var isGP = (user && user.gpType) || isAdmin();
+      var isGP = (user && (user.gpType || user.onboardingRole === 'gp')) || isAdmin();
       gpEl.style.display = isGP ? 'block' : 'none';
+
+      // Show GP onboarding link if onboarding not complete
+      var gpObLink = document.getElementById(isSPA ? 'gpOnboardingLink' : 'gpOnboardingLinkSidebar');
+      if (gpObLink && user && user.onboardingRole === 'gp' && !user.gpOnboardingComplete) {
+        gpObLink.style.display = 'flex';
+      }
     }
 
     // Show admin view-as
