@@ -6911,7 +6911,9 @@ async function renderDeal() {
       materialsHtml += '<div class="material-tile-locked">' + _docIcon + '<span>Investment Deck</span><span class="lock-badge" style="margin-left:auto;">Academy</span></div>';
     }
   }
-  if (deal.ppmUrl) {
+  // Don't show PPM if it's the same URL as the deck (likely an OM mislabeled as PPM)
+  var _ppmIsDuplicate = deal.ppmUrl && deal.deckUrl && deal.ppmUrl === deal.deckUrl;
+  if (deal.ppmUrl && !_ppmIsDuplicate) {
     _hasAnyDoc = true;
     if (_ppmExpired) {
       materialsHtml += '<div class="material-tile" style="opacity:0.45;cursor:not-allowed;pointer-events:none;">' + _ppmIcon + '<span>Private Placement Memo</span><span style="font-size:10px;color:var(--text-muted);margin-left:auto;">Unavailable</span></div>';
