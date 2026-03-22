@@ -12865,9 +12865,10 @@ const STEP_TO_PHASE = {
   23: 1, 24: 1, 4: 1, 5: 1, 6: 1, 26: 1, 27: 1,  // baseline, 90-day, targets, growth pref, tax baseline → Goal
   8: 2, 25: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
   9: 2,                  // loss tolerance → Finances
-  10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 16: 3, 20: 3  // asset class, strategy, operator focus, lockup, dist, LP network, completion → Preferences
+  10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 16: 3, 20: 3,  // asset class, strategy, operator focus, lockup, dist, LP network, completion → Preferences
+  17: 4, 18: 4, 19: 4  // plan output → My Plan
 };
-const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences'];
+const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'My Plan'];
 
 function updateWizardPhases(seq, currentIdx) {
   var container = document.getElementById('wizardPhases');
