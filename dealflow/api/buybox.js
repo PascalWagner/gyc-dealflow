@@ -32,7 +32,8 @@ const GHL_FIELD_MAP = {
   capital_readiness: 'contact.investment_timeline',
   max_loss_pct: 'contact.max_loss_tolerance',
   operator_focus: 'contact.operator_focus_preference',
-  share_portfolio: 'contact.lp_network_optin'
+  share_portfolio: 'contact.lp_network_optin',
+  diversification_pref: 'contact.diversification_preference'
 };
 
 // Map frontend wizard keys → Supabase column names
