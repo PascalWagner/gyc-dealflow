@@ -218,43 +218,84 @@ export default async function handler(req, res) {
       console.log('Age distribution fetch failed:', e.message);
     }
 
-    // ── 1c. Housing Data (Census ACS B25002 + B25041) ──
+    // ── 1c. Housing Data (Census ACS B25002 + B25041) — time series ──
     try {
-      // B25002: Occupancy (001=Total, 002=Occupied, 003=Vacant)
-      // B25041: Bedrooms (001=Total, 002=None, 003=1BR, 004=2BR, 005=3BR, 006=4BR, 007=5+BR)
-      const housingVars = 'B25002_001E,B25002_002E,B25002_003E,B25041_002E,B25041_003E,B25041_004E,B25041_005E,B25041_006E,B25041_007E';
+      const housingYears = [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+      const occVars = 'B25002_001E,B25002_002E,B25002_003E';
+      const brVars = 'B25041_002E,B25041_003E,B25041_004E,B25041_005E,B25041_006E,B25041_007E';
 
-      let housingUrl;
+      // Fetch occupancy time series in parallel
+      const occPromises = housingYears.map(async (yr) => {
+        try {
+          let url;
+          if (zip) {
+            const stQ = (yr < 2020 && resolvedStateFips) ? `&in=state:${resolvedStateFips}` : '';
+            url = `${CENSUS_BASE}/${yr}/acs/acs5?get=${occVars}&for=zip%20code%20tabulation%20area:${zip}${stQ}`;
+          } else if (resolvedCountyFips) {
+            const sf = resolvedCountyFips.substring(0, 2);
+            const cf = resolvedCountyFips.substring(2, 5);
+            url = `${CENSUS_BASE}/${yr}/acs/acs5?get=${occVars}&for=county:${cf}&in=state:${sf}`;
+          }
+          if (!url) return null;
+          const r = await fetch(url);
+          if (!r.ok) return null;
+          const d = await r.json();
+          if (d && d.length > 1) {
+            const v = d[1].map(x => parseInt(x) || 0);
+            return { year: yr, total: v[0], occupied: v[1], vacant: v[2] };
+          }
+        } catch (e) { return null; }
+        return null;
+      });
+
+      const occResults = (await Promise.all(occPromises)).filter(r => r && r.total > 0).sort((a, b) => a.year - b.year);
+
+      // Fetch bedroom data for latest year only
+      let brUrl;
       if (zip) {
-        housingUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${housingVars}&for=zip%20code%20tabulation%20area:${zip}`;
+        brUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${brVars}&for=zip%20code%20tabulation%20area:${zip}`;
       } else if (resolvedCountyFips) {
         const sf = resolvedCountyFips.substring(0, 2);
         const cf = resolvedCountyFips.substring(2, 5);
-        housingUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${housingVars}&for=county:${cf}&in=state:${sf}`;
+        brUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${brVars}&for=county:${cf}&in=state:${sf}`;
       }
 
-      if (housingUrl) {
-        const hResp = await fetch(housingUrl);
-        if (hResp.ok) {
-          const hData = await hResp.json();
-          const v = hData[1].map(x => parseInt(x) || 0);
-          const total = v[0];
-          if (total > 0) {
-            results.housing = {
-              totalUnits: total,
-              occupied: v[1],
-              vacant: v[2],
-              vacancyRate: Math.round((v[2] / total) * 1000) / 10,
-              bedrooms: [
-                { label: 'No bedroom', count: v[3], pct: Math.round((v[3] / total) * 1000) / 10 },
-                { label: '1 bedroom', count: v[4], pct: Math.round((v[4] / total) * 1000) / 10 },
-                { label: '2 bedrooms', count: v[5], pct: Math.round((v[5] / total) * 1000) / 10 },
-                { label: '3 bedrooms', count: v[6], pct: Math.round((v[6] / total) * 1000) / 10 },
-                { label: '4+ bedrooms', count: v[7] + v[8], pct: Math.round(((v[7] + v[8]) / total) * 1000) / 10 }
-              ]
-            };
+      let bedrooms = null;
+      if (brUrl) {
+        const brResp = await fetch(brUrl);
+        if (brResp.ok) {
+          const brData = await brResp.json();
+          const bv = brData[1].map(x => parseInt(x) || 0);
+          const brTotal = bv.reduce((a, b) => a + b, 0);
+          if (brTotal > 0) {
+            bedrooms = [
+              { label: 'No bedroom', count: bv[0], pct: Math.round((bv[0] / brTotal) * 1000) / 10 },
+              { label: '1 bedroom', count: bv[1], pct: Math.round((bv[1] / brTotal) * 1000) / 10 },
+              { label: '2 bedrooms', count: bv[2], pct: Math.round((bv[2] / brTotal) * 1000) / 10 },
+              { label: '3 bedrooms', count: bv[3], pct: Math.round((bv[3] / brTotal) * 1000) / 10 },
+              { label: '4+ bedrooms', count: bv[4] + bv[5], pct: Math.round(((bv[4] + bv[5]) / brTotal) * 1000) / 10 }
+            ];
           }
         }
+      }
+
+      if (occResults.length > 0) {
+        const latest = occResults[occResults.length - 1];
+        results.housing = {
+          totalUnits: latest.total,
+          occupied: latest.occupied,
+          vacant: latest.vacant,
+          vacancyRate: Math.round((latest.vacant / latest.total) * 1000) / 10,
+          bedrooms,
+          timeSeries: occResults.map(r => ({
+            year: r.year,
+            occupancyRate: Math.round((r.occupied / r.total) * 1000) / 10,
+            vacancyRate: Math.round((r.vacant / r.total) * 1000) / 10,
+            totalUnits: r.total,
+            occupied: r.occupied,
+            vacant: r.vacant
+          }))
+        };
       }
     } catch (e) {
       console.log('Housing data fetch failed:', e.message);

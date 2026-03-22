@@ -1024,7 +1024,7 @@ body {
 }
 .mi-stat-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-light);
@@ -1079,7 +1079,7 @@ body {
   .nearby-grid { grid-template-columns: 1fr; padding: 16px; }
   .mi-grid { grid-template-columns: 1fr; }
   #housingSection > div { grid-template-columns: 1fr !important; }
-  .mi-stat-row { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px; }
+  .mi-stat-row { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 16px; }
   .price-table { font-size: 12px; }
   .price-table th, .price-table td { padding: 12px 12px; }
   .price-table .col-deck { display: none; }
@@ -1095,7 +1095,7 @@ body {
 
 <!-- Sidebar (injected by sidebar.js) -->
 <div id="sidebar-root"></div>
-<script src="js/sidebar.js" data-page="asset"></script>
+<script src="js/sidebar.js?v=20260322" data-page="asset"></script>
 
 <div class="mobile-topbar">
   <button class="mobile-menu-btn" onclick="toggleSidebar()">
@@ -1245,11 +1245,16 @@ body {
           <!-- Housing (multifamily only) -->
           <div id="housingSection" style="display:none;padding:24px;border-top:1px solid var(--border-light);">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-              <!-- Occupancy -->
+              <!-- Occupancy Chart -->
               <div>
-                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Housing Occupancy</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Housing Occupancy</div>
+                  <div id="vacancyBadge"></div>
+                </div>
                 <div id="housingOccSubtitle" class="mi-subtitle"></div>
-                <div id="housingOccContent"></div>
+                <div class="mi-chart-container">
+                  <canvas id="occupancyChart"></canvas>
+                </div>
               </div>
               <!-- Bedroom Mix -->
               <div>
@@ -1267,9 +1272,10 @@ body {
             <ul id="industryList" class="mi-industry-list"></ul>
           </div>
           <!-- Source -->
-          <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;">
+          <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <a id="censusSourceLink" href="https://data.census.gov" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">via US Census Bureau ↗</a>
             <a id="blsSourceLink" href="https://data.bls.gov/cew/apps/data_views/data_views.htm" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">Bureau of Labor Statistics ↗</a>
+            <span id="dataRecencyNote" style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-left:auto;"></span>
           </div>
         </div>
       </div>
@@ -2270,11 +2276,6 @@ function renderMarketIntelligence(data, assetClass) {
     if (latestIncome) {
       statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div></div>';
     }
-    if (trend) {
-      var trendColor = trend.annualGrowth >= 0 ? 'var(--green)' : 'var(--red)';
-      var trendSign = trend.annualGrowth >= 0 ? '+' : '';
-      statsHtml += '<div class="mi-stat"><div class="mi-stat-value" style="color:' + trendColor + ';">' + trendSign + trend.annualGrowth + '%</div><div class="mi-stat-label">Annual Growth</div></div>';
-    }
     statsEl.innerHTML = statsHtml;
     statsEl.style.display = 'grid';
   }
@@ -2522,30 +2523,92 @@ function renderMarketIntelligence(data, assetClass) {
     var h = data.housing;
     document.getElementById('housingSection').style.display = 'block';
 
-    // Occupancy bar
-    var occPct = h.totalUnits > 0 ? Math.round((h.occupied / h.totalUnits) * 100) : 0;
+    // Vacancy badge
     var vacPct = h.vacancyRate;
+    var vacCls = vacPct > 10 ? 'negative' : (vacPct > 7 ? 'neutral' : 'positive');
+    document.getElementById('vacancyBadge').innerHTML = '<span class="mi-trend-badge ' + vacCls + '">' + vacPct + '% vacancy</span>';
     document.getElementById('housingOccSubtitle').textContent = h.totalUnits.toLocaleString() + ' total housing units in area';
 
-    var occHtml = '<div style="margin-bottom:16px;">' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
-        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">Occupied</span>' +
-        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--green);">' + h.occupied.toLocaleString() + ' (' + occPct + '%)</span>' +
-      '</div>' +
-      '<div style="height:24px;background:var(--border-light);border-radius:4px;overflow:hidden;">' +
-        '<div style="height:100%;width:' + occPct + '%;background:var(--primary);border-radius:4px;"></div>' +
-      '</div>' +
-    '</div>' +
-    '<div>' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
-        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">Vacant</span>' +
-        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + (vacPct > 10 ? 'var(--red)' : 'var(--text-secondary)') + ';">' + h.vacant.toLocaleString() + ' (' + vacPct + '%)</span>' +
-      '</div>' +
-      '<div style="height:24px;background:var(--border-light);border-radius:4px;overflow:hidden;">' +
-        '<div style="height:100%;width:' + Math.min(vacPct * 3, 100) + '%;background:' + (vacPct > 10 ? 'var(--red)' : '#8A9AA0') + ';border-radius:4px;"></div>' +
-      '</div>' +
-    '</div>';
-    document.getElementById('housingOccContent').innerHTML = occHtml;
+    // Occupancy time series chart
+    if (h.timeSeries && h.timeSeries.length >= 2) {
+      var occLabels = h.timeSeries.map(function(d) { return d.year; });
+      var occRates = h.timeSeries.map(function(d) { return d.occupancyRate; });
+      var vacRates = h.timeSeries.map(function(d) { return d.vacancyRate; });
+
+      var occCtx = document.getElementById('occupancyChart').getContext('2d');
+      new Chart(occCtx, {
+        type: 'line',
+        data: {
+          labels: occLabels,
+          datasets: [
+            {
+              label: 'Occupancy Rate',
+              data: occRates,
+              borderColor: '#51BE7B',
+              backgroundColor: 'rgba(81,190,123,0.06)',
+              fill: true,
+              tension: 0.35,
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointBackgroundColor: '#51BE7B',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            },
+            {
+              label: 'Vacancy Rate',
+              data: vacRates,
+              borderColor: '#D04040',
+              backgroundColor: 'rgba(208,64,64,0.04)',
+              fill: true,
+              tension: 0.35,
+              borderWidth: 2,
+              pointRadius: 3,
+              pointBackgroundColor: '#D04040',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              borderDash: [4, 3]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: { font: { family: "'Plus Jakarta Sans'", size: 10, weight: '600' }, boxWidth: 12, padding: 12 }
+            },
+            tooltip: {
+              backgroundColor: '#0A1E21',
+              titleFont: { family: "'Plus Jakarta Sans'", size: 12, weight: '600' },
+              bodyFont: { family: "'Source Sans 3'", size: 13 },
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + '%'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+            },
+            y: {
+              grid: { color: '#EDF1F2' },
+              min: 0,
+              max: 100,
+              ticks: {
+                font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+                color: '#8A9AA0',
+                callback: function(val) { return val + '%'; }
+              }
+            }
+          }
+        }
+      });
+    }
 
     // Bedroom mix
     if (h.bedrooms && h.bedrooms.length) {
@@ -2643,6 +2706,13 @@ function renderMarketIntelligence(data, assetClass) {
     if (q.countyName) {
       document.getElementById('blsSourceLink').textContent = q.countyName + ' Employment ↗';
     }
+  }
+
+  // Data recency note
+  var latestYear = pop.length ? pop[pop.length - 1].year : null;
+  var currentYear = new Date().getFullYear();
+  if (latestYear && latestYear < currentYear) {
+    document.getElementById('dataRecencyNote').textContent = 'Census data available through ' + latestYear + '. Updated annually.';
   }
 }
 
