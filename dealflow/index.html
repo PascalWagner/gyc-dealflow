@@ -21760,8 +21760,9 @@ function renderCaseStudies() {
   const totalMembers = members.length;
   const totalCapital = members.reduce((s, m) => s + m.capitalDeployed, 0);
   const totalInvestments = members.reduce((s, m) => s + m.dealsInvested, 0);
-  const avgPassiveIncome = members.filter(m => m.goalCurrent > 0).length > 0
-    ? Math.round(members.reduce((s, m) => s + m.goalCurrent, 0) / members.filter(m => m.goalCurrent > 0).length)
+  const incomeMembers = members.filter(m => m.goal === 'income' && m.goalCurrent > 0);
+  const avgPassiveIncome = incomeMembers.length > 0
+    ? Math.round(incomeMembers.reduce((s, m) => s + m.goalCurrent, 0) / incomeMembers.length)
     : 0;
   const testimonialReady = members.filter(m => m.outreach === 'hot').length;
 
