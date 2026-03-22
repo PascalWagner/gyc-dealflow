@@ -22860,6 +22860,23 @@ if (window.location.hash === '#onboarding') {
   history.replaceState(null, '', window.location.pathname);
 }
 
+// Handle #buybox from email — navigate to buy box and open wizard at preferences step
+if (window.location.hash.startsWith('#buybox')) {
+  const stepParam = new URLSearchParams(window.location.hash.split('?')[1] || '').get('step');
+  setTimeout(() => {
+    navigateTo('buybox');
+    if (stepParam) {
+      setTimeout(() => {
+        openBuyBoxWizard();
+        // Jump to requested step (e.g. step=4 for Preferences)
+        const targetIdx = parseInt(stepParam) - 1;
+        if (targetIdx > 0) { wizardStepIndex = targetIdx; renderWizardStep(); }
+      }, 400);
+    }
+  }, 300);
+  history.replaceState(null, '', window.location.pathname);
+}
+
 // If buy box is complete, pre-render report and enable buttons
 if (localStorage.getItem('gycBuyBoxComplete')) {
   renderReport();
