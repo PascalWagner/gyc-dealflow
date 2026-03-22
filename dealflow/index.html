@@ -13160,6 +13160,15 @@ const STRATEGY_OPTIONS = {
   }
 };
 
+// Debounced incremental save of wizard progress to Supabase
+var _wizSaveTimer = null;
+function debouncedWizardSave() {
+  clearTimeout(_wizSaveTimer);
+  _wizSaveTimer = setTimeout(function() {
+    syncBuyBoxToGHL();
+  }, 1500);
+}
+
 function openBuyBoxWizard(jumpToPlan) {
   // Gate wizard for free users
   var _wzUser = getUser();
@@ -13176,6 +13185,25 @@ function openBuyBoxWizard(jumpToPlan) {
   if (user && !wizardData.firstName) {
     wizardData.firstName = user.firstName || (user.name || '').split(' ')[0] || '';
     wizardData.lastName = user.lastName || (user.name || '').split(' ').slice(1).join(' ') || '';
+  }
+  // Fetch saved progress from Supabase if localStorage is mostly empty
+  if (user && user.email && Object.keys(wizardData).length <= 2) {
+    fetch('/api/buybox?email=' + encodeURIComponent(user.email))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (data && data.success && data.buyBox && Object.keys(data.buyBox).length > 0) {
+          for (var key in data.buyBox) {
+            if (data.buyBox[key] !== undefined && data.buyBox[key] !== null && data.buyBox[key] !== '') {
+              if (!wizardData[key] || wizardData[key] === '' || (Array.isArray(wizardData[key]) && wizardData[key].length === 0)) {
+                wizardData[key] = data.buyBox[key];
+              }
+            }
+          }
+          localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+          renderWizardStep();
+        }
+      })
+      .catch(function() {});
   }
   // Jump directly to plan builder step if requested
   if (jumpToPlan) {
@@ -13202,6 +13230,8 @@ function closeWizard() {
   invalidateWizardCache();
   document.getElementById('wizardOverlay').classList.remove('active');
   syncWizardToBuyBox();
+  // Save progress to Supabase immediately on close so nothing is lost
+  syncBuyBoxToGHL();
   if (localStorage.getItem('gycBuyBoxComplete')) {
     if (typeof renderReport === 'function') renderReport();
   }
@@ -14428,6 +14458,7 @@ function selectGoalBranch(branch, goalValue) {
   wizardStepIndex++;
   renderWizardStep();
   document.getElementById('wizardBody').scrollTop = 0;
+  debouncedWizardSave();
 }
 
 // ---- Preset chip selection ----
@@ -14590,6 +14621,7 @@ function wizardNext() {
   wizardStepIndex++;
   renderWizardStep();
   document.getElementById('wizardBody').scrollTop = 0;
+  debouncedWizardSave();
 }
 
 function wizardPrev() {

@@ -40,7 +40,8 @@ const GHL_FIELD_MAP = {
 // Only active v3 wizard fields — v1/v2 dead mappings removed
 const WIZARD_TO_COLUMN = {
   triggerEvent: 'trigger_event',
-  networth: 'net_worth',
+  netWorth: 'net_worth',
+  checkSize: 'check_size',
   assetClasses: 'asset_classes',
   lockup: 'lockup',
   strategies: 'strategies',
