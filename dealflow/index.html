@@ -11625,10 +11625,10 @@ function renderAll() {
     if (deals.length === 0) {
       const emptyStates = {
         browse: { icon: '&#x1f50d;', title: 'No deals found', sub: 'Try adjusting your filters or clearing your buy box criteria.' },
-        saved: { icon: '&#x1f516;', title: 'No saved deals yet', sub: 'Browse deals and click Save on ones that catch your eye. This is your shortlist.', cta: 'Browse Deals', action: "document.querySelector('[data-tab=\"browse\"]').click()" },
-        vetting: { icon: '&#x1f4cb;', title: 'No deals in vetting', sub: 'Move a saved deal here when you\'re ready to dig deeper. You\'ll get a DD checklist to work through.', cta: 'Review Saved Deals', action: "document.querySelector('[data-tab=\"saved\"]').click()" },
-        diligence: { icon: '&#x1f50e;', title: 'No deals in due diligence', sub: 'Move a vetted deal here to do deep research. Review financials, talk to the sponsor, and verify the numbers.', cta: 'Check Vetting Pipeline', action: "document.querySelector('[data-tab=\"vetting\"]').click()" },
-        decision: { icon: '&#x2705;', title: 'No deals awaiting decision', sub: 'Complete due diligence on a deal to move it here. This is your final review before wiring money.', cta: 'Check Due Diligence', action: "document.querySelector('[data-tab=\"diligence\"]').click()" },
+        saved: { icon: '&#x1f516;', title: 'No saved deals yet', sub: 'Browse deals and click Save on ones that catch your eye. This is your shortlist.', cta: 'Browse Deals', action: 'switchTab(document.querySelector(\'[data-tab=browse]\'))' },
+        vetting: { icon: '&#x1f4cb;', title: 'No deals in vetting', sub: 'Move a saved deal here when you\'re ready to dig deeper. You\'ll get a DD checklist to work through.', cta: 'Review Saved Deals', action: 'switchTab(document.querySelector(\'[data-tab=saved]\'))' },
+        diligence: { icon: '&#x1f50e;', title: 'No deals in due diligence', sub: 'Move a vetted deal here to do deep research. Review financials, talk to the sponsor, and verify the numbers.', cta: 'Check Vetting Pipeline', action: 'switchTab(document.querySelector(\'[data-tab=vetting]\'))' },
+        decision: { icon: '&#x2705;', title: 'No deals awaiting decision', sub: 'Complete due diligence on a deal to move it here. This is your final review before wiring money.', cta: 'Check Due Diligence', action: 'switchTab(document.querySelector(\'[data-tab=diligence]\'))' },
         invested: { icon: '&#x1f4b0;', title: 'No investments yet', sub: 'Once you commit capital to a deal, track it here. You\'ll see distributions, K-1 status, and more.' },
         passed: { icon: '&#x1f44b;', title: 'No passed deals', sub: 'Deals you skip or pass on will show up here. You can always reconsider later.' }
       };
