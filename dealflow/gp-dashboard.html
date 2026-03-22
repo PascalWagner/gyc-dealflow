@@ -383,7 +383,7 @@ body {
 /* ====== STATS BAR ====== */
 .stats-strip {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -911,7 +911,7 @@ body {
   display: flex;
   align-items: flex-end;
   gap: 0;
-  height: 160px;
+  height: 120px;
   padding-bottom: 28px;
   position: relative;
   border-bottom: 1px solid var(--border-light);
@@ -1502,10 +1502,51 @@ body {
 .comp-insight-good { color: var(--green); }
 .comp-insight-bad { color: var(--orange); }
 
+/* ====== DASHBOARD GRID ====== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.dashboard-grid .section-card {
+  margin-bottom: 0;
+}
+.dashboard-grid-full {
+  grid-column: 1 / -1;
+}
+.dashboard-grid-3-2 {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.dashboard-grid-3-2 .section-card {
+  margin-bottom: 0;
+}
+
+/* Webinar CTA as standalone section-card */
+.webinar-cta-section .section-header {
+  background: linear-gradient(135deg, #f0faf4 0%, #e8f4fd 100%);
+}
+.webinar-cta-section .webinar-cta-card {
+  margin: 0;
+  border: none;
+  border-left: none;
+  border-radius: 0;
+  background: transparent;
+}
+.webinar-cta-section .webinar-cta-btn {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
 /* ====== RESPONSIVE ====== */
 @media (max-width: 1024px) {
-  .stats-strip { grid-template-columns: repeat(2, 1fr); }
+  .stats-strip { grid-template-columns: repeat(3, 1fr); }
   .analytics-grid { grid-template-columns: repeat(3, 1fr); }
+  .dashboard-grid-3-2 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
@@ -1528,6 +1569,8 @@ body {
   .settings-input-row { flex-direction: column; }
   .action-item { flex-wrap: wrap; }
   .action-item-btn { margin-left: auto; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-grid-3-2 { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
   .stats-strip { grid-template-columns: 1fr 1fr; }
@@ -1596,136 +1639,157 @@ body {
       <div class="stats-strip" id="statsStrip">
         <div class="stat-card">
           <div class="stat-card-value" id="statDeals">--</div>
-          <div class="stat-card-label">Total Deals</div>
+          <div class="stat-card-label">Your Deals</div>
         </div>
         <div class="stat-card">
           <div class="stat-card-value" id="statMissing">--</div>
-          <div class="stat-card-label">Missing Data</div>
+          <div class="stat-card-label">Needs Attention</div>
         </div>
         <div class="stat-card">
           <div class="stat-card-value" id="statIntros">--</div>
           <div class="stat-card-label">Intro Requests</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-card-value" id="statOperators">--</div>
-          <div class="stat-card-label">Operators</div>
+      </div>
+      <!-- Hidden element to keep JS from breaking -->
+      <div id="statOperators" style="display:none;">--</div>
+
+      <!-- Row 1: LP Activity + Webinar CTA -->
+      <div class="dashboard-grid-3-2" id="analyticsCard">
+        <!-- LEFT: Investor Activity -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Investor Activity</div>
+          </div>
+          <div class="section-body">
+            <div class="analytics-grid" id="analyticsMetrics">
+              <div class="analytics-metric">
+                <div class="analytics-metric-value" id="metricSaves">--</div>
+                <div class="analytics-metric-label">LPs Interested</div>
+              </div>
+              <div class="analytics-metric">
+                <div class="analytics-metric-value" id="metricVetting">--</div>
+                <div class="analytics-metric-label">In Vetting</div>
+              </div>
+              <div class="analytics-metric">
+                <div class="analytics-metric-value" id="metricInvested">--</div>
+                <div class="analytics-metric-label">Invested</div>
+              </div>
+            </div>
+            <!-- Weekly Activity Chart -->
+            <div class="weekly-chart-wrap" id="weeklyChartWrap">
+              <div class="weekly-chart-title">Investor Activity Over Time</div>
+              <div class="weekly-chart-legend">
+                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>Saved / Interested</span>
+                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>In Vetting</span>
+                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
+              </div>
+              <div class="weekly-chart-container" id="weeklyChartBars">
+                <div class="weekly-chart-empty">Loading chart...</div>
+              </div>
+            </div>
+            <div id="recentActivityWrap">
+              <h4 style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:10px;">Recent Activity</h4>
+              <ul class="activity-list" id="recentActivityList">
+                <li class="activity-item" style="justify-content:center;color:var(--text-muted);">Loading...</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Webinar CTA -->
+        <div class="section-card webinar-cta-section" id="webinarCtaCard">
+          <div class="section-header">
+            <div class="section-title">Get In Front of LPs</div>
+          </div>
+          <div class="section-body">
+            <div class="webinar-cta-card">
+              <div class="webinar-cta-title">&#127919; Pitch to Our Investor Network</div>
+              <div class="webinar-cta-stat" id="webinarCtaStat"></div>
+              <div class="webinar-cta-desc">Your deals are getting attention. Take it further &mdash; pitch directly to our investor network in a live webinar.</div>
+              <ul class="webinar-cta-features">
+                <li>30-minute dedicated pitch slot</li>
+                <li>Qualified accredited investor audience</li>
+                <li>Recorded &amp; shared with all platform members</li>
+                <li>Q&amp;A session with interested LPs</li>
+              </ul>
+              <a href="#book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $500 &rarr;</a>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- GP Analytics Section -->
-      <div class="section-card" id="analyticsCard">
+      <!-- Row 2: Competitive Analysis + Market Positioning -->
+      <div class="dashboard-grid-3-2">
+        <!-- LEFT: Competitive Analysis -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Competitive Analysis</div>
+          </div>
+          <div class="section-body">
+            <div id="competitiveAnalysis">
+              <div class="empty-inline" style="padding:20px;">
+                <p>Loading competitive data...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Market Positioning -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Market Positioning</div>
+          </div>
+          <div class="section-body">
+            <div class="market-cards" id="marketPositioning">
+              <div class="empty-inline" style="padding:20px;">
+                <p>Loading market data...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: What Investors Want (full width) -->
+      <div class="section-card">
         <div class="section-header">
-          <div class="section-title">GP Analytics</div>
+          <div class="section-title">What Our Investors Want</div>
         </div>
         <div class="section-body">
-
-          <!-- Part 1: LP Activity -->
-          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">LP Activity</h3>
-          <div class="analytics-grid" id="analyticsMetrics">
-            <div class="analytics-metric">
-              <div class="analytics-metric-value" id="metricSaves">--</div>
-              <div class="analytics-metric-label">LPs Interested</div>
-            </div>
-            <div class="analytics-metric">
-              <div class="analytics-metric-value" id="metricVetting">--</div>
-              <div class="analytics-metric-label">In Vetting</div>
-            </div>
-            <div class="analytics-metric">
-              <div class="analytics-metric-value" id="metricInvested">--</div>
-              <div class="analytics-metric-label">Invested</div>
-            </div>
-          </div>
-          <!-- Weekly Activity Chart -->
-          <div class="weekly-chart-wrap" id="weeklyChartWrap">
-            <div class="weekly-chart-title">Investor Activity Over Time</div>
-            <div class="weekly-chart-legend">
-              <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>Saved / Interested</span>
-              <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>In Vetting</span>
-              <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
-            </div>
-            <div class="weekly-chart-container" id="weeklyChartBars">
-              <div class="weekly-chart-empty">Loading chart...</div>
-            </div>
-          </div>
-
-          <div id="recentActivityWrap">
-            <h4 style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:10px;">Recent Activity</h4>
-            <ul class="activity-list" id="recentActivityList">
-              <li class="activity-item" style="justify-content:center;color:var(--text-muted);">Loading...</li>
-            </ul>
-          </div>
-
-          <!-- Webinar CTA Card -->
-          <div class="webinar-cta-card" id="webinarCtaCard">
-            <div class="webinar-cta-title">&#127919; Get In Front of LPs</div>
-            <div class="webinar-cta-stat" id="webinarCtaStat"></div>
-            <div class="webinar-cta-desc">Your deals are getting attention. Take it further &mdash; pitch directly to our investor network in a live webinar.</div>
-            <ul class="webinar-cta-features">
-              <li>30-minute dedicated pitch slot</li>
-              <li>Qualified accredited investor audience</li>
-              <li>Recorded &amp; shared with all platform members</li>
-              <li>Q&amp;A session with interested LPs</li>
-            </ul>
-            <a href="#book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $500 &rarr;</a>
-          </div>
-
-          <!-- Divider -->
-          <hr style="border:none;border-top:1px solid var(--border-light);margin:28px 0;">
-
-          <!-- Part 2: Market Positioning -->
-          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">Market Positioning</h3>
-          <div class="market-cards" id="marketPositioning">
-            <div class="empty-inline" style="padding:20px;">
-              <p>Loading market data...</p>
-            </div>
-          </div>
-
-          <!-- Divider -->
-          <hr style="border:none;border-top:1px solid var(--border-light);margin:28px 0;">
-
-          <!-- Part 3: Demand Intelligence -->
-          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">Demand Intelligence</h3>
-          <div class="demand-cards" id="demandIntelligence">
-            <div class="empty-inline" style="padding:20px;">
-              <p>Loading demand data...</p>
-            </div>
-          </div>
-
-          <!-- Divider -->
-          <hr style="border:none;border-top:1px solid var(--border-light);margin:28px 0;">
-
-          <!-- Part 4: What Our Investors Want -->
-          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">What Our Investors Want</h3>
           <div id="investorInsights">
             <div class="empty-inline" style="padding:20px;">
               <p>Loading investor insights...</p>
             </div>
           </div>
-
-          <!-- Divider -->
-          <hr style="border:none;border-top:1px solid var(--border-light);margin:28px 0;">
-
-          <!-- Part 5: Competitive Analysis -->
-          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">Competitive Analysis</h3>
-          <div id="competitiveAnalysis">
-            <div class="empty-inline" style="padding:20px;">
-              <p>Loading competitive data...</p>
-            </div>
-          </div>
-
         </div>
       </div>
 
-      <!-- Action Items Section -->
-      <div class="section-card" id="actionItemsCard">
-        <div class="section-header">
-          <div class="section-title">Action Items</div>
-          <span class="section-badge" id="actionItemsCount">0</span>
+      <!-- Row 4: Demand Intelligence + Action Items -->
+      <div class="dashboard-grid">
+        <!-- LEFT: Demand Intelligence -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Demand Intelligence</div>
+          </div>
+          <div class="section-body">
+            <div class="demand-cards" id="demandIntelligence">
+              <div class="empty-inline" style="padding:20px;">
+                <p>Loading demand data...</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="section-body">
-          <div id="actionItemsList"></div>
-          <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
-            <p>All deals look good! No action items at this time.</p>
+
+        <!-- RIGHT: Action Items -->
+        <div class="section-card" id="actionItemsCard">
+          <div class="section-header">
+            <div class="section-title">Action Items</div>
+            <span class="section-badge" id="actionItemsCount">0</span>
+          </div>
+          <div class="section-body">
+            <div id="actionItemsList"></div>
+            <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
+              <p>All deals look good! No action items at this time.</p>
+            </div>
           </div>
         </div>
       </div>
