@@ -127,56 +127,70 @@ export default async function handler(req, res) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
-    // ---- AGGREGATE: Top Deal Types ----
-    const dealTypeCounts = {};
+    // ---- AGGREGATE: Deal Structure (Fund vs Syndication) ----
+    // This comes from opportunities.deal_type, NOT buy box deal_structure
+    const dealStructureCounts = {};
 
-    // From buy box deal_structure field (can be string, array, or JSON-encoded array)
-    for (const bb of completedBuyBoxes) {
-      if (bb.deal_structure) {
-        let structures = bb.deal_structure;
-        // Parse if it's a JSON string
-        if (typeof structures === 'string') {
-          try { structures = JSON.parse(structures); } catch (e) { /* keep as string */ }
-        }
-        // Handle array of structures
-        if (Array.isArray(structures)) {
-          for (const s of structures) {
-            if (s && typeof s === 'string') {
-              dealTypeCounts[s] = (dealTypeCounts[s] || 0) + 1;
-            }
-          }
-        } else if (typeof structures === 'string') {
-          dealTypeCounts[structures] = (dealTypeCounts[structures] || 0) + 1;
-        }
-      }
-    }
-
-    // From deal stages
+    // From deal stages (what LPs are actually saving)
     for (const s of allStages) {
       const deal = dealMap[s.deal_id];
       if (deal && deal.deal_type) {
-        dealTypeCounts[deal.deal_type] = (dealTypeCounts[deal.deal_type] || 0) + 0.5;
+        dealStructureCounts[deal.deal_type] = (dealStructureCounts[deal.deal_type] || 0) + 1;
       }
     }
 
-    // Supplement from opportunities
-    if (Object.keys(dealTypeCounts).length < 3) {
-      for (const d of allOpps) {
-        if (d.deal_type) {
-          dealTypeCounts[d.deal_type] = (dealTypeCounts[d.deal_type] || 0) + 0.1;
-        }
+    // Supplement from all opportunities
+    for (const d of allOpps) {
+      if (d.deal_type) {
+        dealStructureCounts[d.deal_type] = (dealStructureCounts[d.deal_type] || 0) + 0.1;
       }
     }
 
-    const totalTypeVotes = Object.values(dealTypeCounts).reduce((a, b) => a + b, 0) || 1;
-    const topDealTypes = Object.entries(dealTypeCounts)
+    const totalStructVotes = Object.values(dealStructureCounts).reduce((a, b) => a + b, 0) || 1;
+    const topDealTypes = Object.entries(dealStructureCounts)
       .map(([name, count]) => ({
         name,
         count: Math.round(count),
-        pct: Math.round((count / totalTypeVotes) * 100)
+        pct: Math.round((count / totalStructVotes) * 100)
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
+
+    // ---- AGGREGATE: Operator Preferences (from buy box) ----
+    // deal_structure field = operator type (Multi-Strategy, Single-Strategy, etc.)
+    // operator_size field = operator AUM size preference
+    const operatorTypeCounts = {};
+    const operatorSizeCounts = {};
+
+    function parseJsonField(val) {
+      if (!val) return [];
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : [parsed]; } catch (e) { return [val]; }
+      }
+      return [];
+    }
+
+    for (const bb of completedBuyBoxes) {
+      // Operator type (was incorrectly called deal_structure in buy box)
+      for (const item of parseJsonField(bb.deal_structure)) {
+        if (item) operatorTypeCounts[item] = (operatorTypeCounts[item] || 0) + 1;
+      }
+      // Operator size
+      for (const item of parseJsonField(bb.operator_size)) {
+        if (item) operatorSizeCounts[item] = (operatorSizeCounts[item] || 0) + 1;
+      }
+    }
+
+    const totalOpTypeVotes = Object.values(operatorTypeCounts).reduce((a, b) => a + b, 0) || 1;
+    const operatorPreferences = Object.entries(operatorTypeCounts)
+      .map(([name, count]) => ({ name, pct: Math.round((count / totalOpTypeVotes) * 100) }))
+      .sort((a, b) => b.pct - a.pct);
+
+    const totalOpSizeVotes = Object.values(operatorSizeCounts).reduce((a, b) => a + b, 0) || 1;
+    const operatorSizePrefs = Object.entries(operatorSizeCounts)
+      .map(([name, count]) => ({ name, pct: Math.round((count / totalOpSizeVotes) * 100) }))
+      .sort((a, b) => b.pct - a.pct);
 
     // ---- AGGREGATE: Distribution Preferences ----
     const distCounts = {};
@@ -213,49 +227,56 @@ export default async function handler(req, res) {
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 5);
 
-    // ---- AGGREGATE: Check Size Distribution ----
-    const checkSizeRanges = {};
+    // ---- AGGREGATE: Max Check Size Distribution ----
+    // This shows what LPs say is their maximum check size
+    const checkBuckets = [
+      { label: '$10K', min: 0, max: 15000 },
+      { label: '$25K', min: 15000, max: 37500 },
+      { label: '$50K', min: 37500, max: 75000 },
+      { label: '$100K', min: 75000, max: 175000 },
+      { label: '$250K', min: 175000, max: 375000 },
+      { label: '$500K+', min: 375000, max: Infinity }
+    ];
 
-    // Bucket a numeric value into a range
+    const checkSizeCounts = {};
+    for (const b of checkBuckets) checkSizeCounts[b.label] = 0;
+
     function bucketCheckSize(val) {
-      if (val <= 0) return null;
-      if (val < 25000) return 'Under $25K';
-      if (val < 50000) return '$25K–$50K';
-      if (val < 100000) return '$50K–$100K';
-      if (val < 250000) return '$100K–$250K';
-      if (val < 500000) return '$250K–$500K';
+      const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.]/g, '')) : val;
+      if (!num || num <= 0) return null;
+      for (const b of checkBuckets) {
+        if (num >= b.min && num < b.max) return b.label;
+      }
       return '$500K+';
     }
 
-    // From buy box check_size (could be text range or numeric)
+    // From buy box check_size
     for (const bb of completedBuyBoxes) {
       if (bb.check_size) {
-        let range = bb.check_size;
-        if (typeof range === 'number') {
-          range = bucketCheckSize(range);
-        }
-        if (range) checkSizeRanges[range] = (checkSizeRanges[range] || 0) + 1;
+        const bucket = bucketCheckSize(bb.check_size);
+        if (bucket) checkSizeCounts[bucket]++;
       }
     }
 
-    // From capital_available in goals
+    // From capital_available in goals (as secondary signal)
     for (const g of goals) {
       if (g.capital_available > 0) {
-        const range = bucketCheckSize(g.capital_available);
-        if (range) checkSizeRanges[range] = (checkSizeRanges[range] || 0) + 0.5;
+        const bucket = bucketCheckSize(g.capital_available);
+        if (bucket) checkSizeCounts[bucket] += 0.5;
       }
     }
 
-    const totalCheckVotes = Object.values(checkSizeRanges).reduce((a, b) => a + b, 0) || 1;
-    const checkSizeDistribution = Object.entries(checkSizeRanges)
-      .map(([name, count]) => ({
-        name,
-        pct: Math.round((count / totalCheckVotes) * 100)
-      }))
-      .sort((a, b) => b.pct - a.pct);
+    const totalCheckVotes = Object.values(checkSizeCounts).reduce((a, b) => a + b, 0) || 1;
+    const checkSizeDistribution = checkBuckets
+      .map(b => ({
+        label: b.label,
+        count: Math.round(checkSizeCounts[b.label]),
+        pct: Math.round((checkSizeCounts[b.label] / totalCheckVotes) * 100)
+      }));
 
-    // Most common for backward compat
-    const avgCheckSize = checkSizeDistribution.length > 0 ? checkSizeDistribution[0].name : 'Not enough data';
+    const avgCheckSize = checkSizeDistribution
+      .filter(c => c.count > 0)
+      .sort((a, b) => b.count - a.count)[0]?.label || 'Not enough data';
 
     // ---- AGGREGATE: Top Goals ----
     const goalCounts = {};
@@ -296,6 +317,8 @@ export default async function handler(req, res) {
       avgCheckSize,
       checkSizeDistribution,
       topGoals,
+      operatorPreferences,
+      operatorSizePrefs,
       totalInvestors,
       gpAssetClasses: [...gpAssetClasses]
     });

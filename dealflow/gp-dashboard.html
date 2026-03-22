@@ -3263,26 +3263,38 @@ function renderInvestorInsights(insights) {
   if (hasDistributions || hasGoals) {
     html += '<div class="insights-two-col">';
 
-    // LEFT: Distribution Preferences — Stacked bar
+    // LEFT: Distribution Preferences — Donut chart
     if (hasDistributions) {
       html += '<div>';
       html += '<div class="insights-sub-title">Distribution Preferences</div>';
-      html += '<div class="dist-stacked-bar">';
+
+      var distGradStops = [];
+      var distCum = 0;
       insights.preferredDistributions.forEach(function(item, idx) {
         var color = DIST_COLORS[idx % DIST_COLORS.length];
-        var label = item.pct >= 12 ? (escHtml(item.name) + ' ' + item.pct + '%') : '';
-        html += '<div class="dist-stacked-seg" style="flex:' + item.pct + ';background:' + color + ';">' + label + '</div>';
+        distGradStops.push(color + ' ' + distCum + '%');
+        distCum += item.pct;
+        distGradStops.push(color + ' ' + distCum + '%');
       });
-      html += '</div>';
-      // Legend below for narrow segments
-      html += '<div class="dist-stacked-labels">';
+      var distDonutStyle = 'background: conic-gradient(' + distGradStops.join(', ') + ');';
+
+      html += '<div class="goals-donut-wrap">';
+      html += '<div class="goals-donut" style="' + distDonutStyle + '">' +
+        '<div class="goals-donut-center">' +
+          '<div class="goals-donut-center-value" style="font-size:16px;">' + insights.preferredDistributions[0].pct + '%</div>' +
+          '<div class="goals-donut-center-label">' + escHtml(insights.preferredDistributions[0].name) + '</div>' +
+        '</div>' +
+      '</div>';
+      html += '<div class="goals-legend">';
       insights.preferredDistributions.forEach(function(item, idx) {
         var color = DIST_COLORS[idx % DIST_COLORS.length];
-        html += '<div class="insights-donut-item">' +
-          '<span class="insights-donut-swatch" style="background:' + color + ';"></span>' +
-          escHtml(item.name) + ' <span class="insights-donut-pct">' + item.pct + '%</span>' +
+        html += '<div class="goals-legend-item">' +
+          '<span class="goals-legend-swatch" style="background:' + color + ';"></span>' +
+          escHtml(item.name) +
+          '<span class="goals-legend-pct">' + item.pct + '%</span>' +
         '</div>';
       });
+      html += '</div>';
       html += '</div>';
       html += '</div>';
     }
@@ -3329,24 +3341,23 @@ function renderInvestorInsights(insights) {
     html += '</div>'; // insights-two-col
   }
 
-  // Check Size + Deal Types — side by side
+  // Row: Max Check Size (vertical bar histogram) + Deal Structure (Fund vs Syndication donut)
   html += '<div class="insights-two-col">';
 
-  // LEFT: Check Size Distribution — horizontal bar chart
+  // LEFT: Max Check Size — vertical bar histogram
   html += '<div>';
-  html += '<div class="insights-sub-title">Check Size Distribution</div>';
+  html += '<div class="insights-sub-title">Max Check Size LPs Will Write</div>';
   var csData = insights.checkSizeDistribution || [];
   if (csData.length > 0) {
-    var maxCsPct = Math.max.apply(null, csData.map(function(c) { return c.pct; }));
-    html += '<div class="insights-bar-chart">';
+    var maxCsVal = Math.max.apply(null, csData.map(function(c) { return c.pct; }));
+    html += '<div style="display:flex;align-items:flex-end;gap:6px;height:100px;padding-top:8px;">';
     csData.forEach(function(item) {
-      var barWidth = maxCsPct > 0 ? Math.round((item.pct / maxCsPct) * 100) : 0;
-      html += '<div class="insights-bar-row">' +
-        '<span class="insights-bar-label">' + escHtml(item.name) + '</span>' +
-        '<div class="insights-bar-track">' +
-          '<div class="insights-bar-fill" style="width:' + barWidth + '%;"></div>' +
-        '</div>' +
-        '<span class="insights-bar-pct">' + item.pct + '%</span>' +
+      var barH = maxCsVal > 0 ? Math.max(Math.round((item.pct / maxCsVal) * 90), item.pct > 0 ? 4 : 0) : 0;
+      var barColor = item.pct === maxCsVal && item.pct > 0 ? 'var(--primary)' : 'var(--border)';
+      html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">' +
+        '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);">' + (item.pct > 0 ? item.pct + '%' : '') + '</span>' +
+        '<div style="width:100%;height:' + barH + 'px;background:' + barColor + ';border-radius:4px 4px 0 0;transition:height 0.4s ease;"></div>' +
+        '<span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-secondary);white-space:nowrap;">' + escHtml(item.label) + '</span>' +
       '</div>';
     });
     html += '</div>';
@@ -3355,13 +3366,13 @@ function renderInvestorInsights(insights) {
   }
   html += '</div>';
 
-  // RIGHT: Deal Types — donut chart (same style as goals)
+  // RIGHT: Deal Structure — Fund vs Syndication donut
   html += '<div>';
-  html += '<div class="insights-sub-title">Preferred Deal Types</div>';
+  html += '<div class="insights-sub-title">Deal Structure Preference</div>';
+  var DT_COLORS = ['#2563EB', '#51BE7B', '#CF7A30', '#CA8A04', '#8B5CF6', '#D04040'];
   if (insights.topDealTypes && insights.topDealTypes.length > 0) {
     var dtGradStops = [];
     var dtCum = 0;
-    var DT_COLORS = ['#2563EB', '#51BE7B', '#CF7A30', '#CA8A04', '#8B5CF6', '#D04040'];
     insights.topDealTypes.forEach(function(dt, idx) {
       var color = DT_COLORS[idx % DT_COLORS.length];
       dtGradStops.push(color + ' ' + dtCum + '%');
@@ -3373,8 +3384,8 @@ function renderInvestorInsights(insights) {
     html += '<div class="goals-donut-wrap">';
     html += '<div class="goals-donut" style="' + dtDonutStyle + '">' +
       '<div class="goals-donut-center">' +
-        '<div class="goals-donut-center-value">' + insights.topDealTypes.length + '</div>' +
-        '<div class="goals-donut-center-label">TYPES</div>' +
+        '<div class="goals-donut-center-value" style="font-size:16px;">' + insights.topDealTypes[0].pct + '%</div>' +
+        '<div class="goals-donut-center-label">' + escHtml(insights.topDealTypes[0].name) + '</div>' +
       '</div>' +
     '</div>';
     html += '<div class="goals-legend">';
@@ -3394,6 +3405,53 @@ function renderInvestorInsights(insights) {
   html += '</div>';
 
   html += '</div>'; // insights-two-col
+
+  // Row: Operator Preferences (from buy box — separate from deal structure)
+  var opPrefs = insights.operatorPreferences || [];
+  var opSizePrefs = insights.operatorSizePrefs || [];
+  if (opPrefs.length > 0 || opSizePrefs.length > 0) {
+    html += '<div class="insights-two-col">';
+
+    if (opPrefs.length > 0) {
+      html += '<div>';
+      html += '<div class="insights-sub-title">Preferred Operator Type</div>';
+      var maxOpPct = Math.max.apply(null, opPrefs.map(function(o) { return o.pct; }));
+      html += '<div class="insights-bar-chart">';
+      opPrefs.forEach(function(item) {
+        var barWidth = maxOpPct > 0 ? Math.round((item.pct / maxOpPct) * 100) : 0;
+        html += '<div class="insights-bar-row">' +
+          '<span class="insights-bar-label">' + escHtml(item.name) + '</span>' +
+          '<div class="insights-bar-track">' +
+            '<div class="insights-bar-fill" style="width:' + barWidth + '%;"></div>' +
+          '</div>' +
+          '<span class="insights-bar-pct">' + item.pct + '%</span>' +
+        '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+    }
+
+    if (opSizePrefs.length > 0) {
+      html += '<div>';
+      html += '<div class="insights-sub-title">Preferred Operator Size</div>';
+      var maxSzPct = Math.max.apply(null, opSizePrefs.map(function(o) { return o.pct; }));
+      html += '<div class="insights-bar-chart">';
+      opSizePrefs.forEach(function(item) {
+        var barWidth = maxSzPct > 0 ? Math.round((item.pct / maxSzPct) * 100) : 0;
+        html += '<div class="insights-bar-row">' +
+          '<span class="insights-bar-label">' + escHtml(item.name) + '</span>' +
+          '<div class="insights-bar-track">' +
+            '<div class="insights-bar-fill" style="width:' + barWidth + '%;"></div>' +
+          '</div>' +
+          '<span class="insights-bar-pct">' + item.pct + '%</span>' +
+        '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+    }
+
+    html += '</div>'; // insights-two-col
+  }
 
   // Footer
   html += '<div class="insights-footer">Based on ' + (insights.totalInvestors || 0) + ' investor profiles</div>';
