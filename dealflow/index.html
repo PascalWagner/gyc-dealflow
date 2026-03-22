@@ -21299,6 +21299,7 @@ function renderSchemaPage() {
   const container = document.getElementById('schemaContent');
   if (!container) return;
 
+  try {
   // Gather live stats
   const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
   const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
@@ -21451,8 +21452,8 @@ function renderSchemaPage() {
       { name: 'user_id', type: 'uuid (FK)', example: '' },
       { name: 'goal_type', type: 'enum', example: goals?.type || '' },
       { name: 'current_income', type: 'numeric', example: goals ? '$' + (goals.currentIncome || 0).toLocaleString() : '' },
-      { name: 'target_income', type: 'numeric', example: goals ? '$' + goals.targetIncome.toLocaleString() : '' },
-      { name: 'capital', type: 'numeric', example: goals ? '$' + goals.capital.toLocaleString() : '' },
+      { name: 'target_income', type: 'numeric', example: goals ? '$' + (goals.targetIncome || 0).toLocaleString() : '' },
+      { name: 'capital', type: 'numeric', example: goals ? '$' + (goals.capital || 0).toLocaleString() : '' },
       { name: 'timeline', type: 'integer', example: goals?.timeline || '' },
       { name: 'tax_reduction', type: 'numeric', example: goals ? '$' + (goals.taxReduction || 0).toLocaleString() : '' }
     ], goals ? 1 : 0)}
@@ -21616,6 +21617,10 @@ function renderSchemaPage() {
       </div>
     </div>
   `;
+  } catch(e) {
+    console.error('Schema page render error:', e);
+    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);">Failed to render schema: ' + e.message + '</div>';
+  }
 }
 
 // ========== ADMIN: VIEW AS USER ==========
