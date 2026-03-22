@@ -4741,8 +4741,8 @@ async function renderDeal() {
     heroHtml += '<div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);">';
     heroHtml += '<div style="font-family:var(--font-ui);font-size:12px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Operated by</div>';
     heroHtml += '<a href="sponsor.html?company=' + encodeURIComponent(_heroOp.name) + '" style="display:flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-family:var(--font-ui);font-size:13px;font-weight:600;">';
-    heroHtml += '<div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">' + getInitials(_heroOp.ceo || _heroOp.name) + '</div>';
-    heroHtml += esc(_heroOp.ceo || _heroOp.name);
+    heroHtml += '<div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">' + getInitials(_heroOp.name) + '</div>';
+    heroHtml += esc(_heroOp.name);
     if (_opYears) heroHtml += '<span style="color:rgba(255,255,255,0.4);font-weight:400;font-size:11px;"> · ' + _opYears + '</span>';
     heroHtml += '</a>';
     if (_heroCR) {
@@ -5363,62 +5363,94 @@ async function renderDeal() {
 
     if (!opName) return;
 
-    // Build initials for avatar
-    var initials = opName.split(/\s+/).map(function(w) { return w[0]; }).join('').substring(0, 3).toUpperCase();
+    var _roleDescriptions = {
+      'Sponsor': 'Finds, manages, and operates the investment. They put the deal together and make the day-to-day decisions.',
+      'Operator': 'Manages the property or assets on the ground. Responsible for operations, tenants, and value creation.',
+      'Broker-Dealer': 'A licensed securities firm that helps the fund raise capital from investors. They handle compliance and investor onboarding.',
+      'Capital Raiser': 'Introduces investors to the deal. Works alongside the sponsor to fill the raise.',
+      'Co-Sponsor': 'Partners with the lead sponsor to bring additional expertise, capital, or deal flow.'
+    };
 
     operatorHtml += '<div class="section" style="margin-top:0;">';
     operatorHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">Who\'s Behind the Deal</span></div>';
-    operatorHtml += '<div class="section-body" style="padding:16px 20px;">';
+    operatorHtml += '<div class="section-body" style="padding:0;">';
 
-    // Primary sponsor card
-    operatorHtml += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">';
-    operatorHtml += '<div style="width:48px;height:48px;border-radius:12px;background:var(--teal-deep,#1F5159);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-ui);font-size:14px;font-weight:800;flex-shrink:0;">' + esc(initials) + '</div>';
-    operatorHtml += '<div>';
-    operatorHtml += '<div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text-dark);">' + esc(opName) + '</div>';
-    operatorHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">Sponsor / Operator</div>';
+    // --- Operator / Sponsor ---
+    var opInitials = opName.split(/\s+/).map(function(w) { return w[0]; }).join('').substring(0, 3).toUpperCase();
+    var opType = (primary && primary.type) || 'Sponsor';
+    var opDesc = _roleDescriptions[opType] || _roleDescriptions['Sponsor'];
+
+    operatorHtml += '<div style="padding:16px 20px;border-bottom:1px solid var(--border-light);">';
+    operatorHtml += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">';
+    operatorHtml += '<div style="width:40px;height:40px;border-radius:10px;background:var(--teal-deep,#1F5159);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:800;flex-shrink:0;">' + esc(opInitials) + '</div>';
+    operatorHtml += '<div style="flex:1;min-width:0;">';
+    operatorHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + esc(opName) + '</div>';
+    operatorHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--primary);">' + esc(opType) + '</div>';
     operatorHtml += '</div></div>';
+    operatorHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">' + esc(opDesc) + '</div>';
 
     // Key person
     if (opCeo) {
-      operatorHtml += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-main);border-radius:var(--radius-sm);margin-bottom:8px;">';
-      operatorHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
-      operatorHtml += '<div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + esc(opCeo) + '</div>';
-      operatorHtml += '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">Key Person / Principal</div></div>';
+      operatorHtml += '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;background:var(--bg-main);border-radius:var(--radius-sm);">';
+      operatorHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="14" height="14"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+      operatorHtml += '<span style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-dark);">' + esc(opCeo) + '</span>';
+      operatorHtml += '<span style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">Key Person</span>';
       operatorHtml += '</div>';
     }
 
-    // Entity structure
-    var entities = [];
-    if (deal.issuerEntity) entities.push({ label: 'Issuer', value: deal.issuerEntity });
-    if (deal.gpEntity) entities.push({ label: 'Fund Manager', value: deal.gpEntity });
-    if (deal.sponsorEntity) entities.push({ label: 'Sponsor Entity', value: deal.sponsorEntity });
-    // Show non-primary sponsors (e.g. placing agents)
-    for (var si = 0; si < sponsors.length; si++) {
-      if (!sponsors[si].isPrimary && sponsors[si].name) {
-        var roleLabel = (sponsors[si].type === 'Broker-Dealer') ? 'Placing Agent' : 'Co-Sponsor';
-        entities.push({ label: roleLabel, value: sponsors[si].name });
-      }
+    // Action buttons
+    operatorHtml += '<div style="display:flex;gap:8px;margin-top:10px;">';
+    if (opWebsite) {
+      operatorHtml += '<a href="' + escAttr(opWebsite) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-dark);text-decoration:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>';
     }
-    if (entities.length > 0) {
-      operatorHtml += '<div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:12px;">';
-      for (var ei = 0; ei < entities.length; ei++) {
-        operatorHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-family:var(--font-ui);font-size:11px;">';
-        operatorHtml += '<span style="color:var(--text-muted);font-weight:600;">' + esc(entities[ei].label) + '</span>';
-        operatorHtml += '<span style="color:var(--text-dark);font-weight:500;text-align:right;max-width:60%;">' + esc(entities[ei].value) + '</span>';
+    if (opBooking) {
+      operatorHtml += '<a href="' + escAttr(opBooking) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:700;text-decoration:none;">Request Intro</a>';
+    }
+    operatorHtml += '</div>';
+    operatorHtml += '</div>';
+
+    // --- Additional sponsors (placing agents, capital raisers, co-sponsors) ---
+    for (var si = 0; si < sponsors.length; si++) {
+      if (sponsors[si].isPrimary || !sponsors[si].name) continue;
+      var sp = sponsors[si];
+      var spType = sp.type || 'Co-Sponsor';
+      var spLabel = spType === 'Broker-Dealer' ? 'Placing Agent' : spType;
+      var spDesc = _roleDescriptions[spType] || _roleDescriptions['Co-Sponsor'];
+      var spInitials = sp.name.split(/\s+/).map(function(w) { return w[0]; }).join('').substring(0, 3).toUpperCase();
+
+      operatorHtml += '<div style="padding:14px 20px;border-bottom:1px solid var(--border-light);">';
+      operatorHtml += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">';
+      operatorHtml += '<div style="width:36px;height:36px;border-radius:8px;background:rgba(107,114,128,0.1);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-family:var(--font-ui);font-size:11px;font-weight:800;flex-shrink:0;">' + esc(spInitials) + '</div>';
+      operatorHtml += '<div style="flex:1;min-width:0;">';
+      operatorHtml += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">' + esc(sp.name) + '</div>';
+      operatorHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#3b82f6;">' + esc(spLabel) + '</div>';
+      operatorHtml += '</div></div>';
+      operatorHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">' + esc(spDesc) + '</div>';
+      if (sp.ceo) {
+        operatorHtml += '<div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">';
+        operatorHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+        operatorHtml += esc(sp.ceo);
         operatorHtml += '</div>';
       }
       operatorHtml += '</div>';
     }
 
-    // Action buttons
-    operatorHtml += '<div style="display:flex;gap:8px;margin-top:14px;">';
-    if (opWebsite) {
-      operatorHtml += '<a href="' + escAttr(opWebsite) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-dark);text-decoration:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>';
+    // --- Entity structure (if available) ---
+    var entities = [];
+    if (deal.issuerEntity) entities.push({ label: 'Issuer Entity', value: deal.issuerEntity });
+    if (deal.gpEntity) entities.push({ label: 'Fund Manager', value: deal.gpEntity });
+    if (entities.length > 0) {
+      operatorHtml += '<div style="padding:12px 20px;">';
+      operatorHtml += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Legal Entities</div>';
+      for (var ei = 0; ei < entities.length; ei++) {
+        operatorHtml += '<div style="display:flex;justify-content:space-between;padding:3px 0;font-family:var(--font-ui);font-size:11px;">';
+        operatorHtml += '<span style="color:var(--text-muted);">' + esc(entities[ei].label) + '</span>';
+        operatorHtml += '<span style="color:var(--text-dark);font-weight:500;text-align:right;max-width:55%;">' + esc(entities[ei].value) + '</span>';
+        operatorHtml += '</div>';
+      }
+      operatorHtml += '</div>';
     }
-    if (opBooking) {
-      operatorHtml += '<a href="' + escAttr(opBooking) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:700;text-decoration:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</a>';
-    }
-    operatorHtml += '</div>';
+
     operatorHtml += '</div></div>';
   })();
 
