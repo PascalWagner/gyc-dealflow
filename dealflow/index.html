@@ -6131,7 +6131,7 @@ const _supa = window.supabase.createClient(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;vertical-align:middle"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></polyline></svg>
         Print / Save PDF
       </button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openPlanBuilder()">Edit Plan</button>
+      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openBuyBoxWizard()">Edit Preferences</button>
       </span>
     </div>
     <div class="report-page" id="reportContent">
@@ -14857,7 +14857,7 @@ function renderReport() {
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Target</div>'
     + '<div class="bb-goal-line">' + goalLine + '</div>'
     + '</div>'
-    + '<button class="bb-edit-link" onclick="openPlanBuilder()">Edit</button>'
+    + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Thesis</div>'
     + '<div class="bb-thesis">' + thesisText + '</div>'
