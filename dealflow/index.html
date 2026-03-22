@@ -6130,7 +6130,7 @@ const _supa = window.supabase.createClient(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;vertical-align:middle"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></polyline></svg>
         Print / Save PDF
       </button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openBuyBoxWizard()">Edit Plan</button>
+      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openPlanBuilder()">Edit Plan</button>
       </span>
     </div>
     <div class="report-page" id="reportContent">
@@ -9084,6 +9084,19 @@ function toggleCompareExtraField(fieldId, isOn) {
   renderComparePage();
 }
 
+function toggleDecisionFieldPicker() {
+  var picker = document.getElementById('decisionFieldPicker');
+  if (picker) picker.classList.toggle('open');
+}
+function toggleDecisionExtraField(fieldId, isOn) {
+  var extras = [];
+  try { extras = JSON.parse(localStorage.getItem('gycDecisionExtras') || '[]'); } catch(e) {}
+  if (isOn && extras.indexOf(fieldId) < 0) extras.push(fieldId);
+  if (!isOn) extras = extras.filter(function(id) { return id !== fieldId; });
+  localStorage.setItem('gycDecisionExtras', JSON.stringify(extras));
+  renderDecisionCompare();
+}
+
 // --- Decision Compare Table (embedded in Decision tab) ---
 var MAX_DECISION_COMPARE = 4;
 
@@ -9253,6 +9266,47 @@ function renderDecisionCompare() {
   h += cmpRow('Minimum', deals.map(function(d) { return d.investmentMinimum; }), 'money', false);
   h += cmpRow('Hold Period', deals.map(function(d) { return d.holdPeriod; }), 'yr', false);
   h += cmpRow('Leverage', deals.map(function(d) { return d.avgLoanLTV || d.leverage; }), 'pct', false);
+
+  // --- Optional Extra Fields ---
+  var decisionExtraFields = [
+    { id: 'distributions', label: 'Distributions', render: function() { return cmpTextRow('Distributions', deals.map(function(d) { return d.distributions; })); } },
+    { id: 'strategy', label: 'Strategy', render: function() { return cmpTextRow('Strategy', deals.map(function(d) { return d.investmentStrategy || d.strategy; })); } },
+    { id: 'dealType', label: 'Deal Type', render: function() { return cmpTextRow('Deal Type', deals.map(function(d) { return d.dealType; })); } },
+    { id: 'geography', label: 'Geography', render: function() { return cmpTextRow('Geography', deals.map(function(d) { return d.investingGeography || d.location; })); } },
+    { id: 'sponsorCoInvest', label: 'Sponsor Co-Invest', render: function() { return cmpRow('Sponsor Co-Invest', deals.map(function(d) { return d.sponsorInDeal; }), 'pct', true); } },
+    { id: 'lpGpSplit', label: 'LP/GP Split', render: function() { return cmpTextRow('LP/GP Split', deals.map(function(d) { return d.lpGpSplit; })); } },
+    { id: 'offeringSize', label: 'Offering Size', render: function() { return cmpRow('Offering Size', deals.map(function(d) { return d.offeringSize; }), 'money', false); } },
+    { id: 'sponsorAUM', label: 'Sponsor AUM', render: function() { return cmpRow('Sponsor AUM', deals.map(function(d) { return d.fundAUM; }), 'money', true); } },
+    { id: 'financials', label: 'Financials', render: function() { return cmpTextRow('Financials', deals.map(function(d) { return d.financials; })); } },
+    { id: 'offeringType', label: 'Offering Type', render: function() { return cmpTextRow('Offering Type', deals.map(function(d) { return d.offeringType; })); } },
+    { id: 'availableTo', label: 'Available To', render: function() { return cmpTextRow('Available To', deals.map(function(d) { return d.availableTo; })); } },
+    { id: 'status', label: 'Status', render: function() { return cmpTextRow('Status', deals.map(function(d) { return d.status; })); } }
+  ];
+
+  var decisionActiveExtras = [];
+  try { decisionActiveExtras = JSON.parse(localStorage.getItem('gycDecisionExtras') || '[]'); } catch(e) {}
+
+  if (decisionActiveExtras.length > 0) {
+    h += cmpSection('Additional');
+    decisionExtraFields.forEach(function(f) {
+      if (decisionActiveExtras.indexOf(f.id) >= 0) h += f.render();
+    });
+  }
+
+  // "Add fields" toggle row
+  h += '<tr><td colspan="' + (cols + 1) + '" style="padding:8px 14px;border-bottom:none;">';
+  h += '<div class="compare-add-fields">';
+  h += '<button class="compare-add-fields-btn" onclick="toggleDecisionFieldPicker()">';
+  h += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+  h += ' Add / remove fields</button>';
+  h += '<div class="compare-field-picker" id="decisionFieldPicker">';
+  decisionExtraFields.forEach(function(f) {
+    var isOn = decisionActiveExtras.indexOf(f.id) >= 0;
+    h += '<label class="compare-field-option">';
+    h += '<input type="checkbox" ' + (isOn ? 'checked' : '') + ' onchange="toggleDecisionExtraField(\'' + f.id + '\', this.checked)">';
+    h += '<span>' + f.label + '</span></label>';
+  });
+  h += '</div></div></td></tr>';
 
   // Actions (horizontal layout)
   h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Actions</td>';
@@ -13048,7 +13102,7 @@ const STRATEGY_OPTIONS = {
   }
 };
 
-function openBuyBoxWizard() {
+function openBuyBoxWizard(jumpToPlan) {
   // Gate wizard for free users
   var _wzUser = getUser();
   var _wzTier = (_wzUser && _wzUser.tier) || 'free';
@@ -13065,8 +13119,22 @@ function openBuyBoxWizard() {
     wizardData.firstName = user.firstName || (user.name || '').split(' ')[0] || '';
     wizardData.lastName = user.lastName || (user.name || '').split(' ').slice(1).join(' ') || '';
   }
+  // Jump directly to plan builder step if requested
+  if (jumpToPlan && wizardData._branch) {
+    var seq = getStepSequence();
+    for (var i = 0; i < seq.length; i++) {
+      if (WIZARD_STEPS[seq[i]].type === 'planOutput' && WIZARD_STEPS[seq[i]].branch === wizardData._branch) {
+        wizardStepIndex = i;
+        break;
+      }
+    }
+  }
   document.getElementById('wizardOverlay').classList.add('active');
   renderWizardStep();
+}
+
+function openPlanBuilder() {
+  openBuyBoxWizard(true);
 }
 
 function closeWizard() {
@@ -14903,7 +14971,7 @@ function renderReport() {
   if (planData) {
     var _rpPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
     var _rpStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-    blueprintHtml = buildDashBlueprint(planData, _rpPortfolio, allDeals, _rpStages);
+    blueprintHtml = buildDashBlueprint(planData, _rpPortfolio, allDeals, _rpStages, true);
   }
 
   // ===== RENDER =====
@@ -22523,75 +22591,117 @@ function getMatchingDealsForSlot(slot, deals, stages) {
   });
 }
 
-function buildDashBlueprint(plan, portfolio, deals, stages) {
+function buildDashBlueprint(plan, portfolio, deals, stages, fullMode) {
   if (!plan) return '';
   var slots = plan.slots || plan.buckets || [];
-  if (!slots.length || !slots[0].asset_class) return ''; // Not slot-based data
+  if (!slots.length || !slots[0].asset_class) return '';
   var totalSlots = slots.length;
   var filledSlots = slots.filter(function(s) { return s.filled_by; }).length;
   var totalEstIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
   var filledIncome = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
   var targetIncome = plan.target_income || totalEstIncome;
+  var blendedPct = slots.length > 0 ? Math.round(slots.reduce(function(s, sl) { return s + (sl.target_coc || 0); }, 0) / slots.length * 100) : 8;
 
-  // Build roster table rows
-  var rowsHtml = slots.map(function(slot, i) {
-    var isFilled = !!slot.filled_by;
-    var fillName = slot.filled_name || '';
-    var cocPct = Math.round((slot.target_coc || 0) * 100);
-    var yearLabel = slot.year ? String(slot.year) : '';
+  // Full mode: show complete roster grouped by year (for My Plan tab)
+  if (fullMode) {
+    var currentYear = new Date().getFullYear();
+    var slotsByYear = {};
+    slots.forEach(function(s) { var yr = s.year || currentYear; if (!slotsByYear[yr]) slotsByYear[yr] = []; slotsByYear[yr].push(s); });
+    var years = Object.keys(slotsByYear).sort();
+    var cumulativeIncome = 0;
+    var rosterHtml = '<div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;">';
+    years.forEach(function(yr, yi) {
+      var yearSlots = slotsByYear[yr];
+      var yearIncome = yearSlots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+      cumulativeIncome += yearIncome;
+      var pctOfGoal = targetIncome > 0 ? Math.min(100, Math.round(cumulativeIncome / targetIncome * 100)) : 0;
+      rosterHtml += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-card);border-bottom:1px solid var(--border);' + (yi > 0 ? 'border-top:1px solid var(--border);' : '') + '">'
+        + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">Year ' + (yi + 1) + ' <span style="font-weight:400;color:var(--text-muted);">(' + yr + ')</span></div>'
+        + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--primary);font-weight:600;">$' + cumulativeIncome.toLocaleString() + '/yr <span style="color:var(--text-muted);font-weight:400;">' + pctOfGoal + '%</span></div></div>';
+      yearSlots.forEach(function(slot) {
+        var isFilled = !!slot.filled_by;
+        var cocPct = Math.round((slot.target_coc || 0) * 100);
+        if (isFilled) {
+          rosterHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);">'
+            + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;"></span>'
+            + '<div style="flex:1;min-width:0;"><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">' + (slot.filled_name || 'Investment') + '</div>'
+            + '<div style="font-size:11px;color:var(--text-muted);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; $' + (slot.est_income || 0).toLocaleString() + '/yr</div></div></div>';
+        } else {
+          var matchCount = deals ? getMatchingDealsForSlot(slot, deals, stages).length : 0;
+          rosterHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);font-size:13px;">'
+            + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;box-sizing:border-box;"></span>'
+            + '<div style="flex:1;color:var(--text-secondary);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; ~' + cocPct + '% &middot; ~$' + (slot.est_income || 0).toLocaleString() + '/yr'
+            + (matchCount > 0 ? ' <span style="color:var(--primary);font-size:11px;">' + matchCount + ' matches</span>' : '') + '</div></div>';
+        }
+      });
+    });
+    rosterHtml += '<div style="display:flex;justify-content:space-between;padding:10px 16px;font-family:var(--font-ui);font-size:12px;font-weight:700;background:var(--bg-card);">'
+      + '<span style="color:var(--text-muted);">' + totalSlots + ' deals &times; $' + (plan.check_size || 100000).toLocaleString() + ' &middot; ~' + blendedPct + '% avg yield</span>'
+      + '<span style="color:var(--primary);">$' + totalEstIncome.toLocaleString() + '/yr</span></div>';
+    rosterHtml += '</div>';
 
-    if (isFilled) {
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
-        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;"></span>'
-        + '<div style="flex:1;min-width:0;">'
-        + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + fillName + '</div>'
-        + '<div style="font-size:11px;color:var(--text-muted);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; ' + cocPct + '% CoC &middot; $' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
-        + '</div>'
-        + '</div>';
-    } else {
-      var matchCount = deals ? getMatchingDealsForSlot(slot, deals, stages).length : 0;
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
-        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;box-sizing:border-box;"></span>'
-        + '<div style="flex:1;min-width:0;">'
-        + '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; ~' + cocPct + '% CoC &middot; ~$' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
-        + (matchCount > 0 ? '<div style="font-size:11px;color:var(--primary);margin-top:2px;">' + matchCount + ' matching deal' + (matchCount !== 1 ? 's' : '') + '</div>' : '')
-        + '</div>'
-        + (yearLabel ? '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);flex-shrink:0;">' + yearLabel + '</div>' : '')
-        + '</div>';
-    }
-  }).join('');
-
-  // Next unfilled slot
-  var nextSlot = slots.find(function(s) { return !s.filled_by; });
-  var nextSlotHtml = '';
-  if (nextSlot && deals) {
-    var matching = getMatchingDealsForSlot(nextSlot, deals, stages);
-    nextSlotHtml = '<div style="margin-top:16px;padding:14px 18px;background:linear-gradient(135deg,rgba(81,190,123,0.06),rgba(37,99,235,0.06));border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
-      + '<div style="flex:1;min-width:200px;">'
-      + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Next Investment</div>'
-      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;"><strong>' + nextSlot.asset_class + '</strong> &middot; $' + (nextSlot.check_size || 0).toLocaleString() + ' &middot; ~' + Math.round((nextSlot.target_coc || 0) * 100) + '% CoC</div>'
-      + '<div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:4px;">' + matching.length + ' deal' + (matching.length !== 1 ? 's' : '') + ' match</div>'
+    return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow-card);">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+      + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Your Investment Plan</div>'
+      + '<button onclick="openPlanBuilder()" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;">Edit Plan</button>'
       + '</div>'
-      + '<button onclick="navigateTo(\'deals\')" style="flex-shrink:0;padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">View Matching Deals &rarr;</button>'
+      + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);margin-bottom:14px;"><strong>' + filledSlots + ' of ' + totalSlots + '</strong> investments &middot; <strong style="color:var(--primary);">$' + filledIncome.toLocaleString() + '</strong> of $' + targetIncome.toLocaleString() + '/yr</div>'
+      + rosterHtml
       + '</div>';
   }
 
-  // Summary
-  var blendedPct = plan.blended_coc ? Math.round(plan.blended_coc * 100) : Math.round(slots.reduce(function(s, sl) { return s + (sl.target_coc || 0); }, 0) / slots.length * 100);
+  // Progress bar
+  var progressPct = targetIncome > 0 ? Math.min(100, Math.round(filledIncome / targetIncome * 100)) : 0;
+  var yearsToGoal = 0;
+  if (slots.length > 0) {
+    var dpy = plan.deals_per_year || 1;
+    yearsToGoal = Math.ceil((totalSlots - filledSlots) / dpy);
+  }
+
+  // Only show filled slots (compact list of what they've done)
+  var filledHtml = '';
+  var filledItems = slots.filter(function(s) { return s.filled_by; });
+  if (filledItems.length > 0) {
+    filledHtml = filledItems.map(function(slot) {
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">'
+        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;"></span>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (slot.filled_name || 'Investment') + '</div>'
+        + '<div style="font-size:11px;color:var(--text-muted);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; $' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  // Next unfilled slot — the primary action
+  var nextSlot = slots.find(function(s) { return !s.filled_by; });
+  var nextSlotHtml = '';
+  if (nextSlot) {
+    var cocPct = Math.round((nextSlot.target_coc || 0) * 100);
+    var matchCount = deals ? getMatchingDealsForSlot(nextSlot, deals, stages).length : 0;
+    nextSlotHtml = '<div style="padding:14px 18px;background:linear-gradient(135deg,rgba(81,190,123,0.06),rgba(37,99,235,0.06));border:1px solid var(--border);border-radius:var(--radius-sm);">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
+      + '<div style="flex:1;min-width:180px;">'
+      + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Next Investment</div>'
+      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;"><strong>' + nextSlot.asset_class + '</strong> &middot; $' + (nextSlot.check_size || 0).toLocaleString() + ' &middot; ~' + cocPct + '% CoC &middot; ~$' + (nextSlot.est_income || 0).toLocaleString() + '/yr</div>'
+      + (matchCount > 0 ? '<div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:4px;">' + matchCount + ' deal' + (matchCount !== 1 ? 's' : '') + ' match</div>' : '')
+      + '</div>'
+      + '<button onclick="navigateTo(\'deals\')" style="flex-shrink:0;padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Browse Deals &rarr;</button>'
+      + '</div></div>';
+  }
 
   return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow-card);">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
-    + '<div>'
-    + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Your Investment Plan</div>'
-    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">' + filledSlots + ' of ' + totalSlots + ' investments &middot; $' + filledIncome.toLocaleString() + ' of $' + targetIncome.toLocaleString() + '/yr</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
+    + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Your Investment Plan</div>'
+    + '<button onclick="openPlanBuilder()" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;">Edit Plan</button>'
     + '</div>'
-    + '<button onclick="openBuyBoxWizard()" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;">Edit Plan</button>'
-    + '</div>'
-    + '<div>' + rowsHtml + '</div>'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;font-family:var(--font-ui);font-size:12px;font-weight:700;">'
-    + '<span style="color:var(--text-muted);">Total: ' + totalSlots + ' deals &times; $' + (plan.check_size || 100000).toLocaleString() + ' avg &middot; ~' + blendedPct + '% blended CoC</span>'
-    + '<span style="color:var(--primary);">$' + totalEstIncome.toLocaleString() + '/yr</span>'
-    + '</div>'
+    // Compact summary line
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-dark);margin-bottom:4px;"><strong>' + filledSlots + ' of ' + totalSlots + '</strong> investments &middot; <strong style="color:var(--primary);">$' + filledIncome.toLocaleString() + '</strong> of $' + targetIncome.toLocaleString() + '/yr</div>'
+    + '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-bottom:14px;">' + totalSlots + ' deals &times; $' + (plan.check_size || 100000).toLocaleString() + ' &middot; ~' + blendedPct + '% avg yield' + (yearsToGoal > 0 ? ' &middot; ~' + yearsToGoal + ' yr to goal' : '') + '</div>'
+    // Progress bar
+    + '<div style="height:8px;background:var(--border-light);border-radius:4px;overflow:hidden;margin-bottom:16px;"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:4px;width:' + progressPct + '%;' + (progressPct > 0 ? 'min-width:4px;' : '') + '"></div></div>'
+    // Filled investments (if any)
+    + filledHtml
+    // Next slot CTA
     + nextSlotHtml
     + '</div>';
 }
