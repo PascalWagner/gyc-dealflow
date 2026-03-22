@@ -5590,6 +5590,29 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 .dash-tab { background:none; border:none; border-bottom:2px solid transparent; padding:0 16px; font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap; transition:color 0.15s,border-color 0.15s; }
 .dash-tab:hover { color:var(--text-dark); }
 .dash-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+/* Feedback styles */
+.feedback-filters { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.feedback-filter-btn { font-family:var(--font-ui); font-size:12px; font-weight:600; padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); cursor:pointer; transition:all var(--transition); }
+.feedback-filter-btn:hover { border-color:var(--primary); color:var(--primary); }
+.feedback-filter-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.feedback-item { display:flex; gap:14px; padding:16px 0; border-bottom:1px solid var(--border-light); }
+.feedback-item:last-child { border-bottom:none; }
+.feedback-avatar { width:36px; height:36px; border-radius:50%; background:var(--mint-bg); color:var(--primary); font-family:var(--font-ui); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.feedback-body { flex:1; min-width:0; }
+.feedback-meta { display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap; }
+.feedback-name { font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--text-dark); }
+.feedback-email { font-size:12px; color:var(--text-muted); }
+.feedback-time { font-size:12px; color:var(--text-muted); margin-left:auto; }
+.feedback-type-badge { font-family:var(--font-ui); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; padding:2px 8px; border-radius:10px; }
+.feedback-type-bug { background:var(--red-bg); color:var(--red); }
+.feedback-type-feature { background:var(--blue-bg); color:var(--blue); }
+.feedback-type-question { background:var(--yellow-bg); color:var(--yellow); }
+.feedback-type-other { background:#f3f4f6; color:#6b7280; }
+.feedback-message { font-size:14px; line-height:1.6; color:var(--text-dark); margin-top:6px; white-space:pre-wrap; word-break:break-word; }
+.feedback-screenshot-thumb { display:inline-block; margin-top:10px; width:80px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border); cursor:pointer; transition:opacity var(--transition); }
+.feedback-screenshot-thumb:hover { opacity:0.8; }
+.feedback-empty { text-align:center; padding:40px 20px; color:var(--text-muted); font-size:14px; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -6933,6 +6956,7 @@ const _supa = window.supabase.createClient(
         <button class="growth-tab-btn" data-tab="devnotes" onclick="switchAdminDashTab('devnotes')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Dev Notes</button>
         <button class="growth-tab-btn" data-tab="network" onclick="switchAdminDashTab('network')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Network &amp; Moat</button>
         <button class="growth-tab-btn" data-tab="transactions" onclick="switchAdminDashTab('transactions')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Transactions</button>
+        <button class="growth-tab-btn" data-tab="feedback" onclick="switchAdminDashTab('feedback')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Feedback</button>
       </div>
 
       <!-- TAB: Growth Dashboard -->
@@ -7553,6 +7577,27 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
       </div>
+
+      <!-- TAB: User Feedback -->
+      <div id="admindash-tab-feedback" style="display:none;">
+        <div class="settings-page-desc" style="margin-top:0;">User-submitted feedback from across the platform. Review bugs, feature requests, and questions.</div>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">User Feedback</div>
+            <span class="section-badge" id="adminFeedbackCount">0</span>
+          </div>
+          <div class="section-body">
+            <div class="feedback-filters" id="adminFeedbackFilters">
+              <button class="feedback-filter-btn active" data-type="all" onclick="filterAdminFeedback('all')">All</button>
+              <button class="feedback-filter-btn" data-type="bug" onclick="filterAdminFeedback('bug')">Bugs</button>
+              <button class="feedback-filter-btn" data-type="feature" onclick="filterAdminFeedback('feature')">Features</button>
+              <button class="feedback-filter-btn" data-type="question" onclick="filterAdminFeedback('question')">Questions</button>
+            </div>
+            <div id="adminFeedbackList"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -22672,7 +22717,7 @@ function switchAdminDashTab(tab) {
       btn.style.color = 'var(--text-secondary)';
     }
   });
-  ['growth', 'analytics', 'schema', 'devnotes', 'network', 'transactions'].forEach(function(t) {
+  ['growth', 'analytics', 'schema', 'devnotes', 'network', 'transactions', 'feedback'].forEach(function(t) {
     var el = document.getElementById('admindash-tab-' + t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
@@ -22680,9 +22725,107 @@ function switchAdminDashTab(tab) {
   if (tab === 'analytics') refreshAnalyticsDashboard();
   if (tab === 'schema') renderSchemaPage();
   if (tab === 'network') renderNetworkMoat();
+  if (tab === 'feedback') fetchAndRenderAdminFeedback();
   // Show Clear Data button only on analytics tab
   var clearBtn = document.getElementById('admindashClearBtn');
   if (clearBtn) clearBtn.style.display = (tab === 'analytics') ? 'inline-block' : 'none';
+}
+
+// ========== USER FEEDBACK (Admin Dashboard) ==========
+var _adminFeedbackItems = [];
+var _adminFeedbackFilter = 'all';
+
+function fetchAndRenderAdminFeedback() {
+  var user = getUser();
+  fetch('/api/admin-feedback?limit=100', {
+    headers: { 'Authorization': 'Bearer ' + (user && user.token) }
+  })
+  .then(function(r) { return r.ok ? r.json() : { feedback: [] }; })
+  .then(function(data) {
+    _adminFeedbackItems = data.feedback || [];
+    document.getElementById('adminFeedbackCount').textContent = _adminFeedbackItems.length;
+    applyAdminFeedbackFilter();
+  })
+  .catch(function() {
+    _adminFeedbackItems = [];
+    applyAdminFeedbackFilter();
+  });
+}
+
+function adminFeedbackTimeAgo(dateStr) {
+  var now = Date.now();
+  var then = new Date(dateStr).getTime();
+  var diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function adminFeedbackEscHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function adminFeedbackGetInitials(name) {
+  if (!name) return '?';
+  var parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+}
+
+function applyAdminFeedbackFilter() {
+  var items = _adminFeedbackItems;
+  var filter = _adminFeedbackFilter;
+  if (filter !== 'all') {
+    items = items.filter(function(f) { return f.type === filter; });
+  }
+
+  var container = document.getElementById('adminFeedbackList');
+  if (!container) return;
+  if (items.length === 0) {
+    container.innerHTML = '<div class="feedback-empty">No feedback' + (filter !== 'all' ? ' of this type' : '') + ' yet.</div>';
+    return;
+  }
+
+  var html = '';
+  items.forEach(function(f) {
+    var initials = adminFeedbackGetInitials(f.user_name || f.user_email);
+    var typeCls = 'feedback-type-' + (f.type || 'other');
+    var typeLabel = { bug: 'Bug', feature: 'Feature', question: 'Question', other: 'Other' }[f.type] || f.type;
+    var name = f.user_name || 'Anonymous';
+    var email = f.user_email || '';
+    var msg = f.message || '';
+
+    html += '<div class="feedback-item">';
+    html += '<div class="feedback-avatar">' + initials + '</div>';
+    html += '<div class="feedback-body">';
+    html += '<div class="feedback-meta">';
+    html += '<span class="feedback-name">' + adminFeedbackEscHtml(name) + '</span>';
+    if (email && email !== 'anonymous') html += '<span class="feedback-email">' + adminFeedbackEscHtml(email) + '</span>';
+    html += '<span class="feedback-type-badge ' + typeCls + '">' + typeLabel + '</span>';
+    html += '<span class="feedback-time">' + adminFeedbackTimeAgo(f.created_at) + '</span>';
+    html += '</div>';
+    html += '<div class="feedback-message">' + adminFeedbackEscHtml(msg) + '</div>';
+    if (f.screenshot_url) {
+      html += '<a href="' + f.screenshot_url + '" target="_blank" rel="noopener"><img class="feedback-screenshot-thumb" src="' + f.screenshot_url + '" alt="Screenshot" /></a>';
+    }
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function filterAdminFeedback(type) {
+  _adminFeedbackFilter = type;
+  var btns = document.querySelectorAll('#adminFeedbackFilters .feedback-filter-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-type') === type);
+  });
+  applyAdminFeedbackFilter();
 }
 
 // ========== DATABASE SCHEMA PAGE ==========
