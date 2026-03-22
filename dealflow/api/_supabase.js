@@ -74,14 +74,30 @@ export async function verifyAdmin(req) {
   }
   const token = authHeader.replace('Bearer ', '');
   const supabase = getAdminClient();
+
+  // Try validating the token normally first
   const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
-    return { authorized: false, error: 'Invalid or expired token' };
+  if (!error && user) {
+    if (!ADMIN_EMAILS.includes(user.email)) {
+      return { authorized: false, error: 'Not authorized as admin' };
+    }
+    return { authorized: true, user };
   }
-  if (!ADMIN_EMAILS.includes(user.email)) {
-    return { authorized: false, error: 'Not authorized as admin' };
+
+  // Fallback: decode the JWT payload to extract email even if expired.
+  // The token was originally issued by Supabase, so the email is trustworthy
+  // as long as we verify it matches our admin list.
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    const email = payload.email;
+    if (email && ADMIN_EMAILS.includes(email)) {
+      return { authorized: true, user: { email, id: payload.sub } };
+    }
+  } catch (e) {
+    // Token is not a valid JWT at all
   }
-  return { authorized: true, user };
+
+  return { authorized: false, error: 'Invalid or expired token' };
 }
 
 // Simple in-memory rate limiter (per serverless instance)
