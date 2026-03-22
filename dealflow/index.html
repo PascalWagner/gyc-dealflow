@@ -5330,11 +5330,6 @@ const _supa = window.supabase.createClient(
         </button>
       </div>
     </div>
-    <div class="office-hours-banner">
-      <div class="office-hours-pulse"></div>
-      <div class="office-hours-text">Live Office Hours every <span>Thursday 12-1pm ET</span> - Get your deals reviewed by Pascal</div>
-      <button class="office-hours-join" onclick="window.open('http://growyourcashflow.io/introcall','_blank');if(typeof trackActivity==='function')trackActivity('booked_onboarding',{})">Join This Week</button>
-    </div>
     <div class="filter-bar">
       <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
         <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
@@ -5387,7 +5382,7 @@ const _supa = window.supabase.createClient(
       </label>
       <button class="filter-clear" onclick="clearFilters()">Clear Filters</button>
       <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
-      <div class="filter-count"><span id="visibleCount">0</span> deals</div>
+      <span id="visibleCount" style="display:none;">0</span>
     </div>
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
@@ -5403,9 +5398,8 @@ const _supa = window.supabase.createClient(
       </button>
     </div>
     <div class="content-area">
-      <div id="dealsMilestoneChecklist"></div>
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
-      <div class="card-grid" id="cardGrid"></div>
+      <div class="card-grid" id="cardGrid"><div id="dealsMilestoneChecklist" style="display:contents;"></div></div>
       <!-- Mobile Swipe Feed -->
       <div class="swipe-feed-container" id="swipeFeedContainer">
         <div class="swipe-counter" id="swipeCounter"></div>
@@ -21321,7 +21315,7 @@ function renderMilestoneTracker() {
 
   let foundNext = false;
 
-  let html = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;box-shadow:var(--shadow-card);">'
+  let html = '<div class="deal-card" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-card);">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">'
     + '<div>'
     + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);">Get Started</div>'
