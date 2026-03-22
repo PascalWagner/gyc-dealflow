@@ -350,16 +350,22 @@ async function handlePost(req, res, supabase, user) {
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
   }
 
-  // Handle notif_prefs: update user_profiles.notif_frequency directly
+  // Handle notif_prefs: update user_profiles.notif_frequency + sync GHL tag
   if (type === 'notif_prefs') {
     const freq = data.frequency === 'off' ? 'off' : 'weekly';
     const { data: updated, error } = await supabase
       .from('user_profiles')
       .update({ notif_frequency: freq })
       .eq('id', user.id)
-      .select('notif_frequency')
+      .select('notif_frequency, email')
       .single();
     if (error) throw error;
+
+    // Background sync to GHL: add/remove deal alert frequency tags
+    syncNotifFreqToGhl(updated.email || user.email, freq).catch(e =>
+      console.warn('GHL notif freq sync failed:', e.message)
+    );
+
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
   }
 
@@ -471,4 +477,43 @@ async function handleDelete(req, res, supabase, user) {
     type,
     deletedAt: new Date().toISOString()
   });
+}
+
+// Sync deal alert frequency to GHL as tags
+async function syncNotifFreqToGhl(email, freq) {
+  if (!email) return;
+
+  const TAG_WEEKLY = 'Deal Alerts - Weekly';
+  const TAG_OFF = 'Deal Alerts - Off';
+
+  // Find contact by email
+  const searchResp = await ghlFetch(
+    `https://services.leadconnectorhq.com/contacts/search/duplicate?email=${encodeURIComponent(email)}&locationId=${process.env.GHL_LOCATION_ID || process.env.GHL_LOCATION}`,
+    { method: 'GET' }
+  );
+
+  if (!searchResp || !searchResp.ok) return;
+  const searchData = await searchResp.json();
+  const contact = searchData.contact;
+  if (!contact?.id) return;
+
+  const existingTags = contact.tags || [];
+  const addTag = freq === 'weekly' ? TAG_WEEKLY : TAG_OFF;
+  const removeTag = freq === 'weekly' ? TAG_OFF : TAG_WEEKLY;
+
+  // Remove the opposite tag if present
+  if (existingTags.includes(removeTag)) {
+    await ghlFetch(
+      `https://services.leadconnectorhq.com/contacts/${contact.id}/tags`,
+      { method: 'DELETE', body: JSON.stringify({ tags: [removeTag] }) }
+    ).catch(() => {});
+  }
+
+  // Add the correct tag
+  if (!existingTags.includes(addTag)) {
+    await ghlFetch(
+      `https://services.leadconnectorhq.com/contacts/${contact.id}/tags`,
+      { method: 'POST', body: JSON.stringify({ tags: [addTag] }) }
+    );
+  }
 }
