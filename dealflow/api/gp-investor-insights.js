@@ -130,10 +130,24 @@ export default async function handler(req, res) {
     // ---- AGGREGATE: Top Deal Types ----
     const dealTypeCounts = {};
 
-    // From buy box deal_structure field
+    // From buy box deal_structure field (can be string, array, or JSON-encoded array)
     for (const bb of completedBuyBoxes) {
       if (bb.deal_structure) {
-        dealTypeCounts[bb.deal_structure] = (dealTypeCounts[bb.deal_structure] || 0) + 1;
+        let structures = bb.deal_structure;
+        // Parse if it's a JSON string
+        if (typeof structures === 'string') {
+          try { structures = JSON.parse(structures); } catch (e) { /* keep as string */ }
+        }
+        // Handle array of structures
+        if (Array.isArray(structures)) {
+          for (const s of structures) {
+            if (s && typeof s === 'string') {
+              dealTypeCounts[s] = (dealTypeCounts[s] || 0) + 1;
+            }
+          }
+        } else if (typeof structures === 'string') {
+          dealTypeCounts[structures] = (dealTypeCounts[structures] || 0) + 1;
+        }
       }
     }
 
@@ -199,32 +213,49 @@ export default async function handler(req, res) {
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 5);
 
-    // ---- AGGREGATE: Average Check Size ----
-    const checkSizes = completedBuyBoxes
-      .map(bb => bb.check_size)
-      .filter(Boolean);
+    // ---- AGGREGATE: Check Size Distribution ----
+    const checkSizeRanges = {};
 
-    // Also consider capital_available from goals
-    const capitalAmounts = goals
-      .map(g => g.capital_available)
-      .filter(v => v != null && v > 0);
-
-    let avgCheckSize = 'Not enough data';
-    if (checkSizes.length > 0) {
-      // Check sizes are text ranges like "$25K-$50K", "$50K-$100K" etc.
-      // Find the most common range
-      const csMap = {};
-      for (const cs of checkSizes) csMap[cs] = (csMap[cs] || 0) + 1;
-      const sorted = Object.entries(csMap).sort((a, b) => b[1] - a[1]);
-      avgCheckSize = sorted[0][0];
-    } else if (capitalAmounts.length > 0) {
-      const avg = capitalAmounts.reduce((a, b) => a + b, 0) / capitalAmounts.length;
-      if (avg < 25000) avgCheckSize = 'Under $25K';
-      else if (avg < 50000) avgCheckSize = '$25K-$50K';
-      else if (avg < 100000) avgCheckSize = '$50K-$100K';
-      else if (avg < 250000) avgCheckSize = '$100K-$250K';
-      else avgCheckSize = '$250K+';
+    // Bucket a numeric value into a range
+    function bucketCheckSize(val) {
+      if (val <= 0) return null;
+      if (val < 25000) return 'Under $25K';
+      if (val < 50000) return '$25K–$50K';
+      if (val < 100000) return '$50K–$100K';
+      if (val < 250000) return '$100K–$250K';
+      if (val < 500000) return '$250K–$500K';
+      return '$500K+';
     }
+
+    // From buy box check_size (could be text range or numeric)
+    for (const bb of completedBuyBoxes) {
+      if (bb.check_size) {
+        let range = bb.check_size;
+        if (typeof range === 'number') {
+          range = bucketCheckSize(range);
+        }
+        if (range) checkSizeRanges[range] = (checkSizeRanges[range] || 0) + 1;
+      }
+    }
+
+    // From capital_available in goals
+    for (const g of goals) {
+      if (g.capital_available > 0) {
+        const range = bucketCheckSize(g.capital_available);
+        if (range) checkSizeRanges[range] = (checkSizeRanges[range] || 0) + 0.5;
+      }
+    }
+
+    const totalCheckVotes = Object.values(checkSizeRanges).reduce((a, b) => a + b, 0) || 1;
+    const checkSizeDistribution = Object.entries(checkSizeRanges)
+      .map(([name, count]) => ({
+        name,
+        pct: Math.round((count / totalCheckVotes) * 100)
+      }))
+      .sort((a, b) => b.pct - a.pct);
+
+    // Most common for backward compat
+    const avgCheckSize = checkSizeDistribution.length > 0 ? checkSizeDistribution[0].name : 'Not enough data';
 
     // ---- AGGREGATE: Top Goals ----
     const goalCounts = {};
@@ -263,6 +294,7 @@ export default async function handler(req, res) {
       topDealTypes,
       preferredDistributions,
       avgCheckSize,
+      checkSizeDistribution,
       topGoals,
       totalInvestors,
       gpAssetClasses: [...gpAssetClasses]

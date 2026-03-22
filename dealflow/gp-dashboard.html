@@ -1803,11 +1803,9 @@ body {
                 <div class="weekly-chart-empty">Loading chart...</div>
               </div>
             </div>
-            <div id="recentActivityWrap">
-              <h4 style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:10px;">Recent Activity</h4>
-              <ul class="activity-list" id="recentActivityList">
-                <li class="activity-item" style="justify-content:center;color:var(--text-muted);">Loading...</li>
-              </ul>
+            <!-- Recent activity hidden, keeping DOM for JS -->
+            <div id="recentActivityWrap" style="display:none;">
+              <ul class="activity-list" id="recentActivityList"></ul>
             </div>
           </div>
         </div>
@@ -3329,29 +3327,71 @@ function renderInvestorInsights(insights) {
     html += '</div>'; // insights-two-col
   }
 
-  // Check Size + Deal Types row
-  html += '<div class="insights-stat-cards">';
+  // Check Size + Deal Types — side by side
+  html += '<div class="insights-two-col">';
 
-  // Check size
-  html += '<div class="insights-stat-card">' +
-    '<div class="insights-stat-value">' + escHtml(insights.avgCheckSize || '--') + '</div>' +
-    '<div class="insights-stat-label">Most Common Check Size</div>' +
-  '</div>';
-
-  html += '</div>';
-
-  // Deal Type pills
-  if (insights.topDealTypes && insights.topDealTypes.length > 0) {
-    html += '<div class="insights-sub-title">Preferred Deal Types</div>';
-    html += '<div class="deal-type-pills">';
-    insights.topDealTypes.forEach(function(item) {
-      html += '<span class="deal-type-pill">' +
-        escHtml(item.name) +
-        ' <span class="deal-type-pill-pct">' + item.pct + '%</span>' +
-      '</span>';
+  // LEFT: Check Size Distribution — horizontal bar chart
+  html += '<div>';
+  html += '<div class="insights-sub-title">Check Size Distribution</div>';
+  var csData = insights.checkSizeDistribution || [];
+  if (csData.length > 0) {
+    var maxCsPct = Math.max.apply(null, csData.map(function(c) { return c.pct; }));
+    html += '<div class="insights-bar-chart">';
+    csData.forEach(function(item) {
+      var barWidth = maxCsPct > 0 ? Math.round((item.pct / maxCsPct) * 100) : 0;
+      html += '<div class="insights-bar-row">' +
+        '<span class="insights-bar-label">' + escHtml(item.name) + '</span>' +
+        '<div class="insights-bar-track">' +
+          '<div class="insights-bar-fill" style="width:' + barWidth + '%;"></div>' +
+        '</div>' +
+        '<span class="insights-bar-pct">' + item.pct + '%</span>' +
+      '</div>';
     });
     html += '</div>';
+  } else {
+    html += '<div style="text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-ui);font-size:13px;">Not enough data yet</div>';
   }
+  html += '</div>';
+
+  // RIGHT: Deal Types — donut chart (same style as goals)
+  html += '<div>';
+  html += '<div class="insights-sub-title">Preferred Deal Types</div>';
+  if (insights.topDealTypes && insights.topDealTypes.length > 0) {
+    var dtGradStops = [];
+    var dtCum = 0;
+    var DT_COLORS = ['#2563EB', '#51BE7B', '#CF7A30', '#CA8A04', '#8B5CF6', '#D04040'];
+    insights.topDealTypes.forEach(function(dt, idx) {
+      var color = DT_COLORS[idx % DT_COLORS.length];
+      dtGradStops.push(color + ' ' + dtCum + '%');
+      dtCum += dt.pct;
+      dtGradStops.push(color + ' ' + dtCum + '%');
+    });
+    var dtDonutStyle = 'background: conic-gradient(' + dtGradStops.join(', ') + ');';
+
+    html += '<div class="goals-donut-wrap">';
+    html += '<div class="goals-donut" style="' + dtDonutStyle + '">' +
+      '<div class="goals-donut-center">' +
+        '<div class="goals-donut-center-value">' + insights.topDealTypes.length + '</div>' +
+        '<div class="goals-donut-center-label">TYPES</div>' +
+      '</div>' +
+    '</div>';
+    html += '<div class="goals-legend">';
+    insights.topDealTypes.forEach(function(dt, idx) {
+      var color = DT_COLORS[idx % DT_COLORS.length];
+      html += '<div class="goals-legend-item">' +
+        '<span class="goals-legend-swatch" style="background:' + color + ';"></span>' +
+        escHtml(dt.name) +
+        '<span class="goals-legend-pct">' + dt.pct + '%</span>' +
+      '</div>';
+    });
+    html += '</div>';
+    html += '</div>';
+  } else {
+    html += '<div style="text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-ui);font-size:13px;">Not enough data yet</div>';
+  }
+  html += '</div>';
+
+  html += '</div>'; // insights-two-col
 
   // Footer
   html += '<div class="insights-footer">Based on ' + (insights.totalInvestors || 0) + ' investor profiles</div>';
@@ -3422,14 +3462,15 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
     function getDist(d) {
       return d.distributions || d.Distributions || null;
     }
-    function getOffering(d) {
-      return d.offeringType || d.offering_type || null;
+    function getIRR(d) {
+      var v = d.targetIRR || d.target_irr || d.targetIrr;
+      return v != null ? v : null;
     }
 
     var myPref = getPref(deal);
     var myMin = getMin(deal);
     var myDist = getDist(deal);
-    var myOffering = getOffering(deal);
+    var myIRR = getIRR(deal);
 
     // Build comparison table
     html += '<div class="comp-deal-section">';
@@ -3480,12 +3521,12 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
     }
     html += '</tr>';
 
-    // Offering Type row
-    html += '<tr><td class="comp-metric-label">Offering Type</td>';
-    html += '<td class="col-gp">' + (myOffering ? escHtml(myOffering) : '--') + '</td>';
+    // Target IRR row
+    html += '<tr><td class="comp-metric-label">Target IRR</td>';
+    html += '<td class="col-gp">' + (myIRR != null ? formatPctDisplay(myIRR) : '--') + '</td>';
     for (var ci = 0; ci < top3.length; ci++) {
-      var co = getOffering(top3[ci]);
-      html += '<td>' + (co ? escHtml(co) : '--') + '</td>';
+      var cIRR = getIRR(top3[ci]);
+      html += '<td>' + (cIRR != null ? formatPctDisplay(cIRR) : '--') + '</td>';
     }
     html += '</tr>';
 
