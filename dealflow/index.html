@@ -22566,11 +22566,16 @@ function renderPlanBuilder(branch) {
   var dealsPerYear = window._planDealsPerYear || 2;
   var goalsData = JSON.parse(localStorage.getItem('gycGoals') || 'null');
 
-  // Temporarily override wizard check size for plan generation
+  // Temporarily override wizard data for plan generation
   var origCheck = wizardData.checkSize;
+  var origAssets = wizardData.assetClasses;
   wizardData.checkSize = String(checkSize);
+  if (window._planAssets && window._planAssets.length > 0) {
+    wizardData.assetClasses = window._planAssets.slice();
+  }
   var plan = generatePortfolioPlan(wizardData, goalsData);
   wizardData.checkSize = origCheck;
+  wizardData.assetClasses = origAssets;
 
   var slots = plan.slots || plan.buckets || [];
   // Recalculate with the current dealsPerYear
@@ -22619,6 +22624,54 @@ function renderPlanBuilder(branch) {
   html += '</div></div>';
 
   html += '</div>';
+
+  // ===== ASSET MIX =====
+  if (!window._planAssets) window._planAssets = (wizardData.assetClasses || ['Multi-Family']).slice();
+  var allAssetKeys = Object.keys(ASSET_CLASS_OPTIONS);
+  // Include Lending as a plan asset option
+  var lendingActive = window._planAssets.indexOf('Lending') >= 0 || window._planAssets.indexOf('Private Debt / Credit') >= 0;
+
+  html += '<div style="background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;padding:14px;margin-bottom:12px;">';
+  html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Asset Mix</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">';
+
+  // Active asset chips
+  window._planAssets.forEach(function(ac) {
+    var opt = ASSET_CLASS_OPTIONS[ac];
+    var icon = opt ? opt.icon : (ac === 'Lending' ? '\uD83E\uDD1D' : '\uD83D\uDCCA');
+    var label = opt ? opt.label : ac;
+    var yieldRange = opt ? opt.yieldRange : (ac === 'Lending' ? '8\u201312%' : '');
+    html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(81,190,123,0.08);border:1px solid rgba(81,190,123,0.25);border-radius:8px;font-size:12px;cursor:default;">';
+    html += '<span>' + icon + '</span>';
+    html += '<span style="font-family:var(--font-ui);font-weight:600;color:var(--text-dark);">' + label + '</span>';
+    if (yieldRange) html += '<span style="color:var(--text-muted);font-size:10px;">' + yieldRange + '</span>';
+    if (window._planAssets.length > 1) {
+      html += '<span onclick="window._planAssets.splice(window._planAssets.indexOf(\'' + ac.replace(/'/g, "\\'") + '\'),1);renderPlanBuilder(\'' + branch + '\')" style="cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;margin-left:2px;" title="Remove">\u00D7</span>';
+    }
+    html += '</div>';
+  });
+
+  // Add button with dropdown
+  html += '<div style="position:relative;display:inline-block;">';
+  html += '<button id="planAddAssetBtn" onclick="document.getElementById(\'planAssetDropdown\').style.display=document.getElementById(\'planAssetDropdown\').style.display===\'block\'?\'none\':\'block\'" style="border:1px dashed var(--border);background:transparent;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;" title="Add asset class">+</button>';
+  html += '<div id="planAssetDropdown" style="display:none;position:absolute;top:36px;left:0;z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.25);width:220px;max-height:260px;overflow-y:auto;padding:4px;">';
+
+  // Lending option (special)
+  if (!lendingActive) {
+    html += '<div onclick="window._planAssets.push(\'Lending\');renderPlanBuilder(\'' + branch + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(81,190,123,0.08)\'" onmouseout="this.style.background=\'transparent\'">';
+    html += '<span>\uD83E\uDD1D</span><span style="font-family:var(--font-ui);font-weight:600;">Lending / Credit</span><span style="color:var(--text-muted);font-size:10px;">8\u201312%</span></div>';
+  }
+
+  allAssetKeys.forEach(function(ac) {
+    if (window._planAssets.indexOf(ac) >= 0) return;
+    var opt = ASSET_CLASS_OPTIONS[ac];
+    html += '<div onclick="window._planAssets.push(\'' + ac.replace(/'/g, "\\'") + '\');renderPlanBuilder(\'' + branch + '\')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:12px;transition:background 0.15s;" onmouseover="this.style.background=\'rgba(81,190,123,0.08)\'" onmouseout="this.style.background=\'transparent\'">';
+    html += '<span>' + opt.icon + '</span><span style="font-family:var(--font-ui);font-weight:600;">' + opt.label + '</span><span style="color:var(--text-muted);font-size:10px;">' + opt.yieldRange + '</span></div>';
+  });
+
+  html += '</div></div>'; // close dropdown + wrapper
+
+  html += '</div></div>'; // close chips row + asset mix container
 
   // ===== SUMMARY BAR =====
   html += '<div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:10px;margin-bottom:16px;flex-wrap:wrap;gap:8px;">';
@@ -22677,10 +22730,21 @@ function renderPlanBuilder(branch) {
   // Nav
   html += '<div class="wizard-inline-nav" style="margin-top:20px;">';
   html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-  html += '<button class="wizard-btn wizard-btn-next" onclick="window._planCheckSize=' + checkSize + ';wizardData.checkSize=\'' + checkSize + '\';wizardNext()">Looks Good \u2192</button>';
+  html += '<button class="wizard-btn wizard-btn-next" onclick="window._planCheckSize=' + checkSize + ';wizardData.checkSize=\'' + checkSize + '\';if(window._planAssets)wizardData.assetClasses=window._planAssets.slice();wizardNext()">Looks Good \u2192</button>';
   html += '</div>';
 
   document.getElementById('wizardContent').innerHTML = html;
+
+  // Close asset dropdown on outside click
+  setTimeout(function() {
+    document.addEventListener('click', function _closeDd(e) {
+      var dd = document.getElementById('planAssetDropdown');
+      var btn = document.getElementById('planAddAssetBtn');
+      if (dd && btn && !dd.contains(e.target) && !btn.contains(e.target)) {
+        dd.style.display = 'none';
+      }
+    }, { once: true });
+  }, 0);
 }
 
 // ========== PORTFOLIO PLAN: Generation + Blueprint (v2 — slot-based) ==========
