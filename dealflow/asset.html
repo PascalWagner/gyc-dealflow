@@ -2377,15 +2377,20 @@ function renderMarketIntelligence(data, assetClass) {
     var popSub = '';
     if (trend) {
       var ctx = [];
+      function coloredPct(val) {
+        var c = val >= 0 ? 'var(--green)' : 'var(--red)';
+        var s = val >= 0 ? '+' : '';
+        return '<span style="color:' + c + ';font-weight:700;">' + s + val + '%</span>';
+      }
       if (stateB.popGrowthPct !== null && stateB.popGrowthPct !== undefined) {
         var stName = (stateB.name || '').replace(/,.*/, '');
-        ctx.push(stName + ' ' + (stateB.popGrowthPct >= 0 ? '+' : '') + stateB.popGrowthPct + '%');
+        ctx.push(stName + ' ' + coloredPct(stateB.popGrowthPct));
       }
       if (natB.popGrowthPct !== null && natB.popGrowthPct !== undefined) {
-        ctx.push('US ' + (natB.popGrowthPct >= 0 ? '+' : '') + natB.popGrowthPct + '%');
+        ctx.push('US ' + coloredPct(natB.popGrowthPct));
       }
       if (ctx.length) {
-        popSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + ctx.join(' · ') + ' over same period</div>';
+        popSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + ctx.join(' <span style="opacity:0.4;">·</span> ') + ' over same period</div>';
       }
     }
     statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div>' + popSub + '</div>';
@@ -2394,13 +2399,17 @@ function renderMarketIntelligence(data, assetClass) {
     if (latestIncome) {
       var incSub = '';
       var benchmarks = [];
-      if (stateB.medianIncome) benchmarks.push((stateB.name || '').replace(/,.*/, '') + ': $' + fmtK(stateB.medianIncome));
-      if (natB.medianIncome) benchmarks.push('US: $' + fmtK(natB.medianIncome));
+      var localInc = latestIncome.medianIncome;
+      if (stateB.medianIncome) {
+        var stColor = localInc >= stateB.medianIncome ? 'var(--green)' : 'var(--red)';
+        benchmarks.push((stateB.name || '').replace(/,.*/, '') + ': <span style="color:' + stColor + ';font-weight:700;">$' + fmtK(stateB.medianIncome) + '</span>');
+      }
+      if (natB.medianIncome) {
+        var natColor = localInc >= natB.medianIncome ? 'var(--green)' : 'var(--red)';
+        benchmarks.push('US: <span style="color:' + natColor + ';font-weight:700;">$' + fmtK(natB.medianIncome) + '</span>');
+      }
       if (benchmarks.length) {
-        var localInc = latestIncome.medianIncome;
-        var refInc = natB.medianIncome || stateB.medianIncome;
-        var incColor = localInc >= refInc ? 'var(--green)' : 'var(--text-muted)';
-        incSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + benchmarks.join(' · ') + '</div>';
+        incSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + benchmarks.join(' <span style="opacity:0.4;">·</span> ') + '</div>';
       }
       statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div>' + incSub + '</div>';
     }
