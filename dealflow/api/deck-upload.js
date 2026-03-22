@@ -89,20 +89,27 @@ export default async function handler(req, res) {
     let dealUpdateError = null;
     if (dealId && deckUrl) {
       const urlField = docType === 'ppm' ? 'ppm_url' : 'deck_url';
-      const { data: updateData, error: updateErr, count } = await supabase
+      // Simple update (no .select/.single — those can cause false errors in Supabase v2)
+      const { error: updateErr } = await supabase
         .from('opportunities')
         .update({ [urlField]: deckUrl })
-        .eq('id', dealId)
-        .select('id')
-        .single();
+        .eq('id', dealId);
       if (updateErr) {
         console.error('Deal update failed:', updateErr.message, updateErr.code, { dealId, urlField });
         dealUpdateError = updateErr.message;
-      } else if (!updateData) {
-        console.error('Deal update matched no rows:', { dealId, urlField });
-        dealUpdateError = 'No matching deal found for ID: ' + dealId;
       } else {
-        dealUpdated = true;
+        // Verify the write actually persisted
+        const { data: verify } = await supabase
+          .from('opportunities')
+          .select(urlField)
+          .eq('id', dealId)
+          .single();
+        if (verify && verify[urlField]) {
+          dealUpdated = true;
+        } else {
+          console.error('Deal update returned no error but value not persisted:', { dealId, urlField, verify });
+          dealUpdateError = 'Update appeared to succeed but value not found on verify. dealId=' + dealId;
+        }
       }
     }
 

@@ -3999,7 +3999,7 @@ function updateStickyBar(dealId, stage) {
       + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'invested\')">I\'m Investing \u2192</button>';
   } else if (stage === 'invested') {
     advHtml = '<a href="index.html#portfolio" class="btn-pass" style="text-decoration:none;">My Portfolio</a>'
-      + '<button class="btn-advance" id="stickyAdvanceBtn" style="opacity:0.5;cursor:default;" disabled>Generate Investment Report</button>';
+      + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="generateInvestmentReport()">Generate Investment Report</button>';
   } else if (stage === 'passed') {
     advHtml = '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'saved\')">Reconsider Deal \u2192</button>';
   }
@@ -8192,7 +8192,7 @@ async function submitDeck(dealId, dealName) {
           showEnrichmentWizard(dealId, data.extractedData, data.driveUrl, docLabel, userEmail);
         } else {
           var successMsg = document.getElementById('deckSuccessMsg');
-          var saveNote = data.dealUpdated ? '' : '<br><span style="color:#f59e0b;font-size:12px;">⚠ File uploaded but deal record not saved — try refreshing.</span>';
+          var saveNote = data.dealUpdated ? '' : '<br><span style="color:#f59e0b;font-size:12px;">⚠ Deal record not saved.' + (data.dealUpdateError ? ' (' + data.dealUpdateError + ')' : '') + '</span>';
           if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '') + saveNote;
           document.getElementById('deckModalSuccess').style.display = 'block';
         }
