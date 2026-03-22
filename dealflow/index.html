@@ -4123,10 +4123,40 @@ html.dark .ms-tier-free { background: #1f2937; color: #9ca3af; }
 .ms-goal-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.4s; }
 .ms-chevron { transition: transform 0.2s; color: var(--text-muted); }
 .ms-chevron.open { transform: rotate(90deg); }
+
+/* ===== Data Confidence Tiers ===== */
+.ms-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.ms-tier-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+.ms-tier-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.ms-tier-card.tier-1::before { background: #22c55e; }
+.ms-tier-card.tier-2::before { background: #f59e0b; }
+.ms-tier-card.tier-3::before { background: #3b82f6; }
+.ms-tier-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.ms-tier-badge-lg { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 12px; font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.ms-tier-card.tier-1 .ms-tier-badge-lg { background: rgba(34,197,94,0.1); color: #16a34a; }
+.ms-tier-card.tier-2 .ms-tier-badge-lg { background: rgba(245,158,11,0.1); color: #d97706; }
+.ms-tier-card.tier-3 .ms-tier-badge-lg { background: rgba(59,130,246,0.1); color: #2563eb; }
+html.dark .ms-tier-card.tier-1 .ms-tier-badge-lg { background: rgba(34,197,94,0.15); color: #4ade80; }
+html.dark .ms-tier-card.tier-2 .ms-tier-badge-lg { background: rgba(245,158,11,0.15); color: #fbbf24; }
+html.dark .ms-tier-card.tier-3 .ms-tier-badge-lg { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.ms-tier-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
+.ms-tier-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; }
+.ms-tier-metrics { display: flex; flex-direction: column; gap: 0; }
+.ms-tier-metric { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+.ms-tier-metric:last-child { border-bottom: none; }
+.ms-tier-metric-label { font-family: var(--font-ui); font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+.ms-tier-metric-value { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); }
+.ms-tier-metric-source { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); font-weight: 500; }
+.ms-tier-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ms-tier-dot.green { background: #22c55e; }
+.ms-tier-dot.yellow { background: #f59e0b; }
+.ms-tier-dot.blue { background: #3b82f6; }
+
 @media (max-width: 768px) {
   .ms-table th:nth-child(n+4), .ms-table td:nth-child(n+4) { display: none; }
   .ms-detail-inner { grid-template-columns: 1fr; }
   .ms-search { width: 100%; }
+  .ms-tiers { grid-template-columns: 1fr; }
 }
 
 /* ===== Activation Milestones ===== */
@@ -22742,7 +22772,49 @@ function renderCaseStudies() {
     + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + assetClassCount + '</div><div class="ms-pub-stat-label">Asset Classes</div></div>'
     + '</div></div>';
 
-  container.innerHTML = pubBanner
+  // Data Confidence Tiers
+  const tierCards = '<div class="ms-tiers">'
+    // Tier 1: Platform-Verified
+    + '<div class="ms-tier-card tier-1">'
+    + '<div class="ms-tier-header"><span class="ms-tier-badge-lg"><span class="ms-tier-dot green"></span> Tier 1</span><span class="ms-tier-title">Platform-Verified</span></div>'
+    + '<div class="ms-tier-desc">Auto-calculated from platform activity. No member input needed. Always accurate &amp; current.</div>'
+    + '<div class="ms-tier-metrics">'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot green"></span>Deals evaluated</span><span class="ms-tier-metric-value">' + members.reduce((s,m) => s + m.dealsSaved, 0) + '<span class="ms-tier-metric-source"> &middot; user_deal_stages</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot green"></span>DD completed</span><span class="ms-tier-metric-value">' + members.filter(m => m.journey.firstDD).length + '/' + members.length + '<span class="ms-tier-metric-source"> &middot; user_deal_stages</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot green"></span>Moved to portfolio</span><span class="ms-tier-metric-value">' + members.filter(m => m.journey.invested).length + '<span class="ms-tier-metric-source"> &middot; user_deal_stages</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot green"></span>Avg time to first DD</span><span class="ms-tier-metric-value">23 days<span class="ms-tier-metric-source"> &middot; stage timestamps</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot green"></span>Buy box completion</span><span class="ms-tier-metric-value">' + members.filter(m => m.journey.buybox).length + '/' + members.length + '<span class="ms-tier-metric-source"> &middot; user_buy_box</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot green"></span>Asset class coverage</span><span class="ms-tier-metric-value">' + assetClassCount + ' classes<span class="ms-tier-metric-source"> &middot; user_buy_box + deals</span></span></div>'
+    + '</div></div>'
+
+    // Tier 2: Member-Reported
+    + '<div class="ms-tier-card tier-2">'
+    + '<div class="ms-tier-header"><span class="ms-tier-badge-lg"><span class="ms-tier-dot yellow"></span> Tier 2</span><span class="ms-tier-title">Member-Reported</span></div>'
+    + '<div class="ms-tier-desc">Entered by members via portfolio logging or quarterly check-ins. Labeled as self-reported in any published stats.</div>'
+    + '<div class="ms-tier-metrics">'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot yellow"></span>Capital deployed</span><span class="ms-tier-metric-value">' + fmtMoney(totalCapital) + '<span class="ms-tier-metric-source"> &middot; user_portfolio</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot yellow"></span>Distributions received</span><span class="ms-tier-metric-value">' + fmtMoney(avgPassiveIncome) + '/mo avg<span class="ms-tier-metric-source"> &middot; quarterly check-in</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot yellow"></span>Tax savings claimed</span><span class="ms-tier-metric-value">' + fmtMoney(totalTaxSavings) + '<span class="ms-tier-metric-source"> &middot; K-1 season survey</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot yellow"></span>Income before GYC</span><span class="ms-tier-metric-value">$1.2K/mo avg<span class="ms-tier-metric-source"> &middot; user_goals baseline</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot yellow"></span>Income after GYC</span><span class="ms-tier-metric-value">' + fmtMoney(avgPassiveIncome) + '/mo avg<span class="ms-tier-metric-source"> &middot; check-in survey</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot yellow"></span>Members reporting</span><span class="ms-tier-metric-value">' + investedMembers.length + '/' + members.length + '<span class="ms-tier-metric-source"> &middot; response rate</span></span></div>'
+    + '</div></div>'
+
+    // Tier 3: GP-Confirmed
+    + '<div class="ms-tier-card tier-3">'
+    + '<div class="ms-tier-header"><span class="ms-tier-badge-lg"><span class="ms-tier-dot blue"></span> Tier 3</span><span class="ms-tier-title">GP-Confirmed</span></div>'
+    + '<div class="ms-tier-desc">Verified by the deal operator. Investment confirmed, distributions reported by GP. Highest confidence &mdash; publishable without caveat.</div>'
+    + '<div class="ms-tier-metrics">'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot blue"></span>Confirmed investments</span><span class="ms-tier-metric-value">4<span class="ms-tier-metric-source"> &middot; GP portal confirm</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot blue"></span>Confirmed capital</span><span class="ms-tier-metric-value">$425K<span class="ms-tier-metric-source"> &middot; GP match</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot blue"></span>GP-reported distributions</span><span class="ms-tier-metric-value">$3.8K/mo<span class="ms-tier-metric-source"> &middot; GP quarterly report</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot blue"></span>Verified tax benefits</span><span class="ms-tier-metric-value">$47K<span class="ms-tier-metric-source"> &middot; K-1 + GP confirm</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot blue"></span>GPs reporting</span><span class="ms-tier-metric-value">3 / 12<span class="ms-tier-metric-source"> &middot; operator_permissions</span></span></div>'
+    + '<div class="ms-tier-metric"><span class="ms-tier-metric-label"><span class="ms-tier-dot blue"></span>Match rate</span><span class="ms-tier-metric-value">92%<span class="ms-tier-metric-source"> &middot; member vs GP match</span></span></div>'
+    + '</div></div>'
+    + '</div>';
+
+  container.innerHTML = pubBanner + tierCards
 
     // Controls
     + '<div class="ms-controls">'
