@@ -582,6 +582,21 @@ async function browseTable(supabase, body) {
   return { data: data || [], total: count, page, limit };
 }
 
+// --- Table row counts (schema page) ---
+
+async function tableCounts(supabase) {
+  const counts = {};
+  await Promise.all(BROWSABLE_TABLES.map(async (table) => {
+    try {
+      const { count, error } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+      counts[table] = error ? null : count;
+    } catch { counts[table] = null; }
+  }));
+  return { counts };
+}
+
 // --- Action router ---
 
 const ACTION_MAP = {
@@ -600,6 +615,7 @@ const ACTION_MAP = {
   'intake-create': intakeCreate,
   'growth-metrics': growthMetrics,
   'browse-table': browseTable,
+  'table-counts': tableCounts,
 };
 
 export default async function handler(req, res) {
