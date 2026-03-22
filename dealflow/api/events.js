@@ -139,6 +139,36 @@ export default async function handler(req, res) {
 
     if (insertError) throw insertError;
 
+    // Update activity summary on user_profiles
+    const profileUpdate = { last_activity_date: new Date().toISOString() };
+    if (event === 'deal_viewed' && data?.viewCount !== undefined)
+      profileUpdate.deals_viewed_count = data.viewCount;
+    if (event === 'deal_saved' && data?.saveCount !== undefined)
+      profileUpdate.deals_saved_count = data.saveCount;
+    if (event === 'session_start' && data?.sessionCount !== undefined)
+      profileUpdate.sessions_count = data.sessionCount;
+    if (event === 'wizard_complete')
+      profileUpdate.buy_box_complete = true;
+
+    // Funnel status: only advance, never regress
+    const newFunnel = EVENT_FUNNEL[event];
+    if (newFunnel) {
+      const { data: currentProfile } = await supabase
+        .from('user_profiles')
+        .select('funnel_status')
+        .eq('id', profile.id)
+        .single();
+      const currentStatus = currentProfile?.funnel_status || 'new';
+      if (FUNNEL_ORDER.indexOf(newFunnel) > FUNNEL_ORDER.indexOf(currentStatus)) {
+        profileUpdate.funnel_status = newFunnel;
+      }
+    }
+
+    await supabase
+      .from('user_profiles')
+      .update(profileUpdate)
+      .eq('id', profile.id);
+
     // Sync to GHL in background
     const ghlResult = await syncEventToGhl(email, event, data);
 

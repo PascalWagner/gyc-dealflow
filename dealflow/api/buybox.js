@@ -44,7 +44,8 @@ const GHL_FIELD_MAP = {
   capital_90day: 'contact.capital_90_day',
   capital_readiness: 'contact.investment_timeline',
   max_loss_pct: 'contact.max_loss_tolerance',
-  operator_focus: 'contact.operator_focus_preference'
+  operator_focus: 'contact.operator_focus_preference',
+  share_portfolio: 'contact.lp_network_optin'
 };
 
 // Map frontend wizard keys → Supabase column names

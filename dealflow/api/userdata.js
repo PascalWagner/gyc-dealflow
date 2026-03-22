@@ -13,7 +13,8 @@ const TABLE_MAP = {
   stages: 'user_deal_stages',
   portfolio: 'user_portfolio',
   goals: 'user_goals',
-  taxdocs: 'user_tax_docs'
+  taxdocs: 'user_tax_docs',
+  plan: 'user_portfolio_plans'
 };
 
 // Map frontend field names → Supabase column names
@@ -64,15 +65,14 @@ const FIELD_MAP = {
 };
 
 // GHL custom field mapping for goals → CRM sync
-// Verified against actual GHL custom fields (March 20, 2026)
-// All fields exist in GHL under Contact > Buy Box / Intro Call folders
+// Aligned with buybox.js GHL_FIELD_MAP to avoid duplicate fields in GHL
 const GHL_GOALS_FIELD_MAP = {
-  goal_type: 'contact.primary_investment_objective',          // "Primary Investment Goal"
-  current_income: 'contact.current_monthly_passive_income',   // "Current Annual Passive Income"
-  target_income: 'contact.monthly_passive_income_goal',       // "Annual Passive Income Goal"
-  capital_available: 'contact.deployable_capital',            // "Deployable Capital" (SINGLE_OPTIONS — use capitalToRange())
-  timeline: 'contact.investment_timeline',                    // "Investment Timeline" (Number)
-  tax_reduction: 'contact.tax_reduction_target'               // "Tax Reduction Target" (Monetary)
+  goal_type: 'contact.primary_investment_objective',          // same as buybox goal
+  current_income: 'contact.current_passive_income',           // aligned with buybox baseline_income
+  target_income: 'contact.target_passive_income',             // aligned with buybox target_cashflow
+  capital_available: 'contact.capital_12_month',              // aligned with buybox capital_12mo
+  timeline: 'contact.investment_timeline',                    // aligned with buybox capital_readiness
+  tax_reduction: 'contact.tax_offset_target'                  // aligned with buybox taxable_income
 };
 
 // Convert numeric capital to GHL SINGLE_OPTIONS range label
@@ -409,6 +409,47 @@ async function handlePost(req, res, supabase, user) {
     syncGoalsToGhl(user.email, result).catch(e =>
       console.warn('GHL goals background sync failed:', e.message)
     );
+
+    // Cross-sync goals into user_buy_box so we have one source of truth
+    const buyBoxSync = {};
+    if (result.current_income) buyBoxSync.baseline_income = String(result.current_income);
+    if (result.target_income) buyBoxSync.target_cashflow = String(result.target_income);
+    if (result.tax_reduction) buyBoxSync.taxable_income = String(result.tax_reduction);
+    if (result.capital_available) buyBoxSync.capital_12mo = String(result.capital_available);
+    if (result.goal_type) {
+      const branchMap = { passive_income: 'cashflow', build_wealth: 'growth', reduce_taxes: 'tax' };
+      buyBoxSync.branch = branchMap[result.goal_type] || 'cashflow';
+      buyBoxSync.goal = result.goal_type;
+    }
+    if (Object.keys(buyBoxSync).length > 0) {
+      await supabase
+        .from('user_buy_box')
+        .update(buyBoxSync)
+        .eq('user_id', user.id)
+        .then(() => {})
+        .catch(e => console.warn('Goals→BuyBox cross-sync failed:', e.message));
+    }
+
+  } else if (type === 'plan') {
+    // Upsert by user_id (one plan per user)
+    // Plan data comes pre-structured from frontend — pass through directly
+    const planFields = {
+      user_id: user.id,
+      total_capital: data.total_capital || 0,
+      check_size: data.check_size || 100000,
+      target_annual_income: data.target_annual_income || null,
+      target_irr: data.target_irr || null,
+      target_tax_offset: data.target_tax_offset || null,
+      buckets: data.buckets || [],
+      generated_from: data.generated_from || 'manual'
+    };
+    const { data: upserted, error } = await supabase
+      .from('user_portfolio_plans')
+      .upsert(planFields, { onConflict: 'user_id' })
+      .select()
+      .single();
+    if (error) throw error;
+    result = upserted;
 
   } else {
     // portfolio, taxdocs: multiple records. Update if ID provided, create otherwise.
