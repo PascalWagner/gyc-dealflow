@@ -52,42 +52,37 @@ export default async function handler(req, res) {
     // ── 1. Population Time Series (Census ACS 5-Year) ──
     // ACS 5-year data available from 2009-2023 (as of 2025)
     const years = [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
-    const popData = [];
 
     // Variables: B01003_001E = Total Population, B19013_001E = Median Household Income
     const censusVars = 'B01003_001E,B19013_001E,NAME';
 
-    for (const year of years) {
+    // Fetch all years in parallel for speed
+    const yearPromises = years.map(async (year) => {
       try {
         let url;
         if (zip) {
-          // Zip code tabulation area
           url = `${CENSUS_BASE}/${year}/acs/acs5?get=${censusVars}&for=zip%20code%20tabulation%20area:${zip}`;
         } else if (fips) {
-          // County FIPS (5-digit: 2 state + 3 county)
           const stateFips = fips.substring(0, 2);
           const countyFips = fips.substring(2, 5);
           url = `${CENSUS_BASE}/${year}/acs/acs5?get=${censusVars}&for=county:${countyFips}&in=state:${stateFips}`;
         } else if (state && county) {
           const stateFips = STATE_FIPS[state.toUpperCase()];
-          if (!stateFips) continue;
-          // Use wildcard county and filter by name
+          if (!stateFips) return null;
           url = `${CENSUS_BASE}/${year}/acs/acs5?get=${censusVars}&for=county:*&in=state:${stateFips}`;
         }
 
         const resp = await fetch(url);
-        if (!resp.ok) continue;
+        if (!resp.ok) return null;
         const data = await resp.json();
 
         if (data && data.length > 1) {
-          // First row is headers, rest is data
           const headers = data[0];
           const popIdx = headers.indexOf('B01003_001E');
           const incIdx = headers.indexOf('B19013_001E');
           const nameIdx = headers.indexOf('NAME');
 
-          // For county name search, find matching row
-          let row = data[1]; // Default to first result
+          let row = data[1];
           if (state && county && data.length > 2) {
             const countyNorm = county.toLowerCase().replace(/\s+county$/i, '');
             row = data.slice(1).find(r => {
@@ -96,18 +91,21 @@ export default async function handler(req, res) {
             }) || data[1];
           }
 
-          popData.push({
+          return {
             year,
             population: parseInt(row[popIdx]) || null,
             medianIncome: parseInt(row[incIdx]) || null,
             name: row[nameIdx] || ''
-          });
+          };
         }
       } catch (e) {
-        // Skip failed years
-        continue;
+        return null;
       }
-    }
+      return null;
+    });
+
+    const yearResults = await Promise.all(yearPromises);
+    const popData = yearResults.filter(r => r !== null).sort((a, b) => a.year - b.year);
 
     results.population = popData;
 

@@ -1236,8 +1236,8 @@ body {
           </div>
           <!-- Source -->
           <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;">
-            <span class="mi-source">via US Census Bureau</span>
-            <span class="mi-source">Bureau of Labor Statistics</span>
+            <a href="https://data.census.gov" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">via US Census Bureau ↗</a>
+            <a href="https://data.bls.gov/cew/apps/data_views/data_views.htm" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">Bureau of Labor Statistics ↗</a>
           </div>
         </div>
       </div>
@@ -1491,12 +1491,16 @@ function renderHero(propertyName, address, assetClass, location, status, deals) 
   var ppDeal = deals.find(function(d) { return d.purchasePrice; });
   var ppValue = ppDeal ? currency(ppDeal.purchasePrice) : null;
 
+  // Year built from deal data
+  var yearBuilt = null;
+  deals.forEach(function(d) { if (d.yearBuilt && !yearBuilt) yearBuilt = d.yearBuilt; });
+
   var stats = [
     { value: operators.length || '--', label: operators.length === 1 ? 'Owner' : 'Owners' }
   ];
   if (ppValue) stats.push({ value: ppValue, label: 'Purchase Price' });
-  if (firstSeen) stats.push({ value: fmtDate(firstSeen), label: 'First Acquired' });
-  if (lastSeen && lastSeen !== firstSeen) stats.push({ value: fmtDate(lastSeen), label: 'Latest Transaction' });
+  stats.push({ value: yearBuilt || 'N/A', label: 'Year Built' });
+  if (lastSeen) stats.push({ value: fmtDate(lastSeen), label: 'Latest Transaction' });
 
   document.getElementById('heroStats').innerHTML = stats.map(function(s) {
     return '<div class="hero-stat"><div class="hero-stat-value">' + esc(String(s.value)) + '</div><div class="hero-stat-label">' + esc(s.label) + '</div></div>';
@@ -2434,17 +2438,15 @@ async function init() {
     propertyAddress = extractAddress(dealName);
   }
 
-  // Build a clean property name — strip sponsor prefix like "Nu Partners – " when address is separate
+  // Build a clean property name — use the name part before the address separator
   var propertyName = nameParam || dealName || addressParam || 'Unknown Property';
-  if (propertyAddress && propertyName.length > 30) {
-    // Try to extract just the property/address part after a separator
-    var sepMatch = propertyName.match(/^[^–\-\/]+[–\-\/]\s*(.+)/);
+  if (propertyName.length > 20) {
+    // Split on separator (–, -, /) and check if address is after it
+    var sepMatch = propertyName.match(/^(.+?)\s*[–\-\/]\s*(\d{2,5}\s+.+)/);
     if (sepMatch) {
-      var afterSep = sepMatch[1].trim();
-      // If what's after the separator contains the address, use it as property name
-      if (afterSep.length > 10 && propertyAddress.substring(0, 8) && afterSep.includes(propertyAddress.substring(0, 8))) {
-        propertyName = afterSep;
-      }
+      // Part before separator is the property/deal name, part after is the address
+      propertyName = sepMatch[1].trim();
+      if (!propertyAddress) propertyAddress = sepMatch[2].trim();
     }
   }
 
