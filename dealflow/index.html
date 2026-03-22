@@ -2099,13 +2099,23 @@ html.dark .credit-chart-legend-divider {
   .topbar {
     padding: 0 12px !important;
     height: auto;
-    min-height: 44px;
+    min-height: 0;
     gap: 0;
-    align-items: stretch;
+    align-items: center;
     flex-wrap: wrap;
     padding-bottom: 0 !important;
   }
-  .topbar-title { font-size: 17px; font-weight: 600; margin-right: 0; white-space: nowrap; flex-shrink: 0; display: none !important; }
+  .topbar-title { font-size: 17px; font-weight: 600; margin-right: 0; white-space: nowrap; flex-shrink: 0; }
+  /* Hide topbar title on pages reachable from bottom tab bar (redundant with tab label) */
+  #page-deals .topbar-title,
+  #page-dashboard .topbar-title,
+  #page-marketintel .topbar-title,
+  #page-managers .topbar-title,
+  #page-more .topbar-title { display: none !important; }
+  /* Pages with dash-tabs: hide title, show tabs full-width */
+  #page-buybox .topbar-title,
+  #page-portfolio .topbar-title,
+  #page-taxprep .topbar-title { display: none !important; }
 
   /* ── Mobile: Pill tabs row ── */
   .mobile-pill-tabs {
@@ -2297,9 +2307,9 @@ html.cap-ios .topbar {
   padding: 0 12px !important;
   padding-top: env(safe-area-inset-top, 47px) !important;
   height: auto;
-  min-height: calc(44px + env(safe-area-inset-top, 47px));
+  min-height: 0;
   gap: 0;
-  align-items: stretch;
+  align-items: center;
   flex-wrap: wrap;
   padding-bottom: 0 !important;
   z-index: 52;
@@ -2824,11 +2834,15 @@ html.cap-ios .debt-metric-select-mobile {
     scrollbar-width: none;
     flex-shrink: 1;
     min-width: 0;
+    width: 100%;
+    justify-content: stretch;
   }
   .dash-tabs::-webkit-scrollbar { display: none; }
   .dash-tab {
-    font-size: 12px !important;
-    padding: 0 10px !important;
+    font-size: 13px !important;
+    padding: 10px 0 !important;
+    flex: 1;
+    text-align: center;
   }
 
   /* ── Dashboard content area ── */
@@ -2837,6 +2851,31 @@ html.cap-ios .debt-metric-select-mobile {
   }
   #page-dashboard .dashboard-grid {
     gap: 12px !important;
+  }
+  /* Dashboard: stack momentum (4-col) and stats (3-col) grids */
+  #dashboardContent [style*="grid-template-columns:repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  #dashboardContent [style*="grid-template-columns:repeat(3"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  /* Dashboard: smaller stat card text */
+  #dashboardContent [style*="font-size:22px"] {
+    font-size: 18px !important;
+  }
+
+  /* ── Portfolio page: stack 2-col grids ── */
+  #page-portfolio [style*="grid-template-columns:1fr 1fr"],
+  #page-portfolio [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Tax Prep: summary cards */
+  #page-taxprep [style*="grid-template-columns:repeat(auto-fit"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  #page-taxprep .content-area {
+    padding: 12px !important;
   }
 
   /* ── Operators page: filter bar compact ── */
@@ -7798,10 +7837,6 @@ const _supa = window.supabase.createClient(
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           <span>Settings</span>
         </a>
-        <a class="more-menu-item" href="#" onclick="toggleTheme(); return false" id="moreThemeToggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          <span>Dark Mode</span>
-        </a>
         <a class="more-menu-item" href="mailto:pascal@growyourcashflow.com?subject=Deal%20Flow%20Feedback" style="color:var(--text-muted);">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Send Feedback</span>
@@ -11331,6 +11366,11 @@ function renderAll() {
   // Show/hide mobile view toggle (only on browse tab, mobile only via CSS)
   if (mobileToggle) {
     mobileToggle.style.display = (currentTab === 'browse') ? '' : 'none';
+  }
+  // Show/hide mobile pill view icon (only on browse tab)
+  var pillViewIcon = document.getElementById('mobileViewToggleIcon');
+  if (pillViewIcon) {
+    pillViewIcon.style.display = (currentTab === 'browse') ? '' : 'none';
   }
 
   // Mobile swipe feed view
