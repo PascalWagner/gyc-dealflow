@@ -54,17 +54,31 @@ export default async function handler(req, res) {
       .single();
 
     if (user) {
-      await supabase
+      // Try update first (handles existing rows reliably)
+      const { data: existing } = await supabase
         .from('user_deal_stages')
-        .upsert({
-          user_id: user.id,
-          deal_id: id,
-          stage,
-          notes: '',
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,deal_id'
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('deal_id', id)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('user_deal_stages')
+          .update({ stage, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('deal_id', id);
+      } else {
+        await supabase
+          .from('user_deal_stages')
+          .insert({
+            user_id: user.id,
+            deal_id: id,
+            stage,
+            notes: '',
+            updated_at: new Date().toISOString()
+          });
+      }
     }
   } catch (err) {
     console.error('Deal action error:', err.message);
