@@ -6363,15 +6363,128 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="sub-page" style="max-width:1100px">
       <!-- Tab Toggle Bar -->
-      <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;" id="admindashTabBar">
-        <button class="growth-tab-btn" data-tab="schema" onclick="switchAdminDashTab('schema')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Database Schema</button>
-        <button class="growth-tab-btn" data-tab="devnotes" onclick="switchAdminDashTab('devnotes')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Dev Notes</button>
-        <button class="growth-tab-btn" data-tab="network" onclick="switchAdminDashTab('network')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Network &amp; Moat</button>
-        <button class="growth-tab-btn" data-tab="transactions" onclick="switchAdminDashTab('transactions')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Transaction Strategy</button>
+      <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;flex-wrap:wrap;" id="admindashTabBar">
+        <button class="growth-tab-btn" data-tab="growth" onclick="switchAdminDashTab('growth')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Growth</button>
+        <button class="growth-tab-btn" data-tab="analytics" onclick="switchAdminDashTab('analytics')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Analytics</button>
+        <button class="growth-tab-btn" data-tab="schema" onclick="switchAdminDashTab('schema')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Database Schema</button>
+        <button class="growth-tab-btn" data-tab="devnotes" onclick="switchAdminDashTab('devnotes')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Dev Notes</button>
+        <button class="growth-tab-btn" data-tab="network" onclick="switchAdminDashTab('network')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Network &amp; Moat</button>
+        <button class="growth-tab-btn" data-tab="transactions" onclick="switchAdminDashTab('transactions')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Transactions</button>
       </div>
 
+      <!-- TAB: Growth Dashboard -->
+      <div id="admindash-tab-growth">
+      <div class="settings-page-desc" style="margin-top:0;">Week-over-week platform growth. Focus on increasing the rate of GP and LP acquisition.</div>
+
+      <!-- North Star Banner -->
+      <div id="growthNorthStar" style="background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02));border:1px solid rgba(81,190,123,0.2);border-radius:12px;padding:24px 28px;margin-bottom:28px;">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">North Star Metric</div>
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:var(--text-dark);" id="growthNorthStarValue">--</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Deals added to LP pipelines (all time)</div>
+          <div id="growthNorthStarDelta" style="font-family:var(--font-ui);font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto;"></div>
+        </div>
+        <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:8px;">This measures real engagement: an LP cared enough about a deal to move it into their pipeline. It combines GP supply quality + LP demand activation.</div>
+      </div>
+
+      <!-- Key Metrics Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;" id="growthMetricsGrid"></div>
+
+      <!-- WoW Charts -->
+      <div class="section" style="margin-top:0;">
+        <div class="section-header"><span class="section-title">Week-over-Week Trends</span></div>
+        <div class="section-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" id="growthChartsGrid">
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">LPs Added</div><div id="growthChartLPs" style="height:120px;"></div></div>
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">GPs Added</div><div id="growthChartGPs" style="height:120px;"></div></div>
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Deals Added</div><div id="growthChartDeals" style="height:120px;"></div></div>
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Pipeline Adds (LP &rarr; Deal)</div><div id="growthChartPipeline" style="height:120px;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Suggestions -->
+      <div class="section">
+        <div class="section-header"><span class="section-title">Growth Playbook</span></div>
+        <div class="section-body" id="growthSuggestions">
+          <div style="color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading suggestions...</div>
+        </div>
+      </div>
+      </div><!-- /admindash-tab-growth -->
+
+      <!-- TAB: Analytics -->
+      <div id="admindash-tab-analytics" style="display:none;">
+      <!-- Summary Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;" id="analyticsSummaryCards">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Pageviews</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsPageviews">0</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsPageviewsToday">0</span></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Unique Users</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsUsers">0</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsUsersToday">0</span></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Avg Session Time</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsAvgSession">--</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Based on page enter/leave</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Viewed Page</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsMostViewed">--</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;" id="analyticsMostViewedCount"></div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Page Popularity</h3>
+          <div style="height:300px;"><canvas id="analyticsPageChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Deal Engagement</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Viewed Deals</h4>
+              <div id="analyticsTopViewedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
+            </div>
+            <div>
+              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Saved Deals</h4>
+              <div id="analyticsTopSavedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Sessions Table -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">User Sessions</h3>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border);">
+                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">User</th>
+                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Last Active</th>
+                <th style="text-align:right;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Total Events</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsUserSessions"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Activity Feed <span style="font-weight:400;font-size:13px;color:var(--text-muted);">(last 100 events)</span></h3>
+        <div id="analyticsActivityFeed" style="max-height:500px;overflow-y:auto;"></div>
+      </div>
+      </div><!-- /admindash-tab-analytics -->
+
       <!-- TAB: Database Schema -->
-      <div id="admindash-tab-schema">
+      <div id="admindash-tab-schema" style="display:none;">
         <div id="schemaContent"><!-- Rendered by JS --></div>
       </div>
 
@@ -6757,140 +6870,6 @@ const _supa = window.supabase.createClient(
 
 
   <!-- PAGE: Growth -->
-  <div class="page" id="page-growth">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Growth &amp; Analytics</div>
-      <div style="margin-left:auto;display:flex;gap:8px;">
-        <button onclick="if(growthCurrentTab==='growth')renderGrowthPage();else refreshAnalyticsDashboard();" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
-        <button id="growthClearBtn" onclick="clearAnalyticsData()" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--red);cursor:pointer;">Clear Data</button>
-      </div>
-    </div>
-    <div class="sub-page" style="max-width:1100px">
-
-      <!-- Tab Toggle Bar -->
-      <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;" id="growthTabBar">
-        <button class="growth-tab-btn growth-tab-active" data-tab="growth" onclick="switchGrowthTab('growth')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Growth Dashboard</button>
-        <button class="growth-tab-btn" data-tab="analytics" onclick="switchGrowthTab('analytics')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Analytics</button>
-      </div>
-
-      <!-- TAB: Growth Dashboard -->
-      <div id="growth-tab-growth">
-      <div class="settings-page-desc" style="margin-top:0;">Week-over-week platform growth. Focus on increasing the rate of GP and LP acquisition.</div>
-
-      <!-- North Star Banner -->
-      <div id="growthNorthStar" style="background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02));border:1px solid rgba(81,190,123,0.2);border-radius:12px;padding:24px 28px;margin-bottom:28px;">
-        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">North Star Metric</div>
-        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
-          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:var(--text-dark);" id="growthNorthStarValue">--</div>
-          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Deals added to LP pipelines (all time)</div>
-          <div id="growthNorthStarDelta" style="font-family:var(--font-ui);font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto;"></div>
-        </div>
-        <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:8px;">This measures real engagement: an LP cared enough about a deal to move it into their pipeline. It combines GP supply quality + LP demand activation.</div>
-      </div>
-
-      <!-- Key Metrics Grid -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;" id="growthMetricsGrid"></div>
-
-      <!-- WoW Charts -->
-      <div class="section" style="margin-top:0;">
-        <div class="section-header"><span class="section-title">Week-over-Week Trends</span></div>
-        <div class="section-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" id="growthChartsGrid">
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">LPs Added</div><div id="growthChartLPs" style="height:120px;"></div></div>
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">GPs Added</div><div id="growthChartGPs" style="height:120px;"></div></div>
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Deals Added</div><div id="growthChartDeals" style="height:120px;"></div></div>
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Pipeline Adds (LP &rarr; Deal)</div><div id="growthChartPipeline" style="height:120px;"></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Growth Suggestions -->
-      <div class="section">
-        <div class="section-header"><span class="section-title">Growth Playbook</span></div>
-        <div class="section-body" id="growthSuggestions">
-          <div style="color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading suggestions...</div>
-        </div>
-      </div>
-      </div><!-- /growth-tab-growth -->
-
-      <!-- TAB: Analytics -->
-      <div id="growth-tab-analytics" style="display:none;">
-      <!-- Summary Cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;" id="analyticsSummaryCards">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Pageviews</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsPageviews">0</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsPageviewsToday">0</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Unique Users</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsUsers">0</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsUsersToday">0</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Avg Session Time</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsAvgSession">--</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Based on page enter/leave</div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Viewed Page</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsMostViewed">--</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;" id="analyticsMostViewedCount"></div>
-        </div>
-      </div>
-
-      <!-- Charts Row -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Page Popularity</h3>
-          <div style="height:300px;"><canvas id="analyticsPageChart"></canvas></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Deal Engagement</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div>
-              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Viewed Deals</h4>
-              <div id="analyticsTopViewedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
-            </div>
-            <div>
-              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Saved Deals</h4>
-              <div id="analyticsTopSavedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- User Sessions Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">User Sessions</h3>
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
-            <thead>
-              <tr style="border-bottom:2px solid var(--border);">
-                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">User</th>
-                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Last Active</th>
-                <th style="text-align:right;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Total Events</th>
-              </tr>
-            </thead>
-            <tbody id="analyticsUserSessions"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Activity Feed -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Activity Feed <span style="font-weight:400;font-size:13px;color:var(--text-muted);">(last 100 events)</span></h3>
-        <div id="analyticsActivityFeed" style="max-height:500px;overflow-y:auto;"></div>
-      </div>
-      </div><!-- /growth-tab-analytics -->
-
-    </div>
-  </div>
-
-
   <!-- PAGE: Debt Fund Explorer -->
   <div class="page" id="page-debtfunds">
     <div class="topbar">
@@ -7268,9 +7247,9 @@ async function fetchDeals() {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
-    // Authenticated users can see 506(b) deals (they've been verified as accredited)
-    const userToken = localStorage.getItem('ghlToken') || localStorage.getItem('sb_token');
-    const dealsUrl = userToken ? DEALS_API_URL + '?include506b=true' : DEALS_API_URL;
+    // Only admin sees 506(b) deals — they cannot be publicly advertised
+    const _ue = (window.GYC_USER_EMAIL || localStorage.getItem('ghlEmail') || '').toLowerCase();
+    const dealsUrl = _ue === 'info@pascalwagner.com' ? DEALS_API_URL + '?include506b=true' : DEALS_API_URL;
     const resp = await fetch(dealsUrl, { signal: controller.signal });
     clearTimeout(timeout);
     if (!resp.ok) throw new Error('API returned ' + resp.status);
@@ -11004,7 +10983,7 @@ document.addEventListener('keydown', e => {
 // ========== PAGE NAVIGATION ==========
 function navigateTo(page) {
   // Redirect legacy page names to admin dashboard
-  if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions') { navigateTo('admindash'); return; }
+  if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions' || page === 'growth') { navigateTo('admindash'); return; }
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -11043,7 +11022,6 @@ function navigateTo(page) {
   if (page === 'casestudies') renderCaseStudies();
   if (page === 'admin-manage') adminLoadData();
   if (page === 'outreach') outreachInit();
-  if (page === 'growth') switchGrowthTab(growthCurrentTab);
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
     // Try to render from localStorage first
@@ -14957,19 +14935,43 @@ function renderManagersPage() {
   deals.forEach(d => {
     const name = d.managementCompany;
     if (!name) return;
-    if (!dealsByCompany[name]) dealsByCompany[name] = { deals: [], assetClasses: new Set(), dealTypes: new Set() };
+    if (!dealsByCompany[name]) dealsByCompany[name] = { deals: [], assetClasses: new Set(), dealTypes: new Set(), activeCount: 0 };
     dealsByCompany[name].deals.push(d);
     if (d.assetClass) dealsByCompany[name].assetClasses.add(d.assetClass);
     if (d.dealType) dealsByCompany[name].dealTypes.add(d.dealType);
+    if (d.status && /open|active|accepting/i.test(d.status)) dealsByCompany[name].activeCount++;
   });
+
+  // Helper: compute aggregate stats from a list of deals
+  function computeDealStats(dealList) {
+    let irrs = [], prefs = [], mins = [];
+    let activeCount = 0;
+    dealList.forEach(d => {
+      const irr = typeof d.targetIRR === 'number' ? (d.targetIRR <= 1 ? d.targetIRR * 100 : d.targetIRR) : 0;
+      if (irr > 0) irrs.push(irr);
+      const pref = typeof d.preferredReturn === 'number' ? (d.preferredReturn <= 1 ? d.preferredReturn * 100 : d.preferredReturn) : 0;
+      if (pref > 0) prefs.push(pref);
+      const min = typeof d.investmentMinimum === 'number' ? d.investmentMinimum : 0;
+      if (min > 0) mins.push(min);
+      if (d.status && /open|active|accepting/i.test(d.status)) activeCount++;
+    });
+    const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    return {
+      avgIRR: avg(irrs),
+      avgPref: avg(prefs),
+      minInvestment: mins.length ? Math.min(...mins) : 0,
+      activeDeals: activeCount
+    };
+  }
 
   // Primary source: GYC_COMPANIES from API (Supabase management_companies table)
   const companyMap = {};
   apiCompanies.forEach(c => {
     const name = c.name;
     if (!name) return;
-    const dealInfo = dealsByCompany[name] || { deals: [], assetClasses: new Set(), dealTypes: new Set() };
+    const dealInfo = dealsByCompany[name] || { deals: [], assetClasses: new Set(), dealTypes: new Set(), activeCount: 0 };
     const assetClasses = new Set([...(c.assetClasses || []), ...dealInfo.assetClasses]);
+    const stats = computeDealStats(dealInfo.deals);
     companyMap[name] = {
       name: name,
       ceo: c.ceo || '',
@@ -14979,13 +14981,15 @@ function renderManagersPage() {
       website: c.website || '',
       type: c.type || '',
       foundingYear: c.foundingYear || null,
-      totalInvestors: c.totalInvestors || null
+      totalInvestors: c.totalInvestors || null,
+      ...stats
     };
   });
 
   // Also add companies from deals that aren't in the API list
   Object.entries(dealsByCompany).forEach(([name, info]) => {
     if (!companyMap[name]) {
+      const stats = computeDealStats(info.deals);
       companyMap[name] = {
         name: name,
         ceo: info.deals[0]?.ceo || '',
@@ -14995,7 +14999,8 @@ function renderManagersPage() {
         website: '',
         type: '',
         foundingYear: null,
-        totalInvestors: null
+        totalInvestors: null,
+        ...stats
       };
     }
   });
@@ -21224,7 +21229,7 @@ function loadAdminEngagement() {
 }
 
 // ========== ADMIN DASHBOARD TABS ==========
-var adminDashCurrentTab = 'schema';
+var adminDashCurrentTab = 'growth';
 
 function switchAdminDashTab(tab) {
   adminDashCurrentTab = tab;
@@ -21238,10 +21243,12 @@ function switchAdminDashTab(tab) {
       btn.style.color = 'var(--text-secondary)';
     }
   });
-  ['schema', 'devnotes', 'network', 'transactions'].forEach(function(t) {
+  ['growth', 'analytics', 'schema', 'devnotes', 'network', 'transactions'].forEach(function(t) {
     var el = document.getElementById('admindash-tab-' + t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
+  if (tab === 'growth') renderGrowthPage();
+  if (tab === 'analytics') refreshAnalyticsDashboard();
   if (tab === 'schema') renderSchemaPage();
   if (tab === 'network') renderNetworkMoat();
 }
