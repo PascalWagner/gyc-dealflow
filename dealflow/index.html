@@ -5525,64 +5525,66 @@ const _supa = window.supabase.createClient(
       </div>
       <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
 
-      <!-- Filter Panel (hidden by default) -->
-      <div id="filterPanel" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,0.12);padding:16px 20px;margin-top:4px;">
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Asset Class</label>
-            <select class="filter-select" id="filterAssetClass" onchange="applyFilters()" style="min-width:140px;">
-              <option value="">All</option>
-              <option value="Multi-Family">Multi-Family</option>
-              <option value="Industrial">Industrial</option>
-              <option value="Self Storage">Self Storage</option>
-              <option value="Hotels/Hospitality">Hotels / Hospitality</option>
-              <option value="Lending">Lending</option>
-              <option value="RV/Mobile Home Parks">RV / Mobile Home Parks</option>
-              <option value="Business / Other">Business / Other</option>
-              <option value="Mixed-Use">Mixed-Use</option>
-              <option value="Short Term Rental">Short Term Rental</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deal Type</label>
-            <select class="filter-select" id="filterDealType" onchange="applyFilters()" style="min-width:120px;">
-              <option value="">All</option>
-              <option value="Fund">Fund</option>
-              <option value="Syndication">Syndication</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Strategy</label>
-            <select class="filter-select" id="filterStrategy" onchange="applyFilters()" style="min-width:120px;">
-              <option value="">All</option>
-              <option value="Lending">Lending</option>
-              <option value="Buy & Hold">Buy &amp; Hold</option>
-              <option value="Value-Add">Value-Add</option>
-              <option value="Distressed">Distressed</option>
-              <option value="Development">Development</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Sort By</label>
-            <select class="filter-select" id="filterSort" onchange="_goalSortOverridden=true;applyFilters()" style="min-width:140px;">
-              <option value="newest">Newest</option>
-              <option value="irr">Highest IRR</option>
-              <option value="min_invest">Lowest Min Investment</option>
-              <option value="az">A-Z Name</option>
-            </select>
-          </div>
-          <select class="filter-select" id="filterStatus" onchange="applyFilters()" style="display:none;">
-            <option value="">Status</option>
-            <option value="Open to invest">Open to invest</option>
-            <option value="Evergreen">Evergreen</option>
+      <span id="visibleCount" style="display:none;">0</span>
+    </div>
+    <!-- Filter Panel (expands inline below filter bar) -->
+    <div id="filterPanel" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-top:none;padding:14px 24px;margin:-1px 0 0 0;">
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Asset Class</label>
+          <select class="filter-select" id="filterAssetClass" onchange="applyFilters()" style="min-width:140px;">
+            <option value="">All</option>
+            <option value="Multi-Family">Multi-Family</option>
+            <option value="Industrial">Industrial</option>
+            <option value="Self Storage">Self Storage</option>
+            <option value="Hotels/Hospitality">Hotels / Hospitality</option>
+            <option value="Lending">Lending</option>
+            <option value="RV/Mobile Home Parks">RV / Mobile Home Parks</option>
+            <option value="Business / Other">Business / Other</option>
+            <option value="Mixed-Use">Mixed-Use</option>
+            <option value="Short Term Rental">Short Term Rental</option>
           </select>
-          <label id="showArchivedToggle" style="display:none;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;" title="Show deals that are likely closed or no longer accepting capital">
-            <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;"> Show archived
-          </label>
-          <button class="filter-clear" onclick="clearFilters()" style="margin-left:auto;">Clear Filters</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deal Type</label>
+          <select class="filter-select" id="filterDealType" onchange="applyFilters()" style="min-width:120px;">
+            <option value="">All</option>
+            <option value="Fund">Fund</option>
+            <option value="Syndication">Syndication</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Strategy</label>
+          <select class="filter-select" id="filterStrategy" onchange="applyFilters()" style="min-width:120px;">
+            <option value="">All</option>
+            <option value="Lending">Lending</option>
+            <option value="Buy & Hold">Buy &amp; Hold</option>
+            <option value="Value-Add">Value-Add</option>
+            <option value="Distressed">Distressed</option>
+            <option value="Development">Development</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Sort By</label>
+          <select class="filter-select" id="filterSort" onchange="_goalSortOverridden=true;applyFilters()" style="min-width:140px;">
+            <option value="newest">Newest</option>
+            <option value="irr">Highest IRR</option>
+            <option value="min_invest">Lowest Min Investment</option>
+            <option value="az">A-Z Name</option>
+          </select>
+        </div>
+        <select class="filter-select" id="filterStatus" onchange="applyFilters()" style="display:none;">
+          <option value="">Status</option>
+          <option value="Open to invest">Open to invest</option>
+          <option value="Evergreen">Evergreen</option>
+        </select>
+        <label id="showArchivedToggle" style="display:none;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;" title="Include deals that may be closed or no longer accepting capital">
+          <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;accent-color:var(--primary);"> Show archived
+        </label>
+        <div style="margin-left:auto;">
+          <button onclick="clearFilters()" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--red,#e74c3c);white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background='rgba(231,76,60,0.06)';this.style.borderColor='var(--red,#e74c3c)'" onmouseout="this.style.background='transparent';this.style.borderColor='var(--border)'">Clear All Filters</button>
         </div>
       </div>
-      <span id="visibleCount" style="display:none;">0</span>
     </div>
     <div class="stats-bar" id="statsBar"></div>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
@@ -11280,14 +11282,6 @@ function toggleFilterPanel() {
   }
 }
 
-// Close filter panel when clicking outside
-document.addEventListener('click', function(e) {
-  var panel = document.getElementById('filterPanel');
-  var btn = document.getElementById('filtersToggleBtn');
-  if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && btn && !btn.contains(e.target)) {
-    toggleFilterPanel();
-  }
-});
 
 // Update filter count badge
 function updateFilterBadge() {
