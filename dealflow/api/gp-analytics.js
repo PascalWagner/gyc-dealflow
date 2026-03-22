@@ -85,13 +85,74 @@ export default async function handler(req, res) {
       else if (s.stage === 'portfolio') totalInvested++;
     }
 
-    // 4. Recent activity (last 10)
-    const recentActivity = allStages.slice(0, 10).map(s => ({
-      user_id: s.user_id,
-      deal_id: s.deal_id,
-      stage: s.stage,
-      updated_at: s.updated_at
-    }));
+    // 4. Recent activity (last 10) — enriched with capital signals
+    const recentRaw = allStages.slice(0, 10);
+
+    // Fetch capital data for these users from user_goals
+    const recentUserIds = [...new Set(recentRaw.map(s => s.user_id))];
+    let capitalMap = {};
+    if (recentUserIds.length > 0) {
+      const { data: goalRows } = await supabase
+        .from('user_goals')
+        .select('user_id, capital_available, goal_type')
+        .in('user_id', recentUserIds);
+
+      for (const g of (goalRows || [])) {
+        capitalMap[g.user_id] = {
+          capital_available: g.capital_available,
+          goal_type: g.goal_type
+        };
+      }
+    }
+
+    const recentActivity = recentRaw.map(s => {
+      const userGoal = capitalMap[s.user_id] || {};
+      const capital = userGoal.capital_available;
+
+      // Determine intent tier
+      let intentTier = 'browsing';
+      if ((s.stage === 'duediligence' || s.stage === 'portfolio') && capital > 50000) {
+        intentTier = 'high';
+      } else if (s.stage === 'interested' || s.stage === 'duediligence') {
+        intentTier = 'engaged';
+      }
+
+      // Anonymized capital range
+      let capitalRange = null;
+      if (capital != null && capital > 0) {
+        if (capital >= 250000) capitalRange = '$250K+';
+        else if (capital >= 100000) capitalRange = '$100K-$250K';
+        else if (capital >= 50000) capitalRange = '$50K-$100K';
+        else if (capital >= 25000) capitalRange = '$25K-$50K';
+        else capitalRange = 'Under $25K';
+      }
+
+      return {
+        user_id: s.user_id,
+        deal_id: s.deal_id,
+        stage: s.stage,
+        updated_at: s.updated_at,
+        intent_tier: intentTier,
+        capital_range: capitalRange,
+        goal_type: userGoal.goal_type || null
+      };
+    });
+
+    // Count high-intent LPs this month
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    const highIntentSet = new Set();
+    for (const s of allStages) {
+      if (!s.updated_at) continue;
+      const dt = new Date(s.updated_at);
+      if (dt < monthAgo) continue;
+      const userGoal = capitalMap[s.user_id] || {};
+      const capital = userGoal.capital_available;
+      if ((s.stage === 'duediligence' || s.stage === 'portfolio') && capital > 50000) {
+        highIntentSet.add(s.user_id);
+      }
+    }
+    const highIntentCount = highIntentSet.size;
 
     // 5. Weekly activity aggregation (last 8 weeks)
     const now = new Date();
@@ -128,7 +189,8 @@ export default async function handler(req, res) {
       totalVetting,
       totalInvested,
       recentActivity,
-      weeklyActivity
+      weeklyActivity,
+      highIntentCount
     });
   } catch (err) {
     console.error('gp-analytics error:', err);

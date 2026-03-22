@@ -1194,6 +1194,314 @@ body {
   font-style: italic;
 }
 
+/* ====== INVESTOR INSIGHTS (What Our Investors Want) ====== */
+.insights-bar-chart {
+  margin-bottom: 20px;
+}
+.insights-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.insights-bar-label {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 130px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.insights-bar-track {
+  flex: 1;
+  height: 24px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.insights-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  min-width: 0;
+}
+.insights-bar-fill.gp-highlight {
+  background: var(--teal-deep);
+}
+.insights-bar-pct {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.insights-bar-gp-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255,255,255,0.9);
+  color: var(--teal-deep);
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+.insights-stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.insights-stat-card {
+  background: var(--off-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px 14px;
+  text-align: center;
+}
+.insights-stat-value {
+  font-family: var(--font-headline);
+  font-size: 20px;
+  color: var(--teal-deep);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.insights-stat-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+.insights-donut-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.insights-donut-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.insights-donut-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.insights-donut-pct {
+  font-weight: 700;
+  color: var(--teal-deep);
+}
+.insights-footer {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+.insights-sub-title {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* ====== LEAD QUALITY / INTENT BADGES ====== */
+.activity-card-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--off-white);
+  border: 1px solid var(--border-light);
+  margin-bottom: 8px;
+  transition: all var(--transition);
+}
+.activity-card-item:last-child { margin-bottom: 0; }
+.activity-card-item:hover { border-color: var(--border); box-shadow: var(--shadow-card); }
+.intent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.intent-badge.intent-high {
+  background: #FEF2F2;
+  color: #D04040;
+}
+.intent-badge.intent-engaged {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+.intent-badge.intent-browsing {
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+.activity-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.activity-card-deal {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.activity-card-signal {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.activity-card-time {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.high-intent-summary {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--teal-deep);
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: var(--green-bg);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary);
+}
+
+/* ====== COMPETITIVE ANALYSIS ====== */
+.comp-deal-section {
+  margin-bottom: 28px;
+}
+.comp-deal-section:last-child { margin-bottom: 0; }
+.comp-deal-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.comp-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  min-width: 500px;
+}
+.comp-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.comp-table th.col-gp {
+  background: var(--green-bg);
+  color: var(--teal-deep);
+}
+.comp-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+  font-weight: 500;
+}
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table td.col-gp {
+  background: rgba(231, 245, 240, 0.5);
+  font-weight: 700;
+  color: var(--teal-deep);
+}
+.comp-metric-label {
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 100px;
+}
+.comp-value-better {
+  color: var(--green);
+  font-weight: 700;
+}
+.comp-value-worse {
+  color: var(--orange);
+  font-weight: 700;
+}
+.comp-value-neutral {
+  color: var(--text-dark);
+  font-weight: 500;
+}
+.comp-insights {
+  list-style: none;
+  padding: 0;
+}
+.comp-insights li {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border-light);
+}
+.comp-insights li:last-child { border-bottom: none; }
+.comp-insights li::before {
+  content: '\2022';
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 8px;
+}
+.comp-insight-good { color: var(--green); }
+.comp-insight-bad { color: var(--orange); }
+
 /* ====== RESPONSIVE ====== */
 @media (max-width: 1024px) {
   .stats-strip { grid-template-columns: repeat(2, 1fr); }
@@ -1225,6 +1533,8 @@ body {
   .stats-strip { grid-template-columns: 1fr 1fr; }
   .analytics-grid { grid-template-columns: 1fr; }
   .demand-cards { grid-template-columns: 1fr; }
+  .insights-stat-cards { grid-template-columns: 1fr; }
+  .insights-bar-label { min-width: 90px; font-size: 11px; }
 }
 </style>
 </head>
@@ -1378,6 +1688,28 @@ body {
           <div class="demand-cards" id="demandIntelligence">
             <div class="empty-inline" style="padding:20px;">
               <p>Loading demand data...</p>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <hr style="border:none;border-top:1px solid var(--border-light);margin:28px 0;">
+
+          <!-- Part 4: What Our Investors Want -->
+          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">What Our Investors Want</h3>
+          <div id="investorInsights">
+            <div class="empty-inline" style="padding:20px;">
+              <p>Loading investor insights...</p>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <hr style="border:none;border-top:1px solid var(--border-light);margin:28px 0;">
+
+          <!-- Part 5: Competitive Analysis -->
+          <h3 style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:14px;">Competitive Analysis</h3>
+          <div id="competitiveAnalysis">
+            <div class="empty-inline" style="padding:20px;">
+              <p>Loading competitive data...</p>
             </div>
           </div>
 
@@ -2248,7 +2580,7 @@ function fetchGPAnalytics() {
     })
     .catch(function(e) {
       console.warn('GP analytics API unavailable:', e.message);
-      return { totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [] };
+      return { totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [], highIntentCount: 0 };
     });
 }
 
@@ -2271,18 +2603,54 @@ function renderLPActivity(analytics) {
     dealNameMap[getDealId(d)] = getDealName(d);
   });
 
-  listEl.innerHTML = recent.map(function(item) {
-    var stageLabel = item.stage === 'interested' ? 'Saved' : item.stage === 'duediligence' ? 'Vetting' : item.stage === 'portfolio' ? 'Invested' : item.stage;
-    var stageClass = 'stage-' + item.stage;
+  // High intent summary
+  var highIntentCount = analytics.highIntentCount || 0;
+  var summaryHtml = '';
+  if (highIntentCount > 0) {
+    summaryHtml = '<div class="high-intent-summary">' +
+      '\uD83D\uDD25 ' + highIntentCount + ' high-intent LP' + (highIntentCount !== 1 ? 's' : '') + ' engaged with your deals this month' +
+    '</div>';
+  }
+
+  var itemsHtml = recent.map(function(item) {
     var dealName = dealNameMap[item.deal_id] || 'Unknown Deal';
     var timeAgo = relativeTime(item.updated_at);
 
-    return '<li class="activity-item">' +
-      '<span class="activity-stage-badge ' + stageClass + '">' + escHtml(stageLabel) + '</span>' +
-      '<span class="activity-deal-name">' + escHtml(dealName) + '</span>' +
-      '<span class="activity-time">' + escHtml(timeAgo) + '</span>' +
-    '</li>';
+    // Intent tier badge
+    var tier = item.intent_tier || 'browsing';
+    var tierLabel = 'Browsing';
+    var tierEmoji = '\uD83D\uDC40';
+    var tierClass = 'intent-browsing';
+    if (tier === 'high') {
+      tierLabel = 'High Intent';
+      tierEmoji = '\uD83D\uDD25';
+      tierClass = 'intent-high';
+    } else if (tier === 'engaged') {
+      tierLabel = 'Engaged';
+      tierEmoji = '\u2B50';
+      tierClass = 'intent-engaged';
+    }
+
+    // Stage label
+    var stageLabel = item.stage === 'interested' ? 'Saved deal' : item.stage === 'duediligence' ? 'Moved to vetting' : item.stage === 'portfolio' ? 'Marked as invested' : item.stage;
+
+    // Capital signal
+    var signalParts = [stageLabel];
+    if (item.capital_range) {
+      signalParts.push('LP with ' + item.capital_range + ' to deploy');
+    }
+
+    return '<div class="activity-card-item">' +
+      '<span class="intent-badge ' + tierClass + '">' + tierEmoji + ' ' + escHtml(tierLabel) + '</span>' +
+      '<div class="activity-card-body">' +
+        '<div class="activity-card-deal">' + escHtml(dealName) + '</div>' +
+        '<div class="activity-card-signal">' + escHtml(signalParts.join(' \u00B7 ')) + '</div>' +
+      '</div>' +
+      '<span class="activity-card-time">' + escHtml(timeAgo) + '</span>' +
+    '</div>';
   }).join('');
+
+  listEl.innerHTML = summaryHtml + itemsHtml;
 }
 
 function relativeTime(dateStr) {
@@ -2662,6 +3030,326 @@ function renderDemandIntelligence(gpDeals, allDeals, analytics) {
   container.innerHTML = html;
 }
 
+// ========== INVESTOR INSIGHTS ==========
+function fetchInvestorInsights() {
+  if (!gpState.companyId) return Promise.resolve({});
+  var user = getUser();
+  var headers = { 'Content-Type': 'application/json' };
+  if (user && user.token) {
+    headers['Authorization'] = 'Bearer ' + user.token;
+  }
+
+  return fetch('/api/gp-investor-insights?companyId=' + encodeURIComponent(gpState.companyId), { headers: headers })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      return resp.json();
+    })
+    .catch(function(e) {
+      console.warn('Investor insights API unavailable:', e.message);
+      return {};
+    });
+}
+
+var DIST_COLORS = ['#51BE7B', '#2563EB', '#CF7A30', '#CA8A04', '#D04040', '#8B5CF6'];
+
+function renderInvestorInsights(insights) {
+  var container = document.getElementById('investorInsights');
+  if (!insights || !insights.topAssetClasses || insights.topAssetClasses.length === 0) {
+    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>Not enough investor data yet. As more investors complete their profiles, aggregate preferences will appear here.</p></div>';
+    return;
+  }
+
+  var html = '';
+
+  // Top Asset Classes — Horizontal bar chart
+  html += '<div class="insights-sub-title">Most Popular Asset Classes</div>';
+  html += '<div class="insights-bar-chart">';
+  var maxPct = Math.max.apply(null, insights.topAssetClasses.map(function(a) { return a.pct; }));
+  insights.topAssetClasses.forEach(function(item) {
+    var barWidth = maxPct > 0 ? Math.round((item.pct / maxPct) * 100) : 0;
+    var fillClass = item.isGP ? ' gp-highlight' : '';
+    var gpTag = item.isGP ? '<span class="insights-bar-gp-tag">YOUR DEALS</span>' : '';
+    html += '<div class="insights-bar-row">' +
+      '<span class="insights-bar-label">' + escHtml(item.name) + '</span>' +
+      '<div class="insights-bar-track">' +
+        '<div class="insights-bar-fill' + fillClass + '" style="width:' + barWidth + '%;">' + gpTag + '</div>' +
+      '</div>' +
+      '<span class="insights-bar-pct">' + item.pct + '%</span>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  // Distribution Preferences — colored segments
+  if (insights.preferredDistributions && insights.preferredDistributions.length > 0) {
+    html += '<div class="insights-sub-title">Distribution Preferences</div>';
+    html += '<div class="insights-donut-row">';
+    insights.preferredDistributions.forEach(function(item, idx) {
+      var color = DIST_COLORS[idx % DIST_COLORS.length];
+      html += '<div class="insights-donut-item">' +
+        '<span class="insights-donut-swatch" style="background:' + color + ';"></span>' +
+        escHtml(item.name) + ' <span class="insights-donut-pct">' + item.pct + '%</span>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Stat cards row: Check Size, Top Goal, Deal Types
+  html += '<div class="insights-stat-cards">';
+
+  // Check size
+  html += '<div class="insights-stat-card">' +
+    '<div class="insights-stat-value">' + escHtml(insights.avgCheckSize || '--') + '</div>' +
+    '<div class="insights-stat-label">Most Common Check Size</div>' +
+  '</div>';
+
+  // Top goal
+  if (insights.topGoals && insights.topGoals.length > 0) {
+    html += '<div class="insights-stat-card">' +
+      '<div class="insights-stat-value">' + escHtml(insights.topGoals[0].name) + '</div>' +
+      '<div class="insights-stat-label">Top Goal (' + insights.topGoals[0].pct + '% of LPs)</div>' +
+    '</div>';
+  }
+
+  // Top deal type
+  if (insights.topDealTypes && insights.topDealTypes.length > 0) {
+    html += '<div class="insights-stat-card">' +
+      '<div class="insights-stat-value">' + escHtml(insights.topDealTypes[0].name) + '</div>' +
+      '<div class="insights-stat-label">Preferred Structure (' + insights.topDealTypes[0].pct + '%)</div>' +
+    '</div>';
+  }
+
+  html += '</div>';
+
+  // Goals breakdown (if more than one)
+  if (insights.topGoals && insights.topGoals.length > 1) {
+    html += '<div class="insights-sub-title">Investor Goals</div>';
+    html += '<div class="insights-donut-row">';
+    insights.topGoals.forEach(function(item, idx) {
+      var color = DIST_COLORS[idx % DIST_COLORS.length];
+      html += '<div class="insights-donut-item">' +
+        '<span class="insights-donut-swatch" style="background:' + color + ';"></span>' +
+        escHtml(item.name) + ' <span class="insights-donut-pct">' + item.pct + '%</span>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Footer
+  html += '<div class="insights-footer">Based on ' + (insights.totalInvestors || 0) + ' investor profiles</div>';
+
+  container.innerHTML = html;
+}
+
+// ========== COMPETITIVE ANALYSIS ==========
+function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
+  var container = document.getElementById('competitiveAnalysis');
+
+  // Filter to active deals only
+  var activeDeals = allDeals.filter(function(d) {
+    var s = (d.status || '').toLowerCase();
+    return s !== 'closed' && s !== 'fully funded' && s !== 'completed';
+  });
+
+  if (gpDeals.length === 0 || activeDeals.length < 3) {
+    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>Not enough active deals to generate competitive analysis. At least 3 active deals are needed on the platform.</p></div>';
+    return;
+  }
+
+  // What distribution percentage to cite from investor insights
+  var monthlyDistPct = 0;
+  if (preferredDistributions && preferredDistributions.length > 0) {
+    for (var pi = 0; pi < preferredDistributions.length; pi++) {
+      if ((preferredDistributions[pi].name || '').toLowerCase().indexOf('month') >= 0) {
+        monthlyDistPct = preferredDistributions[pi].pct;
+        break;
+      }
+    }
+  }
+
+  var html = '';
+
+  gpDeals.forEach(function(deal) {
+    var name = getDealName(deal);
+    var ac = getDealAssetClass(deal);
+    if (!ac) return; // skip deals without asset class
+
+    // Find competitors in same asset class
+    var peers = activeDeals.filter(function(d) {
+      var dAc = d.assetClass || d.asset_class || '';
+      var dId = d.id || d.airtable_id || '';
+      var myId = deal.id || deal.airtable_id || '';
+      return dAc === ac && dId !== myId;
+    });
+
+    if (peers.length === 0) return;
+
+    // Sort by preferred return descending
+    var sorted = peers.slice().sort(function(a, b) {
+      var aVal = a.preferredReturn || a.pref_return || a.prefReturn || 0;
+      var bVal = b.preferredReturn || b.pref_return || b.prefReturn || 0;
+      return bVal - aVal;
+    });
+
+    var top3 = sorted.slice(0, 3);
+
+    // Helper to get values
+    function getPref(d) {
+      var v = d.preferredReturn || d.pref_return || d.prefReturn;
+      return v != null ? v : null;
+    }
+    function getMin(d) {
+      return d.investmentMinimum || d.investment_minimum || d.minInvestment || d.min_investment || d.minimumInvestment || null;
+    }
+    function getDist(d) {
+      return d.distributions || d.Distributions || null;
+    }
+    function getOffering(d) {
+      return d.offeringType || d.offering_type || null;
+    }
+
+    var myPref = getPref(deal);
+    var myMin = getMin(deal);
+    var myDist = getDist(deal);
+    var myOffering = getOffering(deal);
+
+    // Build comparison table
+    html += '<div class="comp-deal-section">';
+    html += '<div class="comp-deal-title">Your Deal vs Top ' + top3.length + ' ' + escHtml(ac) + ' Deals</div>';
+    html += '<div class="comp-table-wrap"><table class="comp-table">';
+
+    // Header row
+    html += '<thead><tr>' +
+      '<th></th>' +
+      '<th class="col-gp">Your Deal</th>';
+    for (var ci = 0; ci < top3.length; ci++) {
+      html += '<th>#' + (ci + 1) + ' Competitor</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    // Preferred Return row
+    html += '<tr><td class="comp-metric-label">Pref Return</td>';
+    html += '<td class="col-gp">' + (myPref != null ? formatPctDisplay(myPref) : '--') + '</td>';
+    var compPrefs = [];
+    for (var ci = 0; ci < top3.length; ci++) {
+      var cp = getPref(top3[ci]);
+      compPrefs.push(cp);
+      html += '<td>' + (cp != null ? formatPctDisplay(cp) : '--') + '</td>';
+    }
+    html += '</tr>';
+
+    // Min Investment row
+    html += '<tr><td class="comp-metric-label">Min Investment</td>';
+    html += '<td class="col-gp">' + (myMin != null ? '$' + Number(myMin).toLocaleString() : '--') + '</td>';
+    var compMins = [];
+    for (var ci = 0; ci < top3.length; ci++) {
+      var cm = getMin(top3[ci]);
+      compMins.push(cm);
+      html += '<td>' + (cm != null ? '$' + Number(cm).toLocaleString() : '--') + '</td>';
+    }
+    html += '</tr>';
+
+    // Distributions row
+    html += '<tr><td class="comp-metric-label">Distributions</td>';
+    html += '<td class="col-gp">' + (myDist ? escHtml(myDist) : '--') + '</td>';
+    var compDists = [];
+    for (var ci = 0; ci < top3.length; ci++) {
+      var cd = getDist(top3[ci]);
+      compDists.push(cd);
+      html += '<td>' + (cd ? escHtml(cd) : '--') + '</td>';
+    }
+    html += '</tr>';
+
+    // Offering Type row
+    html += '<tr><td class="comp-metric-label">Offering Type</td>';
+    html += '<td class="col-gp">' + (myOffering ? escHtml(myOffering) : '--') + '</td>';
+    for (var ci = 0; ci < top3.length; ci++) {
+      var co = getOffering(top3[ci]);
+      html += '<td>' + (co ? escHtml(co) : '--') + '</td>';
+    }
+    html += '</tr>';
+
+    html += '</tbody></table></div>';
+
+    // Generate actionable insights
+    var insightsItems = [];
+
+    // Pref return comparison
+    var validCompPrefs = compPrefs.filter(function(v) { return v != null; });
+    if (myPref != null && validCompPrefs.length > 0) {
+      var avgCompPref = validCompPrefs.reduce(function(a, b) { return a + b; }, 0) / validCompPrefs.length;
+      if (myPref < avgCompPref) {
+        insightsItems.push({
+          type: 'bad',
+          text: 'Your preferred return (' + formatPctDisplay(myPref) + ') is below the top ' + validCompPrefs.length + ' competitors (avg ' + formatPctDisplay(avgCompPref) + '). Consider increasing to attract more LP interest.'
+        });
+      } else {
+        insightsItems.push({
+          type: 'good',
+          text: 'Your preferred return (' + formatPctDisplay(myPref) + ') is competitive with the top ' + validCompPrefs.length + ' deals (avg ' + formatPctDisplay(avgCompPref) + ').'
+        });
+      }
+    }
+
+    // Min investment comparison
+    var validCompMins = compMins.filter(function(v) { return v != null; });
+    if (myMin != null && validCompMins.length > 0) {
+      var lowerCount = validCompMins.filter(function(v) { return v < myMin; }).length;
+      if (lowerCount > 0) {
+        insightsItems.push({
+          type: 'bad',
+          text: 'Your minimum investment ($' + Number(myMin).toLocaleString() + ') is higher than ' + lowerCount + ' of the top ' + validCompMins.length + ' competitors. A lower entry point could increase deal flow.'
+        });
+      } else {
+        insightsItems.push({
+          type: 'good',
+          text: 'Your minimum investment ($' + Number(myMin).toLocaleString() + ') is at or below competitors — accessible to more investors.'
+        });
+      }
+    }
+
+    // Distribution comparison
+    if (myDist && monthlyDistPct > 30) {
+      var isMonthly = (myDist || '').toLowerCase().indexOf('month') >= 0;
+      if (!isMonthly) {
+        insightsItems.push({
+          type: 'bad',
+          text: 'Monthly distributions are preferred by ' + monthlyDistPct + '% of LPs — your ' + myDist.toLowerCase() + ' schedule may reduce appeal.'
+        });
+      } else {
+        insightsItems.push({
+          type: 'good',
+          text: 'Your monthly distribution schedule aligns with what ' + monthlyDistPct + '% of LPs prefer.'
+        });
+      }
+    }
+
+    if (insightsItems.length > 0) {
+      html += '<ul class="comp-insights">';
+      insightsItems.forEach(function(item) {
+        html += '<li><span class="comp-insight-' + item.type + '">' + escHtml(item.text) + '</span></li>';
+      });
+      html += '</ul>';
+    }
+
+    html += '</div>';
+  });
+
+  if (!html) {
+    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>Add asset class and financial details to your deals to see competitive analysis.</p></div>';
+  } else {
+    container.innerHTML = html;
+  }
+}
+
+function formatPctDisplay(val) {
+  if (val == null) return '--';
+  // If stored as decimal (e.g. 0.10), convert to percentage
+  if (val <= 1) {
+    return (val * 100).toFixed(1) + '%';
+  }
+  return val.toFixed(1) + '%';
+}
+
 // ========== LOAD LOCAL SETTINGS ==========
 function loadLocalSettings() {
   try {
@@ -2685,13 +3373,14 @@ function init() {
     return;
   }
 
-  // Fetch deals, settings, analytics, and all deals for market positioning in parallel
-  Promise.all([fetchGPDeals(), fetchGPSettings(), fetchGPAnalytics(), fetchAllDealsForMarket()])
+  // Fetch deals, settings, analytics, all deals for market positioning, and investor insights in parallel
+  Promise.all([fetchGPDeals(), fetchGPSettings(), fetchGPAnalytics(), fetchAllDealsForMarket(), fetchInvestorInsights()])
     .then(function(results) {
       var deals = results[0];
       var settings = results[1] || {};
       var analytics = results[2] || {};
       var allDeals = results[3] || [];
+      var investorInsights = results[4] || {};
 
       // Merge local settings as fallback
       var localSettings = loadLocalSettings();
@@ -2712,6 +3401,8 @@ function init() {
       renderWebinarCta(deals, allDeals, analytics);
       renderMarketPositioning(deals, allDeals);
       renderDemandIntelligence(deals, allDeals, analytics);
+      renderInvestorInsights(investorInsights);
+      renderCompetitiveAnalysis(deals, allDeals, (investorInsights && investorInsights.preferredDistributions) || []);
 
       document.body.classList.add('page-loaded');
     })
@@ -2719,9 +3410,11 @@ function init() {
       console.error('Failed to load GP dashboard:', e);
       // Render with empty data
       renderGPDashboard([], loadLocalSettings());
-      renderLPActivity({ totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [] });
+      renderLPActivity({ totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [], highIntentCount: 0 });
       renderWeeklyChart([]);
       renderWebinarCta([], [], {});
+      renderInvestorInsights({});
+      renderCompetitiveAnalysis([], [], []);
       document.body.classList.add('page-loaded');
     });
 }
