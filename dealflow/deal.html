@@ -4680,7 +4680,7 @@ async function renderDeal() {
     { key: 'invested', label: 'Invested', num: '6' }
   ];
   var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'diligence': 3, 'decision': 4, 'invested': 5 };
-  var currentIdx = stageOrder[currentStage] || 0;
+  var currentIdx = currentStage === 'passed' ? -1 : (stageOrder[currentStage] || 0);
 
   // === Build each section into its own variable ===
 
