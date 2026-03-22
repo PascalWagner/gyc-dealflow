@@ -12227,8 +12227,10 @@ function renderWizardStep() {
       return pct + '% of net worth';
     }
     var capOptions = [
-      { val: '<$100k', label: 'Under $100K', desc: 'Getting started', nwCtx: nwPct(75000) },
-      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals at typical minimums', nwCtx: nwPct(175000) },
+      { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
+      { val: '$50k', label: '$50K', desc: '1 deal at typical minimums', nwCtx: nwPct(50000) },
+      { val: '$100k', label: '$100K', desc: '1\u20132 deals', nwCtx: nwPct(100000) },
+      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct(175000) },
       { val: '$250k-$500k', label: '$250K \u2013 $500K', desc: 'Well-diversified portfolio', nwCtx: nwPct(375000) },
       { val: '$500k-$1M', label: '$500K \u2013 $1M', desc: 'Significant deployment', nwCtx: nwPct(750000) },
       { val: '$1M+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct(1500000) }
@@ -12264,8 +12266,9 @@ function renderWizardStep() {
     }
     var cap90Options = [
       { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: '<$50k', label: 'Under $50K', desc: '1 deal at most minimums', nwCtx: nwPct90(25000) },
-      { val: '$50k-$100k', label: '$50K \u2013 $100K', desc: '1\u20132 deals', nwCtx: nwPct90(75000) },
+      { val: '$25k', label: '$25K', desc: '1 deal at a lower minimum', nwCtx: nwPct90(25000) },
+      { val: '$50k', label: '$50K', desc: '1 deal at typical minimums', nwCtx: nwPct90(50000) },
+      { val: '$100k', label: '$100K', desc: '1\u20132 deals', nwCtx: nwPct90(100000) },
       { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct90(175000) },
       { val: '$250k+', label: '$250K+', desc: 'Ready to move', nwCtx: nwPct90(250000) }
     ];
