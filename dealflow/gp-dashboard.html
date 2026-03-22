@@ -1585,7 +1585,7 @@ body {
 
 <!-- Sidebar (shared component) -->
 <div id="sidebar-root"></div>
-<script src="js/sidebar.js" data-page="gpdashboard"></script>
+<script src="js/sidebar.js?v=20260322" data-page="gpdashboard"></script>
 
 <!-- Mobile top bar -->
 <div class="mobile-topbar">
@@ -3278,15 +3278,17 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
 
     // Build comparison table
     html += '<div class="comp-deal-section">';
-    html += '<div class="comp-deal-title">Your Deal vs Top ' + top3.length + ' ' + escHtml(ac) + ' Deals</div>';
+    html += '<div class="comp-deal-title">' + escHtml(name) + ' vs Top ' + top3.length + ' ' + escHtml(ac) + ' Deals</div>';
     html += '<div class="comp-table-wrap"><table class="comp-table">';
 
-    // Header row
+    // Header row — show real deal names linked to deal pages
     html += '<thead><tr>' +
       '<th></th>' +
-      '<th class="col-gp">Your Deal</th>';
+      '<th class="col-gp"><a href="deal.html?id=' + escAttr(getDealId(deal)) + '" style="color:var(--teal-deep);text-decoration:none;">' + escHtml(name) + '</a></th>';
     for (var ci = 0; ci < top3.length; ci++) {
-      html += '<th>#' + (ci + 1) + ' Competitor</th>';
+      var compName = getDealName(top3[ci]);
+      var compId = getDealId(top3[ci]);
+      html += '<th><a href="deal.html?id=' + escAttr(compId) + '" style="color:var(--primary);text-decoration:none;font-weight:700;">' + escHtml(compName) + '</a></th>';
     }
     html += '</tr></thead><tbody>';
 
