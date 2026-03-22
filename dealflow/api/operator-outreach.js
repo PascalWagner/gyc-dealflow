@@ -113,6 +113,21 @@ async function upsertOutreach(supabase, params, adminUser) {
 
   if (error) throw error;
 
+  // Auto-update CEO on management_companies if contact_name is set and no CEO exists
+  if (fields.contact_name) {
+    const { data: mc } = await supabase
+      .from('management_companies')
+      .select('ceo')
+      .eq('id', managementCompanyId)
+      .single();
+    if (mc && !mc.ceo) {
+      await supabase
+        .from('management_companies')
+        .update({ ceo: fields.contact_name })
+        .eq('id', managementCompanyId);
+    }
+  }
+
   // Auto-log status changes
   const adminEmail = adminUser?.email || 'admin';
   const oldStatus = existing?.outreach_status || 'backlog';

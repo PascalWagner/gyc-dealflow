@@ -19463,7 +19463,7 @@ async function outreachSave(mcId) {
     action: 'upsert',
     managementCompanyId: mcId,
     outreach_status: (document.querySelector('#oe_status_pills button[data-active="true"]') || {}).dataset?.status || 'backlog',
-    contact_name: document.getElementById('oe_contact_name').value || null,
+    contact_name: _titleCase(document.getElementById('oe_contact_name').value) || null,
     contact_email: document.getElementById('oe_contact_email').value || null,
     contact_phone: document.getElementById('oe_contact_phone').value || null,
     contact_linkedin: document.getElementById('oe_contact_linkedin').value || null,
