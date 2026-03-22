@@ -6104,9 +6104,112 @@ const _supa = window.supabase.createClient(
       <div style="margin-bottom:32px;">
         <h1 style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin:0 0 8px 0;">Private Market Intelligence</h1>
         <p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin:0;max-width:680px;">
-          Live data from <strong id="miTotalDeals">0</strong> private offerings totaling <strong id="miTotalCapital">$0</strong> in capital.
-          Updated in real-time as we add new deals to the database.
+          Market-wide data from <strong id="miSecTotal">334,178</strong> SEC Form D filings combined with
+          deal-level insights from <strong id="miTotalDeals">0</strong> offerings we've reviewed (totaling <strong id="miTotalCapital">$0</strong> in capital).
         </p>
+      </div>
+
+      <!-- SEC MARKET-WIDE SECTION -->
+      <div style="margin-bottom:40px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <div style="background:#3B9DDD;color:#fff;font-family:var(--font-ui);font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;">Entire Market</div>
+          <h2 style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);margin:0;">SEC Form D Filings — All Private Placements</h2>
+        </div>
+        <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin:0 0 20px 0;">Every Regulation D filing since 2020 — this is the entire U.S. private placement market, not just our database.</p>
+
+        <!-- SEC Summary Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Form D Filings</div>
+            <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="secTotalFilings">--</div>
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;">Since Q1 2020</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Capital Raised</div>
+            <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="secTotalCapital">--</div>
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;">Total amount sold</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">506(b) Share</div>
+            <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="sec506bPct">--</div>
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;">Latest quarter</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Median Minimum</div>
+            <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="secMedianMin">--</div>
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;">Across all filings</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Real Estate Filings</div>
+            <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="secREFilings">--</div>
+            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;">RE + Commercial + Residential</div>
+          </div>
+        </div>
+
+        <!-- SEC Charts Row 1 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">New Form D Filings Per Quarter</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">The pace of new private offerings entering the U.S. market</p>
+            <div style="height:280px;"><canvas id="secNewFilingsChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Capital Raised Per Quarter</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Total dollars flowing into private placements each quarter</p>
+            <div style="height:280px;"><canvas id="secCapitalChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- SEC Charts Row 2 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">506(b) vs 506(c) — Market Share</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Is the market shifting toward publicly-marketed offerings?</p>
+            <div style="height:280px;"><canvas id="sec506TrendChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Equity vs Debt Offerings</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">The rise of debt strategies across the entire market</p>
+            <div style="height:280px;"><canvas id="secEquityDebtChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- SEC Charts Row 3 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Top Industries by Filing Volume</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Where private capital is concentrating</p>
+            <div style="height:320px;"><canvas id="secIndustryChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Real Estate Filings Over Time</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">RE private placement activity vs the broader market</p>
+            <div style="height:280px;"><canvas id="secREChart"></canvas></div>
+          </div>
+        </div>
+
+        <!-- SEC Charts Row 4 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Median Minimum Investment</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">How accessible is the private market getting?</p>
+            <div style="height:280px;"><canvas id="secMinInvChart"></canvas></div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Non-Accredited Investor Access</h3>
+            <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">% of filings accepting non-accredited investors</p>
+            <div style="height:280px;"><canvas id="secNonAccreditedChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIVIDER -->
+      <div style="border-top:2px solid var(--border);margin:40px 0 32px 0;">
+        <div style="display:flex;align-items:center;gap:10px;margin-top:20px;margin-bottom:8px;">
+          <div style="background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;">Our Database</div>
+          <h2 style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);margin:0;">Deal-Level Insights From Reviewed Offerings</h2>
+        </div>
+        <p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin:0 0 20px 0;">Data the SEC doesn't track — actual target returns, pref returns, fee structures, and LP/GP splits from term sheets we've reviewed.</p>
       </div>
 
       <!-- Summary Cards -->
@@ -17482,11 +17585,143 @@ function renderMarketIntel() {
 
   // Use the globally loaded DEALS array (already fetched at startup)
   var deals = (typeof DEALS !== 'undefined' ? DEALS : []).filter(function(d) { return !d.isStale; });
-  if (!deals.length) {
-    document.getElementById('miTotalDeals').textContent = '0';
-    return;
+  if (deals.length) renderMarketIntelData(deals);
+
+  // Load SEC market-wide data
+  fetch('/api/sec-market-data.json')
+    .then(function(r) { return r.json(); })
+    .then(function(secData) { renderSECData(secData); })
+    .catch(function(e) { console.warn('SEC data not available:', e.message); });
+}
+
+function renderSECData(secData) {
+  var qs = secData.quarters || [];
+  if (!qs.length) return;
+
+  var labels = qs.map(function(q){return q.label;});
+  var last = qs[qs.length - 1];
+
+  // Summary cards
+  var el = document.getElementById('secTotalFilings');
+  if (el) el.textContent = secData.total_filings.toLocaleString();
+
+  var totalCap = qs.reduce(function(a,q){return a + q.capital_sold;}, 0);
+  el = document.getElementById('secTotalCapital');
+  if (el) el.textContent = '$' + (totalCap/1e12).toFixed(1) + 'T';
+
+  el = document.getElementById('sec506bPct');
+  if (el) el.textContent = last.pct_506b + '%';
+
+  el = document.getElementById('secMedianMin');
+  if (el) el.textContent = '$' + (last.median_min_investment/1000).toFixed(0) + 'K';
+
+  var totalRE = qs.reduce(function(a,q){return a + q.re_filings;}, 0);
+  el = document.getElementById('secREFilings');
+  if (el) el.textContent = totalRE.toLocaleString();
+
+  el = document.getElementById('miSecTotal');
+  if (el) el.textContent = secData.total_filings.toLocaleString();
+
+  var chartColors = ['#51BE7B','#3B9DDD','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316','#6366F1','#84CC16','#06B6D4','#D946EF'];
+  var lineOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } },
+    elements: { point: { radius: 3, hoverRadius: 5 }, line: { tension: 0.3 } }
+  };
+
+  // 1. New Filings Per Quarter
+  var ctx1 = document.getElementById('secNewFilingsChart');
+  if (ctx1) {
+    miCharts.secNewFilings = new Chart(ctx1, {
+      type: 'line',
+      data: { labels: labels, datasets: [{ label: 'New Filings', data: qs.map(function(q){return q.new_filings;}), borderColor: '#3B9DDD', backgroundColor: '#3B9DDD22', fill: true, borderWidth: 2 }] },
+      options: lineOpts
+    });
   }
-  renderMarketIntelData(deals);
+
+  // 2. Capital Raised Per Quarter
+  var ctx2 = document.getElementById('secCapitalChart');
+  if (ctx2) {
+    miCharts.secCapital = new Chart(ctx2, {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ label: 'Capital Sold', data: qs.map(function(q){return q.capital_sold;}), backgroundColor: '#51BE7B', borderRadius: 4 }] },
+      options: Object.assign({}, lineOpts, { elements: {}, scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return '$'+(v/1e12).toFixed(1)+'T';} } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } } })
+    });
+  }
+
+  // 3. 506(b) vs 506(c) Trend
+  var ctx3 = document.getElementById('sec506TrendChart');
+  if (ctx3) {
+    miCharts.sec506 = new Chart(ctx3, {
+      type: 'line',
+      data: { labels: labels, datasets: [
+        { label: '506(b)', data: qs.map(function(q){return q.pct_506b;}), borderColor: '#F59E0B', backgroundColor: '#F59E0B22', fill: false, borderWidth: 2 },
+        { label: '506(c)', data: qs.map(function(q){return q.pct_506c;}), borderColor: '#51BE7B', backgroundColor: '#51BE7B22', fill: false, borderWidth: 2 }
+      ]},
+      options: Object.assign({}, lineOpts, {
+        plugins: { legend: { display: true, position: 'top', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, usePointStyle: true, padding: 16 } } },
+        scales: { y: { min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v+'%';} } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } }
+      })
+    });
+  }
+
+  // 4. Equity vs Debt
+  var ctx4 = document.getElementById('secEquityDebtChart');
+  if (ctx4) {
+    miCharts.secEqDebt = new Chart(ctx4, {
+      type: 'line',
+      data: { labels: labels, datasets: [
+        { label: 'Equity', data: qs.map(function(q){return q.equity_count;}), borderColor: '#51BE7B', fill: false, borderWidth: 2 },
+        { label: 'Debt', data: qs.map(function(q){return q.debt_count;}), borderColor: '#3B9DDD', fill: false, borderWidth: 2 }
+      ]},
+      options: Object.assign({}, lineOpts, { plugins: { legend: { display: true, position: 'top', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, usePointStyle: true, padding: 16 } } } })
+    });
+  }
+
+  // 5. Top Industries (horizontal bar)
+  var ctx5 = document.getElementById('secIndustryChart');
+  if (ctx5 && secData.top_industries) {
+    var indEntries = Object.entries(secData.top_industries).slice(0, 12);
+    miCharts.secIndustry = new Chart(ctx5, {
+      type: 'bar',
+      data: { labels: indEntries.map(function(e){return e[0];}), datasets: [{ data: indEntries.map(function(e){return e[1];}), backgroundColor: chartColors.slice(0, indEntries.length), borderRadius: 4 }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } }
+    });
+  }
+
+  // 6. Real Estate Filings Over Time
+  var ctx6 = document.getElementById('secREChart');
+  if (ctx6) {
+    miCharts.secRE = new Chart(ctx6, {
+      type: 'line',
+      data: { labels: labels, datasets: [
+        { label: 'RE Filings', data: qs.map(function(q){return q.re_filings;}), borderColor: '#14B8A6', backgroundColor: '#14B8A622', fill: true, borderWidth: 2 },
+        { label: 'All Filings', data: qs.map(function(q){return q.new_filings;}), borderColor: '#8B5CF644', backgroundColor: 'transparent', fill: false, borderWidth: 1, borderDash: [4,4] }
+      ]},
+      options: Object.assign({}, lineOpts, { plugins: { legend: { display: true, position: 'top', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, usePointStyle: true, padding: 16 } } } })
+    });
+  }
+
+  // 7. Median Min Investment Trend
+  var ctx7 = document.getElementById('secMinInvChart');
+  if (ctx7) {
+    miCharts.secMinInv = new Chart(ctx7, {
+      type: 'line',
+      data: { labels: labels, datasets: [{ label: 'Median Minimum', data: qs.map(function(q){return q.median_min_investment;}), borderColor: '#8B5CF6', backgroundColor: '#8B5CF622', fill: true, borderWidth: 2 }] },
+      options: Object.assign({}, lineOpts, { scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return '$'+(v/1000).toFixed(0)+'K';} } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } } })
+    });
+  }
+
+  // 8. Non-Accredited Access
+  var ctx8 = document.getElementById('secNonAccreditedChart');
+  if (ctx8) {
+    miCharts.secNonAccr = new Chart(ctx8, {
+      type: 'line',
+      data: { labels: labels, datasets: [{ label: '% with Non-Accredited', data: qs.map(function(q){return q.pct_nonaccredited;}), borderColor: '#EC4899', backgroundColor: '#EC489922', fill: true, borderWidth: 2 }] },
+      options: Object.assign({}, lineOpts, { scales: { y: { min: 0, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v+'%';} } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } } })
+    });
+  }
 }
 
 function renderMarketIntelData(deals) {
