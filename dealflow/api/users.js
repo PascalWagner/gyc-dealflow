@@ -42,6 +42,26 @@ export default async function handler(req, res) {
       })).filter(c => c.email);
     }
 
+    // Enrich contacts with full profile data (LinkedIn, etc.) from individual GHL lookups
+    async function enrichContacts(contacts) {
+      const enriched = await Promise.all(contacts.slice(0, 10).map(async (c) => {
+        try {
+          const resp = await fetch(`https://rest.gohighlevel.com/v1/contacts/${c.id}`, {
+            headers: { Authorization: `Bearer ${GHL_API_KEY}` }
+          });
+          if (!resp.ok) return c;
+          const data = await resp.json();
+          const full = data.contact || data;
+          return {
+            ...c,
+            phone: c.phone || full.phone || '',
+            linkedin: c.linkedin || full.linkedIn || full.linkedin || (full.customFields || []).find(f => (f.value || '').includes('linkedin.com'))?.value || ''
+          };
+        } catch { return c; }
+      }));
+      return enriched;
+    }
+
     // Method 1: GHL v1 contacts search by query
     const searchUrl = `https://rest.gohighlevel.com/v1/contacts/?query=${encodeURIComponent(q)}&limit=20`;
     const resp = await fetch(searchUrl, {
@@ -76,6 +96,11 @@ export default async function handler(req, res) {
         contacts = mapContacts(lookupData.contacts);
         debugInfo.method3_count = contacts.length;
       }
+    }
+
+    // Enrich top results with full contact data (LinkedIn URL, etc.)
+    if (contacts.length > 0) {
+      contacts = await enrichContacts(contacts);
     }
 
     return res.status(200).json({ success: true, contacts, debug: debugInfo });
