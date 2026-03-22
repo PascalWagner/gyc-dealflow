@@ -12240,7 +12240,7 @@ function renderWizardStep() {
       var matchingDeals = getWizardPlanDeals(branch);
       var avgYield = 0.09;
       if (matchingDeals.length > 0) {
-        var yields = matchingDeals.map(function(d) { return d.target_irr || d.pref_return || 0; }).filter(function(y) { return y > 0 && y < 1; });
+        var yields = matchingDeals.map(function(d) { return d.targetIRR || d.pref_return || 0; }).filter(function(y) { return y > 0 && y < 1; });
         if (yields.length > 0) avgYield = yields.reduce(function(a, b) { return a + b; }, 0) / yields.length;
       }
       var projectedIncome = Math.round(deployCap * avgYield);
@@ -17209,7 +17209,7 @@ function deckFinderRender() {
         '<div style="flex:1;min-width:0;">' +
         '<div style="font-family:var(--font-body);font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + d.investment_name + '</div>' +
         '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:1px;">' + d.operator_name +
-        (d.asset_class ? ' &middot; ' + d.asset_class : '') + '</div></div>' +
+        (d.assetClass ? ' &middot; ' + d.assetClass : '') + '</div></div>' +
         matchBadge + '</div>' +
         matchDetails + searchResults + searchBar + '</div>';
     }).join('');
@@ -17376,12 +17376,12 @@ function intakeRenderStep(){var stepsEl=document.getElementById('intakeSteps'),b
 function intakeRenderStep1(body,footer){body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:12px;">Paste PPM or offering text</div><textarea id="intakePPMText" placeholder="Paste the full PPM text, offering summary, or deal deck content here..." style="width:100%;min-height:200px;padding:14px;border:none;border-radius:12px;font-family:var(--font-body);font-size:14px;resize:vertical;background:var(--bg-cream);outline:none;"></textarea><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-top:8px;">AI will extract deal fields automatically. You can also skip and fill manually.</div>';footer.innerHTML='<button onclick="intakeSkipExtract()" class="admin-btn secondary">Skip (Fill Manually)</button><button onclick="intakeExtract()" class="admin-btn primary">Extract with AI</button>';}
 function intakeSkipExtract(){_intakeData={};_intakeStep=2;intakeRenderStep();}
 async function intakeExtract(){var text=document.getElementById('intakePPMText')?.value?.trim();if(!text){alert('Please paste some text first');return;}var btn=document.querySelector('#intakeFooter button:last-child');if(btn){btn.disabled=true;btn.textContent='Extracting...';}var user=getUser();try{var resp=await fetch('/api/deal-enrich',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify({text:text,mode:'extract'})});var result=await resp.json();if(result.success&&result.data)_intakeData=result.data;else{console.warn('Extraction returned no data:',result);_intakeData={};}}catch(e){console.error('Extract failed:',e);_intakeData={};}_intakeStep=2;intakeRenderStep();}
-function intakeRenderStep2(body,footer){var d=_intakeData;var fields=[{key:'investment_name',label:'Deal Name',val:d.investmentName||d.investment_name||''},{key:'asset_class',label:'Asset Class',val:d.assetClass||d.asset_class||'',type:'select',opts:['Lending','Multi Family','Self Storage','Industrial','Hotels/Hospitality','RV/Mobile Home Parks','Short Term Rental','Mixed Use','Office','Retail','Oil & Gas','Other']},{key:'deal_type',label:'Deal Type',val:d.dealType||d.deal_type||'',type:'select',opts:['Fund','Syndication','Direct','REIT']},{key:'strategy',label:'Strategy',val:d.strategy||''},{key:'investment_strategy',label:'Investment Strategy',val:d.investmentStrategy||d.investment_strategy||'',type:'textarea'},{key:'target_irr',label:'Target IRR',val:d.targetIRR||d.target_irr||''},{key:'preferred_return',label:'Preferred Return',val:d.preferredReturn||d.preferred_return||''},{key:'cash_on_cash',label:'Cash on Cash',val:d.cashOnCash||d.cash_on_cash||''},{key:'investment_minimum',label:'Minimum Investment ($)',val:d.investmentMinimum||d.investment_minimum||''},{key:'hold_period_years',label:'Hold Period (years)',val:d.holdPeriod||d.hold_period_years||''},{key:'offering_size',label:'Offering Size ($)',val:d.offeringSize||d.offering_size||''},{key:'offering_type',label:'Offering Type',val:d.offeringType||d.offering_type||'',type:'select',opts:['506(b)','506(c)','Reg A','Reg D']},{key:'distributions',label:'Distributions',val:d.distributions||'',type:'select',opts:['Monthly','Quarterly','Annual','None']},{key:'lp_gp_split',label:'LP/GP Split',val:d.lpGpSplit||d.lp_gp_split||''},{key:'fees',label:'Fees',val:d.fees||''},{key:'deck_url',label:'Deck URL',val:d.deck_url||''},{key:'status',label:'Status',val:d.status||'open',type:'select',opts:['open','closed','coming_soon']}];var fieldsHtml=fields.map(function(f){var isEmpty=!f.val;var inp;if(f.type==='select'){inp='<select class="admin-field-input intake-field" data-key="'+f.key+'"><option value="">—</option>'+f.opts.map(function(o){return'<option value="'+o+'"'+(f.val===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';}else if(f.type==='textarea'){inp='<textarea class="admin-field-input intake-field" data-key="'+f.key+'" style="min-height:50px;resize:vertical;text-align:left;">'+(f.val||'')+'</textarea>';}else{inp='<input type="text" class="admin-field-input intake-field" data-key="'+f.key+'" value="'+String(f.val).replace(/"/g,'&quot;')+'" placeholder="—">';}return'<div class="admin-field-row"><span class="admin-field-label">'+f.label+(isEmpty?' <span style="color:var(--orange);font-size:9px;font-weight:700;">MISSING</span>':'')+'</span>'+inp+'</div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:6px;">Review & Edit Fields</div><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-bottom:16px;">Fields marked MISSING are empty. Fill as many as you can.</div><div class="admin-field-group" style="max-height:400px;overflow-y:auto;">'+fieldsHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=1;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakeSaveStep2()" class="admin-btn primary">Next: Link Operator</button>';}
+function intakeRenderStep2(body,footer){var d=_intakeData;var fields=[{key:'investment_name',label:'Deal Name',val:d.investmentName||d.investment_name||''},{key:'asset_class',label:'Asset Class',val:d.assetClass||d.assetClass||'',type:'select',opts:['Lending','Multi Family','Self Storage','Industrial','Hotels/Hospitality','RV/Mobile Home Parks','Short Term Rental','Mixed Use','Office','Retail','Oil & Gas','Other']},{key:'deal_type',label:'Deal Type',val:d.dealType||d.deal_type||'',type:'select',opts:['Fund','Syndication','Direct','REIT']},{key:'strategy',label:'Strategy',val:d.strategy||''},{key:'investment_strategy',label:'Investment Strategy',val:d.investmentStrategy||d.investment_strategy||'',type:'textarea'},{key:'target_irr',label:'Target IRR',val:d.targetIRR||d.targetIRR||''},{key:'preferred_return',label:'Preferred Return',val:d.preferredReturn||d.preferredReturn||''},{key:'cash_on_cash',label:'Cash on Cash',val:d.cashOnCash||d.cash_on_cash||''},{key:'investment_minimum',label:'Minimum Investment ($)',val:d.investmentMinimum||d.investmentMinimum||''},{key:'hold_period_years',label:'Hold Period (years)',val:d.holdPeriod||d.holdPeriod||''},{key:'offering_size',label:'Offering Size ($)',val:d.offeringSize||d.offeringSize||''},{key:'offering_type',label:'Offering Type',val:d.offeringType||d.offering_type||'',type:'select',opts:['506(b)','506(c)','Reg A','Reg D']},{key:'distributions',label:'Distributions',val:d.distributions||'',type:'select',opts:['Monthly','Quarterly','Annual','None']},{key:'lp_gp_split',label:'LP/GP Split',val:d.lpGpSplit||d.lpGpSplit||''},{key:'fees',label:'Fees',val:d.fees||''},{key:'deck_url',label:'Deck URL',val:d.deck_url||''},{key:'status',label:'Status',val:d.status||'open',type:'select',opts:['open','closed','coming_soon']}];var fieldsHtml=fields.map(function(f){var isEmpty=!f.val;var inp;if(f.type==='select'){inp='<select class="admin-field-input intake-field" data-key="'+f.key+'"><option value="">—</option>'+f.opts.map(function(o){return'<option value="'+o+'"'+(f.val===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>';}else if(f.type==='textarea'){inp='<textarea class="admin-field-input intake-field" data-key="'+f.key+'" style="min-height:50px;resize:vertical;text-align:left;">'+(f.val||'')+'</textarea>';}else{inp='<input type="text" class="admin-field-input intake-field" data-key="'+f.key+'" value="'+String(f.val).replace(/"/g,'&quot;')+'" placeholder="—">';}return'<div class="admin-field-row"><span class="admin-field-label">'+f.label+(isEmpty?' <span style="color:var(--orange);font-size:9px;font-weight:700;">MISSING</span>':'')+'</span>'+inp+'</div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:6px;">Review & Edit Fields</div><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-bottom:16px;">Fields marked MISSING are empty. Fill as many as you can.</div><div class="admin-field-group" style="max-height:400px;overflow-y:auto;">'+fieldsHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=1;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakeSaveStep2()" class="admin-btn primary">Next: Link Operator</button>';}
 function intakeSaveStep2(){var fields=document.querySelectorAll('.intake-field');var deal={};fields.forEach(function(f){deal[f.dataset.key]=f.value===''?null:f.value;});_intakeData.deal_fields=deal;_intakeStep=3;intakeRenderStep();}
 function intakeRenderStep3(body,footer){var opOpts=_intakeOperators.map(function(o){return'<option value="'+o.id+'">'+(o.name||o.operator_name)+'</option>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:16px;">Link to Operator</div><div class="admin-field-group" style="margin-bottom:16px;"><div class="admin-field-row"><span class="admin-field-label">Operator</span><select id="intakeOperatorSelect" class="admin-field-input" onchange="intakeToggleNewOp()"><option value="">Select...</option>'+opOpts+'<option value="__new__">+ Create New</option></select></div></div><div id="intakeNewOpFields" style="display:none;"><div class="admin-section-title" style="margin-top:16px;">New Operator Details</div><div class="admin-field-group"><div class="admin-field-row"><span class="admin-field-label">Name</span><input type="text" id="intakeNewOpName" class="admin-field-input" placeholder="—" value="'+((_intakeData.managementCompany||'')+'').replace(/"/g,'&quot;')+'"></div><div class="admin-field-row"><span class="admin-field-label">Website</span><input type="text" id="intakeNewOpWebsite" class="admin-field-input" placeholder="—"></div><div class="admin-field-row"><span class="admin-field-label">CEO</span><input type="text" id="intakeNewOpCeo" class="admin-field-input" placeholder="—" value="'+((_intakeData.ceo||'')+'').replace(/"/g,'&quot;')+'"></div></div></div>';setTimeout(function(){if(_intakeData.managementCompany){var sel=document.getElementById('intakeOperatorSelect');if(sel){var match=_intakeOperators.find(function(o){return(o.name||o.operator_name||'').toLowerCase()===_intakeData.managementCompany.toLowerCase();});if(match)sel.value=match.id;else{sel.value='__new__';intakeToggleNewOp();}}}},0);footer.innerHTML='<button onclick="_intakeStep=2;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakeSaveStep3()" class="admin-btn primary">Next: Review & Publish</button>';}
 function intakeToggleNewOp(){var sel=document.getElementById('intakeOperatorSelect');var flds=document.getElementById('intakeNewOpFields');if(flds)flds.style.display=sel&&sel.value==='__new__'?'block':'none';}
 function intakeSaveStep3(){var sel=document.getElementById('intakeOperatorSelect');var val=sel?sel.value:'';if(val==='__new__'){_intakeData.create_operator=true;_intakeData.operator_data={name:document.getElementById('intakeNewOpName')?.value||'',website:document.getElementById('intakeNewOpWebsite')?.value||'',ceo:document.getElementById('intakeNewOpCeo')?.value||''};_intakeData.operator_id=null;}else{_intakeData.create_operator=false;_intakeData.operator_id=val||null;_intakeData.operator_data=null;}_intakeStep=4;intakeRenderStep();}
-function intakeRenderStep4(body,footer){var d=_intakeData.deal_fields||{};var opName=_intakeData.create_operator?(_intakeData.operator_data?.name||'New operator'):(_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.name||_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.operator_name||'None');var sRows=[['Deal Name',d.investment_name||'\u2014'],['Asset Class',d.asset_class||'\u2014'],['Deal Type',d.deal_type||'\u2014'],['Target IRR',d.target_irr||'\u2014'],['Minimum',d.investment_minimum?'$'+Number(d.investment_minimum).toLocaleString():'\u2014'],['Operator',opName+(_intakeData.create_operator?' (NEW)':'')],['Status',d.status||'open']];var sHtml=sRows.map(function(r){return'<div class="admin-field-row"><span class="admin-field-label">'+r[0]+'</span><span style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">'+r[1]+'</span></div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:16px;">Review & Publish</div><div class="admin-field-group" style="margin-bottom:12px;">'+sHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=3;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakePublish()" class="admin-btn primary">Publish Deal</button>';}
+function intakeRenderStep4(body,footer){var d=_intakeData.deal_fields||{};var opName=_intakeData.create_operator?(_intakeData.operator_data?.name||'New operator'):(_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.name||_intakeOperators.find(function(o){return o.id===_intakeData.operator_id;})?.operator_name||'None');var sRows=[['Deal Name',d.investment_name||'\u2014'],['Asset Class',d.assetClass||'\u2014'],['Deal Type',d.deal_type||'\u2014'],['Target IRR',d.targetIRR||'\u2014'],['Minimum',d.investmentMinimum?'$'+Number(d.investmentMinimum).toLocaleString():'\u2014'],['Operator',opName+(_intakeData.create_operator?' (NEW)':'')],['Status',d.status||'open']];var sHtml=sRows.map(function(r){return'<div class="admin-field-row"><span class="admin-field-label">'+r[0]+'</span><span style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">'+r[1]+'</span></div>';}).join('');body.innerHTML='<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;margin-bottom:16px;">Review & Publish</div><div class="admin-field-group" style="margin-bottom:12px;">'+sHtml+'</div>';footer.innerHTML='<button onclick="_intakeStep=3;intakeRenderStep()" class="admin-btn secondary">Back</button><button onclick="intakePublish()" class="admin-btn primary">Publish Deal</button>';}
 async function intakePublish(){var user=getUser();var btn=document.querySelector('#intakeFooter button:last-child');if(btn){btn.disabled=true;btn.textContent='Publishing...';}var payload={action:'intake-create',deal_data:_intakeData.deal_fields||{},operator_id:_intakeData.operator_id||null,create_operator:!!_intakeData.create_operator,operator_data:_intakeData.operator_data||null};try{var resp=await fetch('/api/admin-manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+user.token},body:JSON.stringify(payload)});var result=await resp.json();if(result.success){document.getElementById('intakeWizardModal')?.remove();adminLoadData();}else{alert('Publish failed: '+(result.error||'Unknown error'));if(btn){btn.disabled=false;btn.textContent='Publish Deal';}}}catch(e){alert('Publish failed: '+e.message);if(btn){btn.disabled=false;btn.textContent='Publish Deal';}}}
 
 
@@ -17404,17 +17404,13 @@ function renderMarketIntel() {
   Object.values(miCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
   miCharts = {};
 
-  var SUPABASE_URL = window._ENV_SUPABASE_URL || 'https://nntzqyufmtypfjpusflm.supabase.co';
-  var SUPABASE_KEY = window._ENV_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.17lOOjIkHR_rvSYJh6GbJsrKQflXbDMBq0WB7IhYCQ4';
-
-  fetch(SUPABASE_URL + '/rest/v1/opportunities?select=asset_class,deal_type,strategy,target_irr,preferred_return,investment_minimum,hold_period_years,offering_size,distributions,lp_gp_split,financials,is_506b,available_to,status', {
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(deals) {
-    renderMarketIntelData(deals);
-  })
-  .catch(function(e) { console.error('Market Intel fetch error:', e); });
+  // Use the globally loaded DEALS array (already fetched at startup)
+  var deals = (typeof DEALS !== 'undefined' ? DEALS : []).filter(function(d) { return !d.isStale; });
+  if (!deals.length) {
+    document.getElementById('miTotalDeals').textContent = '0';
+    return;
+  }
+  renderMarketIntelData(deals);
 }
 
 function renderMarketIntelData(deals) {
@@ -17424,7 +17420,7 @@ function renderMarketIntelData(deals) {
 
   // Total capital
   var totalCap = 0;
-  deals.forEach(function(d) { if (d.offering_size && d.offering_size > 0 && d.offering_size < 1e12) totalCap += d.offering_size; });
+  deals.forEach(function(d) { if (d.offeringSize && d.offeringSize > 0 && d.offeringSize < 1e12) totalCap += d.offeringSize; });
   document.getElementById('miTotalCapital').textContent = totalCap >= 1e9 ? '$' + (totalCap/1e9).toFixed(1) + 'B' : '$' + (totalCap/1e6).toFixed(0) + 'M';
 
   // Helper: median
@@ -17448,23 +17444,23 @@ function renderMarketIntelData(deals) {
   }
 
   // ---- Summary Cards ----
-  var irrs = deals.filter(function(d) { return d.target_irr && d.target_irr > 0 && d.target_irr < 2; }).map(function(d) { return d.target_irr; });
+  var irrs = deals.filter(function(d) { return d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2; }).map(function(d) { return d.targetIRR; });
   var medIRR = median(irrs);
   document.getElementById('miMedianIRR').textContent = (medIRR*100).toFixed(1) + '%';
   document.getElementById('miIRRRange').textContent = 'Range: ' + (Math.min.apply(null,irrs)*100).toFixed(0) + '% – ' + (Math.max.apply(null,irrs)*100).toFixed(0) + '%';
 
-  var prefs = deals.filter(function(d) { return d.preferred_return && d.preferred_return > 0 && d.preferred_return < 1; }).map(function(d) { return d.preferred_return; });
+  var prefs = deals.filter(function(d) { return d.preferredReturn && d.preferredReturn > 0 && d.preferredReturn < 1; }).map(function(d) { return d.preferredReturn; });
   var medPref = median(prefs);
   document.getElementById('miMedianPref').textContent = (medPref*100).toFixed(1) + '%';
   document.getElementById('miPrefRange').textContent = prefs.length + ' deals report a pref';
 
-  var mins = deals.filter(function(d) { return d.investment_minimum && d.investment_minimum > 0; }).map(function(d) { return d.investment_minimum; });
+  var mins = deals.filter(function(d) { return d.investmentMinimum && d.investmentMinimum > 0; }).map(function(d) { return d.investmentMinimum; });
   var medMin = median(mins);
   document.getElementById('miMedianMin').textContent = medMin >= 1000 ? '$' + (medMin/1000).toFixed(0) + 'K' : '$' + medMin;
   document.getElementById('miMinRange').textContent = mins.length + ' deals with minimums';
 
   // LP/GP splits
-  var splitCounts = countMap(deals.filter(function(d) { return d.lp_gp_split && /\d+\/\d+/.test(d.lp_gp_split); }).map(function(d) { return d.lp_gp_split; }));
+  var splitCounts = countMap(deals.filter(function(d) { return d.lpGpSplit && /\d+\/\d+/.test(d.lpGpSplit); }).map(function(d) { return d.lpGpSplit; }));
   var topSplits = sortedEntries(splitCounts);
   if (topSplits.length) {
     document.getElementById('miTopSplit').textContent = topSplits[0][0];
@@ -17518,7 +17514,7 @@ function renderMarketIntelData(deals) {
   }
 
   // ---- Chart 2: Asset Class Breakdown (horizontal bar) ----
-  var acCounts = countMap(deals.filter(function(d){return d.asset_class;}).map(function(d){return d.asset_class;}));
+  var acCounts = countMap(deals.filter(function(d){return d.assetClass;}).map(function(d){return d.assetClass;}));
   var acSorted = sortedEntries(acCounts).slice(0, 10);
   var acCtx = document.getElementById('miAssetClassChart');
   if (acCtx) {
@@ -17544,9 +17540,9 @@ function renderMarketIntelData(deals) {
   // ---- Chart 3: IRR by Asset Class (horizontal bar) ----
   var irrByAC = {};
   deals.forEach(function(d) {
-    if (d.target_irr && d.target_irr > 0 && d.target_irr < 2 && d.asset_class) {
-      if (!irrByAC[d.asset_class]) irrByAC[d.asset_class] = [];
-      irrByAC[d.asset_class].push(d.target_irr);
+    if (d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2 && d.assetClass) {
+      if (!irrByAC[d.assetClass]) irrByAC[d.assetClass] = [];
+      irrByAC[d.assetClass].push(d.targetIRR);
     }
   });
   var irrACSorted = Object.entries(irrByAC)
@@ -17656,7 +17652,7 @@ function renderMarketIntelData(deals) {
   }
 
   // ---- Chart 8: 506b vs 506c (doughnut) ----
-  var b506 = deals.filter(function(d){return d.is_506b;}).length;
+  var b506 = deals.filter(function(d){return d.is506b;}).length;
   var c506 = totalDeals - b506;
   var ctx506 = document.getElementById('mi506Chart');
   if (ctx506) {
@@ -17693,7 +17689,7 @@ function renderMarketIntelData(deals) {
   }
 
   // ---- Chart 10: Hold Period (histogram) ----
-  var holds = deals.filter(function(d){return d.hold_period_years && d.hold_period_years > 0 && d.hold_period_years <= 15;}).map(function(d){return d.hold_period_years;});
+  var holds = deals.filter(function(d){return d.holdPeriod && d.holdPeriod > 0 && d.holdPeriod <= 15;}).map(function(d){return d.holdPeriod;});
   var holdBuckets = {'1-2 yrs':0,'3-4 yrs':0,'5-6 yrs':0,'7-8 yrs':0,'9-10 yrs':0,'10+ yrs':0};
   holds.forEach(function(h) {
     if (h <= 2) holdBuckets['1-2 yrs']++;
