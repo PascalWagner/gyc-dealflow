@@ -12453,13 +12453,13 @@ function renderWizardStep() {
     html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Understanding your capital source helps us match you with the right deal structures.</div>';
 
     var triggerOptions = [
-      { val: 'business_exit', label: 'Sold a business', icon: '\uD83C\uDFE2' },
-      { val: 'property_sale', label: 'Sold / refinanced property', icon: '\uD83C\uDFE0' },
-      { val: 'inheritance', label: 'Inheritance / windfall', icon: '\uD83C\uDF81' },
-      { val: 'savings', label: 'Savings over time', icon: '\uD83D\uDCB0' },
-      { val: '1031', label: '1031 exchange', icon: '\uD83D\uDD04' },
-      { val: 'w2_income', label: 'W-2 / professional income', icon: '\uD83D\uDCBC' },
-      { val: 'other', label: 'Something else', icon: '\u2728' }
+      { val: 'business_exit', label: 'Sold a business', desc: 'Looking to redeploy proceeds into passive investments', icon: '\uD83C\uDFE2' },
+      { val: 'property_sale', label: 'Sold / refinanced property', desc: 'Capital from a real estate transaction', icon: '\uD83C\uDFE0' },
+      { val: 'inheritance', label: 'Inheritance / windfall', desc: 'Received a lump sum and want to put it to work', icon: '\uD83C\uDF81' },
+      { val: 'savings', label: 'Savings over time', desc: 'Built up capital through disciplined saving', icon: '\uD83D\uDCB0' },
+      { val: '1031', label: '1031 exchange', desc: 'Need to identify replacement property within 45 days', icon: '\uD83D\uDD04' },
+      { val: 'w2_income', label: 'W-2 / professional income', desc: 'Investing a portion of ongoing earnings', icon: '\uD83D\uDCBC' },
+      { val: 'other', label: 'Something else', desc: 'Retirement accounts, trust distributions, etc.', icon: '\u2728' }
     ];
 
     html += '<div style="display:flex;flex-direction:column;gap:8px;">';
@@ -12467,8 +12467,9 @@ function renderWizardStep() {
       var isSel = wizardData.triggerEvent === opt.val;
       html += '<div onclick="wizardData.triggerEvent=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
       html += '<div style="font-size:20px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
-      html += '<div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      if (isSel) html += '<div style="margin-left:auto;color:var(--primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="flex-shrink:0;color:var(--primary);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
       html += '</div>';
     });
     html += '</div>';
@@ -12817,8 +12818,16 @@ function renderWizardStep() {
   if (step.type === 'lockupPrefs') {
     html += '<div class="wizard-card-title">How long are you comfortable not having access to your invested capital?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are <span class="wiz-tip" data-tip="You cannot sell or withdraw your investment before the hold period ends. Your capital is locked in until the deal completes.">illiquid</span> \u2014 once you invest, you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
-    // Count deals by hold period
-    var lockActiveDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
+    // Count deals filtered by user's asset class + strategy selections
+    var lockSelAssets = wizardData.assetClasses || [];
+    var lockSelStrategies = wizardData.strategies || [];
+    var lockAllDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
+    var lockTotalAll = lockAllDeals.length;
+    var lockActiveDeals = lockAllDeals.filter(function(d) {
+      if (lockSelAssets.length > 0 && d.assetClass && !lockSelAssets.includes(d.assetClass)) return false;
+      if (lockSelStrategies.length > 0 && d.strategy && !lockSelStrategies.includes(d.strategy)) return false;
+      return true;
+    });
     var lockTotal = lockActiveDeals.length;
     function countLockup(minYrs, maxYrs) {
       return lockActiveDeals.filter(function(d) {
@@ -12850,7 +12859,7 @@ function renderWizardStep() {
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
-      if (opt.count > 0) html += '<div style="flex-shrink:0;text-align:right;"><div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' deals</div><div style="font-size:10px;color:var(--text-muted);">' + pct + '% of matches</div></div>';
+      if (lockTotalAll > 0) html += '<div style="flex-shrink:0;text-align:right;"><div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' <span style="font-weight:400;font-size:12px;color:var(--text-muted);">of ' + lockTotalAll + '</span></div><div style="font-size:10px;color:var(--text-muted);">deals match</div></div>';
       html += '</div>';
     });
     html += '</div>';
