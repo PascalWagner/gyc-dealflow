@@ -953,7 +953,7 @@ body {
   .deal-page-content div[style*="grid-template-columns: 1fr 2fr"] {
     grid-template-columns: 1fr !important;
   }
-  /* All 1fr 1fr grids inside sections (thesis, SEC metrics, case study, stress test, memo) */
+  /* All 1fr 1fr grids inside sections (thesis, SEC metrics, case study, stress test) */
   .deal-page-content div[style*="grid-template-columns:1fr 1fr"],
   .deal-page-content div[style*="grid-template-columns: 1fr 1fr"] {
     grid-template-columns: 1fr !important;
@@ -3817,139 +3817,6 @@ function loadDDAnswers(dealId) {
   } catch(e) { return {}; }
 }
 
-// Investment Memo save/print
-function saveMemoField(dealId, field, value) {
-  if (!requireAuth('save your investment notes')) return;
-  var memo = {};
-  try { memo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
-  memo[field] = value;
-  memo._lastSaved = new Date().toISOString();
-  localStorage.setItem('gycMemo_' + dealId, JSON.stringify(memo));
-
-  // Debounced sync to database
-  clearTimeout(window._memoSyncTimer);
-  window._memoSyncTimer = setTimeout(function() { syncMemoToDb(dealId); }, 1500);
-}
-
-function syncMemoToDb(dealId) {
-  var user = null;
-  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
-  if (!user || !user.email) return;
-
-  var memo = {};
-  try { memo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
-  var deal = DEALS.find(function(d) { return d.id === dealId; });
-  var ddAnswers = loadDDAnswers(dealId);
-
-  // Build buy box match snapshot
-  var bbMatch = null;
-  try {
-    var bb = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || 'null');
-    if (bb && deal) {
-      var checks = [];
-      if (bb.assetClasses && bb.assetClasses.length > 0) checks.push({ label: 'Asset Class', match: bb.assetClasses.indexOf(deal.assetClass) >= 0 });
-      if (bb.checkSize) checks.push({ label: 'Check Size', match: deal.investmentMinimum <= bb.checkSize });
-      if (bb.minIRR) { var _di = deal.targetIRR || 0; var _dipct = _di <= 1 ? _di * 100 : _di; var _bipct = parseFloat(bb.minIRR) <= 1 ? parseFloat(bb.minIRR) * 100 : parseFloat(bb.minIRR); checks.push({ label: 'Target Return', match: _dipct >= _bipct }); }
-      if (bb.strategies && bb.strategies.length > 0) checks.push({ label: 'Strategy', match: bb.strategies.indexOf(deal.strategy) >= 0 });
-      if (bb.maxLockup) checks.push({ label: 'Lockup', match: (deal.holdPeriod || 0) <= bb.maxLockup });
-      bbMatch = { criteria: checks, matched: checks.filter(function(c) { return c.match; }).length, total: checks.length };
-    }
-  } catch(e) {}
-
-  // Build deal snapshot
-  var snapshot = deal ? {
-    investmentName: deal.investmentName, managementCompany: deal.managementCompany, ceo: deal.ceo,
-    assetClass: deal.assetClass, dealType: deal.dealType, targetIRR: deal.targetIRR,
-    preferredReturn: deal.preferredReturn, investmentMinimum: deal.investmentMinimum,
-    holdPeriod: deal.holdPeriod, strategy: deal.strategy, status: deal.status
-  } : {};
-
-  fetch('/api/memo', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      dealId: dealId,
-      email: user.email,
-      dealName: deal ? deal.investmentName : '',
-      thesis: memo.thesis || '',
-      risks: memo.risks || '',
-      reflection: memo.reflection || '',
-      buyBoxMatch: bbMatch,
-      ddAnswers: ddAnswers,
-      dealSnapshot: snapshot,
-      stage: typeof getDealStage === 'function' ? getDealStage(dealId) : 'ready'
-    })
-  }).catch(function(err) { console.warn('Memo sync failed:', err.message); });
-}
-
-// Load memo from database on page load (merge with localStorage)
-function loadMemoFromDb(dealId) {
-  var user = null;
-  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
-  if (!user || !user.email) return;
-
-  fetch('/api/memo?dealId=' + encodeURIComponent(dealId) + '&email=' + encodeURIComponent(user.email))
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!data.success || !data.memo) return;
-      var dbMemo = data.memo;
-      var localMemo = {};
-      try { localMemo = JSON.parse(localStorage.getItem('gycMemo_' + dealId) || '{}'); } catch(e) {}
-
-      // Merge: use most recent version (DB or local)
-      var dbTime = dbMemo.updated_at ? new Date(dbMemo.updated_at).getTime() : 0;
-      var localTime = localMemo._lastSaved ? new Date(localMemo._lastSaved).getTime() : 0;
-
-      if (dbTime > localTime) {
-        // DB is newer — update localStorage and re-render textareas
-        localMemo.thesis = dbMemo.thesis || localMemo.thesis || '';
-        localMemo.risks = dbMemo.risks || localMemo.risks || '';
-        localMemo.reflection = dbMemo.reflection || localMemo.reflection || '';
-        localMemo._lastSaved = dbMemo.updated_at;
-        localStorage.setItem('gycMemo_' + dealId, JSON.stringify(localMemo));
-
-        // Update textareas if they exist
-        var thesisEl = document.getElementById('memoThesis');
-        var risksEl = document.getElementById('memoRisks');
-        var reflEl = document.getElementById('memoReflection');
-        if (thesisEl && dbMemo.thesis) thesisEl.value = dbMemo.thesis;
-        if (risksEl && dbMemo.risks) risksEl.value = dbMemo.risks;
-        if (reflEl && dbMemo.reflection) reflEl.value = dbMemo.reflection;
-      } else if (localTime > dbTime && (localMemo.thesis || localMemo.risks || localMemo.reflection)) {
-        // Local is newer — push to DB
-        syncMemoToDb(dealId);
-      }
-    })
-    .catch(function(err) { console.warn('Memo load failed:', err.message); });
-}
-
-function printMemo(dealId) {
-  var memoEl = document.getElementById('memoBody');
-  if (!memoEl) return;
-  var win = window.open('', '_blank');
-  var deal = DEALS.find(function(d) { return d.id === dealId; });
-  var title = deal ? deal.investmentName + ' — Investment Memo' : 'Investment Memo';
-  win.document.write('<!DOCTYPE html><html><head><title>' + title + '</title>');
-  win.document.write('<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#1a1a1a;line-height:1.6;}h1{font-size:22px;margin-bottom:4px;}h2{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#888;margin:20px 0 8px;border-bottom:1px solid #eee;padding-bottom:4px;}.snap-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}.snap-item{padding:6px 10px;background:#f8f8f8;border-radius:6px;}.snap-label{font-size:10px;color:#888;}.snap-val{font-size:13px;font-weight:600;}.check-pass{color:#22c55e;}.check-fail{color:#ef4444;}.qa{border-bottom:1px solid #f0f0f0;padding:4px 0;}.qa-q{font-size:11px;color:#888;}.qa-a{font-size:12px;font-weight:600;}.auto-tag{font-size:9px;color:#22c55e;background:#f0fdf4;padding:1px 5px;border-radius:4px;}.textarea-print{white-space:pre-wrap;padding:8px 12px;background:#fafafa;border:1px solid #eee;border-radius:6px;font-size:13px;min-height:40px;}.footer{margin-top:30px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:10px;}@media print{body{margin:20px;}}</style>');
-  win.document.write('</head><body>');
-  win.document.write('<h1>' + title + '</h1>');
-  win.document.write('<div style="font-size:12px;color:#888;margin-bottom:20px;">Generated ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' &middot; Grow Your Cashflow</div>');
-  // Clone memo content but convert textareas to divs
-  var clone = memoEl.cloneNode(true);
-  var textareas = clone.querySelectorAll('textarea');
-  for (var ti = 0; ti < textareas.length; ti++) {
-    var ta = textareas[ti];
-    var div = document.createElement('div');
-    div.className = 'textarea-print';
-    div.textContent = ta.value || '(not yet written)';
-    ta.parentNode.replaceChild(div, ta);
-  }
-  win.document.write(clone.innerHTML);
-  win.document.write('<div class="footer">This memo was generated from your research on Grow Your Cashflow. Use it to evaluate your investment decisions over time.</div>');
-  win.document.write('</body></html>');
-  win.document.close();
-  setTimeout(function() { win.print(); }, 300);
-}
 
 function saveDDAnswer(dealId, key, value) {
   if (!requireAuth('save your due diligence answers')) return;
@@ -4542,7 +4409,10 @@ async function renderDeal() {
 
 
 
-  let deal = DEALS.find(d => d.id === id);
+  // Use already-loaded deal if available (e.g. after PPM upload updates _currentDeal)
+  let deal = (window._currentDeal && window._currentDeal.id === id) ? window._currentDeal : null;
+
+  if (!deal) deal = DEALS.find(d => d.id === id);
 
   // Check localStorage for user-submitted deals
   if (!deal) {
@@ -4552,35 +4422,46 @@ async function renderDeal() {
     } catch(e) {}
   }
 
-  // Fetch deal from Supabase API
-
+  // 1. Try session cache from index.html (instant, no network)
   if (!deal) {
-
     try {
-
-      container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
-
-      const resp = await fetch('/api/deals');
-
-      if (resp.ok) {
-
-        const apiData = await resp.json();
-
-        const allDeals = (apiData && apiData.deals) ? apiData.deals : (Array.isArray(apiData) ? apiData : []);
-
-        // Store for peer comparisons (benchmark, similar deals, thesis context)
-        DEALS = allDeals;
-        try { sessionStorage.setItem('gycDealsCache', JSON.stringify(allDeals)); } catch(e) {}
-
-        deal = allDeals.find(d => d.id === id);
-
+      const cached = sessionStorage.getItem('gycDealsCache');
+      if (cached) {
+        const cachedDeals = JSON.parse(cached);
+        deal = cachedDeals.find(d => d.id === id);
+        if (deal) DEALS = cachedDeals;
       }
-
-    } catch (e) { console.warn('API fetch failed:', e.message); }
-
+    } catch(e) {}
   }
 
+  // 2. Fast single-deal fetch by ID
+  if (!deal) {
+    try {
+      container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
+      const singleResp = await fetch('/api/deals?id=' + encodeURIComponent(id));
+      if (singleResp.ok) {
+        const singleData = await singleResp.json();
+        if (singleData && singleData.deal) {
+          deal = singleData.deal;
+        }
+      }
+    } catch (e) { console.warn('Single deal fetch failed:', e.message); }
+  }
 
+  // 3. Fallback: fetch all deals (also populates DEALS for peer comparisons)
+  if (!deal) {
+    try {
+      container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
+      const resp = await fetch('/api/deals');
+      if (resp.ok) {
+        const apiData = await resp.json();
+        const allDeals = (apiData && apiData.deals) ? apiData.deals : (Array.isArray(apiData) ? apiData : []);
+        DEALS = allDeals;
+        try { sessionStorage.setItem('gycDealsCache', JSON.stringify(allDeals)); } catch(e) {}
+        deal = allDeals.find(d => d.id === id);
+      }
+    } catch (e) { console.warn('API fetch failed:', e.message); }
+  }
 
   if (!deal) {
 
@@ -4596,6 +4477,16 @@ async function renderDeal() {
 
   // Store deal reference for share class switcher
   window._currentDeal = deal;
+
+  // Lazy-load all deals in background for peer comparisons if we only fetched single deal
+  if (DEALS.length === 0) {
+    fetch('/api/deals').then(r => r.ok ? r.json() : null).then(data => {
+      if (data && data.deals) {
+        DEALS = data.deals;
+        try { sessionStorage.setItem('gycDealsCache', JSON.stringify(DEALS)); } catch(e) {}
+      }
+    }).catch(() => {});
+  }
 
   // Pre-load background check data for DD checklist auto-population
   if (deal.managementCompanyId && !_bgCheckCache) {
@@ -6098,79 +5989,44 @@ async function renderDeal() {
 
     var hasPP = d.purchasePrice;
     var hasLoan = d.acquisitionLoan || d.loanToValue;
-    var hasWaterfall = d.waterfallDetails && d.waterfallDetails.length > 0;
-    var hasFeeDetail = d.acquisitionFeePct || d.assetMgmtFeePct || d.propertyMgmtFeePct || d.capitalEventFeePct || d.dispositionFeePct || d.constructionMgmtFeePct;
-    var hasFees = hasFeeDetail || (d.fees && d.fees.length > 0);
 
-    if (!hasPP && !hasLoan && !hasWaterfall && !hasFees) return '';
+    if (!hasPP && !hasLoan) return '';
 
     var h = '<div class="section" style="margin-top:20px;">';
     h += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Deal Economics</span></div>';
-    h += '<div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+    h += '<div class="section-body">';
 
-    // Sources & Uses column
-    if (hasPP || hasLoan) {
-      h += '<div>';
-      h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Sources & Uses</div>';
-      var pp = d.purchasePrice;
-      var equity = d.offeringSize || 0;
-      var debt = d.acquisitionLoan || (pp && pp > equity ? pp - equity : 0);
-      var ltv = d.loanToValue ? (d.loanToValue * 100).toFixed(0) : (pp && debt > 0 ? (debt / pp * 100).toFixed(0) : null);
+    var pp = d.purchasePrice;
+    var equity = d.offeringSize || 0;
+    var debt = d.acquisitionLoan || (pp && pp > equity ? pp - equity : 0);
+    var ltv = d.loanToValue ? (d.loanToValue * 100).toFixed(0) : (pp && debt > 0 ? (debt / pp * 100).toFixed(0) : null);
 
-      if (pp) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Purchase Price</span><span style="font-weight:600;">' + fmt(pp, 'money') + '</span></div>';
-      if (debt > 0) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Acquisition Loan</span><span style="font-weight:600;">' + fmt(debt, 'money') + '</span></div>';
-      if (equity) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">LP Equity Raise</span><span style="font-weight:600;">' + fmt(equity, 'money') + '</span></div>';
-      if (d.capexBudget) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Capex / Renovation</span><span style="font-weight:600;">' + fmt(d.capexBudget, 'money') + '</span></div>';
-      if (d.closingCosts) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Closing Costs</span><span style="font-weight:600;">' + fmt(d.closingCosts, 'money') + '</span></div>';
+    // Sources & Uses
+    h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Sources & Uses</div>';
+    if (pp) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Purchase Price</span><span style="font-weight:600;">' + fmt(pp, 'money') + '</span></div>';
+    if (debt > 0) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Acquisition Loan</span><span style="font-weight:600;">' + fmt(debt, 'money') + '</span></div>';
+    if (equity) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">LP Equity Raise</span><span style="font-weight:600;">' + fmt(equity, 'money') + '</span></div>';
+    if (d.capexBudget) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Capex / Renovation</span><span style="font-weight:600;">' + fmt(d.capexBudget, 'money') + '</span></div>';
+    if (d.closingCosts) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Closing Costs</span><span style="font-weight:600;">' + fmt(d.closingCosts, 'money') + '</span></div>';
 
-      if (ltv && ltv > 0) {
-        h += '<div style="margin-top:12px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;"><span>LTV</span><span>' + ltv + '%</span></div>';
-        h += '<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;"><div style="width:' + ltv + '%;background:var(--blue);"></div><div style="width:' + (100 - ltv) + '%;background:var(--green);"></div></div>';
-        h += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;"><span>Debt ' + ltv + '%</span><span>Equity ' + (100 - ltv) + '%</span></div></div>';
-      }
+    // LTV bar
+    if (ltv && ltv > 0) {
+      h += '<div style="margin-top:12px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;"><span>LTV</span><span>' + ltv + '%</span></div>';
+      h += '<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;"><div style="width:' + ltv + '%;background:var(--blue);"></div><div style="width:' + (100 - ltv) + '%;background:var(--green);"></div></div>';
+      h += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;"><span>Debt ' + ltv + '%</span><span>Equity ' + (100 - ltv) + '%</span></div></div>';
+    }
 
-      if (d.loanRate || d.loanTermYears || d.loanIOYears) {
-        h += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
-        h += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Loan Terms</div>';
-        if (d.loanRate) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Interest Rate</span><span style="font-weight:600;">' + fmt(d.loanRate, 'pct') + '</span></div>';
-        if (d.loanTermYears) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Loan Term</span><span style="font-weight:600;">' + d.loanTermYears + ' Years</span></div>';
-        if (d.loanIOYears) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">IO Period</span><span style="font-weight:600;">' + d.loanIOYears + ' Years</span></div>';
-        h += '</div>';
-      }
+    // Loan Terms
+    if (d.loanRate || d.loanTermYears || d.loanIOYears) {
+      h += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
+      h += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Loan Terms</div>';
+      if (d.loanRate) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Interest Rate</span><span style="font-weight:600;">' + fmt(d.loanRate, 'pct') + '</span></div>';
+      if (d.loanTermYears) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Loan Term</span><span style="font-weight:600;">' + d.loanTermYears + ' Years</span></div>';
+      if (d.loanIOYears) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">IO Period</span><span style="font-weight:600;">' + d.loanIOYears + ' Years</span></div>';
       h += '</div>';
     }
 
-    // Waterfall + Fees column
-    if (hasWaterfall || hasFees) {
-      h += '<div>';
-      if (hasWaterfall) {
-        h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Distribution Waterfall</div>';
-        d.waterfallDetails.forEach(function(tier) {
-          h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + esc(tier.tier || tier.threshold || '') + '</span><span style="font-weight:600;">' + esc(tier.split || '') + '</span></div>';
-        });
-      }
-
-      if (hasFees) {
-        h += '<div style="' + (hasWaterfall ? 'margin-top:16px;padding-top:12px;border-top:1px solid var(--border);' : '') + '">';
-        h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Fee Structure</div>';
-        if (hasFeeDetail) {
-          if (d.acquisitionFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Acquisition Fee</span><span style="font-weight:600;">' + fmt(d.acquisitionFeePct, 'pct') + '</span></div>';
-          if (d.assetMgmtFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Asset Management</span><span style="font-weight:600;">' + fmt(d.assetMgmtFeePct, 'pct') + ' / yr</span></div>';
-          if (d.propertyMgmtFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Property Management</span><span style="font-weight:600;">' + fmt(d.propertyMgmtFeePct, 'pct') + '</span></div>';
-          if (d.capitalEventFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Capital Event Fee</span><span style="font-weight:600;">' + fmt(d.capitalEventFeePct, 'pct') + '</span></div>';
-          if (d.dispositionFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Disposition Fee</span><span style="font-weight:600;">' + fmt(d.dispositionFeePct, 'pct') + '</span></div>';
-          if (d.constructionMgmtFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Construction Mgmt</span><span style="font-weight:600;">' + fmt(d.constructionMgmtFeePct, 'pct') + '</span></div>';
-        } else if (d.fees) {
-          d.fees.forEach(function(f) {
-            h += '<div style="padding:6px 0;font-size:13px;color:var(--text-secondary);">' + esc(f) + '</div>';
-          });
-        }
-        h += '</div>';
-      }
-      h += '</div>';
-    }
-
-    h += '</div></div></div>';
+    h += '</div></div>';
     return h;
   }
 
@@ -7239,172 +7095,6 @@ async function renderDeal() {
   actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
   actionsHtml += '</div></div></div>';
 
-  // --- Investment Memo ---
-  var memoHtml = '';
-  if (currentStage === 'ready' || currentStage === 'invested') {
-    var ddAnswers = loadDDAnswers(deal.id);
-    var checklist = getChecklistForDeal(deal);
-    var answeredCount = Object.keys(ddAnswers).filter(function(k) { return ddAnswers[k]; }).length;
-    var totalQs = checklist.sections.reduce(function(s, sec) { return s + sec.questions.length; }, 0);
-
-    // Buy box data
-    var bbData = null;
-    try { bbData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || 'null'); } catch(e) {}
-    var bbChecks = [];
-    if (bbData) {
-      if (bbData.assetClasses && bbData.assetClasses.length > 0) bbChecks.push({ label: 'Asset Class: ' + deal.assetClass, match: bbData.assetClasses.indexOf(deal.assetClass) >= 0 });
-      if (bbData.checkSize) bbChecks.push({ label: 'Min $' + (deal.investmentMinimum ? (deal.investmentMinimum/1000) + 'K' : '?') + ' vs your $' + (bbData.checkSize/1000) + 'K', match: deal.investmentMinimum <= bbData.checkSize });
-      if (bbData.minIRR) { var _mdIRR = deal.targetIRR || 0; var _mdPct = _mdIRR <= 1 ? _mdIRR * 100 : _mdIRR; var _mbPct = parseFloat(bbData.minIRR) <= 1 ? parseFloat(bbData.minIRR) * 100 : parseFloat(bbData.minIRR); bbChecks.push({ label: 'Target ' + _mdPct.toFixed(1) + '% vs your ' + _mbPct.toFixed(1) + '% min', match: _mdPct >= _mbPct }); }
-      if (bbData.strategies && bbData.strategies.length > 0) bbChecks.push({ label: 'Strategy: ' + (deal.strategy || 'N/A'), match: bbData.strategies.indexOf(deal.strategy) >= 0 });
-      if (bbData.maxLockup) bbChecks.push({ label: 'Hold ' + (deal.holdPeriod || '?') + ' yrs vs your ' + bbData.maxLockup + ' yr max', match: (deal.holdPeriod || 0) <= bbData.maxLockup });
-    }
-
-    // Portfolio data for invested deals
-    var portfolioEntry = null;
-    try {
-      var allPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-      portfolioEntry = allPortfolio.find(function(p) { return p.dealId === deal.id; });
-    } catch(e) {}
-
-    // Goal data
-    var goalData = null;
-    try { goalData = JSON.parse(localStorage.getItem('gycGoals') || 'null'); } catch(e) {}
-
-    // Memo notes (user-written thesis + reflections)
-    var memoNotes = {};
-    try { memoNotes = JSON.parse(localStorage.getItem('gycMemo_' + deal.id) || '{}'); } catch(e) {}
-
-    memoHtml += '<div class="section" id="investmentMemo">';
-    memoHtml += '<div class="section-header">';
-    memoHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
-    memoHtml += '<span class="section-title">Investment Memo</span>';
-    memoHtml += '<button onclick="printMemo(\'' + escAttr(deal.id) + '\')" style="margin-left:auto;padding:5px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);cursor:pointer;display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print / Save PDF</button>';
-    memoHtml += '</div>';
-    memoHtml += '<div class="section-body" id="memoBody">';
-
-    // --- 1. Deal Snapshot ---
-    memoHtml += '<div style="margin-bottom:20px;">';
-    memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Deal Snapshot</div>';
-    memoHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    var snapFields = [
-      ['Investment', deal.investmentName],
-      ['Sponsor', deal.managementCompany + (deal.ceo ? ' (' + deal.ceo + ')' : '')],
-      ['Asset Class', deal.assetClass || '—'],
-      ['Deal Type', deal.dealType || '—'],
-      ['Target IRR', deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '—'],
-      ['Pref Return', deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—'],
-      ['Minimum', deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—'],
-      ['Hold Period', deal.holdPeriod ? formatHoldPeriod(deal.holdPeriod) : '—'],
-      ['Strategy', deal.strategy || '—'],
-      ['Distributions', deal.distributions || '—'],
-      ['Offering Type', deal.offeringType || '—'],
-      ['Status', deal.status || '—']
-    ];
-    for (var si = 0; si < snapFields.length; si++) {
-      memoHtml += '<div style="padding:6px 10px;background:var(--bg-cream);border-radius:6px;">';
-      memoHtml += '<div style="font-size:10px;color:var(--text-muted);">' + snapFields[si][0] + '</div>';
-      memoHtml += '<div style="font-size:13px;font-weight:600;color:var(--text-dark);">' + esc(String(snapFields[si][1])) + '</div>';
-      memoHtml += '</div>';
-    }
-    memoHtml += '</div></div>';
-
-    // --- 2. Buy Box Alignment ---
-    if (bbChecks.length > 0) {
-      var bbMatched = bbChecks.filter(function(c) { return c.match; }).length;
-      memoHtml += '<div style="margin-bottom:20px;">';
-      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Buy Box Alignment &mdash; ' + bbMatched + '/' + bbChecks.length + ' criteria met</div>';
-      memoHtml += '<div style="display:flex;flex-direction:column;gap:4px;">';
-      for (var bi = 0; bi < bbChecks.length; bi++) {
-        var bc = bbChecks[bi];
-        var bcIcon = bc.match
-          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
-          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-        memoHtml += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:' + (bc.match ? 'rgba(74,222,128,0.04)' : 'rgba(248,113,113,0.04)') + ';border-radius:6px;font-size:12px;color:' + (bc.match ? 'var(--text-dark)' : 'var(--text-secondary)') + ';">' + bcIcon + esc(bc.label) + '</div>';
-      }
-      memoHtml += '</div></div>';
-    }
-
-    // --- 3. Research Summary (DD answers by section) ---
-    if (answeredCount > 0) {
-      memoHtml += '<div style="margin-bottom:20px;">';
-      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Research Summary &mdash; ' + answeredCount + '/' + totalQs + ' questions answered</div>';
-      for (var msi = 0; msi < checklist.sections.length; msi++) {
-        var msec = checklist.sections[msi];
-        var secKey = msec.title.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        // Collect answered questions in this section
-        var secAnswers = [];
-        for (var mqi = 0; mqi < msec.questions.length; mqi++) {
-          var mq = msec.questions[mqi];
-          var mKey = secKey + '_' + mqi;
-          var mAnswer = ddAnswers[mKey];
-          var mAutoVal = mq.autoField ? getAutoValue(deal, mq.autoField, mq.format) : null;
-          var mDisplayVal = mAnswer || mAutoVal;
-          if (mDisplayVal) {
-            secAnswers.push({ q: mq.q, a: mDisplayVal, isAuto: !mAnswer && !!mAutoVal });
-          }
-        }
-        if (secAnswers.length === 0) continue;
-        memoHtml += '<div style="margin-bottom:12px;">';
-        memoHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">' + esc(msec.title) + ' <span style="font-weight:500;color:var(--text-muted);">(' + secAnswers.length + '/' + msec.questions.length + ')</span></div>';
-        for (var ai = 0; ai < secAnswers.length; ai++) {
-          memoHtml += '<div style="padding:4px 0;border-bottom:1px solid var(--border-light);">';
-          memoHtml += '<div style="font-size:11px;color:var(--text-muted);">' + esc(secAnswers[ai].q) + '</div>';
-          memoHtml += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);">' + esc(secAnswers[ai].a);
-          if (secAnswers[ai].isAuto) memoHtml += ' <span style="font-size:9px;color:var(--primary);background:rgba(81,190,123,0.1);padding:1px 5px;border-radius:4px;font-weight:700;">from deal data</span>';
-          memoHtml += '</div></div>';
-        }
-        memoHtml += '</div>';
-      }
-      memoHtml += '</div>';
-    } else {
-      memoHtml += '<div style="margin-bottom:20px;padding:16px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);border-radius:8px;text-align:center;">';
-      memoHtml += '<div style="font-size:12px;color:var(--text-secondary);">No DD research recorded yet. <a href="#" onclick="document.querySelector(\'.dd-accordion\').scrollIntoView({behavior:\'smooth\'});return false;" style="color:var(--primary);font-weight:700;">Start the DD Checklist</a> to build your research record.</div>';
-      memoHtml += '</div>';
-    }
-
-    // --- 4. Investment Thesis (user writes why they're investing) ---
-    memoHtml += '<div style="margin-bottom:20px;">';
-    memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">My Investment Thesis</div>';
-    memoHtml += '<textarea id="memoThesis" onchange="saveMemoField(\'' + escAttr(deal.id) + '\',\'thesis\',this.value)" placeholder="Why are you investing in this deal? What convinced you? What do you expect to happen?" style="width:100%;min-height:80px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);resize:vertical;box-sizing:border-box;">' + esc(memoNotes.thesis || '') + '</textarea>';
-    memoHtml += '</div>';
-
-    // --- 5. Key Risks ---
-    memoHtml += '<div style="margin-bottom:20px;">';
-    memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Key Risks I\'ve Identified</div>';
-    memoHtml += '<textarea id="memoRisks" onchange="saveMemoField(\'' + escAttr(deal.id) + '\',\'risks\',this.value)" placeholder="What are the biggest risks? What could go wrong? What assumptions need to hold?" style="width:100%;min-height:60px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);resize:vertical;box-sizing:border-box;">' + esc(memoNotes.risks || '') + '</textarea>';
-    memoHtml += '</div>';
-
-    // --- 6. Investment Details (if invested) ---
-    if (currentStage === 'invested') {
-      memoHtml += '<div style="margin-bottom:20px;">';
-      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Investment Details</div>';
-      memoHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-      if (portfolioEntry) {
-        memoHtml += '<div style="padding:8px 10px;background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.1);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Amount Invested</div><div style="font-size:16px;font-weight:800;color:var(--primary);">' + fmt(parseFloat(portfolioEntry.amountInvested) || 0, 'money') + '</div></div>';
-        memoHtml += '<div style="padding:8px 10px;background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.1);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Date Invested</div><div style="font-size:14px;font-weight:700;color:var(--text-dark);">' + esc(portfolioEntry.investmentDate || '—') + '</div></div>';
-      } else {
-        memoHtml += '<div style="padding:8px 10px;background:var(--bg-cream);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Amount Invested</div><div style="font-size:13px;color:var(--text-secondary);">Not recorded yet</div></div>';
-        memoHtml += '<div style="padding:8px 10px;background:var(--bg-cream);border-radius:6px;"><div style="font-size:10px;color:var(--text-muted);">Date Invested</div><div style="font-size:13px;color:var(--text-secondary);">Not recorded yet</div></div>';
-      }
-      memoHtml += '</div></div>';
-
-      // --- 7. Post-Investment Reflection (only for invested deals) ---
-      memoHtml += '<div style="margin-bottom:20px;">';
-      memoHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Post-Investment Reflection</div>';
-      memoHtml += '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Come back periodically to journal how this investment is performing vs your expectations.</div>';
-      memoHtml += '<textarea id="memoReflection" onchange="saveMemoField(\'' + escAttr(deal.id) + '\',\'reflection\',this.value)" placeholder="Is the deal performing as expected? Are distributions on time? Would you invest again? What have you learned?" style="width:100%;min-height:80px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-card);resize:vertical;box-sizing:border-box;">' + esc(memoNotes.reflection || '') + '</textarea>';
-      memoHtml += '</div>';
-    }
-
-    // --- Memo timestamp ---
-    var memoDate = memoNotes._lastSaved ? new Date(memoNotes._lastSaved).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
-    if (memoDate) {
-      memoHtml += '<div style="font-size:10px;color:var(--text-muted);text-align:right;">Last updated: ' + memoDate + '</div>';
-    }
-
-    memoHtml += '</div></div>';
-  }
-
   // --- Similar Deals Comparison Table ---
   var similarHtml = '';
   (function buildSimilarDeals() {
@@ -7789,7 +7479,6 @@ async function renderDeal() {
     + operatorDealsHtml
     + bgReportDealHtml
     // --- Job 7: Decide ---
-    + memoHtml
     + officeHoursHtml
     + fundNudgeHtml
     // --- Admin ---
@@ -7808,11 +7497,6 @@ async function renderDeal() {
   container.innerHTML = html;
 
   document.body.classList.add('page-loaded');
-
-  // Load memo from database (merges with localStorage)
-  if (typeof loadMemoFromDb === 'function') {
-    loadMemoFromDb(deal.id);
-  }
 
   // Load deal stages from database (merges with localStorage)
   if (typeof loadStagesFromDb === 'function') {
@@ -8416,12 +8100,19 @@ async function submitDeck(dealId, dealName) {
 
       if (resp.ok) {
         var data = await resp.json();
-        // Update local deal object so Documents card reflects the upload immediately
+        // Update local deal objects so Documents card reflects the upload immediately
         var localDeal = DEALS.find(function(d) { return d.id === dealId; });
         if (localDeal && data.driveUrl) {
           if (docType === 'ppm') localDeal.ppmUrl = data.driveUrl;
           else localDeal.deckUrl = data.driveUrl;
         }
+        // Also update the active deal reference used by renderDeal()
+        if (window._currentDeal && window._currentDeal.id === dealId && data.driveUrl) {
+          if (docType === 'ppm') window._currentDeal.ppmUrl = data.driveUrl;
+          else window._currentDeal.deckUrl = data.driveUrl;
+        }
+        // Invalidate session cache so re-render fetches fresh data
+        try { sessionStorage.removeItem('gycDealsCache'); } catch(e) {}
         document.getElementById('deckModalForm').style.display = 'none';
 
         // If enrichment extracted data, show confirmation wizard
