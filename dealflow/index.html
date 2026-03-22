@@ -10980,7 +10980,7 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 //   → 90-day capital → 12-mo capital → Readiness → Source → Check size → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
   common_start: [0],
-  cashflow: [22, 23, 4, 8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 16],
+  cashflow: [8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 16],
   growth: [22, 5, 8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 17],
   tax: [22, 6, 20, 21, 8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 18],
   common_end: [19]
@@ -12118,10 +12118,21 @@ function renderWizardStep() {
     let heroSub = '';
 
     if (branch === 'cashflow') {
-      const target = parseDollar(wizardData.targetCashFlow) || 100000;
-      heroNumber = '$' + target.toLocaleString();
-      heroLabel = 'per year in passive income';
-      heroSub = 'We found <strong>' + getWizardPlanDeals(branch).length + ' deals</strong> that match your criteria. Your dashboard is ready.';
+      // Derive projected income from capital + average yield by selected asset classes
+      var capMap = { '<$100k': 75000, '$100k-$250k': 175000, '$250k-$500k': 375000, '$500k-$1M': 750000, '$1M+': 1500000 };
+      var deployCap = parseDollar(wizardData.capital90Day) || capMap[wizardData.capital12mo] || 100000;
+      var matchingDeals = getWizardPlanDeals(branch);
+      var avgYield = 0.09;
+      if (matchingDeals.length > 0) {
+        var yields = matchingDeals.map(function(d) { return d.target_irr || d.pref_return || 0; }).filter(function(y) { return y > 0 && y < 1; });
+        if (yields.length > 0) avgYield = yields.reduce(function(a, b) { return a + b; }, 0) / yields.length;
+      }
+      var projectedIncome = Math.round(deployCap * avgYield);
+      heroNumber = '$' + projectedIncome.toLocaleString();
+      heroLabel = 'projected annual cash flow';
+      heroSub = 'Based on $' + deployCap.toLocaleString() + ' deployed at ~' + Math.round(avgYield * 100) + '% avg return across <strong>' + matchingDeals.length + ' matching deals</strong>.';
+      // Store derived target for dashboard use
+      wizardData.targetCashFlow = projectedIncome;
     } else if (branch === 'tax') {
       const taxable = parseDollar(wizardData.taxableIncome) || 200000;
       const estRate = taxable > 500000 ? 0.37 : (taxable > 200000 ? 0.35 : 0.32);
@@ -12187,8 +12198,8 @@ function renderWizardStep() {
     const summaryBranch = wizardData._branch || 'cashflow';
     let goalSummary = '';
     if (summaryBranch === 'cashflow') {
-      const t = parseDollar(wizardData.targetCashFlow) || 100000;
-      goalSummary = '$' + t.toLocaleString() + '/yr in passive income';
+      const t = parseDollar(wizardData.targetCashFlow) || 0;
+      goalSummary = t > 0 ? '$' + t.toLocaleString() + '/yr projected cash flow' : 'Cash flow goal';
     } else if (summaryBranch === 'tax') {
       const t = parseDollar(wizardData.taxableIncome) || 200000;
       goalSummary = 'Offset $' + t.toLocaleString() + ' in taxable income';
@@ -12537,10 +12548,17 @@ function syncWizardToBuyBox() {
   // Auto-seed goals from buy box wizard data if no explicit goals set
   if (!localStorage.getItem('gycGoals') && d._branch) {
     const branchToType = { cashflow: 'passive_income', tax: 'reduce_taxes', growth: 'build_wealth' };
+    // Derive target income from capital + average yield if not explicitly set
+    var derivedTarget = parseFloat(d.targetCashFlow) || 0;
+    if (!derivedTarget && d._branch === 'cashflow') {
+      var capLookup = { '<$100k': 75000, '$100k-$250k': 175000, '$250k-$500k': 375000, '$500k-$1M': 750000, '$1M+': 1500000 };
+      var deployCap = parseFloat(d.capital90Day) || capLookup[d.capital12mo] || 100000;
+      derivedTarget = Math.round(deployCap * 0.09);
+    }
     const seededGoals = {
       type: branchToType[d._branch] || 'passive_income',
       currentIncome: parseFloat(d.baselineIncome) || 0,
-      targetIncome: parseFloat(d.targetCashFlow) || 100000,
+      targetIncome: derivedTarget,
       capital: numberToCapitalLabel(parseFloat(d.growthCapital || d.checkSize) || 500000),
       checkSize: parseFloat(d.checkSize) || 100000,
       timeline: 5,

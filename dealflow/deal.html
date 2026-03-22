@@ -6091,6 +6091,89 @@ async function renderDeal() {
     chartHtml += '</div></div></div>';
   }
 
+  // --- 5b. Deal Economics (Sources & Uses, Waterfall, Fee Breakdown) ---
+  function buildDealEconomicsHtml(d) {
+    // Only show deal economics for syndications
+    if ((d.dealType || '').toLowerCase() !== 'syndication') return '';
+
+    var hasPP = d.purchasePrice;
+    var hasLoan = d.acquisitionLoan || d.loanToValue;
+    var hasWaterfall = d.waterfallDetails && d.waterfallDetails.length > 0;
+    var hasFeeDetail = d.acquisitionFeePct || d.assetMgmtFeePct || d.propertyMgmtFeePct || d.capitalEventFeePct || d.dispositionFeePct || d.constructionMgmtFeePct;
+    var hasFees = hasFeeDetail || (d.fees && d.fees.length > 0);
+
+    if (!hasPP && !hasLoan && !hasWaterfall && !hasFees) return '';
+
+    var h = '<div class="section" style="margin-top:20px;">';
+    h += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Deal Economics</span></div>';
+    h += '<div class="section-body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
+
+    // Sources & Uses column
+    if (hasPP || hasLoan) {
+      h += '<div>';
+      h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Sources & Uses</div>';
+      var pp = d.purchasePrice;
+      var equity = d.offeringSize || 0;
+      var debt = d.acquisitionLoan || (pp && pp > equity ? pp - equity : 0);
+      var ltv = d.loanToValue ? (d.loanToValue * 100).toFixed(0) : (pp && debt > 0 ? (debt / pp * 100).toFixed(0) : null);
+
+      if (pp) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Purchase Price</span><span style="font-weight:600;">' + fmt(pp, 'money') + '</span></div>';
+      if (debt > 0) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Acquisition Loan</span><span style="font-weight:600;">' + fmt(debt, 'money') + '</span></div>';
+      if (equity) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">LP Equity Raise</span><span style="font-weight:600;">' + fmt(equity, 'money') + '</span></div>';
+      if (d.capexBudget) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Capex / Renovation</span><span style="font-weight:600;">' + fmt(d.capexBudget, 'money') + '</span></div>';
+      if (d.closingCosts) h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">Closing Costs</span><span style="font-weight:600;">' + fmt(d.closingCosts, 'money') + '</span></div>';
+
+      if (ltv && ltv > 0) {
+        h += '<div style="margin-top:12px;"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;"><span>LTV</span><span>' + ltv + '%</span></div>';
+        h += '<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;"><div style="width:' + ltv + '%;background:var(--blue);"></div><div style="width:' + (100 - ltv) + '%;background:var(--green);"></div></div>';
+        h += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;"><span>Debt ' + ltv + '%</span><span>Equity ' + (100 - ltv) + '%</span></div></div>';
+      }
+
+      if (d.loanRate || d.loanTermYears || d.loanIOYears) {
+        h += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
+        h += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Loan Terms</div>';
+        if (d.loanRate) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Interest Rate</span><span style="font-weight:600;">' + fmt(d.loanRate, 'pct') + '</span></div>';
+        if (d.loanTermYears) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Loan Term</span><span style="font-weight:600;">' + d.loanTermYears + ' Years</span></div>';
+        if (d.loanIOYears) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">IO Period</span><span style="font-weight:600;">' + d.loanIOYears + ' Years</span></div>';
+        h += '</div>';
+      }
+      h += '</div>';
+    }
+
+    // Waterfall + Fees column
+    if (hasWaterfall || hasFees) {
+      h += '<div>';
+      if (hasWaterfall) {
+        h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Distribution Waterfall</div>';
+        d.waterfallDetails.forEach(function(tier) {
+          h += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--text-secondary);">' + esc(tier.tier || tier.threshold || '') + '</span><span style="font-weight:600;">' + esc(tier.split || '') + '</span></div>';
+        });
+      }
+
+      if (hasFees) {
+        h += '<div style="' + (hasWaterfall ? 'margin-top:16px;padding-top:12px;border-top:1px solid var(--border);' : '') + '">';
+        h += '<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Fee Structure</div>';
+        if (hasFeeDetail) {
+          if (d.acquisitionFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Acquisition Fee</span><span style="font-weight:600;">' + fmt(d.acquisitionFeePct, 'pct') + '</span></div>';
+          if (d.assetMgmtFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Asset Management</span><span style="font-weight:600;">' + fmt(d.assetMgmtFeePct, 'pct') + ' / yr</span></div>';
+          if (d.propertyMgmtFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Property Management</span><span style="font-weight:600;">' + fmt(d.propertyMgmtFeePct, 'pct') + '</span></div>';
+          if (d.capitalEventFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Capital Event Fee</span><span style="font-weight:600;">' + fmt(d.capitalEventFeePct, 'pct') + '</span></div>';
+          if (d.dispositionFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Disposition Fee</span><span style="font-weight:600;">' + fmt(d.dispositionFeePct, 'pct') + '</span></div>';
+          if (d.constructionMgmtFeePct) h += '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;"><span style="color:var(--text-secondary);">Construction Mgmt</span><span style="font-weight:600;">' + fmt(d.constructionMgmtFeePct, 'pct') + '</span></div>';
+        } else if (d.fees) {
+          d.fees.forEach(function(f) {
+            h += '<div style="padding:6px 0;font-size:13px;color:var(--text-secondary);">' + esc(f) + '</div>';
+          });
+        }
+        h += '</div>';
+      }
+      h += '</div>';
+    }
+
+    h += '</div></div></div>';
+    return h;
+  }
+
   // --- 6. Deal Terms + Geography ---
   var detailsHtml = '';
   detailsHtml += '<div class="section">';
@@ -7690,6 +7773,7 @@ async function renderDeal() {
     + detailsHtml
     + '<div>' + operatorHtml + materialsHtml + '</div>'
     + '</div>'
+    + buildDealEconomicsHtml(deal)
     + chartHtml
     // --- Job 5: How does it compare? ---
     + cashFlowHtml

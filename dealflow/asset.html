@@ -1021,12 +1021,7 @@ body {
         </div>
       </div>
 
-      <!-- Deal Economics -->
-      <div class="section" id="dealEconSection" style="display:none;">
-        <div class="section-label">Deal Economics</div>
-        <div class="section-card">
-          <div id="dealEconContent" style="padding:24px;"></div>
-        </div>
+      <!-- Deal Economics removed — belongs on deal page, not asset page -->
       </div>
 
       <!-- Property Records -->
@@ -1582,9 +1577,6 @@ function renderAssetOverview(deals, propertyDetails) {
   if (sqft) items.push({ v: Number(sqft).toLocaleString() + ' SF', l: 'Square Footage' });
   if (!address && pd.city) items.push({ v: pd.city + ', ' + (pd.state || ''), l: 'Location' });
   if (occ) items.push({ v: occ + '%', l: 'Occupancy' });
-  if (strat) items.push({ v: strat, l: 'Strategy' });
-  if (d0.holdPeriod || pd.holdPeriod) items.push({ v: (d0.holdPeriod || pd.holdPeriod) + ' Yrs', l: 'Hold Period' });
-  if (d0.offeringType || pd.offeringType) items.push({ v: d0.offeringType || pd.offeringType, l: 'Offering Type' });
   if (propType) items.push({ v: propType, l: 'Property Type' });
 
   // Get best strategy text
@@ -1716,119 +1708,6 @@ function renderOperatorComparison(deals) {
   });
 
   html += '</tbody></table>';
-  el.innerHTML = html;
-}
-
-function renderDealEconomics(deals) {
-  var section = document.getElementById('dealEconSection');
-  var el = document.getElementById('dealEconContent');
-
-  var hasPurchasePrice = deals.some(function(d) { return d.purchasePrice; });
-  var hasDetailedFees = deals.some(function(d) { return d.fees && d.fees.length > 0 || d.acquisitionFeePct || d.assetMgmtFeePct; });
-  var hasReturns = deals.some(function(d) { return d.preferredReturn || d.targetIRR || d.equityMultiple; });
-  var hasLoan = deals.some(function(d) { return d.acquisitionLoan || d.loanToValue; });
-
-  if (!hasPurchasePrice && !hasDetailedFees && !hasReturns) return;
-
-  section.style.display = 'block';
-
-  var deal = deals.find(function(d) { return d.purchasePrice; }) || deals[0];
-  var html = '<div class="econ-grid">';
-
-  // ─── Sources & Uses card ───
-  if (hasPurchasePrice || hasLoan) {
-    html += '<div class="econ-card">';
-    html += '<div class="econ-card-title">Sources & Uses</div>';
-
-    var pp = deal.purchasePrice;
-    var equity = deal.offeringSize || 0;
-    var debt = deal.acquisitionLoan || (pp && pp > equity ? pp - equity : 0);
-    var ltv = deal.loanToValue ? (deal.loanToValue * 100).toFixed(0) : (pp && debt > 0 ? (debt / pp * 100).toFixed(0) : null);
-
-    if (pp) html += '<div class="econ-row"><span class="econ-row-label">Purchase Price</span><span class="econ-row-value">' + currency(pp) + '</span></div>';
-    if (debt > 0) html += '<div class="econ-row"><span class="econ-row-label">Acquisition Loan' + (deal.acquisitionLoan ? '' : ' (est.)') + '</span><span class="econ-row-value">' + currency(debt) + '</span></div>';
-    if (equity) html += '<div class="econ-row"><span class="econ-row-label">LP Equity Raise</span><span class="econ-row-value">' + currency(equity) + '</span></div>';
-    if (deal.capexBudget) html += '<div class="econ-row"><span class="econ-row-label">Capex / Renovation</span><span class="econ-row-value">' + currency(deal.capexBudget) + '</span></div>';
-    if (deal.closingCosts) html += '<div class="econ-row"><span class="econ-row-label">Closing Costs</span><span class="econ-row-value">' + currency(deal.closingCosts) + '</span></div>';
-
-    // LTV bar
-    if (ltv && ltv > 0) {
-      html += '<div class="econ-row" style="border-bottom:none;"><span class="econ-row-label">LTV' + (deal.loanToValue ? '' : ' (est.)') + '</span><span class="econ-row-value">' + ltv + '%</span></div>';
-      html += '<div class="econ-bar-wrap">' +
-        '<div class="econ-bar-seg" style="width:' + ltv + '%;background:var(--blue);"></div>' +
-        '<div class="econ-bar-seg" style="width:' + (100 - ltv) + '%;background:var(--green);"></div>' +
-      '</div>';
-      html += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;"><span>Debt ' + ltv + '%</span><span>Equity ' + (100 - ltv) + '%</span></div>';
-    }
-
-    // Loan details
-    if (deal.loanRate || deal.loanTermYears || deal.loanIOYears) {
-      html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
-      html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Loan Terms</div>';
-      if (deal.loanRate) html += '<div class="econ-row"><span class="econ-row-label">Interest Rate</span><span class="econ-row-value">' + pct(deal.loanRate) + '</span></div>';
-      if (deal.loanTermYears) html += '<div class="econ-row"><span class="econ-row-label">Loan Term</span><span class="econ-row-value">' + deal.loanTermYears + ' Years</span></div>';
-      if (deal.loanIOYears) html += '<div class="econ-row"><span class="econ-row-label">Interest-Only Period</span><span class="econ-row-value">' + deal.loanIOYears + ' Years</span></div>';
-      html += '</div>';
-    }
-
-    html += '</div>';
-  }
-
-  // ─── Returns & Fees card ───
-  if (hasReturns || hasDetailedFees) {
-    html += '<div class="econ-card">';
-    html += '<div class="econ-card-title">Returns & Fees</div>';
-
-    if (deal.preferredReturn) html += '<div class="econ-row"><span class="econ-row-label">Preferred Return</span><span class="econ-row-value">' + pct(deal.preferredReturn) + '</span></div>';
-    if (deal.targetIRR) html += '<div class="econ-row"><span class="econ-row-label">Target IRR</span><span class="econ-row-value">' + pct(deal.targetIRR) + '</span></div>';
-    if (deal.equityMultiple) html += '<div class="econ-row"><span class="econ-row-label">Equity Multiple</span><span class="econ-row-value">' + multiple(deal.equityMultiple) + '</span></div>';
-    if (deal.cashOnCash) html += '<div class="econ-row"><span class="econ-row-label">Cash-on-Cash</span><span class="econ-row-value">' + pct(deal.cashOnCash) + '</span></div>';
-    if (deal.lpGpSplit) html += '<div class="econ-row"><span class="econ-row-label">LP / GP Split</span><span class="econ-row-value">' + esc(deal.lpGpSplit) + '</span></div>';
-    if (deal.holdPeriod) html += '<div class="econ-row"><span class="econ-row-label">Hold Period</span><span class="econ-row-value">' + deal.holdPeriod + ' Years</span></div>';
-    if (deal.distributions) html += '<div class="econ-row"><span class="econ-row-label">Distributions</span><span class="econ-row-value">' + esc(deal.distributions) + '</span></div>';
-    if (deal.investmentMinimum) html += '<div class="econ-row"><span class="econ-row-label">Minimum Investment</span><span class="econ-row-value">' + currency(deal.investmentMinimum) + '</span></div>';
-
-    // Waterfall details
-    if (deal.waterfallDetails && deal.waterfallDetails.length > 0) {
-      html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
-      html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Distribution Waterfall</div>';
-      deal.waterfallDetails.forEach(function(tier) {
-        html += '<div class="econ-row"><span class="econ-row-label">' + esc(tier.tier || tier.threshold || '') + '</span><span class="econ-row-value">' + esc(tier.split || '') + '</span></div>';
-      });
-      html += '</div>';
-    }
-
-    // Fee breakdown — prefer structured fields, fallback to text array
-    var hasStructuredFees = deal.acquisitionFeePct || deal.assetMgmtFeePct || deal.propertyMgmtFeePct || deal.capitalEventFeePct || deal.dispositionFeePct || deal.constructionMgmtFeePct;
-    if (hasStructuredFees || (deal.fees && deal.fees.length > 0)) {
-      html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">';
-      html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Fee Structure</div>';
-
-      if (hasStructuredFees) {
-        if (deal.acquisitionFeePct) html += '<div class="econ-row"><span class="econ-row-label">Acquisition Fee</span><span class="econ-row-value">' + pct(deal.acquisitionFeePct) + '</span></div>';
-        if (deal.assetMgmtFeePct) html += '<div class="econ-row"><span class="econ-row-label">Asset Management</span><span class="econ-row-value">' + pct(deal.assetMgmtFeePct) + ' / yr</span></div>';
-        if (deal.propertyMgmtFeePct) html += '<div class="econ-row"><span class="econ-row-label">Property Management</span><span class="econ-row-value">' + pct(deal.propertyMgmtFeePct) + '</span></div>';
-        if (deal.capitalEventFeePct) html += '<div class="econ-row"><span class="econ-row-label">Capital Event Fee</span><span class="econ-row-value">' + pct(deal.capitalEventFeePct) + '</span></div>';
-        if (deal.dispositionFeePct) html += '<div class="econ-row"><span class="econ-row-label">Disposition Fee</span><span class="econ-row-value">' + pct(deal.dispositionFeePct) + '</span></div>';
-        if (deal.constructionMgmtFeePct) html += '<div class="econ-row"><span class="econ-row-label">Construction Mgmt</span><span class="econ-row-value">' + pct(deal.constructionMgmtFeePct) + '</span></div>';
-      } else {
-        deal.fees.forEach(function(f) {
-          html += '<div class="econ-row"><span class="econ-row-label">' + esc(f) + '</span></div>';
-        });
-      }
-      html += '</div>';
-    }
-
-    html += '</div>';
-  }
-
-  html += '</div>';
-
-  if (deals.length > 1 && hasPurchasePrice) {
-    var dealLabel = deal.managementCompany || 'latest deal';
-    html += '<div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;">Showing economics for ' + esc(dealLabel) + '</div>';
-  }
-
   el.innerHTML = html;
 }
 
@@ -2150,7 +2029,7 @@ async function init() {
   renderPriceHistory(matchingDeals, null);
   renderAssetOverview(matchingDeals, propertyDetails);
   renderOperatorComparison(matchingDeals);
-  renderDealEconomics(matchingDeals);
+  // Deal economics removed — belongs on deal page only
 
   // Show content
   document.getElementById('loadingSkeleton').style.display = 'none';
