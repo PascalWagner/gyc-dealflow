@@ -76,6 +76,9 @@
       progressFill.style.width = pct + '%';
     }
 
+    // Build checklist when reaching step 6
+    if (step === 6) buildChecklist();
+
     // Scroll to top
     window.scrollTo(0, 0);
   };
