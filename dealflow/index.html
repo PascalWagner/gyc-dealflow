@@ -9261,10 +9261,8 @@ function renderCreditCard(deal) {
   const isInterested = stage === 'saved' || stage === 'vetting' || stage === 'diligence' || stage === 'decision' || stage === 'invested';
   const isPassed = stage === 'passed';
 
-  const showCmpCheck = (currentTab === 'saved' || currentTab === 'vetting');
   const html = `
     <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
-      ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <div class="credit-card-hero" style="position:relative">
         <div class="credit-badges">
           <span class="credit-badge">${typeLabel}</span>
@@ -9272,7 +9270,6 @@ function renderCreditCard(deal) {
           ${auditBadge}
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
           ${renderFreshnessBadge(deal)}
-          ${renderMatchBadge(deal)}
           ${renderSearchStageBadge(deal)}
           ${deal.pctFunded >= 70 && deal.pctFunded < 100 ? `<span class="credit-badge" style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;">Almost Full &mdash; ${deal.pctFunded}%</span>` : ''}
           ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
@@ -9283,7 +9280,6 @@ function renderCreditCard(deal) {
         <div class="credit-card-title">${deal.investmentName}</div>
         <div class="credit-card-manager">${deal.managementCompany || 'Unknown'}</div>
         <div class="credit-card-strategy">${strategy}</div>
-        ${buildHighlightPills(deal)}
         <div class="credit-card-metrics">
           <div class="metric">
             <div class="metric-label">Target Income</div>
@@ -9548,10 +9544,8 @@ function renderCard(deal) {
   const mgr = getManagerTier(deal);
   const hasDocs = !!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl);
 
-  var showCompareCheck = (currentTab === 'saved' || currentTab === 'vetting');
   return `
     <div class="deal-card" data-id="${deal.id}">
-      ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
       <div class="equity-card-hero" style="background:${deal.propertyImageUrl ? 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(' + deal.propertyImageUrl + ')' : hero.gradient};${deal.propertyImageUrl ? 'background-size:cover;background-position:center;' : ''}position:relative;">
         <div class="equity-hero-badges">
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
@@ -9560,7 +9554,6 @@ function renderCard(deal) {
           ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
           ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
           ${renderFreshnessBadge(deal)}
-          ${renderMatchBadge(deal)}
           ${renderSearchStageBadge(deal)}
         </div>
         ${deal.propertyImageUrl ? '' : '<div class="equity-hero-icon">' + hero.icon + '</div>'}
@@ -9570,7 +9563,6 @@ function renderCard(deal) {
         <div class="credit-card-title">${deal.investmentName}</div>
         <div class="credit-card-manager">${deal.managementCompany || ''}${deal.location ? ' &middot; ' + deal.location : ''}</div>
         ${strategy ? `<div class="credit-card-strategy">${strategy}</div>` : ''}
-        ${buildHighlightPills(deal)}
         <div class="credit-card-metrics">
           <div class="metric">
             <div class="metric-label">Equity Multiple</div>
@@ -13194,62 +13186,7 @@ function renderReport() {
     }
   }
 
-  // ===== SECTION 4: PORTFOLIO VS BUY BOX (DRIFT DETECTION) =====
-  let driftHtml = '';
-  const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-  const portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-
-  // Get asset classes from saved/dd/portfolio deals
-  const engagedDeals = allDeals.filter(deal => {
-    const stage = getDealStage(deal.id);
-    return stage === 'saved' || stage === 'interested' || stage === 'vetting' || stage === 'duediligence' || stage === 'diligence' || stage === 'decision' || stage === 'invested';
-  });
-  const portfolioAssets = portfolio.map(p => p.assetClass).filter(Boolean);
-  const engagedAssets = engagedDeals.map(x => x.assetClass).filter(Boolean);
-  const allEngagedAssets = [...new Set([...engagedAssets, ...portfolioAssets])];
-
-  if (allEngagedAssets.length > 0 || engagedDeals.length > 0) {
-    let driftRows = '';
-    let hasNewInterests = false;
-    let allAligned = true;
-
-    // Check each engaged asset class against buy box
-    const buyBoxAssets = new Set(userAssets);
-    if (wantsLending) buyBoxAssets.add('Lending');
-
-    allEngagedAssets.forEach(ac => {
-      const inBuyBox = buyBoxAssets.has(ac);
-      const count = allEngagedAssets.filter(a => a === ac).length;
-      if (inBuyBox) {
-        driftRows += '<div class="bb-drift-row">'
-          + '<div class="bb-drift-check"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="3" style="width:12px;height:12px;"><polyline points="20 6 9 17 4 12"/></svg></div>'
-          + '<div style="flex:1;font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">' + ac + '</div>'
-          + '<span class="bb-drift-pill bb-drift-aligned">In your buy box</span>'
-          + '</div>';
-      } else {
-        hasNewInterests = true;
-        allAligned = false;
-        driftRows += '<div class="bb-drift-row">'
-          + '<div style="width:20px;height:20px;border-radius:50%;background:rgba(37,99,235,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" style="width:12px;height:12px;"><circle cx="12" cy="12" r="3"/></svg></div>'
-          + '<div style="flex:1;font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);">' + ac + '</div>'
-          + '<span class="bb-drift-pill bb-drift-new">New interest</span>'
-          + '</div>';
-      }
-    });
-
-    const driftSummary = allAligned
-      ? '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Your portfolio is tracking your thesis</span></div>'
-      : '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;">You\'ve been exploring outside your buy box. Consider updating your criteria.</div>';
-
-    driftHtml = '<div class="bb-card">'
-      + '<div class="bb-label">Portfolio vs. Buy Box</div>'
-      + driftSummary
-      + driftRows
-      + (hasNewInterests ? '<div style="margin-top:16px;text-align:center;"><button onclick="openBuyBoxWizard()" class="bb-edit-link" style="font-size:13px;">Update your buy box to match &rarr;</button></div>' : '')
-      + '</div>';
-  }
-
-  // ===== SECTION 5: OFFICE HOURS CTA =====
+  // ===== SECTION 4: OFFICE HOURS CTA =====
   const ctaHtml = '<div class="bb-office-cta">'
     + '<div>'
     + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>'
@@ -13264,7 +13201,6 @@ function renderReport() {
     + thesisHtml
     + snapshotHtml
     + pathHtml
-    + driftHtml
     + ctaHtml
     + '</div>';
 }
