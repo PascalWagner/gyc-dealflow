@@ -1551,6 +1551,12 @@ html.dark .credit-chart-legend-divider {
   height: 100%;
   border-radius: 3px;
 }
+.card-funding-no-data, .swipe-funding-no-data {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
 
 /* Equity Card Hero */
 .equity-card-hero {
@@ -10088,11 +10094,10 @@ function renderCreditCard(deal) {
           var raised = deal.totalAmountSold;
           var total = deal.offeringSize;
           var pct = deal.pctFunded;
-          if (!raised || !total || !pct) return '';
-          var barColor = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : 'var(--primary)';
+          if (!raised || !total || !pct) return '<div class="card-funding-bar"><div class="card-funding-no-data">SEC filing data not available</div></div>';
           return '<div class="card-funding-bar">'
             + '<div class="card-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
-            + '<div class="card-funding-track"><div class="card-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>'
+            + '<div class="card-funding-track"><div class="card-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:var(--primary);"></div></div>'
             + '</div>';
         })()}
         ${getGoalFitLine(deal)}
@@ -10388,11 +10393,10 @@ function renderCard(deal) {
           var raised = deal.totalAmountSold;
           var total = deal.offeringSize;
           var pct = deal.pctFunded;
-          if (!raised || !total || !pct) return '';
-          var barColor = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : 'var(--primary)';
+          if (!raised || !total || !pct) return '<div class="card-funding-bar"><div class="card-funding-no-data">SEC filing data not available</div></div>';
           return '<div class="card-funding-bar">'
             + '<div class="card-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
-            + '<div class="card-funding-track"><div class="card-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>'
+            + '<div class="card-funding-track"><div class="card-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:var(--primary);"></div></div>'
             + '</div>';
         })()}
         ${getGoalFitLine(deal)}
@@ -23900,11 +23904,10 @@ function renderSwipeCard(deal) {
         var raised = deal.totalAmountSold;
         var total = deal.offeringSize;
         var pct = deal.pctFunded;
-        if (!raised || !total || !pct) return '';
-        var barColor = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : 'var(--primary)';
+        if (!raised || !total || !pct) return '<div class="swipe-funding-bar"><div class="swipe-funding-no-data">SEC filing data not available</div></div>';
         return '<div class="swipe-funding-bar">'
           + '<div class="swipe-funding-labels"><span>' + fmt(raised, 'money') + ' raised</span><span>' + pct + '% funded</span></div>'
-          + '<div class="swipe-funding-track"><div class="swipe-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + ';"></div></div>'
+          + '<div class="swipe-funding-track"><div class="swipe-funding-fill" style="width:' + Math.min(pct, 100) + '%;background:var(--primary);"></div></div>'
           + '</div>';
       })()
     + renderSocialProof(deal.id)
