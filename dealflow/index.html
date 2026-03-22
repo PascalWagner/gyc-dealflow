@@ -11295,7 +11295,8 @@ function switchToDebtFunds() {
   if (statsBar) statsBar.style.display = 'none';
   if (goalIndicator) goalIndicator.style.display = 'none';
   if (mobileToggle) mobileToggle.style.display = 'none';
-  if (viewToggle) viewToggle.style.display = 'none';
+  // Hide view toggles but keep space (so topbar doesn't shift)
+  if (viewToggle) viewToggle.style.visibility = 'hidden';
   if (debtView) { debtView.style.display = ''; renderDebtFunds(); }
 }
 
@@ -11316,7 +11317,7 @@ function switchTab(el, fromSelect) {
   var statsBar = document.getElementById('statsBar');
   if (statsBar) statsBar.style.display = '';
   var viewToggle = document.querySelector('#page-deals .topbar-view-toggle');
-  if (viewToggle) viewToggle.style.display = '';
+  if (viewToggle) { viewToggle.style.display = ''; viewToggle.style.visibility = 'visible'; }
 
   if (fromSelect) {
     // Called from mobile <select> dropdown
@@ -12240,9 +12241,9 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 //   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
   common_start: [15, 0],
-  cashflow: [23, 4, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16, 17],
-  growth: [23, 5, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16, 18],
-  tax: [23, 6, 21, 22, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16, 19],
+  cashflow: [23, 4, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
+  growth: [23, 5, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
+  tax: [23, 6, 21, 22, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
   common_end: [20]
 };
 
@@ -12268,10 +12269,9 @@ const STEP_TO_PHASE = {
   21: 1, 22: 1,          // income source, RE pro (tax branch) → Goal
   8: 2, 25: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
   9: 2,                  // loss tolerance → Finances
-  10: 3, 11: 3, 12: 3, 13: 3, 14: 3,  // asset class, strategy, operator focus, lockup, dist → Preferences
-  16: 4, 17: 4, 18: 4, 19: 4, 20: 4   // LP network, plan outputs, completion → Plan
+  10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 16: 3, 20: 3  // asset class, strategy, operator focus, lockup, dist, LP network, completion → Preferences
 };
-const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'Plan'];
+const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences'];
 
 function updateWizardPhases(seq, currentIdx) {
   var container = document.getElementById('wizardPhases');
