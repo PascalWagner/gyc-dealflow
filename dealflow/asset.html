@@ -1125,7 +1125,7 @@ body {
       <div class="breadcrumb" id="breadcrumb">
         <a href="index.html">Dashboard</a>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        <a href="index.html#assets">Assets</a>
+        <a href="index.html#deals">Deal Flow</a>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         <span id="breadcrumbName" style="color:var(--text-dark);font-weight:600;"></span>
       </div>
@@ -3072,33 +3072,35 @@ async function init() {
   // Render nearby assets map (needs current coords)
   renderNearby(nearby, currentCoords, propertyName);
 
-  // RentCast enrichment (async, non-blocking — may also update hero map with more precise coords)
-  var rcZip = null;
-  var rcCountyFips = null;
-  if (propertyAddress && propertyAddress.length > 10) {
-    var rc = await enrichWithRentCast(propertyAddress);
-    if (rc) {
-      renderPropertyRecords(rc, matchingDeals);
-      if (rc.latitude && rc.longitude) renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
-      if (rc.unitCount) renderPriceHistory(matchingDeals, rc.unitCount);
-      rcZip = rc.zipCode || null;
-      rcCountyFips = rc.countyFips || null;
-    }
-  }
-
-  // Market Intelligence (Census + BLS data)
-  var miZip = rcZip || null;
-  if (!miZip && propertyAddress) {
+  // Extract zip from address for immediate market data fetch
+  var miZip = null;
+  if (propertyAddress) {
     var zipMatch = propertyAddress.match(/\b(\d{5})\b/);
     if (zipMatch) miZip = zipMatch[1];
   }
-  // Get coordinates for county FIPS resolution
-  var miLat = null, miLng = null;
-  if (currentCoords) { miLat = currentCoords.lat; miLng = currentCoords.lng; }
+  var miLat = currentCoords ? currentCoords.lat : null;
+  var miLng = currentCoords ? currentCoords.lng : null;
 
-  if (miZip || rcCountyFips || (miLat && miLng)) {
-    var marketData = await fetchMarketData(miZip, state, rcCountyFips, miLat, miLng);
+  // Fire market intelligence + RentCast in parallel (not sequential)
+  var marketPromise = (miZip || (miLat && miLng))
+    ? fetchMarketData(miZip, state, null, miLat, miLng)
+    : Promise.resolve(null);
+
+  var rentcastPromise = (propertyAddress && propertyAddress.length > 10)
+    ? enrichWithRentCast(propertyAddress)
+    : Promise.resolve(null);
+
+  // Market intelligence renders as soon as cache returns (fast)
+  marketPromise.then(function(marketData) {
     if (marketData) renderMarketIntelligence(marketData, assetClass);
+  });
+
+  // RentCast enrichment renders when it completes
+  var rc = await rentcastPromise;
+  if (rc) {
+    renderPropertyRecords(rc, matchingDeals);
+    if (rc.latitude && rc.longitude) renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
+    if (rc.unitCount) renderPriceHistory(matchingDeals, rc.unitCount);
   }
 }
 
