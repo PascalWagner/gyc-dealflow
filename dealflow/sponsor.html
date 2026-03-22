@@ -1844,7 +1844,7 @@ function renderBgReport(result, isPaid) {
     html += '<div class="bg-report-gate" style="margin-top:20px;">';
     html += '<div class="bg-report-gate-title">Automated Background Checks</div>';
     html += '<div class="bg-report-gate-sub">Academy members get automated public records searches across 5 government databases for every sponsor. Know exactly who you\'re investing with before you write a check.</div>';
-    html += '<button class="bg-report-run-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy &rarr;</button>';
+    html += '<button class="bg-report-run-btn" onclick="window.location.href=\'index.html#subscription\'">Join Cashflow Academy &rarr;</button>';
     html += '</div>';
   } else if (result) {
     // Has results — show them
@@ -1947,7 +1947,7 @@ async function triggerBgCheck() {
     if (!resp.ok) {
       var errData = await resp.json().catch(function() { return {}; });
       if (errData.upgrade) {
-        alert('Background checks are available to Academy members. Join at growyourcashflow.io/cashflow-academy');
+        window.location.href = 'index.html#subscription';
       } else {
         alert('Error running background check: ' + (errData.error || resp.status));
       }

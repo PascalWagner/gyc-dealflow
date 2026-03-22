@@ -5239,9 +5239,20 @@ const _supa = window.supabase.createClient(
     <div class="sub-page">
       <div class="settings-page-title">Membership</div>
       <div class="settings-page-desc">From free deal access to having Pascal in your corner for every investment decision.</div>
+
+      <!-- Billing toggle -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:20px;margin-bottom:8px;">
+        <span id="billing-label-annual" style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);cursor:pointer;" onclick="setBillingToggle('annual')">Annual</span>
+        <button id="billing-toggle" onclick="toggleBilling()" style="position:relative;width:44px;height:24px;border-radius:12px;border:none;background:var(--primary);cursor:pointer;padding:0;transition:background 0.2s;">
+          <span id="billing-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+        </button>
+        <span id="billing-label-monthly" style="font-family:var(--font-ui);font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;" onclick="setBillingToggle('monthly')">Monthly</span>
+      </div>
+      <div id="billing-savings" style="text-align:center;font-family:var(--font-body);font-size:12px;color:var(--primary);margin-bottom:16px;font-weight:600;">Save $7,000/year with annual billing</div>
+
       <div class="plan-grid">
         <div class="plan-card">
-          <div class="plan-name">Free</div>
+          <div class="plan-name">Explorer</div>
           <div class="plan-price">$0</div>
           <div class="plan-desc">Browse live deals, build your buy box, and start evaluating opportunities.</div>
           <ul class="plan-features">
@@ -5250,24 +5261,28 @@ const _supa = window.supabase.createClient(
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Deal filtering &amp; search</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Debt Fund Explorer</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly deal digest email</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>5 deal detail views / month</li>
           </ul>
-          <button class="btn-cta btn-cta-secondary plan-btn">Current Plan</button>
+          <button class="btn-cta btn-cta-secondary plan-btn" data-plan="free">Current Plan</button>
         </div>
         <div class="plan-card featured">
           <div class="plan-name">Academy</div>
-          <div class="plan-price">$400<span>/month</span></div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:-4px;margin-bottom:12px;">Billed annually at $5,000/year</div>
-          <div class="plan-desc">Your annual mastermind. Someone in your corner for every deal, every question, every decision.</div>
+          <div class="plan-price" id="academy-price">$5,000<span>/year</span></div>
+          <div id="academy-price-note" style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:-4px;margin-bottom:12px;">or 3 payments of $2,000</div>
+          <div class="plan-desc">Your annual mastermind. Pascal in your corner for every deal, every question, every decision.</div>
           <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cashflow Academy curriculum</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Explorer</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Unlimited deal views &amp; comparisons</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Pascal's deal scoring &amp; analysis</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>GP background checks &amp; due diligence</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly live office hours with Pascal</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>GP introductions &amp; deal reviews</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Private investor community</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority deal alerts &amp; scoring</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cashflow Academy curriculum</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full framework &amp; template library</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn">Join the Academy</button>
+          <div id="academy-renewal-note" style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:12px;text-align:center;">Year 2+ renewal: $200/month</div>
+          <button class="btn-cta btn-cta-primary plan-btn" data-plan="academy" id="academy-cta-btn">Join the Academy</button>
         </div>
         <div class="plan-card" style="border-color:var(--teal-deep);background:linear-gradient(180deg,var(--bg-card) 0%,rgba(31,81,89,0.04) 100%);">
           <div class="plan-name" style="color:var(--teal-deep);">Family Office</div>
@@ -5282,8 +5297,17 @@ const _supa = window.supabase.createClient(
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tax &amp; entity structuring guidance</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Portfolio construction &amp; rebalancing</li>
           </ul>
-          <a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="btn-cta btn-cta-primary plan-btn" style="background:var(--teal-deep);text-decoration:none;text-align:center;display:block;">Schedule a Call</a>
+          <a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="btn-cta btn-cta-primary plan-btn" data-plan="family_office" style="background:var(--teal-deep);text-decoration:none;text-align:center;display:block;">Schedule a Call</a>
         </div>
+      </div>
+
+      <!-- Fund Investor callout -->
+      <div style="margin-top:24px;padding:20px 24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--teal-deep);margin-bottom:4px;">GYC Income Fund</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">Deploying $100K+? Fund investors get Academy included. One check, we handle everything.</div>
+        </div>
+        <a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="btn-cta btn-cta-secondary" style="white-space:nowrap;text-decoration:none;padding:10px 20px;">Learn More</a>
       </div>
     </div>
   </div>
@@ -5649,7 +5673,7 @@ const _supa = window.supabase.createClient(
           <div style="font-family:var(--font-headline);font-size:22px;margin-bottom:8px">Ready to stop guessing?</div>
           <div style="font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7">Most LPs spend months researching deals alone. Academy members deploy confidently in 90 days with a clear plan and Pascal in their corner.</div>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px">
-            <a href="https://growyourcashflow.io/cashflow-academy" target="_blank" onclick="trackActivity('academy_cta_clicked',{source:'academy_page'})" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;transition:all 0.15s" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">Join Cashflow Academy &#8594;</a>
+            <a href="javascript:void(0)" onclick="trackActivity('academy_cta_clicked',{source:'academy_page'});navigateTo('subscription')" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;transition:all 0.15s;cursor:pointer" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">Join Cashflow Academy &#8594;</a>
             <a href="https://growyourcashflow.io/call" target="_blank" onclick="trackActivity('call_booked',{source:'academy_page'})" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:transparent;color:#fff;text-decoration:none;border:1.5px solid rgba(255,255,255,0.3);transition:all 0.15s" onmouseover="this.style.borderColor='#51BE7B';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)';this.style.transform='none'">&#9742; Book a Call First</a>
           </div>
           <div style="margin-top:16px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.35)">Or email <a href="mailto:pascal@growyourcashflow.io" style="color:#51BE7B">pascal@growyourcashflow.io</a></div>
@@ -6590,7 +6614,7 @@ function renderAcademyGateCTA(source, title, subtitle) {
     '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>' +
     '<div class="gate-title">' + (title || 'Unlock with Cashflow Academy') + '</div>' +
     '<div class="gate-sub">' + (subtitle || 'Get full DD checklists, deal comparisons, stress tests, and Pascal\'s personal analysis.') + '</div>' +
-    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Academy &rarr;</button>' +
+    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});navigateTo(\'subscription\')">Join Academy &rarr;</button>' +
     '<div class="gate-features">' +
       '<span>' + checkSvg + 'Full DD Checklist</span>' +
       '<span>' + checkSvg + 'Deal Comparison</span>' +
@@ -7097,7 +7121,7 @@ function openComparisonView() {
     h += '<div style="margin-top:24px;padding:24px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #3b82f6;border-radius:12px;text-align:center;">';
     h += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--text-dark);margin-bottom:8px;">Want Pascal to review your picks?</div>';
     h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Academy members get personalized deal analysis and deployment guidance.</div>';
-    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Get Pascal\'s Analysis &rarr;</button>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});navigateTo(\'subscription\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Get Pascal\'s Analysis &rarr;</button>';
     h += '</div>';
   }
 
@@ -9183,7 +9207,7 @@ function renderPanelNextSteps(deal) {
     if (isExplorer) {
       h += '<div style="margin-top:8px;padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;text-align:center;">';
       h += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">Unlock all ' + checklist.sections.length + ' DD sections</div>';
-      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
+      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});navigateTo(\'subscription\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
       h += '</div>';
     }
 
@@ -9211,7 +9235,7 @@ function renderPanelNextSteps(deal) {
   h += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">';
   h += '<button onclick="trackActivity(\'call_booked\',{dealId:\'' + deal.id + '\',source:\'deal_panel\'});window.open(\'https://growyourcashflow.io/call\',\'_blank\')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);text-align:center;">Book a call about this deal</button>';
   if (isExplorer) {
-    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Get Pascal\'s analysis &rarr; Join Academy</button>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});navigateTo(\'subscription\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Get Pascal\'s analysis &rarr; Join Academy</button>';
   }
   h += '</div></div>';
 
@@ -10081,6 +10105,7 @@ function navigateTo(page) {
   if (page === 'casestudies') renderCaseStudies();
   if (page === 'admin-manage') adminLoadData();
   if (page === 'outreach') outreachInit();
+  if (page === 'subscription') initSubscription();
   if (page === 'network-moat') renderNetworkMoat();
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
@@ -12241,7 +12266,7 @@ function renderReport() {
         ? '<div style="text-align:center;padding:24px 0;">'
           + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">' + totalMatching + ' deals match your criteria</div>'
           + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;max-width:360px;margin:0 auto 16px;">Academy members see detailed market intelligence for each asset class.</div>'
-          + '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Unlock Market Data &rarr;</button>'
+          + '<button onclick="navigateTo(\'subscription\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Unlock Market Data &rarr;</button>'
           + '</div>'
         : '<table class="bb-snapshot-table">'
           + '<thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Min</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
@@ -12466,40 +12491,109 @@ function getMatchingDealCount(d) {
 }
 
 // ========== SUBSCRIPTION FLOW ==========
+
+// GHL Payment Links — replace these with your actual GHL payment link URLs
+const GHL_PAYMENT_LINKS = {
+  academy_annual:       '', // GHL payment link for $5,000/year
+  academy_payment_plan: '', // GHL payment link for 3x $2,000
+  academy_monthly:      '', // GHL payment link for $1,000/month
+  academy_renewal:      '', // GHL payment link for $200/month (Year 2+)
+};
+
+let currentBilling = 'annual'; // 'annual' or 'monthly'
+
+function setBillingToggle(mode) {
+  currentBilling = mode;
+  updateBillingUI();
+}
+
+function toggleBilling() {
+  currentBilling = currentBilling === 'annual' ? 'monthly' : 'annual';
+  updateBillingUI();
+}
+
+function updateBillingUI() {
+  const knob = document.getElementById('billing-toggle-knob');
+  const labelAnnual = document.getElementById('billing-label-annual');
+  const labelMonthly = document.getElementById('billing-label-monthly');
+  const priceEl = document.getElementById('academy-price');
+  const noteEl = document.getElementById('academy-price-note');
+  const renewalEl = document.getElementById('academy-renewal-note');
+  const savingsEl = document.getElementById('billing-savings');
+  const toggleBtn = document.getElementById('billing-toggle');
+
+  if (!knob || !priceEl) return;
+
+  if (currentBilling === 'annual') {
+    knob.style.left = '2px';
+    toggleBtn.style.background = 'var(--primary)';
+    labelAnnual.style.fontWeight = '600';
+    labelAnnual.style.color = 'var(--text-dark)';
+    labelMonthly.style.fontWeight = '500';
+    labelMonthly.style.color = 'var(--text-muted)';
+    priceEl.innerHTML = '$5,000<span>/year</span>';
+    noteEl.textContent = 'or 3 payments of $2,000';
+    noteEl.style.display = '';
+    renewalEl.style.display = '';
+    savingsEl.textContent = 'Save $7,000/year with annual billing';
+    savingsEl.style.display = '';
+  } else {
+    knob.style.left = '22px';
+    toggleBtn.style.background = 'var(--text-muted)';
+    labelAnnual.style.fontWeight = '500';
+    labelAnnual.style.color = 'var(--text-muted)';
+    labelMonthly.style.fontWeight = '600';
+    labelMonthly.style.color = 'var(--text-dark)';
+    priceEl.innerHTML = '$1,000<span>/month</span>';
+    noteEl.textContent = 'Billed monthly, cancel anytime';
+    noteEl.style.display = '';
+    renewalEl.style.display = 'none';
+    savingsEl.style.display = 'none';
+  }
+}
+
 function initSubscription() {
   const user = getUser();
   const currentTier = user ? (user.tier || 'free') : 'free';
+  const isPaid = currentTier === 'academy' || currentTier === 'alumni' || currentTier === 'investor' || currentTier === 'family_office';
 
   document.querySelectorAll('.plan-btn').forEach(btn => {
-    const card = btn.closest('.plan-card');
-    const planName = card.querySelector('.plan-name').textContent.toLowerCase().trim();
+    const plan = btn.getAttribute('data-plan');
+    if (!plan) return;
 
-    if (planName === currentTier || (planName === 'free' && currentTier === 'free') || (planName === 'family office' && currentTier === 'family_office')) {
-      btn.textContent = 'Current Plan';
-      btn.className = 'btn-cta btn-cta-secondary plan-btn';
-      btn.style.background = '';
-      btn.onclick = null;
-    } else if (planName === 'free') {
-      btn.textContent = currentTier !== 'free' ? 'Included' : 'Current Plan';
+    if (plan === 'free') {
+      btn.textContent = isPaid ? 'Included' : 'Current Plan';
       btn.className = 'btn-cta btn-cta-secondary plan-btn';
       btn.onclick = null;
-    } else if (planName === 'academy') {
-      if (currentTier === 'family_office') {
+    } else if (plan === 'academy') {
+      if (currentTier === 'academy' || currentTier === 'alumni' || currentTier === 'investor') {
+        btn.textContent = 'Current Plan';
+        btn.className = 'btn-cta btn-cta-secondary plan-btn';
+        btn.onclick = null;
+      } else if (currentTier === 'family_office') {
         btn.textContent = 'Included';
         btn.className = 'btn-cta btn-cta-secondary plan-btn';
         btn.onclick = null;
       } else {
         btn.textContent = 'Join the Academy';
-        btn.onclick = () => handleSubscribe('academy', 5000);
+        btn.onclick = () => handleSubscribe('academy');
       }
-    } else if (planName === 'family office') {
-      // Family Office uses a calendar link, not a JS handler
-      // The button is already an <a> tag in the HTML
+    } else if (plan === 'family_office') {
+      if (currentTier === 'family_office') {
+        // Replace the <a> tag behavior
+        btn.textContent = 'Current Plan';
+        btn.className = 'btn-cta btn-cta-secondary plan-btn';
+        btn.style.background = '';
+        btn.removeAttribute('href');
+        btn.onclick = (e) => e.preventDefault();
+      }
     }
   });
+
+  updateBillingUI();
 }
 
-async function handleSubscribe(tier, price) {
+function handleSubscribe(tier) {
   const user = getUser();
   if (!user) {
     window.location.href = 'deal-login.html';
@@ -12507,29 +12601,25 @@ async function handleSubscribe(tier, price) {
   }
 
   if (tier === 'academy') {
-    // Academy requires application
-    if (confirm('Apply for Cashflow Academy ($497/month)? This includes weekly 1:1 calls with Pascal, live deal reviews, and a 12-month deployment plan.')) {
-      trackActivity('subscribe_academy', { tier: 'academy', price: 497 });
-      user.tier = 'academy';
-      localStorage.setItem('gycUser', JSON.stringify(user));
-      alert('Application submitted! Pascal will reach out to schedule your onboarding call.');
-      initAuth();
-      initSubscription();
+    const linkKey = currentBilling === 'annual' ? 'academy_annual' : 'academy_monthly';
+    const paymentUrl = GHL_PAYMENT_LINKS[linkKey];
+    const price = currentBilling === 'annual' ? 5000 : 1000;
+    const billingLabel = currentBilling === 'annual' ? '$5,000/year' : '$1,000/month';
+
+    trackActivity('subscribe_academy', { tier: 'academy', price, billing: currentBilling });
+
+    if (paymentUrl) {
+      // Append email to pre-populate GHL checkout
+      const sep = paymentUrl.includes('?') ? '&' : '?';
+      const checkoutUrl = paymentUrl + sep + 'email=' + encodeURIComponent(user.email || '');
+      window.open(checkoutUrl, '_blank');
+    } else {
+      // Fallback: no GHL payment link configured yet
+      if (confirm('Join Cashflow Academy (' + billingLabel + ')?\n\nYou\'ll get Pascal\'s deal scoring, unlimited deal access, weekly office hours, GP introductions, and the full Academy curriculum.\n\nPayment processing is being set up. Click OK and Pascal will reach out to get you started.')) {
+        trackActivity('academy_application', { tier: 'academy', price, billing: currentBilling });
+        alert('Application received! Pascal will reach out shortly to get you started.');
+      }
     }
-  } else if (tier === 'investor') {
-    if (confirm('Upgrade to Investor plan ($99/month)? You\'ll get buy box matching, GP introductions, and priority deal alerts.')) {
-      trackActivity('subscribe_investor', { tier: 'investor', price: 99 });
-      user.tier = 'investor';
-      localStorage.setItem('gycUser', JSON.stringify(user));
-      alert('Welcome to the Investor plan! Your dashboard has been upgraded.');
-      initAuth();
-      initSubscription();
-    }
-  } else {
-    user.tier = 'free';
-    localStorage.setItem('gycUser', JSON.stringify(user));
-    initAuth();
-    initSubscription();
   }
 }
 
@@ -12917,7 +13007,7 @@ function renderCashflowGapBar() {
   bar.style.display = 'flex';
   var ctaHtml = '';
   if (hasGap && user && user.tier === 'free') {
-    ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
+    ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});navigateTo(\'subscription\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
   } else if (!hasGap) {
     ctaHtml = '<span style="font-size:11px;color:#4ade80;font-weight:700;">Goal reached!</span>';
   }
@@ -13062,7 +13152,7 @@ function renderThreePaths(targetIncome, capital, checkSize) {
     }
     return '';
   })();
-  h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'three_paths\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
+  h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'three_paths\'});navigateTo(\'subscription\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
   h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:#3b82f6;font-weight:700;">$5,000</div>';
   h += '</div>';
 
@@ -13264,7 +13354,7 @@ function showDealGateOverlay(dealId) {
         Unlock unlimited deal analysis, Pascal's personal scorecard, full DD checklists, and guided deployment with Cashflow Academy.
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
-        <button onclick="trackActivity('academy_cta_clicked',{source:'gate_overlay'});window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Join Cashflow Academy &rarr;</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'gate_overlay'});navigateTo('subscription')" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Join Cashflow Academy &rarr;</button>
         <button onclick="trackActivity('call_booked',{source:'gate_overlay'});window.open('https://growyourcashflow.io/call','_blank')" style="width:100%;padding:14px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Book a Free Strategy Call</button>
       </div>
       <div style="margin-top:16px;font-size:11px;color:var(--text-muted);">Free views reset monthly. ${5 - Math.min(state.count, 5)} of 5 remaining.</div>
@@ -13361,7 +13451,7 @@ function onDealSaved(saveCount) {
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
         <button onclick="trackActivity('call_booked',{source:'deals_saved_banner'});window.open('https://growyourcashflow.io/call','_blank')" style="padding:10px 18px;background:#4ade80;color:#0f172a;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Book a Call</button>
-        <button onclick="trackActivity('academy_cta_clicked',{source:'deals_saved_banner'});window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Academy &rarr;</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'deals_saved_banner'});navigateTo('subscription')" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Academy &rarr;</button>
       </div>
       <button onclick="dismissCta('deals_saved_banner')" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:4px;">&times;</button>`;
     document.body.appendChild(banner);
@@ -13390,7 +13480,7 @@ function showReturningUserModal() {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button onclick="trackActivity('call_booked',{source:'returning_user_modal'});window.open('https://growyourcashflow.io/call','_blank');dismissCta('returning_user_modal');" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Book a Free Strategy Call &rarr;</button>
-        <button onclick="trackActivity('academy_cta_clicked',{source:'returning_user_modal'});window.open('https://growyourcashflow.io/cashflow-academy','_blank');dismissCta('returning_user_modal');" style="width:100%;padding:12px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;">Learn About Cashflow Academy</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'returning_user_modal'});navigateTo('subscription');dismissCta('returning_user_modal');" style="width:100%;padding:12px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;">Learn About Cashflow Academy</button>
         <button onclick="dismissCta('returning_user_modal')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:8px;">Not now</button>
       </div>
     </div>`;
@@ -19964,9 +20054,12 @@ if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
   }
 })();
 
-// Handle #onboarding hash from signup — send to dashboard (onboarding card handles it)
+// Handle hash-based navigation from external pages
 if (window.location.hash === '#onboarding') {
   setTimeout(() => navigateTo('dashboard'), 300);
+  history.replaceState(null, '', window.location.pathname);
+} else if (window.location.hash === '#subscription') {
+  setTimeout(() => { navigateTo('subscription'); initSubscription(); }, 300);
   history.replaceState(null, '', window.location.pathname);
 }
 
