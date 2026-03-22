@@ -7798,16 +7798,12 @@ async function renderDeal() {
     + '<div>' + operatorHtml + chartHtml + materialsHtml + '</div>'
     + '</div>'
     + buildDealEconomicsHtml(deal)
-    // --- Free-visible sections first ---
-    + secFilingHtml
-    + similarHtml
-    // --- Paid sections ---
-    + cashFlowHtml
-    + feeBenchHtml
-    + feeCompareHtml
-    + portfolioSnapshotHtml
-    + geoMapHtml
-    + thesisHtml
+    + (isPaidUser || _compIsAdmin
+      // --- Paid users: original section order ---
+      ? (cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + secFilingHtml + thesisHtml)
+      // --- Free users: free content first, locked sections pushed below ---
+      : (secFilingHtml + similarHtml + geoMapHtml + thesisHtml + cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml)
+    )
     + dealFitHtml
     + bgReportDealHtml
     // --- Job 7: Decide ---
