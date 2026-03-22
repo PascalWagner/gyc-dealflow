@@ -149,40 +149,32 @@ ${fundingBar}
 <tr><td align="center" style="padding:24px 0 0;"><div style="font-size:11px;color:#8A9AA0;"><a href="${BASE}/index.html#settings" style="color:#8A9AA0;text-decoration:underline;">Manage preferences</a><span style="margin:0 4px;">&#183;</span><a href="${BASE}/api/unsubscribe?email=${encodeURIComponent(email)}" style="color:#8A9AA0;text-decoration:underline;">Unsubscribe</a></div><div style="font-size:11px;color:#C4CDD1;margin-top:8px;">Grow Your Cashflow &#183; growyourcashflow.io</div></td></tr>
 </table></td></tr></table>`;
 
-    // Send via GHL email
-    // First find the GHL contact
-    const searchResp = await ghlFetch(
-      `https://services.leadconnectorhq.com/contacts/search/duplicate?email=${encodeURIComponent(email)}&locationId=${GHL_LOCATION}`,
-      { method: 'GET' }
-    );
-
+    // Send via Resend
     let sent = false;
-    if (searchResp?.ok) {
-      const searchData = await searchResp.json();
-      const contactId = searchData.contact?.id;
+    const resendKey = process.env.RESEND_API_KEY;
+    if (resendKey) {
+      const sendResp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Grow Your Cashflow <deals@growyourcashflow.io>',
+          to: [email],
+          subject,
+          html: emailHtml
+        })
+      });
 
-      if (contactId) {
-        // Send email via GHL
-        const sendResp = await ghlFetch(
-          `https://services.leadconnectorhq.com/contacts/${contactId}/campaigns/emails`,
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              emailType: 'html',
-              subject,
-              html: emailHtml,
-              from: 'Grow Your Cashflow <deals@growyourcashflow.io>'
-            })
-          }
-        );
-
-        if (sendResp?.ok) {
-          sent = true;
-        } else {
-          const errText = await sendResp?.text().catch(() => 'unknown');
-          console.error('GHL send failed:', errText);
-        }
+      if (sendResp.ok) {
+        sent = true;
+      } else {
+        const errText = await sendResp.text().catch(() => 'unknown');
+        console.error('Resend failed:', errText);
       }
+    } else {
+      console.error('RESEND_API_KEY not set');
     }
 
     return res.status(200).json({
@@ -191,7 +183,7 @@ ${fundingBar}
       deal: deal.investment_name,
       subject,
       email,
-      note: sent ? 'Email sent via GHL' : 'Email generated but GHL send may have failed — check logs'
+      note: sent ? 'Email sent via Resend' : 'Email generated but send failed — check RESEND_API_KEY'
     });
 
   } catch (err) {
