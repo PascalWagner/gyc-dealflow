@@ -1078,6 +1078,7 @@ body {
   .records-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; }
   .nearby-grid { grid-template-columns: 1fr; padding: 16px; }
   .mi-grid { grid-template-columns: 1fr; }
+  #housingSection > div { grid-template-columns: 1fr !important; }
   .mi-stat-row { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px; }
   .price-table { font-size: 12px; }
   .price-table th, .price-table td { padding: 12px 12px; }
@@ -1238,6 +1239,24 @@ body {
             <div style="display:flex;justify-content:center;gap:24px;margin-top:8px;">
               <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:12px;height:12px;background:#38bdf8;border-radius:2px;"></span>Male</span>
               <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:12px;height:12px;background:#fbbf24;border-radius:2px;"></span>Female</span>
+            </div>
+          </div>
+
+          <!-- Housing (multifamily only) -->
+          <div id="housingSection" style="display:none;padding:24px;border-top:1px solid var(--border-light);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+              <!-- Occupancy -->
+              <div>
+                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Housing Occupancy</div>
+                <div id="housingOccSubtitle" class="mi-subtitle"></div>
+                <div id="housingOccContent"></div>
+              </div>
+              <!-- Bedroom Mix -->
+              <div>
+                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Bedrooms in Housing Units</div>
+                <div id="bedroomSubtitle" class="mi-subtitle"></div>
+                <div id="bedroomContent"></div>
+              </div>
             </div>
           </div>
 
@@ -2230,7 +2249,7 @@ async function fetchMarketData(zip, stateAbbr, countyFips, lat, lng) {
   }
 }
 
-function renderMarketIntelligence(data) {
+function renderMarketIntelligence(data, assetClass) {
   if (!data || (!data.population || !data.population.length)) return;
 
   var section = document.getElementById('marketIntelSection');
@@ -2497,6 +2516,58 @@ function renderMarketIntelligence(data) {
     });
   }
 
+  // ── Housing Data (multifamily only) ──
+  var isMultifamily = assetClass && (assetClass.toLowerCase().includes('multi') || assetClass.toLowerCase().includes('apartment') || assetClass.toLowerCase().includes('residential'));
+  if (isMultifamily && data.housing) {
+    var h = data.housing;
+    document.getElementById('housingSection').style.display = 'block';
+
+    // Occupancy bar
+    var occPct = h.totalUnits > 0 ? Math.round((h.occupied / h.totalUnits) * 100) : 0;
+    var vacPct = h.vacancyRate;
+    document.getElementById('housingOccSubtitle').textContent = h.totalUnits.toLocaleString() + ' total housing units in area';
+
+    var occHtml = '<div style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">Occupied</span>' +
+        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--green);">' + h.occupied.toLocaleString() + ' (' + occPct + '%)</span>' +
+      '</div>' +
+      '<div style="height:24px;background:var(--border-light);border-radius:4px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + occPct + '%;background:var(--primary);border-radius:4px;"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div>' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">Vacant</span>' +
+        '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + (vacPct > 10 ? 'var(--red)' : 'var(--text-secondary)') + ';">' + h.vacant.toLocaleString() + ' (' + vacPct + '%)</span>' +
+      '</div>' +
+      '<div style="height:24px;background:var(--border-light);border-radius:4px;overflow:hidden;">' +
+        '<div style="height:100%;width:' + Math.min(vacPct * 3, 100) + '%;background:' + (vacPct > 10 ? 'var(--red)' : '#8A9AA0') + ';border-radius:4px;"></div>' +
+      '</div>' +
+    '</div>';
+    document.getElementById('housingOccContent').innerHTML = occHtml;
+
+    // Bedroom mix
+    if (h.bedrooms && h.bedrooms.length) {
+      document.getElementById('bedroomSubtitle').textContent = '2023 ACS 5-Year Estimates';
+      var maxBrPct = Math.max.apply(null, h.bedrooms.map(function(b) { return b.pct; }));
+      var brHtml = '';
+      h.bedrooms.forEach(function(br) {
+        var barW = maxBrPct > 0 ? Math.round((br.pct / maxBrPct) * 100) : 0;
+        brHtml += '<div style="margin-bottom:10px;">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
+            '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">' + esc(br.label) + '</span>' +
+            '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);">' + br.pct + '%</span>' +
+          '</div>' +
+          '<div style="height:20px;background:var(--border-light);border-radius:4px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + barW + '%;background:var(--blue);border-radius:4px;transition:width 0.5s;"></div>' +
+          '</div>' +
+        '</div>';
+      });
+      document.getElementById('bedroomContent').innerHTML = brHtml;
+    }
+  }
+
   // ── Employment ──
   if (data.employment && data.employment.topIndustries && data.employment.topIndustries.length) {
     var empSection = document.getElementById('employmentSection');
@@ -2712,7 +2783,7 @@ async function init() {
 
   if (miZip || rcCountyFips || (miLat && miLng)) {
     var marketData = await fetchMarketData(miZip, state, rcCountyFips, miLat, miLng);
-    if (marketData) renderMarketIntelligence(marketData);
+    if (marketData) renderMarketIntelligence(marketData, assetClass);
   }
 }
 

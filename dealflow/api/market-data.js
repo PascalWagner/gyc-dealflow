@@ -218,6 +218,48 @@ export default async function handler(req, res) {
       console.log('Age distribution fetch failed:', e.message);
     }
 
+    // ── 1c. Housing Data (Census ACS B25002 + B25041) ──
+    try {
+      // B25002: Occupancy (001=Total, 002=Occupied, 003=Vacant)
+      // B25041: Bedrooms (001=Total, 002=None, 003=1BR, 004=2BR, 005=3BR, 006=4BR, 007=5+BR)
+      const housingVars = 'B25002_001E,B25002_002E,B25002_003E,B25041_002E,B25041_003E,B25041_004E,B25041_005E,B25041_006E,B25041_007E';
+
+      let housingUrl;
+      if (zip) {
+        housingUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${housingVars}&for=zip%20code%20tabulation%20area:${zip}`;
+      } else if (resolvedCountyFips) {
+        const sf = resolvedCountyFips.substring(0, 2);
+        const cf = resolvedCountyFips.substring(2, 5);
+        housingUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${housingVars}&for=county:${cf}&in=state:${sf}`;
+      }
+
+      if (housingUrl) {
+        const hResp = await fetch(housingUrl);
+        if (hResp.ok) {
+          const hData = await hResp.json();
+          const v = hData[1].map(x => parseInt(x) || 0);
+          const total = v[0];
+          if (total > 0) {
+            results.housing = {
+              totalUnits: total,
+              occupied: v[1],
+              vacant: v[2],
+              vacancyRate: Math.round((v[2] / total) * 1000) / 10,
+              bedrooms: [
+                { label: 'No bedroom', count: v[3], pct: Math.round((v[3] / total) * 1000) / 10 },
+                { label: '1 bedroom', count: v[4], pct: Math.round((v[4] / total) * 1000) / 10 },
+                { label: '2 bedrooms', count: v[5], pct: Math.round((v[5] / total) * 1000) / 10 },
+                { label: '3 bedrooms', count: v[6], pct: Math.round((v[6] / total) * 1000) / 10 },
+                { label: '4+ bedrooms', count: v[7] + v[8], pct: Math.round(((v[7] + v[8]) / total) * 1000) / 10 }
+              ]
+            };
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Housing data fetch failed:', e.message);
+    }
+
     // ── 2. Employment Data (BLS QCEW via API) ──
     // Use County Employment data if we have FIPS
     let countyFips = resolvedCountyFips;
