@@ -1578,6 +1578,132 @@ body {
   .demand-cards { grid-template-columns: 1fr; }
   .insights-stat-cards { grid-template-columns: 1fr; }
   .insights-bar-label { min-width: 90px; font-size: 11px; }
+  .insights-two-col { flex-direction: column; }
+}
+
+/* ====== DISTRIBUTION STACKED BAR ====== */
+.dist-stacked-bar {
+  display: flex;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.dist-stacked-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  transition: flex 0.4s ease;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.dist-stacked-labels {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ====== GOALS DONUT ====== */
+.goals-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.goals-donut {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+.goals-donut-center {
+  position: absolute;
+  inset: 20%;
+  background: var(--bg-card);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.goals-donut-center-value {
+  font-family: var(--font-headline);
+  font-size: 20px;
+  color: var(--teal-deep);
+  line-height: 1;
+}
+.goals-donut-center-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.goals-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.goals-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.goals-legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.goals-legend-pct {
+  font-weight: 700;
+  color: var(--teal-deep);
+  margin-left: auto;
+}
+
+/* ====== DEAL TYPE PILLS ====== */
+.deal-type-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.deal-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--off-white);
+  border: 1px solid var(--border);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.deal-type-pill-pct {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* ====== INSIGHTS TWO-COL ====== */
+.insights-two-col {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+.insights-two-col > div {
+  flex: 1;
 }
 </style>
 </head>
@@ -1718,23 +1844,23 @@ body {
         </div>
       </div>
 
-      <!-- Row 2: Competitive Analysis + Market Positioning -->
-      <div class="dashboard-grid-3-2">
-        <!-- LEFT: Competitive Analysis -->
-        <div class="section-card">
-          <div class="section-header">
-            <div class="section-title">Competitive Analysis</div>
-          </div>
-          <div class="section-body">
-            <div id="competitiveAnalysis">
-              <div class="empty-inline" style="padding:20px;">
-                <p>Loading competitive data...</p>
-              </div>
+      <!-- Row 2: Competitive Analysis (full width) -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Competitive Analysis</div>
+        </div>
+        <div class="section-body">
+          <div id="competitiveAnalysis">
+            <div class="empty-inline" style="padding:20px;">
+              <p>Loading competitive data...</p>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- RIGHT: Market Positioning -->
+      <!-- Row 3: Market Positioning + Demand Intelligence -->
+      <div class="dashboard-grid">
+        <!-- LEFT: Market Positioning -->
         <div class="section-card">
           <div class="section-header">
             <div class="section-title">Market Positioning</div>
@@ -1747,9 +1873,23 @@ body {
             </div>
           </div>
         </div>
+
+        <!-- RIGHT: Demand Intelligence -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Demand Intelligence</div>
+          </div>
+          <div class="section-body">
+            <div class="demand-cards" id="demandIntelligence">
+              <div class="empty-inline" style="padding:20px;">
+                <p>Loading demand data...</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Row 3: What Investors Want (full width) -->
+      <!-- Row 4: What Investors Want (full width) -->
       <div class="section-card">
         <div class="section-header">
           <div class="section-title">What Our Investors Want</div>
@@ -1763,33 +1903,16 @@ body {
         </div>
       </div>
 
-      <!-- Row 4: Demand Intelligence + Action Items -->
-      <div class="dashboard-grid">
-        <!-- LEFT: Demand Intelligence -->
-        <div class="section-card">
-          <div class="section-header">
-            <div class="section-title">Demand Intelligence</div>
-          </div>
-          <div class="section-body">
-            <div class="demand-cards" id="demandIntelligence">
-              <div class="empty-inline" style="padding:20px;">
-                <p>Loading demand data...</p>
-              </div>
-            </div>
-          </div>
+      <!-- Row 5: Action Items (full width) -->
+      <div class="section-card" id="actionItemsCard">
+        <div class="section-header">
+          <div class="section-title">Action Items</div>
+          <span class="section-badge" id="actionItemsCount">0</span>
         </div>
-
-        <!-- RIGHT: Action Items -->
-        <div class="section-card" id="actionItemsCard">
-          <div class="section-header">
-            <div class="section-title">Action Items</div>
-            <span class="section-badge" id="actionItemsCount">0</span>
-          </div>
-          <div class="section-body">
-            <div id="actionItemsList"></div>
-            <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
-              <p>All deals look good! No action items at this time.</p>
-            </div>
+        <div class="section-body">
+          <div id="actionItemsList"></div>
+          <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
+            <p>All deals look good! No action items at this time.</p>
           </div>
         </div>
       </div>
@@ -3125,7 +3248,7 @@ function renderInvestorInsights(insights) {
 
   var html = '';
 
-  // Top Asset Classes — Horizontal bar chart
+  // Top Asset Classes — Horizontal bar chart (keep as-is)
   html += '<div class="insights-sub-title">Most Popular Asset Classes</div>';
   html += '<div class="insights-bar-chart">';
   var maxPct = Math.max.apply(null, insights.topAssetClasses.map(function(a) { return a.pct; }));
@@ -3143,21 +3266,80 @@ function renderInvestorInsights(insights) {
   });
   html += '</div>';
 
-  // Distribution Preferences — colored segments
-  if (insights.preferredDistributions && insights.preferredDistributions.length > 0) {
-    html += '<div class="insights-sub-title">Distribution Preferences</div>';
-    html += '<div class="insights-donut-row">';
-    insights.preferredDistributions.forEach(function(item, idx) {
-      var color = DIST_COLORS[idx % DIST_COLORS.length];
-      html += '<div class="insights-donut-item">' +
-        '<span class="insights-donut-swatch" style="background:' + color + ';"></span>' +
-        escHtml(item.name) + ' <span class="insights-donut-pct">' + item.pct + '%</span>' +
-      '</div>';
-    });
-    html += '</div>';
+  // Two-column row: Distribution Preferences (left) + Investor Goals donut (right)
+  var hasDistributions = insights.preferredDistributions && insights.preferredDistributions.length > 0;
+  var hasGoals = insights.topGoals && insights.topGoals.length > 1;
+
+  if (hasDistributions || hasGoals) {
+    html += '<div class="insights-two-col">';
+
+    // LEFT: Distribution Preferences — Stacked bar
+    if (hasDistributions) {
+      html += '<div>';
+      html += '<div class="insights-sub-title">Distribution Preferences</div>';
+      html += '<div class="dist-stacked-bar">';
+      insights.preferredDistributions.forEach(function(item, idx) {
+        var color = DIST_COLORS[idx % DIST_COLORS.length];
+        var label = item.pct >= 12 ? (escHtml(item.name) + ' ' + item.pct + '%') : '';
+        html += '<div class="dist-stacked-seg" style="flex:' + item.pct + ';background:' + color + ';">' + label + '</div>';
+      });
+      html += '</div>';
+      // Legend below for narrow segments
+      html += '<div class="dist-stacked-labels">';
+      insights.preferredDistributions.forEach(function(item, idx) {
+        var color = DIST_COLORS[idx % DIST_COLORS.length];
+        html += '<div class="insights-donut-item">' +
+          '<span class="insights-donut-swatch" style="background:' + color + ';"></span>' +
+          escHtml(item.name) + ' <span class="insights-donut-pct">' + item.pct + '%</span>' +
+        '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+    }
+
+    // RIGHT: Investor Goals — Donut chart
+    if (hasGoals) {
+      html += '<div>';
+      html += '<div class="insights-sub-title">Investor Goals</div>';
+
+      // Build conic-gradient
+      var gradientStops = [];
+      var cumPct = 0;
+      insights.topGoals.forEach(function(goal, idx) {
+        var color = DIST_COLORS[idx % DIST_COLORS.length];
+        gradientStops.push(color + ' ' + cumPct + '%');
+        cumPct += goal.pct;
+        gradientStops.push(color + ' ' + cumPct + '%');
+      });
+      var donutStyle = 'background: conic-gradient(' + gradientStops.join(', ') + ');';
+
+      html += '<div class="goals-donut-wrap">';
+      html += '<div class="goals-donut" style="' + donutStyle + '">';
+      html += '<div class="goals-donut-center">';
+      html += '<div class="goals-donut-center-value">' + (insights.totalInvestors || 0) + '</div>';
+      html += '<div class="goals-donut-center-label">Investors</div>';
+      html += '</div>';
+      html += '</div>';
+
+      // Legend
+      html += '<div class="goals-legend">';
+      insights.topGoals.forEach(function(goal, idx) {
+        var color = DIST_COLORS[idx % DIST_COLORS.length];
+        html += '<div class="goals-legend-item">' +
+          '<span class="goals-legend-swatch" style="background:' + color + ';"></span>' +
+          escHtml(goal.name) +
+          '<span class="goals-legend-pct">' + goal.pct + '%</span>' +
+        '</div>';
+      });
+      html += '</div>';
+      html += '</div>'; // goals-donut-wrap
+      html += '</div>';
+    }
+
+    html += '</div>'; // insights-two-col
   }
 
-  // Stat cards row: Check Size, Top Goal, Deal Types
+  // Check Size + Deal Types row
   html += '<div class="insights-stat-cards">';
 
   // Check size
@@ -3166,34 +3348,17 @@ function renderInvestorInsights(insights) {
     '<div class="insights-stat-label">Most Common Check Size</div>' +
   '</div>';
 
-  // Top goal
-  if (insights.topGoals && insights.topGoals.length > 0) {
-    html += '<div class="insights-stat-card">' +
-      '<div class="insights-stat-value">' + escHtml(insights.topGoals[0].name) + '</div>' +
-      '<div class="insights-stat-label">Top Goal (' + insights.topGoals[0].pct + '% of LPs)</div>' +
-    '</div>';
-  }
-
-  // Top deal type
-  if (insights.topDealTypes && insights.topDealTypes.length > 0) {
-    html += '<div class="insights-stat-card">' +
-      '<div class="insights-stat-value">' + escHtml(insights.topDealTypes[0].name) + '</div>' +
-      '<div class="insights-stat-label">Preferred Structure (' + insights.topDealTypes[0].pct + '%)</div>' +
-    '</div>';
-  }
-
   html += '</div>';
 
-  // Goals breakdown (if more than one)
-  if (insights.topGoals && insights.topGoals.length > 1) {
-    html += '<div class="insights-sub-title">Investor Goals</div>';
-    html += '<div class="insights-donut-row">';
-    insights.topGoals.forEach(function(item, idx) {
-      var color = DIST_COLORS[idx % DIST_COLORS.length];
-      html += '<div class="insights-donut-item">' +
-        '<span class="insights-donut-swatch" style="background:' + color + ';"></span>' +
-        escHtml(item.name) + ' <span class="insights-donut-pct">' + item.pct + '%</span>' +
-      '</div>';
+  // Deal Type pills
+  if (insights.topDealTypes && insights.topDealTypes.length > 0) {
+    html += '<div class="insights-sub-title">Preferred Deal Types</div>';
+    html += '<div class="deal-type-pills">';
+    insights.topDealTypes.forEach(function(item) {
+      html += '<span class="deal-type-pill">' +
+        escHtml(item.name) +
+        ' <span class="deal-type-pill-pct">' + item.pct + '%</span>' +
+      '</span>';
     });
     html += '</div>';
   }
