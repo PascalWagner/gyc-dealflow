@@ -2091,18 +2091,82 @@ html.dark .credit-chart-legend-divider {
   #managersStats { display:none !important; }
   #page-managers .filter-bar { padding: 8px 12px !important; }
 
-  /* ── Mobile: Clean up topbar (match cap-ios) ── */
+  /* ── Mobile: Clean up topbar ── */
   .mobile-menu-btn { display: none !important; }
   .topbar-spacer { display: none; }
   .topbar-view-toggle { display: none !important; }
+  .topbar-mobile-select { display: none !important; }
   .topbar {
     padding: 0 12px !important;
-    height: 44px;
-    gap: 8px;
-    align-items: center;
+    height: auto;
+    min-height: 44px;
+    gap: 0;
+    align-items: stretch;
+    flex-wrap: wrap;
     padding-bottom: 0 !important;
   }
-  .topbar-title { font-size: 17px; font-weight: 600; margin-right: 6px; white-space: nowrap; flex-shrink: 0; }
+  .topbar-title { font-size: 17px; font-weight: 600; margin-right: 0; white-space: nowrap; flex-shrink: 0; display: none !important; }
+
+  /* ── Mobile: Pill tabs row ── */
+  .mobile-pill-tabs {
+    display: flex !important;
+    order: 1;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding: 8px 0;
+    align-items: center;
+  }
+  .mobile-pill-tabs::-webkit-scrollbar { display: none; }
+  .mobile-pill-tab {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+  .mobile-pill-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .mobile-pill-tab .pill-count {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.7;
+  }
+  .mobile-pill-tab.active .pill-count { opacity: 0.9; }
+  .mobile-view-icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: auto;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s;
+  }
+  .mobile-view-icon svg { width: 16px; height: 16px; color: var(--text-secondary); }
+  .mobile-view-icon.feed-active { background: var(--primary); border-color: var(--primary); }
+  .mobile-view-icon.feed-active svg { color: #fff; }
 
   /* ── Mobile: Stats bar compact ── */
   .stats-bar {
@@ -2194,31 +2258,13 @@ html.dark .mobile-tab-bar {
    These do NOT affect the mobile web version.
    ═══════════════════════════════════════════════════════ */
 
-/* Mobile dropdown: hidden by default, shown on cap-ios */
+/* Mobile dropdown: hidden everywhere now (replaced by pill tabs) */
 .topbar-mobile-select {
-  display: none;
+  display: none !important;
 }
-@media (max-width: 767px) {
-  .topbar-mobile-select {
-    display: block;
-    font-family: var(--font-ui);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-dark);
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 28px 6px 10px;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23607179' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 8px center;
-    cursor: pointer;
-    flex-shrink: 1;
-    min-width: 0;
-    max-width: 160px;
-  }
+/* Mobile pill tabs: hidden by default, shown via media query */
+.mobile-pill-tabs {
+  display: none;
 }
 
 /* Safe area: use padding on the topbar itself, not body */
@@ -2250,39 +2296,19 @@ html.dark.cap-ios::before {
 html.cap-ios .topbar {
   padding: 0 12px !important;
   padding-top: env(safe-area-inset-top, 47px) !important;
-  height: calc(44px + env(safe-area-inset-top, 47px));
-  gap: 8px;
-  align-items: flex-end;
-  padding-bottom: 8px !important;
+  height: auto;
+  min-height: calc(44px + env(safe-area-inset-top, 47px));
+  gap: 0;
+  align-items: stretch;
+  flex-wrap: wrap;
+  padding-bottom: 0 !important;
   z-index: 52;
 }
 html.cap-ios .topbar-title {
-  font-size: 17px;
-  font-weight: 600;
-  margin-right: 6px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  display: none !important;
 }
-/* Show dropdown, hide tab buttons on iOS */
 html.cap-ios .topbar-mobile-select {
-  display: block;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-dark);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 28px 6px 10px;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23607179' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  cursor: pointer;
-  flex-shrink: 1;
-  min-width: 0;
-  max-width: 160px;
+  display: none !important;
 }
 html.cap-ios .topbar-tabs {
   display: none !important;
@@ -2290,17 +2316,17 @@ html.cap-ios .topbar-tabs {
 @media (max-width: 767px) {
   .topbar-tabs { display: none !important; }
 }
-/* View toggle: hide grid + list, keep feed + map only */
-html.cap-ios .topbar-view-toggle .view-btn[data-view="grid"],
-html.cap-ios .topbar-view-toggle .view-btn[data-view="list"] {
-  display: none !important;
-}
 html.cap-ios .topbar-spacer { display: none; }
 html.cap-ios .topbar-view-toggle {
   display: none !important;
 }
 @media (max-width: 767px) {
   .topbar-view-toggle { display: none !important; }
+}
+/* Pill tabs on cap-ios */
+html.cap-ios .mobile-pill-tabs {
+  display: flex !important;
+  padding-top: 8px;
 }
 
 /* ── Hide elements not needed on iOS / mobile ──────────────── */
@@ -5333,9 +5359,9 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   line-height: 1.5;
 }
 
-/* Show mobile view toggle only on mobile */
+/* Old mobile view toggle: hidden (replaced by icon in pill tabs row) */
 @media (max-width: 768px) {
-  .mobile-view-toggle { display: flex; }
+  .mobile-view-toggle { display: none !important; }
   /* Tighten content-area when swipe is visible */
   #page-deals .content-area { padding-top: 4px; }
 }
@@ -5509,6 +5535,19 @@ const _supa = window.supabase.createClient(
         <button class="topbar-tab" data-tab="decision" onclick="switchTab(this)">Decision</button>
         <button class="topbar-tab" data-tab="invested" onclick="switchTab(this)">Invested</button>
         <button class="topbar-tab" data-tab="passed" onclick="switchTab(this)">Not Interested</button>
+      </div>
+      <!-- Mobile pill tabs (single unified row) -->
+      <div class="mobile-pill-tabs" id="mobilePillTabs">
+        <button class="mobile-pill-tab active" data-tab="browse" onclick="switchTab(this)">Browse</button>
+        <button class="mobile-pill-tab" data-tab="saved" onclick="switchTab(this)">Saved</button>
+        <button class="mobile-pill-tab" data-tab="vetting" onclick="switchTab(this)">Vetting</button>
+        <button class="mobile-pill-tab" data-tab="diligence" onclick="switchTab(this)">DD</button>
+        <button class="mobile-pill-tab" data-tab="decision" onclick="switchTab(this)">Decision</button>
+        <button class="mobile-pill-tab" data-tab="invested" onclick="switchTab(this)">Invested</button>
+        <button class="mobile-pill-tab" data-tab="passed" onclick="switchTab(this)">Passed</button>
+        <button class="mobile-view-icon" id="mobileViewToggleIcon" onclick="toggleMobileViewIcon()" title="Switch view">
+          <svg id="mobileViewIconSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-view-toggle">
@@ -11132,6 +11171,20 @@ function updateTabCounts() {
       if (countSpan) countSpan.remove();
     }
   });
+  // Update mobile pill tab counts
+  document.querySelectorAll('.mobile-pill-tab').forEach(tab => {
+    const t = tab.dataset.tab;
+    var pillCount = tab.querySelector('.pill-count');
+    const count = counts[t] || 0;
+    if (t === 'browse') {
+      if (pillCount) pillCount.remove();
+    } else if (count > 0) {
+      if (pillCount) pillCount.textContent = count;
+      else tab.insertAdjacentHTML('beforeend', '<span class="pill-count">' + count + '</span>');
+    } else {
+      if (pillCount) pillCount.remove();
+    }
+  });
 }
 
 function renderAll() {
@@ -11350,6 +11403,17 @@ function switchTab(el, fromSelect) {
     const sel = document.getElementById('dealWorkflowSelect');
     if (sel) sel.value = currentTab;
   }
+  // Sync mobile pill tabs
+  document.querySelectorAll('.mobile-pill-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === currentTab);
+  });
+  // Scroll active pill into view
+  var activePill = document.querySelector('.mobile-pill-tab.active');
+  if (activePill) activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  // Sync desktop tabs from pill click
+  document.querySelectorAll('.topbar-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === currentTab);
+  });
   // Clear comparison selection on tab switch
   comparisonSelection.clear();
   updateCompareBar();
@@ -23880,7 +23944,29 @@ function switchMobileView(view) {
   document.querySelectorAll('.mobile-view-toggle-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.mobileView === view);
   });
+  // Sync the pill tabs view icon
+  updateMobileViewIcon();
   renderAll();
+}
+
+function toggleMobileViewIcon() {
+  var newView = mobileView === 'swipe' ? 'speed' : 'swipe';
+  switchMobileView(newView);
+}
+
+function updateMobileViewIcon() {
+  var iconBtn = document.getElementById('mobileViewToggleIcon');
+  var iconSvg = document.getElementById('mobileViewIconSvg');
+  if (!iconBtn || !iconSvg) return;
+  if (mobileView === 'swipe') {
+    // Show grid icon (meaning "tap to switch to feed")
+    iconSvg.innerHTML = '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>';
+    iconBtn.classList.remove('feed-active');
+  } else {
+    // Show card/swipe icon (meaning "tap to switch to swipe")
+    iconSvg.innerHTML = '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>';
+    iconBtn.classList.add('feed-active');
+  }
 }
 
 function renderSwipeCard(deal) {
