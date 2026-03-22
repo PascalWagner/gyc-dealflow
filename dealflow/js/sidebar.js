@@ -170,14 +170,14 @@
   html += '<div id="' + (isSPA ? 'adminNav' : 'adminNavSidebar') + '" style="display:none;">'
     + '<div class="nav-section-label">Admin</div>';
   var adminPages = [
+    ['growth', icons.growth, 'Growth'],
     ['dealflow', icons.analytics, 'Deal Flow Analytics'],
     ['analytics', icons.analyticsBar, 'Analytics'],
+    ['admin-manage', icons.manage, 'Manage Data'],
+    ['outreach', icons.outreach, 'Operator Outreach'],
     ['devnotes', icons.devnotes, 'Dev Notes'],
     ['schema', icons.schema, 'Database Schema'],
     ['casestudies', icons.casestudies, 'Case Studies'],
-    ['admin-manage', icons.manage, 'Manage Data'],
-    ['outreach', icons.outreach, 'Operator Outreach'],
-    ['growth', icons.growth, 'Growth'],
     ['network-moat', icons.network, 'Network &amp; Moat'],
     ['transactions', icons.transactions, 'Transaction Strategy']
   ];
