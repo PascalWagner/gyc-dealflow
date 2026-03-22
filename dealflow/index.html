@@ -7471,11 +7471,7 @@ function renderFreshnessBadge(deal) {
 
 // ========== BUY BOX MATCH BADGE ==========
 function renderMatchBadge(deal) {
-  var info = matchBadgeInfo(deal);
-  if (!info.text) return '';
-  var bg = info.cls === 'green' ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.08)';
-  var color = info.cls === 'green' ? '#4ade80' : '#fbbf24';
-  return '<span class="deal-freshness-badge" style="background:' + bg + ';color:' + color + ';">' + info.text + '</span>';
+  return '';
 }
 
 // ========== OPERATOR PERMISSION BADGE (admin only) ==========
@@ -9175,7 +9171,7 @@ function renderFeedCard(deal) {
   const primaryBadge = isCredit ? creditBadgeLabel(deal) : (deal.assetClass || 'Other');
 
   return `
-    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid ${isInterested ? 'var(--green)' : 'var(--border)'};border-radius:var(--radius);overflow:hidden;transition:all 0.2s ease;${isPassed ? 'opacity:0.45;' : ''}box-shadow:var(--shadow-card);width:100%;">
+    <div class="feed-card" data-id="${deal.id}" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.2s ease;${isPassed ? 'opacity:0.45;' : ''}box-shadow:var(--shadow-card);width:100%;">
       <!-- Hero Image / Placeholder -->
       <div onclick="window.location.href='deal.html?id=${deal.id}'" style="height:140px;background:${heroBg};position:relative;cursor:pointer;display:flex;align-items:center;justify-content:center;">
         ${!heroImg ? `<div style="width:80px;height:80px;opacity:0.3;">${hero.icon}</div>` : ''}
@@ -9360,17 +9356,7 @@ function formatLockup(deal) {
 
 // Build highlight pills for a deal card (max 2)
 function buildHighlightPills(deal) {
-  var pills = [];
-  if (deal.financials === 'Audited') pills.push('Audited');
-  if (deal.debtPosition === '1st') pills.push('1st Lien');
-  if (pills.length > 2) pills = pills.slice(0, 2);
-  if (pills.length === 0) return '';
-  var html = '<div style="display:flex;gap:4px;margin-top:4px;">';
-  for (var pi = 0; pi < pills.length; pi++) {
-    html += '<span style="padding:2px 6px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:10px;font-family:var(--font-ui);font-size:9px;font-weight:600;color:var(--primary);">' + pills[pi] + '</span>';
-  }
-  html += '</div>';
-  return html;
+  return '';
 }
 
 // Render user's stage indicator on card
@@ -12597,26 +12583,36 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 11: ACCREDITATION STATUS =====
+  // ===== SCREEN 11: ACCREDITATION STATUS (multi-select) =====
   if (step.type === 'accreditationPrefs') {
+    // Migrate old single-value to array
+    if (wizardData.accreditation && !Array.isArray(wizardData.accreditation)) {
+      wizardData.accreditation = [wizardData.accreditation];
+    }
+    if (!wizardData.accreditation) wizardData.accreditation = [];
     html += '<div class="wizard-card-title">What\u2019s your investor accreditation level?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">You\u2019ll see every deal in our database, but when you apply your Buy Box, we\u2019ll only show deals you\u2019re eligible to invest in.</div>';
-    var accOptions = [
-      { val: 'net_worth', label: 'Yes \u2014 Net worth over $1M', desc: 'Excluding primary residence' },
-      { val: 'income', label: 'Yes \u2014 Income over $200K', desc: '$200K individual or $300K with spouse' },
-      { val: 'licensed', label: 'Yes \u2014 Licensed professional', desc: 'Series 7, 65, 82, or equivalent' },
-      { val: 'entity', label: 'Yes \u2014 Through an entity', desc: 'LLC, trust, or fund with $5M+ assets' },
-      { val: 'not_accredited', label: 'Not yet accredited', desc: 'We\'ll show you deals open to all investors (Reg A+, Reg CF)' },
-      { val: 'unsure', label: 'Not sure', desc: 'We can help you figure it out' }
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Select all that apply. You\u2019ll see every deal in our database, but when you apply your Buy Box, we\u2019ll only show deals you\u2019re eligible to invest in.</div>';
+    var accQualified = [
+      { val: 'net_worth', label: 'Net worth over $1M', desc: 'Individual or joint net worth exceeding $1M, excluding your primary residence (SEC Rule 501)' },
+      { val: 'income', label: 'Income over $200K', desc: 'Earned $200K+ individually (or $300K+ jointly) in each of the past 2 years, with reasonable expectation of the same this year' },
+      { val: 'licensed', label: 'Licensed professional', desc: 'Hold a Series 7, Series 65, or Series 82 license in good standing' },
+      { val: 'entity', label: 'Through an entity', desc: 'Invest via an LLC, trust, family office, or fund with $5M+ in assets' }
     ];
-    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
-    accOptions.forEach(function(opt) {
-      var isSel = wizardData.accreditation === opt.val;
-      html += '<div onclick="wizardData.accreditation=\'' + opt.val + '\';renderWizardStep();" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
-      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-      html += '<div><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+    html += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">I qualify as accredited because\u2026</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
+    accQualified.forEach(function(opt) {
+      var isSel = wizardData.accreditation.includes(opt.val);
+      html += '<div onclick="toggleWizardAccreditation(\'' + opt.val + '\')" style="padding:14px 16px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:5px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;line-height:1.5;">' + opt.desc + '</div></div>';
       html += '</div>';
     });
+    html += '</div>';
+    // Not accredited option (exclusive)
+    var notAcc = wizardData.accreditation.includes('not_accredited');
+    html += '<div onclick="toggleWizardAccreditation(\'not_accredited\')" style="padding:14px 16px;border:2px solid ' + (notAcc ? 'var(--primary)' : 'var(--border)') + ';border-radius:10px;cursor:pointer;background:' + (notAcc ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:12px;transition:all 0.2s;">';
+    html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (notAcc ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (notAcc ? 'var(--primary)' : 'transparent') + ';">' + (notAcc ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+    html += '<div><div style="font-weight:700;font-size:14px;color:var(--text-dark);">Not yet accredited</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;line-height:1.5;">You don\u2019t currently meet SEC accreditation thresholds. We\u2019ll show you deals open to all investors (Reg A+, Reg CF, Reg D 506(b) with prior relationship).</div></div>';
     html += '</div>';
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
@@ -12850,6 +12846,21 @@ function renderWizardStep() {
 
 // ---- Goal branch selection (auto-advance) ----
 // Toggle functions for wizard multi-select screens
+function toggleWizardAccreditation(val) {
+  if (!Array.isArray(wizardData.accreditation)) wizardData.accreditation = [];
+  if (val === 'not_accredited') {
+    // Exclusive — clear all others
+    wizardData.accreditation = wizardData.accreditation.includes('not_accredited') ? [] : ['not_accredited'];
+  } else {
+    // Remove not_accredited if selecting a qualified option
+    wizardData.accreditation = wizardData.accreditation.filter(function(v) { return v !== 'not_accredited'; });
+    var idx = wizardData.accreditation.indexOf(val);
+    if (idx >= 0) { wizardData.accreditation.splice(idx, 1); }
+    else { wizardData.accreditation.push(val); }
+  }
+  localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  renderWizardStep();
+}
 function toggleWizardAsset(key) {
   if (!wizardData.assetClasses) wizardData.assetClasses = [];
   var idx = wizardData.assetClasses.indexOf(key);
@@ -12996,6 +13007,9 @@ function wizardNext() {
     reqField = '_forceShake';
   }
   if (curStep && curStep.type === 'strategySelect' && (!wizardData.strategies || wizardData.strategies.length === 0)) {
+    reqField = '_forceShake';
+  }
+  if (curStep && curStep.type === 'accreditationPrefs' && (!wizardData.accreditation || wizardData.accreditation.length === 0)) {
     reqField = '_forceShake';
   }
   if (reqField && !wizardData[reqField]) {
