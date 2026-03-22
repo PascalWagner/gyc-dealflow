@@ -6088,6 +6088,138 @@ const _supa = window.supabase.createClient(
     </div>
   </div>
 
+  <!-- PAGE: Market Intelligence (Paid Subscribers) -->
+  <div class="page" id="page-marketintel">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Market Intelligence</div>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+        <span style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);" id="marketintelDealCount"></span>
+      </div>
+    </div>
+    <div class="sub-page" style="max-width:1200px" id="marketintelContent">
+      <!-- Header -->
+      <div style="margin-bottom:32px;">
+        <h1 style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin:0 0 8px 0;">Private Market Intelligence</h1>
+        <p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin:0;max-width:680px;">
+          Live data from <strong id="miTotalDeals">0</strong> private offerings totaling <strong id="miTotalCapital">$0</strong> in capital.
+          Updated in real-time as we add new deals to the database.
+        </p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;" id="miSummaryCards">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Median Target IRR</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="miMedianIRR">--</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;" id="miIRRRange"></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Median Pref Return</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="miMedianPref">--</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;" id="miPrefRange"></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Median Minimum</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="miMedianMin">--</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;" id="miMinRange"></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Common Split</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="miTopSplit">--</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;" id="miSplitNote"></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Audited Financials</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="miAuditPct">--</div>
+          <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:2px;" id="miAuditNote"></div>
+        </div>
+      </div>
+
+      <!-- Row 1: IRR Distribution + Asset Class Breakdown -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Target IRR Distribution</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">What sponsors are promising across <span class="mi-irr-count">0</span> deals</p>
+          <div style="height:280px;"><canvas id="miIRRChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Deals by Asset Class</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Multi-Family dominates — but alternatives are growing</p>
+          <div style="height:280px;"><canvas id="miAssetClassChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 2: IRR by Asset Class + LP/GP Splits -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Avg Target IRR by Asset Class</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Higher returns come with higher risk</p>
+          <div style="height:320px;"><canvas id="miIRRByAssetChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">LP/GP Profit Splits</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">70/30 has overtaken 80/20 as the new standard</p>
+          <div style="height:320px;"><canvas id="miSplitChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Minimum Investment + Distribution Frequency -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Minimum Investment Tiers</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Most deals require $50K–$100K to get in</p>
+          <div style="height:280px;"><canvas id="miMinChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Distribution Frequency</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">How often sponsors pay you back</p>
+          <div style="height:280px;"><canvas id="miDistChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 4: Audited vs Unaudited + 506b vs 506c -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Financial Audit Status</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Only a small fraction of sponsors get audited</p>
+          <div style="height:280px;"><canvas id="miAuditChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">506(b) vs 506(c) Offerings</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Can the deal legally advertise to you?</p>
+          <div style="height:280px;"><canvas id="mi506Chart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 5: Strategy Breakdown + Hold Period -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Investment Strategy</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Lending and Value-Add dominate the market</p>
+          <div style="height:280px;"><canvas id="miStrategyChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Hold Period Distribution</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">How long your money is locked up</p>
+          <div style="height:280px;"><canvas id="miHoldChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Insights / Takeaways -->
+      <div style="background:linear-gradient(135deg, #0A1E21 0%, #132F34 100%);border-radius:var(--radius);padding:32px;margin-bottom:32px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#fff;margin:0 0 16px 0;">Key Takeaways</h3>
+        <div id="miInsights" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;"></div>
+      </div>
+
+      <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:32px;">
+        Data sourced from GYC deal database. This is market research, not investment advice. Past performance does not guarantee future results.
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE: Analytics (Admin Only) -->
   <div class="page" id="page-analytics">
     <div class="topbar">
@@ -7054,9 +7186,7 @@ function renderFreshnessBadge(deal) {
   var score = Math.round((filled / fields.length) * 100);
   // Check if PPM exists (strong verification signal)
   var hasPPM = !!deal.ppmUrl;
-  if (hasPPM && score >= 70) {
-    return '<span class="deal-freshness-badge verified"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Verified</span>';
-  }
+  // Verified badge removed — not clear enough for users
   if (score < 50) {
     return '<span class="deal-freshness-badge unverified">Limited Data</span>';
   }
@@ -8834,7 +8964,6 @@ function formatLockup(deal) {
 function buildHighlightPills(deal) {
   var pills = [];
   if (deal.financials === 'Audited') pills.push('Audited');
-  if ((deal.distributions || '').toLowerCase() === 'monthly') pills.push('Monthly');
   if (deal.debtPosition === '1st') pills.push('1st Lien');
   if (pills.length > 2) pills = pills.slice(0, 2);
   if (pills.length === 0) return '';
@@ -8930,9 +9059,6 @@ function renderCreditCard(deal) {
   const html = `
     <div class="deal-card" data-id="${deal.id}" data-credit-chart="${hasChart ? chartId : ''}">
       ${showCmpCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
-      <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
-      </button>
       <div class="credit-card-hero" style="position:relative">
         <div class="credit-badges">
           <span class="credit-badge">${typeLabel}</span>
@@ -8982,14 +9108,10 @@ function renderCreditCard(deal) {
           </div>
         </div>
         ${renderCardStageExtras(deal)}
-        ${renderUserStageIndicator(deal.id)}
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
         ${renderGridCardActions(deal, stage, isInterested)}
-        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal" style="margin-left:auto;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        </button>
       </div>
     </div>
   `;
@@ -9224,9 +9346,6 @@ function renderCard(deal) {
   return `
     <div class="deal-card" data-id="${deal.id}">
       ${showCompareCheck ? '<div class="compare-check' + (comparisonSelection.has(deal.id) ? ' selected' : '') + '" data-deal-id="' + deal.id + '" onclick="toggleComparisonSelect(\'' + deal.id + '\', event)" style="position:absolute;top:8px;left:8px;z-index:10;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,0.7);background:' + (comparisonSelection.has(deal.id) ? '#3b82f6' : 'rgba(0,0,0,0.3)') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>' : ''}
-      <button class="card-compare-btn${getCompareDeals().indexOf(deal.id) >= 0 ? ' in-compare' : ''}" data-deal-id="${deal.id}" onclick="toggleCompareAdd('${deal.id}', event)" title="Add to compare">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
-      </button>
       <div class="equity-card-hero" style="background:${deal.propertyImageUrl ? 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(' + deal.propertyImageUrl + ')' : hero.gradient};${deal.propertyImageUrl ? 'background-size:cover;background-position:center;' : ''}position:relative;">
         <div class="equity-hero-badges">
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
@@ -9276,14 +9395,10 @@ function renderCard(deal) {
           </div>
         </div>
         ${renderCardStageExtras(deal)}
-        ${renderUserStageIndicator(deal.id)}
       </div>
       ${renderSocialProof(deal.id)}
       <div class="card-footer">
         ${renderGridCardActions(deal, stage, isInterested)}
-        <button class="card-share-btn" onclick="event.stopPropagation(); shareDealCard('${deal.id}')" title="Share deal" style="margin-left:auto;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        </button>
       </div>
     </div>
   `;
@@ -10532,6 +10647,7 @@ function navigateTo(page) {
   if (page === 'incomefund') renderIncomeFund();
   if (page === 'portfolio') renderPortfolio();
   if (page === 'taxprep') renderTaxPrep();
+  if (page === 'marketintel') renderMarketIntel();
   if (page === 'analytics') refreshAnalyticsDashboard();
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'schema') renderSchemaPage();
@@ -17279,6 +17395,349 @@ let _outreachSearchTimer = null;
 function outreachSearchDebounce() {
   clearTimeout(_outreachSearchTimer);
   _outreachSearchTimer = setTimeout(() => { _outreachPage = 1; outreachLoadData(); }, 300);
+}
+
+// ========== MARKET INTELLIGENCE ==========
+var miCharts = {};
+function renderMarketIntel() {
+  // Destroy existing charts
+  Object.values(miCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
+  miCharts = {};
+
+  var SUPABASE_URL = window._ENV_SUPABASE_URL || 'https://nntzqyufmtypfjpusflm.supabase.co';
+  var SUPABASE_KEY = window._ENV_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.17lOOjIkHR_rvSYJh6GbJsrKQflXbDMBq0WB7IhYCQ4';
+
+  fetch(SUPABASE_URL + '/rest/v1/opportunities?select=asset_class,deal_type,strategy,target_irr,preferred_return,investment_minimum,hold_period_years,offering_size,distributions,lp_gp_split,financials,is_506b,available_to,status', {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(deals) {
+    renderMarketIntelData(deals);
+  })
+  .catch(function(e) { console.error('Market Intel fetch error:', e); });
+}
+
+function renderMarketIntelData(deals) {
+  var totalDeals = deals.length;
+  document.getElementById('miTotalDeals').textContent = totalDeals.toLocaleString();
+  document.getElementById('marketintelDealCount').textContent = 'Based on ' + totalDeals + ' deals';
+
+  // Total capital
+  var totalCap = 0;
+  deals.forEach(function(d) { if (d.offering_size && d.offering_size > 0 && d.offering_size < 1e12) totalCap += d.offering_size; });
+  document.getElementById('miTotalCapital').textContent = totalCap >= 1e9 ? '$' + (totalCap/1e9).toFixed(1) + 'B' : '$' + (totalCap/1e6).toFixed(0) + 'M';
+
+  // Helper: median
+  function median(arr) {
+    if (!arr.length) return 0;
+    var s = arr.slice().sort(function(a,b){return a-b;});
+    var mid = Math.floor(s.length/2);
+    return s.length % 2 ? s[mid] : (s[mid-1]+s[mid])/2;
+  }
+
+  // Helper: count map
+  function countMap(arr) {
+    var m = {};
+    arr.forEach(function(v) { m[v] = (m[v]||0) + 1; });
+    return m;
+  }
+
+  // Helper: sorted entries by value desc
+  function sortedEntries(obj) {
+    return Object.entries(obj).sort(function(a,b) { return b[1] - a[1]; });
+  }
+
+  // ---- Summary Cards ----
+  var irrs = deals.filter(function(d) { return d.target_irr && d.target_irr > 0 && d.target_irr < 2; }).map(function(d) { return d.target_irr; });
+  var medIRR = median(irrs);
+  document.getElementById('miMedianIRR').textContent = (medIRR*100).toFixed(1) + '%';
+  document.getElementById('miIRRRange').textContent = 'Range: ' + (Math.min.apply(null,irrs)*100).toFixed(0) + '% – ' + (Math.max.apply(null,irrs)*100).toFixed(0) + '%';
+
+  var prefs = deals.filter(function(d) { return d.preferred_return && d.preferred_return > 0 && d.preferred_return < 1; }).map(function(d) { return d.preferred_return; });
+  var medPref = median(prefs);
+  document.getElementById('miMedianPref').textContent = (medPref*100).toFixed(1) + '%';
+  document.getElementById('miPrefRange').textContent = prefs.length + ' deals report a pref';
+
+  var mins = deals.filter(function(d) { return d.investment_minimum && d.investment_minimum > 0; }).map(function(d) { return d.investment_minimum; });
+  var medMin = median(mins);
+  document.getElementById('miMedianMin').textContent = medMin >= 1000 ? '$' + (medMin/1000).toFixed(0) + 'K' : '$' + medMin;
+  document.getElementById('miMinRange').textContent = mins.length + ' deals with minimums';
+
+  // LP/GP splits
+  var splitCounts = countMap(deals.filter(function(d) { return d.lp_gp_split && /\d+\/\d+/.test(d.lp_gp_split); }).map(function(d) { return d.lp_gp_split; }));
+  var topSplits = sortedEntries(splitCounts);
+  if (topSplits.length) {
+    document.getElementById('miTopSplit').textContent = topSplits[0][0];
+    document.getElementById('miSplitNote').textContent = topSplits[0][1] + ' deals (' + Math.round(topSplits[0][1]/totalDeals*100) + '%)';
+  }
+
+  // Audited
+  var audited = deals.filter(function(d) { return d.financials === 'Audited'; }).length;
+  var withFinancials = deals.filter(function(d) { return d.financials && d.financials !== 'Unknown'; }).length;
+  var auditPct = withFinancials ? Math.round(audited/withFinancials*100) : 0;
+  document.getElementById('miAuditPct').textContent = auditPct + '%';
+  document.getElementById('miAuditNote').textContent = audited + ' of ' + withFinancials + ' deals audited';
+
+  // Chart colors
+  var primary = '#51BE7B';
+  var primaryLight = '#51BE7B44';
+  var chartColors = ['#51BE7B','#3B9DDD','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316','#6366F1','#84CC16','#06B6D4','#D946EF'];
+
+  // ---- Chart 1: IRR Distribution (histogram) ----
+  var irrBuckets = {'<8%':0,'8-12%':0,'12-16%':0,'16-20%':0,'20-25%':0,'25-30%':0,'30%+':0};
+  irrs.forEach(function(v) {
+    var p = v*100;
+    if (p < 8) irrBuckets['<8%']++;
+    else if (p < 12) irrBuckets['8-12%']++;
+    else if (p < 16) irrBuckets['12-16%']++;
+    else if (p < 20) irrBuckets['16-20%']++;
+    else if (p < 25) irrBuckets['20-25%']++;
+    else if (p < 30) irrBuckets['25-30%']++;
+    else irrBuckets['30%+']++;
+  });
+  document.querySelectorAll('.mi-irr-count').forEach(function(el) { el.textContent = irrs.length; });
+  var irrCtx = document.getElementById('miIRRChart');
+  if (irrCtx) {
+    miCharts.irr = new Chart(irrCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(irrBuckets),
+        datasets: [{
+          label: 'Number of Deals',
+          data: Object.values(irrBuckets),
+          backgroundColor: primary,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+
+  // ---- Chart 2: Asset Class Breakdown (horizontal bar) ----
+  var acCounts = countMap(deals.filter(function(d){return d.asset_class;}).map(function(d){return d.asset_class;}));
+  var acSorted = sortedEntries(acCounts).slice(0, 10);
+  var acCtx = document.getElementById('miAssetClassChart');
+  if (acCtx) {
+    miCharts.assetClass = new Chart(acCtx, {
+      type: 'bar',
+      data: {
+        labels: acSorted.map(function(e){return e[0];}),
+        datasets: [{
+          data: acSorted.map(function(e){return e[1];}),
+          backgroundColor: chartColors.slice(0, acSorted.length),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, y: { grid: { display: false } } }
+      }
+    });
+  }
+
+  // ---- Chart 3: IRR by Asset Class (horizontal bar) ----
+  var irrByAC = {};
+  deals.forEach(function(d) {
+    if (d.target_irr && d.target_irr > 0 && d.target_irr < 2 && d.asset_class) {
+      if (!irrByAC[d.asset_class]) irrByAC[d.asset_class] = [];
+      irrByAC[d.asset_class].push(d.target_irr);
+    }
+  });
+  var irrACSorted = Object.entries(irrByAC)
+    .map(function(e) { return [e[0], e[1].reduce(function(a,b){return a+b;},0)/e[1].length, e[1].length]; })
+    .filter(function(e) { return e[2] >= 3; })
+    .sort(function(a,b) { return b[1] - a[1]; });
+  var irrACCtx = document.getElementById('miIRRByAssetChart');
+  if (irrACCtx) {
+    miCharts.irrByAsset = new Chart(irrACCtx, {
+      type: 'bar',
+      data: {
+        labels: irrACSorted.map(function(e){return e[0] + ' (n=' + e[2] + ')';}),
+        datasets: [{
+          data: irrACSorted.map(function(e){return (e[1]*100).toFixed(1);}),
+          backgroundColor: irrACSorted.map(function(e,i){return chartColors[i % chartColors.length];}),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw + '% avg IRR'; } } } },
+        scales: { x: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v+'%';} } }, y: { grid: { display: false } } }
+      }
+    });
+  }
+
+  // ---- Chart 4: LP/GP Splits (bar) ----
+  var splitFiltered = sortedEntries(splitCounts).slice(0, 8);
+  var splitCtx = document.getElementById('miSplitChart');
+  if (splitCtx) {
+    miCharts.split = new Chart(splitCtx, {
+      type: 'bar',
+      data: {
+        labels: splitFiltered.map(function(e){return e[0];}),
+        datasets: [{
+          data: splitFiltered.map(function(e){return e[1];}),
+          backgroundColor: splitFiltered.map(function(e,i){return chartColors[i % chartColors.length];}),
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+
+  // ---- Chart 5: Minimum Investment Tiers (doughnut) ----
+  var minBuckets = {'Under $25K':0,'$25K–$50K':0,'$50K–$100K':0,'$100K–$250K':0,'$250K+':0};
+  mins.forEach(function(m) {
+    if (m < 25000) minBuckets['Under $25K']++;
+    else if (m < 50000) minBuckets['$25K–$50K']++;
+    else if (m < 100000) minBuckets['$50K–$100K']++;
+    else if (m < 250000) minBuckets['$100K–$250K']++;
+    else minBuckets['$250K+']++;
+  });
+  var minCtx = document.getElementById('miMinChart');
+  if (minCtx) {
+    miCharts.min = new Chart(minCtx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(minBuckets),
+        datasets: [{ data: Object.values(minBuckets), backgroundColor: chartColors.slice(0,5), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, padding: 12, usePointStyle: true } } }
+      }
+    });
+  }
+
+  // ---- Chart 6: Distribution Frequency (doughnut) ----
+  var distCounts = countMap(deals.filter(function(d){return d.distributions && d.distributions !== 'Unknown';}).map(function(d){return d.distributions;}));
+  var distSorted = sortedEntries(distCounts);
+  var distCtx = document.getElementById('miDistChart');
+  if (distCtx) {
+    miCharts.dist = new Chart(distCtx, {
+      type: 'doughnut',
+      data: {
+        labels: distSorted.map(function(e){return e[0];}),
+        datasets: [{ data: distSorted.map(function(e){return e[1];}), backgroundColor: chartColors.slice(0, distSorted.length), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, padding: 12, usePointStyle: true } } }
+      }
+    });
+  }
+
+  // ---- Chart 7: Audit Status (doughnut) ----
+  var auditCounts = countMap(deals.filter(function(d){return d.financials && d.financials !== 'Unknown';}).map(function(d){return d.financials;}));
+  var auditCtx = document.getElementById('miAuditChart');
+  if (auditCtx) {
+    miCharts.audit = new Chart(auditCtx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(auditCounts),
+        datasets: [{ data: Object.values(auditCounts), backgroundColor: ['#EF4444', '#51BE7B'], borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, padding: 12, usePointStyle: true } } }
+      }
+    });
+  }
+
+  // ---- Chart 8: 506b vs 506c (doughnut) ----
+  var b506 = deals.filter(function(d){return d.is_506b;}).length;
+  var c506 = totalDeals - b506;
+  var ctx506 = document.getElementById('mi506Chart');
+  if (ctx506) {
+    miCharts.filing = new Chart(ctx506, {
+      type: 'doughnut',
+      data: {
+        labels: ['506(c) — Can advertise', '506(b) — Cannot advertise'],
+        datasets: [{ data: [c506, b506], backgroundColor: ['#51BE7B', '#F59E0B'], borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'right', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, padding: 12, usePointStyle: true } } }
+      }
+    });
+  }
+
+  // ---- Chart 9: Strategy Breakdown (bar) ----
+  var stratCounts = countMap(deals.filter(function(d){return d.strategy;}).map(function(d){return d.strategy;}));
+  var stratSorted = sortedEntries(stratCounts);
+  var stratCtx = document.getElementById('miStrategyChart');
+  if (stratCtx) {
+    miCharts.strategy = new Chart(stratCtx, {
+      type: 'bar',
+      data: {
+        labels: stratSorted.map(function(e){return e[0];}),
+        datasets: [{ data: stratSorted.map(function(e){return e[1];}), backgroundColor: chartColors.slice(0, stratSorted.length), borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+
+  // ---- Chart 10: Hold Period (histogram) ----
+  var holds = deals.filter(function(d){return d.hold_period_years && d.hold_period_years > 0 && d.hold_period_years <= 15;}).map(function(d){return d.hold_period_years;});
+  var holdBuckets = {'1-2 yrs':0,'3-4 yrs':0,'5-6 yrs':0,'7-8 yrs':0,'9-10 yrs':0,'10+ yrs':0};
+  holds.forEach(function(h) {
+    if (h <= 2) holdBuckets['1-2 yrs']++;
+    else if (h <= 4) holdBuckets['3-4 yrs']++;
+    else if (h <= 6) holdBuckets['5-6 yrs']++;
+    else if (h <= 8) holdBuckets['7-8 yrs']++;
+    else if (h <= 10) holdBuckets['9-10 yrs']++;
+    else holdBuckets['10+ yrs']++;
+  });
+  var holdCtx = document.getElementById('miHoldChart');
+  if (holdCtx) {
+    miCharts.hold = new Chart(holdCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(holdBuckets),
+        datasets: [{ data: Object.values(holdBuckets), backgroundColor: primary, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } }
+      }
+    });
+  }
+
+  // ---- Key Insights ----
+  var insights = [
+    { icon: '\u26A0\uFE0F', title: 'Only ' + auditPct + '% of deals are audited', body: 'Out of ' + withFinancials + ' deals with financial data, just ' + audited + ' have audited financials. Always ask your sponsor if their books are audited by a third party.' },
+    { icon: '\uD83D\uDCC9', title: '70/30 is the new 80/20', body: 'The most common LP/GP profit split is now 70/30, meaning the sponsor keeps 30% of profits above the preferred return. Negotiate for 80/20 when you can.' },
+    { icon: '\uD83C\uDFAF', title: 'Median IRR: ' + (medIRR*100).toFixed(1) + '%', body: 'Across ' + irrs.length + ' deals, the median target IRR is ' + (medIRR*100).toFixed(1) + '%. Be skeptical of anything promising 25%+ unless it\'s a development or value-add strategy.' },
+    { icon: '\uD83D\uDD12', title: Math.round(b506/totalDeals*100) + '% are 506(b) offerings', body: '506(b) deals cannot legally advertise. If you see one promoted on social media, that\'s a compliance red flag worth investigating.' },
+    { icon: '\uD83D\uDCB0', title: 'Most deals need $50K–$100K', body: Math.round(mins.filter(function(m){return m>=50000 && m<100000;}).length/mins.length*100) + '% of deals have minimums in the $50K–$100K range. Start with lower-minimum debt funds if you\'re newer.' },
+    { icon: '\uD83C\uDFE2', title: 'Multi-Family is ' + Math.round((acCounts['Multi-Family']||0)/totalDeals*100) + '% of the market', body: 'Nearly ' + Math.round((acCounts['Multi-Family']||0)/totalDeals*100) + '% of all private offerings are multifamily. Consider diversifying into self-storage, industrial, or lending.' }
+  ];
+  var insightsEl = document.getElementById('miInsights');
+  if (insightsEl) {
+    insightsEl.innerHTML = insights.map(function(ins) {
+      return '<div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:16px;">'
+        + '<div style="font-size:20px;margin-bottom:6px;">' + ins.icon + '</div>'
+        + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">' + ins.title + '</div>'
+        + '<div style="font-family:var(--font-body);font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5;">' + ins.body + '</div>'
+        + '</div>';
+    }).join('');
+  }
 }
 
 // ========== NETWORK & MOAT ==========
