@@ -171,7 +171,6 @@
     + '<div class="nav-section-label">Admin</div>';
   var adminPages = [
     ['growth', icons.growth, 'Growth'],
-    ['dealflow', icons.analytics, 'Deal Flow Analytics'],
     ['analytics', icons.analyticsBar, 'Analytics'],
     ['admin-manage', icons.manage, 'Manage Data'],
     ['outreach', icons.outreach, 'Operator Outreach'],
