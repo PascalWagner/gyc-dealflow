@@ -63,7 +63,7 @@ html.dark {
   --text-secondary: #9DB0B5;
   --text-muted: #607179;
   --border: #1F5159;
-  --border-light: #14333A;
+  --border-light: #1A3F47;
   --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3);
   --green-bg: #0D2E1A;
@@ -1747,6 +1747,13 @@ body {
 html.dark .skeleton::after {
   background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
 }
+html.dark .section-card {
+  border-color: var(--border);
+}
+html.dark .mi-card {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
 html.dark .webinar-cta-card {
   background: linear-gradient(135deg, #0D2E1A 0%, #1A2332 100%);
   border-color: var(--border);
@@ -1756,9 +1763,11 @@ html.dark .webinar-cta-section .section-header {
 }
 html.dark .comp-table th.col-gp {
   background: var(--green-bg);
+  color: var(--primary);
 }
 html.dark .comp-table td.col-gp {
-  background: rgba(13, 46, 26, 0.5);
+  background: rgba(13, 46, 26, 0.3);
+  color: var(--primary);
 }
 html.dark .intent-badge.intent-high {
   background: var(--red-bg);
@@ -1770,8 +1779,51 @@ html.dark .insights-bar-gp-tag {
   background: rgba(255,255,255,0.15);
   color: #E8EDE9;
 }
+html.dark .insights-bar-fill.gp-highlight {
+  background: var(--primary);
+}
 html.dark .health-table tr:hover td {
   background: var(--bg-sidebar-hover);
+}
+html.dark .settings-input {
+  background: var(--bg-cream);
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+html.dark .email-list li {
+  background: var(--bg-cream);
+  border-color: var(--border);
+}
+html.dark .activity-card-item {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+html.dark .insights-stat-card {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+html.dark .deal-type-pill {
+  background: var(--bg-card);
+}
+html.dark .high-intent-summary {
+  background: rgba(13, 46, 26, 0.5);
+  color: var(--primary);
+}
+html.dark .weekly-chart-empty {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+html.dark .stat-card-value,
+html.dark .analytics-metric-value,
+html.dark .insights-stat-value,
+html.dark .goals-donut-center-value,
+html.dark .goals-legend-pct,
+html.dark .insights-donut-pct,
+html.dark .mi-card-value {
+  color: var(--primary);
+}
+html.dark .gp-header {
+  background: linear-gradient(145deg, var(--teal-midnight) 0%, #1F5159 100%);
 }
 </style>
 </head>
@@ -3603,7 +3655,7 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
     // Header row — show real deal names linked to deal pages
     html += '<thead><tr>' +
       '<th></th>' +
-      '<th class="col-gp"><a href="deal.html?id=' + escAttr(getDealId(deal)) + '" style="color:var(--teal-deep);text-decoration:none;">' + escHtml(name) + '</a></th>';
+      '<th class="col-gp"><a href="deal.html?id=' + escAttr(getDealId(deal)) + '" style="color:var(--primary);text-decoration:none;font-weight:700;">' + escHtml(name) + '</a></th>';
     for (var ci = 0; ci < top3.length; ci++) {
       var compName = getDealName(top3[ci]);
       var compId = getDealId(top3[ci]);
