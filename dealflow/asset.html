@@ -2533,6 +2533,8 @@ function renderMarketIntelligence(data, assetClass) {
     if (h.timeSeries && h.timeSeries.length >= 2) {
       var occLabels = h.timeSeries.map(function(d) { return d.year; });
       var occRates = h.timeSeries.map(function(d) { return d.occupancyRate; });
+      var occMin = Math.min.apply(null, occRates);
+      var occYMin = Math.max(0, Math.floor((occMin - 5) / 5) * 5); // 5pts below lowest, rounded to nearest 5
       var vacRates = h.timeSeries.map(function(d) { return d.vacancyRate; });
 
       var occCtx = document.getElementById('occupancyChart').getContext('2d');
@@ -2580,7 +2582,7 @@ function renderMarketIntelligence(data, assetClass) {
             },
             y: {
               grid: { color: '#EDF1F2' },
-              min: 70,
+              min: occYMin,
               max: 100,
               ticks: {
                 font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
