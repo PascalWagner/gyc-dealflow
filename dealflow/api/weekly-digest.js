@@ -91,9 +91,10 @@ async function fetchRecentDeals(supabase, daysBack = 7) {
   const { data, error } = await supabase
     .from('opportunities')
     .select(`
-      id, investment_name, asset_class, investment_strategy,
+      id, investment_name, asset_class, investment_strategy, strategy,
       target_irr, cash_on_cash, preferred_return, investment_minimum,
-      hold_period_years, status, distributions, deck_url,
+      hold_period_years, status, distributions, deck_url, deal_type,
+      offering_size, total_amount_sold, lp_gp_split, instrument,
       management_company:management_companies ( operator_name )
     `)
     .gte('added_date', cutoffISO.split('T')[0])
@@ -103,8 +104,37 @@ async function fetchRecentDeals(supabase, daysBack = 7) {
   if (error) throw error;
   return (data || []).map(d => ({
     ...d,
-    managementCompany: d.management_company?.operator_name || ''
+    managementCompany: d.management_company?.operator_name || '',
+    pctFunded: (d.total_amount_sold && d.offering_size && d.offering_size > 0)
+      ? Math.round(d.total_amount_sold / d.offering_size * 100) : null
   }));
+}
+
+async function fetchAlmostFullDeals(supabase) {
+  // Deals 70-99% funded based on SEC data — urgency/scarcity plays
+  const { data, error } = await supabase
+    .from('opportunities')
+    .select(`
+      id, investment_name, asset_class, investment_strategy, strategy,
+      target_irr, cash_on_cash, preferred_return, investment_minimum,
+      hold_period_years, status, distributions, deck_url, deal_type,
+      offering_size, total_amount_sold, lp_gp_split, instrument,
+      management_company:management_companies ( operator_name )
+    `)
+    .not('total_amount_sold', 'is', null)
+    .not('offering_size', 'is', null)
+    .gt('offering_size', 0)
+    .not('investment_name', 'eq', '')
+    .order('total_amount_sold', { ascending: false });
+
+  if (error) throw error;
+  return (data || [])
+    .map(d => ({
+      ...d,
+      managementCompany: d.management_company?.operator_name || '',
+      pctFunded: Math.round(d.total_amount_sold / d.offering_size * 100)
+    }))
+    .filter(d => d.pctFunded >= 70 && d.pctFunded < 100);
 }
 
 async function fetchUsersWithBuyBox(supabase) {
@@ -138,7 +168,7 @@ async function fetchUsersWithBuyBox(supabase) {
     });
 }
 
-function generateEmailContent(user, matchedDeals, allNewDeals) {
+function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals = []) {
   const firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1);
   const isAcademy = user.tier === 'academy' || user.tier === 'alumni';
 
@@ -146,8 +176,13 @@ function generateEmailContent(user, matchedDeals, allNewDeals) {
   const sorted = [...matchedDeals].sort((a, b) => b.matchPct - a.matchPct);
   const topMatches = sorted.slice(0, 5);
 
+  // Sort almost-full by highest % funded
+  const urgentDeals = [...almostFullDeals].sort((a, b) => b.pctFunded - a.pctFunded).slice(0, 3);
+
   let subject = '';
-  if (topMatches.length > 0) {
+  if (urgentDeals.length > 0) {
+    subject = `${urgentDeals.length} deal${urgentDeals.length > 1 ? 's' : ''} almost full + ${allNewDeals.length} new this week`;
+  } else if (topMatches.length > 0) {
     subject = `${topMatches.length} new deal${topMatches.length > 1 ? 's' : ''} match your buy box`;
   } else {
     subject = `${allNewDeals.length} new deal${allNewDeals.length > 1 ? 's' : ''} this week on GYC`;
@@ -163,6 +198,36 @@ function generateEmailContent(user, matchedDeals, allNewDeals) {
         <h1 style="font-size: 22px; color: #141413; margin: 0 0 8px;">Your Weekly Deal Digest</h1>
         <p style="font-size: 14px; color: #607179; margin: 0 0 24px;">Hey ${firstName}, here's what's new this week.</p>
   `;
+
+  // Almost Full section — urgency/scarcity
+  if (urgentDeals.length > 0) {
+    html += `<div style="margin-bottom: 24px;">
+      <h2 style="font-size: 14px; color: #EF4444; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px;">Almost Full</h2>`;
+
+    for (const deal of urgentDeals) {
+      const yieldVal = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
+      const yieldStr = yieldVal > 0 ? (yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1)) + '%' : '\u2014';
+      const minStr = deal.investment_minimum ? '$' + (deal.investment_minimum / 1000).toFixed(0) + 'K' : '\u2014';
+
+      html += `
+        <a href="https://dealflow.growyourcashflow.io/deal.html?id=${deal.id}" style="display: block; text-decoration: none; border: 1px solid #FECACA; border-radius: 8px; padding: 16px; margin-bottom: 8px; background: #FEF2F2;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 700; font-size: 14px; color: #141413;">${deal.investment_name}</div>
+              <div style="font-size: 12px; color: #607179;">${deal.managementCompany || deal.asset_class}</div>
+            </div>
+            <div style="background: #EF4444; color: #fff; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 20px;">${deal.pctFunded}% funded</div>
+          </div>
+          <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: #607179;">
+            <span>Yield: <strong style="color: #141413;">${yieldStr}</strong></span>
+            <span>Min: <strong style="color: #141413;">${minStr}</strong></span>
+            <span>${deal.asset_class}</span>
+          </div>
+        </a>`;
+    }
+
+    html += `</div>`;
+  }
 
   if (topMatches.length > 0) {
     html += `<div style="margin-bottom: 24px;">
@@ -264,11 +329,13 @@ export default async function handler(req, res) {
   try {
     const supabase = getAdminClient();
 
-    // 1. Fetch new deals from Supabase
+    // 1. Fetch new deals + almost-full deals from Supabase
     const newDeals = await fetchRecentDeals(supabase, daysBack);
-    if (newDeals.length === 0) {
+    const almostFullDeals = await fetchAlmostFullDeals(supabase);
+
+    if (newDeals.length === 0 && almostFullDeals.length === 0) {
       return res.status(200).json({
-        message: 'No new deals in the last ' + daysBack + ' days',
+        message: 'No new deals or urgent deals to report',
         digests: [],
         totalUsers: 0,
         newDeals: 0
@@ -285,6 +352,7 @@ export default async function handler(req, res) {
       const matchedDeals = [];
 
       if (user.hasBuyBox) {
+        // Match against new deals
         for (const deal of newDeals) {
           const result = matchDealToBuyBox(deal, user.buyBox);
           if (result.score >= 0.4) {
@@ -297,10 +365,10 @@ export default async function handler(req, res) {
         }
       }
 
-      // Skip users with no matches AND no new deals to show
-      if (matchedDeals.length === 0 && newDeals.length < 2) continue;
+      // Skip users with nothing to show
+      if (matchedDeals.length === 0 && newDeals.length < 2 && almostFullDeals.length === 0) continue;
 
-      const { subject, html } = generateEmailContent(user, matchedDeals, newDeals);
+      const { subject, html } = generateEmailContent(user, matchedDeals, newDeals, almostFullDeals);
 
       digests.push({
         email: user.email,
