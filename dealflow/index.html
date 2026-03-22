@@ -14132,8 +14132,14 @@ function renderWizardStep() {
   // ===== SCREEN 10/11/12: PLAN OUTPUT (Apple-simple) =====
   if (step.type === 'planOutput') {
     const branch = step.branch;
-
-    // Compute the one key number for each goal type
+    // Initialize plan levers
+    if (!window._planCheckSize) window._planCheckSize = parseDollar(wizardData.checkSize) || 100000;
+    if (!window._planDealsPerYear) window._planDealsPerYear = 2;
+    renderPlanBuilder(branch);
+    return;
+  }
+  if (false) { // --- OLD planOutput code replaced by renderPlanBuilder ---
+    const branch = '';
     let heroNumber = '';
     let heroLabel = '';
     let heroSub = '';
@@ -22270,6 +22276,130 @@ function buildDashPathToGoal(d, branch, deals) {
       + '</div>';
   }
   return '';
+}
+
+// ========== INTERACTIVE PLAN BUILDER (wizard planOutput screen) ==========
+
+function renderPlanBuilder(branch) {
+  var checkSize = window._planCheckSize || parseDollar(wizardData.checkSize) || 100000;
+  var dealsPerYear = window._planDealsPerYear || 2;
+  var goalsData = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+
+  // Temporarily override wizard check size for plan generation
+  var origCheck = wizardData.checkSize;
+  wizardData.checkSize = String(checkSize);
+  var plan = generatePortfolioPlan(wizardData, goalsData);
+  wizardData.checkSize = origCheck;
+
+  var slots = plan.slots || plan.buckets || [];
+  // Recalculate with the current dealsPerYear
+  var currentYear = new Date().getFullYear();
+  slots.forEach(function(s, i) { s.year = currentYear + Math.floor(i / dealsPerYear); });
+
+  var totalSlots = slots.length;
+  var totalIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+  var totalCapital = slots.reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
+  var blendedPct = slots.length > 0 ? Math.round(slots.reduce(function(s, sl) { return s + (sl.target_coc || 0); }, 0) / slots.length * 100) : 8;
+  var yearsToGoal = slots.length > 0 ? Math.ceil(slots.length / dealsPerYear) : 3;
+
+  // Target label
+  var targetLabel = '';
+  if (branch === 'cashflow') targetLabel = '$' + (plan.target_income || 0).toLocaleString() + '/yr in passive income';
+  else if (branch === 'tax') targetLabel = '$' + (plan.target_income || 0).toLocaleString() + ' in tax savings';
+  else targetLabel = '$' + (plan.target_income || 0).toLocaleString() + ' in growth';
+
+  var html = '';
+
+  // Headline
+  html += '<div style="text-align:center;padding:20px 0 4px;">';
+  html += '<div style="font-family:var(--font-headline);font-size:26px;font-weight:800;color:var(--text-dark);line-height:1.2;margin-bottom:6px;">Build your plan</div>';
+  html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);line-height:1.5;">Adjust the levers below to see how different approaches get you to <strong style="color:var(--text-dark);">' + targetLabel + '</strong>.</div>';
+  html += '</div>';
+
+  // ===== LEVERS =====
+  html += '<div style="display:flex;gap:12px;margin:20px 0;flex-wrap:wrap;">';
+
+  // Check size lever
+  html += '<div style="flex:1;min-width:140px;background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;padding:14px;text-align:center;">';
+  html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Check Size</div>';
+  html += '<div style="display:flex;align-items:center;justify-content:center;gap:8px;">';
+  html += '<button onclick="window._planCheckSize=Math.max(25000,window._planCheckSize-25000);renderPlanBuilder(\'' + branch + '\')" style="border:none;background:var(--border);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">\u2212</button>';
+  html += '<div style="font-family:var(--font-headline);font-size:20px;font-weight:800;color:var(--text-dark);">$' + checkSize.toLocaleString() + '</div>';
+  html += '<button onclick="window._planCheckSize=Math.min(500000,window._planCheckSize+25000);renderPlanBuilder(\'' + branch + '\')" style="border:none;background:var(--border);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button>';
+  html += '</div></div>';
+
+  // Deals per year lever
+  html += '<div style="flex:1;min-width:140px;background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;padding:14px;text-align:center;">';
+  html += '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Deals per Year</div>';
+  html += '<div style="display:flex;align-items:center;justify-content:center;gap:8px;">';
+  html += '<button onclick="window._planDealsPerYear=Math.max(1,window._planDealsPerYear-1);renderPlanBuilder(\'' + branch + '\')" style="border:none;background:var(--border);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">\u2212</button>';
+  html += '<div style="font-family:var(--font-headline);font-size:20px;font-weight:800;color:var(--text-dark);">' + dealsPerYear + '</div>';
+  html += '<button onclick="window._planDealsPerYear=Math.min(6,window._planDealsPerYear+1);renderPlanBuilder(\'' + branch + '\')" style="border:none;background:var(--border);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button>';
+  html += '</div></div>';
+
+  html += '</div>';
+
+  // ===== SUMMARY BAR =====
+  html += '<div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:10px;margin-bottom:16px;flex-wrap:wrap;gap:8px;">';
+  html += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text-dark);">' + totalSlots + '</strong> investments</div>';
+  html += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text-dark);">$' + totalCapital.toLocaleString() + '</strong> total</div>';
+  html += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);"><strong style="color:var(--text-dark);">~' + blendedPct + '%</strong> avg yield</div>';
+  html += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);font-weight:700;"><strong>$' + totalIncome.toLocaleString() + '/yr</strong></div>';
+  html += '</div>';
+
+  // ===== TIMELINE + ROSTER =====
+  // Group slots by year
+  var slotsByYear = {};
+  slots.forEach(function(s) {
+    var yr = s.year || currentYear;
+    if (!slotsByYear[yr]) slotsByYear[yr] = [];
+    slotsByYear[yr].push(s);
+  });
+
+  var years = Object.keys(slotsByYear).sort();
+  var cumulativeIncome = 0;
+
+  html += '<div style="background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;overflow:hidden;">';
+
+  years.forEach(function(yr, yi) {
+    var yearSlots = slotsByYear[yr];
+    var yearIncome = yearSlots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+    cumulativeIncome += yearIncome;
+    var pctOfGoal = plan.target_income > 0 ? Math.min(100, Math.round(cumulativeIncome / plan.target_income * 100)) : 0;
+
+    // Year header
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-card);border-bottom:1px solid var(--border-light);' + (yi > 0 ? 'border-top:1px solid var(--border-light);' : '') + '">';
+    html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">Year ' + (yi + 1) + ' <span style="font-weight:400;color:var(--text-muted);">(' + yr + ')</span></div>';
+    html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--primary);font-weight:600;">$' + cumulativeIncome.toLocaleString() + '/yr <span style="color:var(--text-muted);font-weight:400;">' + pctOfGoal + '%</span></div>';
+    html += '</div>';
+
+    // Slots in this year
+    yearSlots.forEach(function(slot) {
+      var cocPct = Math.round((slot.target_coc || 0) * 100);
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border-light);font-size:13px;">'
+        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;box-sizing:border-box;"></span>'
+        + '<div style="flex:1;color:var(--text-secondary);">' + slot.asset_class + '</div>'
+        + '<div style="color:var(--text-muted);font-size:11px;">$' + (slot.check_size || 0).toLocaleString() + '</div>'
+        + '<div style="color:var(--text-muted);font-size:11px;">~' + cocPct + '%</div>'
+        + '<div style="color:var(--text-dark);font-weight:600;font-size:11px;">+$' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
+        + '</div>';
+    });
+  });
+
+  html += '</div>';
+
+  // Timeline note
+  html += '<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:14px;line-height:1.5;">'
+    + 'At ' + dealsPerYear + ' deal' + (dealsPerYear !== 1 ? 's' : '') + '/yr with $' + checkSize.toLocaleString() + ' checks, you reach your goal in <strong style="color:var(--text-dark);">~' + yearsToGoal + ' years</strong>.'
+    + '</div>';
+
+  // Nav
+  html += '<div class="wizard-inline-nav" style="margin-top:20px;">';
+  html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+  html += '<button class="wizard-btn wizard-btn-next" onclick="window._planCheckSize=' + checkSize + ';wizardData.checkSize=\'' + checkSize + '\';wizardNext()">Looks Good \u2192</button>';
+  html += '</div>';
+
+  document.getElementById('wizardContent').innerHTML = html;
 }
 
 // ========== PORTFOLIO PLAN: Generation + Blueprint (v2 — slot-based) ==========
