@@ -309,17 +309,18 @@ export default async function handler(req, res) {
       const occVars = 'B25002_001E,B25002_002E,B25002_003E';
       const brVars = 'B25041_002E,B25041_003E,B25041_004E,B25041_005E,B25041_006E,B25041_007E';
 
-      // Fetch occupancy time series in parallel
-      const occPromises = housingYears.map(async (yr) => {
+      // Fetch occupancy + bedrooms time series in parallel
+      const allVars = occVars + ',' + brVars;
+      const housingPromises = housingYears.map(async (yr) => {
         try {
           let url;
           if (zip) {
             const stQ = (yr < 2020 && resolvedStateFips) ? `&in=state:${resolvedStateFips}` : '';
-            url = `${CENSUS_BASE}/${yr}/acs/acs5?get=${occVars}&for=zip%20code%20tabulation%20area:${zip}${stQ}`;
+            url = `${CENSUS_BASE}/${yr}/acs/acs5?get=${allVars}&for=zip%20code%20tabulation%20area:${zip}${stQ}`;
           } else if (resolvedCountyFips) {
             const sf = resolvedCountyFips.substring(0, 2);
             const cf = resolvedCountyFips.substring(2, 5);
-            url = `${CENSUS_BASE}/${yr}/acs/acs5?get=${occVars}&for=county:${cf}&in=state:${sf}`;
+            url = `${CENSUS_BASE}/${yr}/acs/acs5?get=${allVars}&for=county:${cf}&in=state:${sf}`;
           }
           if (!url) return null;
           const r = await fetch(url);
@@ -327,59 +328,61 @@ export default async function handler(req, res) {
           const d = await r.json();
           if (d && d.length > 1) {
             const v = d[1].map(x => parseInt(x) || 0);
-            return { year: yr, total: v[0], occupied: v[1], vacant: v[2] };
+            // v[0-2] = B25002 (total, occupied, vacant), v[3-8] = B25041 (no BR, 1BR, 2BR, 3BR, 4BR, 5+BR)
+            return {
+              year: yr, total: v[0], occupied: v[1], vacant: v[2],
+              br0: v[3], br1: v[4], br2: v[5], br3: v[6], br4: v[7] + v[8]
+            };
           }
         } catch (e) { return null; }
         return null;
       });
 
-      const occResults = (await Promise.all(occPromises)).filter(r => r && r.total > 0).sort((a, b) => a.year - b.year);
+      const housingResults = (await Promise.all(housingPromises)).filter(r => r && r.total > 0).sort((a, b) => a.year - b.year);
 
-      // Fetch bedroom data for latest year only
-      let brUrl;
-      if (zip) {
-        brUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${brVars}&for=zip%20code%20tabulation%20area:${zip}`;
-      } else if (resolvedCountyFips) {
-        const sf = resolvedCountyFips.substring(0, 2);
-        const cf = resolvedCountyFips.substring(2, 5);
-        brUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${brVars}&for=county:${cf}&in=state:${sf}`;
-      }
-
+      // Build bedrooms from latest year
       let bedrooms = null;
-      if (brUrl) {
-        const brResp = await fetch(brUrl);
-        if (brResp.ok) {
-          const brData = await brResp.json();
-          const bv = brData[1].map(x => parseInt(x) || 0);
-          const brTotal = bv.reduce((a, b) => a + b, 0);
-          if (brTotal > 0) {
-            bedrooms = [
-              { label: 'No bedroom', count: bv[0], pct: Math.round((bv[0] / brTotal) * 1000) / 10 },
-              { label: '1 bedroom', count: bv[1], pct: Math.round((bv[1] / brTotal) * 1000) / 10 },
-              { label: '2 bedrooms', count: bv[2], pct: Math.round((bv[2] / brTotal) * 1000) / 10 },
-              { label: '3 bedrooms', count: bv[3], pct: Math.round((bv[3] / brTotal) * 1000) / 10 },
-              { label: '4+ bedrooms', count: bv[4] + bv[5], pct: Math.round(((bv[4] + bv[5]) / brTotal) * 1000) / 10 }
-            ];
-          }
+      if (housingResults.length > 0) {
+        const latest = housingResults[housingResults.length - 1];
+        const brTotal = latest.br0 + latest.br1 + latest.br2 + latest.br3 + latest.br4;
+        if (brTotal > 0) {
+          bedrooms = [
+            { label: 'No bedroom', count: latest.br0, pct: Math.round((latest.br0 / brTotal) * 1000) / 10 },
+            { label: '1 bedroom', count: latest.br1, pct: Math.round((latest.br1 / brTotal) * 1000) / 10 },
+            { label: '2 bedrooms', count: latest.br2, pct: Math.round((latest.br2 / brTotal) * 1000) / 10 },
+            { label: '3 bedrooms', count: latest.br3, pct: Math.round((latest.br3 / brTotal) * 1000) / 10 },
+            { label: '4+ bedrooms', count: latest.br4, pct: Math.round((latest.br4 / brTotal) * 1000) / 10 }
+          ];
         }
       }
 
-      if (occResults.length > 0) {
-        const latest = occResults[occResults.length - 1];
+      if (housingResults.length > 0) {
+        const latest = housingResults[housingResults.length - 1];
         results.housing = {
           totalUnits: latest.total,
           occupied: latest.occupied,
           vacant: latest.vacant,
           vacancyRate: Math.round((latest.vacant / latest.total) * 1000) / 10,
           bedrooms,
-          timeSeries: occResults.map(r => ({
+          timeSeries: housingResults.map(r => ({
             year: r.year,
             occupancyRate: Math.round((r.occupied / r.total) * 1000) / 10,
             vacancyRate: Math.round((r.vacant / r.total) * 1000) / 10,
             totalUnits: r.total,
             occupied: r.occupied,
             vacant: r.vacant
-          }))
+          })),
+          bedroomTimeSeries: housingResults.map(r => {
+            const t = r.br0 + r.br1 + r.br2 + r.br3 + r.br4;
+            return {
+              year: r.year,
+              noBr: t > 0 ? Math.round((r.br0 / t) * 1000) / 10 : 0,
+              oneBr: t > 0 ? Math.round((r.br1 / t) * 1000) / 10 : 0,
+              twoBr: t > 0 ? Math.round((r.br2 / t) * 1000) / 10 : 0,
+              threeBr: t > 0 ? Math.round((r.br3 / t) * 1000) / 10 : 0,
+              fourPlusBr: t > 0 ? Math.round((r.br4 / t) * 1000) / 10 : 0
+            };
+          })
         };
       }
     } catch (e) {

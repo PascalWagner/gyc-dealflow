@@ -1260,9 +1260,22 @@ body {
               </div>
               <!-- Bedroom Mix -->
               <div>
-                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Bedrooms in Housing Units</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Bedrooms in Housing Units</div>
+                  <div id="brViewToggle" style="display:none;background:var(--border-light);border-radius:6px;overflow:hidden;">
+                    <button onclick="toggleBrView('bars')" id="brViewBars" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">Current</button>
+                    <button onclick="toggleBrView('trend')" id="brViewTrend" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">Trend</button>
+                  </div>
+                </div>
                 <div id="bedroomSubtitle" class="mi-subtitle"></div>
-                <div id="bedroomContent"></div>
+                <div id="brBarsView">
+                  <div id="bedroomContent"></div>
+                </div>
+                <div id="brTrendView" style="display:none;">
+                  <div style="height:220px;position:relative;">
+                    <canvas id="bedroomTrendChart"></canvas>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2734,6 +2747,41 @@ function renderMarketIntelligence(data, assetClass) {
       });
       document.getElementById('bedroomContent').innerHTML = brHtml;
     }
+
+    // Bedroom trend stacked bar chart
+    if (h.bedroomTimeSeries && h.bedroomTimeSeries.length >= 3) {
+      document.getElementById('brViewToggle').style.display = 'flex';
+      var brYears = h.bedroomTimeSeries.map(function(d) { return d.year; });
+      var brTrendCtx = document.getElementById('bedroomTrendChart').getContext('2d');
+      new Chart(brTrendCtx, {
+        type: 'bar',
+        data: {
+          labels: brYears,
+          datasets: [
+            { label: 'Studio', data: h.bedroomTimeSeries.map(function(d) { return d.noBr; }), backgroundColor: '#94a3b8', borderRadius: 2 },
+            { label: '1 BR', data: h.bedroomTimeSeries.map(function(d) { return d.oneBr; }), backgroundColor: '#38bdf8', borderRadius: 2 },
+            { label: '2 BR', data: h.bedroomTimeSeries.map(function(d) { return d.twoBr; }), backgroundColor: '#2563EB', borderRadius: 2 },
+            { label: '3 BR', data: h.bedroomTimeSeries.map(function(d) { return d.threeBr; }), backgroundColor: '#51BE7B', borderRadius: 2 },
+            { label: '4+ BR', data: h.bedroomTimeSeries.map(function(d) { return d.fourPlusBr; }), backgroundColor: '#f59e0b', borderRadius: 2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans'", size: 9, weight: '600' }, boxWidth: 10, padding: 8 } },
+            tooltip: {
+              backgroundColor: '#0A1E21', padding: 10, cornerRadius: 8,
+              callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + '%'; } }
+            }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' }, color: '#8A9AA0' } },
+            y: { stacked: true, max: 100, grid: { color: '#EDF1F2' }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' }, color: '#8A9AA0', callback: function(v) { return v + '%'; } } }
+          }
+        }
+      });
+    }
   }
 
   // ── Employment ──
@@ -2875,6 +2923,23 @@ function renderMarketIntelligence(data, assetClass) {
   var currentYear = new Date().getFullYear();
   if (latestYear && latestYear < currentYear) {
     document.getElementById('dataRecencyNote').textContent = 'Census data available through ' + latestYear + '. Updated annually.';
+  }
+}
+
+// ========== BEDROOM VIEW TOGGLE ==========
+function toggleBrView(view) {
+  var barsEl = document.getElementById('brBarsView');
+  var trendEl = document.getElementById('brTrendView');
+  var barsBtn = document.getElementById('brViewBars');
+  var trendBtn = document.getElementById('brViewTrend');
+  if (view === 'trend') {
+    barsEl.style.display = 'none'; trendEl.style.display = 'block';
+    barsBtn.style.background = 'transparent'; barsBtn.style.color = 'var(--text-muted)';
+    trendBtn.style.background = 'var(--text-dark)'; trendBtn.style.color = '#fff';
+  } else {
+    barsEl.style.display = 'block'; trendEl.style.display = 'none';
+    barsBtn.style.background = 'var(--text-dark)'; barsBtn.style.color = '#fff';
+    trendBtn.style.background = 'transparent'; trendBtn.style.color = 'var(--text-muted)';
   }
 }
 
