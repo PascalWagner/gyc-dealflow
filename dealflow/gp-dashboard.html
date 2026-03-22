@@ -1711,7 +1711,9 @@ body {
 
 <!-- Sidebar (shared component) -->
 <div id="sidebar-root"></div>
-<script src="js/sidebar.js?v=20260322" data-page="gpdashboard"></script>
+<script>
+(function(){var s=document.createElement('script');s.src='js/sidebar.js?v='+Date.now();s.dataset.page='gpdashboard';document.currentScript.parentNode.insertBefore(s,document.currentScript);})();
+</script>
 
 <!-- Mobile top bar -->
 <div class="mobile-topbar">
