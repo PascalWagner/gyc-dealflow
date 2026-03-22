@@ -19304,7 +19304,6 @@ function outreachShowEditModal(data, mcId) {
           <span id="oe_crm_badge" style="font-family:var(--font-ui);font-size:10px;color:#10b981;font-weight:600;background:#ecfdf5;padding:2px 8px;border-radius:8px;display:${data.ghl_contact_id ? 'inline' : 'none'};">Linked to CRM</span>
         </div>
         <input type="hidden" id="oe_ghl_contact_id" value="${data.ghl_contact_id || ''}">
-        <input type="hidden" id="oe_perm_value" value="${data.permission_granted ? 'yes' : 'no'}">
         <!-- Name with typeahead search -->
         <div style="position:relative;">
           <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Name</div>
@@ -19333,20 +19332,25 @@ function outreachShowEditModal(data, mcId) {
         </div>
       </div>
 
-      <!-- Permission / Listing Agreement (hidden until contact name filled) -->
+      <!-- Listing Agreement (hidden until contact name filled) -->
       <div id="oe_permission_card" style="background:rgba(0,0,0,0.02);border-radius:12px;padding:18px 20px;margin-bottom:16px;display:${data.contact_name ? 'block' : 'none'};">
-        <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;">Permission</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-          <div style="display:flex;gap:6px;">
-            <button type="button" id="oe_perm_yes" data-selected="${data.permission_granted ? 'true' : 'false'}" onclick="this.dataset.selected='true';document.getElementById('oe_perm_no').dataset.selected='false';document.getElementById('oe_perm_value').value='yes';this.style.background='#10b981';this.style.color='#fff';this.style.borderColor='#10b981';var no=document.getElementById('oe_perm_no');no.style.background='transparent';no.style.color='var(--text-muted)';no.style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${data.permission_granted ? '#10b981' : 'var(--border)'};cursor:pointer;background:${data.permission_granted ? '#10b981' : 'transparent'};color:${data.permission_granted ? '#fff' : 'var(--text-muted)'};">Yes</button>
-            <button type="button" id="oe_perm_no" data-selected="${!data.permission_granted ? 'true' : 'false'}" onclick="this.dataset.selected='true';document.getElementById('oe_perm_yes').dataset.selected='false';document.getElementById('oe_perm_value').value='no';this.style.background='#ef4444';this.style.color='#fff';this.style.borderColor='#ef4444';var yes=document.getElementById('oe_perm_yes');yes.style.background='transparent';yes.style.color='var(--text-muted)';yes.style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${!data.permission_granted ? '#ef4444' : 'var(--border)'};cursor:pointer;background:${!data.permission_granted ? '#ef4444' : 'transparent'};color:${!data.permission_granted ? '#fff' : 'var(--text-muted)'};">No</button>
-          </div>
-          <div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">Has operator signed a listing agreement?</div>
-        </div>
-        <div>
-          <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Signed Contract URL</div>
-          <input type="url" id="oe_proof" value="${data.permission_proof_url || ''}" placeholder="Link to signed listing agreement..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-        </div>
+        <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;">Listing Agreement</div>
+        ${data.permission_proof_url
+          ? `<div style="display:flex;align-items:center;gap:10px;">
+              <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;background:#ecfdf5;color:#10b981;font-family:var(--font-ui);font-size:12px;font-weight:700;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Signed
+              </span>
+              <a href="${data.permission_proof_url}" target="_blank" style="font-family:var(--font-ui);font-size:13px;color:var(--primary);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${data.permission_proof_url.replace('https://', '').slice(0, 50)}${data.permission_proof_url.length > 58 ? '...' : ''}</a>
+              <button type="button" onclick="document.getElementById('oe_proof_display').style.display='none';document.getElementById('oe_proof_edit').style.display='block'" style="padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);cursor:pointer;flex-shrink:0;">Edit</button>
+            </div>
+            <div id="oe_proof_display"></div>
+            <div id="oe_proof_edit" style="display:none;margin-top:10px;">
+              <input type="url" id="oe_proof" value="${data.permission_proof_url || ''}" placeholder="Link to signed listing agreement..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+            </div>`
+          : `<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-bottom:10px;">Paste the signed listing agreement URL to grant permission.</div>
+            <input type="url" id="oe_proof" value="" placeholder="Link to signed listing agreement..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">`
+        }
       </div>
 
     </div>
@@ -19488,8 +19492,8 @@ async function outreachSave(mcId) {
     contact_phone: document.getElementById('oe_contact_phone').value || null,
     contact_linkedin: document.getElementById('oe_contact_linkedin').value || null,
     ghl_contact_id: document.getElementById('oe_ghl_contact_id').value || null,
-    permission_granted: document.getElementById('oe_perm_value').value === 'yes',
-    permission_proof_url: document.getElementById('oe_proof')?.value || ''
+    permission_proof_url: document.getElementById('oe_proof')?.value || '',
+    permission_granted: !!(document.getElementById('oe_proof')?.value)
   };
   try {
     const resp = await fetch('/api/operator-outreach', {
