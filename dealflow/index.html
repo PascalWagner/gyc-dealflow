@@ -2856,6 +2856,18 @@ html.cap-ios .debt-metric-select-mobile {
   .more-menu-label { font-family: var(--font-ui); font-weight: 700; }
   .more-admin-section { border-top: 2px solid var(--border); padding-top: 16px; margin-top: 8px; }
   .more-admin-section .more-menu-label { color: var(--red, #e74c3c); }
+
+  /* ── Intel page: hide redundant header on mobile ── */
+  #marketintelContent > div:first-child {
+    display: none !important;
+  }
+  /* Intel page: tighter section spacing */
+  #page-marketintel h3 { font-size: 14px !important; }
+  #page-marketintel [style*="margin-bottom:40px"] { margin-bottom: 24px !important; }
+  #page-marketintel [style*="margin-bottom:32px"] { margin-bottom: 16px !important; }
+  #page-marketintel [style*="padding:32px"] { padding: 16px !important; }
+  /* Intel: SEC section headers smaller */
+  #page-marketintel [style*="font-size:18px"] { font-size: 15px !important; }
 }
 
 /* ====== OFFICE HOURS CTA BANNER ====== */
@@ -11545,7 +11557,7 @@ function updateStageDescription() {
   const desc = document.getElementById('stageDescription');
   if (!desc) return;
   const stages = {
-    browse: null, // No banner for browse — it's the default
+    browse: { title: 'Deal Flow', text: 'Browse vetted opportunities. Save deals to your shortlist, then move them through your pipeline.', color: 'var(--primary)' },
     saved: { title: 'Your Shortlist', text: 'Deals you want to look at closer. When you\'re ready to dig in, move one to Vetting.', color: 'var(--primary)' },
     vetting: { title: 'Vetting Pipeline', text: 'Do your homework here. Work through the DD checklist, research the sponsor, and check the numbers.', color: '#2563EB' },
     diligence: { title: 'Due Diligence', text: 'Deep dive into the deal. Review financials, talk to the sponsor, verify the numbers, and build conviction.', color: '#f97316' },
