@@ -2536,7 +2536,7 @@ function renderMarketIntelligence(data, assetClass) {
       var occLabels = h.timeSeries.map(function(d) { return d.year; });
       var occRates = h.timeSeries.map(function(d) { return d.occupancyRate; });
       var occMin = Math.min.apply(null, occRates);
-      var occYMin = Math.max(0, Math.floor((occMin - 5) / 5) * 5); // 5pts below lowest, rounded to nearest 5
+      var occYMin = Math.max(0, Math.floor(occMin - 3)); // 3pts below lowest
       var vacRates = h.timeSeries.map(function(d) { return d.vacancyRate; });
 
       var occCtx = document.getElementById('occupancyChart').getContext('2d');
@@ -2638,11 +2638,18 @@ function renderMarketIntelligence(data, assetClass) {
       var ind = industries[i];
       var barPct = Math.round((ind.employment / maxEmpl) * 100);
       var payStr = ind.avgAnnualPay ? '$' + Math.round(ind.avgAnnualPay / 1000) + 'K avg' : '';
+      var yoyHtml = '';
+      if (ind.yoyPct !== null && ind.yoyPct !== undefined) {
+        var yoyColor = ind.yoyPct >= 0 ? 'var(--green)' : 'var(--red)';
+        var yoySign = ind.yoyPct >= 0 ? '+' : '';
+        yoyHtml = '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:' + yoyColor + ';min-width:45px;text-align:right;">' + yoySign + ind.yoyPct + '%</span>';
+      }
       listHtml += '<li class="mi-industry-item">' +
         '<span class="mi-industry-rank">' + (i + 1) + '</span>' +
         '<span class="mi-industry-name">' + esc(ind.industry) + (payStr ? '<div style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:1px;">' + payStr + '</div>' : '') + '</span>' +
         '<span class="mi-industry-bar-wrap"><span class="mi-industry-bar" style="width:' + barPct + '%;"></span></span>' +
         '<span class="mi-industry-count">' + ind.employment.toLocaleString() + '</span>' +
+        yoyHtml +
         '</li>';
     }
     document.getElementById('industryList').innerHTML = listHtml;

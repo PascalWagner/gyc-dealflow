@@ -49,7 +49,8 @@ export default async function handler(req, res) {
   // ── Cache check ──
   const cacheKey = zip || fips || '';
   const CACHE_MAX_AGE_DAYS = 30;
-  if (cacheKey) {
+  const forceRefresh = req.query.refresh === '1';
+  if (cacheKey && !forceRefresh) {
     try {
       const sb = getAdminClient();
       const { data: cached } = await sb
@@ -367,6 +368,8 @@ export default async function handler(req, res) {
           const ownCodeIdx = headers.indexOf('own_code');
           const sizeCodeIdx = headers.indexOf('size_code');
           const agglvlIdx = headers.indexOf('agglvl_code');
+          const otyEmplChgIdx = headers.indexOf('oty_annual_avg_emplvl_chg');
+          const otyEmplPctIdx = headers.indexOf('oty_annual_avg_emplvl_pct_chg');
           var totalEmpl = null;
 
           for (let i = 1; i < lines.length; i++) {
@@ -397,10 +400,15 @@ export default async function handler(req, res) {
             const wage = parseInt(cols[wageIdx]);
             if (!empl || empl < 50) continue;
 
+            const otyChg = parseInt(cols[otyEmplChgIdx]) || null;
+            const otyPct = parseFloat(cols[otyEmplPctIdx]) || null;
+
             industries.push({
               industry: label,
               employment: empl,
-              avgAnnualPay: wage || null
+              avgAnnualPay: wage || null,
+              yoyChange: otyChg,
+              yoyPct: otyPct
             });
           }
 
