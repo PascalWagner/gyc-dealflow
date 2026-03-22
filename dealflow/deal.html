@@ -5660,6 +5660,9 @@ async function renderDeal() {
 
     if (!hasPortfolio) {
       portfolioSnapshotHtml += '<div style="text-align:center;padding:16px 0;"><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">We haven\u2019t extracted portfolio data for ' + esc(_opName2) + ' yet.</div></div>';
+      if (!isPaidUser && !_compIsAdmin) {
+        portfolioSnapshotHtml += '</div></div>'; // close blur wrapper + gate overlay
+      }
       portfolioSnapshotHtml += '</div></div>';
       return;
     }
