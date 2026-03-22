@@ -54,7 +54,8 @@ export default async function handler(req, res) {
         totalSaves: 0,
         totalVetting: 0,
         totalInvested: 0,
-        recentActivity: []
+        recentActivity: [],
+        weeklyActivity: []
       });
     }
 
@@ -92,12 +93,42 @@ export default async function handler(req, res) {
       updated_at: s.updated_at
     }));
 
+    // 5. Weekly activity aggregation (last 8 weeks)
+    const now = new Date();
+    const weeklyMap = {};
+    // Pre-fill last 8 weeks with zeros
+    for (let i = 0; i < 8; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - d.getDay() + 1 - i * 7); // Monday of each week
+      const key = d.toISOString().slice(0, 10);
+      weeklyMap[key] = { week: key, interested: 0, duediligence: 0, portfolio: 0 };
+    }
+
+    for (const s of allStages) {
+      if (!s.updated_at) continue;
+      const dt = new Date(s.updated_at);
+      // Find Monday of this date's week
+      const day = dt.getDay();
+      const monday = new Date(dt);
+      monday.setDate(monday.getDate() - ((day + 6) % 7));
+      const key = monday.toISOString().slice(0, 10);
+      if (weeklyMap[key]) {
+        if (s.stage === 'interested') weeklyMap[key].interested++;
+        else if (s.stage === 'duediligence') weeklyMap[key].duediligence++;
+        else if (s.stage === 'portfolio') weeklyMap[key].portfolio++;
+      }
+    }
+
+    // Sort ascending by week
+    const weeklyActivity = Object.values(weeklyMap).sort((a, b) => a.week.localeCompare(b.week));
+
     return res.status(200).json({
       dealViews,
       totalSaves,
       totalVetting,
       totalInvested,
-      recentActivity
+      recentActivity,
+      weeklyActivity
     });
   } catch (err) {
     console.error('gp-analytics error:', err);

@@ -876,6 +876,210 @@ body {
   min-width: 0;
 }
 
+/* Weekly Activity Chart */
+.weekly-chart-wrap {
+  margin: 24px 0 20px;
+}
+.weekly-chart-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.weekly-chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.weekly-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.weekly-chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.weekly-chart-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  height: 160px;
+  padding-bottom: 28px;
+  position: relative;
+  border-bottom: 1px solid var(--border-light);
+}
+.weekly-chart-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+  cursor: pointer;
+}
+.weekly-chart-bar-stack {
+  width: 60%;
+  max-width: 40px;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+}
+.weekly-chart-bar-group:hover .weekly-chart-bar-stack {
+  opacity: 0.85;
+}
+.weekly-chart-bar-seg {
+  width: 100%;
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.weekly-chart-bar-seg.seg-interested { background: #27ae60; }
+.weekly-chart-bar-seg.seg-duediligence { background: #2563eb; }
+.weekly-chart-bar-seg.seg-portfolio { background: #1a2332; }
+.weekly-chart-bar-label {
+  position: absolute;
+  bottom: -24px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.weekly-chart-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--charcoal);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+.weekly-chart-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--charcoal);
+}
+.weekly-chart-bar-group:hover .weekly-chart-tooltip {
+  display: block;
+}
+.weekly-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  background: var(--off-white);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+  line-height: 1.6;
+}
+
+/* Webinar CTA Card */
+.webinar-cta-card {
+  margin-top: 28px;
+  margin-bottom: 28px;
+  padding: 28px;
+  background: linear-gradient(135deg, #f0faf4 0%, #e8f4fd 100%);
+  border: 1px solid #c3e6d1;
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+}
+.webinar-cta-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 120px;
+  height: 120px;
+  background: rgba(81, 190, 123, 0.06);
+  border-radius: 50%;
+}
+.webinar-cta-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+}
+.webinar-cta-stat {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+.webinar-cta-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.webinar-cta-features {
+  list-style: none;
+  margin-bottom: 20px;
+}
+.webinar-cta-features li {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dark);
+  padding: 4px 0;
+}
+.webinar-cta-features li::before {
+  content: '\2022';
+  color: var(--primary);
+  font-weight: 700;
+  margin-right: 8px;
+}
+.webinar-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 28px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+.webinar-cta-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
 /* Market Positioning */
 .market-cards {
   display: flex;
@@ -1121,11 +1325,38 @@ body {
               <div class="analytics-metric-label">Invested</div>
             </div>
           </div>
+          <!-- Weekly Activity Chart -->
+          <div class="weekly-chart-wrap" id="weeklyChartWrap">
+            <div class="weekly-chart-title">Investor Activity Over Time</div>
+            <div class="weekly-chart-legend">
+              <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>Saved / Interested</span>
+              <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>In Vetting</span>
+              <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
+            </div>
+            <div class="weekly-chart-container" id="weeklyChartBars">
+              <div class="weekly-chart-empty">Loading chart...</div>
+            </div>
+          </div>
+
           <div id="recentActivityWrap">
             <h4 style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:10px;">Recent Activity</h4>
             <ul class="activity-list" id="recentActivityList">
               <li class="activity-item" style="justify-content:center;color:var(--text-muted);">Loading...</li>
             </ul>
+          </div>
+
+          <!-- Webinar CTA Card -->
+          <div class="webinar-cta-card" id="webinarCtaCard">
+            <div class="webinar-cta-title">&#127919; Get In Front of LPs</div>
+            <div class="webinar-cta-stat" id="webinarCtaStat"></div>
+            <div class="webinar-cta-desc">Your deals are getting attention. Take it further &mdash; pitch directly to our investor network in a live webinar.</div>
+            <ul class="webinar-cta-features">
+              <li>30-minute dedicated pitch slot</li>
+              <li>Qualified accredited investor audience</li>
+              <li>Recorded &amp; shared with all platform members</li>
+              <li>Q&amp;A session with interested LPs</li>
+            </ul>
+            <a href="#book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $500 &rarr;</a>
           </div>
 
           <!-- Divider -->
@@ -2017,7 +2248,7 @@ function fetchGPAnalytics() {
     })
     .catch(function(e) {
       console.warn('GP analytics API unavailable:', e.message);
-      return { totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [] };
+      return { totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [] };
     });
 }
 
@@ -2069,6 +2300,118 @@ function relativeTime(dateStr) {
   var diffMonths = Math.floor(diffDays / 30);
   if (diffMonths < 12) return diffMonths + 'mo ago';
   return Math.floor(diffMonths / 12) + 'y ago';
+}
+
+// ========== WEEKLY ACTIVITY CHART ==========
+function renderWeeklyChart(weeklyActivity) {
+  var container = document.getElementById('weeklyChartBars');
+  var weeks = weeklyActivity || [];
+
+  // Check if all weeks are empty
+  var hasAny = weeks.some(function(w) {
+    return (w.interested || 0) + (w.duediligence || 0) + (w.portfolio || 0) > 0;
+  });
+
+  if (weeks.length === 0 || !hasAny) {
+    container.innerHTML = '<div class="weekly-chart-empty">No activity yet. As investors discover your deals, you\'ll see their engagement here.</div>';
+    return;
+  }
+
+  // Find max total for scaling
+  var maxTotal = 1;
+  weeks.forEach(function(w) {
+    var t = (w.interested || 0) + (w.duediligence || 0) + (w.portfolio || 0);
+    if (t > maxTotal) maxTotal = t;
+  });
+
+  // Format week label (e.g. "Mar 3")
+  var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function formatWeek(dateStr) {
+    var d = new Date(dateStr + 'T00:00:00');
+    return monthNames[d.getMonth()] + ' ' + d.getDate();
+  }
+
+  var barsHtml = '';
+  weeks.forEach(function(w) {
+    var intCount = w.interested || 0;
+    var ddCount = w.duediligence || 0;
+    var portCount = w.portfolio || 0;
+    var total = intCount + ddCount + portCount;
+    var maxHeight = 120; // px available for bars
+
+    var intH = total > 0 ? Math.max(intCount / maxTotal * maxHeight, intCount > 0 ? 3 : 0) : 0;
+    var ddH = total > 0 ? Math.max(ddCount / maxTotal * maxHeight, ddCount > 0 ? 3 : 0) : 0;
+    var portH = total > 0 ? Math.max(portCount / maxTotal * maxHeight, portCount > 0 ? 3 : 0) : 0;
+
+    barsHtml += '<div class="weekly-chart-bar-group">' +
+      '<div class="weekly-chart-tooltip">' +
+        '<strong>' + formatWeek(w.week) + '</strong><br>' +
+        'Interested: ' + intCount + '<br>' +
+        'Vetting: ' + ddCount + '<br>' +
+        'Invested: ' + portCount +
+      '</div>' +
+      '<div class="weekly-chart-bar-stack">' +
+        '<div class="weekly-chart-bar-seg seg-portfolio" style="height:0px;" data-h="' + portH + '"></div>' +
+        '<div class="weekly-chart-bar-seg seg-duediligence" style="height:0px;" data-h="' + ddH + '"></div>' +
+        '<div class="weekly-chart-bar-seg seg-interested" style="height:0px;" data-h="' + intH + '"></div>' +
+      '</div>' +
+      '<span class="weekly-chart-bar-label">' + formatWeek(w.week) + '</span>' +
+    '</div>';
+  });
+
+  container.innerHTML = barsHtml;
+
+  // Animate bars up after a frame
+  requestAnimationFrame(function() {
+    var segs = container.querySelectorAll('.weekly-chart-bar-seg');
+    for (var i = 0; i < segs.length; i++) {
+      var h = segs[i].getAttribute('data-h');
+      if (h && parseFloat(h) > 0) {
+        segs[i].style.height = h + 'px';
+      }
+    }
+  });
+}
+
+// ========== WEBINAR CTA ==========
+function renderWebinarCta(gpDeals, allDeals, analytics) {
+  var statEl = document.getElementById('webinarCtaStat');
+  if (!statEl) return;
+
+  // Try to find the GP's primary asset class and show browsing stat
+  var gpAssetClasses = {};
+  gpDeals.forEach(function(d) {
+    var ac = d.assetClass || d.asset_class || '';
+    if (ac) gpAssetClasses[ac] = (gpAssetClasses[ac] || 0) + 1;
+  });
+
+  var primaryAC = '';
+  var maxCount = 0;
+  Object.keys(gpAssetClasses).forEach(function(ac) {
+    if (gpAssetClasses[ac] > maxCount) {
+      maxCount = gpAssetClasses[ac];
+      primaryAC = ac;
+    }
+  });
+
+  // Count active deals in that asset class as a proxy for "investors browsing"
+  var totalInterest = (analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0);
+  // Use a broader platform stat: count total LP interactions or active deals
+  var activeDealCount = (allDeals || []).filter(function(d) {
+    var s = (d.status || '').toLowerCase();
+    return s !== 'closed' && s !== 'fully funded' && s !== 'completed';
+  }).length;
+
+  if (primaryAC && activeDealCount > 0) {
+    var acDeals = (allDeals || []).filter(function(d) {
+      return (d.assetClass || d.asset_class || '') === primaryAC;
+    }).length;
+    statEl.textContent = acDeals + ' investors are currently browsing ' + primaryAC + ' deals';
+  } else if (totalInterest > 0) {
+    statEl.textContent = totalInterest + ' investors have engaged with deals on the platform';
+  } else {
+    statEl.textContent = 'Hundreds of accredited investors are actively reviewing deals';
+  }
 }
 
 // ========== MARKET POSITIONING ==========
@@ -2365,6 +2708,8 @@ function init() {
 
       // Render analytics sections (after renderGPDashboard so gpState.deals is set)
       renderLPActivity(analytics);
+      renderWeeklyChart(analytics.weeklyActivity);
+      renderWebinarCta(deals, allDeals, analytics);
       renderMarketPositioning(deals, allDeals);
       renderDemandIntelligence(deals, allDeals, analytics);
 
@@ -2374,7 +2719,9 @@ function init() {
       console.error('Failed to load GP dashboard:', e);
       // Render with empty data
       renderGPDashboard([], loadLocalSettings());
-      renderLPActivity({ totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [] });
+      renderLPActivity({ totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [] });
+      renderWeeklyChart([]);
+      renderWebinarCta([], [], {});
       document.body.classList.add('page-loaded');
     });
 }
