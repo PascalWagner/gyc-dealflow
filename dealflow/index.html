@@ -14179,35 +14179,39 @@ function renderWizardStep() {
     html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);line-height:1.6;max-width:380px;margin:0 auto;">' + heroSub + '</div>';
     html += '</div>';
 
-    // Generate the portfolio plan and show buckets
+    // Generate the portfolio plan and show investment roster
     var _wizPlan = generatePortfolioPlan(wizardData, JSON.parse(localStorage.getItem('gycGoals') || 'null'));
-    var _wizBuckets = _wizPlan.buckets || [];
+    var _wizSlots = _wizPlan.slots || _wizPlan.buckets || [];
+    var _wizTotalIncome = _wizSlots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+    var _wizTotalCap = _wizSlots.reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
+    var _wizBlended = _wizSlots.length > 0 ? Math.round(_wizSlots.reduce(function(s, sl) { return s + (sl.target_coc || 0); }, 0) / _wizSlots.length * 100) : 8;
 
-    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;">';
-    _wizBuckets.forEach(function(b) {
-      var dots = '';
-      for (var i = 0; i < b.target_deals; i++) {
-        dots += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid ' + b.color + '40;margin:2px;box-sizing:border-box;"></span>';
-      }
-      html += '<div style="flex:1;min-width:100px;background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;padding:14px;text-align:center;">'
-        + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:' + b.color + ';margin-bottom:6px;">' + b.label + '</div>'
-        + '<div style="font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:2px;">' + b.pct + '%</div>'
-        + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">$' + (b.capital || 0).toLocaleString() + '</div>'
-        + '<div style="line-height:1.8;">' + dots + '</div>'
-        + '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + b.target_deals + ' deal' + (b.target_deals !== 1 ? 's' : '') + '</div>'
+    // Roster table
+    html += '<div style="margin-top:24px;background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;overflow:hidden;">';
+    _wizSlots.forEach(function(slot, i) {
+      var cocPct = Math.round((slot.target_coc || 0) * 100);
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:13px;">'
+        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;box-sizing:border-box;"></span>'
+        + '<div style="flex:1;color:var(--text-secondary);">' + slot.asset_class + '</div>'
+        + '<div style="color:var(--text-muted);font-size:12px;">$' + (slot.check_size || 0).toLocaleString() + '</div>'
+        + '<div style="color:var(--text-muted);font-size:12px;width:50px;text-align:right;">~' + cocPct + '%</div>'
+        + '<div style="color:var(--text-dark);font-weight:700;font-size:12px;width:70px;text-align:right;">$' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
         + '</div>';
     });
+    // Total row
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:700;background:var(--bg-cream);">'
+      + '<span style="width:8px;flex-shrink:0;"></span>'
+      + '<div style="flex:1;color:var(--text-dark);">Total: ' + _wizSlots.length + ' investments</div>'
+      + '<div style="color:var(--text-muted);font-size:12px;">$' + _wizTotalCap.toLocaleString() + '</div>'
+      + '<div style="color:var(--text-muted);font-size:12px;width:50px;text-align:right;">~' + _wizBlended + '%</div>'
+      + '<div style="color:var(--primary);font-size:12px;width:70px;text-align:right;">$' + _wizTotalIncome.toLocaleString() + '/yr</div>'
+      + '</div>';
     html += '</div>';
 
-    // Summary line
-    var _wizTotalDeals = 0;
-    _wizBuckets.forEach(function(b) { _wizTotalDeals += b.target_deals; });
-    html += '<div style="font-size:13px;color:var(--text-secondary);text-align:center;margin-top:16px;line-height:1.6;">'
-      + _wizTotalDeals + ' deals &times; $' + (_wizPlan.check_size || 100000).toLocaleString() + ' each'
-      + '</div>';
-
-    html += '<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:8px;line-height:1.6;">'
-      + 'You\u2019ll build toward this over time \u2014 we\u2019ll recommend which slot to fill next.'
+    // Timeline note
+    var _wizYears = _wizSlots.length > 0 ? (Math.max.apply(null, _wizSlots.map(function(s) { return s.year || 0; })) - Math.min.apply(null, _wizSlots.map(function(s) { return s.year || 9999; })) + 1) : 3;
+    html += '<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:16px;line-height:1.6;">'
+      + '~' + (_wizPlan.deals_per_year || 2) + ' deals per year &middot; reach your goal in ~' + _wizYears + ' years'
       + '</div>';
 
     // Nav
@@ -21774,10 +21778,11 @@ function renderDashboard() {
     // Slot progress from portfolio plan
     var _heroPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
     var slotLine = '';
-    if (_heroPlan && _heroPlan.buckets) {
-      var _hTotal = 0, _hFilled = 0;
-      _heroPlan.buckets.forEach(function(b) { _hTotal += b.target_deals; _hFilled += (b.filled_by || []).length; });
-      if (_hTotal > 0) slotLine = ' &middot; ' + _hFilled + ' of ' + _hTotal + ' plan slots filled';
+    var _heroSlots = _heroPlan && (_heroPlan.slots || _heroPlan.buckets);
+    if (_heroSlots && _heroSlots.length > 0 && _heroSlots[0].asset_class) {
+      var _hTotal = _heroSlots.length;
+      var _hFilled = _heroSlots.filter(function(s) { return s.filled_by; }).length;
+      if (_hTotal > 0) slotLine = ' &middot; ' + _hFilled + ' of ' + _hTotal + ' investments made';
     }
 
     heroHtml = '<div class="dash-hero">'
@@ -23647,9 +23652,10 @@ async function fetchUserDataAsAdmin(targetEmail) {
     if (!resp.ok) return;
     const result = await resp.json();
 
-    // Restore portfolio
+    // Restore portfolio (always overwrite — empty means user has no investments)
+    let restored = [];
     if (result.portfolio && result.portfolio.length > 0) {
-      const restored = result.portfolio.map(r => ({
+      restored = result.portfolio.map(r => ({
         id: r.id || ('inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
         dealId: r.deal_id || '',
         investmentName: r.investment_name || '',
@@ -23666,22 +23672,22 @@ async function fetchUserDataAsAdmin(targetEmail) {
         notes: r.notes || '',
         _recordId: r.id || undefined
       }));
-      localStorage.setItem('gycPortfolio', JSON.stringify(restored));
-      portfolioInvestments = restored;
     }
+    localStorage.setItem('gycPortfolio', JSON.stringify(restored));
+    portfolioInvestments = restored;
 
-    // Restore deal stages
+    // Restore deal stages (always overwrite — empty means user has no stages)
+    const stages = {};
     if (result.stages && result.stages.length > 0) {
-      const stages = {};
       result.stages.forEach(r => { if (r.deal_id && r.stage) stages[r.deal_id] = r.stage; });
-      localStorage.setItem('gycDealStages', JSON.stringify(stages));
-      dealStages = stages;
     }
+    localStorage.setItem('gycDealStages', JSON.stringify(stages));
+    dealStages = stages;
 
-    // Restore goals
+    // Restore goals (always overwrite — empty means user has no goals set)
     if (result.goals && result.goals.length > 0) {
       const g = result.goals[0];
-      const restored = {
+      const restoredGoals = {
         goalType: g.goal_type || 'passive-income',
         currentIncome: g.current_income || 0,
         targetIncome: g.target_income || 0,
@@ -23689,8 +23695,11 @@ async function fetchUserDataAsAdmin(targetEmail) {
         timeline: g.timeline || '5',
         taxReduction: g.tax_reduction || 0
       };
-      localStorage.setItem('gycGoals', JSON.stringify(restored));
-      investorGoals = restored;
+      localStorage.setItem('gycGoals', JSON.stringify(restoredGoals));
+      investorGoals = restoredGoals;
+    } else {
+      localStorage.removeItem('gycGoals');
+      investorGoals = null;
     }
 
     // Re-render current page
@@ -23704,7 +23713,7 @@ async function fetchUserDataAsAdmin(targetEmail) {
   }
 }
 
-function viewAsUser(email, name, contactId, tier) {
+async function viewAsUser(email, name, contactId, tier) {
   // Save admin's real session
   if (!adminRealUser) {
     adminRealUser = JSON.parse(localStorage.getItem('gycUser'));
@@ -23765,8 +23774,8 @@ function viewAsUser(email, name, contactId, tier) {
   // Fetch their buy box from GHL
   fetchBuyBoxForUser(email);
 
-  // Fetch their real data from Supabase (portfolio, stages, goals)
-  fetchUserDataAsAdmin(email);
+  // Fetch their real data from Supabase (portfolio, stages, goals) — await before navigating
+  await fetchUserDataAsAdmin(email);
 
   // Navigate to dashboard to see their full view
   navigateTo('dashboard');
