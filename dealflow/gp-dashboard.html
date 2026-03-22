@@ -1134,9 +1134,9 @@ function checkGPAccess() {
   var user = getUser();
   if (!user) return false;
 
-  // Admin always has access
+  // Admin always has access — but scoped to their own company
   if (user.isAdmin || (user.email && ADMIN_EMAILS.indexOf(user.email.toLowerCase()) >= 0)) {
-    gpState.companyId = user.management_company_id || user.managementCompanyId || null;
+    gpState.companyId = user.management_company_id || user.managementCompanyId || '8971cd85-60d8-41b5-abc0-c878d5f92cb3'; // GYC
     gpState.companyName = user.management_company_name || user.managementCompanyName || user.company || 'Grow Your Cashflow';
     gpState.isAdmin = true;
     return true;
@@ -1167,24 +1167,34 @@ function fetchGPDeals() {
     headers['Authorization'] = 'Bearer ' + user.token;
   }
 
-  var url = '/api/deals';
-  if (gpState.isAdmin) {
-    // Admin sees all deals
-  } else if (gpState.companyId) {
-    url += '?management_company_id=' + encodeURIComponent(gpState.companyId);
-  } else if (gpState.companyName) {
-    url += '?management_company=' + encodeURIComponent(gpState.companyName);
-  }
-
-  return fetch(url, { headers: headers })
+  return fetch('/api/deals', { headers: headers })
     .then(function(resp) {
       if (!resp.ok) throw new Error('API returned ' + resp.status);
       return resp.json();
     })
     .then(function(data) {
-      var deals = data.deals || data.records || data || [];
-      if (Array.isArray(deals)) return deals;
-      return [];
+      var allDeals = data.deals || data.records || data || [];
+      if (!Array.isArray(allDeals)) return [];
+      // Filter to only deals where this GP is the operator
+      if (gpState.companyId) {
+        return allDeals.filter(function(d) {
+          // Match by management company ID
+          if (d.managementCompanyId === gpState.companyId) return true;
+          // Also match by sponsor list
+          if (d.sponsors && d.sponsors.length > 0) {
+            return d.sponsors.some(function(s) { return s.id === gpState.companyId; });
+          }
+          return false;
+        });
+      }
+      if (gpState.companyName) {
+        var cn = gpState.companyName.toLowerCase();
+        return allDeals.filter(function(d) {
+          var mc = (d.managementCompany || '').toLowerCase();
+          return mc === cn || mc.includes(cn) || cn.includes(mc);
+        });
+      }
+      return allDeals;
     })
     .catch(function(e) {
       console.warn('Deals API unavailable:', e.message);
