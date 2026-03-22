@@ -173,11 +173,8 @@
     ['growth', icons.growth, 'Growth & Analytics'],
     ['admin-manage', icons.manage, 'Manage Data'],
     ['outreach', icons.outreach, 'Operator Outreach'],
-    ['devnotes', icons.devnotes, 'Dev Notes'],
-    ['schema', icons.schema, 'Database Schema'],
-    ['casestudies', icons.casestudies, 'Case Studies'],
-    ['network-moat', icons.network, 'Network &amp; Moat'],
-    ['transactions', icons.transactions, 'Transaction Strategy']
+    ['admindash', icons.schema, 'Admin Dashboard'],
+    ['casestudies', icons.casestudies, 'Case Studies']
   ];
   adminPages.forEach(function(p) {
     html += navItem(p[0], p[1], p[2]);

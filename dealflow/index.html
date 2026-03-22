@@ -5745,116 +5745,6 @@ const _supa = window.supabase.createClient(
     </div>
   </div>
 
-  <div class="page" id="page-devnotes">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Dev Notes</div>
-    </div>
-    <div class="sub-page" style="max-width:860px">
-      <div class="settings-page-title">Development Status</div>
-      <div class="settings-page-desc">Internal notes for picking up where we left off. Last updated: March 20, 2026.</div>
-
-      <div style="display:flex;flex-direction:column;gap:24px;">
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#22c55e;margin-bottom:12px;">Working</h3>
-          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#10003; Auth via Supabase (email+password, JWT tokens, auto-refresh every 50 min)</li>
-            <li>&#10003; Sign Up creates Supabase user + GHL contact with tier tags</li>
-            <li>&#10003; GHL tier lookup on login (dealflow-free / dealflow-academy / dealflow-alumni)</li>
-            <li>&#10003; Auth gate on dashboard (redirects to login if no valid session)</li>
-            <li>&#10003; Live deal data from Supabase <code>opportunities</code> + <code>management_companies</code> tables</li>
-            <li>&#10003; Deal filtering, search, grid/list views, deal detail page with fee benchmarks</li>
-            <li>&#10003; Buy Box wizard &rarr; Supabase <code>user_buy_box</code> + GHL contact custom fields</li>
-            <li>&#10003; GP/Sponsor directory with profiles, track record, follow/unfollow</li>
-            <li>&#10003; Deal Q&amp;A system (Supabase <code>deal_qa</code> table)</li>
-            <li>&#10003; Deck upload &rarr; Supabase Storage (<code>deal-decks</code> bucket) + auto-enrichment via Claude</li>
-            <li>&#10003; User data sync: localStorage (primary) &harr; Supabase (persistent backup)</li>
-            <li>&#10003; Goals &harr; GHL sync: Supabase goals push to GHL custom fields, GHL seeds Supabase on first login</li>
-            <li>&#10003; Social proof: deal stage counts via <code>deal_stage_counts</code> view</li>
-            <li>&#10003; Admin analytics dashboard (hot deals, funnel, top users)</li>
-            <li>&#10003; Income Goal Bridge on dashboard (distribution-based progress tracking)</li>
-            <li>&#10003; Deployed to <code>dealflow.growyourcashflow.io</code> via Vercel (auto-deploy on push to main)</li>
-            <li>&#10003; Code on GitHub: <code>git@github.com:PascalWagner/gyc-dealflow.git</code></li>
-          </ul>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:12px;">Known Issues</h3>
-          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#10007; GHL &rarr; Supabase sync is login-only &mdash; if a user's GHL contact is updated directly (e.g. by admin), changes only pull on next login</li>
-            <li>&#10007; Magic link sign-in not built yet</li>
-            <li>&#10007; Forgot password flow not built</li>
-            <li>&#10007; Weekly digest email (kill-switched off, needs migration from old Airtable version)</li>
-          </ul>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#3b82f6;margin-bottom:12px;">Still To Do</h3>
-          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
-            <li>&#9745; GHL &harr; Supabase bidirectional goals sync (target income, capital, timeline &rarr; GHL custom fields)</li>
-            <li>&#9744; Build magic link / forgot password flow via Supabase Auth</li>
-            <li>&#9744; Subscription/payment integration (Stripe)</li>
-            <li>&#9744; Deck review request flow</li>
-            <li>&#9744; GP introduction request flow</li>
-            <li>&#9744; Email notifications for new deals matching buy box</li>
-            <li>&#9744; Weekly digest email (re-enable with Supabase backend)</li>
-            <li>&#9745; Airtable backup folder + migration script deleted (migration complete)</li>
-          </ul>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Architecture</h3>
-          <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Database</td><td style="padding:6px 0;">Supabase (PostgreSQL) &mdash; 12 tables + 2 views</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">File Storage</td><td style="padding:6px 0;">Supabase Storage (<code>deal-decks</code> bucket, signed URLs)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Auth</td><td style="padding:6px 0;">Supabase Auth (JWT) + GHL tier lookup</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">CRM</td><td style="padding:6px 0;">GoHighLevel (contacts, tags, buy box custom fields)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">AI Enrichment</td><td style="padding:6px 0;">Claude API (deck/PPM text extraction &rarr; deal field mapping)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Email</td><td style="padding:6px 0;">Resend (deck submission notifications)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Automations</td><td style="padding:6px 0;">Make.com (Org 5180916 / Team 1371669) &mdash; deal processing pipelines</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Hosting</td><td style="padding:6px 0;">Vercel (serverless functions + static)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GitHub</td><td style="padding:6px 0;">git@github.com:PascalWagner/gyc-dealflow.git</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Domain</td><td style="padding:6px 0;">dealflow.growyourcashflow.io</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Supabase Project</td><td style="padding:6px 0;">gyc-dealflow (ID: nntzqyufmtypfjpusflm)</td></tr>
-          </table>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Data Sync Architecture</h3>
-          <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
-            <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px 8px 0;font-weight:700;">Data</td><td style="padding:8px 4px;font-weight:700;">Primary</td><td style="padding:8px 4px;font-weight:700;">Sync Target</td><td style="padding:8px 0;font-weight:700;">Direction</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Deal Stages</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Portfolio</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Goals</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Tax Docs</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Buy Box</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">GHL custom fields</td><td style="padding:6px 0;">Supabase &rarr; GHL</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Deals</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">&mdash;</td><td style="padding:6px 0;">Server only</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Sponsors</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">&mdash;</td><td style="padding:6px 0;">Server only</td></tr>
-            <tr><td style="padding:6px 12px 6px 0;">Auth/Tier</td><td style="padding:6px 4px;">Supabase Auth</td><td style="padding:6px 4px;">GHL tags</td><td style="padding:6px 0;">GHL &rarr; Supabase (on login)</td></tr>
-          </table>
-          <p style="font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.6;">
-            <strong>Local-first pattern:</strong> User changes save to localStorage instantly, then fire-and-forget sync to Supabase. On login, Supabase data merges into localStorage (fills gaps, never overwrites).
-          </p>
-        </div>
-
-        <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">Migration Notes (March 2026)</h3>
-          <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:disc;padding-left:20px;">
-            <li>Full migration from Airtable &rarr; Supabase completed March 19-20, 2026</li>
-            <li>All API endpoints now query Supabase exclusively &mdash; zero Airtable dependencies remain</li>
-            <li>Airtable backup folder + migration script fully removed</li>
-            <li>Make.com still used for deal processing automations (GDrive &rarr; enrichment pipeline)</li>
-            <li>Deck/PPM files stored in Supabase Storage <code>deal-decks</code> bucket (signed URLs, 1-year expiry)</li>
-          </ul>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
 
   <!-- PAGE: Investment Managers -->
   <div class="page" id="page-managers">
@@ -6463,16 +6353,281 @@ const _supa = window.supabase.createClient(
     <div class="content-area" id="dealflowContent"></div>
   </div>
 
-  <!-- PAGE: Database Schema (Admin Only) -->
-  <div class="page" id="page-schema">
+  <!-- PAGE: Admin Dashboard (consolidated: Schema, Dev Notes, Network & Moat, Transaction Strategy) -->
+  <div class="page" id="page-admindash">
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">Database Schema</div>
+      <div class="topbar-title">Admin Dashboard</div>
     </div>
-    <div class="sub-page" style="max-width:1100px" id="schemaContent">
-      <!-- Rendered by JS -->
+    <div class="sub-page" style="max-width:1100px">
+      <!-- Tab Toggle Bar -->
+      <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;" id="admindashTabBar">
+        <button class="growth-tab-btn" data-tab="schema" onclick="switchAdminDashTab('schema')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Database Schema</button>
+        <button class="growth-tab-btn" data-tab="devnotes" onclick="switchAdminDashTab('devnotes')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Dev Notes</button>
+        <button class="growth-tab-btn" data-tab="network" onclick="switchAdminDashTab('network')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Network &amp; Moat</button>
+        <button class="growth-tab-btn" data-tab="transactions" onclick="switchAdminDashTab('transactions')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Transaction Strategy</button>
+      </div>
+
+      <!-- TAB: Database Schema -->
+      <div id="admindash-tab-schema">
+        <div id="schemaContent"><!-- Rendered by JS --></div>
+      </div>
+
+      <!-- TAB: Dev Notes -->
+      <div id="admindash-tab-devnotes" style="display:none;">
+        <div class="settings-page-title">Development Status</div>
+        <div class="settings-page-desc">Internal notes for picking up where we left off. Last updated: March 20, 2026.</div>
+
+        <div style="display:flex;flex-direction:column;gap:24px;">
+
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#22c55e;margin-bottom:12px;">Working</h3>
+            <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
+              <li>&#10003; Auth via Supabase (email+password, JWT tokens, auto-refresh every 50 min)</li>
+              <li>&#10003; Sign Up creates Supabase user + GHL contact with tier tags</li>
+              <li>&#10003; GHL tier lookup on login (dealflow-free / dealflow-academy / dealflow-alumni)</li>
+              <li>&#10003; Auth gate on dashboard (redirects to login if no valid session)</li>
+              <li>&#10003; Live deal data from Supabase <code>opportunities</code> + <code>management_companies</code> tables</li>
+              <li>&#10003; Deal filtering, search, grid/list views, deal detail page with fee benchmarks</li>
+              <li>&#10003; Buy Box wizard &rarr; Supabase <code>user_buy_box</code> + GHL contact custom fields</li>
+              <li>&#10003; GP/Sponsor directory with profiles, track record, follow/unfollow</li>
+              <li>&#10003; Deal Q&amp;A system (Supabase <code>deal_qa</code> table)</li>
+              <li>&#10003; Deck upload &rarr; Supabase Storage (<code>deal-decks</code> bucket) + auto-enrichment via Claude</li>
+              <li>&#10003; User data sync: localStorage (primary) &harr; Supabase (persistent backup)</li>
+              <li>&#10003; Goals &harr; GHL sync: Supabase goals push to GHL custom fields, GHL seeds Supabase on first login</li>
+              <li>&#10003; Social proof: deal stage counts via <code>deal_stage_counts</code> view</li>
+              <li>&#10003; Admin analytics dashboard (hot deals, funnel, top users)</li>
+              <li>&#10003; Income Goal Bridge on dashboard (distribution-based progress tracking)</li>
+              <li>&#10003; Deployed to <code>dealflow.growyourcashflow.io</code> via Vercel (auto-deploy on push to main)</li>
+              <li>&#10003; Code on GitHub: <code>git@github.com:PascalWagner/gyc-dealflow.git</code></li>
+            </ul>
+          </div>
+
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#f59e0b;margin-bottom:12px;">Known Issues</h3>
+            <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
+              <li>&#10007; GHL &rarr; Supabase sync is login-only &mdash; if a user's GHL contact is updated directly (e.g. by admin), changes only pull on next login</li>
+              <li>&#10007; Magic link sign-in not built yet</li>
+              <li>&#10007; Forgot password flow not built</li>
+              <li>&#10007; Weekly digest email (kill-switched off, needs migration from old Airtable version)</li>
+            </ul>
+          </div>
+
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#3b82f6;margin-bottom:12px;">Still To Do</h3>
+            <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:none;padding:0;">
+              <li>&#9745; GHL &harr; Supabase bidirectional goals sync (target income, capital, timeline &rarr; GHL custom fields)</li>
+              <li>&#9744; Build magic link / forgot password flow via Supabase Auth</li>
+              <li>&#9744; Subscription/payment integration (Stripe)</li>
+              <li>&#9744; Deck review request flow</li>
+              <li>&#9744; GP introduction request flow</li>
+              <li>&#9744; Email notifications for new deals matching buy box</li>
+              <li>&#9744; Weekly digest email (re-enable with Supabase backend)</li>
+              <li>&#9745; Airtable backup folder + migration script deleted (migration complete)</li>
+            </ul>
+          </div>
+
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Architecture</h3>
+            <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Database</td><td style="padding:6px 0;">Supabase (PostgreSQL) &mdash; 12 tables + 2 views</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">File Storage</td><td style="padding:6px 0;">Supabase Storage (<code>deal-decks</code> bucket, signed URLs)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Auth</td><td style="padding:6px 0;">Supabase Auth (JWT) + GHL tier lookup</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">CRM</td><td style="padding:6px 0;">GoHighLevel (contacts, tags, buy box custom fields)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">AI Enrichment</td><td style="padding:6px 0;">Claude API (deck/PPM text extraction &rarr; deal field mapping)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Email</td><td style="padding:6px 0;">Resend (deck submission notifications)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Automations</td><td style="padding:6px 0;">Make.com (Org 5180916 / Team 1371669) &mdash; deal processing pipelines</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Hosting</td><td style="padding:6px 0;">Vercel (serverless functions + static)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">GitHub</td><td style="padding:6px 0;">git@github.com:PascalWagner/gyc-dealflow.git</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Domain</td><td style="padding:6px 0;">dealflow.growyourcashflow.io</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;font-weight:600;white-space:nowrap;">Supabase Project</td><td style="padding:6px 0;">gyc-dealflow (ID: nntzqyufmtypfjpusflm)</td></tr>
+            </table>
+          </div>
+
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#8b5cf6;margin-bottom:12px;">Data Sync Architecture</h3>
+            <table style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);width:100%;border-collapse:collapse;">
+              <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 12px 8px 0;font-weight:700;">Data</td><td style="padding:8px 4px;font-weight:700;">Primary</td><td style="padding:8px 4px;font-weight:700;">Sync Target</td><td style="padding:8px 0;font-weight:700;">Direction</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Deal Stages</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Portfolio</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Goals</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Tax Docs</td><td style="padding:6px 4px;">localStorage</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 0;">Bidirectional (local-first)</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Buy Box</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">GHL custom fields</td><td style="padding:6px 0;">Supabase &rarr; GHL</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Deals</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">&mdash;</td><td style="padding:6px 0;">Server only</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Sponsors</td><td style="padding:6px 4px;">Supabase</td><td style="padding:6px 4px;">&mdash;</td><td style="padding:6px 0;">Server only</td></tr>
+              <tr><td style="padding:6px 12px 6px 0;">Auth/Tier</td><td style="padding:6px 4px;">Supabase Auth</td><td style="padding:6px 4px;">GHL tags</td><td style="padding:6px 0;">GHL &rarr; Supabase (on login)</td></tr>
+            </table>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.6;">
+              <strong>Local-first pattern:</strong> User changes save to localStorage instantly, then fire-and-forget sync to Supabase. On login, Supabase data merges into localStorage (fills gaps, never overwrites).
+            </p>
+          </div>
+
+          <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;">Migration Notes (March 2026)</h3>
+            <ul style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:2;list-style:disc;padding-left:20px;">
+              <li>Full migration from Airtable &rarr; Supabase completed March 19-20, 2026</li>
+              <li>All API endpoints now query Supabase exclusively &mdash; zero Airtable dependencies remain</li>
+              <li>Airtable backup folder + migration script fully removed</li>
+              <li>Make.com still used for deal processing automations (GDrive &rarr; enrichment pipeline)</li>
+              <li>Deck/PPM files stored in Supabase Storage <code>deal-decks</code> bucket (signed URLs, 1-year expiry)</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB: Network & Moat -->
+      <div id="admindash-tab-network" style="display:none;">
+        <div class="settings-page-desc" style="margin-top:0;">Building defensible network effects. The moat is the people, not the software.</div>
+
+        <div class="section" style="margin-top:20px;">
+          <div class="section-header"><span class="section-title">Introduction Analytics</span></div>
+          <div class="section-body">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;" id="introStatsGrid">
+              <div class="stat-card"><div class="stat-value" id="introTotalCount">0</div><div class="stat-label">Total Intros</div></div>
+              <div class="stat-card"><div class="stat-value" id="introUniqueGPs">0</div><div class="stat-label">Unique GPs</div></div>
+              <div class="stat-card"><div class="stat-value" id="introUniqueLPs">0</div><div class="stat-label">Unique LPs</div></div>
+              <div class="stat-card"><div class="stat-value" id="introThisMonth">0</div><div class="stat-label">This Month</div></div>
+            </div>
+            <div id="introRequestsList" style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">No introduction requests tracked yet. When LPs request intros from deal pages, they&rsquo;ll appear here.</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Network Effects Playbook</span></div>
+          <div class="section-body">
+            <div style="display:grid;gap:16px;">
+              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
+                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">1. LP Network Lock-In</div>
+                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">More LPs &rarr; more intro requests &rarr; GPs get warm leads for free &rarr; GPs list more deals &rarr; more LPs join. Track: LP signups, active users, intros requested per month.</div>
+              </div>
+              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
+                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">2. GP Recruitment via Data</div>
+                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Show GPs not on the platform: &ldquo;We made X intros that led to $Y in capital deployed through our network.&rdquo; Prove value with data, then onboard them. Track: capital attributed to intros, GP conversion rate.</div>
+              </div>
+              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
+                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">3. Data Moat</div>
+                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Every deal reviewed, every DD checklist completed, every buy box configured creates proprietary data. Competitor would need to replicate the database AND the community. Track: deals in DB, DD completions, buy box profiles.</div>
+              </div>
+              <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
+                <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">4. Academy as Trust Engine</div>
+                <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Academy members get intros, deal access, DD tools. Non-members see deals but can&rsquo;t act. Upsell path: free browse &rarr; consultation &rarr; Academy &rarr; Fund LP. Track: free-to-paid conversion, Academy retention.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Key Metrics to Track</span></div>
+          <div class="section-body">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+              <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Metric</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Current</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Target</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Why It Matters</th></tr></thead>
+              <tbody>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Active LPs</td><td style="padding:10px 12px;" id="moatMetricLPs">--</td><td style="padding:10px 12px;">500</td><td style="padding:10px 12px;color:var(--text-secondary);">Critical mass for GP interest</td></tr>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">GP Partners</td><td style="padding:10px 12px;" id="moatMetricGPs">--</td><td style="padding:10px 12px;">50</td><td style="padding:10px 12px;color:var(--text-secondary);">Supply side of marketplace</td></tr>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Intros / Month</td><td style="padding:10px 12px;" id="moatMetricIntros">--</td><td style="padding:10px 12px;">25</td><td style="padding:10px 12px;color:var(--text-secondary);">Engagement proof for GPs</td></tr>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Capital Attributed</td><td style="padding:10px 12px;" id="moatMetricCapital">$0</td><td style="padding:10px 12px;">$5M</td><td style="padding:10px 12px;color:var(--text-secondary);">Proves platform value</td></tr>
+                <tr><td style="padding:10px 12px;">Deals in Database</td><td style="padding:10px 12px;" id="moatMetricDeals">--</td><td style="padding:10px 12px;">500</td><td style="padding:10px 12px;color:var(--text-secondary);">Content moat depth</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Transaction Strategy -->
+      <div id="admindash-tab-transactions" style="display:none;">
+        <div class="settings-page-desc" style="margin-top:0;">Roadmap to facilitate capital flow and capture transaction revenue.</div>
+
+        <div class="section" style="margin-top:20px;">
+          <div class="section-header"><span class="section-title">Phase 1: Intro &amp; Attribution (Now)</span></div>
+          <div class="section-body">
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Facilitate LP-to-GP introductions. Track which intros lead to investments.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> None directly. Build attribution data to prove platform value.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
+              <ul style="margin:0;padding-left:20px;">
+                <li style="margin-bottom:6px;">&check; &ldquo;Request Introduction&rdquo; button on deal pages</li>
+                <li style="margin-bottom:6px;">&check; Track intro requests (localStorage + analytics events)</li>
+                <li style="margin-bottom:6px;">&square; Follow-up system: after intro, ask LP &ldquo;did you invest?&rdquo;</li>
+                <li style="margin-bottom:6px;">&square; Attribution dashboard: intros &rarr; meetings &rarr; investments &rarr; $ deployed</li>
+                <li style="margin-bottom:6px;">&square; GP-facing report: &ldquo;GYC sent you X qualified LPs&rdquo;</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Phase 2: Placement Agent (6-12 months)</span></div>
+          <div class="section-body">
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Become a registered placement agent. Take a fee for capital raised through the platform.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> 1-2% placement fee on capital deployed via GYC intros.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
+              <ul style="margin:0;padding-left:20px;">
+                <li style="margin-bottom:6px;">&square; Legal: BD registration / RIA considerations</li>
+                <li style="margin-bottom:6px;">&square; GP agreements: formal placement terms</li>
+                <li style="margin-bottom:6px;">&square; &ldquo;Invest Now&rdquo; button with commitment tracking</li>
+                <li style="margin-bottom:6px;">&square; Capital commitment pipeline (soft circle &rarr; hard commit &rarr; funded)</li>
+                <li style="margin-bottom:6px;">&square; Automated LP verification (accredited investor checks)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Phase 3: Transaction Layer (12-24 months)</span></div>
+          <div class="section-body">
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Facilitate the actual money movement. Payment processing, subscription docs, capital calls.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> Transaction fees + platform fees. Take a cut of every dollar raised.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
+              <ul style="margin:0;padding-left:20px;">
+                <li style="margin-bottom:6px;">&square; Digital subscription agreements (e-sign integration)</li>
+                <li style="margin-bottom:6px;">&square; ACH / wire payment facilitation</li>
+                <li style="margin-bottom:6px;">&square; Capital call management for GPs</li>
+                <li style="margin-bottom:6px;">&square; Distribution tracking &amp; reporting</li>
+                <li style="margin-bottom:6px;">&square; K-1 document distribution</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Phase 4: Secondary Market &amp; Tokenization (24+ months)</span></div>
+          <div class="section-body">
+            <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Enable LP-to-LP secondary trades. Potentially tokenize LP interests on-chain.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> Transaction fees on secondary trades. Liquidity premium pricing.</div>
+              <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
+              <ul style="margin:0;padding-left:20px;">
+                <li style="margin-bottom:6px;">&square; Secondary marketplace: list LP interests for sale</li>
+                <li style="margin-bottom:6px;">&square; Price discovery mechanism (NAV-based, auction, negotiated)</li>
+                <li style="margin-bottom:6px;">&square; ROFR (Right of First Refusal) workflow for GPs</li>
+                <li style="margin-bottom:6px;">&square; Blockchain tokenization of LP interests (ERC-1400 security tokens)</li>
+                <li style="margin-bottom:6px;">&square; Smart contract-based distributions</li>
+                <li style="margin-bottom:6px;">&square; ATS (Alternative Trading System) registration</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><span class="section-title">Revenue Model Evolution</span></div>
+          <div class="section-body">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+              <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Phase</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Revenue Stream</th><th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Potential</th></tr></thead>
+              <tbody>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Academy + Fund</td><td style="padding:10px 12px;">Subscriptions + management fees</td><td style="padding:10px 12px;text-align:right;">$200K/yr</td></tr>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Placement Agent</td><td style="padding:10px 12px;">1-2% of capital placed</td><td style="padding:10px 12px;text-align:right;">$500K-2M/yr</td></tr>
+                <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Transaction Layer</td><td style="padding:10px 12px;">Payment + platform fees</td><td style="padding:10px 12px;text-align:right;">$1-5M/yr</td></tr>
+                <tr><td style="padding:10px 12px;">Secondary Market</td><td style="padding:10px 12px;">Trade fees + liquidity premium</td><td style="padding:10px 12px;text-align:right;">$5-20M/yr</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -6600,71 +6755,6 @@ const _supa = window.supabase.createClient(
     </div>
   </div>
 
-  <!-- PAGE: Network & Moat -->
-  <div class="page" id="page-network-moat">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Network &amp; Moat Strategy</div>
-    </div>
-    <div class="sub-page" style="max-width:900px">
-      <div class="settings-page-desc" style="margin-top:0;">Building defensible network effects. The moat is the people, not the software.</div>
-
-      <div class="section" style="margin-top:20px;">
-        <div class="section-header"><span class="section-title">Introduction Analytics</span></div>
-        <div class="section-body">
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;" id="introStatsGrid">
-            <div class="stat-card"><div class="stat-value" id="introTotalCount">0</div><div class="stat-label">Total Intros</div></div>
-            <div class="stat-card"><div class="stat-value" id="introUniqueGPs">0</div><div class="stat-label">Unique GPs</div></div>
-            <div class="stat-card"><div class="stat-value" id="introUniqueLPs">0</div><div class="stat-label">Unique LPs</div></div>
-            <div class="stat-card"><div class="stat-value" id="introThisMonth">0</div><div class="stat-label">This Month</div></div>
-          </div>
-          <div id="introRequestsList" style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">No introduction requests tracked yet. When LPs request intros from deal pages, they&rsquo;ll appear here.</div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><span class="section-title">Network Effects Playbook</span></div>
-        <div class="section-body">
-          <div style="display:grid;gap:16px;">
-            <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-              <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">1. LP Network Lock-In</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">More LPs &rarr; more intro requests &rarr; GPs get warm leads for free &rarr; GPs list more deals &rarr; more LPs join. Track: LP signups, active users, intros requested per month.</div>
-            </div>
-            <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-              <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">2. GP Recruitment via Data</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Show GPs not on the platform: &ldquo;We made X intros that led to $Y in capital deployed through our network.&rdquo; Prove value with data, then onboard them. Track: capital attributed to intros, GP conversion rate.</div>
-            </div>
-            <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-              <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">3. Data Moat</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Every deal reviewed, every DD checklist completed, every buy box configured creates proprietary data. Competitor would need to replicate the database AND the community. Track: deals in DB, DD completions, buy box profiles.</div>
-            </div>
-            <div style="padding:16px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:8px;">
-              <div style="font-family:var(--font-ui);font-weight:700;color:var(--text-dark);margin-bottom:6px;">4. Academy as Trust Engine</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">Academy members get intros, deal access, DD tools. Non-members see deals but can&rsquo;t act. Upsell path: free browse &rarr; consultation &rarr; Academy &rarr; Fund LP. Track: free-to-paid conversion, Academy retention.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><span class="section-title">Key Metrics to Track</span></div>
-        <div class="section-body">
-          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
-            <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Metric</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Current</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Target</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Why It Matters</th></tr></thead>
-            <tbody>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Active LPs</td><td style="padding:10px 12px;" id="moatMetricLPs">--</td><td style="padding:10px 12px;">500</td><td style="padding:10px 12px;color:var(--text-secondary);">Critical mass for GP interest</td></tr>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">GP Partners</td><td style="padding:10px 12px;" id="moatMetricGPs">--</td><td style="padding:10px 12px;">50</td><td style="padding:10px 12px;color:var(--text-secondary);">Supply side of marketplace</td></tr>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Intros / Month</td><td style="padding:10px 12px;" id="moatMetricIntros">--</td><td style="padding:10px 12px;">25</td><td style="padding:10px 12px;color:var(--text-secondary);">Engagement proof for GPs</td></tr>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Capital Attributed</td><td style="padding:10px 12px;" id="moatMetricCapital">$0</td><td style="padding:10px 12px;">$5M</td><td style="padding:10px 12px;color:var(--text-secondary);">Proves platform value</td></tr>
-              <tr><td style="padding:10px 12px;">Deals in Database</td><td style="padding:10px 12px;" id="moatMetricDeals">--</td><td style="padding:10px 12px;">500</td><td style="padding:10px 12px;color:var(--text-secondary);">Content moat depth</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- PAGE: Growth -->
   <div class="page" id="page-growth">
@@ -6800,106 +6890,6 @@ const _supa = window.supabase.createClient(
     </div>
   </div>
 
-  <!-- PAGE: Transaction Strategy -->
-  <div class="page" id="page-transactions">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Transaction Strategy</div>
-    </div>
-    <div class="sub-page" style="max-width:900px">
-      <div class="settings-page-desc" style="margin-top:0;">Roadmap to facilitate capital flow and capture transaction revenue.</div>
-
-      <div class="section" style="margin-top:20px;">
-        <div class="section-header"><span class="section-title">Phase 1: Intro &amp; Attribution (Now)</span></div>
-        <div class="section-body">
-          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Facilitate LP-to-GP introductions. Track which intros lead to investments.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> None directly. Build attribution data to prove platform value.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
-            <ul style="margin:0;padding-left:20px;">
-              <li style="margin-bottom:6px;">&check; &ldquo;Request Introduction&rdquo; button on deal pages</li>
-              <li style="margin-bottom:6px;">&check; Track intro requests (localStorage + analytics events)</li>
-              <li style="margin-bottom:6px;">&square; Follow-up system: after intro, ask LP &ldquo;did you invest?&rdquo;</li>
-              <li style="margin-bottom:6px;">&square; Attribution dashboard: intros &rarr; meetings &rarr; investments &rarr; $ deployed</li>
-              <li style="margin-bottom:6px;">&square; GP-facing report: &ldquo;GYC sent you X qualified LPs&rdquo;</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><span class="section-title">Phase 2: Placement Agent (6-12 months)</span></div>
-        <div class="section-body">
-          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Become a registered placement agent. Take a fee for capital raised through the platform.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> 1-2% placement fee on capital deployed via GYC intros.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
-            <ul style="margin:0;padding-left:20px;">
-              <li style="margin-bottom:6px;">&square; Legal: BD registration / RIA considerations</li>
-              <li style="margin-bottom:6px;">&square; GP agreements: formal placement terms</li>
-              <li style="margin-bottom:6px;">&square; &ldquo;Invest Now&rdquo; button with commitment tracking</li>
-              <li style="margin-bottom:6px;">&square; Capital commitment pipeline (soft circle &rarr; hard commit &rarr; funded)</li>
-              <li style="margin-bottom:6px;">&square; Automated LP verification (accredited investor checks)</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><span class="section-title">Phase 3: Transaction Layer (12-24 months)</span></div>
-        <div class="section-body">
-          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Facilitate the actual money movement. Payment processing, subscription docs, capital calls.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> Transaction fees + platform fees. Take a cut of every dollar raised.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
-            <ul style="margin:0;padding-left:20px;">
-              <li style="margin-bottom:6px;">&square; Digital subscription agreements (e-sign integration)</li>
-              <li style="margin-bottom:6px;">&square; ACH / wire payment facilitation</li>
-              <li style="margin-bottom:6px;">&square; Capital call management for GPs</li>
-              <li style="margin-bottom:6px;">&square; Distribution tracking &amp; reporting</li>
-              <li style="margin-bottom:6px;">&square; K-1 document distribution</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><span class="section-title">Phase 4: Secondary Market &amp; Tokenization (24+ months)</span></div>
-        <div class="section-body">
-          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">What:</strong> Enable LP-to-LP secondary trades. Potentially tokenize LP interests on-chain.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Revenue:</strong> Transaction fees on secondary trades. Liquidity premium pricing.</div>
-            <div style="margin-bottom:12px;"><strong style="color:var(--text-dark);">Build:</strong></div>
-            <ul style="margin:0;padding-left:20px;">
-              <li style="margin-bottom:6px;">&square; Secondary marketplace: list LP interests for sale</li>
-              <li style="margin-bottom:6px;">&square; Price discovery mechanism (NAV-based, auction, negotiated)</li>
-              <li style="margin-bottom:6px;">&square; ROFR (Right of First Refusal) workflow for GPs</li>
-              <li style="margin-bottom:6px;">&square; Blockchain tokenization of LP interests (ERC-1400 security tokens)</li>
-              <li style="margin-bottom:6px;">&square; Smart contract-based distributions</li>
-              <li style="margin-bottom:6px;">&square; ATS (Alternative Trading System) registration</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="section">
-        <div class="section-header"><span class="section-title">Revenue Model Evolution</span></div>
-        <div class="section-body">
-          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
-            <thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Phase</th><th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Revenue Stream</th><th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Potential</th></tr></thead>
-            <tbody>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Academy + Fund</td><td style="padding:10px 12px;">Subscriptions + management fees</td><td style="padding:10px 12px;text-align:right;">$200K/yr</td></tr>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Placement Agent</td><td style="padding:10px 12px;">1-2% of capital placed</td><td style="padding:10px 12px;text-align:right;">$500K-2M/yr</td></tr>
-              <tr style="border-bottom:1px solid var(--border-light);"><td style="padding:10px 12px;">Transaction Layer</td><td style="padding:10px 12px;">Payment + platform fees</td><td style="padding:10px 12px;text-align:right;">$1-5M/yr</td></tr>
-              <tr><td style="padding:10px 12px;">Secondary Market</td><td style="padding:10px 12px;">Trade fees + liquidity premium</td><td style="padding:10px 12px;text-align:right;">$5-20M/yr</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- PAGE: Debt Fund Explorer -->
   <div class="page" id="page-debtfunds">
@@ -11027,6 +11017,8 @@ document.addEventListener('keydown', e => {
 
 // ========== PAGE NAVIGATION ==========
 function navigateTo(page) {
+  // Redirect legacy page names to admin dashboard
+  if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions') { navigateTo('admindash'); return; }
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -11061,11 +11053,10 @@ function navigateTo(page) {
   if (page === 'taxprep') renderTaxPrep();
   if (page === 'marketintel') renderMarketIntel();
   if (page === 'dealflow') renderDealFlowPage();
-  if (page === 'schema') renderSchemaPage();
+  if (page === 'admindash') switchAdminDashTab(adminDashCurrentTab);
   if (page === 'casestudies') renderCaseStudies();
   if (page === 'admin-manage') adminLoadData();
   if (page === 'outreach') outreachInit();
-  if (page === 'network-moat') renderNetworkMoat();
   if (page === 'growth') switchGrowthTab(growthCurrentTab);
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
@@ -21216,6 +21207,29 @@ function loadAdminEngagement() {
       container.innerHTML = html;
     })
     .catch(function(e) { console.warn('Admin analytics load failed:', e.message); });
+}
+
+// ========== ADMIN DASHBOARD TABS ==========
+var adminDashCurrentTab = 'schema';
+
+function switchAdminDashTab(tab) {
+  adminDashCurrentTab = tab;
+  var btns = document.querySelectorAll('#admindashTabBar .growth-tab-btn');
+  btns.forEach(function(btn) {
+    if (btn.getAttribute('data-tab') === tab) {
+      btn.style.background = 'var(--primary)';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-secondary)';
+    }
+  });
+  ['schema', 'devnotes', 'network', 'transactions'].forEach(function(t) {
+    var el = document.getElementById('admindash-tab-' + t);
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
+  });
+  if (tab === 'schema') renderSchemaPage();
+  if (tab === 'network') renderNetworkMoat();
 }
 
 // ========== DATABASE SCHEMA PAGE ==========
