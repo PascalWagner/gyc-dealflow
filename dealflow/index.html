@@ -1107,6 +1107,7 @@ html.dark .academy-gate-cta {
   display: flex;
   gap: 8px;
   border-top: 1px solid var(--border-light);
+  margin-top: auto;
 }
 .card-share-btn {
   display: flex;
@@ -9181,7 +9182,7 @@ function renderDecisionCompare() {
   h += '<thead><tr><th class="col-label"></th>';
   deals.forEach(function(d, i) {
     h += '<th class="deal-header ' + colClass(i) + '">';
-    h += '<button class="compare-remove-btn" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();" title="Back to Due Diligence" style="font-size:11px;padding:2px 6px;">&#8592; DD</button>';
+    h += '<button class="compare-remove-btn" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();" title="Remove from comparison">&times;</button>';
     h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
     h += '<a href="deal.html?id=' + d.id + '" class="deal-header-name" style="color:inherit;text-decoration:underline;">' + d.investmentName + '</a>';
     h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
@@ -11679,6 +11680,8 @@ function switchTab(el, fromSelect) {
     if (currentTab === 'decision') {
       renderDecisionCompare();
       decisionContainer.style.display = '';
+      // Hide card grid when comparison table is showing (table has all actions)
+      if (grid && decisionContainer.innerHTML.trim()) grid.style.display = 'none';
     } else {
       decisionContainer.style.display = 'none';
     }
