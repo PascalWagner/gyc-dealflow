@@ -2764,6 +2764,98 @@ html.cap-ios .debt-metric-select-mobile {
   .profile-row { grid-template-columns: 1fr; }
   .settings-page { padding: 16px; }
   .sub-page { padding: 16px; }
+
+  /* ── Intel page: stack all 2-column chart grids on mobile ── */
+  #page-marketintel [style*="grid-template-columns:1fr 1fr"],
+  #page-marketintel [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  #page-marketintel [style*="grid-template-columns:repeat(auto-fit"] {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  #page-marketintel [style*="grid-template-columns:repeat(auto-fit"] > div {
+    padding: 14px !important;
+  }
+  #page-marketintel [style*="grid-template-columns:repeat(auto-fit"] [style*="font-size:28px"] {
+    font-size: 22px !important;
+  }
+  /* Intel tab bar: horizontal scroll pills on mobile */
+  #miTabBar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    margin-bottom: 16px !important;
+  }
+  #miTabBar::-webkit-scrollbar { display: none; }
+  #miTabBar .mi-tab-btn {
+    flex: 0 0 auto !important;
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+  }
+  /* Intel page header: smaller on mobile */
+  #page-marketintel h1 { font-size: 20px !important; }
+  #page-marketintel .sub-page { padding: 12px !important; overflow-x: hidden; }
+  /* Intel section headers */
+  #page-marketintel h2 { font-size: 16px !important; }
+  /* Chart containers: smaller on mobile */
+  #page-marketintel [style*="height:280px"],
+  #page-marketintel [style*="height:320px"] {
+    height: 220px !important;
+  }
+  /* Key Takeaways grid: stack */
+  #miInsights { grid-template-columns: 1fr !important; }
+
+  /* ── Deal-Level Insights: summary cards grid ── */
+  #miSummaryCards {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* ── Dashboard tabs: scroll on mobile ── */
+  .dash-tabs {
+    margin-left: 0 !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .dash-tabs::-webkit-scrollbar { display: none; }
+  .dash-tab {
+    font-size: 12px !important;
+    padding: 0 10px !important;
+  }
+
+  /* ── Dashboard content area ── */
+  #page-dashboard .content-area {
+    padding: 12px !important;
+  }
+  #page-dashboard .dashboard-grid {
+    gap: 12px !important;
+  }
+
+  /* ── Operators page: filter bar compact ── */
+  #page-managers .filter-bar {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+  }
+  #page-managers .filter-bar input,
+  #page-managers .filter-bar select {
+    font-size: 12px !important;
+  }
+
+  /* ── More menu: better spacing ── */
+  .more-menu-section { margin-bottom: 20px; }
+  .more-menu-item { padding: 12px; border-radius: 10px; font-size: 15px; }
+  .more-menu-label { font-family: var(--font-ui); font-weight: 700; }
+  .more-admin-section { border-top: 2px solid var(--border); padding-top: 16px; margin-top: 8px; }
+  .more-admin-section .more-menu-label { color: var(--red, #e74c3c); }
 }
 
 /* ====== OFFICE HOURS CTA BANNER ====== */
@@ -12314,6 +12406,7 @@ let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
 // Accreditation → Goal → Baseline → 90-day → 12-mo → Net worth
+// Flow: Accreditation → Income Source → RE Pro → Goal → [Branch targets] → Net Worth
 //   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
   common_start: [15, 21, 22, 0],
@@ -12468,9 +12561,9 @@ const WIZARD_STEPS = [
   { type: 'planOutput', branch: 'tax' },
   // 20: Completion
   { type: 'completion' },
-  // 21: Income source (tax branch only)
+  // 21: Income source (all paths — before goal selection)
   { type: 'incomeSource' },
-  // 22: RE Professional status (tax branch only)
+  // 22: RE Professional status (all paths — before goal selection)
   { type: 'reProfessional' },
   // 23: Current passive income baseline (all paths)
   { type: 'targetInput',
@@ -13010,11 +13103,16 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 4: TAX TARGET (with income structure + RE pro) =====
+  // ===== SCREEN 4: TAX TARGET (with income structure + RE pro context) =====
   if (step.type === 'taxTarget') {
-    html += '<div class="wizard-card-title">How much taxable income do you want to offset?</div>';
-    // Amount input
-    var taxVal = parseDollar(wizardData.taxableIncome) || 200000;
+    html += '<div class="wizard-card-title">How much of that do you want to offset through real estate?</div>';
+    // Show baseline reference if available
+    var taxBaseline = parseDollar(wizardData.taxableIncomeBaseline) || 0;
+    if (taxBaseline > 0) {
+      html += '<div class="wizard-card-desc" style="margin-bottom:16px;">You told us you earn $' + taxBaseline.toLocaleString() + '/yr. How much do you want to shelter?</div>';
+    }
+    // Amount input — default to half of baseline or $200K
+    var taxVal = parseDollar(wizardData.taxableIncome) || (taxBaseline > 0 ? Math.round(taxBaseline * 0.5) : 200000);
     html += '<div class="wizard-target-input">';
     html += '<input type="text" id="wizTargetInput" value="' + fmtDollar(taxVal) + '" data-key="taxableIncome" inputmode="numeric" autocomplete="off">';
     html += '</div>';
@@ -13028,6 +13126,22 @@ function renderWizardStep() {
     html += '</div>';
     var taxSaved = Math.round(taxVal * 0.37).toLocaleString();
     html += '<div class="wizard-live-calc" id="wizLiveCalc">At a 37% bracket, that\u2019s ~$' + taxSaved + ' back in your pocket.</div>';
+    // Smart context from income source + RE Pro status (captured earlier in flow)
+    if (wizardData.incomeStructure && wizardData.reProfessional) {
+      var taxCtxNote = '';
+      if (wizardData.incomeStructure === 'w2' && wizardData.reProfessional === 'no') {
+        taxCtxNote = '<strong style="color:#f59e0b;">\u26A0\uFE0F Without RE Pro status,</strong> passive losses only offset passive income \u2014 not your W-2 salary. We\u2019ll focus on strategies like bonus depreciation that shelter your investment returns.';
+      } else if (wizardData.incomeStructure === 'w2' && wizardData.reProfessional === 'yes') {
+        taxCtxNote = '<strong style="color:#4ade80;">\u2705 With RE Pro status,</strong> you can deduct passive losses directly against your W-2 salary. Aggressive cost segregation and bonus depreciation are on the table.';
+      } else if (wizardData.incomeStructure === 'self_employed') {
+        taxCtxNote = '<strong style="color:#3b82f6;">\uD83D\uDEE0\uFE0F Self-employed:</strong> Losses flow through your entity structure flexibly. We\u2019ll match strategies that complement your business tax planning.';
+      } else if (wizardData.incomeStructure === 'mixed') {
+        taxCtxNote = '<strong style="color:#3b82f6;">\uD83D\uDD00 Mixed income:</strong> We can target depreciation strategies for both your passive and active income streams.';
+      }
+      if (taxCtxNote) {
+        html += '<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:12px;color:var(--text-secondary);line-height:1.5;">' + taxCtxNote + '</div>';
+      }
+    }
 
     // Nav
     html += '<div class="wizard-inline-nav">';
@@ -13051,10 +13165,10 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 20: INCOME SOURCE =====
+  // ===== SCREEN 21: INCOME SOURCE (all paths, before goal selection) =====
   if (step.type === 'incomeSource') {
     html += '<div class="wizard-card-title">Where does your income come from?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Your income type determines which depreciation strategies are available to you.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Your income type affects which investment strategies and tax benefits are available to you.</div>';
     var incomeOptions = [
       { val: 'w2', label: 'W-2 (employed)', desc: 'Salary or wages from an employer', icon: '\uD83D\uDCBC' },
       { val: 'self_employed', label: 'Self-employed / 1099', desc: 'Business owner or independent contractor', icon: '\uD83D\uDEE0\uFE0F' },
@@ -13080,7 +13194,7 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 21: RE PROFESSIONAL STATUS =====
+  // ===== SCREEN 22: RE PROFESSIONAL STATUS (all paths, before goal selection) =====
   if (step.type === 'reProfessional') {
     html += '<div class="wizard-card-title">Do you (or your spouse) qualify as a Real Estate Professional?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">750+ hours/yr in RE activities. This unlocks unlimited passive loss deductions against W-2 income.</div>';
