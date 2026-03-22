@@ -1,14 +1,16 @@
 // Vercel Serverless Function: /api/operator-outreach
-// Operator permission tracking + outreach email generation
-// Admin-only endpoint for managing 506(b) compliance
+// Operator permission tracking + outreach pipeline
+// Admin-only endpoint for managing operator permissions (506c focus)
 
 import { getAdminClient, setCors, verifyAdmin } from './_supabase.js';
 
 // --- Priority score for outreach sorting ---
-// Higher = should be worked next. Backlog operators with lots of deals float up.
+// Higher = should be worked next. 506(c) operators with lots of deals float up.
+// 506(b) offerings CANNOT be publicly advertised — zero urgency for outreach.
 function computePriority(row) {
   const dealScore = (row.deal_count || 0) * 10;
-  const typeScore = row.offering_type === '506b' ? 5 : row.offering_type === 'unknown' ? 3 : 0;
+  // 506(c) = can publicly market, high urgency. 506(b) = can't advertise, zero urgency.
+  const typeScore = row.offering_type === '506c' ? 5 : row.offering_type === '506b' ? 0 : 2;
   // Pre-outreach stages get higher urgency so they surface for planning
   const statusScore = {
     backlog: 4,
