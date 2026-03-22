@@ -2,7 +2,7 @@
 // Fetches population, income, and employment data from Census Bureau and BLS
 // Returns: population time series, top industries, risk flags
 
-import { setCors } from './_supabase.js';
+import { setCors, getAdminClient } from './_supabase.js';
 
 // Census ACS 5-Year API (free, no key required for small volume)
 const CENSUS_BASE = 'https://api.census.gov/data';
@@ -44,6 +44,29 @@ export default async function handler(req, res) {
 
   if (!zip && !fips && !(state && county)) {
     return res.status(400).json({ success: false, error: 'Provide zip, fips (state+county FIPS), or state+county name' });
+  }
+
+  // ── Cache check ──
+  const cacheKey = zip || fips || '';
+  const CACHE_MAX_AGE_DAYS = 30;
+  if (cacheKey) {
+    try {
+      const sb = getAdminClient();
+      const { data: cached } = await sb
+        .from('market_data_cache')
+        .select('data, fetched_at')
+        .eq('zip', cacheKey)
+        .single();
+
+      if (cached && cached.data) {
+        const age = (Date.now() - new Date(cached.fetched_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (age < CACHE_MAX_AGE_DAYS) {
+          return res.status(200).json({ success: true, ...cached.data, _cached: true });
+        }
+      }
+    } catch (e) {
+      // Cache miss or error — proceed to fetch fresh
+    }
   }
 
   // Resolve state FIPS for ZCTA queries (needed for pre-2020 Census API)
@@ -436,6 +459,21 @@ export default async function handler(req, res) {
 
     // Include query params for deep-linking
     results.query = { zip: zip || null, fips: resolvedCountyFips || null, stateAbbr: stateAbbr || null, countyName: resolvedCountyName };
+
+    // ── Store in cache ──
+    if (cacheKey && results.population && results.population.length > 0) {
+      try {
+        const sb = getAdminClient();
+        await sb.from('market_data_cache').upsert({
+          zip: cacheKey,
+          data: results,
+          fetched_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'zip' });
+      } catch (e) {
+        console.log('Cache write failed:', e.message);
+      }
+    }
 
     return res.status(200).json({ success: true, ...results });
 
