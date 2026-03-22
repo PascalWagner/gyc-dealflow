@@ -1705,6 +1705,121 @@ body {
 .insights-two-col > div {
   flex: 1;
 }
+
+/* ====== USER FEEDBACK SECTION ====== */
+.feedback-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.feedback-filter-btn {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.feedback-filter-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.feedback-filter-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.feedback-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.feedback-item:last-child { border-bottom: none; }
+.feedback-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--mint-bg);
+  color: var(--primary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.feedback-body { flex: 1; min-width: 0; }
+.feedback-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.feedback-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.feedback-email {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.feedback-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.feedback-type-badge {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.feedback-type-bug { background: var(--red-bg); color: var(--red); }
+.feedback-type-feature { background: var(--blue-bg); color: var(--blue); }
+.feedback-type-question { background: var(--yellow-bg); color: var(--yellow); }
+.feedback-type-other { background: #f3f4f6; color: #6b7280; }
+.feedback-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dark);
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.feedback-screenshot-thumb {
+  display: inline-block;
+  margin-top: 10px;
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.feedback-screenshot-thumb:hover { opacity: 0.8; }
+.feedback-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+@media (max-width: 768px) {
+  .feedback-time { margin-left: 0; width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -1971,6 +2086,23 @@ body {
             <div class="save-status" id="emailSaveStatus"></div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- User Feedback (Admin Only) -->
+      <div class="section-card" id="feedbackSection" style="display:none;">
+        <div class="section-header">
+          <div class="section-title">User Feedback</div>
+          <span class="section-badge" id="feedbackCount">0</span>
+        </div>
+        <div class="section-body">
+          <div class="feedback-filters" id="feedbackFilters">
+            <button class="feedback-filter-btn active" data-type="all" onclick="filterFeedback('all')">All</button>
+            <button class="feedback-filter-btn" data-type="bug" onclick="filterFeedback('bug')">Bugs</button>
+            <button class="feedback-filter-btn" data-type="feature" onclick="filterFeedback('feature')">Features</button>
+            <button class="feedback-filter-btn" data-type="question" onclick="filterFeedback('question')">Questions</button>
+          </div>
+          <div id="feedbackList"></div>
         </div>
       </div>
 
@@ -3686,6 +3818,101 @@ function loadLocalSettings() {
 }
 
 // ========== INIT ==========
+// ========== USER FEEDBACK (Admin) ==========
+gpState.feedback = [];
+gpState.feedbackFilter = 'all';
+
+function fetchAdminFeedback() {
+  if (!gpState.isAdmin) return Promise.resolve([]);
+  var user = getUser();
+  return fetch('/api/admin-feedback?limit=100', {
+    headers: { 'Authorization': 'Bearer ' + (user && user.token) }
+  })
+  .then(function(r) { return r.ok ? r.json() : { feedback: [] }; })
+  .then(function(data) { return data.feedback || []; })
+  .catch(function() { return []; });
+}
+
+function timeAgo(dateStr) {
+  var now = Date.now();
+  var then = new Date(dateStr).getTime();
+  var diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function renderFeedback(items) {
+  var section = document.getElementById('feedbackSection');
+  if (!section) return;
+  if (!gpState.isAdmin) { section.style.display = 'none'; return; }
+
+  gpState.feedback = items || [];
+  section.style.display = '';
+  document.getElementById('feedbackCount').textContent = items.length;
+
+  applyFeedbackFilter();
+}
+
+function applyFeedbackFilter() {
+  var items = gpState.feedback;
+  var filter = gpState.feedbackFilter;
+  if (filter !== 'all') {
+    items = items.filter(function(f) { return f.type === filter; });
+  }
+
+  var container = document.getElementById('feedbackList');
+  if (items.length === 0) {
+    container.innerHTML = '<div class="feedback-empty">No feedback' + (filter !== 'all' ? ' of this type' : '') + ' yet.</div>';
+    return;
+  }
+
+  var html = '';
+  items.forEach(function(f) {
+    var initials = getInitials(f.user_name || f.user_email);
+    var typeCls = 'feedback-type-' + (f.type || 'other');
+    var typeLabel = { bug: 'Bug', feature: 'Feature', question: 'Question', other: 'Other' }[f.type] || f.type;
+    var name = f.user_name || 'Anonymous';
+    var email = f.user_email || '';
+    var msg = f.message || '';
+
+    html += '<div class="feedback-item">';
+    html += '<div class="feedback-avatar">' + initials + '</div>';
+    html += '<div class="feedback-body">';
+    html += '<div class="feedback-meta">';
+    html += '<span class="feedback-name">' + escHtml(name) + '</span>';
+    if (email && email !== 'anonymous') html += '<span class="feedback-email">' + escHtml(email) + '</span>';
+    html += '<span class="feedback-type-badge ' + typeCls + '">' + typeLabel + '</span>';
+    html += '<span class="feedback-time">' + timeAgo(f.created_at) + '</span>';
+    html += '</div>';
+    html += '<div class="feedback-message">' + escHtml(msg) + '</div>';
+    if (f.screenshot_url) {
+      html += '<a href="' + f.screenshot_url + '" target="_blank" rel="noopener"><img class="feedback-screenshot-thumb" src="' + f.screenshot_url + '" alt="Screenshot" /></a>';
+    }
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function filterFeedback(type) {
+  gpState.feedbackFilter = type;
+  var btns = document.querySelectorAll('.feedback-filter-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-type') === type);
+  });
+  applyFeedbackFilter();
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
 function init() {
   var hasGPAccess = checkGPAccess();
 
@@ -3695,14 +3922,15 @@ function init() {
     return;
   }
 
-  // Fetch deals, settings, analytics, all deals for market positioning, and investor insights in parallel
-  Promise.all([fetchGPDeals(), fetchGPSettings(), fetchGPAnalytics(), fetchAllDealsForMarket(), fetchInvestorInsights()])
+  // Fetch deals, settings, analytics, all deals for market positioning, investor insights, and feedback in parallel
+  Promise.all([fetchGPDeals(), fetchGPSettings(), fetchGPAnalytics(), fetchAllDealsForMarket(), fetchInvestorInsights(), fetchAdminFeedback()])
     .then(function(results) {
       var deals = results[0];
       var settings = results[1] || {};
       var analytics = results[2] || {};
       var allDeals = results[3] || [];
       var investorInsights = results[4] || {};
+      var feedbackItems = results[5] || [];
 
       // Merge local settings as fallback
       var localSettings = loadLocalSettings();
@@ -3725,6 +3953,9 @@ function init() {
       renderDemandIntelligence(deals, allDeals, analytics);
       renderInvestorInsights(investorInsights);
       renderCompetitiveAnalysis(deals, allDeals, (investorInsights && investorInsights.preferredDistributions) || []);
+
+      // Render feedback (admin only)
+      renderFeedback(feedbackItems);
 
       document.body.classList.add('page-loaded');
     })

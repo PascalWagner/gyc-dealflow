@@ -1,7 +1,7 @@
 // Vercel Serverless Function: /api/feedback
-// Receives user feedback and sends it as an email via Resend or Make.com webhook
+// Receives user feedback, stores in Supabase, and sends email notification
 
-import { setCors } from './_supabase.js';
+import { getAdminClient, setCors } from './_supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -18,6 +18,54 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    // ---- Store in Supabase ----
+    let screenshotUrl = null;
+    const supabase = getAdminClient();
+
+    // Upload screenshot to Supabase Storage if provided
+    if (screenshot && screenshot.startsWith('data:image/')) {
+      try {
+        const match = screenshot.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (match) {
+          const ext = match[1];
+          const buffer = Buffer.from(match[2], 'base64');
+          const path = `feedback/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+
+          const { error: upErr } = await supabase.storage
+            .from('feedback-screenshots')
+            .upload(path, buffer, { contentType: `image/${ext}`, upsert: true });
+
+          if (!upErr) {
+            const { data: urlData } = await supabase.storage
+              .from('feedback-screenshots')
+              .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 year
+            screenshotUrl = urlData?.signedUrl || null;
+          } else {
+            console.warn('Screenshot upload failed:', upErr.message);
+          }
+        }
+      } catch (e) {
+        console.warn('Screenshot processing failed:', e.message);
+      }
+    }
+
+    // Insert feedback record
+    const { error: dbErr } = await supabase.from('user_feedback').insert({
+      user_email: userEmail || 'anonymous',
+      user_name: userName || null,
+      type: type || 'other',
+      message,
+      screenshot_url: screenshotUrl,
+      page: page || null,
+      user_agent: userAgent || null
+    });
+
+    if (dbErr) {
+      console.warn('Feedback DB insert failed:', dbErr.message);
+      // Continue to email — don't lose the feedback
+    }
+
+    // ---- Send email notification ----
     const typeLabel = { bug: 'Bug Report', feature: 'Feature Request', question: 'Question', other: 'Other' }[type] || type;
 
     // Escape HTML to prevent XSS in email
@@ -26,7 +74,12 @@ export default async function handler(req, res) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    // Build email HTML
+    const screenshotHtml = screenshotUrl
+      ? `<div style="margin-bottom:16px;"><p style="font-size:12px;color:#6b7280;margin-bottom:8px;">Attached Screenshot:</p><img src="${screenshotUrl}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;" /></div>`
+      : screenshot
+        ? `<div style="margin-bottom:16px;"><p style="font-size:12px;color:#6b7280;margin-bottom:8px;">Attached Screenshot:</p><img src="${screenshot}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;" /></div>`
+        : '';
+
     const emailHtml = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <div style="background:#2C3E2D;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
@@ -42,7 +95,7 @@ export default async function handler(req, res) {
           <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:16px;margin-bottom:16px;">
             <p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-wrap;">${esc(message)}</p>
           </div>
-          ${screenshot ? `<div style="margin-bottom:16px;"><p style="font-size:12px;color:#6b7280;margin-bottom:8px;">Attached Screenshot:</p><img src="${screenshot}" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;" /></div>` : ''}
+          ${screenshotHtml}
           <div style="font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px;">
             User Agent: ${esc(userAgent) || 'N/A'}
           </div>
@@ -95,7 +148,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // If no email service configured, still return success (logged)
+    // If no email service configured, still return success (stored in DB)
     console.log('Feedback received (no email service configured):', { type, message, userEmail, userName, page });
     return res.status(200).json({ success: true, method: 'logged' });
 
