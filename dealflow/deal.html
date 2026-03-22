@@ -6374,26 +6374,22 @@ async function renderDeal() {
   detailsHtml += detailItem('Distributions', deal.distributions);
   detailsHtml += detailItem('Available To', deal.availableTo);
   detailsHtml += detailItem('Offering Type', deal.offeringType);
-  if (isPaidUser || _compIsAdmin) {
-    if (isCreditFund(deal)) {
-      detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
-    } else {
-      detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
-    }
-    if (!isCreditFund(deal)) {
-      detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
-      detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
-    }
-    detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
-    detailsHtml += detailItem('Strategy', deal.strategy);
-    if (deal.debtPosition) detailsHtml += detailItem('Debt Position', deal.debtPosition);
-    if (deal.fundAUM) detailsHtml += detailItem('Fund AUM', fmt(deal.fundAUM, 'money'));
-    if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
-    if (deal.avgLoanLTV) detailsHtml += detailItem('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
-    if (deal.financials) detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">' + esc('Financials') + '</div><div class="detail-value">' + esc(String(deal.financials)) + '</div></div>';
+  if (isCreditFund(deal)) {
+    detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
   } else {
-    detailsHtml += '<div class="detail-item" style="grid-column:1/-1;text-align:center;padding:12px;"><a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:#3b82f6;text-decoration:none;">Unlock Full Deal Terms \u2192</a></div>';
+    detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
   }
+  if (!isCreditFund(deal)) {
+    detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
+    detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
+  }
+  detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
+  detailsHtml += detailItem('Strategy', deal.strategy);
+  if (deal.debtPosition) detailsHtml += detailItem('Debt Position', deal.debtPosition);
+  if (deal.fundAUM) detailsHtml += detailItem('Fund AUM', fmt(deal.fundAUM, 'money'));
+  if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
+  if (deal.avgLoanLTV) detailsHtml += detailItem('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
+  if (deal.financials) detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">' + esc('Financials') + '</div><div class="detail-value">' + esc(String(deal.financials)) + '</div></div>';
   detailsHtml += '</div>';
   // Geography moved to dedicated map card
   detailsHtml += '</div></div>';
@@ -7006,7 +7002,7 @@ async function renderDeal() {
   var _deckBlocked = !_perm.granted || !_perm.canShowDeck;
   var _ppmBlocked = !_perm.granted || !_perm.canShowPpm;
   var _shieldIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-  var _docIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  var _docIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
   var _ppmIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
   var _subIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
   function isExpiredAirtableUrl(url) { return url && (url.indexOf('airtableusercontent.com') >= 0 || url.indexOf('dl.airtable.com') >= 0); }
@@ -7802,7 +7798,7 @@ async function renderDeal() {
       // --- Paid users: original section order ---
       ? (cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + secFilingHtml + thesisHtml)
       // --- Free users: free content first, locked sections pushed below ---
-      : (secFilingHtml + similarHtml + geoMapHtml + thesisHtml + cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml)
+      : (geoMapHtml + secFilingHtml + similarHtml + thesisHtml + cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml)
     )
     + dealFitHtml
     + bgReportDealHtml
