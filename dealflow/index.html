@@ -5578,11 +5578,11 @@ const _supa = window.supabase.createClient(
           <option value="Open to invest">Open to invest</option>
           <option value="Evergreen">Evergreen</option>
         </select>
-        <label id="showArchivedToggle" style="display:none;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;" title="Include deals that may be closed or no longer accepting capital">
-          <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;accent-color:var(--primary);"> Show archived
+        <label id="showArchivedToggle" style="display:none;align-items:center;gap:6px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;white-space:nowrap;padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);" title="Include deals that may be closed or no longer accepting capital">
+          <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;accent-color:var(--primary);width:14px;height:14px;"> Show archived
         </label>
         <div style="margin-left:auto;">
-          <button onclick="clearFilters()" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--red,#e74c3c);white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background='rgba(231,76,60,0.06)';this.style.borderColor='var(--red,#e74c3c)'" onmouseout="this.style.background='transparent';this.style.borderColor='var(--border)'">Clear All Filters</button>
+          <button onclick="clearFilters()" style="padding:7px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--red,#e74c3c);white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background='rgba(231,76,60,0.06)';this.style.borderColor='var(--red,#e74c3c)'" onmouseout="this.style.background='var(--bg-card)';this.style.borderColor='var(--border)'">Clear All Filters</button>
         </div>
       </div>
     </div>
