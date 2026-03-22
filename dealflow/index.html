@@ -2067,7 +2067,7 @@ html.dark .credit-chart-legend-divider {
   .card-social-proof { flex-wrap: wrap; gap: 6px 10px; }
 
   /* ── Mobile: Modal ── */
-  .modal-card { padding: 20px; max-height: 85vh; }
+  .modal-card { padding: 20px; max-height: 85vh; max-width: calc(100vw - 32px) !important; }
 
   /* ── Mobile: Three paths section ── */
   .three-paths-grid { grid-template-columns: 1fr !important; }
@@ -4069,7 +4069,36 @@ html.cap-ios .debt-metric-select-mobile {
   .report-body { padding: 24px; }
   .report-grid { grid-template-columns: 1fr; }
   .report-metric-row { grid-template-columns: 1fr; }
+  .report-page { padding: 12px !important; }
   .office-hours-banner { padding: 12px 16px; flex-wrap: wrap; }
+
+  /* ── Debt Funds Explorer: mobile fixes ── */
+  #debtFundStats {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  #debtFundStats > div {
+    padding: 14px !important;
+  }
+  #debtFundStats [style*="font-size:28px"],
+  #debtFundStats [style*="font-size:24px"] {
+    font-size: 20px !important;
+  }
+  /* Hide older return columns on mobile — keep Fund, Position, 2025, 2024 */
+  #debtFundTable th:nth-child(3),
+  #debtFundTable td:nth-child(3),
+  #debtFundTable th:nth-child(4),
+  #debtFundTable td:nth-child(4),
+  #debtFundTable th:nth-child(7),
+  #debtFundTable td:nth-child(7),
+  #debtFundTable th:nth-child(8),
+  #debtFundTable td:nth-child(8) {
+    display: none !important;
+  }
+  /* Debt fund filter bar compact */
+  #debtFilterBar {
+    padding: 0 12px !important;
+  }
 }
 /* Map View */
 #mapView {
