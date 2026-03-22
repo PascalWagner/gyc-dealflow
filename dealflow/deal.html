@@ -5777,8 +5777,9 @@ async function renderDeal() {
       secFilingHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">No SEC Form D match found</div>';
       secFilingHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;max-width:320px;margin:0 auto 16px;">We couldn\u2019t match this to a filing on EDGAR. This may mean the offering hasn\u2019t filed yet, uses a different entity name, or is exempt from filing.</div>';
       secFilingHtml += '<a href="https://efts.sec.gov/LATEST/search-index?q=%22' + encodeURIComponent(deal.investmentName || deal.managementCompany || '') + '%22&dateRange=custom&startdt=' + (new Date().getFullYear()-3) + '-01-01&forms=D" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-ui);font-size:12px;color:var(--primary);text-decoration:none;font-weight:600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search EDGAR manually</a>';
+      secFilingHtml += '</div>'; // close inner empty-state div
     }
-    secFilingHtml += '</div></div>';
+    secFilingHtml += '</div></div>'; // close section-body + section
   })();
 
   var caseStudyHtml = '';
