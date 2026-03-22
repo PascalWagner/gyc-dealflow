@@ -4055,25 +4055,34 @@ html.cap-ios .debt-metric-select-mobile {
 
 /* ===== Case Studies Page ===== */
 /* ===== Member Success Dashboard ===== */
-.ms-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
-.ms-stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-align: center; }
-.ms-stat-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
-.ms-stat-value { font-family: var(--font-ui); font-size: 28px; font-weight: 800; color: var(--text-dark); }
-.ms-stat-sub { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-.ms-section-title { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 16px; }
-.ms-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-.ms-search { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; color: var(--text-dark); background: var(--bg-cream); flex: 1; min-width: 200px; }
+.ms-pub-banner { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
+.ms-pub-banner-title { font-family: var(--font-ui); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 16px; }
+.ms-pub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.ms-pub-stat { text-align: center; padding: 12px 8px; }
+.ms-pub-stat-value { font-family: var(--font-ui); font-size: 26px; font-weight: 800; color: var(--primary); line-height: 1; }
+.ms-pub-stat-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-muted); margin-top: 6px; line-height: 1.3; }
+.ms-pub-stat-divider { width: 1px; background: var(--border-light); }
+.ms-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.ms-search { padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; color: var(--text-dark); background: var(--bg-cream); width: 220px; }
 .ms-search:focus { outline: none; border-color: var(--primary); }
-.ms-filter-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--bg-card); cursor: pointer; transition: all var(--transition); }
+.ms-filter-btn { padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); background: var(--bg-card); cursor: pointer; transition: all var(--transition); }
 .ms-filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-.ms-member-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 12px; box-shadow: var(--shadow-card); transition: box-shadow var(--transition); }
-.ms-member-card:hover { box-shadow: var(--shadow-card-hover); }
-.ms-member-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
-.ms-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: #fff; flex-shrink: 0; }
-.ms-member-info { flex: 1; min-width: 0; }
-.ms-member-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); }
-.ms-member-meta { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.ms-tier-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px; }
+.ms-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
+.ms-table { width: 100%; border-collapse: collapse; min-width: 750px; }
+.ms-table th { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--bg-cream); cursor: pointer; user-select: none; white-space: nowrap; }
+.ms-table th:hover { color: var(--text-dark); }
+.ms-table th.sorted { color: var(--primary); }
+.ms-table th .sort-arrow { font-size: 9px; margin-left: 3px; }
+.ms-table td { font-family: var(--font-body); font-size: 13px; color: var(--text-dark); padding: 12px 16px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+.ms-table tr.ms-row { cursor: pointer; transition: background var(--transition); }
+.ms-table tr.ms-row:hover { background: var(--bg-cream); }
+.ms-table tr.ms-row:last-child td { border-bottom: none; }
+.ms-table tr.ms-row.expanded { background: var(--bg-cream); }
+.ms-table tr.ms-row.expanded td { border-bottom: 1px solid var(--border); }
+.ms-avatar-sm { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; vertical-align: middle; margin-right: 10px; }
+.ms-name-cell { display: flex; align-items: center; gap: 10px; }
+.ms-name-text { font-family: var(--font-ui); font-weight: 600; font-size: 13px; }
+.ms-tier-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-family: var(--font-ui); font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px; }
 .ms-tier-academy { background: #ede9fe; color: #5b21b6; }
 .ms-tier-alumni { background: #dbeafe; color: #1e40af; }
 .ms-tier-investor { background: #dcfce7; color: #166534; }
@@ -4082,36 +4091,39 @@ html.dark .ms-tier-academy { background: #2e1065; color: #c4b5fd; }
 html.dark .ms-tier-alumni { background: #172554; color: #93c5fd; }
 html.dark .ms-tier-investor { background: #052e16; color: #86efac; }
 html.dark .ms-tier-free { background: #1f2937; color: #9ca3af; }
-.ms-outreach-badge { padding: 4px 10px; border-radius: 10px; font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
-.ms-outreach-hot { background: #dcfce7; color: #166534; }
-.ms-outreach-warm { background: #fef3c7; color: #92400e; }
-.ms-outreach-new { background: #dbeafe; color: #1e40af; }
-html.dark .ms-outreach-hot { background: #052e16; color: #86efac; }
-html.dark .ms-outreach-warm { background: #451a03; color: #fcd34d; }
-html.dark .ms-outreach-new { background: #172554; color: #93c5fd; }
-.ms-metrics-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 14px; }
-.ms-metric { padding: 10px 14px; background: var(--bg-cream); border-radius: var(--radius-sm); }
-.ms-metric-label { font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
-.ms-metric-value { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); }
-.ms-metric-value.green { color: var(--primary); }
-.ms-journey { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.ms-journey-step { padding: 4px 10px; border-radius: 10px; font-family: var(--font-ui); font-size: 10px; font-weight: 600; }
+.ms-outreach-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.ms-outreach-dot.hot { background: #22c55e; }
+.ms-outreach-dot.warm { background: #f59e0b; }
+.ms-outreach-dot.new { background: #3b82f6; }
+.ms-money { font-family: var(--font-ui); font-weight: 700; font-size: 13px; }
+.ms-money.green { color: var(--primary); }
+.ms-money.muted { color: var(--text-muted); font-weight: 400; }
+.ms-detail { border-bottom: 1px solid var(--border-light); }
+.ms-detail td { padding: 0 !important; }
+.ms-detail-inner { padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.ms-detail-left { }
+.ms-detail-right { }
+.ms-detail-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+.ms-detail-story { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.6; padding: 12px 16px; background: var(--green-bg); border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 14px; }
+.ms-detail-pub { padding: 10px 14px; background: rgba(81,190,123,0.06); border: 1px dashed var(--primary); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; color: var(--primary); font-weight: 600; }
+.ms-journey { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.ms-journey-step { padding: 3px 8px; border-radius: 10px; font-family: var(--font-ui); font-size: 9px; font-weight: 600; }
 .ms-journey-done { background: var(--primary); color: #fff; }
 .ms-journey-pending { background: var(--border-light); color: var(--text-muted); }
-.ms-story { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-top: 12px; padding: 12px 16px; background: var(--green-bg); border-left: 3px solid var(--primary); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-.ms-actions { display: flex; gap: 8px; margin-top: 14px; }
-.ms-action-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); background: transparent; cursor: pointer; transition: all var(--transition); }
-.ms-action-btn:hover { border-color: var(--primary); color: var(--primary); }
-.ms-action-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-.ms-action-btn.primary:hover { background: var(--primary-hover); }
-.ms-publishable { margin-top: 32px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
-.ms-pub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
-.ms-pub-stat { padding: 16px; background: var(--bg-cream); border-radius: var(--radius-sm); text-align: center; }
-.ms-pub-stat-value { font-family: var(--font-ui); font-size: 24px; font-weight: 800; color: var(--primary); }
-.ms-pub-stat-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px; }
+.ms-journey-arrow { color: var(--text-muted); font-size: 9px; }
+.ms-asset-tag { display: inline-block; padding: 2px 7px; margin: 2px 3px 2px 0; background: var(--bg-cream); border: 1px solid var(--border-light); border-radius: 10px; font-family: var(--font-ui); font-size: 9px; font-weight: 600; color: var(--text-secondary); }
+.ms-goal-bar { margin-bottom: 14px; }
+.ms-goal-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.ms-goal-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ms-goal-pct { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--primary); }
+.ms-goal-track { height: 5px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
+.ms-goal-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.4s; }
+.ms-chevron { transition: transform 0.2s; color: var(--text-muted); }
+.ms-chevron.open { transform: rotate(90deg); }
 @media (max-width: 768px) {
-  .ms-metrics-row { grid-template-columns: 1fr 1fr; }
-  .ms-member-header { flex-wrap: wrap; }
+  .ms-table th:nth-child(n+4), .ms-table td:nth-child(n+4) { display: none; }
+  .ms-detail-inner { grid-template-columns: 1fr; }
+  .ms-search { width: 100%; }
 }
 
 /* ===== Activation Milestones ===== */
@@ -21749,6 +21761,7 @@ const DUMMY_MEMBERS = [
 let msFilter = 'all';
 let msSearch = '';
 let msSortBy = 'capital';
+let msExpanded = {};
 
 function renderCaseStudies() {
   const container = document.getElementById('caseStudiesContent');
@@ -21756,29 +21769,29 @@ function renderCaseStudies() {
 
   const members = DUMMY_MEMBERS;
 
-  // Aggregate stats
-  const totalMembers = members.length;
-  const totalCapital = members.reduce((s, m) => s + m.capitalDeployed, 0);
-  const totalInvestments = members.reduce((s, m) => s + m.dealsInvested, 0);
-  const incomeMembers = members.filter(m => m.goal === 'income' && m.goalCurrent > 0);
-  const avgPassiveIncome = incomeMembers.length > 0
-    ? Math.round(incomeMembers.reduce((s, m) => s + m.goalCurrent, 0) / incomeMembers.length)
-    : 0;
-  const testimonialReady = members.filter(m => m.outreach === 'hot').length;
-
   const fmtMoney = (n) => {
     if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
     if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
     return '$' + n.toLocaleString();
   };
 
-  // Filter members
+  // Aggregates
+  const totalCapital = members.reduce((s, m) => s + m.capitalDeployed, 0);
+  const totalInvestments = members.reduce((s, m) => s + m.dealsInvested, 0);
+  const incomeMembers = members.filter(m => m.goal === 'income' && m.goalCurrent > 0);
+  const avgPassiveIncome = incomeMembers.length > 0
+    ? Math.round(incomeMembers.reduce((s, m) => s + m.goalCurrent, 0) / incomeMembers.length)
+    : 0;
+  const investedMembers = members.filter(m => m.dealsInvested > 0);
+  const totalTaxSavings = members.filter(m => m.goal === 'tax').reduce((s, m) => s + m.goalCurrent, 0);
+  const assetClassCount = new Set(investedMembers.flatMap(m => m.assetClasses)).size;
+
+  // Filter
   let filtered = [...members];
   if (msFilter === 'hot') filtered = filtered.filter(m => m.outreach === 'hot');
   else if (msFilter === 'invested') filtered = filtered.filter(m => m.dealsInvested > 0);
   else if (msFilter === 'active') filtered = filtered.filter(m => m.dealsInDD > 0);
   else if (msFilter === 'tax') filtered = filtered.filter(m => m.goal === 'tax');
-
   if (msSearch) {
     const q = msSearch.toLowerCase();
     filtered = filtered.filter(m => m.name.toLowerCase().includes(q) || m.assetClasses.some(a => a.toLowerCase().includes(q)));
@@ -21789,8 +21802,18 @@ function renderCaseStudies() {
   else if (msSortBy === 'income') filtered.sort((a, b) => b.goalCurrent - a.goalCurrent);
   else if (msSortBy === 'activity') filtered.sort((a, b) => b.loginCount - a.loginCount);
   else if (msSortBy === 'deals') filtered.sort((a, b) => b.dealsInvested - a.dealsInvested);
+  else if (msSortBy === 'joined') filtered.sort((a, b) => new Date(a.joined) - new Date(b.joined));
 
-  // Journey steps
+  const tierLabel = (t) => ({ free: 'Free', academy: 'Academy', alumni: 'Alumni', investor: 'Investor' }[t] || t);
+  const outreachLabel = (o) => ({ hot: 'Ready', warm: 'Warm', new: 'New' }[o] || o);
+  const goalLabel = (g) => ({ income: 'Passive Income', tax: 'Tax Reduction', growth: 'Growth' }[g] || g);
+
+  const daysSince = (dateStr) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    return Math.floor((now - d) / 86400000);
+  };
+
   const journeySteps = [
     { key: 'buybox', label: 'Buy Box' },
     { key: 'saved3', label: 'Saved 3' },
@@ -21800,133 +21823,105 @@ function renderCaseStudies() {
     { key: 'invested', label: 'Invested' },
   ];
 
-  const tierClass = (t) => 'ms-tier-' + t;
-  const tierLabel = (t) => ({ free: 'Free', academy: 'Academy', alumni: 'Alumni', investor: 'Investor' }[t] || t);
+  const sortArrow = (col) => msSortBy === col ? '<span class="sort-arrow">&#9660;</span>' : '';
+  const thClass = (col) => msSortBy === col ? ' class="sorted"' : '';
 
-  const outreachClass = (o) => 'ms-outreach-' + o;
-  const outreachLabel = (o) => ({ hot: 'Testimonial Ready', warm: 'Warm Lead', new: 'Nurturing' }[o] || o);
-
-  const goalLabel = (g) => ({ income: 'Passive Income', tax: 'Tax Reduction', growth: 'Growth' }[g] || g);
-
-  const daysSince = (dateStr) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    return Math.floor((now - d) / 86400000);
+  // Goal result column
+  const goalCell = (m) => {
+    if (m.goal === 'income' && m.goalCurrent > 0) return '<span class="ms-money green">' + fmtMoney(m.goalCurrent) + '/mo</span>';
+    if (m.goal === 'tax' && m.goalCurrent > 0) return '<span class="ms-money green">' + fmtMoney(m.goalCurrent) + ' saved</span>';
+    if (m.goal === 'growth' && m.goalCurrent > 0) return '<span class="ms-money">' + fmtMoney(m.goalCurrent) + '</span>';
+    return '<span class="ms-money muted">&mdash;</span>';
   };
 
-  // Build member cards
-  const memberCards = filtered.map(m => {
-    const joinDate = new Date(m.joined + 'T12:00:00');
-    const joinStr = joinDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  // Journey completion count
+  const journeyPct = (m) => {
+    const done = Object.values(m.journey).filter(Boolean).length;
+    return done + '/' + Object.keys(m.journey).length;
+  };
+
+  // Build table rows
+  let tableRows = '';
+  filtered.forEach((m, i) => {
+    const isOpen = !!msExpanded[m.name];
     const daysAgo = daysSince(m.lastActive);
-    const lastActiveStr = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : daysAgo + ' days ago';
+    const lastStr = daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1d ago' : daysAgo + 'd ago';
+    const joinStr = new Date(m.joined + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 
-    // Goal progress
-    const goalPct = m.goalTarget > 0 ? Math.min(100, Math.round((m.goalCurrent / m.goalTarget) * 100)) : 0;
+    tableRows += '<tr class="ms-row' + (isOpen ? ' expanded' : '') + '" onclick="msToggle(\'' + m.name.replace(/'/g, "\\'") + '\')">'
+      + '<td><div class="ms-name-cell"><div class="ms-avatar-sm" style="background:' + m.color + ';">' + m.initials + '</div><div><div class="ms-name-text">' + m.name + '</div><div style="font-size:11px;color:var(--text-muted);">' + joinStr + '</div></div></div></td>'
+      + '<td><span class="ms-tier-badge ms-tier-' + m.tier + '">' + tierLabel(m.tier) + '</span></td>'
+      + '<td><span class="ms-money' + (m.capitalDeployed > 0 ? ' green' : ' muted') + '">' + (m.capitalDeployed > 0 ? fmtMoney(m.capitalDeployed) : '&mdash;') + '</span></td>'
+      + '<td>' + goalCell(m) + '</td>'
+      + '<td style="text-align:center;">' + m.dealsInvested + '<span style="color:var(--text-muted);font-size:11px;"> / ' + m.dealsSaved + '</span></td>'
+      + '<td><span class="ms-outreach-dot ' + m.outreach + '"></span>' + outreachLabel(m.outreach) + '</td>'
+      + '<td style="color:var(--text-muted);font-size:12px;">' + lastStr + '</td>'
+      + '<td style="text-align:center;"><svg class="ms-chevron' + (isOpen ? ' open' : '') + '" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></td>'
+      + '</tr>';
 
-    // Journey HTML
-    const journeyHtml = journeySteps.map(s =>
-      '<span class="ms-journey-step ' + (m.journey[s.key] ? 'ms-journey-done' : 'ms-journey-pending') + '">' + s.label + '</span>'
-    ).join('<span style="color:var(--text-muted);font-size:10px;">&#8594;</span>');
+    // Expanded detail row
+    if (isOpen) {
+      const goalPct = m.goalTarget > 0 ? Math.min(100, Math.round((m.goalCurrent / m.goalTarget) * 100)) : 0;
 
-    let html = '<div class="ms-member-card">'
-      + '<div class="ms-member-header">'
-      + '<div class="ms-avatar" style="background:' + m.color + ';">' + m.initials + '</div>'
-      + '<div class="ms-member-info">'
-      + '<div class="ms-member-name">' + m.name + '<span class="ms-tier-badge ' + tierClass(m.tier) + '">' + tierLabel(m.tier) + '</span></div>'
-      + '<div class="ms-member-meta">Joined ' + joinStr + ' &middot; Last active ' + lastActiveStr + ' &middot; ' + m.loginCount + ' sessions</div>'
-      + '</div>'
-      + '<span class="ms-outreach-badge ' + outreachClass(m.outreach) + '">' + outreachLabel(m.outreach) + '</span>'
-      + '</div>';
+      const journeyHtml = journeySteps.map(s =>
+        '<span class="ms-journey-step ' + (m.journey[s.key] ? 'ms-journey-done' : 'ms-journey-pending') + '">' + s.label + '</span>'
+      ).join('<span class="ms-journey-arrow">&#8594;</span>');
 
-    // Metrics row
-    html += '<div class="ms-metrics-row">';
-    html += '<div class="ms-metric"><div class="ms-metric-label">Capital Deployed</div><div class="ms-metric-value' + (m.capitalDeployed > 0 ? ' green' : '') + '">' + (m.capitalDeployed > 0 ? fmtMoney(m.capitalDeployed) : '&mdash;') + '</div></div>';
-    html += '<div class="ms-metric"><div class="ms-metric-label">Deals Invested</div><div class="ms-metric-value">' + m.dealsInvested + ' <span style="font-size:11px;font-weight:400;color:var(--text-muted);">of ' + m.dealsSaved + ' saved</span></div></div>';
-    html += '<div class="ms-metric"><div class="ms-metric-label">In Due Diligence</div><div class="ms-metric-value">' + m.dealsInDD + '</div></div>';
+      const assetHtml = m.assetClasses.length > 0
+        ? m.assetClasses.map(a => '<span class="ms-asset-tag">' + a + '</span>').join('')
+        : '<span style="color:var(--text-muted);font-size:12px;">No investments yet</span>';
 
-    if (m.goal === 'income') {
-      html += '<div class="ms-metric"><div class="ms-metric-label">Monthly Passive Income</div><div class="ms-metric-value' + (m.goalCurrent > 0 ? ' green' : '') + '">' + (m.goalCurrent > 0 ? fmtMoney(m.goalCurrent) + '/mo' : '&mdash;') + '</div></div>';
-    } else if (m.goal === 'tax') {
-      html += '<div class="ms-metric"><div class="ms-metric-label">Tax Savings</div><div class="ms-metric-value green">' + fmtMoney(m.goalCurrent) + '</div></div>';
-    } else {
-      html += '<div class="ms-metric"><div class="ms-metric-label">Portfolio Value</div><div class="ms-metric-value">' + fmtMoney(m.goalCurrent) + '</div></div>';
-    }
+      tableRows += '<tr class="ms-detail"><td colspan="8"><div class="ms-detail-inner">'
+        + '<div class="ms-detail-left">'
+        + '<div class="ms-detail-label">Story</div>'
+        + '<div class="ms-detail-story">' + m.story + '</div>';
 
-    html += '</div>';
+      if (m.publishableStats) {
+        tableRows += '<div class="ms-detail-label">Publishable Stat</div>'
+          + '<div class="ms-detail-pub">' + m.publishableStats + '</div>';
+      }
 
-    // Goal progress bar
-    if (m.goalTarget > 0) {
-      html += '<div style="margin-bottom:14px;">'
-        + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-        + '<span style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">' + goalLabel(m.goal) + ' Goal</span>'
-        + '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);">' + goalPct + '% &middot; ' + fmtMoney(m.goalCurrent) + ' / ' + fmtMoney(m.goalTarget) + '</span>'
+      tableRows += '</div>'
+        + '<div class="ms-detail-right">';
+
+      // Goal progress
+      if (m.goalTarget > 0) {
+        tableRows += '<div class="ms-goal-bar">'
+          + '<div class="ms-goal-header"><span class="ms-goal-label">' + goalLabel(m.goal) + ' Goal</span><span class="ms-goal-pct">' + goalPct + '% &middot; ' + fmtMoney(m.goalCurrent) + ' / ' + fmtMoney(m.goalTarget) + '</span></div>'
+          + '<div class="ms-goal-track"><div class="ms-goal-fill" style="width:' + goalPct + '%;"></div></div>'
+          + '</div>';
+      }
+
+      tableRows += '<div class="ms-detail-label">Activation Journey</div>'
+        + '<div class="ms-journey">' + journeyHtml + '</div>'
+        + '<div class="ms-detail-label">Asset Classes</div>'
+        + '<div style="margin-bottom:14px;">' + assetHtml + '</div>'
+        + '<div style="display:flex;gap:12px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
+        + '<span>' + m.loginCount + ' sessions</span>'
+        + '<span>' + m.dealsInDD + ' in DD</span>'
         + '</div>'
-        + '<div style="height:6px;background:var(--border-light);border-radius:3px;overflow:hidden;">'
-        + '<div style="height:100%;width:' + goalPct + '%;background:var(--primary);border-radius:3px;transition:width 0.4s;"></div>'
-        + '</div></div>';
+        + '</div>'
+        + '</div></td></tr>';
     }
+  });
 
-    // Asset classes
-    if (m.assetClasses.length > 0) {
-      html += '<div style="margin-bottom:12px;">'
-        + m.assetClasses.map(a => '<span style="display:inline-block;padding:3px 8px;margin:2px 4px 2px 0;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:10px;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-secondary);">' + a + '</span>').join('')
-        + '</div>';
-    }
-
-    // Journey
-    html += '<div style="margin-bottom:12px;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Activation Journey</div>'
-      + '<div class="ms-journey">' + journeyHtml + '</div></div>';
-
-    // Story
-    html += '<div class="ms-story">' + m.story + '</div>';
-
-    // Publishable stat callout
-    if (m.publishableStats) {
-      html += '<div style="margin-top:12px;padding:10px 14px;background:rgba(81,190,123,0.06);border:1px dashed var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;color:var(--primary);font-weight:600;">'
-        + 'Publishable: ' + m.publishableStats
-        + '</div>';
-    }
-
-    html += '</div>';
-    return html;
-  }).join('');
-
-  // Publishable aggregate stats
-  const investedMembers = members.filter(m => m.dealsInvested > 0);
-  const pubHtml = '<div class="ms-publishable">'
-    + '<div class="ms-section-title">Publishable Aggregate Stats</div>'
-    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;">Stats you could use on the website, in emails, or on social — based on real member data.</div>'
+  // Publishable stats banner
+  const pubBanner = '<div class="ms-pub-banner">'
+    + '<div class="ms-pub-banner-title">Publishable Stats</div>'
     + '<div class="ms-pub-grid">'
-    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + fmtMoney(totalCapital) + '</div><div class="ms-pub-stat-label">Total Capital Deployed by Members</div></div>'
-    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + totalInvestments + '</div><div class="ms-pub-stat-label">Total Investments Made</div></div>'
-    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + fmtMoney(avgPassiveIncome) + '/mo</div><div class="ms-pub-stat-label">Avg Passive Income (Invested Members)</div></div>'
-    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + investedMembers.length + '</div><div class="ms-pub-stat-label">Members Who\'ve Invested</div></div>'
-    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + members.filter(m => m.goal === 'tax').reduce((s, m) => s + m.goalCurrent, 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }) + '</div><div class="ms-pub-stat-label">Total Tax Savings Generated</div></div>'
-    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + new Set(investedMembers.flatMap(m => m.assetClasses)).size + '</div><div class="ms-pub-stat-label">Asset Classes Invested Across</div></div>'
-    + '</div>'
-    + '</div>';
+    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + fmtMoney(totalCapital) + '</div><div class="ms-pub-stat-label">Capital Deployed</div></div>'
+    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + totalInvestments + '</div><div class="ms-pub-stat-label">Investments Made</div></div>'
+    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + fmtMoney(avgPassiveIncome) + '/mo</div><div class="ms-pub-stat-label">Avg Passive Income</div></div>'
+    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + investedMembers.length + '/' + members.length + '</div><div class="ms-pub-stat-label">Members Invested</div></div>'
+    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + fmtMoney(totalTaxSavings) + '</div><div class="ms-pub-stat-label">Tax Savings</div></div>'
+    + '<div class="ms-pub-stat"><div class="ms-pub-stat-value">' + assetClassCount + '</div><div class="ms-pub-stat-label">Asset Classes</div></div>'
+    + '</div></div>';
 
-  // Sort controls
-  const sortOptions = [
-    { val: 'capital', label: 'Capital' },
-    { val: 'income', label: 'Income' },
-    { val: 'activity', label: 'Activity' },
-    { val: 'deals', label: '# Deals' },
-  ];
-
-  container.innerHTML = ''
-    // Top stats
-    + '<div class="ms-stats-grid">'
-    + '<div class="ms-stat-card"><div class="ms-stat-label">Total Members</div><div class="ms-stat-value">' + totalMembers + '</div></div>'
-    + '<div class="ms-stat-card"><div class="ms-stat-label">Capital Deployed</div><div class="ms-stat-value">' + fmtMoney(totalCapital) + '</div></div>'
-    + '<div class="ms-stat-card"><div class="ms-stat-label">Avg Passive Income</div><div class="ms-stat-value">' + fmtMoney(avgPassiveIncome) + '</div><div class="ms-stat-sub">per month (invested members)</div></div>'
-    + '<div class="ms-stat-card"><div class="ms-stat-label">Testimonial Ready</div><div class="ms-stat-value" style="color:var(--primary);">' + testimonialReady + '</div></div>'
-    + '</div>'
+  container.innerHTML = pubBanner
 
     // Controls
     + '<div class="ms-controls">'
-    + '<input type="text" class="ms-search" placeholder="Search members or asset classes..." value="' + (msSearch || '') + '" oninput="msSearch=this.value;renderCaseStudies();">'
+    + '<input type="text" class="ms-search" placeholder="Search..." value="' + (msSearch || '') + '" oninput="msSearch=this.value;renderCaseStudies();">'
     + '<button class="ms-filter-btn ' + (msFilter === 'all' ? 'active' : '') + '" onclick="msFilter=\'all\';renderCaseStudies();">All</button>'
     + '<button class="ms-filter-btn ' + (msFilter === 'hot' ? 'active' : '') + '" onclick="msFilter=\'hot\';renderCaseStudies();">Testimonial Ready</button>'
     + '<button class="ms-filter-btn ' + (msFilter === 'invested' ? 'active' : '') + '" onclick="msFilter=\'invested\';renderCaseStudies();">Invested</button>'
@@ -21934,18 +21929,29 @@ function renderCaseStudies() {
     + '<button class="ms-filter-btn ' + (msFilter === 'tax' ? 'active' : '') + '" onclick="msFilter=\'tax\';renderCaseStudies();">Tax Strategy</button>'
     + '</div>'
 
-    // Sort
-    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">'
-    + '<span style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);">Sort by:</span>'
-    + sortOptions.map(s => '<button class="ms-filter-btn' + (msSortBy === s.val ? ' active' : '') + '" onclick="msSortBy=\'' + s.val + '\';renderCaseStudies();" style="font-size:10px;padding:4px 10px;">' + s.label + '</button>').join('')
-    + '</div>'
+    // Table
+    + '<div class="ms-table-wrap"><table class="ms-table">'
+    + '<thead><tr>'
+    + '<th onclick="msSortBy=\'joined\';renderCaseStudies();"' + thClass('joined') + '>Member' + sortArrow('joined') + '</th>'
+    + '<th>Tier</th>'
+    + '<th onclick="msSortBy=\'capital\';renderCaseStudies();"' + thClass('capital') + '>Capital' + sortArrow('capital') + '</th>'
+    + '<th onclick="msSortBy=\'income\';renderCaseStudies();"' + thClass('income') + '>Result' + sortArrow('income') + '</th>'
+    + '<th onclick="msSortBy=\'deals\';renderCaseStudies();"' + thClass('deals') + '>Deals' + sortArrow('deals') + '</th>'
+    + '<th>Status</th>'
+    + '<th onclick="msSortBy=\'activity\';renderCaseStudies();"' + thClass('activity') + '>Active' + sortArrow('activity') + '</th>'
+    + '<th></th>'
+    + '</tr></thead>'
+    + '<tbody>' + tableRows + '</tbody>'
+    + '</table></div>';
 
-    // Member cards
-    + '<div class="ms-section-title">Member Profiles (' + filtered.length + ')</div>'
-    + memberCards
+  // Restore search focus
+  const searchEl = container.querySelector('.ms-search');
+  if (searchEl && msSearch) { searchEl.focus(); searchEl.selectionStart = searchEl.selectionEnd = msSearch.length; }
+}
 
-    // Publishable stats
-    + pubHtml;
+function msToggle(name) {
+  msExpanded[name] = !msExpanded[name];
+  renderCaseStudies();
 }
 
 // Keep renderMilestoneTracker for dashboard use
