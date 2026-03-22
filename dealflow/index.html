@@ -13008,33 +13008,59 @@ function renderReport() {
 
   // Build thesis statement from wizard data
   const assetList = (d.assetClasses || []);
-  const stratList = userStrategies.filter(Boolean);
+  const stratList = [...new Set(userStrategies.filter(Boolean))]; // deduplicate
   let thesisParts = [];
+
+  // Asset classes
   if (assetList.length > 0) {
-    const bold = assetList.slice(0, 3).map(a => '<strong>' + a + '</strong>').join(', ') + (assetList.length > 3 ? ' + ' + (assetList.length - 3) + ' more' : '');
-    thesisParts.push('I invest in ' + bold);
+    const bold = assetList.map(a => '<strong>' + a + '</strong>');
+    const assetStr = bold.length > 2 ? bold.slice(0, -1).join(', ') + ', and ' + bold[bold.length - 1] : bold.join(' and ');
+    thesisParts.push('I invest in ' + assetStr);
   } else {
     thesisParts.push('I invest across <strong>all asset classes</strong>');
   }
+
+  // Strategies — use comma-separated with Oxford comma
   if (stratList.length > 0) {
-    thesisParts.push('through <strong>' + stratList.join('</strong> and <strong>') + '</strong> strategies');
+    const strats = stratList.map(s => '<strong>' + s + '</strong>');
+    const stratStr = strats.length > 2 ? strats.slice(0, -1).join(', ') + ', and ' + strats[strats.length - 1] : strats.join(' and ');
+    thesisParts.push('using ' + stratStr + ' strategies');
   }
-  if (d.checkSize) thesisParts.push('I write <strong>' + d.checkSize + '</strong> checks');
-  if (d.lockup) thesisParts.push('with <strong>' + d.lockup + '</strong> lockups');
+
+  // Check size — format as currency
+  if (d.checkSize) {
+    const cs = typeof d.checkSize === 'number' ? '$' + d.checkSize.toLocaleString() : (String(d.checkSize).startsWith('$') ? d.checkSize : '$' + Number(d.checkSize).toLocaleString());
+    thesisParts.push('writing <strong>' + cs + '</strong> checks');
+  }
+
+  // Lockup — add "year" if missing
+  if (d.lockup) {
+    const lockStr = String(d.lockup);
+    const lockLabel = /year/i.test(lockStr) ? lockStr : lockStr + ' year';
+    thesisParts.push('with <strong>' + lockLabel + '</strong> lockups');
+  }
+
+  // Distributions
   if (d.distributions) {
     const dist = typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions);
-    thesisParts.push('and need <strong>' + dist.toLowerCase() + ' or better</strong> distributions');
+    thesisParts.push('targeting <strong>' + dist.toLowerCase() + ' or better</strong> distributions');
   }
-  const thesisText = thesisParts.join('. ') + '.';
+
+  // Join naturally: first part is a sentence start, rest are comma-separated clauses
+  const thesisText = thesisParts.length > 1
+    ? thesisParts[0] + ', ' + thesisParts.slice(1).join(', ') + '.'
+    : thesisParts[0] + '.';
 
   const thesisHtml = '<div class="bb-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">'
     + '<div>'
     + '<span style="display:inline-block;padding:4px 12px;border-radius:100px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:' + bc.colorBg + ';color:' + bc.color + ';border:1px solid ' + bc.color + '20;margin-bottom:16px;">' + bc.label + '</span>'
+    + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Target</div>'
     + '<div class="bb-goal-line">' + goalLine + '</div>'
     + '</div>'
     + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
     + '</div>'
+    + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Thesis</div>'
     + '<div class="bb-thesis">' + thesisText + '</div>'
     + '</div>';
 
