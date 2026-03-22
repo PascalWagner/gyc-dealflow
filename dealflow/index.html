@@ -5226,6 +5226,12 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   cursor: pointer;
 }
 
+
+/* Dashboard tab bar */
+.dash-tabs { display:flex; gap:0; margin-left:24px; align-self:stretch; }
+.dash-tab { background:none; border:none; border-bottom:2px solid transparent; padding:0 16px; font-family:var(--font-ui); font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer; white-space:nowrap; transition:color 0.15s,border-color 0.15s; }
+.dash-tab:hover { color:var(--text-dark); }
+.dash-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -5666,6 +5672,12 @@ const _supa = window.supabase.createClient(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
       <div class="topbar-title">Dashboard</div>
+      <div class="dash-tabs" id="dashTabBar_dashboard">
+        <button class="dash-tab active" onclick="navigateTo('dashboard')">Overview</button>
+        <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
+        <button class="dash-tab" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
+      </div>
     </div>
     <div class="content-area" style="padding:24px;max-width:1200px;" id="dashboardContent">
       <!-- Rendered by JS -->
@@ -5698,7 +5710,13 @@ const _supa = window.supabase.createClient(
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">My Buy Box</div>
+      <div class="topbar-title">Dashboard</div>
+      <div class="dash-tabs" id="dashTabBar_buybox">
+        <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
+        <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
+        <button class="dash-tab active" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
+      </div>
       <div class="topbar-spacer"></div>
       <span id="buyboxTopbarActions" style="display:inline-flex;gap:8px;">
       <button class="btn-cta btn-cta-primary" style="width:auto;padding:8px 20px;font-size:11px" onclick="window.print()">
@@ -7361,7 +7379,13 @@ const _supa = window.supabase.createClient(
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">My Portfolio</div>
+      <div class="topbar-title">Dashboard</div>
+      <div class="dash-tabs" id="dashTabBar_portfolio">
+        <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
+        <button class="dash-tab active" onclick="navigateTo('portfolio')">Portfolio</button>
+        <button class="dash-tab" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
+      </div>
       <div class="topbar-spacer"></div>
       <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
     </div>
@@ -7411,7 +7435,13 @@ const _supa = window.supabase.createClient(
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">Tax Prep</div>
+      <div class="topbar-title">Dashboard</div>
+      <div class="dash-tabs" id="dashTabBar_taxprep">
+        <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
+        <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
+        <button class="dash-tab" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab active" onclick="navigateTo('taxprep')">Tax Prep</button>
+      </div>
     </div>
     <div class="sub-page" style="max-width:1000px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
@@ -11288,6 +11318,11 @@ function navigateTo(page) {
   if (pageEl) pageEl.classList.add('active');
   const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (navEl) navEl.classList.add('active');
+  // Dashboard sub-pages: highlight Dashboard nav item
+  if (['buybox','portfolio','taxprep'].includes(page)) {
+    const dashNav = document.querySelector('.nav-item[data-page="dashboard"]');
+    if (dashNav) dashNav.classList.add('active');
+  }
   // Track page enter for analytics
   analyticsPageEnter(page);
   // Fire GA4 event
@@ -12320,8 +12355,8 @@ function renderWizardStep() {
     }
     var capOptions = [
       { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: '$50k', label: '$50K', desc: '1 deal at typical minimums', nwCtx: nwPct(50000) },
-      { val: '$100k', label: '$100K', desc: '1\u20132 deals', nwCtx: nwPct(100000) },
+      { val: 'under-$50k', label: 'Under $50K', desc: '1 deal at a lower minimum', nwCtx: nwPct(25000) },
+      { val: '$50k-$100k', label: '$50K \u2013 $100K', desc: '1\u20132 deals at typical minimums', nwCtx: nwPct(75000) },
       { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct(175000) },
       { val: '$250k-$500k', label: '$250K \u2013 $500K', desc: 'Well-diversified portfolio', nwCtx: nwPct(375000) },
       { val: '$500k-$1M', label: '$500K \u2013 $1M', desc: 'Significant deployment', nwCtx: nwPct(750000) },
@@ -12358,9 +12393,9 @@ function renderWizardStep() {
     }
     var cap90Options = [
       { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: '$25k', label: '$25K', desc: '1 deal at a lower minimum', nwCtx: nwPct90(25000) },
-      { val: '$50k', label: '$50K', desc: '1 deal at typical minimums', nwCtx: nwPct90(50000) },
-      { val: '$100k', label: '$100K', desc: '1\u20132 deals', nwCtx: nwPct90(100000) },
+      { val: 'under-$25k', label: 'Under $25K', desc: '1 deal at a lower minimum', nwCtx: nwPct90(12500) },
+      { val: '$25k-$50k', label: '$25K \u2013 $50K', desc: '1 deal at typical minimums', nwCtx: nwPct90(37500) },
+      { val: '$50k-$100k', label: '$50K \u2013 $100K', desc: '1\u20132 deals', nwCtx: nwPct90(75000) },
       { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct90(175000) },
       { val: '$250k+', label: '$250K+', desc: 'Ready to move', nwCtx: nwPct90(250000) }
     ];

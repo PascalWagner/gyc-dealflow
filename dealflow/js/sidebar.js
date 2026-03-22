@@ -36,8 +36,12 @@
     if (isSPA) return 'navigateTo(\'' + page + '\'); return false';
     return '';
   }
+  // Dashboard sub-pages: buybox, portfolio, taxprep all highlight Dashboard
+  var dashSubPages = ['buybox', 'portfolio', 'taxprep'];
   function navClass(page) {
-    return 'nav-item' + (currentPage === page ? ' active' : '');
+    var isActive = currentPage === page;
+    if (page === 'dashboard' && dashSubPages.indexOf(currentPage) !== -1) isActive = true;
+    return 'nav-item' + (isActive ? ' active' : '');
   }
 
   // External link pages (always direct href)
@@ -123,15 +127,10 @@
   // HOME
   html += '<div class="nav-section-label">Home</div>';
   html += navItem('dashboard', icons.dashboard, 'Dashboard');
-  if (isSPA) {
-    // My Buy Box only in SPA
-    html += '<a class="' + navClass('buybox') + '" href="#" data-page="buybox" onclick="navigateTo(\'buybox\'); return false">' + icons.buybox + ' My Buy Box</a>';
-  } else {
-    html += navItemExt('index.html#buybox', icons.buybox, 'My Buy Box');
-  }
 
   // RESEARCH
   html += '<div class="nav-section-label">Research</div>';
+  html += navItem('marketintel', icons.marketIntel, 'Market Intel');
   html += navItem('deals', icons.deals, 'Deal Flow', { badge: 'dealCountBadge' });
   html += navItem('debtfunds', icons.debtfunds, 'Debt Funds');
   html += navItem('managers', icons.operators, 'Operators');
@@ -139,12 +138,6 @@
     html += navItem('compare', icons.compare, 'Compare', { badge: 'compareCountBadge' });
   }
   html += navItem('assets', icons.assets, 'Assets', { id: 'navAssets', disabled: true, comingSoon: 'assetsComingSoon' });
-  html += navItem('marketintel', icons.marketIntel, 'Market Intel');
-
-  // MY INVESTMENTS
-  html += '<div class="nav-section-label">My Investments</div>';
-  html += navItem('portfolio', icons.portfolio, 'My Portfolio');
-  html += navItem('taxprep', icons.taxprep, 'Tax Prep', { id: 'navTaxPrep' });
 
   // SUPPORT
   html += '<div class="nav-section-label">Support</div>';
@@ -172,7 +165,7 @@
   var adminPages = [
     ['admindash', icons.schema, 'Admin Dashboard'],
     ['admin-manage', icons.manage, 'Manage Data'],
-    ['outreach', icons.outreach, 'Operator Outreach'],
+    // Outreach is now a sub-view inside Manage Data → Operators
     ['casestudies', icons.casestudies, 'Case Studies']
   ];
   adminPages.forEach(function(p) {
