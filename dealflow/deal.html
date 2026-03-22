@@ -3064,6 +3064,11 @@ body {
 
 /* ====== STRESS TEST SECTION ====== */
 .stress-test-section { padding: 24px; position: relative; }
+.stress-test-coming-soon { position: relative; }
+.stress-test-coming-soon > .stress-test-content { opacity: 0.3; pointer-events: none; user-select: none; filter: grayscale(0.5); }
+.stress-test-coming-soon > .stress-test-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-align: center; padding: 32px 48px; background: rgba(255,255,255,0.92); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+.stress-test-coming-soon > .stress-test-overlay .coming-soon-title { font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--text-dark); margin-bottom: 6px; }
+.stress-test-coming-soon > .stress-test-overlay .coming-soon-sub { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .stress-test-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -8635,6 +8640,237 @@ function copyGPAgenda(dealId) {
       setTimeout(function() { btn.innerHTML = orig; }, 2000);
     }
   });
+}
+
+// ========== INVESTMENT REPORT ==========
+
+function generateInvestmentReport() {
+  // Access deal from the closure/global scope where renderDeal stored it
+  var d = window._currentDeal;
+  if (!d) { alert('Deal data not available. Please refresh the page.'); return; }
+
+  var user = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var buyBox = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  var goals = JSON.parse(localStorage.getItem('gycGoals') || '{}');
+  var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+
+  // Find this deal's investment details from portfolio
+  var investment = portfolio.find(function(p) { return p.dealId === d.id; }) || {};
+
+  var userName = user.name || user.firstName || 'Investor';
+  userName = userName.split(' ').map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+  var today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Helper functions
+  function rFmt(val, type) {
+    if (val === undefined || val === null || val === '' || val === '---') return '\u2014';
+    if (type === 'pct') return (typeof val === 'number' && val < 1 ? (val * 100).toFixed(1) : val) + '%';
+    if (type === 'money') {
+      var n = typeof val === 'number' ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+      if (isNaN(n)) return String(val);
+      if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return '$' + Math.round(n).toLocaleString();
+      return '$' + n.toLocaleString();
+    }
+    return String(val);
+  }
+
+  // --- Section 1: Buy Box / Investment Criteria ---
+  var goalLabels = { passive_income: 'Cash Flow', reduce_taxes: 'Tax Optimization', build_wealth: 'Equity Growth', cashflow: 'Cash Flow', tax: 'Tax Optimization', growth: 'Equity Growth' };
+  var goalType = goalLabels[buyBox._branch] || goalLabels[goals.type] || '\u2014';
+  var bbAssets = (buyBox.assetClasses || []).join(', ') || '\u2014';
+  var bbStrategies = (buyBox.strategies || []).join(', ') || '\u2014';
+  var bbCheckSize = buyBox.checkSize ? rFmt(buyBox.checkSize, 'money') : '\u2014';
+  var bbLockup = buyBox.lockup ? buyBox.lockup + ' years' : '\u2014';
+  var bbDistributions = buyBox.distributions || '\u2014';
+
+  var criteriaHtml = '<div class="report-section">'
+    + '<h2>1. My Investment Criteria</h2>'
+    + '<table class="report-table"><tbody>'
+    + '<tr><td class="label">Investment Goal</td><td>' + goalType + '</td></tr>'
+    + '<tr><td class="label">Asset Classes</td><td>' + bbAssets + '</td></tr>'
+    + '<tr><td class="label">Strategies</td><td>' + bbStrategies + '</td></tr>'
+    + '<tr><td class="label">Check Size</td><td>' + bbCheckSize + '</td></tr>'
+    + '<tr><td class="label">Max Lockup</td><td>' + bbLockup + '</td></tr>'
+    + '<tr><td class="label">Distribution Pref</td><td>' + bbDistributions + '</td></tr>'
+    + '</tbody></table></div>';
+
+  // --- Section 2: Deal Overview ---
+  var operatorName = '';
+  if (d.operators && d.operators.length) operatorName = d.operators[0].name || d.operators[0].company || '';
+  if (!operatorName) operatorName = d.management_company || d.sponsor || '\u2014';
+
+  var dealOverviewHtml = '<div class="report-section">'
+    + '<h2>2. Deal Overview</h2>'
+    + '<table class="report-table"><tbody>'
+    + '<tr><td class="label">Deal Name</td><td>' + (d.investment_name || d.name || '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Operator</td><td>' + operatorName + '</td></tr>'
+    + '<tr><td class="label">Asset Class</td><td>' + (d.asset_class || '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Deal Type</td><td>' + (d.deal_type || '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Strategy</td><td>' + (d.strategy || '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Target IRR</td><td>' + (d.target_irr ? rFmt(d.target_irr, 'pct') : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Pref Return</td><td>' + (d.pref_return ? rFmt(d.pref_return, 'pct') : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Equity Multiple</td><td>' + (d.equity_multiple ? d.equity_multiple + 'x' : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Hold Period</td><td>' + (d.hold_period ? d.hold_period + (d.hold_period_unit === 'months' ? ' months' : ' years') : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Offering Size</td><td>' + (d.offering_size ? rFmt(d.offering_size, 'money') : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Min Investment</td><td>' + (d.investment_minimum ? rFmt(d.investment_minimum, 'money') : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Distributions</td><td>' + (d.distribution_frequency || '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Debt Position</td><td>' + (d.debt_position || '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Offering Type</td><td>' + (d.offering_type || '\u2014') + '</td></tr>'
+    + '</tbody></table></div>';
+
+  // --- Section 3: Buy Box Alignment ---
+  var checks = [];
+  // Asset class match
+  var bbAC = (buyBox.assetClasses || []).map(function(a) { return a.toLowerCase(); });
+  var dealAC = (d.asset_class || '').toLowerCase();
+  if (bbAC.length === 0) checks.push({ match: true, label: 'Asset class', detail: 'No preference set' });
+  else checks.push({ match: bbAC.some(function(a) { return dealAC.indexOf(a) !== -1; }), label: 'Asset class', detail: d.asset_class || '\u2014' });
+
+  // Strategy match
+  var bbStrat = (buyBox.strategies || []).map(function(s) { return s.toLowerCase(); });
+  var dealStrat = (d.strategy || '').toLowerCase();
+  if (bbStrat.length === 0) checks.push({ match: true, label: 'Strategy', detail: 'No preference set' });
+  else checks.push({ match: bbStrat.some(function(s) { return dealStrat.indexOf(s) !== -1; }), label: 'Strategy', detail: d.strategy || '\u2014' });
+
+  // Check size
+  var checkAmt = parseFloat(buyBox.checkSize) || 0;
+  var minInv = parseFloat(d.investment_minimum) || 0;
+  if (checkAmt > 0 && minInv > 0) checks.push({ match: checkAmt >= minInv, label: 'Check size vs minimum', detail: rFmt(checkAmt, 'money') + ' vs ' + rFmt(minInv, 'money') + ' min' });
+
+  // Lockup
+  var bbLockupYrs = parseFloat(buyBox.lockup) || 0;
+  var dealHold = parseFloat(d.hold_period) || 0;
+  if (bbLockupYrs > 0 && dealHold > 0) checks.push({ match: dealHold <= bbLockupYrs, label: 'Hold period vs max lockup', detail: dealHold + 'yr deal vs ' + bbLockupYrs + 'yr max' });
+
+  var matchCount = checks.filter(function(c) { return c.match; }).length;
+  var alignmentHtml = '<div class="report-section">'
+    + '<h2>3. Buy Box Alignment <span class="match-badge">' + matchCount + '/' + checks.length + ' match</span></h2>'
+    + '<table class="report-table"><tbody>';
+  checks.forEach(function(c) {
+    var icon = c.match ? '<span class="check-yes">\u2713</span>' : '<span class="check-no">\u2717</span>';
+    alignmentHtml += '<tr><td style="width:24px;text-align:center;">' + icon + '</td><td class="label">' + c.label + '</td><td>' + c.detail + '</td></tr>';
+  });
+  alignmentHtml += '</tbody></table></div>';
+
+  // --- Section 4: Fee Analysis ---
+  var fees = d.fees || [];
+  var feeHtml = '<div class="report-section"><h2>4. Fee Analysis</h2>';
+  if (fees.length > 0) {
+    feeHtml += '<table class="report-table"><tbody>';
+    fees.forEach(function(f) {
+      var label = f.fee_type || f.label || f.name || 'Fee';
+      var value = f.value || f.amount || f.rate || '\u2014';
+      feeHtml += '<tr><td class="label">' + label + '</td><td>' + value + '</td></tr>';
+    });
+    feeHtml += '</tbody></table>';
+  } else {
+    feeHtml += '<p class="muted">Fee data not available for this deal.</p>';
+  }
+  feeHtml += '</div>';
+
+  // --- Section 5: Key Risks ---
+  var risks = d.cons || d.risks || [];
+  var risksHtml = '<div class="report-section"><h2>5. Key Risks</h2>';
+  if (Array.isArray(risks) && risks.length > 0) {
+    risksHtml += '<ul class="risk-list">';
+    risks.forEach(function(r) { risksHtml += '<li>' + (typeof r === 'string' ? r : (r.text || r.label || JSON.stringify(r))) + '</li>'; });
+    risksHtml += '</ul>';
+  } else {
+    risksHtml += '<p class="muted">No specific risks identified in deal data.</p>';
+  }
+  risksHtml += '</div>';
+
+  // --- Section 6: My Investment ---
+  var investAmt = investment.amountInvested || investment.amount_invested || investment.amount || '';
+  var investDate = investment.dateInvested || investment.date_invested || investment.date || '';
+  if (investDate) {
+    try { investDate = new Date(investDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); } catch(e) {}
+  }
+
+  var investHtml = '<div class="report-section">'
+    + '<h2>6. My Investment</h2>'
+    + '<table class="report-table"><tbody>'
+    + '<tr><td class="label">Amount Invested</td><td>' + (investAmt ? rFmt(investAmt, 'money') : '\u2014') + '</td></tr>'
+    + '<tr><td class="label">Date Invested</td><td>' + (investDate || '\u2014') + '</td></tr>'
+    + '</tbody></table></div>';
+
+  // --- Section 7: Projected Cash Flow ---
+  var cfHtml = '<div class="report-section"><h2>7. Projected Cash Flow</h2>';
+  var projCF = d.projectedCashFlow || d.projected_cash_flow || [];
+  if (Array.isArray(projCF) && projCF.length > 0) {
+    var baseAmt = investAmt ? parseFloat(String(investAmt).replace(/[^0-9.-]/g, '')) : 100000;
+    cfHtml += '<p class="muted" style="margin-bottom:8px;">Based on ' + rFmt(baseAmt, 'money') + ' invested</p>';
+    cfHtml += '<table class="report-table cf-table"><thead><tr><th>Year</th><th>Distributions</th><th>Cash-on-Cash</th><th>Cumulative</th></tr></thead><tbody>';
+    var cumulative = 0;
+    projCF.forEach(function(yr, i) {
+      var dist = yr.distribution || yr.distributions || yr.cashFlow || 0;
+      var scaledDist = baseAmt ? Math.round(dist * baseAmt / 100000) : dist;
+      cumulative += scaledDist;
+      var coc = baseAmt > 0 ? (scaledDist / baseAmt * 100).toFixed(1) + '%' : '\u2014';
+      cfHtml += '<tr><td>Year ' + (i + 1) + '</td><td>' + rFmt(scaledDist, 'money') + '</td><td>' + coc + '</td><td>' + rFmt(cumulative, 'money') + '</td></tr>';
+    });
+    cfHtml += '</tbody></table>';
+  } else {
+    cfHtml += '<p class="muted">Projected cash flow data not available.</p>';
+  }
+  cfHtml += '</div>';
+
+  // --- Assemble full report ---
+  var reportHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>Investment Report \u2014 ' + (d.investment_name || d.name || 'Deal') + '</title>'
+    + '<style>'
+    + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
+    + 'body { font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif; color: #1a1a1a; line-height: 1.5; padding: 40px; max-width: 800px; margin: 0 auto; }'
+    + '.report-header { text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #51be7b; }'
+    + '.report-header h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 28px; font-weight: 400; margin-bottom: 4px; }'
+    + '.report-header .deal-name { font-size: 18px; color: #51be7b; font-weight: 600; margin-bottom: 8px; }'
+    + '.report-header .meta { font-size: 12px; color: #888; }'
+    + '.report-section { margin-bottom: 28px; }'
+    + '.report-section h2 { font-family: "Plus Jakarta Sans", -apple-system, sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e5e5; }'
+    + '.match-badge { font-size: 12px; font-weight: 700; color: #51be7b; text-transform: none; letter-spacing: 0; margin-left: 8px; }'
+    + '.report-table { width: 100%; border-collapse: collapse; font-size: 13px; }'
+    + '.report-table td, .report-table th { padding: 6px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }'
+    + '.report-table .label { color: #666; font-weight: 500; width: 40%; }'
+    + '.report-table th { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #888; border-bottom: 2px solid #e5e5e5; }'
+    + '.cf-table td:not(:first-child), .cf-table th:not(:first-child) { text-align: right; }'
+    + '.check-yes { color: #51be7b; font-weight: 700; font-size: 16px; }'
+    + '.check-no { color: #d04040; font-weight: 700; font-size: 16px; }'
+    + '.risk-list { padding-left: 20px; font-size: 13px; }'
+    + '.risk-list li { margin-bottom: 4px; }'
+    + '.muted { color: #888; font-size: 12px; }'
+    + '.report-footer { text-align: center; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; }'
+    + '@media print { body { padding: 20px; } .no-print { display: none; } @page { margin: 0.75in; } }'
+    + '</style></head><body>'
+    + '<div class="report-header">'
+    + '<h1>Investment Report</h1>'
+    + '<div class="deal-name">' + (d.investment_name || d.name || 'Deal') + '</div>'
+    + '<div class="meta">Prepared for ' + userName + ' \u00b7 ' + today + '</div>'
+    + '</div>'
+    + criteriaHtml
+    + dealOverviewHtml
+    + alignmentHtml
+    + feeHtml
+    + risksHtml
+    + investHtml
+    + cfHtml
+    + '<div class="report-footer">Generated by GYC Dealflow \u00b7 growyourcashflow.io</div>'
+    + '<div class="no-print" style="text-align:center;margin-top:24px;">'
+    + '<button onclick="window.print()" style="padding:12px 32px;background:#51be7b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Save as PDF</button>'
+    + '</div>'
+    + '</body></html>';
+
+  // Open in new window
+  var w = window.open('', '_blank');
+  if (w) {
+    w.document.write(reportHtml);
+    w.document.close();
+    // Auto-trigger print after a brief delay for rendering
+    setTimeout(function() { w.print(); }, 500);
+  } else {
+    alert('Please allow popups to generate your investment report.');
+  }
 }
 
 // ========== INIT ==========
