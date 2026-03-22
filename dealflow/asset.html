@@ -2376,10 +2376,6 @@ function renderMarketIntelligence(data, assetClass) {
     // Population with benchmark context
     var popSub = '';
     if (trend) {
-      var growthColor = trend.pctChange >= 0 ? 'var(--green)' : 'var(--red)';
-      var growthSign = trend.pctChange >= 0 ? '+' : '';
-      popSub = '<div style="font-size:11px;color:' + growthColor + ';font-weight:600;margin-top:4px;">' + growthSign + trend.pctChange + '% since ' + trend.startYear + '</div>';
-      // Context line
       var ctx = [];
       if (stateB.popGrowthPct !== null && stateB.popGrowthPct !== undefined) {
         var stName = (stateB.name || '').replace(/,.*/, '');
@@ -2389,7 +2385,7 @@ function renderMarketIntelligence(data, assetClass) {
         ctx.push('US ' + (natB.popGrowthPct >= 0 ? '+' : '') + natB.popGrowthPct + '%');
       }
       if (ctx.length) {
-        popSub += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + ctx.join(' · ') + ' over same period</div>';
+        popSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + ctx.join(' · ') + ' over same period</div>';
       }
     }
     statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div>' + popSub + '</div>';
@@ -2426,7 +2422,7 @@ function renderMarketIntelligence(data, assetClass) {
       var arrowSvg = trend.declining
         ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>'
         : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
-      document.getElementById('popTrendBadge').innerHTML = '<span class="mi-trend-badge ' + badgeCls + '">' + arrowSvg + (trend.pctChange > 0 ? '+' : '') + trend.pctChange + '%</span>';
+      document.getElementById('popTrendBadge').innerHTML = '<span class="mi-trend-badge ' + badgeCls + '">' + arrowSvg + (trend.pctChange > 0 ? '+' : '') + trend.pctChange + '% since ' + trend.startYear + '</span>';
     }
 
     var areaName = pop[0].name || '';
