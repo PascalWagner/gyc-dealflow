@@ -40,11 +40,14 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { zip, state, county, fips } = req.query;
+  const { zip, state, county, fips, stateAbbr } = req.query;
 
   if (!zip && !fips && !(state && county)) {
     return res.status(400).json({ success: false, error: 'Provide zip, fips (state+county FIPS), or state+county name' });
   }
+
+  // Resolve state FIPS for ZCTA queries (needed for pre-2020 Census API)
+  const resolvedStateFips = stateAbbr ? STATE_FIPS[stateAbbr.toUpperCase()] : (fips ? fips.substring(0, 2) : null);
 
   try {
     const results = {};
@@ -61,7 +64,9 @@ export default async function handler(req, res) {
       try {
         let url;
         if (zip) {
-          url = `${CENSUS_BASE}/${year}/acs/acs5?get=${censusVars}&for=zip%20code%20tabulation%20area:${zip}`;
+          // Pre-2020 ACS requires state qualifier for ZCTA lookups
+          const stateQ = (year < 2020 && resolvedStateFips) ? `&in=state:${resolvedStateFips}` : '';
+          url = `${CENSUS_BASE}/${year}/acs/acs5?get=${censusVars}&for=zip%20code%20tabulation%20area:${zip}${stateQ}`;
         } else if (fips) {
           const stateFips = fips.substring(0, 2);
           const countyFips = fips.substring(2, 5);
@@ -242,6 +247,9 @@ export default async function handler(req, res) {
     }
 
     results.risks = risks;
+
+    // Include query params for deep-linking
+    results.query = { zip: zip || null, fips: fips || null, stateAbbr: stateAbbr || null };
 
     return res.status(200).json({ success: true, ...results });
 

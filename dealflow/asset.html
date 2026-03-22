@@ -1236,8 +1236,8 @@ body {
           </div>
           <!-- Source -->
           <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;">
-            <a href="https://data.census.gov" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">via US Census Bureau ↗</a>
-            <a href="https://data.bls.gov/cew/apps/data_views/data_views.htm" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">Bureau of Labor Statistics ↗</a>
+            <a id="censusSourceLink" href="https://data.census.gov" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">via US Census Bureau ↗</a>
+            <a id="blsSourceLink" href="https://data.bls.gov/cew/apps/data_views/data_views.htm" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">Bureau of Labor Statistics ↗</a>
           </div>
         </div>
       </div>
@@ -1457,7 +1457,16 @@ function renderHero(propertyName, address, assetClass, location, status, deals) 
 
   document.getElementById('heroAssetType').textContent = assetClass || 'Property';
   document.getElementById('heroName').textContent = propertyName;
-  document.getElementById('heroAddress').textContent = address || location || '';
+
+  // Address with Google Maps link
+  var addrText = address || location || '';
+  var addrEl = document.getElementById('heroAddress');
+  if (addrText) {
+    var gmapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addrText);
+    addrEl.innerHTML = esc(addrText) + ' <a href="' + escAttr(gmapsUrl) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--blue);text-decoration:none;padding:3px 10px;background:var(--blue-bg);border-radius:20px;vertical-align:middle;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>View on Google Maps</a>';
+  } else {
+    addrEl.textContent = '';
+  }
 
   // Tags
   var tagsHtml = '';
@@ -1491,15 +1500,18 @@ function renderHero(propertyName, address, assetClass, location, status, deals) 
   var ppDeal = deals.find(function(d) { return d.purchasePrice; });
   var ppValue = ppDeal ? currency(ppDeal.purchasePrice) : null;
 
-  // Year built from deal data
+  // Year built and units from deal data
   var yearBuilt = null;
-  deals.forEach(function(d) { if (d.yearBuilt && !yearBuilt) yearBuilt = d.yearBuilt; });
+  var unitCount = null;
+  deals.forEach(function(d) {
+    if (d.yearBuilt && !yearBuilt) yearBuilt = d.yearBuilt;
+    if (d.unitCount && !unitCount) unitCount = d.unitCount;
+  });
 
-  var stats = [
-    { value: operators.length || '--', label: operators.length === 1 ? 'Owner' : 'Owners' }
-  ];
-  if (ppValue) stats.push({ value: ppValue, label: 'Purchase Price' });
+  var stats = [];
+  if (unitCount) stats.push({ value: Number(unitCount).toLocaleString(), label: 'Units' });
   stats.push({ value: yearBuilt || 'N/A', label: 'Year Built' });
+  stats.push({ value: operators.length || '--', label: operators.length === 1 ? 'Owner' : 'Owners' });
   if (lastSeen) stats.push({ value: fmtDate(lastSeen), label: 'Latest Transaction' });
 
   document.getElementById('heroStats').innerHTML = stats.map(function(s) {
@@ -2151,10 +2163,11 @@ function renderMap(lat, lng, label) {
 }
 
 // ========== MARKET INTELLIGENCE ==========
-async function fetchMarketData(zip, state, countyFips) {
+async function fetchMarketData(zip, stateAbbr, countyFips) {
   var params = [];
   if (zip) params.push('zip=' + encodeURIComponent(zip));
   if (countyFips) params.push('fips=' + encodeURIComponent(countyFips));
+  if (stateAbbr) params.push('stateAbbr=' + encodeURIComponent(stateAbbr));
   if (!params.length) return null;
 
   try {
@@ -2411,6 +2424,17 @@ function renderMarketIntelligence(data) {
     });
     risksEl.innerHTML = html;
   }
+
+  // ── Deep-link source badges ──
+  var q = data.query || {};
+  if (q.zip) {
+    // Census data.census.gov deep link: search by ZCTA
+    document.getElementById('censusSourceLink').href = 'https://data.census.gov/table?g=860XX00US' + q.zip + '&tid=ACSDT5Y2023.B01003';
+  }
+  if (q.fips && q.fips.length === 5) {
+    // BLS QCEW deep link: county-level employment data
+    document.getElementById('blsSourceLink').href = 'https://data.bls.gov/cew/apps/table_maker/v4/table_maker.htm#type=1&year=2024&qtr=A&own=5&ind=10&area=' + q.fips + '&supp=0';
+  }
 }
 
 // ========== INIT ==========
@@ -2540,13 +2564,12 @@ async function init() {
 
   // Market Intelligence (Census + BLS data)
   var miZip = rcZip || null;
-  // Try to extract zip from property address
   if (!miZip && propertyAddress) {
     var zipMatch = propertyAddress.match(/\b(\d{5})\b/);
     if (zipMatch) miZip = zipMatch[1];
   }
   if (miZip || rcCountyFips) {
-    var marketData = await fetchMarketData(miZip, null, rcCountyFips);
+    var marketData = await fetchMarketData(miZip, state, rcCountyFips);
     if (marketData) renderMarketIntelligence(marketData);
   }
 }
