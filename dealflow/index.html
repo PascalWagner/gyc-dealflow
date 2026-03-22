@@ -12178,7 +12178,7 @@ function navigateTo(page) {
   // Update cashflow gap bar on every page
   if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
   // Render page-specific content
-  if (page === 'deals') { updateDealsChecklist(); }
+  if (page === 'deals') { updateDealsChecklist(); if (typeof renderAll === 'function') renderAll(); }
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
   if (page === 'settings') initBuyBox();
@@ -23836,49 +23836,62 @@ async function viewAsUser(email, name, contactId, tier) {
 }
 
 function exitViewAs() {
-  // Recover adminRealUser from localStorage if lost (e.g. page refresh during impersonation)
-  if (!adminRealUser) {
-    const saved = localStorage.getItem('_gycAdminRealUser');
-    if (saved) adminRealUser = JSON.parse(saved);
+  try {
+    // Recover adminRealUser from localStorage if lost (e.g. page refresh during impersonation)
+    if (!adminRealUser) {
+      const saved = localStorage.getItem('_gycAdminRealUser');
+      if (saved) adminRealUser = JSON.parse(saved);
+    }
+    if (!adminRealUser) {
+      // Last resort: clear impersonation state and reload
+      localStorage.removeItem('_gycAdminRealUser');
+      window.location.reload();
+      return;
+    }
+
+    // Save the impersonated user's data before switching back
+    const currentUser = getUser();
+    if (currentUser) saveUserScopedData(currentUser.email);
+
+    // Restore admin session
+    localStorage.setItem('gycUser', JSON.stringify(adminRealUser));
+    localStorage.removeItem('_gycAdminRealUser');
+
+    // Restore admin's per-user data (portfolio, deal stages, buy box, etc.)
+    loadUserScopedData(adminRealUser.email);
+
+    // If localStorage was empty after restore, fetch from Supabase as fallback
+    const restoredPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+    if (restoredPortfolio.length === 0 && adminRealUser.email) {
+      fetchUserDataFromSupabase(adminRealUser.email);
+    }
+
+    // Restore sidebar
+    const name = adminRealUser.name || 'Admin';
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    document.getElementById('sidebarAvatar').textContent = initials;
+    document.getElementById('sidebarName').textContent = name;
+    const sidebarEmailEl3 = document.getElementById('sidebarEmail');
+    if (sidebarEmailEl3) sidebarEmailEl3.textContent = adminRealUser.email || '';
+
+    // Hide impersonation indicator, show search
+    document.getElementById('viewAsImpersonating').style.display = 'none';
+    document.getElementById('viewAsSearch').style.display = 'block';
+
+    // Restore Assets access for admin
+    showAdminNav();
+
+    adminRealUser = null;
+
+    // Navigate to dashboard with restored data
+    navigateTo('dashboard');
+  } catch (e) {
+    console.error('exitViewAs failed:', e);
+    // Fallback: clear impersonation and reload
+    localStorage.removeItem('_gycAdminRealUser');
+    adminRealUser = null;
+    window.location.reload();
   }
-  if (!adminRealUser) return;
-
-  // Save the impersonated user's data before switching back
-  const currentUser = getUser();
-  if (currentUser) saveUserScopedData(currentUser.email);
-
-  // Restore admin session
-  localStorage.setItem('gycUser', JSON.stringify(adminRealUser));
-  localStorage.removeItem('_gycAdminRealUser');
-
-  // Restore admin's per-user data (portfolio, deal stages, buy box, etc.)
-  loadUserScopedData(adminRealUser.email);
-
-  // If localStorage was empty after restore, fetch from Supabase as fallback
-  const restoredPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-  if (restoredPortfolio.length === 0 && adminRealUser.email) {
-    fetchUserDataFromSupabase(adminRealUser.email);
-  }
-
-  // Restore sidebar
-  const name = adminRealUser.name || 'Admin';
-  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  document.getElementById('sidebarAvatar').textContent = initials;
-  document.getElementById('sidebarName').textContent = name;
-  const sidebarEmailEl3 = document.getElementById('sidebarEmail');
-  if (sidebarEmailEl3) sidebarEmailEl3.textContent = adminRealUser.email || '';
-
-  // Hide impersonation indicator, show search
-  document.getElementById('viewAsImpersonating').style.display = 'none';
-  document.getElementById('viewAsSearch').style.display = 'block';
-
-  // Restore Assets access for admin
-  showAdminNav();
-
-  adminRealUser = null;
-
-  // Navigate to dashboard with restored data
-  navigateTo('dashboard');
 }
 
 async function fetchBuyBoxForUser(email) {
