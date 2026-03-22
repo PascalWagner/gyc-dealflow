@@ -563,7 +563,7 @@ const BROWSABLE_TABLES = [
   'dd_checklist', 'deal_qa', 'investment_memos', 'deck_submissions',
   'operator_permissions', 'operator_interactions', 'deal_stage_counts',
   'sec_filings', 'related_persons', 'deal_sponsors', 'background_checks',
-  'gdrive_deck_files', 'api_keys', 'api_request_log'
+  'gdrive_deck_files', 'api_keys', 'api_request_log', 'intro_requests'
 ];
 
 async function browseTable(supabase, body) {
@@ -597,6 +597,23 @@ async function tableCounts(supabase) {
   return { counts };
 }
 
+// --- List intro requests ---
+
+async function listIntros(supabase) {
+  const { data, error, count } = await supabase
+    .from('intro_requests')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    // Table may not exist yet
+    console.warn('intro_requests query failed:', error.message);
+    return { intros: [], total: 0 };
+  }
+  return { intros: data || [], total: count || 0 };
+}
+
 // --- Action router ---
 
 const ACTION_MAP = {
@@ -614,6 +631,7 @@ const ACTION_MAP = {
   'list-operators-quality': listOperatorsQuality,
   'intake-create': intakeCreate,
   'growth-metrics': growthMetrics,
+  'list-intros': listIntros,
   'browse-table': browseTable,
   'table-counts': tableCounts,
 };

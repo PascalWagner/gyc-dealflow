@@ -6701,12 +6701,16 @@ const _supa = window.supabase.createClient(
               <div style="text-align:center;flex:1;">
                 <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#2C6E49);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">More LPs<br>Join</div>
               </div>
+              <div style="font-size:20px;color:var(--primary);flex-shrink:0;">&rarr;</div>
+              <div style="text-align:center;flex:1;">
+                <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#ec4899,#be185d);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:800;line-height:1.2;text-align:center;">AI Agents<br>Find Us</div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- 4 Moat Pillars -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
           <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:var(--radius);padding:20px;">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
               <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--primary);">1</span>
@@ -6738,6 +6742,22 @@ const _supa = window.supabase.createClient(
             </div>
             <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">Academy members get intros, deal access, DD tools. Non-members see deals but can&rsquo;t act. Upsell: free browse &rarr; consultation &rarr; Academy &rarr; Fund LP.</div>
             <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: free-to-paid conversion, Academy retention</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid #ec4899;border-radius:var(--radius);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#ec4899;">5</span>
+              <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">AI Agent Distribution</span>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">When AI agents search for deals, they hit our API. Free tier gets basic listings; paid API ($0.10-1.00/query) unlocks enriched data, DD reports, and sponsor analytics. Every query trains our models and deepens the data moat.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: API calls/day, unique agent keys, revenue per query</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid #06b6d4;border-radius:var(--radius);padding:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:#06b6d4;">6</span>
+              <span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Proprietary Intelligence Layer</span>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.7;">AI can scrape public data, but can&rsquo;t replicate our DD checklists, LP sentiment, intro outcomes, or fund performance data. The more users interact, the more unique intelligence accumulates that no web scraper can access.</div>
+            <div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-top:10px;">TRACK: DD completions, sentiment signals, performance data points</div>
           </div>
         </div>
 
@@ -19119,50 +19139,78 @@ function renderMarketIntelData(deals) {
 // ========== NETWORK & MOAT ==========
 function renderNetworkMoat() {
   if (!isAdmin()) return;
-  // Load intro requests from localStorage
-  try {
-    var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
-    var el = function(id) { return document.getElementById(id); };
+  var el = function(id) { return document.getElementById(id); };
+
+  // Load intros from Supabase first, fallback to localStorage
+  adminFetch({ action: 'list-intros' }).then(function(result) {
+    var intros = (result && result.intros) || [];
+
+    // If no Supabase data, try localStorage
+    if (!intros.length) {
+      try {
+        var local = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
+        if (!Array.isArray(local)) {
+          local = Object.keys(local).map(function(k) { return { deal_name: k, created_at: new Date(local[k]).toISOString() }; });
+        }
+        intros = local.map(function(l) {
+          return {
+            user_email: l.userEmail || l.user_email || 'unknown',
+            operator_name: l.company || l.operator_name || '--',
+            operator_ceo: l.person || l.operator_ceo || '',
+            deal_name: l.deal || l.deal_name || l.dealId || '--',
+            created_at: l.created_at || (l.timestamp ? new Date(l.timestamp).toISOString() : null),
+            status: l.status || 'pending'
+          };
+        });
+      } catch(e) { intros = []; }
+    }
+
     if (el('introTotalCount')) el('introTotalCount').textContent = intros.length;
     // Unique GPs
     var gpSet = {};
-    intros.forEach(function(i) { gpSet[i.company || 'unknown'] = true; });
+    intros.forEach(function(i) { gpSet[i.operator_name || 'unknown'] = true; });
     if (el('introUniqueGPs')) el('introUniqueGPs').textContent = Object.keys(gpSet).length;
     // Unique LPs
     var lpSet = {};
-    intros.forEach(function(i) { lpSet[i.userEmail || 'unknown'] = true; });
+    intros.forEach(function(i) { lpSet[i.user_email || 'unknown'] = true; });
     if (el('introUniqueLPs')) el('introUniqueLPs').textContent = Object.keys(lpSet).length;
     // This month
-    var now = Date.now();
-    var monthAgo = now - 30 * 24 * 60 * 60 * 1000;
-    var thisMonth = intros.filter(function(i) { return i.timestamp > monthAgo; });
+    var monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    var thisMonth = intros.filter(function(i) {
+      var t = i.created_at ? new Date(i.created_at).getTime() : (i.timestamp || 0);
+      return t > monthAgo;
+    });
     if (el('introThisMonth')) el('introThisMonth').textContent = thisMonth.length;
-    // Render list
+
+    // Render table
     if (intros.length > 0 && el('introRequestsList')) {
       var html = '<table style="width:100%;border-collapse:collapse;">';
-      html += '<thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Date</th><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">LP</th><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">GP / Person</th><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Deal</th></tr></thead><tbody>';
-      intros.sort(function(a, b) { return b.timestamp - a.timestamp; });
+      html += '<thead><tr style="border-bottom:2px solid var(--border);"><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Date</th><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">LP</th><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Operator</th><th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Deal</th><th style="text-align:center;padding:8px 12px;font-family:var(--font-ui);font-weight:600;font-size:11px;color:var(--text-muted);text-transform:uppercase;">Status</th></tr></thead><tbody>';
       intros.forEach(function(i) {
+        var date = i.created_at ? new Date(i.created_at).toLocaleDateString() : '--';
+        var statusColor = i.status === 'completed' ? '#22c55e' : i.status === 'declined' ? '#ef4444' : '#f59e0b';
+        var statusLabel = (i.status || 'pending').charAt(0).toUpperCase() + (i.status || 'pending').slice(1);
         html += '<tr style="border-bottom:1px solid var(--border-light);">';
-        html += '<td style="padding:8px 12px;font-size:12px;">' + new Date(i.timestamp).toLocaleDateString() + '</td>';
-        html += '<td style="padding:8px 12px;font-size:12px;">' + (i.userEmail || '--') + '</td>';
-        html += '<td style="padding:8px 12px;font-size:12px;">' + (i.person || i.company || '--') + '</td>';
-        html += '<td style="padding:8px 12px;font-size:12px;">' + (i.deal || '--') + '</td>';
+        html += '<td style="padding:8px 12px;font-size:12px;">' + date + '</td>';
+        html += '<td style="padding:8px 12px;font-size:12px;font-weight:600;">' + (i.user_email || '--') + '</td>';
+        html += '<td style="padding:8px 12px;font-size:12px;">' + (i.operator_name || '--') + '</td>';
+        html += '<td style="padding:8px 12px;font-size:12px;">' + (i.deal_name || '--') + '</td>';
+        html += '<td style="padding:8px 12px;font-size:12px;text-align:center;"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + statusColor + '22;color:' + statusColor + ';">' + statusLabel + '</span></td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
       el('introRequestsList').innerHTML = html;
     }
-  } catch(e) {}
+  }).catch(function() {
+    // Fallback — just show zeros
+  });
+
   // Populate deal count metric
   try {
-    var cached = sessionStorage.getItem('gycDealsCache');
-    if (cached) {
-      var deals = JSON.parse(cached);
-      var el2 = document.getElementById('moatMetricDeals');
-      if (el2) el2.textContent = deals.length;
-    }
+    var dealsCount = (typeof DEALS !== 'undefined' ? DEALS : []).length;
+    if (el('moatMetricDeals')) el('moatMetricDeals').textContent = dealsCount || '--';
   } catch(e) {}
+
   // Update progress bars
   try {
     var bars = [

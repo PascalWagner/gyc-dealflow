@@ -3341,7 +3341,7 @@ body {
 
 <!-- Sidebar (injected by sidebar.js) -->
 <div id="sidebar-root"></div>
-<script src="js/sidebar.js" data-page="deal"></script>
+<script src="js/sidebar.js?v=20260322" data-page="deal"></script>
 
 
 
@@ -4115,10 +4115,35 @@ function hasDeckBeenViewed(dealId) {
 
 // Wrapper for intro requests that also tracks in localStorage
 function requestIntro(dealId) {
-  // Store in localStorage
+  // Store structured data in localStorage for admin dashboard
   try {
-    var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '{}');
-    intros[dealId] = Date.now();
+    var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
+    if (!Array.isArray(intros)) {
+      // Migrate old object format to array
+      var old = intros;
+      intros = Object.keys(old).map(function(k) { return { dealId: k, timestamp: old[k] }; });
+    }
+    var userEmail = '';
+    try { userEmail = JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e2) {}
+    if (!userEmail) {
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var lk = localStorage.key(i);
+          if (lk && lk.indexOf('-auth-token') > -1) {
+            var lv = JSON.parse(localStorage.getItem(lk) || '{}');
+            if (lv.user && lv.user.email) { userEmail = lv.user.email; break; }
+          }
+        }
+      } catch(e3) {}
+    }
+    intros.push({
+      dealId: dealId,
+      deal: document.title.replace(' | Grow Your Cashflow', '').trim() || dealId,
+      company: (document.querySelector('.panel-company-name') || {}).textContent || '',
+      person: '',
+      userEmail: userEmail,
+      timestamp: Date.now()
+    });
     localStorage.setItem('gycIntroRequests', JSON.stringify(intros));
   } catch(e) {}
 
