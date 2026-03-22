@@ -1302,15 +1302,6 @@ html.dark .academy-gate-cta {
 }
 
 /* Compare button on cards */
-.card-compare-btn {
-  position:absolute; top:8px; right:8px; z-index:10; width:28px; height:28px; border-radius:50%;
-  border:none; background:rgba(0,0,0,0.35); backdrop-filter:blur(4px); cursor:pointer;
-  display:flex; align-items:center; justify-content:center; transition:all 0.15s; padding:0;
-}
-.card-compare-btn:hover { background:rgba(0,0,0,0.55); }
-.card-compare-btn.in-compare { background:var(--primary); }
-.card-compare-btn svg { width:16px; height:16px; }
-
 /* Toast notification */
 .gyc-toast {
   position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
@@ -2473,13 +2464,13 @@ html.cap-ios .card-grid {
 
 /* ── Detail panel: full screen with safe areas ────── */
 html.cap-ios .detail-panel {
-  top: env(safe-area-inset-top, 54px);
+  top: env(safe-area-inset-top, 47px);
   padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Sidebar: account for safe areas ──────────────── */
 html.cap-ios .sidebar {
-  padding-top: env(safe-area-inset-top, 54px);
+  padding-top: env(safe-area-inset-top, 47px);
 }
 html.cap-ios .sidebar.open {
   transform: translateX(0);
@@ -2497,7 +2488,7 @@ html.cap-ios .settings-page {
   padding: 20px 16px;
 }
 html.cap-ios .wizard-overlay {
-  padding-top: env(safe-area-inset-top, 54px);
+  padding-top: env(safe-area-inset-top, 47px);
 }
 
 /* ── More page menu ───────────────────────────────── */
@@ -2562,24 +2553,8 @@ html.cap-ios #managersFilterSidebar > div[style*="margin-bottom"] {
   vertical-align: top;
 }
 
-/* ── Debt Fund Explorer: optimize for iOS ──────────── */
-html.cap-ios #page-debtfunds .content-area {
-  padding: 12px !important;
-}
-html.cap-ios #page-debtfunds .settings-page {
-  padding: 0 !important;
-}
-html.cap-ios #page-debtfunds .settings-page-title {
-  font-size: 22px !important;
-}
-/* Debt fund filter bar: wrap on mobile */
-html.cap-ios #page-debtfunds .content-area > div[style*="display:flex"][style*="flex-wrap"] {
-  gap: 8px !important;
-  padding: 12px !important;
-}
-/* Debt fund stat cards at top: stack or scroll */
-html.cap-ios .debt-stat-cards,
-html.cap-ios #page-debtfunds div[style*="grid-template-columns: repeat(4"] {
+/* Debt fund stat cards: stack on iOS */
+html.cap-ios .debt-stat-cards {
   grid-template-columns: repeat(2, 1fr) !important;
   gap: 8px !important;
 }
@@ -7486,27 +7461,6 @@ const _supa = window.supabase.createClient(
   </div>
 
   <!-- PAGE: Compare Deals -->
-  <div class="page" id="page-compare">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div>
-        <div class="topbar-title">Compare Deals</div>
-        <div style="font-size:12px;color:var(--text-muted);font-family:var(--font-ui);">Side-by-side comparison of your selected deals</div>
-      </div>
-      <div class="topbar-spacer"></div>
-      <button class="btn btn-outline" onclick="window.print()" style="font-size:12px;padding:6px 14px;margin-right:6px;">Print / Export</button>
-      <button class="btn btn-outline" onclick="clearCompareDeals()" style="font-size:12px;padding:6px 14px;">Clear All</button>
-    </div>
-    <div class="content-area" style="padding:20px 24px;">
-      <div id="compareSearchContainer"></div>
-      <div id="compareChipsContainer"></div>
-      <div id="compareChartsContainer"></div>
-      <div id="compareTableContainer"></div>
-    </div>
-  </div>
-
   <!-- PAGE: My Portfolio -->
   <div class="page" id="page-portfolio">
     <div class="topbar">
