@@ -19360,7 +19360,7 @@ function outreachShowEditModal(data, mcId) {
           return '<div class="oe-contact-result" data-contact=\'' + JSON.stringify(c).replace(/'/g, '&#39;') + '\' style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background=\'rgba(0,0,0,0.04)\'" onmouseout="this.style.background=\'transparent\'">'
             + '<div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:11px;font-weight:700;flex-shrink:0;">' + initials + '</div>'
             + '<div style="min-width:0;flex:1;">'
-            + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.name + '</div>'
+            + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _titleCase(c.name) + '</div>'
             + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.email + (c.phone ? ' · ' + c.phone : '') + '</div>'
             + '</div></div>';
         }).join('');
