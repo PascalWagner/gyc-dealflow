@@ -32,12 +32,12 @@ export default async function handler(req, res) {
     (deals || []).forEach(d => { dealNames[d.id] = d.investment_name || d.id; });
 
     // Normalize stages
-    const STAGE_MAP = { interested: 'saved', duediligence: 'vetting', portfolio: 'invested' };
+    const STAGE_MAP = { interested: 'saved', duediligence: 'vetting', portfolio: 'invested', ready: 'decision' };
 
     // Aggregate
     const dealStats = {};
     const userStats = {};
-    const funnel = { saved: 0, vetting: 0, ready: 0, invested: 0, passed: 0 };
+    const funnel = { saved: 0, vetting: 0, diligence: 0, decision: 0, invested: 0, passed: 0 };
 
     for (const rec of (stages || [])) {
       const dealId = rec.deal_id || '';
@@ -49,9 +49,9 @@ export default async function handler(req, res) {
       // Deal stats
       if (dealId) {
         if (!dealStats[dealId]) {
-          dealStats[dealId] = { name: dealNames[dealId] || dealId, saved: 0, vetting: 0, ready: 0, invested: 0, total: 0 };
+          dealStats[dealId] = { name: dealNames[dealId] || dealId, saved: 0, vetting: 0, diligence: 0, decision: 0, invested: 0, total: 0 };
         }
-        if (['saved', 'vetting', 'ready', 'invested'].includes(stage)) {
+        if (['saved', 'vetting', 'diligence', 'decision', 'invested'].includes(stage)) {
           dealStats[dealId][stage]++;
           dealStats[dealId].total++;
         }
@@ -60,9 +60,9 @@ export default async function handler(req, res) {
       // User stats (user_id is typically the user's email)
       if (userId) {
         if (!userStats[userId]) {
-          userStats[userId] = { email: userId, saved: 0, vetting: 0, ready: 0, invested: 0, total: 0, lastActive: '' };
+          userStats[userId] = { email: userId, saved: 0, vetting: 0, diligence: 0, decision: 0, invested: 0, total: 0, lastActive: '' };
         }
-        if (['saved', 'vetting', 'ready', 'invested'].includes(stage)) {
+        if (['saved', 'vetting', 'diligence', 'decision', 'invested'].includes(stage)) {
           userStats[userId][stage]++;
           userStats[userId].total++;
         }
@@ -88,14 +88,15 @@ export default async function handler(req, res) {
         email: u.email,
         saved: u.saved,
         vetting: u.vetting,
-        ready: u.ready,
+        diligence: u.diligence,
+        decision: u.decision,
         invested: u.invested,
         total: u.total,
         lastActive: u.lastActive
       }));
 
     const totalUsers = Object.keys(userStats).length;
-    const usersInDD = Object.values(userStats).filter(u => u.vetting > 0 || u.ready > 0).length;
+    const usersInDD = Object.values(userStats).filter(u => u.vetting > 0 || u.diligence > 0 || u.decision > 0).length;
     const usersInvested = Object.values(userStats).filter(u => u.invested > 0).length;
 
     return res.status(200).json({

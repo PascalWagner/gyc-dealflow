@@ -17627,7 +17627,7 @@ function renderMarketIntel() {
   if (deals.length) renderMarketIntelData(deals);
 
   // Load SEC market-wide data
-  fetch('/api/sec-market-data.json')
+  fetch('/data/sec-market-data.json')
     .then(function(r) { return r.json(); })
     .then(function(secData) { renderSECData(secData); })
     .catch(function(e) { console.warn('SEC data not available:', e.message); });

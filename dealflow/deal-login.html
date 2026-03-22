@@ -599,6 +599,7 @@ const _supa = window.supabase.createClient(
       refreshToken: session.refresh_token,
       tier: d.tier || 'free',
       isAdmin: d.isAdmin || false,
+      tags: d.tags || [],
       loggedInAt: new Date().toISOString()
     }));
     window.location.href = 'index.html';
