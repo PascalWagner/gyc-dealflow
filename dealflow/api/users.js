@@ -36,7 +36,7 @@ export default async function handler(req, res) {
         lastName: c.lastName || '',
         email: c.email || '',
         phone: c.phone || '',
-        linkedin: c.customFields?.find(f => f.id === 'linkedin_url')?.value || c.linkedin || '',
+        linkedin: c.linkedIn || c.linkedin || (c.customFields || []).find(f => f.id === 'linkedin_url' || (f.value || '').includes('linkedin.com'))?.value || '',
         tags: c.tags || [],
         tier: deriveTier(c.tags || [])
       })).filter(c => c.email);

@@ -19299,103 +19299,44 @@ function outreachShowEditModal(data, mcId) {
             <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Phone</div>
             <input type="text" id="oe_contact_phone" value="${data.contact_phone || ''}" placeholder="(555) 123-4567" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
           </div>
-          <div>
+          <div style="grid-column:span 2;">
             <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">LinkedIn</div>
             <input type="url" id="oe_contact_linkedin" value="${data.contact_linkedin || ''}" placeholder="https://linkedin.com/in/..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
           </div>
-          <div>
-            <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Method</div>
-            <select id="oe_method" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;">
-              ${methodOptions.map(m => `<option value="${m}"${data.outreach_method === m ? ' selected' : ''}>${m ? m.charAt(0).toUpperCase() + m.slice(1).replace('_', ' ') : 'Not set'}</option>`).join('')}
-            </select>
-          </div>
         </div>
       </div>
 
-      <!-- Permissions Card -->
+      <!-- Permission / Listing Agreement -->
       <div style="background:rgba(0,0,0,0.02);border-radius:12px;padding:18px 20px;margin-bottom:16px;">
-        <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;">Permissions</div>
-
-        <!-- Toggle rows -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);">
-          <div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--text-dark);">Permission Granted</div>
-            <div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">Operator has given explicit approval</div>
+        <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;">Permission</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="display:flex;gap:6px;">
+            <button type="button" id="oe_perm_yes" onclick="document.getElementById('oe_perm_yes').style.background='#10b981';document.getElementById('oe_perm_yes').style.color='#fff';document.getElementById('oe_perm_yes').style.borderColor='#10b981';document.getElementById('oe_perm_no').style.background='transparent';document.getElementById('oe_perm_no').style.color='var(--text-muted)';document.getElementById('oe_perm_no').style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${data.permission_granted ? '#10b981' : 'var(--border)'};cursor:pointer;background:${data.permission_granted ? '#10b981' : 'transparent'};color:${data.permission_granted ? '#fff' : 'var(--text-muted)'};">Yes</button>
+            <button type="button" id="oe_perm_no" onclick="document.getElementById('oe_perm_no').style.background='#ef4444';document.getElementById('oe_perm_no').style.color='#fff';document.getElementById('oe_perm_no').style.borderColor='#ef4444';document.getElementById('oe_perm_yes').style.background='transparent';document.getElementById('oe_perm_yes').style.color='var(--text-muted)';document.getElementById('oe_perm_yes').style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${!data.permission_granted ? '#ef4444' : 'var(--border)'};cursor:pointer;background:${!data.permission_granted ? '#ef4444' : 'transparent'};color:${!data.permission_granted ? '#fff' : 'var(--text-muted)'};">No</button>
           </div>
-          ${tog('oe_permission', data.permission_granted)}
+          <div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">Has operator signed a listing agreement?</div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--text-dark);">Show Metrics</div>
-          ${tog('oe_metrics', data.can_show_metrics)}
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--text-dark);">Show Deck</div>
-          ${tog('oe_deck', data.can_show_deck)}
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--text-dark);">Show PPM</div>
-          ${tog('oe_ppm', data.can_show_ppm)}
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
-          <div style="font-family:var(--font-ui);font-size:14px;font-weight:500;color:var(--text-dark);">Performance Updates</div>
-          ${tog('oe_updates', data.send_performance_updates)}
-        </div>
-
-        <!-- Offering type + scope -->
-        <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Offering Type</div>
-            <select id="oe_offering" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;">
-              ${offeringOptions.map(o => `<option value="${o}"${data.offering_type === o ? ' selected' : ''}>${o === 'unknown' ? 'Unknown' : o.toUpperCase()}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Permission Scope</div>
-            <input type="text" id="oe_scope" value="${(data.permission_scope || '').replace(/"/g, '&quot;')}" placeholder="e.g. deck + metrics" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-          </div>
+        <div>
+          <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Signed Contract URL</div>
+          <input type="url" id="oe_proof" value="${data.permission_proof_url || ''}" placeholder="Link to signed listing agreement..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
         </div>
         <div style="margin-top:12px;">
-          <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Proof URL</div>
-          <input type="url" id="oe_proof" value="${data.permission_proof_url || ''}" placeholder="https://..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-        </div>
-      </div>
-
-      <!-- Notes -->
-      <div style="margin-bottom:16px;">
-        <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Notes</div>
-        <textarea id="oe_notes" rows="2" placeholder="Internal notes about this operator..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;resize:vertical;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">${data.permission_notes || ''}</textarea>
-      </div>
-
-      <!-- Activity Log -->
-      <div style="background:rgba(0,0,0,0.02);border-radius:12px;padding:18px 20px;margin-bottom:20px;">
-        <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">Activity</div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
-          <select id="oe_log_type" style="padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:13px;background:var(--bg-card);outline:none;cursor:pointer;flex:0 0 auto;appearance:none;padding-right:28px;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="note">Note</option><option value="research_note">Research</option><option value="call">Call</option><option value="meeting">Meeting</option>
-            <option value="email_sent">Email Sent</option><option value="reply_received">Reply</option>
+          <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Offering Type</div>
+          <select id="oe_offering" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;">
+            ${offeringOptions.map(o => `<option value="${o}"${data.offering_type === o ? ' selected' : ''}>${o === 'unknown' ? 'Unknown' : o.toUpperCase()}</option>`).join('')}
           </select>
-          <input type="text" id="oe_log_note" placeholder="What happened?" style="flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:13px;background:var(--bg-card);outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-          <button onclick="outreachLogFromModal('${mcId}')" style="padding:9px 16px;background:var(--text-dark);color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Log</button>
-        </div>
-        <div id="oe_timeline" style="max-height:180px;overflow-y:auto;">
-          <div style="text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-ui);font-size:13px;">Loading...</div>
         </div>
       </div>
 
     </div>
 
     <!-- Footer -->
-    <div style="position:sticky;bottom:0;background:var(--bg-card);padding:16px 28px;border-top:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;gap:10px;z-index:2;">
-      <button onclick="outreachShowEmail('${mcId}')" style="padding:10px 18px;background:transparent;border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);transition:background 0.15s;" onmouseover="this.style.background='rgba(0,0,0,0.03)'" onmouseout="this.style.background='transparent'">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:-2px;margin-right:5px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email
-      </button>
-      <div style="flex:1;"></div>
+    <div style="position:sticky;bottom:0;background:var(--bg-card);padding:16px 28px;border-top:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:flex-end;gap:10px;z-index:2;">
       <button onclick="document.getElementById('outreachEditModal').remove()" style="padding:10px 22px;background:transparent;border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);transition:background 0.15s;" onmouseover="this.style.background='rgba(0,0,0,0.03)'" onmouseout="this.style.background='transparent'">Cancel</button>
       <button onclick="outreachSave('${mcId}')" style="padding:10px 28px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;transition:opacity 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.1);" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Changes</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
-  outreachLoadTimeline(mcId);
 
   // Wire up contact name typeahead search
   let _oeSearchTimer = null;
@@ -19525,21 +19466,14 @@ async function outreachSave(mcId) {
     action: 'upsert',
     managementCompanyId: mcId,
     outreach_status: (document.querySelector('#oe_status_pills button[data-active="true"]') || {}).dataset?.status || 'backlog',
-    outreach_method: document.getElementById('oe_method').value || null,
     contact_name: document.getElementById('oe_contact_name').value || null,
     contact_email: document.getElementById('oe_contact_email').value || null,
     contact_phone: document.getElementById('oe_contact_phone').value || null,
     contact_linkedin: document.getElementById('oe_contact_linkedin').value || null,
     ghl_contact_id: document.getElementById('oe_ghl_contact_id').value || null,
-    permission_granted: document.getElementById('oe_permission').getAttribute('aria-checked') === 'true',
-    permission_scope: document.getElementById('oe_scope').value || '',
+    permission_granted: document.getElementById('oe_perm_yes').style.background === 'rgb(16, 185, 129)' || document.getElementById('oe_perm_yes').style.background === '#10b981',
     permission_proof_url: document.getElementById('oe_proof').value || '',
-    offering_type: document.getElementById('oe_offering').value,
-    can_show_metrics: document.getElementById('oe_metrics').getAttribute('aria-checked') === 'true',
-    can_show_deck: document.getElementById('oe_deck').getAttribute('aria-checked') === 'true',
-    can_show_ppm: document.getElementById('oe_ppm').getAttribute('aria-checked') === 'true',
-    send_performance_updates: document.getElementById('oe_updates').getAttribute('aria-checked') === 'true',
-    notes: document.getElementById('oe_notes').value || ''
+    offering_type: document.getElementById('oe_offering').value
   };
   try {
     const resp = await fetch('/api/operator-outreach', {
