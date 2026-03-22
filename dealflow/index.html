@@ -19279,11 +19279,12 @@ function outreachShowEditModal(data, mcId) {
       <div style="background:rgba(0,0,0,0.02);border-radius:12px;padding:18px 20px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
           <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);">Contact</div>
-          ${data.ghl_contact_id ? '<span style="font-family:var(--font-ui);font-size:10px;color:#10b981;font-weight:600;background:#ecfdf5;padding:2px 8px;border-radius:8px;">Linked to CRM</span>' : ''}
+          <span id="oe_crm_badge" style="font-family:var(--font-ui);font-size:10px;color:#10b981;font-weight:600;background:#ecfdf5;padding:2px 8px;border-radius:8px;display:${data.ghl_contact_id ? 'inline' : 'none'};">Linked to CRM</span>
         </div>
         <input type="hidden" id="oe_ghl_contact_id" value="${data.ghl_contact_id || ''}">
+        <input type="hidden" id="oe_perm_value" value="${data.permission_granted ? 'yes' : 'no'}">
         <!-- Name with typeahead search -->
-        <div style="position:relative;margin-bottom:12px;">
+        <div style="position:relative;">
           <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Name</div>
           <div style="position:relative;">
             <input type="text" id="oe_contact_name" value="${data.contact_name || ''}" placeholder="Search CRM contacts or type a new name..." autocomplete="off" style="width:100%;padding:10px 14px;padding-right:36px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="setTimeout(()=>{this.style.borderColor='var(--border)';document.getElementById('oe_contact_results')&&(document.getElementById('oe_contact_results').style.display='none')},200)">
@@ -19291,41 +19292,38 @@ function outreachShowEditModal(data, mcId) {
           </div>
           <div id="oe_contact_results" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:10;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;margin-top:4px;"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Email</div>
-            <input type="email" id="oe_contact_email" value="${data.contact_email || ''}" placeholder="john@company.com" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-          </div>
-          <div>
-            <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Phone</div>
-            <input type="text" id="oe_contact_phone" value="${data.contact_phone || ''}" placeholder="(555) 123-4567" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-          </div>
-          <div style="grid-column:span 2;">
-            <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">LinkedIn</div>
-            <input type="url" id="oe_contact_linkedin" value="${data.contact_linkedin || ''}" placeholder="https://linkedin.com/in/..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+        <!-- Contact details: hidden until contact selected or "Create new" clicked -->
+        <div id="oe_contact_details" style="display:${data.contact_name ? 'block' : 'none'};margin-top:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Email</div>
+              <input type="email" id="oe_contact_email" value="${data.contact_email || ''}" placeholder="john@company.com" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div>
+              <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Phone</div>
+              <input type="text" id="oe_contact_phone" value="${data.contact_phone || ''}" placeholder="(555) 123-4567" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div style="grid-column:span 2;">
+              <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">LinkedIn</div>
+              <input type="url" id="oe_contact_linkedin" value="${data.contact_linkedin || ''}" placeholder="https://linkedin.com/in/..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Permission / Listing Agreement -->
-      <div style="background:rgba(0,0,0,0.02);border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+      <!-- Permission / Listing Agreement (hidden until contact name filled) -->
+      <div id="oe_permission_card" style="background:rgba(0,0,0,0.02);border-radius:12px;padding:18px 20px;margin-bottom:16px;display:${data.contact_name ? 'block' : 'none'};">
         <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:14px;">Permission</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
           <div style="display:flex;gap:6px;">
-            <button type="button" id="oe_perm_yes" onclick="document.getElementById('oe_perm_yes').style.background='#10b981';document.getElementById('oe_perm_yes').style.color='#fff';document.getElementById('oe_perm_yes').style.borderColor='#10b981';document.getElementById('oe_perm_no').style.background='transparent';document.getElementById('oe_perm_no').style.color='var(--text-muted)';document.getElementById('oe_perm_no').style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${data.permission_granted ? '#10b981' : 'var(--border)'};cursor:pointer;background:${data.permission_granted ? '#10b981' : 'transparent'};color:${data.permission_granted ? '#fff' : 'var(--text-muted)'};">Yes</button>
-            <button type="button" id="oe_perm_no" onclick="document.getElementById('oe_perm_no').style.background='#ef4444';document.getElementById('oe_perm_no').style.color='#fff';document.getElementById('oe_perm_no').style.borderColor='#ef4444';document.getElementById('oe_perm_yes').style.background='transparent';document.getElementById('oe_perm_yes').style.color='var(--text-muted)';document.getElementById('oe_perm_yes').style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${!data.permission_granted ? '#ef4444' : 'var(--border)'};cursor:pointer;background:${!data.permission_granted ? '#ef4444' : 'transparent'};color:${!data.permission_granted ? '#fff' : 'var(--text-muted)'};">No</button>
+            <button type="button" id="oe_perm_yes" data-selected="${data.permission_granted ? 'true' : 'false'}" onclick="this.dataset.selected='true';document.getElementById('oe_perm_no').dataset.selected='false';document.getElementById('oe_perm_value').value='yes';this.style.background='#10b981';this.style.color='#fff';this.style.borderColor='#10b981';var no=document.getElementById('oe_perm_no');no.style.background='transparent';no.style.color='var(--text-muted)';no.style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${data.permission_granted ? '#10b981' : 'var(--border)'};cursor:pointer;background:${data.permission_granted ? '#10b981' : 'transparent'};color:${data.permission_granted ? '#fff' : 'var(--text-muted)'};">Yes</button>
+            <button type="button" id="oe_perm_no" data-selected="${!data.permission_granted ? 'true' : 'false'}" onclick="this.dataset.selected='true';document.getElementById('oe_perm_yes').dataset.selected='false';document.getElementById('oe_perm_value').value='no';this.style.background='#ef4444';this.style.color='#fff';this.style.borderColor='#ef4444';var yes=document.getElementById('oe_perm_yes');yes.style.background='transparent';yes.style.color='var(--text-muted)';yes.style.borderColor='var(--border)'" style="padding:7px 18px;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;border:1.5px solid ${!data.permission_granted ? '#ef4444' : 'var(--border)'};cursor:pointer;background:${!data.permission_granted ? '#ef4444' : 'transparent'};color:${!data.permission_granted ? '#fff' : 'var(--text-muted)'};">No</button>
           </div>
           <div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">Has operator signed a listing agreement?</div>
         </div>
         <div>
           <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Signed Contract URL</div>
           <input type="url" id="oe_proof" value="${data.permission_proof_url || ''}" placeholder="Link to signed listing agreement..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;transition:border-color 0.15s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-        </div>
-        <div style="margin-top:12px;">
-          <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:4px;">Offering Type</div>
-          <select id="oe_offering" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:var(--font-body);font-size:14px;background:var(--bg-card);box-sizing:border-box;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%239ca3af%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 12px center;">
-            ${offeringOptions.map(o => `<option value="${o}"${data.offering_type === o ? ' selected' : ''}>${o === 'unknown' ? 'Unknown' : o.toUpperCase()}</option>`).join('')}
-          </select>
         </div>
       </div>
 
@@ -19354,7 +19352,10 @@ function outreachShowEditModal(data, mcId) {
         const resp = await fetch('/api/users?q=' + encodeURIComponent(q) + '&admin=' + encodeURIComponent(adminEmail));
         const data = await resp.json();
         if (!data.contacts || data.contacts.length === 0) {
-          resultsDiv.innerHTML = '<div style="padding:12px 16px;font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">No CRM contacts found — name will be saved as-is</div>';
+          resultsDiv.innerHTML = '<div style="padding:12px 16px;">'
+            + '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);margin-bottom:8px;">No CRM contacts found</div>'
+            + '<button type="button" id="oe_create_new_btn" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;cursor:pointer;" onmousedown="event.preventDefault();document.getElementById(\'oe_contact_details\').style.display=\'block\';document.getElementById(\'oe_permission_card\').style.display=\'block\';document.getElementById(\'oe_contact_results\').style.display=\'none\';">+ Create new contact</button>'
+            + '</div>';
           resultsDiv.style.display = 'block';
           return;
         }
@@ -19379,17 +19380,10 @@ function outreachShowEditModal(data, mcId) {
             document.getElementById('oe_contact_linkedin').value = contact.linkedin || '';
             document.getElementById('oe_ghl_contact_id').value = contact.id || '';
             resultsDiv.style.display = 'none';
-            // Show linked badge
-            const badge = resultsDiv.closest('[style*="rgba(0,0,0,0.02)"]')?.querySelector('[style*="#10b981"]');
-            if (!badge) {
-              const header = resultsDiv.closest('[style*="rgba(0,0,0,0.02)"]')?.querySelector('[style*="margin-bottom:14px"]');
-              if (header) {
-                const b = document.createElement('span');
-                b.style.cssText = 'font-family:var(--font-ui);font-size:10px;color:#10b981;font-weight:600;background:#ecfdf5;padding:2px 8px;border-radius:8px;';
-                b.textContent = 'Linked to CRM';
-                header.appendChild(b);
-              }
-            }
+            // Show contact details, permission card, and CRM badge
+            document.getElementById('oe_contact_details').style.display = 'block';
+            document.getElementById('oe_permission_card').style.display = 'block';
+            document.getElementById('oe_crm_badge').style.display = 'inline';
           });
         });
       } catch (e) { resultsDiv.style.display = 'none'; }
@@ -19472,9 +19466,8 @@ async function outreachSave(mcId) {
     contact_phone: document.getElementById('oe_contact_phone').value || null,
     contact_linkedin: document.getElementById('oe_contact_linkedin').value || null,
     ghl_contact_id: document.getElementById('oe_ghl_contact_id').value || null,
-    permission_granted: document.getElementById('oe_perm_yes').style.background === 'rgb(16, 185, 129)' || document.getElementById('oe_perm_yes').style.background === '#10b981',
-    permission_proof_url: document.getElementById('oe_proof').value || '',
-    offering_type: document.getElementById('oe_offering').value
+    permission_granted: document.getElementById('oe_perm_value').value === 'yes',
+    permission_proof_url: document.getElementById('oe_proof')?.value || ''
   };
   try {
     const resp = await fetch('/api/operator-outreach', {
