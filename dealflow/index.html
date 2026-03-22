@@ -5371,7 +5371,7 @@ const _supa = window.supabase.createClient(
       <button class="buybox-update-btn" id="dealsBuyBoxUpdate" onclick="updateDealsBuyBox()">Update Buy Box?</button>
       <select class="filter-select" id="filterAssetClass" onchange="applyFilters()">
         <option value="">Asset Class</option>
-        <option value="Multi Family">Multi Family</option>
+        <option value="Multi-Family">Multi-Family</option>
         <option value="Industrial">Industrial</option>
         <option value="Self Storage">Self Storage</option>
         <option value="Hotels/Hospitality">Hotels / Hospitality</option>
@@ -5388,8 +5388,10 @@ const _supa = window.supabase.createClient(
       </select>
       <select class="filter-select" id="filterStrategy" onchange="applyFilters()">
         <option value="">Strategy</option>
-        <option value="Value-Add">Value-Add</option>
         <option value="Lending">Lending</option>
+        <option value="Buy & Hold">Buy & Hold</option>
+        <option value="Value-Add">Value-Add</option>
+        <option value="Distressed">Distressed</option>
         <option value="Development">Development</option>
       </select>
       <select class="filter-select" id="filterStatus" onchange="applyFilters()" style="display:none;">
@@ -6798,6 +6800,15 @@ const _supa = window.supabase.createClient(
         </button>
         <span id="adminResultCount" style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);font-weight:500;"></span>
       </div>
+      <!-- Operators sub-toggle: Database vs Outreach Pipeline -->
+      <div id="adminOperatorSubToggle" style="display:none;margin-bottom:16px;">
+        <div style="display:inline-flex;gap:2px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:8px;padding:3px;">
+          <button class="admin-op-subtoggle active" data-view="database" onclick="adminSwitchOperatorView('database',this)" style="padding:7px 16px;border:none;border-radius:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Database</button>
+          <button class="admin-op-subtoggle" data-view="outreach" onclick="adminSwitchOperatorView('outreach',this)" style="padding:7px 16px;border:none;border-radius:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Outreach Pipeline</button>
+        </div>
+      </div>
+      <!-- Outreach pipeline embed (hidden by default) -->
+      <div id="adminOutreachEmbed" style="display:none;"></div>
       <div id="adminQualityBanner" style="display:none;padding:14px 18px;background:var(--bg-cream);border-radius:12px;margin-bottom:16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">
         <strong style="color:var(--text-dark);">Quality Audit Mode</strong> — <span id="adminQualityBannerText">Shows how complete each record is. Sorted worst-first so you can fix the biggest gaps. Green = 80%+, Yellow = 50-80%, Red = below 50%.</span>
       </div>
@@ -9131,7 +9142,7 @@ function getAssetPlaceholder(assetClass) {
   // Gradient placeholders by asset class
   const colors = {
     'Lending': { bg: 'linear-gradient(135deg,#1a365d,#2563EB)', icon: '&#128178;' },
-    'Multi Family': { bg: 'linear-gradient(135deg,#14532d,#22c55e)', icon: '&#127970;' },
+    'Multi-Family': { bg: 'linear-gradient(135deg,#14532d,#22c55e)', icon: '&#127970;' },
     'Self Storage': { bg: 'linear-gradient(135deg,#713f12,#f59e0b)', icon: '&#128230;' },
     'Hotels/Hospitality': { bg: 'linear-gradient(135deg,#4a1d96,#8b5cf6)', icon: '&#127976;' },
     'Industrial': { bg: 'linear-gradient(135deg,#3f3f46,#71717a)', icon: '&#127981;' },
@@ -10988,6 +10999,7 @@ document.addEventListener('keydown', e => {
 function navigateTo(page) {
   // Redirect legacy page names to admin dashboard
   if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions' || page === 'growth') { navigateTo('admindash'); return; }
+  if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -16660,6 +16672,8 @@ let _adminSearchTimer = null;
 let _adminQualityMode = true;
 let _adminHideComplete = true;
 
+var _adminOperatorView = 'database';
+
 function adminShowTab(tab, btn) {
   _adminTab = tab;
   _adminPage = 1;
@@ -16681,7 +16695,85 @@ function adminShowTab(tab, btn) {
   if (qBanner) qBanner.style.display = 'none';
   var hcToggle = document.getElementById('adminHideCompleteToggle');
   if (hcToggle) hcToggle.remove();
+
+  // Show/hide operator sub-toggle
+  var subToggle = document.getElementById('adminOperatorSubToggle');
+  var outreachEmbed = document.getElementById('adminOutreachEmbed');
+  if (subToggle) subToggle.style.display = tab === 'operators' ? '' : 'none';
+  if (tab === 'operators' && _adminOperatorView === 'outreach') {
+    adminSwitchOperatorView('outreach');
+    return;
+  }
+  if (outreachEmbed) outreachEmbed.style.display = 'none';
   adminLoadData();
+}
+
+function adminSwitchOperatorView(view, btn) {
+  _adminOperatorView = view;
+  // Update toggle buttons
+  document.querySelectorAll('.admin-op-subtoggle').forEach(function(b) {
+    if (b.getAttribute('data-view') === view) {
+      b.style.background = 'var(--primary)';
+      b.style.color = '#fff';
+      b.classList.add('active');
+    } else {
+      b.style.background = 'transparent';
+      b.style.color = 'var(--text-secondary)';
+      b.classList.remove('active');
+    }
+  });
+
+  // Elements to toggle
+  var adminTableWrap = document.querySelector('#page-admin-manage .admin-table-wrap');
+  var qualityBanner = document.getElementById('adminQualityBanner');
+  var qualityStats = document.getElementById('adminQualityStats');
+  var pagination = document.getElementById('adminPagination');
+  var searchWrap = document.getElementById('adminSearch') ? document.getElementById('adminSearch').closest('div[style]') : null;
+  if (searchWrap && searchWrap.parentElement) searchWrap = searchWrap.parentElement;
+  var outreachEmbed = document.getElementById('adminOutreachEmbed');
+  var outreachPage = document.getElementById('page-outreach');
+
+  if (view === 'outreach') {
+    // Hide admin table elements
+    if (adminTableWrap) adminTableWrap.style.display = 'none';
+    if (qualityBanner) qualityBanner.style.display = 'none';
+    if (qualityStats) qualityStats.style.display = 'none';
+    if (pagination) pagination.style.display = 'none';
+    // Hide the search/buttons row (first child flex div)
+    var toolbarRow = document.querySelector('#page-admin-manage .sub-page > div:first-child');
+    if (toolbarRow) toolbarRow.style.display = 'none';
+    // Move outreach page content into embed container
+    if (outreachEmbed && outreachPage) {
+      var subPage = outreachPage.querySelector('.sub-page');
+      if (subPage && !outreachEmbed._movedContent) {
+        // Move the actual DOM nodes (not clone) so event handlers & IDs still work
+        while (subPage.firstChild) {
+          outreachEmbed.appendChild(subPage.firstChild);
+        }
+        outreachEmbed._movedContent = true;
+        outreachEmbed._sourceSubPage = subPage;
+      }
+      outreachEmbed.style.display = '';
+    }
+    // Refresh outreach data
+    if (typeof outreachLoadStats === 'function') outreachLoadStats();
+    if (typeof outreachLoadData === 'function') outreachLoadData();
+  } else {
+    // Restore outreach content back to its original page
+    if (outreachEmbed && outreachEmbed._movedContent && outreachEmbed._sourceSubPage) {
+      while (outreachEmbed.firstChild) {
+        outreachEmbed._sourceSubPage.appendChild(outreachEmbed.firstChild);
+      }
+      outreachEmbed._movedContent = false;
+    }
+    if (outreachEmbed) outreachEmbed.style.display = 'none';
+    // Show admin table elements
+    if (adminTableWrap) adminTableWrap.style.display = '';
+    if (pagination) pagination.style.display = '';
+    var toolbarRow = document.querySelector('#page-admin-manage .sub-page > div:first-child');
+    if (toolbarRow) toolbarRow.style.display = '';
+    adminLoadData();
+  }
 }
 
 function adminSearchDebounce() {
