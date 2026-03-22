@@ -163,6 +163,61 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── 1b. Age Distribution (Census ACS B01001) ──
+    try {
+      // B01001: Sex by Age — male (003-025), female (027-049)
+      const maleVars = 'B01001_003E,B01001_004E,B01001_005E,B01001_006E,B01001_007E,B01001_008E,B01001_009E,B01001_010E,B01001_011E,B01001_012E,B01001_013E,B01001_014E,B01001_015E,B01001_016E,B01001_017E,B01001_018E,B01001_019E,B01001_020E,B01001_021E,B01001_022E,B01001_023E,B01001_024E,B01001_025E';
+      const femaleVars = 'B01001_027E,B01001_028E,B01001_029E,B01001_030E,B01001_031E,B01001_032E,B01001_033E,B01001_034E,B01001_035E,B01001_036E,B01001_037E,B01001_038E,B01001_039E,B01001_040E,B01001_041E,B01001_042E,B01001_043E,B01001_044E,B01001_045E,B01001_046E,B01001_047E,B01001_048E,B01001_049E';
+
+      let ageUrl;
+      if (zip) {
+        ageUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${maleVars},${femaleVars}&for=zip%20code%20tabulation%20area:${zip}`;
+      } else if (resolvedCountyFips) {
+        const sf = resolvedCountyFips.substring(0, 2);
+        const cf = resolvedCountyFips.substring(2, 5);
+        ageUrl = `${CENSUS_BASE}/2023/acs/acs5?get=${maleVars},${femaleVars}&for=county:${cf}&in=state:${sf}`;
+      }
+
+      if (ageUrl) {
+        const ageResp = await fetch(ageUrl);
+        if (ageResp.ok) {
+          const ageData = await ageResp.json();
+          const vals = ageData[1].map(v => parseInt(v) || 0);
+
+          // Raw Census age groups (23 male + 23 female):
+          // Under5,5-9,10-14,15-17,18-19,20,21,22-24,25-29,30-34,35-39,40-44,45-49,50-54,55-59,60-61,62-64,65-66,67-69,70-74,75-79,80-84,85+
+          // Consolidate into 5-year groups matching the pyramid chart
+          const m = vals.slice(0, 23);
+          const f = vals.slice(23, 46);
+
+          const ageGroups = [
+            { label: 'Under 5',       male: m[0],  female: f[0] },
+            { label: '5 to 9',        male: m[1],  female: f[1] },
+            { label: '10 to 14',      male: m[2],  female: f[2] },
+            { label: '15 to 19',      male: m[3]+m[4], female: f[3]+f[4] },
+            { label: '20 to 24',      male: m[5]+m[6]+m[7], female: f[5]+f[6]+f[7] },
+            { label: '25 to 29',      male: m[8],  female: f[8] },
+            { label: '30 to 34',      male: m[9],  female: f[9] },
+            { label: '35 to 39',      male: m[10], female: f[10] },
+            { label: '40 to 44',      male: m[11], female: f[11] },
+            { label: '45 to 49',      male: m[12], female: f[12] },
+            { label: '50 to 54',      male: m[13], female: f[13] },
+            { label: '55 to 59',      male: m[14], female: f[14] },
+            { label: '60 to 64',      male: m[15]+m[16], female: f[15]+f[16] },
+            { label: '65 to 69',      male: m[17]+m[18], female: f[17]+f[18] },
+            { label: '70 to 74',      male: m[19], female: f[19] },
+            { label: '75 to 79',      male: m[20], female: f[20] },
+            { label: '80 to 84',      male: m[21], female: f[21] },
+            { label: '85 and over',   male: m[22], female: f[22] }
+          ];
+
+          results.ageDistribution = ageGroups;
+        }
+      }
+    } catch (e) {
+      console.log('Age distribution fetch failed:', e.message);
+    }
+
     // ── 2. Employment Data (BLS QCEW via API) ──
     // Use County Employment data if we have FIPS
     let countyFips = resolvedCountyFips;

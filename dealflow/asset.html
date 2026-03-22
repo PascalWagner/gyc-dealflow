@@ -1228,6 +1228,19 @@ body {
               </div>
             </div>
           </div>
+          <!-- Age Distribution Pyramid -->
+          <div id="agePyramidSection" style="display:none;padding:24px;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Population by Age &amp; Sex</div>
+            <div id="agePyramidSubtitle" class="mi-subtitle"></div>
+            <div style="height:360px;position:relative;">
+              <canvas id="agePyramidChart"></canvas>
+            </div>
+            <div style="display:flex;justify-content:center;gap:24px;margin-top:8px;">
+              <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:12px;height:12px;background:#38bdf8;border-radius:2px;"></span>Male</span>
+              <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:12px;height:12px;background:#fbbf24;border-radius:2px;"></span>Female</span>
+            </div>
+          </div>
+
           <!-- Employment -->
           <div id="employmentSection" style="display:none;padding:24px;">
             <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Top Industries by Employment</div>
@@ -2393,6 +2406,90 @@ function renderMarketIntelligence(data) {
               font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
               color: '#8A9AA0',
               callback: function(val) { return '$' + (val / 1000).toFixed(0) + 'K'; }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Age Distribution Pyramid ──
+  if (data.ageDistribution && data.ageDistribution.length) {
+    document.getElementById('agePyramidSection').style.display = 'block';
+    var areaName = (pop.length && pop[0].name) ? pop[0].name : '';
+    document.getElementById('agePyramidSubtitle').textContent = areaName + ' · 2023 ACS 5-Year Estimates';
+
+    var ageLabels = data.ageDistribution.map(function(g) { return g.label; });
+    var maleData = data.ageDistribution.map(function(g) { return -g.male; }); // Negative for left side
+    var femaleData = data.ageDistribution.map(function(g) { return g.female; });
+
+    var maxVal = Math.max.apply(null, data.ageDistribution.map(function(g) { return Math.max(g.male, g.female); }));
+
+    var pyramidCtx = document.getElementById('agePyramidChart').getContext('2d');
+    new Chart(pyramidCtx, {
+      type: 'bar',
+      data: {
+        labels: ageLabels,
+        datasets: [
+          {
+            label: 'Male',
+            data: maleData,
+            backgroundColor: '#38bdf8',
+            borderRadius: 2,
+            barPercentage: 0.85,
+            categoryPercentage: 0.9
+          },
+          {
+            label: 'Female',
+            data: femaleData,
+            backgroundColor: '#fbbf24',
+            borderRadius: 2,
+            barPercentage: 0.85,
+            categoryPercentage: 0.9
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0A1E21',
+            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+            bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(ctx) {
+                return ctx.dataset.label + ': ' + Math.abs(ctx.parsed.x).toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: false,
+            grid: { color: '#EDF1F2' },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' },
+              color: '#8A9AA0',
+              callback: function(val) {
+                var v = Math.abs(val);
+                if (v >= 1000) return (v / 1000).toFixed(0) + 'K';
+                return v;
+              }
+            },
+            min: -maxVal * 1.1,
+            max: maxVal * 1.1
+          },
+          y: {
+            stacked: false,
+            grid: { display: false },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' },
+              color: '#607179'
             }
           }
         }
