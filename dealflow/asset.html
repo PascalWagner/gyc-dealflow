@@ -1147,9 +1147,9 @@ body {
         <div class="hero-stats" id="heroStats"></div>
       </div>
 
-      <!-- Asset Overview -->
+      <!-- Property Summary -->
       <div class="section" id="assetOverviewSection" style="display:none;">
-        <div class="section-label">Asset Overview</div>
+        <div class="section-label">Property Summary</div>
         <div class="section-card">
           <div id="assetOverviewContent" style="padding:24px;"></div>
         </div>
@@ -1780,12 +1780,11 @@ function extractPropertyDetails(deals) {
   return details;
 }
 
-function renderAssetOverview(deals, propertyDetails) {
+function renderAssetOverview(deals, propertyDetails, propertyName, assetClass, location) {
   var section = document.getElementById('assetOverviewSection');
   var el = document.getElementById('assetOverviewContent');
   var pd = propertyDetails || {};
 
-  // Merge structured DB fields with regex-mined details
   var d0 = deals[0] || {};
   var units = d0.unitCount || pd.units;
   var yrBuilt = d0.yearBuilt;
@@ -1794,34 +1793,69 @@ function renderAssetOverview(deals, propertyDetails) {
   var propType = d0.propertyType || pd.propertyType;
   var strat = d0.strategy || pd.strategy;
 
-  var address = d0.address || '';
+  // Get unique operators
+  var opSet = {};
+  var operators = [];
+  deals.forEach(function(d) {
+    var mc = d.managementCompany;
+    if (mc && !opSet[mc]) { opSet[mc] = true; operators.push(mc); }
+  });
 
-  var items = [];
-  if (address) items.push({ v: address, l: 'Address' });
-  if (units) items.push({ v: Number(units).toLocaleString(), l: 'Units' });
-  if (yrBuilt) items.push({ v: String(yrBuilt), l: 'Year Built' });
-  if (sqft) items.push({ v: Number(sqft).toLocaleString() + ' SF', l: 'Square Footage' });
-  if (!address && pd.city) items.push({ v: pd.city + ', ' + (pd.state || ''), l: 'Location' });
-  if (occ) items.push({ v: occ + '%', l: 'Occupancy' });
-  if (propType) items.push({ v: propType, l: 'Property Type' });
+  // Build natural language summary
+  var parts = [];
+  var name = propertyName || 'This property';
 
-  // Get best strategy text
-  var strategyTexts = deals
-    .filter(function(d) { return d.investmentStrategy && d.investmentStrategy.length > 50; })
-    .map(function(d) { return { text: d.investmentStrategy, op: d.managementCompany }; });
+  // Opening sentence
+  var opening = name;
+  if (assetClass) opening += ' is a ' + assetClass.toLowerCase() + ' property';
+  else opening += ' is a property';
+  if (location) opening += ' located in ' + location;
+  opening += '.';
+  parts.push(opening);
 
-  if (!items.length) return;
+  // Details sentence
+  var details = [];
+  if (units) details.push(Number(units).toLocaleString() + ' units');
+  if (sqft) details.push(Number(sqft).toLocaleString() + ' square feet');
+  if (yrBuilt) details.push('built in ' + yrBuilt);
+  if (details.length) {
+    parts.push('The property has ' + details.join(', ') + '.');
+  }
+
+  // Occupancy
+  if (occ) {
+    parts.push('Current occupancy is ' + occ + '%.');
+  }
+
+  // Strategy
+  if (strat) {
+    parts.push('The current investment strategy is ' + strat.toLowerCase() + '.');
+  }
+
+  // Ownership history
+  if (operators.length === 1) {
+    parts.push('It is currently owned by ' + operators[0] + '.');
+  } else if (operators.length > 1) {
+    parts.push('It has had ' + operators.length + ' operators in our database: ' + operators.join(', ') + '.');
+  }
+
+  // Deal count
+  if (deals.length > 1) {
+    var dates = deals.map(function(d) { return d.addedDate; }).filter(Boolean).sort();
+    if (dates.length >= 2) {
+      var firstYear = new Date(dates[0]).getFullYear();
+      var lastYear = new Date(dates[dates.length - 1]).getFullYear();
+      parts.push('We\'ve tracked ' + deals.length + ' transactions on this asset from ' + firstYear + ' to ' + lastYear + '.');
+    }
+  }
+
+  if (parts.length <= 1) return; // Not enough data for a meaningful summary
 
   section.style.display = 'block';
 
-  var html = '';
-  if (items.length) {
-    html += '<div class="overview-grid">' +
-      items.map(function(i) {
-        return '<div class="overview-item"><div class="overview-value">' + esc(i.v) + '</div><div class="overview-label">' + esc(i.l) + '</div></div>';
-      }).join('') + '</div>';
-  }
-
+  var html = '<div style="padding:24px;font-family:var(--font-body);font-size:15px;line-height:1.7;color:var(--text-secondary);">' +
+    '<p style="margin:0;">' + esc(parts.join(' ')) + '</p>' +
+    '</div>';
 
   el.innerHTML = html;
 }
@@ -2163,11 +2197,13 @@ function renderMap(lat, lng, label) {
 }
 
 // ========== MARKET INTELLIGENCE ==========
-async function fetchMarketData(zip, stateAbbr, countyFips) {
+async function fetchMarketData(zip, stateAbbr, countyFips, lat, lng) {
   var params = [];
   if (zip) params.push('zip=' + encodeURIComponent(zip));
   if (countyFips) params.push('fips=' + encodeURIComponent(countyFips));
   if (stateAbbr) params.push('stateAbbr=' + encodeURIComponent(stateAbbr));
+  if (lat) params.push('lat=' + encodeURIComponent(lat));
+  if (lng) params.push('lng=' + encodeURIComponent(lng));
   if (!params.length) return null;
 
   try {
@@ -2526,7 +2562,7 @@ async function init() {
   // Render
   renderHero(propertyName, propertyAddress, assetClass, location, status, matchingDeals);
   renderPriceHistory(matchingDeals, null);
-  renderAssetOverview(matchingDeals, propertyDetails);
+  renderAssetOverview(matchingDeals, propertyDetails, propertyName, assetClass, location);
   renderOperatorComparison(matchingDeals);
   // Deal economics removed — belongs on deal page only
 
@@ -2568,8 +2604,12 @@ async function init() {
     var zipMatch = propertyAddress.match(/\b(\d{5})\b/);
     if (zipMatch) miZip = zipMatch[1];
   }
-  if (miZip || rcCountyFips) {
-    var marketData = await fetchMarketData(miZip, state, rcCountyFips);
+  // Get coordinates for county FIPS resolution
+  var miLat = null, miLng = null;
+  if (currentCoords) { miLat = currentCoords.lat; miLng = currentCoords.lng; }
+
+  if (miZip || rcCountyFips || (miLat && miLng)) {
+    var marketData = await fetchMarketData(miZip, state, rcCountyFips, miLat, miLng);
     if (marketData) renderMarketIntelligence(marketData);
   }
 }

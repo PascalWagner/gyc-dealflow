@@ -40,14 +40,33 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { zip, state, county, fips, stateAbbr } = req.query;
+  const { zip, state, county, fips, stateAbbr, lat, lng } = req.query;
 
   if (!zip && !fips && !(state && county)) {
     return res.status(400).json({ success: false, error: 'Provide zip, fips (state+county FIPS), or state+county name' });
   }
 
   // Resolve state FIPS for ZCTA queries (needed for pre-2020 Census API)
-  const resolvedStateFips = stateAbbr ? STATE_FIPS[stateAbbr.toUpperCase()] : (fips ? fips.substring(0, 2) : null);
+  let resolvedStateFips = stateAbbr ? STATE_FIPS[stateAbbr.toUpperCase()] : (fips ? fips.substring(0, 2) : null);
+
+  // Resolve county FIPS from lat/lng using FCC Census Area API
+  let resolvedCountyFips = fips || null;
+  if (!resolvedCountyFips && lat && lng) {
+    try {
+      const fccResp = await fetch(`https://geo.fcc.gov/api/census/area?lat=${lat}&lon=${lng}&format=json`);
+      if (fccResp.ok) {
+        const fccData = await fccResp.json();
+        if (fccData.results && fccData.results.length > 0) {
+          resolvedCountyFips = fccData.results[0].county_fips;
+          if (!resolvedStateFips && resolvedCountyFips) {
+            resolvedStateFips = resolvedCountyFips.substring(0, 2);
+          }
+        }
+      }
+    } catch (e) {
+      console.log('FCC geocode failed:', e.message);
+    }
+  }
 
   try {
     const results = {};
@@ -144,12 +163,7 @@ export default async function handler(req, res) {
 
     // ── 2. Employment Data (BLS QCEW via API) ──
     // Use County Employment data if we have FIPS
-    let countyFips = fips;
-    if (!countyFips && zip) {
-      // Try to derive county FIPS from census data name
-      // The census NAME field includes county info
-      // For now, skip employment if we only have zip
-    }
+    let countyFips = resolvedCountyFips;
 
     if (countyFips && countyFips.length === 5) {
       try {
@@ -249,7 +263,7 @@ export default async function handler(req, res) {
     results.risks = risks;
 
     // Include query params for deep-linking
-    results.query = { zip: zip || null, fips: fips || null, stateAbbr: stateAbbr || null };
+    results.query = { zip: zip || null, fips: resolvedCountyFips || null, stateAbbr: stateAbbr || null };
 
     return res.status(200).json({ success: true, ...results });
 
