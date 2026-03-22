@@ -11705,7 +11705,7 @@ function navigateTo(page) {
   if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
   if (page === 'compare') { navigateTo('deals'); setTimeout(function(){ var dt = document.querySelector('#page-deals .topbar-tab[data-tab="decision"]'); if (dt) switchTab(dt); }, 100); return; }
   if (page === 'debtfunds') { navigateTo('deals'); setTimeout(switchToDebtFunds, 100); return; }
-  if (page === 'assets') { navigateTo('deals'); return; }
+  // Assets page is a standalone page, don't redirect
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
