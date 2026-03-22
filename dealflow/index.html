@@ -11597,13 +11597,13 @@ function updateStageDescription() {
   const desc = document.getElementById('stageDescription');
   if (!desc) return;
   const stages = {
-    browse: { title: 'Deal Flow', text: 'Browse vetted opportunities. Save deals to your shortlist, then move them through your pipeline.', color: 'var(--primary)' },
-    saved: { title: 'Your Shortlist', text: 'Deals you want to look at closer. When you\'re ready to dig in, move one to Vetting.', color: 'var(--primary)' },
-    vetting: { title: 'Vetting Pipeline', text: 'Do your homework here. Work through the DD checklist, research the sponsor, and check the numbers.', color: '#2563EB' },
-    diligence: { title: 'Due Diligence', text: 'Deep dive into the deal. Review financials, talk to the sponsor, verify the numbers, and build conviction.', color: '#f97316' },
-    decision: { title: 'Decision Time', text: 'You\'ve done your due diligence. Review the final details and schedule a call with Pascal before wiring.', color: '#a855f7' },
+    browse: { title: 'Deal Flow', text: 'Browse vetted opportunities. Swipe right or click Save to add a deal to your Shortlist.', color: 'var(--primary)' },
+    saved: { title: 'Your Shortlist', text: 'Deals you want to look at closer. Click Start Vetting to begin your DD checklist on a deal.', color: 'var(--primary)' },
+    vetting: { title: 'Vetting Pipeline', text: 'Do your homework here. Work through the DD checklist, research the sponsor, and check the numbers. When you\'re ready to go deeper, click Start Due Diligence.', color: '#2563EB' },
+    diligence: { title: 'Due Diligence', text: 'You\'re serious about this one. Review financials, talk to the sponsor, and verify the numbers. When you\'ve built conviction, click Make Decision to move forward.', color: '#f97316' },
+    decision: { title: 'Decision Time', text: 'You\'ve done your due diligence. Schedule a review call with Pascal to discuss final details before wiring capital.', color: '#a855f7' },
     invested: { title: 'Your Portfolio', text: 'Deals you\'ve committed capital to. Track distributions, K-1s, and hold periods.', color: '#059669' },
-    passed: { title: 'Passed', text: 'Deals you decided weren\'t right for you. You can always reconsider.', color: 'var(--text-muted)' }
+    passed: { title: 'Not Interested', text: 'Deals you decided weren\'t right for you. You can always click Reconsider to move one back to your Shortlist.', color: 'var(--text-muted)' }
   };
   const s = stages[currentTab];
   if (!s) { desc.style.display = 'none'; return; }
