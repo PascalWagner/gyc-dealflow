@@ -1080,118 +1080,102 @@ body {
   transform: translateY(-1px);
 }
 
-/* Market Positioning */
-.market-cards {
+/* Market Intelligence */
+.mi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.mi-card {
+  background: var(--off-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
 }
-.market-deal-card {
-  padding: 20px;
-  background: var(--off-white);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-light);
-}
-.market-deal-title {
-  font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-dark);
-  margin-bottom: 16px;
-}
-.percentile-row {
+.mi-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-.percentile-row:last-child { margin-bottom: 0; }
-.percentile-label {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  min-width: 110px;
+  justify-content: center;
+  margin-bottom: 12px;
   flex-shrink: 0;
 }
-.percentile-bar-wrap {
+.mi-card-icon svg { width: 18px; height: 18px; }
+.mi-card-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.mi-card-value {
+  font-family: var(--font-ui);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.mi-card-desc {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
   flex: 1;
-  position: relative;
-  height: 8px;
-  background: var(--border-light);
-  border-radius: 4px;
-  overflow: visible;
 }
-.percentile-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.6s ease;
+.mi-card-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
 }
-.percentile-bar-fill.q-top { background: var(--green); }
-.percentile-bar-fill.q-mid { background: var(--yellow); }
-.percentile-bar-fill.q-low { background: var(--red); }
-.percentile-marker {
-  position: absolute;
-  top: -4px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--bg-card);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  transform: translateX(-50%);
+.mi-card-action:hover { text-decoration: underline; }
+.mi-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
-.percentile-marker.q-top { background: var(--green); }
-.percentile-marker.q-mid { background: var(--yellow); }
-.percentile-marker.q-low { background: var(--red); }
-.percentile-text {
+.mi-bar-row:last-child { margin-bottom: 0; }
+.mi-bar-label {
   font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 600;
+  color: var(--text-secondary);
   min-width: 80px;
-  text-align: right;
   flex-shrink: 0;
 }
-.percentile-text.q-top { color: var(--green); }
-.percentile-text.q-mid { color: var(--yellow); }
-.percentile-text.q-low { color: var(--red); }
-
-/* Demand Intelligence */
-.demand-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+.mi-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
 }
-.demand-card {
-  background: var(--off-white);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: 18px 16px;
+.mi-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
 }
-.demand-card-asset {
+.mi-bar-pct {
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--primary);
-  margin-bottom: 10px;
-}
-.demand-stat {
-  font-family: var(--font-ui);
-  font-size: 13px;
   color: var(--text-dark);
-  margin-bottom: 6px;
-  line-height: 1.4;
-}
-.demand-stat strong {
-  font-weight: 700;
-  color: var(--teal-deep);
-}
-.demand-coming-soon {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  color: var(--text-muted);
-  font-style: italic;
+  min-width: 32px;
+  text-align: right;
 }
 
 /* ====== INVESTOR INSIGHTS (What Our Investors Want) ====== */
@@ -1851,46 +1835,15 @@ body {
         </div>
       </div>
 
-      <!-- Row 3: Market Positioning + Demand Intelligence -->
-      <div class="dashboard-grid">
-        <!-- LEFT: Market Positioning -->
-        <div class="section-card">
-          <div class="section-header">
-            <div class="section-title">Market Positioning</div>
-          </div>
-          <div class="section-body">
-            <div class="market-cards" id="marketPositioning">
-              <div class="empty-inline" style="padding:20px;">
-                <p>Loading market data...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT: Demand Intelligence -->
-        <div class="section-card">
-          <div class="section-header">
-            <div class="section-title">Demand Intelligence</div>
-          </div>
-          <div class="section-body">
-            <div class="demand-cards" id="demandIntelligence">
-              <div class="empty-inline" style="padding:20px;">
-                <p>Loading demand data...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row 4: What Investors Want (full width) -->
+      <!-- Market Intelligence (consolidated: positioning + demand + investor prefs) -->
       <div class="section-card">
         <div class="section-header">
-          <div class="section-title">What Our Investors Want</div>
+          <div class="section-title">Market Intelligence</div>
         </div>
         <div class="section-body">
-          <div id="investorInsights">
+          <div id="marketIntelligence">
             <div class="empty-inline" style="padding:20px;">
-              <p>Loading investor insights...</p>
+              <p>Loading market intelligence...</p>
             </div>
           </div>
         </div>
@@ -3106,201 +3059,132 @@ function getPercentileLabel(pct, higherIsBetter) {
   return 'Bottom ' + (100 - (100 - pct)) + '%';
 }
 
-function renderMarketPositioning(gpDeals, allDeals) {
-  var container = document.getElementById('marketPositioning');
+// ========== MARKET INTELLIGENCE (consolidated) ==========
+function renderMarketIntelligence(gpDeals, allDeals, analytics, insights) {
+  var container = document.getElementById('marketIntelligence');
+  if (!container) return;
 
-  // Filter to active deals only (non-stale)
   var activeDeals = allDeals.filter(function(d) {
     var s = (d.status || '').toLowerCase();
     return s !== 'closed' && s !== 'fully funded' && s !== 'completed';
   });
 
-  if (gpDeals.length === 0 || activeDeals.length < 3) {
-    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>Not enough market data to compute positioning. At least 3 active deals are needed.</p></div>';
-    return;
-  }
+  var html = '<div class="mi-grid">';
 
-  // Pre-compute sorted arrays for each metric
-  var prefReturns = activeDeals
-    .map(function(d) { return d.preferredReturn || d.pref_return || d.prefReturn; })
-    .filter(function(v) { return v != null && !isNaN(v); })
-    .sort(function(a, b) { return a - b; });
+  // --- Card 1: Your Competitive Position ---
+  if (gpDeals.length > 0 && activeDeals.length >= 3) {
+    var prefReturns = activeDeals
+      .map(function(d) { return d.preferredReturn || d.pref_return || d.prefReturn; })
+      .filter(function(v) { return v != null && !isNaN(v); })
+      .sort(function(a, b) { return a - b; });
 
-  var minInvestments = activeDeals
-    .map(function(d) { return d.investmentMinimum || d.investment_minimum || d.minInvestment; })
-    .filter(function(v) { return v != null && !isNaN(v) && v > 0; })
-    .sort(function(a, b) { return a - b; });
+    // Best performing deal by percentile
+    var bestDeal = null, bestPct = -1;
+    gpDeals.forEach(function(d) {
+      var pref = d.preferredReturn || d.pref_return || d.prefReturn;
+      if (pref != null && prefReturns.length >= 3) {
+        var pct = computePercentile(prefReturns, pref);
+        if (pct > bestPct) { bestPct = pct; bestDeal = d; }
+      }
+    });
 
-  // Fee load: sum all fee percentages
-  function totalFees(d) {
-    var fees = (d.acquisitionFeePct || 0) + (d.assetMgmtFeePct || 0) +
-      (d.propertyMgmtFeePct || 0) + (d.capitalEventFeePct || 0) +
-      (d.dispositionFeePct || 0) + (d.constructionMgmtFeePct || 0);
-    return fees > 0 ? fees : null;
-  }
+    if (bestDeal) {
+      var posColor = bestPct >= 75 ? 'var(--green)' : bestPct >= 40 ? 'var(--yellow)' : 'var(--red)';
+      var posLabel = bestPct >= 75 ? 'Top quartile' : bestPct >= 50 ? 'Above average' : bestPct >= 25 ? 'Below average' : 'Bottom quartile';
+      var posAdvice = bestPct >= 75 ? 'Your pref return is highly competitive. Highlight this in your deck.' : bestPct >= 50 ? 'Solid positioning. Consider emphasizing track record to stand out.' : 'Consider increasing your pref return or lowering your minimum to attract more LPs.';
 
-  var feeLoads = activeDeals
-    .map(function(d) { return totalFees(d); })
-    .filter(function(v) { return v != null; })
-    .sort(function(a, b) { return a - b; });
-
-  var html = '';
-
-  gpDeals.forEach(function(deal) {
-    var name = getDealName(deal);
-    var rows = '';
-
-    // Preferred Return
-    var myPref = deal.preferredReturn || deal.pref_return || deal.prefReturn;
-    if (myPref != null && prefReturns.length >= 3) {
-      var pPref = computePercentile(prefReturns, myPref);
-      var cPref = getPercentileClass(pPref, true);
-      rows += buildPercentileRow('Pref Return', pPref, cPref, true, (myPref * 100).toFixed(1) + '%');
-    }
-
-    // Min Investment (lower is more accessible = better for LPs)
-    var myMin = deal.investmentMinimum || deal.investment_minimum || deal.minInvestment;
-    if (myMin != null && minInvestments.length >= 3) {
-      var pMin = computePercentile(minInvestments, myMin);
-      var cMin = getPercentileClass(pMin, false);
-      rows += buildPercentileRow('Min Investment', pMin, cMin, false, '$' + myMin.toLocaleString());
-    }
-
-    // Fee Load
-    var myFees = totalFees(deal);
-    if (myFees != null && feeLoads.length >= 3) {
-      var pFee = computePercentile(feeLoads, myFees);
-      var cFee = getPercentileClass(pFee, false);
-      rows += buildPercentileRow('Fee Load', pFee, cFee, false, myFees.toFixed(1) + '%');
-    }
-
-    if (rows) {
-      html += '<div class="market-deal-card">' +
-        '<div class="market-deal-title">' + escHtml(name) + '</div>' +
-        rows +
+      html += '<div class="mi-card">' +
+        '<div class="mi-card-icon" style="background:' + posColor + '20;">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="' + posColor + '" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>' +
+        '</div>' +
+        '<div class="mi-card-title">Competitive Position</div>' +
+        '<div class="mi-card-value" style="color:' + posColor + ';">' + posLabel + '</div>' +
+        '<div class="mi-card-desc">' + escHtml(posAdvice) + '</div>' +
       '</div>';
     }
-  });
-
-  if (!html) {
-    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>Insufficient data to rank your deals. Add preferred return, minimum investment, or fee details to see positioning.</p></div>';
-  } else {
-    container.innerHTML = html;
-  }
-}
-
-function buildPercentileRow(label, percentile, qClass, higherIsBetter, valueStr) {
-  var desc;
-  if (higherIsBetter) {
-    desc = 'Higher than ' + percentile + '% of active deals';
-  } else {
-    desc = 'Lower than ' + (100 - percentile) + '% of active deals';
   }
 
-  return '<div class="percentile-row">' +
-    '<span class="percentile-label">' + escHtml(label) + '</span>' +
-    '<div class="percentile-bar-wrap">' +
-      '<div class="percentile-bar-fill ' + qClass + '" style="width:100%"></div>' +
-      '<div class="percentile-marker ' + qClass + '" style="left:' + percentile + '%"></div>' +
+  // --- Card 2: LP Demand ---
+  var totalActivity = analytics ? (analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0) : 0;
+  var saves = analytics ? (analytics.totalSaves || 0) : 0;
+  var vetting = analytics ? (analytics.totalVetting || 0) : 0;
+  var invested = analytics ? (analytics.totalInvested || 0) : 0;
+
+  var demandLevel = totalActivity >= 20 ? 'High' : totalActivity >= 5 ? 'Growing' : totalActivity > 0 ? 'Early' : 'No activity yet';
+  var demandColor = totalActivity >= 20 ? 'var(--green)' : totalActivity >= 5 ? '#2563EB' : totalActivity > 0 ? 'var(--yellow)' : 'var(--text-muted)';
+  var demandAdvice = totalActivity >= 20 ? saves + ' saves, ' + vetting + ' vetting, ' + invested + ' invested. Strong interest \u2014 follow up with active LPs.' :
+    totalActivity >= 5 ? saves + ' saves, ' + vetting + ' vetting. Momentum building \u2014 consider a webinar to convert interest.' :
+    totalActivity > 0 ? 'A few LPs are watching. Complete your deal profile and add your deck to increase visibility.' :
+    'No LP activity yet. Make sure your deals have complete profiles, decks, and competitive terms.';
+
+  html += '<div class="mi-card">' +
+    '<div class="mi-card-icon" style="background:' + demandColor + '20;">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="' + demandColor + '" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
     '</div>' +
-    '<span class="percentile-text ' + qClass + '" title="' + escAttr(desc) + '">' + escHtml(valueStr) + '</span>' +
+    '<div class="mi-card-title">LP Demand</div>' +
+    '<div class="mi-card-value" style="color:' + demandColor + ';">' + demandLevel + '</div>' +
+    '<div class="mi-card-desc">' + escHtml(demandAdvice) + '</div>' +
   '</div>';
-}
 
-// ========== DEMAND INTELLIGENCE ==========
-function renderDemandIntelligence(gpDeals, allDeals, analytics) {
-  var container = document.getElementById('demandIntelligence');
-
-  // Get unique asset classes from GP's deals
+  // --- Card 3: Market Share ---
   var gpAssetClasses = {};
   gpDeals.forEach(function(d) {
     var ac = getDealAssetClass(d);
-    if (ac) {
-      if (!gpAssetClasses[ac]) gpAssetClasses[ac] = [];
-      gpAssetClasses[ac].push(d);
-    }
+    if (ac) { gpAssetClasses[ac] = (gpAssetClasses[ac] || 0) + 1; }
   });
+  var acKeys = Object.keys(gpAssetClasses);
+  if (acKeys.length > 0 && activeDeals.length > 0) {
+    var totalInClass = 0, gpInClass = 0;
+    acKeys.forEach(function(ac) {
+      activeDeals.forEach(function(d) {
+        if ((d.assetClass || d.asset_class) === ac) totalInClass++;
+      });
+      gpInClass += gpAssetClasses[ac];
+    });
+    var sharePct = totalInClass > 0 ? Math.round((gpInClass / totalInClass) * 100) : 0;
+    var shareAdvice = sharePct >= 10 ? 'You have strong representation in your asset classes.' : 'Adding more deals in your asset class could increase your visibility to targeted LPs.';
 
-  if (Object.keys(gpAssetClasses).length === 0) {
-    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>No asset class data available. Add asset classes to your deals to see demand intelligence.</p></div>';
-    return;
+    html += '<div class="mi-card">' +
+      '<div class="mi-card-icon" style="background:rgba(37,99,235,0.1);">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2v20"/></svg>' +
+      '</div>' +
+      '<div class="mi-card-title">Market Share</div>' +
+      '<div class="mi-card-value" style="color:#2563EB;">' + gpInClass + ' of ' + totalInClass + ' deals</div>' +
+      '<div class="mi-card-desc">' + escHtml(shareAdvice) + '</div>' +
+    '</div>';
   }
 
-  // Filter active deals
-  var activeDeals = allDeals.filter(function(d) {
-    var s = (d.status || '').toLowerCase();
-    return s !== 'closed' && s !== 'fully funded' && s !== 'completed';
-  });
+  // --- Card 4: Investor Preferences ---
+  if (insights && insights.topAssetClasses && insights.topAssetClasses.length > 0) {
+    var topAC = insights.topAssetClasses[0];
+    var gpMatch = insights.topAssetClasses.find(function(a) { return a.isGP; });
+    var matchAdvice = gpMatch ? 'Your ' + gpMatch.name + ' deals align with ' + gpMatch.pct + '% of investor interest.' : 'Most investors prefer ' + topAC.name + ' (' + topAC.pct + '%). Consider if your strategy aligns.';
 
-  // Count active deals per asset class
-  var assetClassCounts = {};
-  activeDeals.forEach(function(d) {
-    var ac = d.assetClass || d.asset_class || '';
-    if (ac) {
-      assetClassCounts[ac] = (assetClassCounts[ac] || 0) + 1;
-    }
-  });
+    html += '<div class="mi-card">' +
+      '<div class="mi-card-icon" style="background:rgba(139,92,246,0.1);">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>' +
+      '</div>' +
+      '<div class="mi-card-title">Investor Preferences</div>' +
+      '<div class="mi-card-value" style="color:#8B5CF6;">' + escHtml(topAC.name) + ' \u2014 ' + topAC.pct + '%</div>' +
+      '<div class="mi-card-desc">' + escHtml(matchAdvice) + '</div>';
 
-  // Compute deal rank within asset class by preferred return
-  function rankInAssetClass(deal, ac) {
-    var peers = activeDeals.filter(function(d) {
-      return (d.assetClass || d.asset_class) === ac;
+    // Mini bar chart of top 4 asset classes
+    var topFour = insights.topAssetClasses.slice(0, 4);
+    var maxPct = Math.max.apply(null, topFour.map(function(a) { return a.pct; }));
+    topFour.forEach(function(item) {
+      var barW = maxPct > 0 ? Math.round((item.pct / maxPct) * 100) : 0;
+      var barColor = item.isGP ? 'var(--primary)' : 'var(--border)';
+      html += '<div class="mi-bar-row">' +
+        '<span class="mi-bar-label">' + escHtml(item.name) + '</span>' +
+        '<div class="mi-bar-track"><div class="mi-bar-fill" style="width:' + barW + '%;background:' + barColor + ';"></div></div>' +
+        '<span class="mi-bar-pct">' + item.pct + '%</span>' +
+      '</div>';
     });
-    var pref = deal.preferredReturn || deal.pref_return || deal.prefReturn;
-    if (pref == null) return null;
 
-    var peersWithPref = peers
-      .map(function(d) { return { id: d.id || d.airtable_id, pref: d.preferredReturn || d.pref_return || d.prefReturn }; })
-      .filter(function(p) { return p.pref != null; })
-      .sort(function(a, b) { return b.pref - a.pref; }); // descending — highest pref first
-
-    for (var i = 0; i < peersWithPref.length; i++) {
-      if (peersWithPref[i].id === (deal.id || deal.airtable_id)) {
-        return { rank: i + 1, total: peersWithPref.length };
-      }
-    }
-    return null;
+    html += '</div>';
   }
 
-  // Count LP interest per asset class (use analytics dealViews as a proxy)
-  var dealViewsByAssetClass = {};
-  var dealViews = (analytics && analytics.dealViews) || {};
-
-  // More broadly: count user_deal_stages for all deals in each asset class
-  // We don't have that data from the API, so we approximate using total saves/vetting/invested
-  // across the GP's deals grouped by asset class
-  // For a better proxy, count all deals in this GP's asset class from allDeals
-
-  var html = '';
-
-  Object.keys(gpAssetClasses).forEach(function(ac) {
-    var totalInClass = assetClassCounts[ac] || 0;
-    var gpDealsInClass = gpAssetClasses[ac];
-
-    var cardHtml = '<div class="demand-card">' +
-      '<div class="demand-card-asset">' + escHtml(ac) + '</div>' +
-      '<div class="demand-stat"><strong>' + totalInClass + '</strong> active ' + escHtml(ac) + ' deals on the platform</div>';
-
-    // Rank each GP deal
-    gpDealsInClass.forEach(function(d) {
-      var ranking = rankInAssetClass(d, ac);
-      if (ranking) {
-        cardHtml += '<div class="demand-stat">Your deal <strong>' + escHtml(getDealName(d)) + '</strong> ranks <strong>#' + ranking.rank + ' of ' + ranking.total + '</strong> by pref return</div>';
-      }
-    });
-
-    // LP demand proxy
-    var totalActivity = (analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0);
-    if (totalActivity > 0) {
-      cardHtml += '<div class="demand-stat"><strong>' + totalActivity + '</strong> LP interactions with your ' + escHtml(ac) + ' deals</div>';
-    } else {
-      cardHtml += '<div class="demand-coming-soon">LP demand tracking — Coming Soon</div>';
-    }
-
-    cardHtml += '</div>';
-    html += cardHtml;
-  });
-
+  html += '</div>'; // mi-grid
   container.innerHTML = html;
 }
 
@@ -3326,10 +3210,11 @@ function fetchInvestorInsights() {
 
 var DIST_COLORS = ['#51BE7B', '#2563EB', '#CF7A30', '#CA8A04', '#D04040', '#8B5CF6'];
 
+// Legacy — kept for reference, replaced by renderMarketIntelligence
 function renderInvestorInsights(insights) {
+  return; // No longer used — consolidated into Market Intelligence
   var container = document.getElementById('investorInsights');
-  if (!insights || !insights.topAssetClasses || insights.topAssetClasses.length === 0) {
-    container.innerHTML = '<div class="empty-inline" style="padding:20px;"><p>Not enough investor data yet. As more investors complete their profiles, aggregate preferences will appear here.</p></div>';
+  if (!container || !insights || !insights.topAssetClasses || insights.topAssetClasses.length === 0) {
     return;
   }
 
@@ -3818,9 +3703,7 @@ function init() {
       renderLPActivity(analytics);
       renderWeeklyChart(analytics.weeklyActivity);
       renderWebinarCta(deals, allDeals, analytics);
-      renderMarketPositioning(deals, allDeals);
-      renderDemandIntelligence(deals, allDeals, analytics);
-      renderInvestorInsights(investorInsights);
+      renderMarketIntelligence(deals, allDeals, analytics, investorInsights);
       renderCompetitiveAnalysis(deals, allDeals, (investorInsights && investorInsights.preferredDistributions) || []);
 
       document.body.classList.add('page-loaded');
@@ -3832,7 +3715,7 @@ function init() {
       renderLPActivity({ totalSaves: 0, totalVetting: 0, totalInvested: 0, recentActivity: [], weeklyActivity: [], highIntentCount: 0 });
       renderWeeklyChart([]);
       renderWebinarCta([], [], {});
-      renderInvestorInsights({});
+      renderMarketIntelligence([], [], {}, {});
       renderCompetitiveAnalysis([], [], []);
       document.body.classList.add('page-loaded');
     });
