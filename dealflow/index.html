@@ -11415,8 +11415,9 @@ async function fetchUserDataFromSupabase(email) {
         let merged = false;
         stagesData.records.forEach(r => {
           const dealId = r.deal_id;
-          const stage = r.stage;
-          if (dealId && stage && localStages[dealId] !== stage) { // Supabase wins — handles email Save/Skip
+          // Migrate DB stage names to frontend names (interested→saved, etc.)
+          const stage = _migrateStage(r.stage);
+          if (dealId && stage && localStages[dealId] !== stage) {
             localStages[dealId] = stage;
             merged = true;
           }
