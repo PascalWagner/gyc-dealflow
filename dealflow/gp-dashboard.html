@@ -53,6 +53,28 @@
   --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
 }
 
+html.dark {
+  --bg-cream: #0A1E21;
+  --bg-card: #14333A;
+  --bg-sidebar: #061215;
+  --bg-sidebar-hover: #0A1E21;
+  --bg-sidebar-active: #1F5159;
+  --text-dark: #E8EDE9;
+  --text-secondary: #9DB0B5;
+  --text-muted: #607179;
+  --border: #1F5159;
+  --border-light: #14333A;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3);
+  --green-bg: #0D2E1A;
+  --orange-bg: #2E1F0D;
+  --blue-bg: #1A2332;
+  --red-bg: #2E1515;
+  --yellow-bg: #2E2A0D;
+  --off-white: #0F2A2F;
+  --charcoal: #E8EDE9;
+}
+
 body {
   font-family: var(--font-body);
   background: var(--bg-cream);
@@ -1720,6 +1742,37 @@ body {
 
 /* ====== USER FEEDBACK SECTION ====== */
 /* feedback styles moved to admin dashboard */
+
+/* ====== DARK MODE OVERRIDES ====== */
+html.dark .skeleton::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+}
+html.dark .webinar-cta-card {
+  background: linear-gradient(135deg, #0D2E1A 0%, #1A2332 100%);
+  border-color: var(--border);
+}
+html.dark .webinar-cta-section .section-header {
+  background: linear-gradient(135deg, #0D2E1A 0%, #1A2332 100%);
+}
+html.dark .comp-table th.col-gp {
+  background: var(--green-bg);
+}
+html.dark .comp-table td.col-gp {
+  background: rgba(13, 46, 26, 0.5);
+}
+html.dark .intent-badge.intent-high {
+  background: var(--red-bg);
+}
+html.dark .weekly-chart-bar-seg.seg-portfolio {
+  background: #9DB0B5;
+}
+html.dark .insights-bar-gp-tag {
+  background: rgba(255,255,255,0.15);
+  color: #E8EDE9;
+}
+html.dark .health-table tr:hover td {
+  background: var(--bg-sidebar-hover);
+}
 </style>
 </head>
 <body>
