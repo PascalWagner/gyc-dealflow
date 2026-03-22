@@ -9236,12 +9236,14 @@ function renderDecisionCompare() {
   deals.forEach(function(d, i) {
     h += '<th class="deal-header ' + colClass(i) + '">';
     h += '<button class="compare-remove-btn" onclick="toggleDecisionCompare(\'' + d.id + '\')" title="Remove from comparison">&times;</button>';
-    h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
     h += '<a href="deal.html?id=' + d.id + '" class="deal-header-name" style="color:inherit;text-decoration:underline;">' + d.investmentName + '</a>';
     h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
     h += '</th>';
   });
   h += '</tr></thead><tbody>';
+
+  // Asset Class row
+  h += cmpTextRow('Asset Class', deals.map(function(d) { return d.assetClass; }));
 
   // Plan Fit
   h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Plan Fit</td>';
