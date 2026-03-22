@@ -53,8 +53,7 @@ export default async function handler(req, res) {
         investment_name: investmentName.trim(),
         management_company_id: mcId,
         status: 'Open to Invest',
-        added_date: new Date().toISOString().split('T')[0],
-        user_submitted: true
+        added_date: new Date().toISOString().split('T')[0]
       })
       .select('id, investment_name')
       .single();
