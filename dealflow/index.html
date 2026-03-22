@@ -5482,7 +5482,6 @@ const _supa = window.supabase.createClient(
         <option value="decision">Decision</option>
         <option value="invested">Invested</option>
         <option value="passed">Not Interested</option>
-        <option value="debtfunds">Debt Funds</option>
       </select>
       <!-- Desktop tabs (hidden on cap-ios) -->
       <div class="topbar-tabs" id="dealWorkflowTabs">
@@ -5507,48 +5506,16 @@ const _supa = window.supabase.createClient(
         </button>
       </div>
     </div>
-    <div class="filter-bar">
+    <div class="filter-bar" style="position:relative;">
       <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
         <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
         Apply My Buy Box
       </button>
       <button class="buybox-update-btn" id="dealsBuyBoxUpdate" onclick="updateDealsBuyBox()">Update Buy Box?</button>
-      <select class="filter-select" id="filterAssetClass" onchange="applyFilters()">
-        <option value="">Asset Class</option>
-        <option value="Multi-Family">Multi-Family</option>
-        <option value="Industrial">Industrial</option>
-        <option value="Self Storage">Self Storage</option>
-        <option value="Hotels/Hospitality">Hotels / Hospitality</option>
-        <option value="Lending">Lending</option>
-        <option value="RV/Mobile Home Parks">RV / Mobile Home Parks</option>
-        <option value="Business / Other">Business / Other</option>
-        <option value="Mixed-Use">Mixed-Use</option>
-        <option value="Short Term Rental">Short Term Rental</option>
-      </select>
-      <select class="filter-select" id="filterDealType" onchange="applyFilters()">
-        <option value="">Deal Type</option>
-        <option value="Fund">Fund</option>
-        <option value="Syndication">Syndication</option>
-      </select>
-      <select class="filter-select" id="filterStrategy" onchange="applyFilters()">
-        <option value="">Strategy</option>
-        <option value="Lending">Lending</option>
-        <option value="Buy & Hold">Buy & Hold</option>
-        <option value="Value-Add">Value-Add</option>
-        <option value="Distressed">Distressed</option>
-        <option value="Development">Development</option>
-      </select>
-      <select class="filter-select" id="filterStatus" onchange="applyFilters()" style="display:none;">
-        <option value="">Status</option>
-        <option value="Open to invest">Open to invest</option>
-        <option value="Evergreen">Evergreen</option>
-      </select>
-      <select class="filter-select" id="filterSort" onchange="_goalSortOverridden=true;applyFilters()">
-        <option value="newest">Sort: Newest</option>
-        <option value="irr">Sort: Highest IRR</option>
-        <option value="min_invest">Sort: Lowest Min Investment</option>
-        <option value="az">Sort: A-Z Name</option>
-      </select>
+      <button id="filtersToggleBtn" onclick="toggleFilterPanel()" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;color:var(--text-secondary);transition:all 0.15s;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filters <span id="filterCountBadge" style="display:none;background:var(--primary);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;min-width:16px;text-align:center;"></span>
+      </button>
       <div style="position:relative;flex:1;min-width:160px;">
         <input type="text" class="filter-input" id="filterSearch" placeholder="Search deals..." oninput="applyFilters()" style="width:100%;box-sizing:border-box;">
         <div id="searchNoResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px;margin-top:4px;">
@@ -5556,13 +5523,65 @@ const _supa = window.supabase.createClient(
           <button onclick="showAddDealModal()" style="width:100%;padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add a Deal</button>
         </div>
       </div>
-      <label id="showArchivedToggle" style="display:none;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;" title="Show deals that are likely closed or no longer accepting capital">
-        <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;"> Show archived
-      </label>
-      <button id="debtFundsFilterBtn" onclick="switchToDebtFunds()" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;color:var(--text-secondary);transition:all 0.15s;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg> Debt Funds</button>
-      <button class="filter-clear" onclick="clearFilters()">Clear Filters</button>
       <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
+
+      <!-- Filter Panel (hidden by default) -->
+      <div id="filterPanel" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 32px rgba(0,0,0,0.12);padding:16px 20px;margin-top:4px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Asset Class</label>
+            <select class="filter-select" id="filterAssetClass" onchange="applyFilters()" style="min-width:140px;">
+              <option value="">All</option>
+              <option value="Multi-Family">Multi-Family</option>
+              <option value="Industrial">Industrial</option>
+              <option value="Self Storage">Self Storage</option>
+              <option value="Hotels/Hospitality">Hotels / Hospitality</option>
+              <option value="Lending">Lending</option>
+              <option value="RV/Mobile Home Parks">RV / Mobile Home Parks</option>
+              <option value="Business / Other">Business / Other</option>
+              <option value="Mixed-Use">Mixed-Use</option>
+              <option value="Short Term Rental">Short Term Rental</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deal Type</label>
+            <select class="filter-select" id="filterDealType" onchange="applyFilters()" style="min-width:120px;">
+              <option value="">All</option>
+              <option value="Fund">Fund</option>
+              <option value="Syndication">Syndication</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Strategy</label>
+            <select class="filter-select" id="filterStrategy" onchange="applyFilters()" style="min-width:120px;">
+              <option value="">All</option>
+              <option value="Lending">Lending</option>
+              <option value="Buy & Hold">Buy &amp; Hold</option>
+              <option value="Value-Add">Value-Add</option>
+              <option value="Distressed">Distressed</option>
+              <option value="Development">Development</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Sort By</label>
+            <select class="filter-select" id="filterSort" onchange="_goalSortOverridden=true;applyFilters()" style="min-width:140px;">
+              <option value="newest">Newest</option>
+              <option value="irr">Highest IRR</option>
+              <option value="min_invest">Lowest Min Investment</option>
+              <option value="az">A-Z Name</option>
+            </select>
+          </div>
+          <select class="filter-select" id="filterStatus" onchange="applyFilters()" style="display:none;">
+            <option value="">Status</option>
+            <option value="Open to invest">Open to invest</option>
+            <option value="Evergreen">Evergreen</option>
+          </select>
+          <label id="showArchivedToggle" style="display:none;align-items:center;gap:5px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;" title="Show deals that are likely closed or no longer accepting capital">
+            <input type="checkbox" id="showArchivedCheck" onchange="applyFilters()" style="cursor:pointer;"> Show archived
+          </label>
+          <button class="filter-clear" onclick="clearFilters()" style="margin-left:auto;">Clear Filters</button>
+        </div>
+      </div>
       <span id="visibleCount" style="display:none;">0</span>
     </div>
     <div class="stats-bar" id="statsBar"></div>
@@ -5577,129 +5596,6 @@ const _supa = window.supabase.createClient(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Feed
       </button>
-    </div>
-    <!-- Debt Funds sub-view (shown when Debt Funds tab is active) -->
-    <div id="debtFundsView" style="display:none;">
-      <div class="sub-page" style="max-width:1200px">
-        <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
-        <!-- Debt Fund Filters -->
-        <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
-          <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
-            <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-            Apply My Buy Box
-          </button>
-          <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
-          <div style="width:1px;height:36px;background:var(--border);align-self:center;"></div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Financials</label>
-            <select id="debtFinancialsFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-              <option value="all">All</option>
-              <option value="Audited">Audited</option>
-              <option value="Unaudited">Unaudited</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">AUM Size</label>
-            <select id="debtAUMFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-              <option value="all">All</option>
-              <option value="small">Small (&lt;$100M)</option>
-              <option value="mid">Mid ($100M-$1B)</option>
-              <option value="institutional">Institutional ($1B+)</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Debt Position</label>
-            <select id="debtPositionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-              <option value="all">All</option>
-              <option value="1st">1st Position</option>
-              <option value="2nd">2nd Position</option>
-              <option value="Mezzanine">Mezzanine</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</label>
-            <select id="debtDistributionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-              <option value="all">All</option>
-              <option value="Monthly">Monthly</option>
-              <option value="Quarterly">Quarterly</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Min Investment</label>
-            <select id="debtMinimumFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-              <option value="all">All</option>
-              <option value="25000">Under $25K</option>
-              <option value="50000">Under $50K</option>
-              <option value="100000">Under $100K</option>
-              <option value="250000">Under $250K</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">2025 Return</label>
-            <select id="debtYieldFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-              <option value="all">All</option>
-              <option value="8">8%+</option>
-              <option value="9">9%+</option>
-              <option value="10">10%+</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
-            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Search</label>
-            <input id="debtSearchInput" type="text" placeholder="Search funds..." oninput="syncDebtFilters()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;color:var(--text-dark);box-sizing:border-box;">
-          </div>
-          <button onclick="clearDebtFilters()" style="align-self:center;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'"
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Filters
-          </button>
-        </div>
-        <!-- Stat Cards -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;" id="debtFundStats"></div>
-        <!-- Chart Section -->
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
-            <div class="debt-metric-toggle" style="display:flex;gap:8px;" id="debtChartToggles">
-              <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
-              <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
-              <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
-              <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
-            </div>
-            <select class="debt-metric-select-mobile" style="display:none;padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);background:var(--bg-card);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23607179%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;" onchange="switchDebtMetric(this.value, null, true)">
-              <option value="yield">Yield</option>
-              <option value="leverage">Leverage</option>
-              <option value="ltv">Loan-to-Value</option>
-              <option value="delinquency">Delinquency Rate</option>
-            </select>
-          </div>
-          <div class="debt-chart-wrapper" style="position:relative;">
-            <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
-              <canvas id="debtFundChart"></canvas>
-            </div>
-            <div id="debtChartLegend" style="min-width:180px;max-width:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:8px 0;font-family:var(--font-ui);font-size:12px;order:0;"></div>
-            <div id="debtChartComingSoon" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);border-radius:var(--radius);z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
-              <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:var(--text-secondary);">Coming Soon</div>
-              <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);max-width:340px;text-align:center;">Delinquency rate data is not yet available. We're working on sourcing verified metrics from fund managers.</div>
-            </div>
-          </div>
-        </div>
-        <!-- Debt Funds Table -->
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;">
-          <table class="table-view" id="debtFundTable" style="display:table;">
-            <thead>
-              <tr>
-                <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
-                <th onclick="sortDebtTable('_return2022')">2022 <span class="sort-arrow">&#9650;</span></th>
-              </tr>
-            </thead>
-            <tbody id="debtFundTableBody"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
     <div class="content-area">
       <div id="decisionCompareContainer" style="display:none;margin-bottom:24px;"></div>
@@ -6334,6 +6230,7 @@ const _supa = window.supabase.createClient(
         <button class="mi-tab-btn mi-tab-active" data-tab="sec" onclick="switchMiTab('sec')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Private Market Intelligence</button>
         <button class="mi-tab-btn" data-tab="deals" onclick="switchMiTab('deals')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Deal-Level Insights</button>
         <button class="mi-tab-btn" data-tab="dealflow" onclick="switchMiTab('dealflow')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Deal Flow Stats</button>
+        <button class="mi-tab-btn" data-tab="debtfunds" onclick="switchMiTab('debtfunds')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Debt Fund Explorer</button>
       </div>
 
       <!-- TAB: Private Market Intelligence (SEC Data) -->
@@ -6634,6 +6531,130 @@ const _supa = window.supabase.createClient(
 
       <!-- TAB: Deal Flow Stats -->
       <div id="mi-tab-dealflow" style="display:none;"></div>
+
+      <!-- TAB: Debt Fund Explorer -->
+      <div id="mi-tab-debtfunds" style="display:none;">
+      <div class="sub-page" style="max-width:1200px">
+        <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
+        <!-- Debt Fund Filters -->
+        <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+          <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
+            <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+            Apply My Buy Box
+          </button>
+          <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
+          <div style="width:1px;height:36px;background:var(--border);align-self:center;"></div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Financials</label>
+            <select id="debtFinancialsFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="Audited">Audited</option>
+              <option value="Unaudited">Unaudited</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">AUM Size</label>
+            <select id="debtAUMFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="small">Small (&lt;$100M)</option>
+              <option value="mid">Mid ($100M-$1B)</option>
+              <option value="institutional">Institutional ($1B+)</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Debt Position</label>
+            <select id="debtPositionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="1st">1st Position</option>
+              <option value="2nd">2nd Position</option>
+              <option value="Mezzanine">Mezzanine</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</label>
+            <select id="debtDistributionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Min Investment</label>
+            <select id="debtMinimumFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="25000">Under $25K</option>
+              <option value="50000">Under $50K</option>
+              <option value="100000">Under $100K</option>
+              <option value="250000">Under $250K</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">2025 Return</label>
+            <select id="debtYieldFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="8">8%+</option>
+              <option value="9">9%+</option>
+              <option value="10">10%+</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Search</label>
+            <input id="debtSearchInput" type="text" placeholder="Search funds..." oninput="syncDebtFilters()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;color:var(--text-dark);box-sizing:border-box;">
+          </div>
+          <button onclick="clearDebtFilters()" style="align-self:center;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'"
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Filters
+          </button>
+        </div>
+        <!-- Stat Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;" id="debtFundStats"></div>
+        <!-- Chart Section -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
+            <div class="debt-metric-toggle" style="display:flex;gap:8px;" id="debtChartToggles">
+              <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
+              <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
+              <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
+              <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
+            </div>
+            <select class="debt-metric-select-mobile" style="display:none;padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);background:var(--bg-card);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23607179%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;" onchange="switchDebtMetric(this.value, null, true)">
+              <option value="yield">Yield</option>
+              <option value="leverage">Leverage</option>
+              <option value="ltv">Loan-to-Value</option>
+              <option value="delinquency">Delinquency Rate</option>
+            </select>
+          </div>
+          <div class="debt-chart-wrapper" style="position:relative;">
+            <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
+              <canvas id="debtFundChart"></canvas>
+            </div>
+            <div id="debtChartLegend" style="min-width:180px;max-width:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:8px 0;font-family:var(--font-ui);font-size:12px;order:0;"></div>
+            <div id="debtChartComingSoon" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);border-radius:var(--radius);z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+              <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:var(--text-secondary);">Coming Soon</div>
+              <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);max-width:340px;text-align:center;">Delinquency rate data is not yet available. We're working on sourcing verified metrics from fund managers.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Debt Funds Table -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;">
+          <table class="table-view" id="debtFundTable" style="display:table;">
+            <thead>
+              <tr>
+                <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2022')">2022 <span class="sort-arrow">&#9650;</span></th>
+              </tr>
+            </thead>
+            <tbody id="debtFundTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      </div><!-- /mi-tab-debtfunds -->
 
     </div>
   </div>
@@ -7606,7 +7627,7 @@ const _supa = window.supabase.createClient(
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
           <span>Dashboard</span>
         </a>
-        <a class="more-menu-item" href="#" onclick="navigateTo('deals'); setTimeout(switchToDebtFunds, 100); return false">
+        <a class="more-menu-item" href="#" onclick="navigateTo('debtfunds'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
           <span>Debt Funds</span>
         </a>
@@ -11245,6 +11266,44 @@ function renderAll() {
   }
 }
 
+// Filter panel toggle
+function toggleFilterPanel() {
+  var panel = document.getElementById('filterPanel');
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  var btn = document.getElementById('filtersToggleBtn');
+  if (btn) {
+    btn.style.background = isOpen ? 'transparent' : 'var(--bg-card)';
+    btn.style.borderColor = isOpen ? 'var(--border)' : 'var(--primary)';
+    btn.style.color = isOpen ? 'var(--text-secondary)' : 'var(--text-dark)';
+  }
+}
+
+// Close filter panel when clicking outside
+document.addEventListener('click', function(e) {
+  var panel = document.getElementById('filterPanel');
+  var btn = document.getElementById('filtersToggleBtn');
+  if (panel && panel.style.display !== 'none' && !panel.contains(e.target) && btn && !btn.contains(e.target)) {
+    toggleFilterPanel();
+  }
+});
+
+// Update filter count badge
+function updateFilterBadge() {
+  var count = 0;
+  if (document.getElementById('filterAssetClass')?.value) count++;
+  if (document.getElementById('filterDealType')?.value) count++;
+  if (document.getElementById('filterStrategy')?.value) count++;
+  if (document.getElementById('filterSort')?.value !== 'newest') count++;
+  if (document.getElementById('showArchivedCheck')?.checked) count++;
+  var badge = document.getElementById('filterCountBadge');
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-block' : 'none';
+  }
+}
+
 function applyFilters() {
   // If buy box was applied and user manually changed a filter, un-toggle
   if (dealsBuyBoxApplied && !buyBoxProgrammaticChange) {
@@ -11263,6 +11322,7 @@ function applyFilters() {
     status: document.getElementById('filterStatus')?.value || '',
     sort: document.getElementById('filterSort')?.value || ''
   });
+  updateFilterBadge();
   renderAll();
 }
 
@@ -11276,65 +11336,18 @@ function clearFilters() {
   var archCheck = document.getElementById('showArchivedCheck');
   if (archCheck) archCheck.checked = false;
   _goalSortOverridden = false;
+  var panel = document.getElementById('filterPanel');
+  if (panel) panel.style.display = 'none';
+  var btn = document.getElementById('filtersToggleBtn');
+  if (btn) { btn.style.background = 'transparent'; btn.style.borderColor = 'var(--border)'; btn.style.color = 'var(--text-secondary)'; }
   applyFilters();
 }
 
-var _debtFundsActive = false;
-
-function switchToDebtFunds() {
-  _debtFundsActive = true;
-  // Deactivate all pipeline tabs
-  document.querySelectorAll('#page-deals .topbar-tab').forEach(function(t) { t.classList.remove('active'); });
-  // Highlight the filter bar button
-  var debtBtn = document.getElementById('debtFundsFilterBtn');
-  if (debtBtn) { debtBtn.style.background = 'var(--primary)'; debtBtn.style.color = '#fff'; debtBtn.style.borderColor = 'var(--primary)'; }
-  // Sync mobile dropdown
-  var sel = document.getElementById('dealWorkflowSelect');
-  if (sel) sel.value = 'debtfunds';
-  // Hide card grid and filter bar, show debt funds view
-  var cardGrid = document.getElementById('cardGrid');
-  var contentArea = cardGrid ? cardGrid.closest('.content-area') : null;
-  var filterBar = document.querySelector('#page-deals .filter-bar');
-  var debtView = document.getElementById('debtFundsView');
-  var statsBar = document.getElementById('statsBar');
-  var goalIndicator = document.getElementById('goalSortIndicator');
-  var mobileToggle = document.getElementById('mobileViewToggle');
-  var viewToggle = document.querySelector('#page-deals .topbar-view-toggle');
-  if (contentArea) contentArea.style.display = 'none';
-  if (filterBar) filterBar.style.display = 'none';
-  if (statsBar) statsBar.style.display = 'none';
-  if (goalIndicator) goalIndicator.style.display = 'none';
-  if (mobileToggle) mobileToggle.style.display = 'none';
-  // Hide view toggles but keep space (so topbar doesn't shift)
-  if (viewToggle) viewToggle.style.visibility = 'hidden';
-  if (debtView) { debtView.style.display = ''; renderDebtFunds(); }
-}
-
 function switchTab(el, fromSelect) {
-  // Exiting debt funds view
-  _debtFundsActive = false;
-  var debtView = document.getElementById('debtFundsView');
-  if (debtView) debtView.style.display = 'none';
-  // Reset debt funds filter button
-  var debtBtn = document.getElementById('debtFundsFilterBtn');
-  if (debtBtn) { debtBtn.style.background = 'transparent'; debtBtn.style.color = 'var(--text-secondary)'; debtBtn.style.borderColor = 'var(--border)'; }
-  // Re-show card grid and filter bar
-  var cardGrid = document.getElementById('cardGrid');
-  var contentArea = cardGrid ? cardGrid.closest('.content-area') : null;
-  if (contentArea) contentArea.style.display = '';
-  var filterBar = document.querySelector('#page-deals .filter-bar');
-  if (filterBar) filterBar.style.display = '';
-  var statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = '';
-  var viewToggle = document.querySelector('#page-deals .topbar-view-toggle');
-  if (viewToggle) { viewToggle.style.display = ''; viewToggle.style.visibility = 'visible'; }
-
   if (fromSelect) {
     // Called from mobile <select> dropdown
     const sel = document.getElementById('dealWorkflowSelect');
     currentTab = sel.value;
-    // Handle debt funds from mobile dropdown
-    if (currentTab === 'debtfunds') { switchToDebtFunds(); return; }
     // Also sync the desktop tabs
     document.querySelectorAll('.topbar-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === currentTab);
@@ -11704,7 +11717,7 @@ function navigateTo(page) {
   if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions' || page === 'growth') { navigateTo('admindash'); return; }
   if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
   if (page === 'compare') { navigateTo('deals'); setTimeout(function(){ var dt = document.querySelector('#page-deals .topbar-tab[data-tab="decision"]'); if (dt) switchTab(dt); }, 100); return; }
-  if (page === 'debtfunds') { navigateTo('deals'); setTimeout(switchToDebtFunds, 100); return; }
+  if (page === 'debtfunds') { navigateTo('marketintel'); setTimeout(function(){ switchMiTab('debtfunds'); }, 100); return; }
   // Assets page is a standalone page, don't redirect
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
@@ -11735,7 +11748,6 @@ function navigateTo(page) {
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
   if (page === 'settings') initBuyBox();
-  if (page === 'debtfunds') renderDebtFunds();
   if (page === 'managers') renderManagersPage();
   if (page === 'assets') renderAssetsPage();
   if (page === 'dashboard') { if (typeof checkActivationMilestones === 'function') checkActivationMilestones(); renderDashboard(); }
@@ -18916,7 +18928,7 @@ function outreachSearchDebounce() {
 // ========== MARKET INTELLIGENCE ==========
 var miCharts = {};
 var miCurrentTab = 'sec';
-var miTabRendered = { sec: false, deals: false, dealflow: false };
+var miTabRendered = { sec: false, deals: false, dealflow: false, debtfunds: false };
 
 function switchMiTab(tab) {
   miCurrentTab = tab;
@@ -18934,7 +18946,7 @@ function switchMiTab(tab) {
     }
   });
   // Show/hide tab content
-  ['sec', 'deals', 'dealflow'].forEach(function(t) {
+  ['sec', 'deals', 'dealflow', 'debtfunds'].forEach(function(t) {
     var el = document.getElementById('mi-tab-' + t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
@@ -18947,6 +18959,10 @@ function switchMiTab(tab) {
   }
   if (tab === 'dealflow' && !miTabRendered.dealflow) {
     renderMiDealflowTab();
+  }
+  if (tab === 'debtfunds' && !miTabRendered.debtfunds) {
+    renderDebtFunds();
+    miTabRendered.debtfunds = true;
   }
 }
 
@@ -18977,7 +18993,7 @@ function renderMarketIntel() {
   miCharts = {};
 
   // Reset rendered state so tabs re-render with fresh data
-  miTabRendered = { sec: false, deals: false, dealflow: false };
+  miTabRendered = { sec: false, deals: false, dealflow: false, debtfunds: false };
 
   // Render the currently active tab
   switchMiTab(miCurrentTab);
