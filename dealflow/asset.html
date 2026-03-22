@@ -2470,7 +2470,11 @@ function renderMarketIntelligence(data) {
   }
   if (q.fips && q.fips.length === 5) {
     // BLS QCEW deep link: county-level employment data
-    document.getElementById('blsSourceLink').href = 'https://data.bls.gov/cew/apps/table_maker/v4/table_maker.htm#type=1&year=2024&qtr=A&own=5&ind=10&area=' + q.fips + '&supp=0';
+    // Link to QCEW single-area annual data view (supersector level, private ownership)
+    document.getElementById('blsSourceLink').href = 'https://data.bls.gov/cew/apps/table_maker/v4/table_maker.htm#type=2&st=' + q.fips.substring(0,2) + '&area=' + q.fips + '&ind=10&own=5&rtr=A&year=2024&supp=0';
+    if (q.countyName) {
+      document.getElementById('blsSourceLink').textContent = q.countyName + ' Employment ↗';
+    }
   }
 }
 

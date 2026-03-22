@@ -226,8 +226,8 @@ export default async function handler(req, res) {
               continue;
             }
 
-            // Get supersector level (agglvl=74) for private sector (own_code=5)
-            if (ownCode !== '5' || agglvl !== '74') continue;
+            // Get supersector level (agglvl=73) for private sector (own_code=5)
+            if (ownCode !== '5' || agglvl !== '73') continue;
 
             const label = INDUSTRY_LABELS[indCode];
             if (!label) continue;
