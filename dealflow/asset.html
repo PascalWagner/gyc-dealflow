@@ -2465,7 +2465,7 @@ function renderMarketIntelligence(data) {
   var q = data.query || {};
   if (q.zip) {
     // Census data.census.gov deep link: search by ZCTA
-    document.getElementById('censusSourceLink').href = 'https://data.census.gov/table?g=860XX00US' + q.zip + '&tid=ACSDT5Y2023.B01003';
+    document.getElementById('censusSourceLink').href = 'https://data.census.gov/profile/' + q.zip + '?g=860XX00US' + q.zip + '#populations-and-people';
   }
   if (q.fips && q.fips.length === 5) {
     // BLS QCEW deep link: county-level employment data
