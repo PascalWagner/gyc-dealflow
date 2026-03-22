@@ -15610,25 +15610,20 @@ async function submitNewDeal() {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
 
   try {
-    // 1. Create the deal + operator in Supabase via intake-create API
-    const createResp = await fetch('/api/admin-manage', {
+    // 1. Create the deal + operator in Supabase
+    const createResp = await fetch('/api/deal-create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'intake-create',
-        create_operator: true,
-        operator_data: { name: sponsor, website: website || '' },
-        deal_data: {
-          investment_name: name,
-          mc_website: website || null,
-          status: 'Open to invest',
-          added_date: new Date().toISOString().split('T')[0],
-          user_submitted: true
-        }
+        investmentName: name,
+        sponsor: sponsor,
+        website: website || '',
+        userEmail: userData.email || '',
+        userName: userData.name || userData.firstName || ''
       })
     });
     const createData = await createResp.json();
-    const dealId = createData.data && createData.data.id;
+    const dealId = createData.dealId;
 
     if (!dealId) throw new Error('Failed to create deal in database');
 

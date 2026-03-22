@@ -87,28 +87,43 @@ export default async function handler(req, res) {
     // 2. Update the deal record with the URL (deck_url or ppm_url based on docType)
     let dealUpdated = false;
     let dealUpdateError = null;
+    let newDealId = null;
+    const isUUID = dealId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dealId);
+
     if (dealId && deckUrl) {
       const urlField = docType === 'ppm' ? 'ppm_url' : 'deck_url';
-      // Simple update (no .select/.single — those can cause false errors in Supabase v2)
-      const { error: updateErr } = await supabase
-        .from('opportunities')
-        .update({ [urlField]: deckUrl })
-        .eq('id', dealId);
-      if (updateErr) {
-        console.error('Deal update failed:', updateErr.message, updateErr.code, { dealId, urlField });
-        dealUpdateError = updateErr.message;
-      } else {
-        // Verify the write actually persisted
-        const { data: verify } = await supabase
+
+      if (!isUUID) {
+        // Deal was created locally (Add Deal) — create it in Supabase first
+        const baseName = (dealName || '').replace(/ - PPM$/, '');
+        const { data: newDeal, error: insertErr } = await supabase
           .from('opportunities')
-          .select(urlField)
-          .eq('id', dealId)
+          .insert({
+            investment_name: baseName,
+            [urlField]: deckUrl,
+            status: 'Open to Invest',
+            added_date: new Date().toISOString().split('T')[0]
+          })
+          .select('id')
           .single();
-        if (verify && verify[urlField]) {
-          dealUpdated = true;
+        if (insertErr) {
+          console.error('Deal insert failed:', insertErr.message, { dealId, baseName });
+          dealUpdateError = insertErr.message;
         } else {
-          console.error('Deal update returned no error but value not persisted:', { dealId, urlField, verify });
-          dealUpdateError = 'Update appeared to succeed but value not found on verify. dealId=' + dealId;
+          dealUpdated = true;
+          newDealId = newDeal.id;
+        }
+      } else {
+        // Normal UUID deal — update existing record
+        const { error: updateErr } = await supabase
+          .from('opportunities')
+          .update({ [urlField]: deckUrl })
+          .eq('id', dealId);
+        if (updateErr) {
+          console.error('Deal update failed:', updateErr.message, updateErr.code, { dealId, urlField });
+          dealUpdateError = updateErr.message;
+        } else {
+          dealUpdated = true;
         }
       }
     }
@@ -171,6 +186,7 @@ export default async function handler(req, res) {
       success: true,
       driveUrl: deckUrl,
       dealUpdated,
+      ...(newDealId ? { newDealId } : {}),
       ...(dealUpdateError ? { dealUpdateError } : {}),
       enriched,
       enrichedFields,

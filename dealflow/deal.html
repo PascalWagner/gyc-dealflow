@@ -8183,6 +8183,20 @@ async function submitDeck(dealId, dealName) {
 
       if (resp.ok) {
         var data = await resp.json();
+
+        // If a local-only deal was promoted to Supabase, redirect to the real deal
+        if (data.newDealId) {
+          // Remove from localStorage user deals
+          try {
+            var userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+            localStorage.setItem('gycUserDeals', JSON.stringify(userDeals.filter(function(d) { return d.id !== dealId; })));
+          } catch(e) {}
+          // Invalidate caches and redirect to real deal page
+          try { sessionStorage.removeItem('gycDealsCache'); } catch(e) {}
+          window.location.href = 'deal.html?id=' + data.newDealId;
+          return;
+        }
+
         // Update local deal objects so Documents card reflects the upload immediately
         var localDeal = DEALS.find(function(d) { return d.id === dealId; });
         if (localDeal && data.driveUrl) {
