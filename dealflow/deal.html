@@ -5351,7 +5351,77 @@ async function renderDeal() {
   thesisHtml += '</div></div></div>';
 
   // --- Who's Behind This Deal — now in hero, removed from sidebar ---
+  // --- Who's Behind the Deal ---
   var operatorHtml = '';
+  (function buildWhosBehind() {
+    var sponsors = deal.sponsors || [];
+    var primary = sponsors.find(function(s) { return s.isPrimary; }) || sponsors[0];
+    var opName = (primary && primary.name) || deal.managementCompany || '';
+    var opCeo = (primary && primary.ceo) || deal.ceo || '';
+    var opWebsite = (primary && primary.website) || deal.mcWebsite || '';
+    var opBooking = (primary && primary.bookingUrl) || deal.mcBookingUrl || '';
+
+    if (!opName) return;
+
+    // Build initials for avatar
+    var initials = opName.split(/\s+/).map(function(w) { return w[0]; }).join('').substring(0, 3).toUpperCase();
+
+    operatorHtml += '<div class="section" style="margin-top:0;">';
+    operatorHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">Who\'s Behind the Deal</span></div>';
+    operatorHtml += '<div class="section-body" style="padding:16px 20px;">';
+
+    // Primary sponsor card
+    operatorHtml += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">';
+    operatorHtml += '<div style="width:48px;height:48px;border-radius:12px;background:var(--teal-deep,#1F5159);display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-ui);font-size:14px;font-weight:800;flex-shrink:0;">' + esc(initials) + '</div>';
+    operatorHtml += '<div>';
+    operatorHtml += '<div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text-dark);">' + esc(opName) + '</div>';
+    operatorHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">Sponsor / Operator</div>';
+    operatorHtml += '</div></div>';
+
+    // Key person
+    if (opCeo) {
+      operatorHtml += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-main);border-radius:var(--radius-sm);margin-bottom:8px;">';
+      operatorHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+      operatorHtml += '<div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + esc(opCeo) + '</div>';
+      operatorHtml += '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);">Key Person / Principal</div></div>';
+      operatorHtml += '</div>';
+    }
+
+    // Entity structure
+    var entities = [];
+    if (deal.issuerEntity) entities.push({ label: 'Issuer', value: deal.issuerEntity });
+    if (deal.gpEntity) entities.push({ label: 'Fund Manager', value: deal.gpEntity });
+    if (deal.sponsorEntity) entities.push({ label: 'Sponsor Entity', value: deal.sponsorEntity });
+    // Show non-primary sponsors (e.g. placing agents)
+    for (var si = 0; si < sponsors.length; si++) {
+      if (!sponsors[si].isPrimary && sponsors[si].name) {
+        var roleLabel = (sponsors[si].type === 'Broker-Dealer') ? 'Placing Agent' : 'Co-Sponsor';
+        entities.push({ label: roleLabel, value: sponsors[si].name });
+      }
+    }
+    if (entities.length > 0) {
+      operatorHtml += '<div style="margin-top:12px;border-top:1px solid var(--border-light);padding-top:12px;">';
+      for (var ei = 0; ei < entities.length; ei++) {
+        operatorHtml += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-family:var(--font-ui);font-size:11px;">';
+        operatorHtml += '<span style="color:var(--text-muted);font-weight:600;">' + esc(entities[ei].label) + '</span>';
+        operatorHtml += '<span style="color:var(--text-dark);font-weight:500;text-align:right;max-width:60%;">' + esc(entities[ei].value) + '</span>';
+        operatorHtml += '</div>';
+      }
+      operatorHtml += '</div>';
+    }
+
+    // Action buttons
+    operatorHtml += '<div style="display:flex;gap:8px;margin-top:14px;">';
+    if (opWebsite) {
+      operatorHtml += '<a href="' + escAttr(opWebsite) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-dark);text-decoration:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>';
+    }
+    if (opBooking) {
+      operatorHtml += '<a href="' + escAttr(opBooking) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:700;text-decoration:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction</a>';
+    }
+    operatorHtml += '</div>';
+    operatorHtml += '</div></div>';
+  })();
+
   // Still need to store operator for portfolio/track record section
   (function() {
     var sponsors = deal.sponsors || [];
@@ -5646,7 +5716,7 @@ async function renderDeal() {
       }
     } else {
       // No SEC filing found — full empty state
-      secFilingHtml += '<div class="section-body" style="text-align:center;padding:40px 24px;">';
+      secFilingHtml += '<div style="text-align:center;padding:40px 24px;">';
       secFilingHtml += '<div style="margin-bottom:12px;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="40" height="40" style="opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>';
       secFilingHtml += '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">No SEC Form D match found</div>';
       secFilingHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;max-width:320px;margin:0 auto 16px;">We couldn\u2019t match this to a filing on EDGAR. This may mean the offering hasn\u2019t filed yet, uses a different entity name, or is exempt from filing.</div>';
@@ -7529,7 +7599,7 @@ async function renderDeal() {
     // --- Job 3: Deal terms + operator (two-column) ---
     + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">'
     + detailsHtml
-    + '<div>' + chartHtml + materialsHtml + buyBoxHtml + '</div>'
+    + '<div>' + operatorHtml + chartHtml + materialsHtml + buyBoxHtml + '</div>'
     + '</div>'
     + buildDealEconomicsHtml(deal)
     // --- Job 5: How does it compare? ---
