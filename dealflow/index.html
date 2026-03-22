@@ -6184,7 +6184,7 @@ const _supa = window.supabase.createClient(
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Investment plan builder &amp; market intel</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Private investor community</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn" onclick="window.open('https://growyourcashflow.io/cashflow-academy','_blank')">Join the Academy</button>
+          <button class="btn-cta btn-cta-primary plan-btn" onclick="navigateTo('academy')">Join the Academy</button>
         </div>
         <div class="plan-card" style="border-color:var(--teal-deep);background:linear-gradient(180deg,var(--bg-card) 0%,rgba(31,81,89,0.04) 100%);">
           <div class="plan-name" style="color:var(--teal-deep);">Family Office</div>
@@ -6392,75 +6392,133 @@ const _supa = window.supabase.createClient(
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">Cash Flow Academy</div>
+      <div class="topbar-title">Cashflow Academy</div>
     </div>
-    <div class="sub-page" style="max-width:960px">
+    <div class="sub-page" style="max-width:900px">
 
-      <!-- HERO -->
+      <!-- HERO: Problem + Promise -->
       <div class="if-hero">
-        <h1>Deploy <span style="color:#51BE7B">$100K&#8211;$500K</span><br>into private deals in 90 days.</h1>
-        <p class="if-hero-sub">Stop researching alone. Get Pascal&#8217;s playbook, live deal reviews, and a clear deployment plan tailored to your goals.</p>
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#51BE7B;margin-bottom:12px;">Cashflow Academy</div>
+        <h1>Stop evaluating deals blind.</h1>
+        <p class="if-hero-sub">You&#8217;ve seen the deals. You&#8217;ve seen the locked analysis. The risk factors, cash flow projections, peer comparisons, fee benchmarks &#8212; that&#8217;s the difference between <em>looking</em> at a deal and <em>understanding</em> it.</p>
         <div class="if-hero-stats">
           <div class="if-hero-stat"><div class="val">90</div><div class="lbl">Day Deployment<br>Framework</div></div>
-          <div class="if-hero-stat"><div class="val">1:1</div><div class="lbl">Deal Review<br>With Pascal</div></div>
+          <div class="if-hero-stat"><div class="val">1:1</div><div class="lbl">Deal Reviews<br>With Pascal</div></div>
           <div class="if-hero-stat"><div class="val">Weekly</div><div class="lbl">Live Office Hours<br>&amp; Q&A</div></div>
         </div>
       </div>
 
-      <!-- WHAT YOU GET -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-top:24px;box-shadow:var(--shadow-card);">
-        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:16px;">What&#8217;s included</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;">
-          <div style="display:flex;gap:12px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(81,190,123,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="16" height="16"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            </div>
-            <div>
-              <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Full DD Checklists</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Every deal, fully unlocked. Stress tests, risk analysis, and comparisons.</div>
-            </div>
+      <!-- AGITATE: What you're missing -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;margin-top:24px;box-shadow:var(--shadow-card);">
+        <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Every deal you browse, you&#8217;re seeing 30% of the picture.</div>
+        <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;">The overview and deck are just the sponsor&#8217;s pitch. The real evaluation &#8212; risk analysis, cash flow stress tests, fee benchmarks against 400+ peers, operator track records, due diligence checklists &#8212; is what separates investors who deploy confidently from those who stay on the sidelines.</div>
+      </div>
+
+      <!-- OFFER STACK: Layer 1 - Intelligence -->
+      <div style="margin-top:32px;">
+        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:16px;">Full Deal Intelligence</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Cash Flow Projections</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Year-by-year distributions, capital returns, and cash-on-cash analysis on every deal.</div>
           </div>
-          <div style="display:flex;gap:12px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(81,190,123,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div>
-              <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Weekly Office Hours</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Live deal reviews and Q&A with Pascal. Thursdays 12&#8211;1pm ET.</div>
-            </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Risk Analysis</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Auto-detected risk factors with detailed explanations &#8212; operator risk, illiquidity, leverage, concentration.</div>
           </div>
-          <div style="display:flex;gap:12px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(81,190,123,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="16" height="16"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-            </div>
-            <div>
-              <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Deployment Roadmap</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">A personalized plan to hit your income goal with the right mix of deals.</div>
-            </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Peer Comparisons</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">See how any deal stacks up against hundreds of similar deals on returns, fees, minimums, and hold periods.</div>
           </div>
-          <div style="display:flex;gap:12px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(81,190,123,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </div>
-            <div>
-              <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Submit Deals for Review</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">Send Pascal any deal you&#8217;re considering. Get his honest take before you wire.</div>
-            </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Stress Test Calculator</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Model bear, base, and bull scenarios. Adjust rent growth, cap rates, vacancy, and interest rates.</div>
           </div>
         </div>
       </div>
 
+      <!-- OFFER STACK: Layer 2 - Context -->
+      <div style="margin-top:28px;">
+        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:16px;">Context &amp; Tools</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Due Diligence Checklists</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">70+ question interactive checklists tailored to each deal type, with auto-filled answers from deal data.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Market Intelligence</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">SEC filing trends, asset class benchmarks, deal flow analytics, and debt fund comparisons.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Investment Plan Builder</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Personalized deployment roadmap based on your goals, capital, and risk tolerance.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Operator Background Reports</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Automated checks across SEC EDGAR, FINRA BrokerCheck, OFAC, and federal court records.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OFFER STACK: Layer 3 - Access -->
+      <div style="margin-top:28px;">
+        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:16px;">Access &amp; Network</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">GP Introductions</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Direct intros to operators. Skip the cold outreach.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">PPM &amp; Data Room</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Full offering documents, subscription agreements, and data room access.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Deal Comparison</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Compare deals side by side with buy box fit scoring.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OFFER STACK: Layer 4 - Pascal -->
+      <div style="margin-top:28px;">
+        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:16px;">Pascal in Your Corner</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Weekly Office Hours</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Live deal reviews and Q&amp;A every Thursday. Bring any deal, any question.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Submit Deals for Review</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Send Pascal any deal. Get his honest take before you wire.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">90-Day Deployment Plan</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">A structured timeline to go from researching to capital deployed.</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Private Investor Community</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Connect with other accredited investors actively deploying into private deals.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRICING -->
+      <div style="background:var(--bg-card);border:2px solid var(--primary);border-radius:var(--radius);padding:32px;margin-top:32px;text-align:center;box-shadow:0 4px 24px rgba(81,190,123,0.1);">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Annual Membership</div>
+        <div style="font-family:var(--font-headline);font-size:36px;color:var(--text-dark);">$5,000<span style="font-size:16px;color:var(--text-muted);font-family:var(--font-body);">/year</span></div>
+        <div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:4px;">Full platform access + coaching + GP network</div>
+      </div>
+
       <!-- CTA -->
-      <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:40px 32px;text-align:center;color:#fff;position:relative;overflow:hidden;margin-top:24px">
+      <div style="background:linear-gradient(135deg,#0A1E21 0%,#0d3840 100%);border-radius:var(--radius);padding:40px 32px;text-align:center;color:#fff;position:relative;overflow:hidden;margin-top:20px">
         <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(81,190,123,0.05)"></div>
         <div style="position:relative">
           <div style="font-family:var(--font-headline);font-size:22px;margin-bottom:8px">Ready to stop guessing?</div>
-          <div style="font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7">Most LPs spend months researching deals alone. Academy members deploy confidently in 90 days with a clear plan and Pascal in their corner.</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.7">Most LPs spend months researching alone. Academy members deploy confidently in 90 days with the full platform and Pascal in their corner.</div>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:20px">
-            <a href="https://growyourcashflow.io/cashflow-academy" target="_blank" onclick="trackActivity('academy_cta_clicked',{source:'academy_page'})" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;transition:all 0.15s" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">Join Cashflow Academy &#8594;</a>
-            <a href="https://growyourcashflow.io/call" target="_blank" onclick="trackActivity('call_booked',{source:'academy_page'})" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:transparent;color:#fff;text-decoration:none;border:1.5px solid rgba(255,255,255,0.3);transition:all 0.15s" onmouseover="this.style.borderColor='#51BE7B';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)';this.style.transform='none'">&#9742; Book a Call First</a>
+            <a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" onclick="trackActivity('academy_cta_clicked',{source:'academy_page'})" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:#51BE7B;color:#fff;text-decoration:none;transition:all 0.15s" onmouseover="this.style.background='#45A86C';this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#51BE7B';this.style.transform='none'">Book a Strategy Call &#8594;</a>
+            <a href="mailto:pascal@growyourcashflow.io" style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;padding:14px 32px;border-radius:28px;background:transparent;color:#fff;text-decoration:none;border:1.5px solid rgba(255,255,255,0.3);transition:all 0.15s" onmouseover="this.style.borderColor='#51BE7B';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)';this.style.transform='none'">Email Pascal</a>
           </div>
-          <div style="margin-top:16px;font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.35)">Or email <a href="mailto:pascal@growyourcashflow.io" style="color:#51BE7B">pascal@growyourcashflow.io</a></div>
         </div>
       </div>
 
@@ -8145,7 +8203,7 @@ function renderAcademyGateCTA(source, title, subtitle) {
     '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>' +
     '<div class="gate-title">' + (title || 'Unlock with Cashflow Academy') + '</div>' +
     '<div class="gate-sub">' + (subtitle || 'Get full DD checklists, deal comparisons, stress tests, and Pascal\'s personal analysis.') + '</div>' +
-    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Academy &rarr;</button>' +
+    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});navigateTo(\'academy\')">Join Academy &rarr;</button>' +
     '<div class="gate-features">' +
       '<span>' + checkSvg + 'Full DD Checklist</span>' +
       '<span>' + checkSvg + 'Deal Comparison</span>' +
@@ -8646,7 +8704,7 @@ function openComparisonView() {
     h += '<div style="margin-top:24px;padding:24px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #3b82f6;border-radius:12px;text-align:center;">';
     h += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--text-dark);margin-bottom:8px;">Want Pascal to review your picks?</div>';
     h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Academy members get personalized deal analysis and deployment guidance.</div>';
-    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Get Pascal\'s Analysis &rarr;</button>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});navigateTo(\'academy\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Get Pascal\'s Analysis &rarr;</button>';
     h += '</div>';
   }
 
@@ -11204,7 +11262,7 @@ function renderPanelNextSteps(deal) {
     if (isExplorer) {
       h += '<div style="margin-top:8px;padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;text-align:center;">';
       h += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">Unlock all ' + checklist.sections.length + ' DD sections</div>';
-      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
+      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});navigateTo(\'academy\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
       h += '</div>';
     }
 
@@ -11239,7 +11297,7 @@ function renderPanelNextSteps(deal) {
   h += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">';
   h += '<button onclick="trackActivity(\'call_booked\',{dealId:\'' + deal.id + '\',source:\'deal_panel\'});window.open(\'https://growyourcashflow.io/call\',\'_blank\')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);text-align:center;">Book a call about this deal</button>';
   if (isExplorer) {
-    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Get Pascal\'s analysis &rarr; Join Academy</button>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});navigateTo(\'academy\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Get Pascal\'s analysis &rarr; Join Academy</button>';
   }
   h += '</div></div>';
 
@@ -12311,7 +12369,7 @@ function navigateTo(page) {
           + '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>'
           + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Investment Plan Builder</div>'
           + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6;">Academy members get a personalized deployment plan with buy box criteria, deal matching, and portfolio construction guidance.</div>'
-          + '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+          + '<a href="#" onclick="navigateTo('academy');return false;" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
           + '</div>';
       }
       return;
@@ -13245,7 +13303,7 @@ function openBuyBoxWizard(jumpToPlan) {
   var _wzTier = (_wzUser && _wzUser.tier) || 'free';
   var _wzIsAdmin = typeof isAdmin === 'function' && isAdmin();
   if (_wzTier === 'free' && !_wzIsAdmin) {
-    window.open('https://growyourcashflow.io/cashflow-academy', '_blank');
+    navigateTo('academy');
     return;
   }
   wizardStepIndex = 0;
@@ -15019,7 +15077,7 @@ function renderReport() {
         ? '<div style="text-align:center;padding:24px 0;">'
           + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">' + totalMatching + ' deals match your criteria</div>'
           + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;max-width:360px;margin:0 auto 16px;">Academy members see detailed market intelligence for each asset class.</div>'
-          + '<button onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Unlock Market Data &rarr;</button>'
+          + '<button onclick="navigateTo(\'academy\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Unlock Market Data &rarr;</button>'
           + '</div>'
         : '<table class="bb-snapshot-table">'
           + '<thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Min</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
@@ -15662,7 +15720,7 @@ function renderCashflowGapBar() {
   bar.style.display = 'flex';
   var ctaHtml = '';
   if (hasGap && user && user.tier === 'free') {
-    ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
+    ctaHtml = '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'gap_bar\'});navigateTo(\'academy\')" style="padding:5px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;">Academy deploys in 90 days &rarr;</button>';
   } else if (!hasGap) {
     ctaHtml = '<span style="font-size:11px;color:#4ade80;font-weight:700;">Goal reached!</span>';
   }
@@ -15807,7 +15865,7 @@ function renderThreePaths(targetIncome, capital, checkSize) {
     }
     return '';
   })();
-  h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'three_paths\'});window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
+  h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'three_paths\'});navigateTo(\'academy\')" style="margin-top:12px;width:100%;padding:12px;background:#3b82f6;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:#fff;">Learn More &rarr;</button>';
   h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:#3b82f6;font-weight:700;">$5,000</div>';
   h += '</div>';
 
@@ -16030,7 +16088,7 @@ function onDealSaved(saveCount) {
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
         <button onclick="trackActivity('call_booked',{source:'deals_saved_banner'});window.open('https://growyourcashflow.io/call','_blank')" style="padding:10px 18px;background:#4ade80;color:#0f172a;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Book a Call</button>
-        <button onclick="trackActivity('academy_cta_clicked',{source:'deals_saved_banner'});window.open('https://growyourcashflow.io/cashflow-academy','_blank')" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Academy &rarr;</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'deals_saved_banner'});navigateTo('academy')" style="padding:10px 18px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Academy &rarr;</button>
       </div>
       <button onclick="dismissCta('deals_saved_banner')" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:4px;">&times;</button>`;
     document.body.appendChild(banner);
@@ -16059,7 +16117,7 @@ function showReturningUserModal() {
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button onclick="trackActivity('call_booked',{source:'returning_user_modal'});window.open('https://growyourcashflow.io/call','_blank');dismissCta('returning_user_modal');" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">Book a Free Strategy Call &rarr;</button>
-        <button onclick="trackActivity('academy_cta_clicked',{source:'returning_user_modal'});window.open('https://growyourcashflow.io/cashflow-academy','_blank');dismissCta('returning_user_modal');" style="width:100%;padding:12px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;">Learn About Cashflow Academy</button>
+        <button onclick="trackActivity('academy_cta_clicked',{source:'returning_user_modal'});navigateTo('academy');dismissCta('returning_user_modal');" style="width:100%;padding:12px;background:transparent;color:var(--text-dark);border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;">Learn About Cashflow Academy</button>
         <button onclick="dismissCta('returning_user_modal')" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:8px;">Not now</button>
       </div>
     </div>`;
@@ -19928,7 +19986,7 @@ function renderMarketIntel() {
         + '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>'
         + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Market Intelligence</div>'
         + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6;">Academy members get real-time market data, SEC filing trends, asset class benchmarks, and deal flow analytics across the private markets.</div>'
-        + '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+        + '<a href="#" onclick="navigateTo('academy');return false;" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
         + '</div>';
     }
     return;
@@ -25304,6 +25362,12 @@ if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
 // Handle #onboarding hash from signup — send to dashboard (onboarding card handles it)
 if (window.location.hash === '#onboarding') {
   setTimeout(() => navigateTo('dashboard'), 300);
+  history.replaceState(null, '', window.location.pathname);
+}
+
+// Handle #academy from deal page gate CTAs
+if (window.location.hash === '#academy') {
+  setTimeout(() => navigateTo('academy'), 300);
   history.replaceState(null, '', window.location.pathname);
 }
 
