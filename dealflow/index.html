@@ -12639,6 +12639,9 @@ function initAuth() {
           user.tier = d.tier || user.tier;
           if (d.isAdmin) user.isAdmin = true;
           if (d.tags) user.tags = d.tags;
+          if (d.gpType) user.gpType = d.gpType;
+          if (d.onboardingRole) user.onboardingRole = d.onboardingRole;
+          if (d.gpOnboardingComplete) user.gpOnboardingComplete = d.gpOnboardingComplete;
           localStorage.setItem('gycUser', JSON.stringify(user));
           const n = d.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
           document.getElementById('sidebarName').textContent = n;
@@ -22415,7 +22418,7 @@ function buildDashThesis(d, branch) {
     + '<span style="display:inline-block;padding:4px 12px;border-radius:100px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:' + bc.colorBg + ';color:' + bc.color + ';border:1px solid ' + bc.color + '20;margin-bottom:12px;">' + bc.label + '</span>'
     + '<div style="font-family:var(--font-headline);font-size:24px;color:var(--text-dark);">' + goalLine + '</div>'
     + '</div>'
-    + '<button onclick="openBuyBoxWizard()" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;flex-shrink:0;">Edit</button>'
+    + '<button onclick="openPlanBuilder()" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;flex-shrink:0;">Edit</button>'
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:15px;line-height:1.8;color:var(--text-secondary);">' + thesisText + '</div>'
     + '</div>';
