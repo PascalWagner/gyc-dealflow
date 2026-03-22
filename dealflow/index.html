@@ -7330,143 +7330,6 @@ const _supa = window.supabase.createClient(
 
 
   <!-- PAGE: Growth -->
-  <!-- PAGE: Debt Fund Explorer -->
-  <div class="page" id="page-debtfunds">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Debt Fund Explorer</div>
-    </div>
-    <div class="sub-page" style="max-width:1200px">
-      <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
-
-      <!-- Debt Fund Filters -->
-      <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
-        <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
-          <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-          Apply My Buy Box
-        </button>
-        <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
-        <div style="width:1px;height:36px;background:var(--border);align-self:center;"></div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Financials</label>
-          <select id="debtFinancialsFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All</option>
-            <option value="Audited">Audited</option>
-            <option value="Unaudited">Unaudited</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">AUM Size</label>
-          <select id="debtAUMFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All</option>
-            <option value="small">Small (&lt;$100M)</option>
-            <option value="mid">Mid ($100M-$1B)</option>
-            <option value="institutional">Institutional ($1B+)</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Debt Position</label>
-          <select id="debtPositionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All</option>
-            <option value="1st">1st Position</option>
-            <option value="2nd">2nd Position</option>
-            <option value="Mezzanine">Mezzanine</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</label>
-          <select id="debtDistributionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All</option>
-            <option value="Monthly">Monthly</option>
-            <option value="Quarterly">Quarterly</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Min Investment</label>
-          <select id="debtMinimumFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All</option>
-            <option value="25000">Under $25K</option>
-            <option value="50000">Under $50K</option>
-            <option value="100000">Under $100K</option>
-            <option value="250000">Under $250K</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">2025 Return</label>
-          <select id="debtYieldFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
-            <option value="all">All</option>
-            <option value="8">8%+</option>
-            <option value="9">9%+</option>
-            <option value="10">10%+</option>
-          </select>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
-          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Search</label>
-          <input id="debtSearchInput" type="text" placeholder="Search funds..." oninput="syncDebtFilters()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;color:var(--text-dark);box-sizing:border-box;">
-        </div>
-        <button onclick="clearDebtFilters()" style="align-self:center;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'"
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Filters
-        </button>
-      </div>
-
-      <!-- Stat Cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;" id="debtFundStats"></div>
-
-      <!-- Chart Section -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
-          <!-- Desktop: toggle buttons -->
-          <div class="debt-metric-toggle" style="display:flex;gap:8px;" id="debtChartToggles">
-            <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
-            <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
-            <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
-            <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
-          </div>
-          <!-- Mobile: dropdown (hidden by default, shown on cap-ios) -->
-          <select class="debt-metric-select-mobile" style="display:none;padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);background:var(--bg-card);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23607179%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;" onchange="switchDebtMetric(this.value, null, true)">
-            <option value="yield">Yield</option>
-            <option value="leverage">Leverage</option>
-            <option value="ltv">Loan-to-Value</option>
-            <option value="delinquency">Delinquency Rate</option>
-          </select>
-        </div>
-        <div class="debt-chart-wrapper" style="position:relative;">
-          <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
-            <canvas id="debtFundChart"></canvas>
-          </div>
-          <div id="debtChartLegend" style="min-width:180px;max-width:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:8px 0;font-family:var(--font-ui);font-size:12px;order:0;"></div>
-          <!-- Coming Soon overlay for delinquency -->
-          <div id="debtChartComingSoon" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);border-radius:var(--radius);z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
-            <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:var(--text-secondary);">Coming Soon</div>
-            <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);max-width:340px;text-align:center;">Delinquency rate data is not yet available. We're working on sourcing verified metrics from fund managers.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Debt Funds Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;">
-        <table class="table-view" id="debtFundTable" style="display:table;">
-          <thead>
-            <tr>
-              <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
-              <th onclick="sortDebtTable('_return2022')">2022 <span class="sort-arrow">&#9650;</span></th>
-            </tr>
-          </thead>
-          <tbody id="debtFundTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <!-- PAGE: Assets -->
   <div class="page" id="page-assets">
     <div class="topbar">
@@ -7642,13 +7505,9 @@ const _supa = window.supabase.createClient(
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
           <span>Dashboard</span>
         </a>
-        <a class="more-menu-item" href="#" onclick="navigateTo('compare'); return false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><rect x="2" y="4" width="8" height="16" rx="1"/><rect x="14" y="4" width="8" height="16" rx="1"/></svg>
-          <span>Compare</span>
-        </a>
-        <a class="more-menu-item" href="#" onclick="navigateTo('assets'); return false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <span>Assets</span>
+        <a class="more-menu-item" href="#" onclick="navigateTo('deals'); setTimeout(switchToDebtFunds, 100); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
+          <span>Debt Funds</span>
         </a>
       </div>
       <div class="more-menu-section">
@@ -8824,6 +8683,177 @@ function toggleCompareExtraField(fieldId, isOn) {
   renderComparePage();
 }
 
+// --- Decision Compare Table (embedded in Decision tab) ---
+function renderDecisionCompare() {
+  var container = document.getElementById('decisionCompareContainer');
+  if (!container) return;
+
+  var decisionIds = Object.keys(dealStages).filter(function(id) { return dealStages[id] === 'decision'; });
+  var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+  var deals = decisionIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
+
+  if (deals.length < 2) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = '';
+  var cols = deals.length;
+
+  // Buy box + match scoring (reuse from compare)
+  var bb = null;
+  try { bb = JSON.parse(localStorage.getItem('gycBuyBox') || 'null'); } catch(e) {}
+
+  function calcMatchScore(d) {
+    if (!bb) return { score: 0, max: 5 };
+    var score = 0;
+    if (bb.assetClasses && bb.assetClasses.length > 0 && bb.assetClasses.indexOf(d.assetClass) >= 0) score++;
+    if (bb.strategies && bb.strategies.length > 0 && bb.strategies.indexOf(d.strategy) >= 0) score++;
+    if (bb.maxInvest) {
+      var maxInv = parseFloat(String(bb.maxInvest).replace(/[$,]/g, ''));
+      if (!isNaN(maxInv) && d.investmentMinimum && d.investmentMinimum <= maxInv) score++;
+    }
+    if (d.preferredReturn && d.preferredReturn > 0) score++;
+    return { score: score, max: 5 };
+  }
+
+  var matchScores = deals.map(calcMatchScore);
+  var bestMatchScore = Math.max.apply(null, matchScores.map(function(m) { return m.score; }));
+  var bestMatchIndices = [];
+  matchScores.forEach(function(m, i) { if (m.score === bestMatchScore && bestMatchScore > 0) bestMatchIndices.push(i); });
+  var highlightBest = bestMatchScore > 0;
+
+  function colClass(i) {
+    return 'col-deal' + (highlightBest && bestMatchIndices.indexOf(i) >= 0 ? ' best-match-col' : '');
+  }
+
+  function cmpRow(label, values, format, higherIsBetter) {
+    var best = null;
+    var nums = values.map(function(v) { return (typeof v === 'number' && !isNaN(v)) ? v : null; });
+    nums.forEach(function(n) { if (n !== null && (best === null || (higherIsBetter ? n > best : n < best))) best = n; });
+    var uniqueBest = best !== null && nums.filter(function(n) { return n === best; }).length < nums.filter(function(n) { return n !== null; }).length;
+    var r = '<tr><td class="col-label">' + label + '</td>';
+    values.forEach(function(v, i) {
+      var isBest = uniqueBest && nums[i] !== null && nums[i] === best;
+      var cls = colClass(i) + (isBest ? ' best-val' : '');
+      var display;
+      if (v === null || v === undefined || v === '') { display = '\u2014'; }
+      else if (format === 'pct') { var n = typeof v === 'string' ? parseFloat(v) : v; display = isNaN(n) ? '\u2014' : (n > 1 ? n : n * 100).toFixed(1) + '%'; }
+      else if (format === 'money') { display = fmt(v, 'money'); }
+      else if (format === 'multiple') { var n = typeof v === 'string' ? parseFloat(v) : v; display = isNaN(n) ? '\u2014' : n.toFixed(2) + 'x'; }
+      else if (format === 'yr') { display = v < 1 ? Math.round(v * 12) + ' mo' : v + ' yr'; }
+      else { display = String(v); }
+      r += '<td class="' + cls + '">' + display + '</td>';
+    });
+    return r + '</tr>';
+  }
+  function cmpTextRow(label, values) {
+    var r = '<tr><td class="col-label">' + label + '</td>';
+    values.forEach(function(v, i) { r += '<td class="' + colClass(i) + '">' + (v || '\u2014') + '</td>'; });
+    return r + '</tr>';
+  }
+  function cmpSection(title) {
+    return '<tr class="section-row"><td colspan="' + (cols + 1) + '">' + title + '</td></tr>';
+  }
+
+  var h = '';
+
+  // Nudge or affirmation banner
+  if (deals.length < 3 && !sessionStorage.getItem('gycNudgeDismissed')) {
+    h += '<div style="background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(168,85,247,0.02));border:1px solid rgba(168,85,247,0.2);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;">';
+    h += '<div style="font-size:28px;">&#128161;</div>';
+    h += '<div>';
+    h += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Compare at least 3 deals before investing</div>';
+    h += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">You have ' + deals.length + '/3 deals in Decision. Investors who compare 3+ deals report higher confidence.</div>';
+    h += '</div>';
+    h += '<button onclick="this.closest(\'div[style]\').style.display=\'none\';sessionStorage.setItem(\'gycNudgeDismissed\',\'1\')" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:4px;">&times;</button>';
+    h += '</div>';
+  } else if (deals.length >= 3) {
+    h += '<div style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2);border-radius:var(--radius);padding:12px 20px;margin-bottom:20px;font-family:var(--font-ui);font-size:13px;color:#059669;">';
+    h += '&#10003; Great &mdash; ' + deals.length + ' deals to compare. Review below before committing capital.';
+    h += '</div>';
+  }
+
+  // Comparison table
+  h += '<div class="compare-table-wrap"><table class="compare-table">';
+
+  // Header row
+  h += '<thead><tr><th class="col-label"></th>';
+  deals.forEach(function(d, i) {
+    h += '<th class="deal-header ' + colClass(i) + '">';
+    h += '<button class="compare-remove-btn" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();" title="Back to Due Diligence" style="font-size:11px;padding:2px 6px;">&#8592; DD</button>';
+    h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
+    h += '<a href="deal.html?id=' + d.id + '" class="deal-header-name" style="color:inherit;text-decoration:underline;">' + d.investmentName + '</a>';
+    h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
+    h += '</th>';
+  });
+  h += '</tr></thead><tbody>';
+
+  // Buy Box Fit
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Buy Box Fit</td>';
+  deals.forEach(function(d, i) {
+    var ms = matchScores[i];
+    var isBest = highlightBest && bestMatchIndices.indexOf(i) >= 0 && bestMatchIndices.length < deals.length;
+    h += '<td class="' + colClass(i) + '" style="text-align:center;">';
+    if (!bb) {
+      h += '<span style="color:var(--text-muted);font-size:11px;">Set Buy Box first</span>';
+    } else {
+      h += '<span style="font-weight:700;font-size:14px;color:' + (isBest ? 'var(--primary)' : 'var(--text-dark)') + ';">' + ms.score + '/' + ms.max + '</span>';
+      h += '<div class="compare-match-bar"><div class="compare-match-bar-fill" style="width:' + Math.round((ms.score / ms.max) * 100) + '%;' + (isBest ? 'background:var(--primary);' : '') + '"></div></div>';
+      if (isBest) h += '<div style="font-size:10px;font-weight:700;color:var(--primary);margin-top:3px;">&#9733; BEST FIT</div>';
+    }
+    h += '</td>';
+  });
+  h += '</tr>';
+
+  // Returns
+  h += cmpSection('Returns');
+  h += cmpRow('Target IRR', deals.map(function(d) { return d.targetIRR; }), 'pct', true);
+  h += cmpRow('Preferred Return', deals.map(function(d) { return d.preferredReturn; }), 'pct', true);
+  h += cmpRow('Cash-on-Cash', deals.map(function(d) { return d.cashOnCash; }), 'pct', true);
+  h += cmpRow('Equity Multiple', deals.map(function(d) { return d.equityMultiple; }), 'multiple', true);
+
+  // Terms
+  h += cmpSection('Terms');
+  h += cmpRow('Minimum', deals.map(function(d) { return d.investmentMinimum; }), 'money', false);
+  h += cmpRow('Hold Period', deals.map(function(d) { return d.holdPeriod; }), 'yr', false);
+  h += cmpRow('Leverage', deals.map(function(d) { return d.avgLoanLTV || d.leverage; }), 'pct', false);
+
+  // Notes
+  h += cmpSection('Your Notes');
+  var savedNotes = {};
+  try { savedNotes = JSON.parse(localStorage.getItem('gycDecisionNotes') || '{}'); } catch(e) {}
+  h += '<tr><td class="col-label">Notes</td>';
+  deals.forEach(function(d, i) {
+    var noteVal = (savedNotes[d.id] || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    h += '<td class="' + colClass(i) + '">';
+    h += '<textarea class="compare-notes-ta" rows="3" data-deal-id="' + d.id + '" placeholder="What do you think?" oninput="saveDecisionNote(this)">' + noteVal + '</textarea>';
+    h += '</td>';
+  });
+  h += '</tr>';
+
+  // Actions
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Actions</td>';
+  deals.forEach(function(d, i) {
+    h += '<td class="' + colClass(i) + '" style="vertical-align:top;">';
+    h += '<button class="compare-action-btn primary" onclick="setDealStage(\'' + d.id + '\',\'invested\');renderDecisionCompare();renderAll();">Mark as Invested</button>';
+    h += '<button class="compare-action-btn" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();">Back to DD</button>';
+    h += '<a href="https://api.leadconnectorhq.com/widget/bookings/pascal-discovery" target="_blank" class="compare-action-btn" style="color:#3b82f6;border-color:rgba(59,130,246,0.3);">Schedule Review</a>';
+    h += '</td>';
+  });
+  h += '</tr>';
+
+  h += '</tbody></table></div>';
+  container.innerHTML = h;
+}
+
+function saveDecisionNote(ta) {
+  var notes = {};
+  try { notes = JSON.parse(localStorage.getItem('gycDecisionNotes') || '{}'); } catch(e) {}
+  notes[ta.dataset.dealId] = ta.value;
+  localStorage.setItem('gycDecisionNotes', JSON.stringify(notes));
+}
+
 // --- Compare Charts ---
 function renderCompareCharts(container, deals, matchScores) {
   var COLORS = ['#51be7b', '#3b82f6', '#f59e0b', '#ef4444'];
@@ -9282,6 +9312,17 @@ if (_oldSaved.length > 0) {
   saveDealStages();
   localStorage.removeItem('gycSavedDeals');
 }
+// Migrate old compare deals to Decision stage
+try {
+  var oldCompare = JSON.parse(localStorage.getItem('gycCompareDeals') || '[]');
+  if (oldCompare.length > 0) {
+    oldCompare.forEach(function(id) {
+      if (!dealStages[id]) { dealStages[id] = 'decision'; }
+    });
+    saveDealStages();
+    localStorage.removeItem('gycCompareDeals');
+  }
+} catch(e) {}
 let savedDeals = { has(id) { return dealStages[id] && dealStages[id] !== 'browse'; }, add(id) { setDealStage(id, 'saved'); }, delete(id) { setDealStage(id, 'browse'); } };
 let currentTab = 'browse';
 let currentView = 'grid';
@@ -11097,11 +11138,59 @@ function clearFilters() {
   applyFilters();
 }
 
+var _debtFundsActive = false;
+
+function switchToDebtFunds() {
+  _debtFundsActive = true;
+  // Deactivate all pipeline tabs
+  document.querySelectorAll('#page-deals .topbar-tab').forEach(function(t) { t.classList.remove('active'); });
+  var debtTab = document.querySelector('#page-deals .topbar-tab[data-tab="debtfunds"]');
+  if (debtTab) debtTab.classList.add('active');
+  // Sync mobile dropdown
+  var sel = document.getElementById('dealWorkflowSelect');
+  if (sel) sel.value = 'debtfunds';
+  // Hide card grid and filter bar, show debt funds view
+  var cardGrid = document.getElementById('cardGrid');
+  var contentArea = cardGrid ? cardGrid.closest('.content-area') : null;
+  var filterBar = document.querySelector('#page-deals .filter-bar');
+  var debtView = document.getElementById('debtFundsView');
+  var statsBar = document.getElementById('statsBar');
+  var goalIndicator = document.getElementById('goalSortIndicator');
+  var mobileToggle = document.getElementById('mobileViewToggle');
+  var viewToggle = document.querySelector('#page-deals .topbar-view-toggle');
+  if (contentArea) contentArea.style.display = 'none';
+  if (filterBar) filterBar.style.display = 'none';
+  if (statsBar) statsBar.style.display = 'none';
+  if (goalIndicator) goalIndicator.style.display = 'none';
+  if (mobileToggle) mobileToggle.style.display = 'none';
+  if (viewToggle) viewToggle.style.display = 'none';
+  if (debtView) { debtView.style.display = ''; renderDebtFunds(); }
+}
+
 function switchTab(el, fromSelect) {
+  // Exiting debt funds view
+  _debtFundsActive = false;
+  var debtView = document.getElementById('debtFundsView');
+  if (debtView) debtView.style.display = 'none';
+  var debtTab = document.querySelector('#page-deals .topbar-tab[data-tab="debtfunds"]');
+  if (debtTab) debtTab.classList.remove('active');
+  // Re-show card grid and filter bar
+  var cardGrid = document.getElementById('cardGrid');
+  var contentArea = cardGrid ? cardGrid.closest('.content-area') : null;
+  if (contentArea) contentArea.style.display = '';
+  var filterBar = document.querySelector('#page-deals .filter-bar');
+  if (filterBar) filterBar.style.display = '';
+  var statsBar = document.getElementById('statsBar');
+  if (statsBar) statsBar.style.display = '';
+  var viewToggle = document.querySelector('#page-deals .topbar-view-toggle');
+  if (viewToggle) viewToggle.style.display = '';
+
   if (fromSelect) {
     // Called from mobile <select> dropdown
     const sel = document.getElementById('dealWorkflowSelect');
     currentTab = sel.value;
+    // Handle debt funds from mobile dropdown
+    if (currentTab === 'debtfunds') { switchToDebtFunds(); return; }
     // Also sync the desktop tabs
     document.querySelectorAll('.topbar-tab').forEach(t => {
       t.classList.toggle('active', t.dataset.tab === currentTab);
@@ -11120,6 +11209,16 @@ function switchTab(el, fromSelect) {
   // Update stage description banner
   updateStageDescription();
   renderAll();
+  // Decision tab: render comparison table
+  var decisionContainer = document.getElementById('decisionCompareContainer');
+  if (decisionContainer) {
+    if (currentTab === 'decision') {
+      renderDecisionCompare();
+      decisionContainer.style.display = '';
+    } else {
+      decisionContainer.style.display = 'none';
+    }
+  }
 }
 
 function updateStageDescription() {
@@ -11460,6 +11559,9 @@ function navigateTo(page) {
   // Redirect legacy page names to admin dashboard
   if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions' || page === 'growth') { navigateTo('admindash'); return; }
   if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
+  if (page === 'compare') { navigateTo('deals'); setTimeout(function(){ var dt = document.querySelector('#page-deals .topbar-tab[data-tab="decision"]'); if (dt) switchTab(dt); }, 100); return; }
+  if (page === 'debtfunds') { navigateTo('deals'); setTimeout(switchToDebtFunds, 100); return; }
+  if (page === 'assets') { navigateTo('deals'); return; }
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -12975,18 +13077,44 @@ function renderWizardStep() {
     html += '<strong><span class="wiz-tip" data-tip="A specialist operator focuses on a single asset class \u2014 like self-storage or multi-family \u2014 day in, day out. They know every nuance of their niche.">Specialist operators</span></strong> do one thing \u2014 like self-storage or multi-family \u2014 day in, day out. They know every nuance of their niche.<br><br>';
     html += '<strong>Diversified operators</strong> manage across multiple asset classes. This is common with larger firms ($100M+ AUM), where scale and team depth make diversification a strength, not a distraction.<br><br>';
     html += 'Neither is better \u2014 it depends on how you want to build your portfolio.</div>';
+    // Count deals by operator specialization (specialist = 1 asset class, diversified = 2+)
+    var opSelAssets = wizardData.assetClasses || [];
+    var opSelStrategies = wizardData.strategies || [];
+    var opAllDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
+    var opTotalAll = opAllDeals.length;
+    var opActiveDeals = opAllDeals.filter(function(d) {
+      if (opSelAssets.length > 0 && d.assetClass && !opSelAssets.includes(d.assetClass)) return false;
+      if (opSelStrategies.length > 0 && d.strategy && !opSelStrategies.includes(d.strategy)) return false;
+      return true;
+    });
+    // Build map of operator -> distinct asset classes
+    var opAssetMap = {};
+    opAllDeals.forEach(function(d) {
+      if (!d.managementCompanyId || !d.assetClass) return;
+      if (!opAssetMap[d.managementCompanyId]) opAssetMap[d.managementCompanyId] = {};
+      opAssetMap[d.managementCompanyId][d.assetClass] = true;
+    });
+    var specialistCount = opActiveDeals.filter(function(d) {
+      return d.managementCompanyId && opAssetMap[d.managementCompanyId] && Object.keys(opAssetMap[d.managementCompanyId]).length === 1;
+    }).length;
+    var diversifiedCount = opActiveDeals.filter(function(d) {
+      return d.managementCompanyId && opAssetMap[d.managementCompanyId] && Object.keys(opAssetMap[d.managementCompanyId]).length > 1;
+    }).length;
     var opFocusOptions = [
-      { val: 'specialist', label: 'Specialists Only', detail: 'I want operators laser-focused on one asset class' },
-      { val: 'both', label: 'Open to Both', detail: 'I\u2019ll evaluate any operator based on their track record' },
-      { val: 'diversified', label: 'Prefer Diversified', detail: 'I like firms that can deploy across multiple strategies' }
+      { val: 'specialist', label: 'Specialists Only', detail: 'I want operators laser-focused on one asset class', count: specialistCount },
+      { val: 'diversified', label: 'Prefer Diversified', detail: 'I like firms that can deploy across multiple strategies', count: diversifiedCount },
+      { val: 'both', label: 'Open to Both', detail: 'I\u2019ll evaluate any operator based on their track record', count: opActiveDeals.length }
     ];
+    var opSel = wizardData.operatorFocus || '';
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     opFocusOptions.forEach(function(opt) {
-      var isSel = wizardData.operatorFocus === opt.val;
-      html += '<div onclick="wizardData.operatorFocus=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      var isSel = opSel === opt.val;
+      var isDisabled = opSel && !isSel;
+      html += '<div onclick="wizardData.operatorFocus=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;' + (isDisabled ? 'opacity:0.4;' : '') + '">';
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
+      if (opTotalAll > 0) html += '<div style="flex-shrink:0;text-align:right;"><div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' <span style="font-weight:400;font-size:12px;color:var(--text-muted);">of ' + opTotalAll + '</span></div><div style="font-size:10px;color:var(--text-muted);">deals match</div></div>';
       html += '</div>';
     });
     html += '</div>';
