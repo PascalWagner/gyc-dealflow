@@ -401,6 +401,17 @@ async function handlePost(req, res, supabase, user) {
       if (error) throw error;
       result = created;
     }
+
+    // Auto-sync: when a portfolio entry has a deal_id, ensure a pipeline stage exists
+    if (type === 'portfolio' && result && result.deal_id) {
+      await supabase.from('user_deal_stages').upsert({
+        user_id: user.id,
+        deal_id: result.deal_id,
+        stage: 'portfolio',
+        notes: '',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,deal_id', ignoreDuplicates: true }).catch(() => {});
+    }
   }
 
   return res.status(200).json({
