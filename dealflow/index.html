@@ -6451,87 +6451,7 @@ const _supa = window.supabase.createClient(
   </div>
 
   <!-- PAGE: Analytics (Admin Only) -->
-  <div class="page" id="page-analytics">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Analytics Dashboard</div>
-      <div style="margin-left:auto;display:flex;gap:8px;">
-        <button class="topbar-tab" onclick="refreshAnalyticsDashboard()">Refresh</button>
-        <button class="topbar-tab" onclick="clearAnalyticsData()" style="color:var(--red);">Clear Data</button>
-      </div>
-    </div>
-    <div class="sub-page" style="max-width:1200px">
-      <!-- Summary Cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;" id="analyticsSummaryCards">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Pageviews</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsPageviews">0</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsPageviewsToday">0</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Unique Users</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsUsers">0</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsUsersToday">0</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Avg Session Time</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsAvgSession">--</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Based on page enter/leave</div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Viewed Page</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsMostViewed">--</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;" id="analyticsMostViewedCount"></div>
-        </div>
-      </div>
-
-      <!-- Charts Row -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Page Popularity</h3>
-          <div style="height:300px;"><canvas id="analyticsPageChart"></canvas></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Deal Engagement</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div>
-              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Viewed Deals</h4>
-              <div id="analyticsTopViewedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
-            </div>
-            <div>
-              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Saved Deals</h4>
-              <div id="analyticsTopSavedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- User Sessions Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">User Sessions</h3>
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
-            <thead>
-              <tr style="border-bottom:2px solid var(--border);">
-                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">User</th>
-                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Last Active</th>
-                <th style="text-align:right;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Total Events</th>
-              </tr>
-            </thead>
-            <tbody id="analyticsUserSessions"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Activity Feed -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Activity Feed <span style="font-weight:400;font-size:13px;color:var(--text-muted);">(last 100 events)</span></h3>
-        <div id="analyticsActivityFeed" style="max-height:500px;overflow-y:auto;"></div>
-      </div>
-    </div>
-  </div>
+  <!-- Analytics page removed - consolidated into Growth tab -->
 
   <!-- PAGE: Deal Flow Analytics -->
   <div class="page" id="page-dealflow">
@@ -6753,10 +6673,22 @@ const _supa = window.supabase.createClient(
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">Growth Dashboard</div>
-      <button onclick="renderGrowthPage()" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
+      <div class="topbar-title">Growth &amp; Analytics</div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button onclick="if(growthCurrentTab==='growth')renderGrowthPage();else refreshAnalyticsDashboard();" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
+        <button id="growthClearBtn" onclick="clearAnalyticsData()" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--red);cursor:pointer;">Clear Data</button>
+      </div>
     </div>
-    <div class="sub-page" style="max-width:1000px">
+    <div class="sub-page" style="max-width:1100px">
+
+      <!-- Tab Toggle Bar -->
+      <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;" id="growthTabBar">
+        <button class="growth-tab-btn growth-tab-active" data-tab="growth" onclick="switchGrowthTab('growth')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Growth Dashboard</button>
+        <button class="growth-tab-btn" data-tab="analytics" onclick="switchGrowthTab('analytics')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Analytics</button>
+      </div>
+
+      <!-- TAB: Growth Dashboard -->
+      <div id="growth-tab-growth">
       <div class="settings-page-desc" style="margin-top:0;">Week-over-week platform growth. Focus on increasing the rate of GP and LP acquisition.</div>
 
       <!-- North Star Banner -->
@@ -6793,6 +6725,79 @@ const _supa = window.supabase.createClient(
           <div style="color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading suggestions...</div>
         </div>
       </div>
+      </div><!-- /growth-tab-growth -->
+
+      <!-- TAB: Analytics -->
+      <div id="growth-tab-analytics" style="display:none;">
+      <!-- Summary Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;" id="analyticsSummaryCards">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Pageviews</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsPageviews">0</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsPageviewsToday">0</span></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Unique Users</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsUsers">0</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsUsersToday">0</span></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Avg Session Time</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsAvgSession">--</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Based on page enter/leave</div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Viewed Page</div>
+          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsMostViewed">--</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;" id="analyticsMostViewedCount"></div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Page Popularity</h3>
+          <div style="height:300px;"><canvas id="analyticsPageChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Deal Engagement</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Viewed Deals</h4>
+              <div id="analyticsTopViewedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
+            </div>
+            <div>
+              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Saved Deals</h4>
+              <div id="analyticsTopSavedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Sessions Table -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">User Sessions</h3>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border);">
+                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">User</th>
+                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Last Active</th>
+                <th style="text-align:right;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Total Events</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsUserSessions"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Activity Feed <span style="font-weight:400;font-size:13px;color:var(--text-muted);">(last 100 events)</span></h3>
+        <div id="analyticsActivityFeed" style="max-height:500px;overflow-y:auto;"></div>
+      </div>
+      </div><!-- /growth-tab-analytics -->
+
     </div>
   </div>
 
@@ -11053,14 +11058,13 @@ function navigateTo(page) {
   if (page === 'portfolio') renderPortfolio();
   if (page === 'taxprep') renderTaxPrep();
   if (page === 'marketintel') renderMarketIntel();
-  if (page === 'analytics') refreshAnalyticsDashboard();
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'schema') renderSchemaPage();
   if (page === 'casestudies') renderCaseStudies();
   if (page === 'admin-manage') adminLoadData();
   if (page === 'outreach') outreachInit();
   if (page === 'network-moat') renderNetworkMoat();
-  if (page === 'growth') renderGrowthPage();
+  if (page === 'growth') switchGrowthTab(growthCurrentTab);
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
     // Try to render from localStorage first
@@ -18820,6 +18824,32 @@ function renderNetworkMoat() {
 }
 
 // --- Growth Dashboard ---
+var growthCurrentTab = 'growth';
+
+function switchGrowthTab(tab) {
+  growthCurrentTab = tab;
+  var btns = document.querySelectorAll('#growthTabBar .growth-tab-btn');
+  btns.forEach(function(btn) {
+    if (btn.getAttribute('data-tab') === tab) {
+      btn.style.background = 'var(--primary)';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-secondary)';
+    }
+  });
+  ['growth', 'analytics'].forEach(function(t) {
+    var el = document.getElementById('growth-tab-' + t);
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
+  });
+  // Show/hide Clear Data button (only for analytics tab)
+  var clearBtn = document.getElementById('growthClearBtn');
+  if (clearBtn) clearBtn.style.display = (tab === 'analytics') ? 'inline-block' : 'none';
+  // Render the selected tab
+  if (tab === 'growth') renderGrowthPage();
+  if (tab === 'analytics') refreshAnalyticsDashboard();
+}
+
 async function renderGrowthPage() {
   if (!isAdmin()) return;
   var grid = document.getElementById('growthMetricsGrid');
@@ -21322,7 +21352,7 @@ function renderSchemaPage() {
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Tables</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">14</div>
+        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">21</div>
         <div style="font-size:10px;color:var(--text-muted);">All in Supabase (PostgreSQL)</div>
       </div>
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
@@ -21350,8 +21380,15 @@ function renderSchemaPage() {
       { name: 'management_company_id', type: 'uuid (FK)', example: 'Linked to management_companies' },
       { name: 'status', type: 'text', example: 'Open / Evergreen / Closed' },
       { name: 'deck_url', type: 'text', example: 'Supabase Storage signed URL' },
-      { name: 'vertical_integration', type: 'boolean', example: 'Equity deals only' },
-      { name: '+ 25 more fields', type: '...', example: 'strategy, distributions, fees, geography, etc.' }
+      { name: 'archived', type: 'boolean', example: 'Soft-delete flag' },
+      { name: 'case_study', type: 'jsonb', example: 'Worked example: title, overview, result, metrics' },
+      { name: 'purchase_price', type: 'numeric', example: 'Property acquisition cost' },
+      { name: 'sec_cik / sec_entity_name', type: 'text', example: 'SEC EDGAR entity matching' },
+      { name: 'property_address / unit_count', type: 'text / int', example: 'Property details from PPM' },
+      { name: 'acquisition_fee_pct + 5 fee fields', type: 'numeric', example: 'Fee structure decimals' },
+      { name: 'waterfall_details', type: 'jsonb', example: 'Multi-tier return structure' },
+      { name: 'issuer_entity / gp_entity', type: 'text', example: 'Legal entity names' },
+      { name: '+ 30 more fields', type: '...', example: 'strategy, distributions, geography, loan terms, etc.' }
     ], dealsCount)}
 
     ${tableCard('Management Companies', 'persistent', 'Supabase · management_companies', [
@@ -21361,8 +21398,12 @@ function renderSchemaPage() {
       { name: 'website', type: 'url', example: 'https://...' },
       { name: 'type', type: 'text', example: 'Operator / Fund Manager' },
       { name: 'asset_classes', type: 'text[]', example: 'Array of asset classes' },
-      { name: 'total_investors', type: 'integer', example: '' },
-      { name: 'founding_year', type: 'integer', example: '' }
+      { name: 'hq_city / hq_state / hq_zip', type: 'text', example: 'HQ location from SEC filings' },
+      { name: 'authorized_emails', type: 'text[]', example: 'GP login whitelist' },
+      { name: 'booking_url', type: 'text', example: 'Calendly / booking link' },
+      { name: 'investment_criteria', type: 'jsonb[]', example: 'Structured buy box criteria' },
+      { name: 'portfolio_snapshot', type: 'jsonb[]', example: 'Existing portfolio properties' },
+      { name: 'legal_entity', type: 'text', example: 'Legal entity name for SEC matching' }
     ], '25+')}
 
     <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">User Data Tables (Supabase)</div>
@@ -21374,7 +21415,11 @@ function renderSchemaPage() {
       { name: 'tier', type: 'text', example: user?.tier || 'free' },
       { name: 'is_admin', type: 'boolean', example: '' },
       { name: 'ghl_contact_id', type: 'text', example: 'Synced from GoHighLevel' },
-      { name: 'buy_box_data', type: 'jsonb', example: 'Wizard selections stored as JSON' }
+      { name: 'buy_box_data', type: 'jsonb', example: 'Wizard selections stored as JSON' },
+      { name: 'share_portfolio', type: 'boolean', example: 'Opt-in social proof' },
+      { name: 'gp_type', type: 'text', example: 'founder / sponsor / operator' },
+      { name: 'management_company_id', type: 'uuid (FK)', example: 'GP company link' },
+      { name: 'gp_verified', type: 'boolean', example: 'GP login verification status' }
     ], 'Per user')}
 
     ${tableCard('User Buy Box', 'persistent', 'Supabase · user_buy_box', [
@@ -21461,8 +21506,10 @@ function renderSchemaPage() {
     ${tableCard('Operator Permissions', 'persistent', 'Supabase · operator_permissions', [
       { name: 'id', type: 'uuid (PK)', example: '' },
       { name: 'company_id', type: 'uuid (FK)', example: 'Linked to management_companies' },
-      { name: 'permission_status', type: 'enum', example: 'pending / approved / declined' },
+      { name: 'outreach_status', type: 'enum', example: 'backlog / researching / contacted / approved / denied' },
       { name: '506b_compliant', type: 'boolean', example: 'Offering type compliance' },
+      { name: 'ghl_contact_id', type: 'text', example: 'CRM contact link' },
+      { name: 'contact_linkedin', type: 'text', example: 'LinkedIn profile URL' },
       { name: 'granted_at', type: 'timestamptz', example: '' }
     ], 'Per operator')}
 
@@ -21482,6 +21529,76 @@ function renderSchemaPage() {
       { name: 'passed_count', type: 'integer', example: 'Materialized view for performance' }
     ], 'Per deal')}
 
+    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">SEC & Market Data (Supabase)</div>
+
+    ${tableCard('SEC Filings', 'persistent', 'Supabase · sec_filings', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'cik / accession_number', type: 'text', example: 'SEC EDGAR identifiers' },
+      { name: 'entity_name', type: 'text', example: 'Legal entity from Form D' },
+      { name: 'filing_date / date_of_first_sale', type: 'date', example: 'Filing timeline' },
+      { name: 'total_offering_amount', type: 'numeric', example: 'Target raise amount' },
+      { name: 'total_amount_sold', type: 'numeric', example: 'Capital raised to date' },
+      { name: 'total_investors', type: 'integer', example: '' },
+      { name: 'is_506b / is_equity', type: 'boolean', example: 'Offering classification' },
+      { name: 'industry_group', type: 'text', example: 'Real Estate, Pooled Investment, etc.' }
+    ], 'SEC data')}
+
+    ${tableCard('Related Persons', 'persistent', 'Supabase · related_persons', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'filing_id', type: 'uuid (FK)', example: 'Linked to sec_filings' },
+      { name: 'person_name', type: 'text', example: 'Full name from Form D' },
+      { name: 'relationship', type: 'text', example: 'Executive Officer, Director, Promoter' }
+    ], 'Per filing')}
+
+    ${tableCard('Deal Sponsors', 'persistent', 'Supabase · deal_sponsors', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'deal_id', type: 'uuid (FK)', example: 'Linked to opportunities' },
+      { name: 'company_id', type: 'uuid (FK)', example: 'Linked to management_companies' },
+      { name: 'role', type: 'text', example: 'operator / capital_raiser / co_gp / property_manager' },
+      { name: 'is_primary', type: 'boolean', example: 'Primary sponsor flag' },
+      { name: 'display_order', type: 'integer', example: '' }
+    ], 'Per deal+sponsor')}
+
+    ${tableCard('Background Checks', 'persistent', 'Supabase · background_checks', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'person_name / company_name', type: 'text', example: 'Search target' },
+      { name: 'status', type: 'text', example: 'clean / flagged / pending' },
+      { name: 'sec_filings_count', type: 'integer', example: 'SEC EDGAR results' },
+      { name: 'finra_found / iapd_found', type: 'boolean', example: 'FINRA BrokerCheck / IAPD' },
+      { name: 'ofac_found', type: 'boolean', example: 'OFAC sanctions check' },
+      { name: 'court_cases_count', type: 'integer', example: 'CourtListener results' },
+      { name: 'summary', type: 'text', example: 'Aggregated findings' }
+    ], 'Per person/company')}
+
+    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">Platform Infrastructure (Supabase)</div>
+
+    ${tableCard('Google Drive Deck Index', 'persistent', 'Supabase · gdrive_deck_files', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'gdrive_id', type: 'text (unique)', example: 'Google Drive file ID' },
+      { name: 'file_name', type: 'text', example: 'Original filename' },
+      { name: 'doc_type', type: 'text', example: 'deck / ppm / supplement' },
+      { name: 'deal_name', type: 'text', example: 'Extracted deal name' },
+      { name: 'matched_deal_id', type: 'uuid (FK)', example: 'Auto-matched to opportunities' }
+    ], 'Indexed files')}
+
+    ${tableCard('API Keys', 'persistent', 'Supabase · api_keys', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'key_hash', type: 'text', example: 'SHA-256 hash of API key' },
+      { name: 'key_prefix', type: 'text', example: 'gyc_...' },
+      { name: 'tier', type: 'text', example: 'free / pro / enterprise' },
+      { name: 'rate_limit', type: 'integer', example: 'Requests per hour' },
+      { name: 'scopes', type: 'text[]', example: 'deals:read, market:read' }
+    ], 'Per key')}
+
+    ${tableCard('API Request Log', 'persistent', 'Supabase · api_request_log', [
+      { name: 'id', type: 'uuid (PK)', example: '' },
+      { name: 'key_id', type: 'uuid (FK)', example: 'Linked to api_keys' },
+      { name: 'endpoint / method', type: 'text', example: '/api/deals · GET' },
+      { name: 'status_code', type: 'integer', example: '200 / 429 / 500' },
+      { name: 'response_time_ms', type: 'integer', example: '' },
+      { name: 'ip_address', type: 'text', example: '' }
+    ], 'Append-only')}
+
     <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">External Integrations</div>
 
     ${tableCard('GoHighLevel (CRM)', 'persistent', 'GHL Contacts · Tags + Custom Fields', [
@@ -21495,7 +21612,7 @@ function renderSchemaPage() {
     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);padding:20px;margin-top:16px;">
       <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px;">Fully Migrated to Supabase</div>
       <div style="font-size:13px;color:#166534;line-height:1.8;">
-        All 14 tables live in Supabase (PostgreSQL). Auth via Supabase Auth (JWT). File storage via Supabase Storage. Realtime sync for DD checklists. GHL serves as CRM only (tags, funnel status, event sync). Analytics via GA4 (G-F8B5NMB9J9). Zero Airtable dependencies remain.
+        All 21 tables live in Supabase (PostgreSQL). Auth via Supabase Auth (JWT). File storage via Supabase Storage. Realtime sync for DD checklists. SEC EDGAR data indexed for market intelligence. Background checks cached for sponsor DD. GHL serves as CRM only (tags, funnel status, event sync). Analytics via GA4 (G-F8B5NMB9J9). Zero Airtable dependencies remain.
       </div>
     </div>
   `;
