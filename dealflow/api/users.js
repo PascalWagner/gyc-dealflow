@@ -36,10 +36,41 @@ export default async function handler(req, res) {
         lastName: c.lastName || '',
         email: c.email || '',
         phone: c.phone || '',
-        linkedin: c.linkedIn || c.linkedin || (c.customFields || []).find(f => f.id === 'linkedin_url' || (f.value || '').includes('linkedin.com'))?.value || '',
+        linkedin: extractLinkedIn(c),
         tags: c.tags || [],
         tier: deriveTier(c.tags || [])
       })).filter(c => c.email);
+    }
+
+    // Extract LinkedIn URL from GHL contact data (checks all known locations)
+    function extractLinkedIn(obj) {
+      // Standard fields (camelCase variants)
+      if (obj.linkedIn) return obj.linkedIn;
+      if (obj.linkedin) return obj.linkedin;
+      if (obj.linkedin_url) return obj.linkedin_url;
+      // customFields as array (v2 style)
+      if (Array.isArray(obj.customFields)) {
+        const cf = obj.customFields.find(f =>
+          f.id === 'linkedin_url' || f.key === 'linkedin_url' ||
+          (f.value && typeof f.value === 'string' && f.value.includes('linkedin.com'))
+        );
+        if (cf?.value) return cf.value;
+      }
+      // customField as object/map (v1 style)
+      if (obj.customField && typeof obj.customField === 'object' && !Array.isArray(obj.customField)) {
+        for (const [key, val] of Object.entries(obj.customField)) {
+          if (typeof val === 'string' && val.includes('linkedin.com')) return val;
+          if (val && typeof val === 'object' && typeof val.value === 'string' && val.value.includes('linkedin.com')) return val.value;
+        }
+      }
+      // customField as array
+      if (Array.isArray(obj.customField)) {
+        const cf = obj.customField.find(f =>
+          (f.value && typeof f.value === 'string' && f.value.includes('linkedin.com'))
+        );
+        if (cf?.value) return cf.value;
+      }
+      return '';
     }
 
     // Enrich contacts with full profile data (LinkedIn, etc.) from individual GHL lookups
@@ -52,10 +83,11 @@ export default async function handler(req, res) {
           if (!resp.ok) return c;
           const data = await resp.json();
           const full = data.contact || data;
+          const linkedin = c.linkedin || extractLinkedIn(full);
           return {
             ...c,
             phone: c.phone || full.phone || '',
-            linkedin: c.linkedin || full.linkedIn || full.linkedin || (full.customFields || []).find(f => (f.value || '').includes('linkedin.com'))?.value || ''
+            linkedin
           };
         } catch { return c; }
       }));
