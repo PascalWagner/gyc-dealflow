@@ -2426,7 +2426,8 @@ function renderMarketIntelligence(data, assetClass) {
     }
 
     var areaName = pop[0].name || '';
-    document.getElementById('popChartSubtitle').textContent = areaName ? areaName + ' (' + pop[0].year + '–' + pop[pop.length - 1].year + ')' : '';
+    var cleanAreaName = areaName.replace(/^ZCTA5\s*/, 'ZIP ');
+    document.getElementById('popChartSubtitle').textContent = cleanAreaName ? cleanAreaName + ' (' + pop[0].year + '–' + pop[pop.length - 1].year + ')' : '';
 
     var lineColor = trend && trend.declining ? '#D04040' : '#51BE7B';
     var fillColor = trend && trend.declining ? 'rgba(208,64,64,0.06)' : 'rgba(81,190,123,0.06)';
@@ -2502,8 +2503,8 @@ function renderMarketIntelligence(data, assetClass) {
     var incArrow = incDeclining
       ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>'
       : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
-    document.getElementById('incomeTrendBadge').innerHTML = '<span class="mi-trend-badge ' + incBadgeCls + '">' + incArrow + (incChange > 0 ? '+' : '') + incChange + '%</span>';
-    document.getElementById('incomeChartSubtitle').textContent = '$' + firstInc.toLocaleString() + ' → $' + lastInc.toLocaleString();
+    document.getElementById('incomeTrendBadge').innerHTML = '<span class="mi-trend-badge ' + incBadgeCls + '">' + incArrow + (incChange > 0 ? '+' : '') + incChange + '% since ' + income[0].year + '</span>';
+    document.getElementById('incomeChartSubtitle').textContent = cleanAreaName + ' · $' + fmtK(firstInc) + ' → $' + fmtK(lastInc);
 
     var incLineColor = incDeclining ? '#D04040' : '#2563EB';
     var incFillColor = incDeclining ? 'rgba(208,64,64,0.06)' : 'rgba(37,99,235,0.06)';
@@ -2565,7 +2566,7 @@ function renderMarketIntelligence(data, assetClass) {
   if (data.ageDistribution && data.ageDistribution.length) {
     document.getElementById('agePyramidSection').style.display = 'block';
     var areaName = (pop.length && pop[0].name) ? pop[0].name : '';
-    document.getElementById('agePyramidSubtitle').textContent = areaName + ' · 2023 ACS 5-Year Estimates';
+    document.getElementById('agePyramidSubtitle').textContent = cleanAreaName + ' · 2023 ACS 5-Year Estimates';
 
     var ageReversed = data.ageDistribution.slice().reverse(); // 85+ at top, Under 5 at bottom
     var ageLabels = ageReversed.map(function(g) { return g.label; });
