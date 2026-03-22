@@ -5604,29 +5604,19 @@ const _supa = window.supabase.createClient(
         <div class="settings-page-title">Notification Preferences</div>
         <div class="settings-page-desc">Control how and when you receive deal alert emails.</div>
 
-        <!-- Deal Alerts Toggle -->
-        <div style="margin-top:24px;padding:20px 24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Deal Alerts</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;line-height:1.5;">Get notified when new deals match your buy box criteria.</div>
-            </div>
-            <label style="position:relative;display:inline-block;width:48px;height:28px;flex-shrink:0;cursor:pointer;">
-              <input type="checkbox" id="notifDealAlerts" checked onchange="saveNotifPrefs()" style="opacity:0;width:0;height:0;">
-              <span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:28px;transition:.3s;"></span>
-              <span class="notif-slider-dot" style="position:absolute;height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Frequency -->
-        <div style="margin-top:16px;padding:20px 24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
-          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Frequency</div>
-          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">How often should we send you deal alerts?</div>
-          <div id="notifFreqBtns" style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="notif-freq-btn" data-freq="daily" onclick="setNotifFreq('daily')" style="padding:10px 20px;border:2px solid var(--border);border-radius:8px;background:var(--bg-main);font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:.2s;">Daily</button>
-            <button class="notif-freq-btn active" data-freq="weekly" onclick="setNotifFreq('weekly')" style="padding:10px 20px;border:2px solid var(--primary);border-radius:8px;background:rgba(81,190,123,0.08);font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--primary);cursor:pointer;transition:.2s;">Weekly</button>
-            <button class="notif-freq-btn" data-freq="off" onclick="setNotifFreq('off')" style="padding:10px 20px;border:2px solid var(--border);border-radius:8px;background:var(--bg-main);font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:.2s;">Off</button>
+        <!-- Deal Alert Frequency -->
+        <div style="margin-top:24px;padding:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
+          <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Deal Alert Frequency</div>
+          <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">We'll email you new deals that match your buy box. Choose how often.</div>
+          <div id="notifFreqBtns" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="notif-freq-btn active" data-freq="weekly" onclick="setNotifFreq('weekly')" style="flex:1;min-width:120px;padding:14px 20px;border:2px solid var(--primary);border-radius:10px;background:rgba(81,190,123,0.08);font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--primary);cursor:pointer;transition:.2s;">
+              <div>Weekly</div>
+              <div style="font-size:11px;font-weight:400;color:var(--text-secondary);margin-top:4px;">Every Friday</div>
+            </button>
+            <button class="notif-freq-btn" data-freq="off" onclick="setNotifFreq('off')" style="flex:1;min-width:120px;padding:14px 20px;border:2px solid var(--border);border-radius:10px;background:var(--bg-main);font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:.2s;">
+              <div>Off</div>
+              <div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:4px;">No deal emails</div>
+            </button>
           </div>
         </div>
 
@@ -11496,12 +11486,24 @@ function switchSettingsTab(el) {
 }
 
 // ========== NOTIFICATION PREFERENCES ==========
-function loadNotifPrefs() {
-  const prefs = JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}');
-  const alertsOn = prefs.dealAlerts !== false; // default on
-  const freq = prefs.frequency || 'weekly';
-  const cb = document.getElementById('notifDealAlerts');
-  if (cb) cb.checked = alertsOn;
+async function loadNotifPrefs() {
+  // Load from Supabase first, fall back to localStorage
+  let freq = 'weekly';
+  try {
+    const token = localStorage.getItem('sb_token') || localStorage.getItem('ghlToken');
+    if (token) {
+      const resp = await fetch('/api/userdata?type=notif_prefs', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.notif_frequency) freq = data.notif_frequency;
+      }
+    }
+  } catch (e) { /* use default */ }
+  // Fall back to localStorage
+  if (!freq || freq === 'weekly') {
+    const local = JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}');
+    if (local.frequency) freq = local.frequency;
+  }
   setNotifFreq(freq, true);
 }
 
@@ -11513,38 +11515,25 @@ function setNotifFreq(freq, silent) {
     btn.style.background = isActive ? 'rgba(81,190,123,0.08)' : 'var(--bg-main)';
     btn.style.color = isActive ? 'var(--primary)' : 'var(--text-secondary)';
   });
-  if (!silent) {
-    // If user picks "off", also uncheck the toggle
-    const cb = document.getElementById('notifDealAlerts');
-    if (freq === 'off' && cb) cb.checked = false;
-    if (freq !== 'off' && cb) cb.checked = true;
-    saveNotifPrefs();
-  }
+  if (!silent) saveNotifPrefs(freq);
 }
 
-function saveNotifPrefs() {
-  const cb = document.getElementById('notifDealAlerts');
-  const activeBtn = document.querySelector('.notif-freq-btn.active');
-  const freq = activeBtn ? activeBtn.dataset.freq : 'weekly';
-  const prefs = { dealAlerts: cb ? cb.checked : true, frequency: freq };
-  localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
-  // Sync to Supabase
-  syncNotifPrefsToDb(prefs);
+async function saveNotifPrefs(freq) {
+  localStorage.setItem('gycNotifPrefs', JSON.stringify({ frequency: freq }));
+  // Save to Supabase user_profiles.notif_frequency
+  try {
+    const token = localStorage.getItem('sb_token') || localStorage.getItem('ghlToken');
+    if (token) {
+      await fetch('/api/userdata', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'notif_prefs', data: { frequency: freq } })
+      });
+    }
+  } catch (e) { /* silent */ }
   // Show saved message
   const msg = document.getElementById('notifSavedMsg');
   if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
-}
-
-async function syncNotifPrefsToDb(prefs) {
-  try {
-    const token = localStorage.getItem('sb_token') || localStorage.getItem('ghlToken');
-    if (!token) return;
-    await fetch('/api/userdata', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'notif_prefs', data: prefs })
-    });
-  } catch (e) { /* silent */ }
 }
 
 // Load prefs when settings page opens

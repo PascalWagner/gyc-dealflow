@@ -182,6 +182,18 @@ export default async function handler(req, res) {
 
 async function handleGet(req, res, supabase, user) {
   const { type } = req.query;
+
+  // Handle notif_prefs: read from user_profiles
+  if (type === 'notif_prefs') {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('notif_frequency')
+      .eq('id', user.id)
+      .single();
+    if (error) throw error;
+    return res.status(200).json({ notif_frequency: data?.notif_frequency || 'weekly' });
+  }
+
   const table = TABLE_MAP[type];
   if (!table) {
     return res.status(400).json({ error: `Invalid type. Must be one of: ${Object.keys(TABLE_MAP).join(', ')}` });
@@ -338,9 +350,22 @@ async function handlePost(req, res, supabase, user) {
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
   }
 
+  // Handle notif_prefs: update user_profiles.notif_frequency directly
+  if (type === 'notif_prefs') {
+    const freq = data.frequency === 'off' ? 'off' : 'weekly';
+    const { data: updated, error } = await supabase
+      .from('user_profiles')
+      .update({ notif_frequency: freq })
+      .eq('id', user.id)
+      .select('notif_frequency')
+      .single();
+    if (error) throw error;
+    return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
+  }
+
   const table = TABLE_MAP[type];
   if (!table) {
-    return res.status(400).json({ error: `Invalid type. Must be one of: profile, ${Object.keys(TABLE_MAP).join(', ')}` });
+    return res.status(400).json({ error: `Invalid type. Must be one of: profile, notif_prefs, ${Object.keys(TABLE_MAP).join(', ')}` });
   }
   if (!data || typeof data !== 'object') {
     return res.status(400).json({ error: 'Data object is required' });
