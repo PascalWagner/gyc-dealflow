@@ -6208,6 +6208,82 @@ const _supa = window.supabase.createClient(
         </div>
       </div>
 
+      <!-- Section Header: Trend Analysis -->
+      <div style="margin:40px 0 24px 0;border-top:1px solid var(--border);padding-top:32px;">
+        <h2 style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin:0 0 4px 0;">Market Trends Over Time</h2>
+        <p style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin:0;">How the private placement market has evolved, based on SEC filing dates and deal additions.</p>
+      </div>
+
+      <!-- Trend Row 1: New Offerings + Cumulative Capital -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">New Offerings Per Quarter</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">The pace of new deal flow entering the market</p>
+          <div style="height:280px;"><canvas id="miNewDealsChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Cumulative Capital Raised</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Total dollars flowing into private placements</p>
+          <div style="height:280px;"><canvas id="miCumCapitalChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Trend Row 2: IRR Compression + Pref Return Trend -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Target IRR Over Time</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Are sponsors promising less as the market matures?</p>
+          <div style="height:280px;"><canvas id="miIRRTrendChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Preferred Return Over Time</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">The floor return sponsors guarantee is shifting</p>
+          <div style="height:280px;"><canvas id="miPrefTrendChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Trend Row 3: Average Minimum + Average Offering Size -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Average Minimum Investment</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Are deals getting more or less accessible?</p>
+          <div style="height:280px;"><canvas id="miMinTrendChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Average Offering Size</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Deal sizes reveal market confidence</p>
+          <div style="height:280px;"><canvas id="miOfferSizeTrendChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Trend Row 4: Multi-Family Market Share + 506b Share -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Multi-Family Market Share</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Is the market diversifying away from apartments?</p>
+          <div style="height:280px;"><canvas id="miMFShareChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">506(b) Share Over Time</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">The shift from private to publicly-marketed offerings</p>
+          <div style="height:280px;"><canvas id="mi506TrendChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Trend Row 5: Lending vs Equity + Audit Rate -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Lending vs Equity Deals</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">The rise of debt strategies in a high-rate environment</p>
+          <div style="height:280px;"><canvas id="miLendVsEquityChart"></canvas></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
+          <h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Audit Rate Over Time</h3>
+          <p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Are sponsors getting more or less transparent?</p>
+          <div style="height:280px;"><canvas id="miAuditTrendChart"></canvas></div>
+        </div>
+      </div>
+
       <!-- Insights / Takeaways -->
       <div style="background:linear-gradient(135deg, #0A1E21 0%, #132F34 100%);border-radius:var(--radius);padding:32px;margin-bottom:32px;">
         <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:#fff;margin:0 0 16px 0;">Key Takeaways</h3>
@@ -17712,6 +17788,287 @@ function renderMarketIntelData(deals) {
         plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } }
       }
+    });
+  }
+
+  // ========== TREND LINE CHARTS ==========
+  // Helper: group deals by quarter using addedDate
+  function groupByQuarter(dealArr) {
+    var quarters = {};
+    dealArr.forEach(function(d) {
+      if (!d.addedDate) return;
+      var dt = new Date(d.addedDate);
+      if (isNaN(dt.getTime())) return;
+      var q = 'Q' + (Math.floor(dt.getMonth()/3)+1) + ' ' + dt.getFullYear();
+      if (!quarters[q]) quarters[q] = { deals: [], date: new Date(dt.getFullYear(), Math.floor(dt.getMonth()/3)*3, 1) };
+      quarters[q].deals.push(d);
+    });
+    // Sort by date
+    return Object.entries(quarters)
+      .sort(function(a,b) { return a[1].date - b[1].date; })
+      .map(function(e) { return { label: e[0], deals: e[1].deals }; });
+  }
+
+  var byQ = groupByQuarter(deals);
+  var qLabels = byQ.map(function(q){return q.label;});
+
+  // Shared line chart options
+  var lineOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: false, grid: { color: 'rgba(128,128,128,0.1)' } },
+      x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } }
+    },
+    elements: { point: { radius: 3, hoverRadius: 5 }, line: { tension: 0.3 } }
+  };
+  var lineOptsZero = JSON.parse(JSON.stringify(lineOpts));
+  lineOptsZero.scales.y.beginAtZero = true;
+
+  // ---- Trend 1: New Offerings Per Quarter ----
+  var newDealsCtx = document.getElementById('miNewDealsChart');
+  if (newDealsCtx && byQ.length > 1) {
+    miCharts.newDeals = new Chart(newDealsCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'New Deals',
+          data: byQ.map(function(q){return q.deals.length;}),
+          borderColor: primary, backgroundColor: primaryLight,
+          fill: true, borderWidth: 2
+        }]
+      },
+      options: lineOptsZero
+    });
+  }
+
+  // ---- Trend 2: Cumulative Capital Raised ----
+  var cumCapCtx = document.getElementById('miCumCapitalChart');
+  if (cumCapCtx && byQ.length > 1) {
+    var cumCap = 0;
+    var cumCapData = byQ.map(function(q) {
+      q.deals.forEach(function(d) { var s = parseFloat(d.offeringSize) || 0; if (s > 0 && s < 1e12) cumCap += s; });
+      return cumCap;
+    });
+    miCharts.cumCapital = new Chart(cumCapCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Cumulative Capital',
+          data: cumCapData,
+          borderColor: '#3B9DDD', backgroundColor: '#3B9DDD22',
+          fill: true, borderWidth: 2
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return '$' + (c.raw/1e6).toFixed(0) + 'M'; } } } },
+        scales: Object.assign({}, lineOpts.scales, { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return '$'+(v/1e9).toFixed(1)+'B';} } } })
+      })
+    });
+  }
+
+  // ---- Trend 3: Target IRR Over Time ----
+  var irrTrendCtx = document.getElementById('miIRRTrendChart');
+  if (irrTrendCtx && byQ.length > 1) {
+    var irrTrendData = byQ.map(function(q) {
+      var vals = q.deals.filter(function(d){return d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2;}).map(function(d){return d.targetIRR;});
+      return vals.length ? (vals.reduce(function(a,b){return a+b;},0)/vals.length*100) : null;
+    });
+    miCharts.irrTrend = new Chart(irrTrendCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Avg Target IRR',
+          data: irrTrendData,
+          borderColor: '#EF4444', backgroundColor: '#EF444422',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v.toFixed(0)+'%';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw.toFixed(1) + '% avg IRR'; } } } }
+      })
+    });
+  }
+
+  // ---- Trend 4: Preferred Return Over Time ----
+  var prefTrendCtx = document.getElementById('miPrefTrendChart');
+  if (prefTrendCtx && byQ.length > 1) {
+    var prefTrendData = byQ.map(function(q) {
+      var vals = q.deals.filter(function(d){return d.preferredReturn && d.preferredReturn > 0 && d.preferredReturn < 1;}).map(function(d){return d.preferredReturn;});
+      return vals.length >= 2 ? (vals.reduce(function(a,b){return a+b;},0)/vals.length*100) : null;
+    });
+    miCharts.prefTrend = new Chart(prefTrendCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Avg Pref Return',
+          data: prefTrendData,
+          borderColor: '#F59E0B', backgroundColor: '#F59E0B22',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v.toFixed(1)+'%';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw.toFixed(1) + '% avg pref'; } } } }
+      })
+    });
+  }
+
+  // ---- Trend 5: Average Minimum Investment ----
+  var minTrendCtx = document.getElementById('miMinTrendChart');
+  if (minTrendCtx && byQ.length > 1) {
+    var minTrendData = byQ.map(function(q) {
+      var vals = q.deals.filter(function(d){return d.investmentMinimum && d.investmentMinimum > 0;}).map(function(d){return d.investmentMinimum;});
+      return vals.length >= 2 ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+    });
+    miCharts.minTrend = new Chart(minTrendCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Avg Minimum',
+          data: minTrendData,
+          borderColor: '#8B5CF6', backgroundColor: '#8B5CF622',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return '$'+(v/1000).toFixed(0)+'K';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return '$' + (c.raw/1000).toFixed(0) + 'K avg minimum'; } } } }
+      })
+    });
+  }
+
+  // ---- Trend 6: Average Offering Size ----
+  var offerTrendCtx = document.getElementById('miOfferSizeTrendChart');
+  if (offerTrendCtx && byQ.length > 1) {
+    var offerTrendData = byQ.map(function(q) {
+      var vals = q.deals.filter(function(d){ var s = parseFloat(d.offeringSize)||0; return s > 0 && s < 1e12; }).map(function(d){return parseFloat(d.offeringSize);});
+      return vals.length >= 2 ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+    });
+    miCharts.offerTrend = new Chart(offerTrendCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Avg Offering Size',
+          data: offerTrendData,
+          borderColor: '#EC4899', backgroundColor: '#EC489922',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return '$'+(v/1e6).toFixed(0)+'M';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return '$' + (c.raw/1e6).toFixed(1) + 'M avg size'; } } } }
+      })
+    });
+  }
+
+  // ---- Trend 7: Multi-Family Market Share ----
+  var mfShareCtx = document.getElementById('miMFShareChart');
+  if (mfShareCtx && byQ.length > 1) {
+    var mfShareData = byQ.map(function(q) {
+      if (q.deals.length < 3) return null;
+      var mf = q.deals.filter(function(d){return d.assetClass === 'Multi-Family';}).length;
+      return (mf / q.deals.length * 100);
+    });
+    miCharts.mfShare = new Chart(mfShareCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Multi-Family %',
+          data: mfShareData,
+          borderColor: '#14B8A6', backgroundColor: '#14B8A622',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v+'%';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw.toFixed(0) + '% multi-family'; } } } }
+      })
+    });
+  }
+
+  // ---- Trend 8: 506(b) Share Over Time ----
+  var t506Ctx = document.getElementById('mi506TrendChart');
+  if (t506Ctx && byQ.length > 1) {
+    var t506Data = byQ.map(function(q) {
+      if (q.deals.length < 3) return null;
+      var b = q.deals.filter(function(d){return d.is506b;}).length;
+      return (b / q.deals.length * 100);
+    });
+    miCharts.t506 = new Chart(t506Ctx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: '506(b) %',
+          data: t506Data,
+          borderColor: '#F97316', backgroundColor: '#F9731622',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v+'%';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw.toFixed(0) + '% are 506(b)'; } } } }
+      })
+    });
+  }
+
+  // ---- Trend 9: Lending vs Equity (stacked area) ----
+  var lendEqCtx = document.getElementById('miLendVsEquityChart');
+  if (lendEqCtx && byQ.length > 1) {
+    var lendingData = byQ.map(function(q) {
+      return q.deals.filter(function(d){return d.strategy === 'Lending';}).length;
+    });
+    var equityData = byQ.map(function(q) {
+      return q.deals.filter(function(d){return d.strategy && d.strategy !== 'Lending';}).length;
+    });
+    miCharts.lendEq = new Chart(lendEqCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [
+          { label: 'Lending', data: lendingData, borderColor: '#3B9DDD', backgroundColor: '#3B9DDD44', fill: true, borderWidth: 2 },
+          { label: 'Equity / Other', data: equityData, borderColor: '#51BE7B', backgroundColor: '#51BE7B44', fill: true, borderWidth: 2 }
+        ]
+      },
+      options: Object.assign({}, lineOptsZero, {
+        plugins: { legend: { display: true, position: 'top', labels: { font: { family: "'Plus Jakarta Sans'", size: 11 }, usePointStyle: true, padding: 16 } } }
+      })
+    });
+  }
+
+  // ---- Trend 10: Audit Rate Over Time ----
+  var auditTrendCtx = document.getElementById('miAuditTrendChart');
+  if (auditTrendCtx && byQ.length > 1) {
+    var auditTrendData = byQ.map(function(q) {
+      var withFin = q.deals.filter(function(d){return d.financials && d.financials !== 'Unknown';});
+      if (withFin.length < 3) return null;
+      var aud = withFin.filter(function(d){return d.financials === 'Audited';}).length;
+      return (aud / withFin.length * 100);
+    });
+    miCharts.auditTrend = new Chart(auditTrendCtx, {
+      type: 'line',
+      data: {
+        labels: qLabels,
+        datasets: [{
+          label: 'Audit Rate',
+          data: auditTrendData,
+          borderColor: '#EF4444', backgroundColor: '#EF444422',
+          fill: true, borderWidth: 2, spanGaps: true
+        }]
+      },
+      options: Object.assign({}, lineOpts, {
+        scales: Object.assign({}, lineOpts.scales, { y: { min: 0, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: function(v){return v+'%';} } } }),
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.raw.toFixed(0) + '% audited'; } } } }
+      })
     });
   }
 
