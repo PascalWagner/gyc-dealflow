@@ -3438,14 +3438,14 @@ function showLoginPrompt(actionLabel) {
 
 // Returns true if user is logged in, shows login prompt and returns false otherwise
 function requireAuth(actionLabel) {
-  var user = getUser();
+  var user = typeof getUser === 'function' ? getUser() : null;
   if (user && user.token && user.token !== 'local-session') return true;
   showLoginPrompt(actionLabel);
   return false;
 }
 
 function isLoggedIn() {
-  var user = getUser();
+  var user = typeof getUser === 'function' ? getUser() : null;
   return !!(user && user.token && user.token !== 'local-session');
 }
 
@@ -5901,7 +5901,7 @@ async function renderDeal() {
 
   // --- Pascal's Take ---
   var pascalTakeHtml = '';
-  var userTier = (getUser() && getUser().tier) || 'free';
+  var userTier = (typeof getUser === 'function' && getUser() && getUser().tier) || 'free';
   var hasPascalContent = deal.pascalVideoUrl || deal.pascalTakeText;
   var isPaidUser = userTier !== 'free';
 
