@@ -960,10 +960,10 @@ body {
   color: var(--text-dark);
 }
 .mi-industry-bar-wrap {
-  width: 120px;
-  height: 6px;
+  width: 180px;
+  height: 8px;
   background: var(--border-light);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 .mi-industry-bar {
@@ -1295,14 +1295,23 @@ body {
         </div>
       </div>
 
-      <!-- Nearby Assets Map -->
+      <!-- Nearby Assets -->
       <div class="section" id="nearbySection" style="display:none;">
-        <div class="section-label">Nearby Assets</div>
-        <div class="section-card">
-          <div id="nearbyMapWrap" style="position:relative;height:400px;">
-            <div id="nearbyMap" style="width:100%;height:100%;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div class="section-label" style="margin-bottom:0;">Nearby Assets</div>
+          <div style="display:flex;background:var(--border-light);border-radius:6px;overflow:hidden;">
+            <button onclick="toggleNearbyView('map')" id="nearbyViewMap" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">Map</button>
+            <button onclick="toggleNearbyView('table')" id="nearbyViewTable" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">Table</button>
           </div>
-          <div id="nearbyList" style="padding:16px 20px;border-top:1px solid var(--border-light);"></div>
+        </div>
+        <div class="section-card">
+          <div id="nearbyMapView">
+            <div id="nearbyMapWrap" style="position:relative;height:400px;">
+              <div id="nearbyMap" style="width:100%;height:100%;"></div>
+            </div>
+          </div>
+          <div id="nearbyTableView" style="display:none;"></div>
+          <div id="nearbyList" style="padding:16px 20px;border-top:1px solid var(--border-light);display:none;"></div>
         </div>
       </div>
 
@@ -2213,6 +2222,46 @@ async function renderNearby(nearbyDeals, currentCoords, currentName) {
   } catch(e) {
     console.warn('Nearby map failed:', e);
   }
+
+  // Build nearby table
+  var tableHtml = '<table style="width:100%;border-collapse:collapse;">' +
+    '<thead><tr style="border-bottom:2px solid var(--border);">' +
+    '<th style="padding:12px 20px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deal</th>' +
+    '<th style="padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Operator</th>' +
+    '<th style="padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Asset Class</th>' +
+    '<th style="padding:12px 16px;text-align:right;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</th>' +
+    '</tr></thead><tbody>';
+
+  nearbyDeals.forEach(function(d) {
+    var href = 'deal.html?id=' + encodeURIComponent(d.id);
+    tableHtml += '<tr style="border-bottom:1px solid var(--border-light);cursor:pointer;" onclick="window.location.href=\'' + href + '\'" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<td style="padding:14px 20px;"><a href="' + href + '" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);text-decoration:none;">' + esc(d.investmentName) + '</a></td>' +
+      '<td style="padding:14px 16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">' + esc(d.managementCompany || '—') + '</td>' +
+      '<td style="padding:14px 16px;"><span style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);">' + esc(d.assetClass || '—') + '</span></td>' +
+      '<td style="padding:14px 16px;text-align:right;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--green);">' + (d.targetIRR ? pct(d.targetIRR) : '—') + '</td>' +
+      '</tr>';
+  });
+
+  tableHtml += '</tbody></table>';
+  document.getElementById('nearbyTableView').innerHTML = tableHtml;
+}
+
+function toggleNearbyView(view) {
+  var mapEl = document.getElementById('nearbyMapView');
+  var tableEl = document.getElementById('nearbyTableView');
+  var mapBtn = document.getElementById('nearbyViewMap');
+  var tableBtn = document.getElementById('nearbyViewTable');
+  if (view === 'table') {
+    mapEl.style.display = 'none';
+    tableEl.style.display = 'block';
+    mapBtn.style.background = 'transparent'; mapBtn.style.color = 'var(--text-muted)';
+    tableBtn.style.background = 'var(--text-dark)'; tableBtn.style.color = '#fff';
+  } else {
+    mapEl.style.display = 'block';
+    tableEl.style.display = 'none';
+    mapBtn.style.background = 'var(--text-dark)'; mapBtn.style.color = '#fff';
+    tableBtn.style.background = 'transparent'; tableBtn.style.color = 'var(--text-muted)';
+  }
 }
 
 async function geocodeAddress(address) {
@@ -2299,9 +2348,27 @@ function renderMarketIntelligence(data, assetClass) {
     }
 
     var statsHtml = '';
+
+    // Population with growth comparison vs state/national
     var popComps = '';
-    if (stateB.name) popComps += compLine(latestPop.population, null, '') ? '' : ''; // Population comparison doesn't make sense (zip vs state)
-    statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div></div>';
+    if (trend && (stateB.popGrowthPct !== undefined || natB.popGrowthPct !== undefined)) {
+      popComps = '<div style="display:flex;gap:10px;justify-content:center;margin-top:4px;">';
+      if (stateB.popGrowthPct !== undefined && stateB.name) {
+        var diff = Math.round((trend.pctChange - stateB.popGrowthPct) * 10) / 10;
+        var color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+        var sign = diff >= 0 ? '+' : '';
+        popComps += '<span style="font-size:10px;color:' + color + ';font-weight:600;">' + sign + diff + 'pp vs ' + stateB.name.replace(/,.*/, '') + '</span>';
+      }
+      if (natB.popGrowthPct !== undefined) {
+        var diff2 = Math.round((trend.pctChange - natB.popGrowthPct) * 10) / 10;
+        var color2 = diff2 >= 0 ? 'var(--green)' : 'var(--red)';
+        var sign2 = diff2 >= 0 ? '+' : '';
+        popComps += (stateB.popGrowthPct !== undefined ? '<span style="font-size:10px;color:var(--text-muted);">·</span>' : '');
+        popComps += '<span style="font-size:10px;color:' + color2 + ';font-weight:600;">' + sign2 + diff2 + 'pp vs US</span>';
+      }
+      popComps += '</div>';
+    }
+    statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div>' + popComps + '</div>';
 
     if (latestIncome) {
       var incComps = '<div style="display:flex;gap:10px;justify-content:center;margin-top:4px;">';
@@ -2669,7 +2736,7 @@ function renderMarketIntelligence(data, assetClass) {
     var listHtml = '';
     for (var i = 0; i < industries.length; i++) {
       var ind = industries[i];
-      var barPct = Math.round((ind.employment / maxEmpl) * 100);
+      var barPct = Math.max(8, Math.round((ind.employment / maxEmpl) * 100));
       var payStr = ind.avgAnnualPay ? '$' + Math.round(ind.avgAnnualPay / 1000) + 'K avg' : '';
       var yoyHtml = '';
       if (ind.yoyPct !== null && ind.yoyPct !== undefined) {

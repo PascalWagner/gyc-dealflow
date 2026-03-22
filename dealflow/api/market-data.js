@@ -192,39 +192,56 @@ export default async function handler(req, res) {
       const benchVars = 'B19013_001E,B01003_001E,NAME';
       const benchPromises = [];
 
-      // State-level
+      // State-level (2023 + 2013 for growth comparison)
       if (resolvedStateFips) {
         benchPromises.push(
           fetch(`${CENSUS_BASE}/2023/acs/acs5?get=${benchVars}&for=state:${resolvedStateFips}`)
             .then(r => r.ok ? r.json() : null).catch(() => null)
         );
+        benchPromises.push(
+          fetch(`${CENSUS_BASE}/2013/acs/acs5?get=B01003_001E&for=state:${resolvedStateFips}`)
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+        );
       } else {
+        benchPromises.push(Promise.resolve(null));
         benchPromises.push(Promise.resolve(null));
       }
 
-      // National
+      // National (2023 + 2013 for growth comparison)
       benchPromises.push(
         fetch(`${CENSUS_BASE}/2023/acs/acs5?get=B19013_001E,B01003_001E&for=us:1`)
           .then(r => r.ok ? r.json() : null).catch(() => null)
       );
+      benchPromises.push(
+        fetch(`${CENSUS_BASE}/2013/acs/acs5?get=B01003_001E&for=us:1`)
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+      );
 
-      const [stateData, nationalData] = await Promise.all(benchPromises);
+      const [stateData, stateData2013, nationalData, nationalData2013] = await Promise.all(benchPromises);
 
       results.benchmarks = {};
       if (stateData && stateData.length > 1) {
         const sh = stateData[0];
         const sv = stateData[1];
+        const statePop2023 = parseInt(sv[sh.indexOf('B01003_001E')]) || null;
+        const statePop2013 = (stateData2013 && stateData2013.length > 1) ? parseInt(stateData2013[1][0]) || null : null;
+        const stateGrowth = (statePop2023 && statePop2013) ? Math.round(((statePop2023 - statePop2013) / statePop2013) * 1000) / 10 : null;
         results.benchmarks.state = {
           name: sv[sh.indexOf('NAME')] || '',
           medianIncome: parseInt(sv[sh.indexOf('B19013_001E')]) || null,
-          population: parseInt(sv[sh.indexOf('B01003_001E')]) || null
+          population: statePop2023,
+          popGrowthPct: stateGrowth
         };
       }
       if (nationalData && nationalData.length > 1) {
         const nv = nationalData[1];
+        const natPop2023 = parseInt(nv[1]) || null;
+        const natPop2013 = (nationalData2013 && nationalData2013.length > 1) ? parseInt(nationalData2013[1][0]) || null : null;
+        const natGrowth = (natPop2023 && natPop2013) ? Math.round(((natPop2023 - natPop2013) / natPop2013) * 1000) / 10 : null;
         results.benchmarks.national = {
           medianIncome: parseInt(nv[0]) || null,
-          population: parseInt(nv[1]) || null
+          population: natPop2023,
+          popGrowthPct: natGrowth
         };
       }
     } catch (e) {
