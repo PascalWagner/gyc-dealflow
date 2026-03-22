@@ -390,7 +390,7 @@ export default async function handler(req, res) {
 
         const currentYear = new Date().getFullYear();
         const qcewYears = [];
-        for (let y = currentYear - 7; y <= currentYear - 2; y++) qcewYears.push(y);
+        for (let y = currentYear - 12; y <= currentYear - 2; y++) qcewYears.push(y); // ~10 years of data
 
         // Fetch all years in parallel
         function parseQcewCsv(csvText, year) {
