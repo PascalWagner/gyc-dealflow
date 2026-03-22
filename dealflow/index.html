@@ -6133,13 +6133,23 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="sub-page" style="max-width:1200px" id="marketintelContent">
       <!-- Header -->
-      <div style="margin-bottom:32px;">
-        <h1 style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin:0 0 8px 0;">Private Market Intelligence</h1>
-        <p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin:0;max-width:680px;">
+      <div style="margin-bottom:24px;">
+        <h1 style="font-family:var(--font-headline);font-size:28px;color:var(--text-dark);margin:0 0 8px 0;">Market Intelligence</h1>
+        <p style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin:0;max-width:680px;" id="miHeaderDesc">
           Market-wide data from <strong id="miSecTotal">730,640</strong> SEC Form D filings combined with
           deal-level insights from <strong id="miTotalDeals">0</strong> offerings we've reviewed (totaling <strong id="miTotalCapital">$0</strong> in capital).
         </p>
       </div>
+
+      <!-- Tab Toggle Bar -->
+      <div style="display:flex;gap:4px;margin-bottom:28px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;" id="miTabBar">
+        <button class="mi-tab-btn mi-tab-active" data-tab="sec" onclick="switchMiTab('sec')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Private Market Intelligence</button>
+        <button class="mi-tab-btn" data-tab="deals" onclick="switchMiTab('deals')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Deal-Level Insights</button>
+        <button class="mi-tab-btn" data-tab="dealflow" onclick="switchMiTab('dealflow')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Deal Flow Stats</button>
+      </div>
+
+      <!-- TAB: Private Market Intelligence (SEC Data) -->
+      <div id="mi-tab-sec">
 
       <!-- SEC MARKET-WIDE SECTION -->
       <div style="margin-bottom:40px;">
@@ -6234,10 +6244,14 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
       </div>
+      </div><!-- /mi-tab-sec -->
 
-      <!-- DIVIDER -->
-      <div style="border-top:2px solid var(--border);margin:40px 0 32px 0;">
-        <div style="display:flex;align-items:center;gap:10px;margin-top:20px;margin-bottom:8px;">
+      <!-- TAB: Deal-Level Insights -->
+      <div id="mi-tab-deals" style="display:none;">
+
+      <!-- Section Header -->
+      <div style="margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
           <div style="background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;">Our Database</div>
           <h2 style="font-family:var(--font-ui);font-size:18px;font-weight:700;color:var(--text-dark);margin:0;">Deal-Level Insights From Reviewed Offerings</h2>
         </div>
@@ -6428,6 +6442,11 @@ const _supa = window.supabase.createClient(
       <div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:32px;">
         Data sourced from GYC deal database. This is market research, not investment advice. Past performance does not guarantee future results.
       </div>
+      </div><!-- /mi-tab-deals -->
+
+      <!-- TAB: Deal Flow Stats -->
+      <div id="mi-tab-dealflow" style="display:none;"></div>
+
     </div>
   </div>
 
@@ -17949,20 +17968,72 @@ function outreachSearchDebounce() {
 
 // ========== MARKET INTELLIGENCE ==========
 var miCharts = {};
+var miCurrentTab = 'sec';
+var miTabRendered = { sec: false, deals: false, dealflow: false };
+
+function switchMiTab(tab) {
+  miCurrentTab = tab;
+  // Update button styles
+  var btns = document.querySelectorAll('#miTabBar .mi-tab-btn');
+  btns.forEach(function(btn) {
+    if (btn.getAttribute('data-tab') === tab) {
+      btn.style.background = 'var(--primary)';
+      btn.style.color = '#fff';
+      btn.classList.add('mi-tab-active');
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-secondary)';
+      btn.classList.remove('mi-tab-active');
+    }
+  });
+  // Show/hide tab content
+  ['sec', 'deals', 'dealflow'].forEach(function(t) {
+    var el = document.getElementById('mi-tab-' + t);
+    if (el) el.style.display = (t === tab) ? 'block' : 'none';
+  });
+  // Lazy-render tab content on first view
+  if (tab === 'sec' && !miTabRendered.sec) {
+    renderMiSecTab();
+  }
+  if (tab === 'deals' && !miTabRendered.deals) {
+    renderMiDealsTab();
+  }
+  if (tab === 'dealflow' && !miTabRendered.dealflow) {
+    renderMiDealflowTab();
+  }
+}
+
+function renderMiSecTab() {
+  fetch('/data/sec-market-data.json')
+    .then(function(r) { return r.json(); })
+    .then(function(secData) { renderSECData(secData); miTabRendered.sec = true; })
+    .catch(function(e) { console.warn('SEC data not available:', e.message); });
+}
+
+function renderMiDealsTab() {
+  var deals = (typeof DEALS !== 'undefined' ? DEALS : []).filter(function(d) { return !d.isStale; });
+  if (deals.length) renderMarketIntelData(deals);
+  miTabRendered.deals = true;
+}
+
+function renderMiDealflowTab() {
+  // Render deal flow stats into the mi-tab-dealflow container
+  var container = document.getElementById('mi-tab-dealflow');
+  if (!container) return;
+  renderDealFlowContent(container);
+  miTabRendered.dealflow = true;
+}
+
 function renderMarketIntel() {
   // Destroy existing charts
   Object.values(miCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
   miCharts = {};
 
-  // Use the globally loaded DEALS array (already fetched at startup)
-  var deals = (typeof DEALS !== 'undefined' ? DEALS : []).filter(function(d) { return !d.isStale; });
-  if (deals.length) renderMarketIntelData(deals);
+  // Reset rendered state so tabs re-render with fresh data
+  miTabRendered = { sec: false, deals: false, dealflow: false };
 
-  // Load SEC market-wide data
-  fetch('/data/sec-market-data.json')
-    .then(function(r) { return r.json(); })
-    .then(function(secData) { renderSECData(secData); })
-    .catch(function(e) { console.warn('SEC data not available:', e.message); });
+  // Render the currently active tab
+  switchMiTab(miCurrentTab);
 }
 
 function renderSECData(secData) {
@@ -20737,7 +20808,10 @@ let dealFlowCharts = {};
 function renderDealFlowPage() {
   const container = document.getElementById('dealflowContent');
   if (!container) return;
+  renderDealFlowContent(container);
+}
 
+function renderDealFlowContent(container) {
   // Compute analytics from DEALS array
   const now = new Date();
   const twelveMonthsAgo = new Date(now);
