@@ -1268,10 +1268,23 @@ body {
           </div>
 
           <!-- Employment -->
-          <div id="employmentSection" style="display:none;padding:24px;">
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Top Industries by Employment</div>
+          <div id="employmentSection" style="display:none;padding:24px;border-top:1px solid var(--border-light);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Top Industries by Employment</div>
+              <div id="empViewToggle" style="display:flex;background:var(--border-light);border-radius:6px;overflow:hidden;">
+                <button onclick="toggleEmpView('list')" id="empViewList" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">List</button>
+                <button onclick="toggleEmpView('chart')" id="empViewChart" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">Trend</button>
+              </div>
+            </div>
             <div id="employmentSubtitle" class="mi-subtitle"></div>
-            <ul id="industryList" class="mi-industry-list"></ul>
+            <div id="empListView">
+              <ul id="industryList" class="mi-industry-list"></ul>
+            </div>
+            <div id="empChartView" style="display:none;">
+              <div style="height:300px;position:relative;">
+                <canvas id="industryTrendChart"></canvas>
+              </div>
+            </div>
           </div>
           <!-- Source -->
           <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -2273,10 +2286,29 @@ function renderMarketIntelligence(data, assetClass) {
     var latestIncome = income.length ? income[income.length - 1] : null;
     var trend = data.populationTrend;
 
+    var b = data.benchmarks || {};
+    var stateB = b.state || {};
+    var natB = b.national || {};
+
+    function compLine(val, benchVal, benchLabel) {
+      if (!benchVal || !val) return '';
+      var diff = Math.round(((val - benchVal) / benchVal) * 100);
+      var color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+      var sign = diff >= 0 ? '+' : '';
+      return '<span style="font-size:10px;color:' + color + ';font-weight:600;">' + sign + diff + '% vs ' + benchLabel + '</span>';
+    }
+
     var statsHtml = '';
+    var popComps = '';
+    if (stateB.name) popComps += compLine(latestPop.population, null, '') ? '' : ''; // Population comparison doesn't make sense (zip vs state)
     statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div></div>';
+
     if (latestIncome) {
-      statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div></div>';
+      var incComps = '<div style="display:flex;gap:10px;justify-content:center;margin-top:4px;">';
+      if (stateB.medianIncome) incComps += compLine(latestIncome.medianIncome, stateB.medianIncome, stateB.name.replace(/,.*/,''));
+      if (natB.medianIncome) incComps += (stateB.medianIncome ? '<span style="font-size:10px;color:var(--text-muted);">·</span>' : '') + compLine(latestIncome.medianIncome, natB.medianIncome, 'US');
+      incComps += '</div>';
+      statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div>' + incComps + '</div>';
     }
     statsEl.innerHTML = statsHtml;
     statsEl.style.display = 'grid';
@@ -2441,11 +2473,12 @@ function renderMarketIntelligence(data, assetClass) {
     var areaName = (pop.length && pop[0].name) ? pop[0].name : '';
     document.getElementById('agePyramidSubtitle').textContent = areaName + ' · 2023 ACS 5-Year Estimates';
 
-    var ageLabels = data.ageDistribution.map(function(g) { return g.label; });
-    var maleData = data.ageDistribution.map(function(g) { return -g.male; }); // Negative for left side
-    var femaleData = data.ageDistribution.map(function(g) { return g.female; });
+    var ageReversed = data.ageDistribution.slice().reverse(); // 85+ at top, Under 5 at bottom
+    var ageLabels = ageReversed.map(function(g) { return g.label; });
+    var maleData = ageReversed.map(function(g) { return -g.male; }); // Negative for left side
+    var femaleData = ageReversed.map(function(g) { return g.female; });
 
-    var maxVal = Math.max.apply(null, data.ageDistribution.map(function(g) { return Math.max(g.male, g.female); }));
+    var maxVal = Math.max.apply(null, ageReversed.map(function(g) { return Math.max(g.male, g.female); }));
 
     var pyramidCtx = document.getElementById('agePyramidChart').getContext('2d');
     new Chart(pyramidCtx, {
@@ -2653,6 +2686,56 @@ function renderMarketIntelligence(data, assetClass) {
         '</li>';
     }
     document.getElementById('industryList').innerHTML = listHtml;
+
+    // Build trend chart if time series data available
+    if (data.employment.timeSeries && data.employment.years && data.employment.years.length >= 2) {
+      document.getElementById('empViewToggle').style.display = 'flex';
+      var trendColors = ['#51BE7B','#2563EB','#f59e0b','#a855f7','#ef4444','#06b6d4','#f97316','#6366f1'];
+      var datasets = [];
+      var idx = 0;
+      for (var indName in data.employment.timeSeries) {
+        var series = data.employment.timeSeries[indName];
+        var color = trendColors[idx % trendColors.length];
+        datasets.push({
+          label: indName,
+          data: series.map(function(s) { return s.employment; }),
+          borderColor: color,
+          backgroundColor: color + '10',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: color,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1
+        });
+        idx++;
+      }
+      var trendCtx = document.getElementById('industryTrendChart').getContext('2d');
+      window._industryTrendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: { labels: data.employment.years, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans'", size: 9, weight: '600' }, boxWidth: 10, padding: 8 } },
+            tooltip: {
+              backgroundColor: '#0A1E21',
+              titleFont: { family: "'Plus Jakarta Sans'", size: 12, weight: '600' },
+              bodyFont: { family: "'Source Sans 3'", size: 11 },
+              padding: 10, cornerRadius: 8,
+              callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + (ctx.parsed.y ? ctx.parsed.y.toLocaleString() : '—'); } }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' } },
+            y: { grid: { color: '#EDF1F2' }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0', callback: function(v) { return v >= 1000 ? (v/1000).toFixed(0)+'K' : v; } } }
+          }
+        }
+      });
+    }
   }
 
   // ── Risk Flags ──
@@ -2707,6 +2790,25 @@ function renderMarketIntelligence(data, assetClass) {
   var currentYear = new Date().getFullYear();
   if (latestYear && latestYear < currentYear) {
     document.getElementById('dataRecencyNote').textContent = 'Census data available through ' + latestYear + '. Updated annually.';
+  }
+}
+
+// ========== EMPLOYMENT VIEW TOGGLE ==========
+function toggleEmpView(view) {
+  var listEl = document.getElementById('empListView');
+  var chartEl = document.getElementById('empChartView');
+  var listBtn = document.getElementById('empViewList');
+  var chartBtn = document.getElementById('empViewChart');
+  if (view === 'chart') {
+    listEl.style.display = 'none';
+    chartEl.style.display = 'block';
+    listBtn.style.background = 'transparent'; listBtn.style.color = 'var(--text-muted)';
+    chartBtn.style.background = 'var(--text-dark)'; chartBtn.style.color = '#fff';
+  } else {
+    listEl.style.display = 'block';
+    chartEl.style.display = 'none';
+    listBtn.style.background = 'var(--text-dark)'; listBtn.style.color = '#fff';
+    chartBtn.style.background = 'transparent'; chartBtn.style.color = 'var(--text-muted)';
   }
 }
 

@@ -187,6 +187,50 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── 1a2. State & National Benchmarks ──
+    try {
+      const benchVars = 'B19013_001E,B01003_001E,NAME';
+      const benchPromises = [];
+
+      // State-level
+      if (resolvedStateFips) {
+        benchPromises.push(
+          fetch(`${CENSUS_BASE}/2023/acs/acs5?get=${benchVars}&for=state:${resolvedStateFips}`)
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+        );
+      } else {
+        benchPromises.push(Promise.resolve(null));
+      }
+
+      // National
+      benchPromises.push(
+        fetch(`${CENSUS_BASE}/2023/acs/acs5?get=B19013_001E,B01003_001E&for=us:1`)
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+      );
+
+      const [stateData, nationalData] = await Promise.all(benchPromises);
+
+      results.benchmarks = {};
+      if (stateData && stateData.length > 1) {
+        const sh = stateData[0];
+        const sv = stateData[1];
+        results.benchmarks.state = {
+          name: sv[sh.indexOf('NAME')] || '',
+          medianIncome: parseInt(sv[sh.indexOf('B19013_001E')]) || null,
+          population: parseInt(sv[sh.indexOf('B01003_001E')]) || null
+        };
+      }
+      if (nationalData && nationalData.length > 1) {
+        const nv = nationalData[1];
+        results.benchmarks.national = {
+          medianIncome: parseInt(nv[0]) || null,
+          population: parseInt(nv[1]) || null
+        };
+      }
+    } catch (e) {
+      console.log('Benchmark fetch failed:', e.message);
+    }
+
     // ── 1b. Age Distribution (Census ACS B01001) ──
     try {
       // B01001: Sex by Age — male (003-025), female (027-049)
@@ -331,97 +375,101 @@ export default async function handler(req, res) {
 
     if (countyFips && countyFips.length === 5) {
       try {
-        // BLS QCEW data via CSV endpoint
+        const INDUSTRY_LABELS = {
+          '1011': 'Natural Resources & Mining',
+          '1012': 'Construction',
+          '1013': 'Manufacturing',
+          '1021': 'Trade, Transportation & Utilities',
+          '1022': 'Information',
+          '1023': 'Financial Activities',
+          '1024': 'Professional & Business Services',
+          '1025': 'Education & Health Services',
+          '1026': 'Leisure & Hospitality',
+          '1027': 'Other Services'
+        };
+
         const currentYear = new Date().getFullYear();
-        const qcewYear = currentYear - 2; // Annual data lags ~18 months
+        const qcewYears = [];
+        for (let y = currentYear - 7; y <= currentYear - 2; y++) qcewYears.push(y);
 
-        const qcewUrl = `https://data.bls.gov/cew/data/api/${qcewYear}/a/area/${countyFips}.csv`;
-        const qcewResp = await fetch(qcewUrl);
-
-        if (qcewResp.ok) {
-          const csvText = await qcewResp.text();
+        // Fetch all years in parallel
+        function parseQcewCsv(csvText, year) {
           const lines = csvText.split('\n');
           const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-
-          // Supersector industry code → label mapping
-          const INDUSTRY_LABELS = {
-            '10': 'All Industries',
-            '101': 'Goods-Producing',
-            '1011': 'Natural Resources & Mining',
-            '1012': 'Construction',
-            '1013': 'Manufacturing',
-            '102': 'Service-Providing',
-            '1021': 'Trade, Transportation & Utilities',
-            '1022': 'Information',
-            '1023': 'Financial Activities',
-            '1024': 'Professional & Business Services',
-            '1025': 'Education & Health Services',
-            '1026': 'Leisure & Hospitality',
-            '1027': 'Other Services',
-            '1028': 'Government'
-          };
-
-          const industries = [];
           const emplIdx = headers.indexOf('annual_avg_emplvl');
           const wageIdx = headers.indexOf('avg_annual_pay');
           const indCodeIdx = headers.indexOf('industry_code');
           const ownCodeIdx = headers.indexOf('own_code');
           const sizeCodeIdx = headers.indexOf('size_code');
           const agglvlIdx = headers.indexOf('agglvl_code');
-          const otyEmplChgIdx = headers.indexOf('oty_annual_avg_emplvl_chg');
           const otyEmplPctIdx = headers.indexOf('oty_annual_avg_emplvl_pct_chg');
-          var totalEmpl = null;
+
+          const industries = {};
+          let totalEmpl = null;
 
           for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.replace(/"/g, '').trim());
             if (!cols[indCodeIdx]) continue;
-
             const ownCode = cols[ownCodeIdx];
             const sizeCode = cols[sizeCodeIdx];
             const agglvl = cols[agglvlIdx];
             const indCode = cols[indCodeIdx];
-
-            // size_code=0 means all sizes, own_code=0 is all ownership, 5 is private
             if (sizeCode !== '0') continue;
 
-            // Capture total employment (all ownership, all industries, county total)
             if (indCode === '10' && ownCode === '0' && agglvl === '70') {
               totalEmpl = parseInt(cols[emplIdx]) || null;
               continue;
             }
-
-            // Get supersector level (agglvl=73) for private sector (own_code=5)
             if (ownCode !== '5' || agglvl !== '73') continue;
-
             const label = INDUSTRY_LABELS[indCode];
             if (!label) continue;
-
             const empl = parseInt(cols[emplIdx]);
-            const wage = parseInt(cols[wageIdx]);
             if (!empl || empl < 50) continue;
 
-            const otyChg = parseInt(cols[otyEmplChgIdx]) || null;
-            const otyPct = parseFloat(cols[otyEmplPctIdx]) || null;
-
-            industries.push({
+            industries[indCode] = {
               industry: label,
               employment: empl,
-              avgAnnualPay: wage || null,
-              yoyChange: otyChg,
-              yoyPct: otyPct
-            });
+              avgAnnualPay: parseInt(cols[wageIdx]) || null,
+              yoyPct: parseFloat(cols[otyEmplPctIdx]) || null
+            };
           }
+          return { year, industries, totalEmpl };
+        }
 
-          industries.sort((a, b) => b.employment - a.employment);
+        const qcewPromises = qcewYears.map(async (yr) => {
+          try {
+            const resp = await fetch(`https://data.bls.gov/cew/data/api/${yr}/a/area/${countyFips}.csv`);
+            if (!resp.ok) return null;
+            return parseQcewCsv(await resp.text(), yr);
+          } catch (e) { return null; }
+        });
+
+        const qcewResults = (await Promise.all(qcewPromises)).filter(r => r !== null).sort((a, b) => a.year - b.year);
+
+        if (qcewResults.length > 0) {
+          const latest = qcewResults[qcewResults.length - 1];
+          const latestIndustries = Object.values(latest.industries).sort((a, b) => b.employment - a.employment);
+
+          // Build time series per industry
+          const topCodes = Object.keys(latest.industries).sort((a, b) => latest.industries[b].employment - latest.industries[a].employment).slice(0, 8);
+          const industryTimeSeries = {};
+          topCodes.forEach(code => {
+            const label = INDUSTRY_LABELS[code];
+            industryTimeSeries[label] = qcewResults.map(r => ({
+              year: r.year,
+              employment: r.industries[code] ? r.industries[code].employment : null
+            }));
+          });
+
           results.employment = {
-            year: qcewYear,
-            topIndustries: industries.slice(0, 12),
-            totalEmployment: totalEmpl,
-            countyName: null // Will be enriched from FCC data
+            year: latest.year,
+            topIndustries: latestIndustries.slice(0, 12),
+            totalEmployment: latest.totalEmpl,
+            timeSeries: industryTimeSeries,
+            years: qcewResults.map(r => r.year)
           };
         }
       } catch (e) {
-        // Employment data not critical
         console.log('BLS QCEW fetch failed:', e.message);
       }
     }
