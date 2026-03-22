@@ -8304,14 +8304,6 @@ function renderCompareCharts(container, deals, matchScores) {
   html += '<canvas id="compareScatterCanvas" width="500" height="300"></canvas>';
   html += legendHtml + '</div>';
 
-  // Chart 3: Fee Comparison (stacked bar)
-  var anyFees = deals.some(function(d) { return d.acquisitionFeePct || d.assetMgmtFeePct || d.propertyMgmtFeePct || d.dispositionFeePct; });
-  if (anyFees) {
-    html += '<div class="compare-chart-card"><div class="compare-chart-title">Fee Drag Comparison</div>';
-    html += '<canvas id="compareFeeCanvas" width="500" height="' + Math.max(180, deals.length * 50 + 40) + '"></canvas>';
-    html += legendHtml + '</div>';
-  }
-
   html += '</div>';
   container.innerHTML = html;
 
@@ -8319,7 +8311,6 @@ function renderCompareCharts(container, deals, matchScores) {
   setTimeout(function() {
     drawIncomeChart(document.getElementById('compareIncomeCanvas'), deals, COLORS, userCheckSize);
     drawScatterChart(document.getElementById('compareScatterCanvas'), deals, COLORS);
-    if (anyFees) drawFeeChart(document.getElementById('compareFeeCanvas'), deals, COLORS);
   }, 0);
 }
 
