@@ -5587,7 +5587,7 @@ async function renderDeal() {
 
     if (!isPaidUser && !_compIsAdmin) {
       bgReportDealHtml += academyGateOverlay('Unlock Sponsor Background Report', 'Academy members get automated background checks on every sponsor — SEC, FINRA, court records, and more.');
-      bgReportDealHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">' + _bgPreviewContent + '</div></div>';
+      bgReportDealHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:180px;">' + _bgPreviewContent + '</div></div>';
     } else {
       bgReportDealHtml += comingSoonOverlay('Automated background checks on every sponsor');
       bgReportDealHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">' + _bgPreviewContent + '</div>';
@@ -5651,16 +5651,17 @@ async function renderDeal() {
     }
 
     var _opName2 = (opSponsor.name || deal.managementCompany || 'this operator');
-    portfolioSnapshotHtml += '<div class="section"' + (!hasPortfolio ? ' style="opacity:0.5;"' : '') + '><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><h2 class="section-title">Operator Track Record</h2>' + (hasPortfolio ? '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-left:auto;">' + portfolio.length + ' properties</span>' : '') + '</div>';
-    if (!isPaidUser && !_compIsAdmin) {
+    var _trackRecordFreeGated = !isPaidUser && !_compIsAdmin;
+    portfolioSnapshotHtml += '<div class="section"' + (!hasPortfolio && !_trackRecordFreeGated ? ' style="opacity:0.5;"' : '') + '><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><h2 class="section-title">Operator Track Record</h2>' + (hasPortfolio ? '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-left:auto;">' + portfolio.length + ' properties</span>' : '') + '</div>';
+    if (_trackRecordFreeGated) {
       portfolioSnapshotHtml += academyGateOverlay('Unlock Operator Track Record', 'See this operator\'s full portfolio, property details, and performance history.');
-      portfolioSnapshotHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">';
+      portfolioSnapshotHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:80px;">';
     }
     portfolioSnapshotHtml += '<div class="section-body">';
 
     if (!hasPortfolio) {
       portfolioSnapshotHtml += '<div style="text-align:center;padding:16px 0;"><div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">We haven\u2019t extracted portfolio data for ' + esc(_opName2) + ' yet.</div></div>';
-      if (!isPaidUser && !_compIsAdmin) {
+      if (_trackRecordFreeGated) {
         portfolioSnapshotHtml += '</div></div>'; // close blur wrapper + gate overlay
       }
       portfolioSnapshotHtml += '</div></div>';
@@ -7725,6 +7726,10 @@ async function renderDeal() {
 
     dealFitHtml = '<div class="section">';
     dealFitHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      dealFitHtml += academyGateOverlay('Unlock Deal Fit Summary', 'See how this deal matches your investor profile — what works, what to watch out for, and how it compares.');
+      dealFitHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">';
+    }
     dealFitHtml += '<div class="section-body">';
 
     // Verdict banner
@@ -7771,6 +7776,9 @@ async function renderDeal() {
       dealFitHtml += '</div>';
     }
 
+    if (!isPaidUser && !_compIsAdmin) {
+      dealFitHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
     dealFitHtml += '</div></div>';
   })();
 
