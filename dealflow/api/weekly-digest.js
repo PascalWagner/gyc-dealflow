@@ -16,6 +16,7 @@
 //   POST { dryRun: false } → returns full digest data for Make.com to send
 
 import { getAdminClient, setCors, ASSET_MAP } from './_supabase.js';
+import { generateSaveUrl } from './deal-save.js';
 
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const DIGEST_SECRET = process.env.DIGEST_SECRET || '';
@@ -168,137 +169,222 @@ async function fetchUsersWithBuyBox(supabase) {
     });
 }
 
-function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals = []) {
+// Fetch social proof: how many LPs saved each deal
+async function fetchDealSaveStats(supabase, dealIds) {
+  if (!dealIds.length) return {};
+  const { data } = await supabase
+    .from('deal_stages')
+    .select('deal_id')
+    .in('deal_id', dealIds)
+    .eq('stage', 'saved');
+  const counts = {};
+  for (const row of (data || [])) {
+    counts[row.deal_id] = (counts[row.deal_id] || 0) + 1;
+  }
+  return counts;
+}
+
+// Render a single deal as an email-safe card (table-based for email clients)
+function dealCard(deal, opts = {}) {
+  const BASE = 'https://dealflow.growyourcashflow.io';
+  const viewUrl = `${BASE}/deal.html?id=${deal.id}`;
+  const imageUrl = `${BASE}/api/deal-card-og?id=${deal.id}`;
+  const saveUrl = opts.email ? generateSaveUrl(deal.id, opts.email) : `${BASE}/deal.html?id=${deal.id}&action=save`;
+
+  const yieldVal = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
+  const yieldPct = yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1);
+  const yieldLabel = deal.preferred_return ? 'PREF RETURN' : deal.cash_on_cash ? 'CASH ON CASH' : 'TARGET IRR';
+  const minVal = deal.investment_minimum;
+  const minStr = minVal >= 1000000 ? '$' + (minVal / 1000000).toFixed(1) + 'M' : minVal >= 1000 ? '$' + (minVal / 1000).toFixed(0) + 'K' : minVal ? '$' + minVal : '\u2014';
+  const holdStr = deal.hold_period_years ? deal.hold_period_years + ' Yrs' : '\u2014';
+  const splitStr = deal.lp_gp_split || '\u2014';
+  const distStr = deal.distributions || '\u2014';
+
+  // Badge colors
+  const acBg = '#1a3a2a'; // dark teal like the platform hero
+  const badgeStyle = 'display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.5px;color:#fff;margin-right:4px;';
+
+  // Almost full badge
+  const almostFullBadge = opts.pctFunded && opts.pctFunded >= 70 && opts.pctFunded < 100
+    ? `<span style="${badgeStyle}background:#EF4444;">${opts.pctFunded}% FUNDED</span>` : '';
+  const matchBadge = opts.matchPct && opts.matchPct >= 60
+    ? `<span style="${badgeStyle}background:#51BE7B;">${opts.matchPct}% MATCH</span>` : '';
+
+  return `
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid #DDE5E8;background:#fff;">
+      <!-- Hero bar with badges + yield -->
+      <tr><td style="background:${acBg};padding:16px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td style="vertical-align:top;">
+            <span style="${badgeStyle}background:rgba(255,255,255,0.2);">${deal.asset_class || ''}</span>
+            <span style="${badgeStyle}background:rgba(255,255,255,0.2);">${deal.deal_type || 'Fund'}</span>
+            ${almostFullBadge}${matchBadge}
+          </td>
+          <td style="text-align:right;vertical-align:top;">
+            ${yieldVal > 0 ? `<div style="font-size:28px;font-weight:800;color:#51BE7B;line-height:1;">${yieldPct}%</div>
+            <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:1px;margin-top:2px;">${yieldLabel}</div>` : ''}
+          </td>
+        </tr></table>
+      </td></tr>
+      <!-- Deal name + operator -->
+      <tr><td style="padding:16px 20px 8px;">
+        <div style="font-size:16px;font-weight:700;color:#141413;line-height:1.3;">${deal.investment_name}</div>
+        <div style="font-size:13px;color:#607179;margin-top:2px;">${deal.managementCompany || ''}</div>
+      </td></tr>
+      <!-- Metrics row -->
+      <tr><td style="padding:4px 20px 16px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td style="width:25%;vertical-align:top;">
+            <div style="font-size:9px;font-weight:700;color:#8A9AA0;text-transform:uppercase;letter-spacing:0.5px;">Minimum</div>
+            <div style="font-size:13px;font-weight:700;color:#141413;margin-top:2px;">${minStr}</div>
+          </td>
+          <td style="width:25%;vertical-align:top;">
+            <div style="font-size:9px;font-weight:700;color:#8A9AA0;text-transform:uppercase;letter-spacing:0.5px;">Hold</div>
+            <div style="font-size:13px;font-weight:700;color:#141413;margin-top:2px;">${holdStr}</div>
+          </td>
+          <td style="width:25%;vertical-align:top;">
+            <div style="font-size:9px;font-weight:700;color:#8A9AA0;text-transform:uppercase;letter-spacing:0.5px;">LP/GP</div>
+            <div style="font-size:13px;font-weight:700;color:#141413;margin-top:2px;">${splitStr}</div>
+          </td>
+          <td style="width:25%;vertical-align:top;">
+            <div style="font-size:9px;font-weight:700;color:#8A9AA0;text-transform:uppercase;letter-spacing:0.5px;">Dist.</div>
+            <div style="font-size:13px;font-weight:700;color:#141413;margin-top:2px;">${distStr}</div>
+          </td>
+        </tr></table>
+      </td></tr>
+      <!-- Funding progress bar -->
+      ${opts.pctFunded && opts.pctFunded > 0 ? `
+      <tr><td style="padding:4px 20px 12px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td style="font-size:10px;color:#8A9AA0;">$${deal.total_amount_sold >= 1000000 ? (deal.total_amount_sold / 1000000).toFixed(1) + 'M' : (deal.total_amount_sold / 1000).toFixed(0) + 'K'} of $${deal.offering_size >= 1000000 ? (deal.offering_size / 1000000).toFixed(1) + 'M' : (deal.offering_size / 1000).toFixed(0) + 'K'} raised</td>
+          <td style="font-size:10px;color:#8A9AA0;text-align:right;">${opts.pctFunded}% funded</td>
+        </tr></table>
+        <div style="height:8px;border-radius:4px;overflow:hidden;background:#EDF1F2;margin-top:4px;">
+          <div style="width:${Math.min(opts.pctFunded, 100)}%;height:100%;background:${opts.pctFunded >= 90 ? '#EF4444' : opts.pctFunded >= 70 ? '#F59E0B' : '#51BE7B'};border-radius:4px;"></div>
+        </div>
+      </td></tr>` : ''}
+      <!-- Social proof -->
+      ${opts.saveCount > 0 ? `
+      <tr><td style="padding:0 20px 12px;">
+        <div style="font-size:11px;color:#8A9AA0;">\u{1f465} ${opts.saveCount} LP${opts.saveCount > 1 ? 's' : ''} saved this deal</div>
+      </td></tr>` : ''}
+      <!-- Action buttons -->
+      <tr><td style="padding:0 20px 16px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td style="width:48%;padding-right:6px;">
+            <a href="${viewUrl}" style="display:block;text-align:center;padding:12px;border:1px solid #DDE5E8;border-radius:8px;font-size:13px;font-weight:700;color:#8A9AA0;text-decoration:none;">\u2715 Skip</a>
+          </td>
+          <td style="width:52%;padding-left:6px;">
+            <a href="${saveUrl}" style="display:block;text-align:center;padding:12px;background:#51BE7B;border-radius:8px;font-size:13px;font-weight:700;color:#fff;text-decoration:none;">\ud83d\udccc Save Deal</a>
+          </td>
+        </tr></table>
+      </td></tr>
+    </table>`;
+}
+
+function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals = [], saveStats = {}) {
   const firstName = user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1);
   const isAcademy = user.tier === 'academy' || user.tier === 'alumni';
 
-  // Sort matches by score
   const sorted = [...matchedDeals].sort((a, b) => b.matchPct - a.matchPct);
-  const topMatches = sorted.slice(0, 5);
+  const topMatches = sorted.slice(0, 3);
+  const urgentDeals = [...almostFullDeals].sort((a, b) => b.pctFunded - a.pctFunded).slice(0, 2);
 
-  // Sort almost-full by highest % funded
-  const urgentDeals = [...almostFullDeals].sort((a, b) => b.pctFunded - a.pctFunded).slice(0, 3);
+  // Pick the ONE hero deal — best match first, then urgent, then newest
+  const heroDeal = topMatches[0]?.deal || urgentDeals[0] || allNewDeals[0];
+  const heroMatch = topMatches[0] || null;
+  const heroUrgent = !heroMatch && urgentDeals[0] ? urgentDeals[0] : null;
+  const heroPctFunded = heroDeal?.pctFunded || (heroDeal?.total_amount_sold && heroDeal?.offering_size ? Math.round(heroDeal.total_amount_sold / heroDeal.offering_size * 100) : null);
 
-  let subject = '';
-  if (urgentDeals.length > 0) {
-    subject = `${urgentDeals.length} deal${urgentDeals.length > 1 ? 's' : ''} almost full + ${allNewDeals.length} new this week`;
-  } else if (topMatches.length > 0) {
-    subject = `${topMatches.length} new deal${topMatches.length > 1 ? 's' : ''} match your buy box`;
-  } else {
-    subject = `${allNewDeals.length} new deal${allNewDeals.length > 1 ? 's' : ''} this week on GYC`;
+  if (!heroDeal) return null;
+
+  // Personalized subject line — the deal IS the subject
+  const yieldVal = heroDeal.preferred_return || heroDeal.cash_on_cash || heroDeal.target_irr || 0;
+  const yieldPct = yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1);
+  const min = heroDeal.investment_minimum;
+  const minStr = min >= 1000000 ? '$' + (min / 1000000).toFixed(1) + 'M' : min >= 1000 ? '$' + (min / 1000).toFixed(0) + 'K min' : '';
+  const splitStr = heroDeal.lp_gp_split ? heroDeal.lp_gp_split + ' split' : '';
+  const parts = [heroDeal.asset_class, yieldVal > 0 ? yieldPct + '% pref' : '', splitStr, minStr].filter(Boolean);
+  let subject = heroDeal.investment_name + ' \u2014 ' + parts.slice(0, 3).join(', ');
+  if (heroPctFunded >= 70) subject = heroDeal.investment_name + ' is ' + heroPctFunded + '% funded \u2014 ' + parts.slice(0, 2).join(', ');
+
+  // "Why you're seeing this" line
+  let whyLine = '';
+  if (heroMatch && heroMatch.reasons.length > 0) {
+    whyLine = 'This matches your buy box: ' + heroMatch.reasons.join(', ');
+  } else if (user.hasBuyBox) {
+    const bbParts = [];
+    if (user.buyBox.assetClasses) bbParts.push(user.buyBox.assetClasses.split(',')[0]);
+    if (user.buyBox.checkSize) bbParts.push(user.buyBox.checkSize + ' check size');
+    if (bbParts.length) whyLine = 'Based on your buy box: ' + bbParts.join(', ');
   }
 
-  // Build HTML email body
-  let html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #FAF9F5; padding: 32px 20px;">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <div style="display: inline-block; background: #51BE7B; color: #fff; font-weight: 700; font-size: 12px; padding: 8px 12px; border-radius: 8px;">GYC</div>
+  // Other deals count
+  const otherCount = allNewDeals.filter(d => d.id !== heroDeal.id).length + urgentDeals.filter(d => d.id !== heroDeal.id).length;
+
+  const BASE = 'https://dealflow.growyourcashflow.io';
+  const imageUrl = `${BASE}/api/deal-card-og?id=${heroDeal.id}`;
+  const viewUrl = `${BASE}/deal.html?id=${heroDeal.id}`;
+  const saveUrl = user.email ? generateSaveUrl(heroDeal.id, user.email) : `${BASE}/deal.html?id=${heroDeal.id}&action=save`;
+  const heroSaveCount = saveStats[heroDeal.id] || 0;
+
+  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+  <body style="margin:0;padding:0;background:#FAF9F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAF9F5;"><tr><td align="center" style="padding:32px 16px;">
+  <table cellpadding="0" cellspacing="0" border="0" width="480" style="max-width:480px;">
+    <!-- Logo -->
+    <tr><td align="center" style="padding-bottom:20px;">
+      <div style="display:inline-block;background:#51BE7B;color:#fff;font-weight:800;font-size:12px;padding:7px 12px;border-radius:8px;letter-spacing:0.5px;">GYC DEAL FLOW</div>
+    </td></tr>
+    <!-- Why you're seeing this -->
+    ${whyLine ? `<tr><td style="padding-bottom:16px;">
+      <div style="font-size:13px;color:#51BE7B;font-weight:600;">${whyLine}</div>
+    </td></tr>` : ''}
+    <!-- Hero card as image (pixel-perfect across email clients) -->
+    <tr><td>
+      <a href="${viewUrl}" style="text-decoration:none;">
+        <img src="${imageUrl}" alt="${heroDeal.investment_name}" width="480" style="width:100%;max-width:480px;border-radius:12px;display:block;" />
+      </a>
+    </td></tr>
+    <!-- Social proof + funding -->
+    <tr><td style="padding:12px 0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+        ${heroSaveCount > 0 ? `<td style="font-size:12px;color:#8A9AA0;">\u{1f465} ${heroSaveCount} LP${heroSaveCount > 1 ? 's' : ''} saved this deal</td>` : '<td></td>'}
+        ${heroPctFunded && heroPctFunded >= 30 ? `<td style="font-size:12px;color:${heroPctFunded >= 70 ? '#EF4444' : '#8A9AA0'};text-align:right;font-weight:${heroPctFunded >= 70 ? '700' : '400'};">${heroPctFunded}% funded</td>` : '<td></td>'}
+      </tr></table>
+    </td></tr>
+    <!-- Action buttons -->
+    <tr><td style="padding-bottom:16px;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+        <td style="width:48%;padding-right:6px;">
+          <a href="${BASE}" style="display:block;text-align:center;padding:14px;border:1px solid #DDE5E8;border-radius:10px;font-size:14px;font-weight:700;color:#8A9AA0;text-decoration:none;">\u2715 Skip</a>
+        </td>
+        <td style="width:52%;padding-left:6px;">
+          <a href="${saveUrl}" style="display:block;text-align:center;padding:14px;background:#51BE7B;border-radius:10px;font-size:14px;font-weight:700;color:#fff;text-decoration:none;">\ud83d\udccc Save Deal</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <!-- More deals link -->
+    ${otherCount > 0 ? `<tr><td align="center" style="padding:8px 0 16px;">
+      <a href="${BASE}" style="font-size:13px;font-weight:600;color:#51BE7B;text-decoration:none;">+ ${otherCount} more deal${otherCount > 1 ? 's' : ''} waiting for you \u2192</a>
+    </td></tr>` : ''}
+    <!-- Buy box nudge -->
+    ${!user.hasBuyBox ? `<tr><td style="padding:8px 0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F0F9F4;border-radius:10px;"><tr><td style="padding:16px 20px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Get better deal matches</div>
+        <div style="font-size:12px;color:#607179;margin-bottom:10px;">Tell us what you're looking for and we'll send deals that fit.</div>
+        <a href="${BASE}/#buybox" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Set Up Buy Box \u2192</a>
+      </td></tr></table>
+    </td></tr>` : ''}
+    <!-- Footer -->
+    <tr><td align="center" style="padding:20px 0 0;">
+      <div style="font-size:11px;color:#8A9AA0;">
+        <a href="${BASE}/settings" style="color:#8A9AA0;text-decoration:underline;">Manage preferences</a>
+        &nbsp;\u00b7&nbsp;
+        <a href="${BASE}/settings?unsub=digest" style="color:#8A9AA0;text-decoration:underline;">Unsubscribe</a>
       </div>
-      <div style="background: #fff; border-radius: 12px; padding: 32px; border: 1px solid #DDE5E8;">
-        <h1 style="font-size: 22px; color: #141413; margin: 0 0 8px;">Your Weekly Deal Digest</h1>
-        <p style="font-size: 14px; color: #607179; margin: 0 0 24px;">Hey ${firstName}, here's what's new this week.</p>
-  `;
-
-  // Almost Full section — urgency/scarcity
-  if (urgentDeals.length > 0) {
-    html += `<div style="margin-bottom: 24px;">
-      <h2 style="font-size: 14px; color: #EF4444; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px;">Almost Full</h2>`;
-
-    for (const deal of urgentDeals) {
-      const yieldVal = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
-      const yieldStr = yieldVal > 0 ? (yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1)) + '%' : '\u2014';
-      const minStr = deal.investment_minimum ? '$' + (deal.investment_minimum / 1000).toFixed(0) + 'K' : '\u2014';
-
-      html += `
-        <a href="https://dealflow.growyourcashflow.io/deal.html?id=${deal.id}" style="display: block; text-decoration: none; border: 1px solid #FECACA; border-radius: 8px; padding: 16px; margin-bottom: 8px; background: #FEF2F2;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 700; font-size: 14px; color: #141413;">${deal.investment_name}</div>
-              <div style="font-size: 12px; color: #607179;">${deal.managementCompany || deal.asset_class}</div>
-            </div>
-            <div style="background: #EF4444; color: #fff; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 20px;">${deal.pctFunded}% funded</div>
-          </div>
-          <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: #607179;">
-            <span>Yield: <strong style="color: #141413;">${yieldStr}</strong></span>
-            <span>Min: <strong style="color: #141413;">${minStr}</strong></span>
-            <span>${deal.asset_class}</span>
-          </div>
-        </a>`;
-    }
-
-    html += `</div>`;
-  }
-
-  if (topMatches.length > 0) {
-    html += `<div style="margin-bottom: 24px;">
-      <h2 style="font-size: 14px; color: #51BE7B; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px;">Buy Box Matches</h2>`;
-
-    for (const match of topMatches) {
-      const deal = match.deal;
-      const yieldVal = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
-      const yieldStr = yieldVal > 0 ? (yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1)) + '%' : '\u2014';
-      const minStr = deal.investment_minimum ? '$' + (deal.investment_minimum / 1000).toFixed(0) + 'K' : '\u2014';
-
-      html += `
-        <div style="border: 1px solid #DDE5E8; border-radius: 8px; padding: 16px; margin-bottom: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 700; font-size: 14px; color: #141413;">${deal.investment_name}</div>
-              <div style="font-size: 12px; color: #607179;">${deal.managementCompany || deal.asset_class}</div>
-            </div>
-            <div style="background: rgba(81,190,123,0.1); color: #51BE7B; font-weight: 700; font-size: 11px; padding: 4px 10px; border-radius: 20px;">${match.matchPct}% match</div>
-          </div>
-          <div style="display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: #607179;">
-            <span>Yield: <strong style="color: #141413;">${yieldStr}</strong></span>
-            <span>Min: <strong style="color: #141413;">${minStr}</strong></span>
-            <span>${deal.asset_class}</span>
-          </div>
-          ${match.reasons.length > 0 ? '<div style="font-size: 11px; color: #51BE7B; margin-top: 6px;">' + match.reasons[0] + '</div>' : ''}
-        </div>`;
-    }
-
-    html += `</div>`;
-  }
-
-  // Other new deals (not matched)
-  const otherDeals = allNewDeals.filter(d => !topMatches.some(m => m.deal.id === d.id)).slice(0, 3);
-  if (otherDeals.length > 0) {
-    html += `<div style="margin-bottom: 24px;">
-      <h2 style="font-size: 14px; color: #607179; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px;">Also New This Week</h2>`;
-
-    for (const deal of otherDeals) {
-      html += `
-        <div style="padding: 8px 0; border-bottom: 1px solid #EDF1F2; font-size: 13px;">
-          <span style="font-weight: 600; color: #141413;">${deal.investment_name}</span>
-          <span style="color: #607179;"> \u00b7 ${deal.asset_class}</span>
-        </div>`;
-    }
-
-    html += `</div>`;
-  }
-
-  // CTA
-  html += `
-    <div style="text-align: center; margin-top: 24px;">
-      <a href="https://dealflow.growyourcashflow.io" style="display: inline-block; background: #51BE7B; color: #fff; font-weight: 700; font-size: 14px; padding: 12px 32px; border-radius: 8px; text-decoration: none;">View All Deals</a>
-    </div>`;
-
-  // Academy upsell for free users
-  if (!isAcademy) {
-    html += `
-      <div style="margin-top: 24px; padding: 16px; background: #EFF6FF; border-radius: 8px; text-align: center;">
-        <div style="font-weight: 700; font-size: 13px; color: #141413; margin-bottom: 4px;">Want Pascal's analysis on these deals?</div>
-        <div style="font-size: 12px; color: #607179; margin-bottom: 10px;">Academy members get DD checklists, stress tests, and guided deployment.</div>
-        <a href="https://growyourcashflow.io/cashflow-academy" style="font-weight: 700; font-size: 12px; color: #3b82f6; text-decoration: none;">Learn more \u2192</a>
-      </div>`;
-  }
-
-  html += `
-      </div>
-      <div style="text-align: center; margin-top: 16px; font-size: 11px; color: #8A9AA0;">
-        <a href="https://dealflow.growyourcashflow.io/settings" style="color: #8A9AA0;">Manage notification preferences</a>
-      </div>
-    </div>`;
+    </td></tr>
+  </table></td></tr></table></body></html>`;
 
   return { subject, html };
 }
@@ -345,6 +431,10 @@ export default async function handler(req, res) {
     // 2. Fetch users with buy boxes from Supabase
     const users = await fetchUsersWithBuyBox(supabase);
 
+    // 2b. Fetch social proof stats (how many LPs saved each deal)
+    const allDealIds = [...newDeals, ...almostFullDeals].map(d => d.id);
+    const saveStats = await fetchDealSaveStats(supabase, allDealIds);
+
     // 3. Compute matches for each user
     const digests = [];
 
@@ -368,7 +458,9 @@ export default async function handler(req, res) {
       // Skip users with nothing to show
       if (matchedDeals.length === 0 && newDeals.length < 2 && almostFullDeals.length === 0) continue;
 
-      const { subject, html } = generateEmailContent(user, matchedDeals, newDeals, almostFullDeals);
+      const result = generateEmailContent(user, matchedDeals, newDeals, almostFullDeals, saveStats);
+      if (!result) continue;
+      const { subject, html } = result;
 
       digests.push({
         email: user.email,
