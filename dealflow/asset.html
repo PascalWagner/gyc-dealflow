@@ -2224,21 +2224,39 @@ async function renderNearby(nearbyDeals, currentCoords, currentName) {
   }
 
   // Build nearby table
+  var thStyle = 'padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;';
   var tableHtml = '<table style="width:100%;border-collapse:collapse;">' +
     '<thead><tr style="border-bottom:2px solid var(--border);">' +
-    '<th style="padding:12px 20px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deal</th>' +
-    '<th style="padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Operator</th>' +
-    '<th style="padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Asset Class</th>' +
-    '<th style="padding:12px 16px;text-align:right;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Target IRR</th>' +
+    '<th style="' + thStyle + 'padding-left:20px;">Asset</th>' +
+    '<th style="' + thStyle + '">Deal</th>' +
+    '<th style="' + thStyle + '">Operator</th>' +
+    '<th style="' + thStyle + '">Asset Class</th>' +
+    '<th style="' + thStyle + 'text-align:right;padding-right:20px;">Target IRR</th>' +
     '</tr></thead><tbody>';
 
+  var linkStyle = 'color:var(--blue);text-decoration:none;font-weight:600;';
+
   nearbyDeals.forEach(function(d) {
-    var href = 'deal.html?id=' + encodeURIComponent(d.id);
-    tableHtml += '<tr style="border-bottom:1px solid var(--border-light);cursor:pointer;" onclick="window.location.href=\'' + href + '\'" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">' +
-      '<td style="padding:14px 20px;"><a href="' + href + '" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);text-decoration:none;">' + esc(d.investmentName) + '</a></td>' +
-      '<td style="padding:14px 16px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">' + esc(d.managementCompany || '—') + '</td>' +
+    var dealHref = 'deal.html?id=' + encodeURIComponent(d.id);
+    var assetHref = 'asset.html?id=' + encodeURIComponent(d.id);
+    // Extract asset name (part before separator) vs full deal name
+    var assetName = d.investmentName || '';
+    var dealName = assetName;
+    var sepM = assetName.match(/^(.+?)\s*[–\-\/]\s*(\d{2,5}\s+.+)/);
+    if (sepM) { assetName = sepM[1].trim(); }
+    // Operator link
+    var opHtml = '—';
+    if (d.managementCompany) {
+      var opHref = 'index.html#operators&search=' + encodeURIComponent(d.managementCompany);
+      opHtml = '<a href="' + escAttr(opHref) + '" onclick="event.stopPropagation()" style="' + linkStyle + 'font-family:var(--font-body);font-size:13px;">' + esc(d.managementCompany) + '</a>';
+    }
+
+    tableHtml += '<tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<td style="padding:14px 16px;padding-left:20px;"><a href="' + escAttr(assetHref) + '" style="' + linkStyle + 'font-family:var(--font-ui);font-size:13px;">' + esc(assetName) + '</a></td>' +
+      '<td style="padding:14px 16px;"><a href="' + escAttr(dealHref) + '" style="' + linkStyle + 'font-family:var(--font-ui);font-size:13px;">' + esc(dealName) + '</a></td>' +
+      '<td style="padding:14px 16px;">' + opHtml + '</td>' +
       '<td style="padding:14px 16px;"><span style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);">' + esc(d.assetClass || '—') + '</span></td>' +
-      '<td style="padding:14px 16px;text-align:right;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--green);">' + (d.targetIRR ? pct(d.targetIRR) : '—') + '</td>' +
+      '<td style="padding:14px 16px;text-align:right;padding-right:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--green);">' + (d.targetIRR ? pct(d.targetIRR) : '—') + '</td>' +
       '</tr>';
   });
 
