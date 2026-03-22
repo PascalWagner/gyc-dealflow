@@ -1761,23 +1761,13 @@ body {
         </div>
       </div>
 
-      <!-- Stats Strip -->
-      <div class="stats-strip" id="statsStrip">
-        <div class="stat-card">
-          <div class="stat-card-value" id="statDeals">--</div>
-          <div class="stat-card-label">Your Deals</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value" id="statMissing">--</div>
-          <div class="stat-card-label">Needs Attention</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-card-value" id="statIntros">--</div>
-          <div class="stat-card-label">Intro Requests</div>
-        </div>
+      <!-- Hidden elements to keep JS from breaking -->
+      <div id="statsStrip" style="display:none;">
+        <span id="statDeals">--</span>
+        <span id="statMissing">--</span>
+        <span id="statIntros">--</span>
+        <span id="statOperators">--</span>
       </div>
-      <!-- Hidden element to keep JS from breaking -->
-      <div id="statOperators" style="display:none;">--</div>
 
       <!-- Row 1: LP Activity + Webinar CTA -->
       <div class="dashboard-grid-3-2" id="analyticsCard">
