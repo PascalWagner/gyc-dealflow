@@ -32,8 +32,11 @@ export default async function handler(req, res) {
       return (arr || []).map(c => ({
         id: c.id,
         name: ((c.firstName || '') + ' ' + (c.lastName || '')).trim() || c.email || 'Unknown',
+        firstName: c.firstName || '',
+        lastName: c.lastName || '',
         email: c.email || '',
         phone: c.phone || '',
+        linkedin: c.customFields?.find(f => f.id === 'linkedin_url')?.value || c.linkedin || '',
         tags: c.tags || [],
         tier: deriveTier(c.tags || [])
       })).filter(c => c.email);
