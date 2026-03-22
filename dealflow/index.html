@@ -11585,22 +11585,8 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 24: 90-day deployable capital
-  { type: 'targetInput',
-    title: 'How much can you deploy in the next 90 days?',
-    subtitle: 'Cash you could wire to a deal this quarter \u2014 not pledged, not locked up.',
-    suffix: '',
-    key: 'capital90Day',
-    defaultVal: '50000',
-    presets: [0, 25000, 50000, 100000, 250000],
-    presetLabels: ['$0','$25K','$50K','$100K','$250K+'],
-    calcFn: function(v) {
-      if (v === 0) return 'No rush. Let\u2019s build your research list first.';
-      var deals = Math.max(1, Math.round(v / 50000));
-      return 'That\u2019s roughly ' + deals + ' deal' + (deals > 1 ? 's' : '') + ' at a typical $50K minimum.';
-    },
-    timerSec: 30
-  }
+  // 24: 90-day deployable capital (radio buttons like 12-mo)
+  { type: 'capital90Day' }
 ];
 
 // Asset class definitions with goal-specific context
@@ -11688,6 +11674,7 @@ const ASSET_CLASS_OPTIONS = {
 };
 
 // Strategy definitions with goal-specific context
+const STRATEGY_ORDER = ['Lending', 'Buy & Hold', 'Value-Add', 'Distressed', 'Development'];
 const STRATEGY_OPTIONS = {
   'Buy & Hold': {
     icon: '\uD83C\uDFE0', label: 'Buy & Hold',
@@ -11918,6 +11905,42 @@ function renderWizardStep() {
     capOptions.forEach(function(opt) {
       var isSel = wizardData.capital12mo === opt.val;
       html += '<div onclick="wizardData.capital12mo=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (opt.nwCtx) html += '<div style="font-size:12px;font-weight:600;color:var(--primary);white-space:nowrap;">' + opt.nwCtx + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 24: 90-DAY CAPITAL =====
+  if (step.type === 'capital90Day') {
+    html += '<div class="wizard-card-title">How much can you deploy in the next 90 days?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Cash you could wire to a deal this quarter \u2014 not pledged, not locked up.</div>';
+    var nwVal90 = parseInt(wizardData.netWorth || '0', 10);
+    function nwPct90(midpoint) {
+      if (!nwVal90 || nwVal90 <= 0) return '';
+      var pct = Math.round(midpoint / nwVal90 * 100);
+      return pct + '% of net worth';
+    }
+    var cap90Options = [
+      { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
+      { val: '<$50k', label: 'Under $50K', desc: '1 deal at most minimums', nwCtx: nwPct90(25000) },
+      { val: '$50k-$100k', label: '$50K \u2013 $100K', desc: '1\u20132 deals', nwCtx: nwPct90(75000) },
+      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct90(175000) },
+      { val: '$250k+', label: '$250K+', desc: 'Ready to move', nwCtx: nwPct90(250000) }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    cap90Options.forEach(function(opt) {
+      var isSel = wizardData.capital90Day === opt.val;
+      html += '<div onclick="wizardData.capital90Day=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
@@ -12314,7 +12337,7 @@ function renderWizardStep() {
         html += '<div style="display:flex;gap:4px;">';
         html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.yieldRange + ' yield</span>';
         html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + ac.holdYears + ' yr</span>';
-        if (count > 0) html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + count + '</span>';
+        if (count > 0) html += '<span style="font-size:9px;padding:2px 5px;background:var(--bg-light);color:var(--text-muted);border-radius:4px;">' + count + ' deals</span>';
         html += '</div>';
         html += '</div>';
       });
@@ -12333,10 +12356,7 @@ function renderWizardStep() {
   if (step.type === 'strategySelect') {
     const branch = wizardData._branch || 'cashflow';
     const selected = wizardData.strategies || [];
-    const fitOrder = { great: 0, good: 1, okay: 2, poor: 3 };
-    const sorted = Object.entries(STRATEGY_OPTIONS).sort(function(a, b) {
-      return (fitOrder[a[1][branch].fit] || 3) - (fitOrder[b[1][branch].fit] || 3);
-    });
+    const sorted = STRATEGY_ORDER.map(function(key) { return [key, STRATEGY_OPTIONS[key]]; }).filter(function(e) { return !!e[1]; });
     const branchLabel = { cashflow: 'cash flow', tax: 'tax reduction', growth: 'equity growth' }[branch];
     html += '<div class="wizard-card-title">What strategies appeal to you?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy affects your returns differently. Best for <strong>' + branchLabel + '</strong> shown first.</div>';
@@ -12370,8 +12390,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 12: LOCKUP PREFERENCE =====
   if (step.type === 'lockupPrefs') {
-    html += '<div class="wizard-card-title">How long can your capital be locked up?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are <span class="wiz-tip" data-tip="You cannot sell or withdraw your investment before the hold period ends. Your capital is locked in until the deal completes.">illiquid</span> \u2014 you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
+    html += '<div class="wizard-card-title">How long are you comfortable not having access to your invested capital?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are <span class="wiz-tip" data-tip="You cannot sell or withdraw your investment before the hold period ends. Your capital is locked in until the deal completes.">illiquid</span> \u2014 once you invest, you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
     // Count deals by hold period
     var lockActiveDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
     var lockTotal = lockActiveDeals.length;
@@ -12403,7 +12423,7 @@ function renderWizardStep() {
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
-      if (opt.count > 0) html += '<div style="flex-shrink:0;text-align:right;"><div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' deals</div><div style="font-size:10px;color:var(--text-muted);">' + pct + '% of database</div></div>';
+      if (opt.count > 0) html += '<div style="flex-shrink:0;text-align:right;"><div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' deals</div><div style="font-size:10px;color:var(--text-muted);">' + pct + '% of matches</div></div>';
       html += '</div>';
     });
     html += '</div>';
@@ -12419,9 +12439,18 @@ function renderWizardStep() {
   if (step.type === 'distributionPrefs') {
     html += '<div class="wizard-card-title">What\u2019s the minimum payout frequency you\u2019d accept?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">More frequent payouts narrows your options. Monthly limits you mostly to lending funds. Being flexible opens up more deals.</div>';
-    // Count active deals by distribution frequency from loaded data
+    // Count deals matching user's buy box by distribution frequency
     var distCounts = { monthly: 0, quarterly: 0, annual: 0, other: 0 };
-    var activeDeals = (window.DEALS || []).filter(function(d) { return !d.isStale; });
+    var selectedAssets = wizardData.assetClasses || [];
+    var selectedStrategies = wizardData.strategies || [];
+    var activeDeals = (window.DEALS || []).filter(function(d) {
+      if (d.isStale) return false;
+      // Filter by selected asset classes if any
+      if (selectedAssets.length > 0 && d.assetClass && !selectedAssets.includes(d.assetClass)) return false;
+      // Filter by selected strategies if any
+      if (selectedStrategies.length > 0 && d.strategy && !selectedStrategies.includes(d.strategy)) return false;
+      return true;
+    });
     activeDeals.forEach(function(d) {
       var dist = (d.distributions || '').toLowerCase().trim();
       if (dist === 'monthly') distCounts.monthly++;
@@ -12450,7 +12479,7 @@ function renderWizardStep() {
       if (opt.count > 0) {
         var pct = anyTotal > 0 ? Math.round(opt.count / anyTotal * 100) : 0;
         html += '<div style="font-weight:700;font-size:16px;color:' + (isSel ? 'var(--primary)' : 'var(--text-dark)') + ';">' + opt.count + ' deals</div>';
-        html += '<div style="font-size:10px;color:var(--text-muted);">' + pct + '% of database</div>';
+        html += '<div style="font-size:10px;color:var(--text-muted);">' + pct + '% of matches</div>';
       }
       if (isSel) html += '<div style="color:var(--primary);margin-top:4px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
       html += '</div>';
@@ -12497,20 +12526,34 @@ function renderWizardStep() {
   // ===== SCREEN 9: LP NETWORK OPT-IN =====
   if (step.type === 'lpNetwork') {
     html += '<div class="wizard-card-title">Join the <span class="wiz-tip" data-tip="LP = Limited Partner. That\'s you \u2014 the investor. The LP Network lets you see other investors in the same deals.">LP Network</span></div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">See who else is investing in the same deals \u2014 and let them see you.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">Investing is better together. See who else is in the same deals \u2014 and let them find you.</div>';
 
-    html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px 24px;margin-bottom:20px;">';
-    // Avatar stack preview
-    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">';
+    // Benefits cards
+    html += '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">';
+    var lpBenefits = [
+      { icon: '\uD83D\uDD0D', title: 'Due diligence sharing', desc: 'See which deals other experienced LPs are in. If someone you trust invested, that\u2019s a signal.' },
+      { icon: '\uD83E\uDD1D', title: 'Co-investor introductions', desc: 'Connect with LPs in your deals to compare notes, ask questions, and build relationships.' },
+      { icon: '\uD83D\uDCCA', title: 'Deal validation', desc: 'A deal with 5 other LPs from this network is very different from one with zero. Social proof matters.' },
+      { icon: '\uD83D\uDC65', title: 'Negotiating leverage', desc: 'Group capital gets better terms. LPs who invest together can negotiate preferred allocations and fee discounts.' }
+    ];
+    lpBenefits.forEach(function(b) {
+      html += '<div style="display:flex;gap:12px;padding:12px 14px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.12);border-radius:10px;">';
+      html += '<div style="font-size:20px;flex-shrink:0;margin-top:1px;">' + b.icon + '</div>';
+      html += '<div><div style="font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:2px;">' + b.title + '</div>';
+      html += '<div style="font-size:11px;color:var(--text-muted);line-height:1.5;">' + b.desc + '</div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Avatar stack
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
     html += '<div style="display:flex;">';
     html += '<div style="width:36px;height:36px;border-radius:50%;background:#51BE7B;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid rgba(81,190,123,0.06);">PW</div>';
     html += '<div style="width:36px;height:36px;border-radius:50%;background:#3b82f6;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">JR</div>';
     html += '<div style="width:36px;height:36px;border-radius:50%;background:#f59e0b;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">CR</div>';
     html += '<div style="width:36px;height:36px;border-radius:50%;background:var(--border);color:var(--text-muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-10px;border:2px solid rgba(81,190,123,0.06);">+8</div>';
     html += '</div>';
-    html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.4;"><strong style="color:var(--text-dark);">Pascal Wagner</strong>, <strong style="color:var(--text-dark);">Joseph Root</strong>, and 9 others invested</div>';
-    html += '</div>';
-    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">When you opt in, other members can see your name on deals you\'ve invested in. This helps LPs coordinate, share due diligence, and connect with co-investors. You can toggle individual deals on or off anytime.</div>';
+    html += '<div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);line-height:1.4;">11 members already opted in</div>';
     html += '</div>';
 
     // Opt-in toggle (default to opted in)
