@@ -98,7 +98,105 @@
     }).then(function() { goToStep(1); }).catch(function() { goToStep(1); });
   };
 
-  // ── Step 2: Company Basics ──
+  // ── Step 2: Company Basics + Typeahead ──
+  var searchTimer = null;
+  var selectedCompany = null; // Set when user picks an existing company
+
+  (function initCompanyTypeahead() {
+    var input = document.getElementById('companyName');
+    var dropdown = document.getElementById('companyDropdown');
+    if (!input || !dropdown) return;
+
+    input.addEventListener('input', function() {
+      var q = input.value.trim();
+      selectedCompany = null; // Reset selection on new typing
+
+      if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() {
+        fetch('/api/company-search?q=' + encodeURIComponent(q))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var results = data.results || [];
+          var html = '';
+
+          for (var i = 0; i < results.length; i++) {
+            var co = results[i];
+            var initials = (co.operator_name || '??').split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+            var meta = [co.type, co.asset_classes ? co.asset_classes.slice(0, 2).join(', ') : ''].filter(Boolean).join(' · ');
+            html += '<div class="company-result" data-id="' + co.id + '" onclick="pickCompany(' + i + ')">'
+              + '<div class="company-result-icon">' + escHtml(initials) + '</div>'
+              + '<div><div class="company-result-name">' + escHtml(co.operator_name) + '</div>'
+              + (meta ? '<div class="company-result-meta">' + escHtml(meta) + '</div>' : '')
+              + '</div></div>';
+          }
+
+          // Always show "Create new" option at the bottom
+          html += '<div class="company-create-option" onclick="createNewCompany()">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+            + 'Create "<strong>' + escHtml(q) + '</strong>" as a new company'
+            + '</div>';
+
+          dropdown.innerHTML = html;
+          dropdown.style.display = 'block';
+
+          // Stash results for pickCompany
+          dropdown._results = results;
+        })
+        .catch(function() { dropdown.style.display = 'none'; });
+      }, 250);
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+  })();
+
+  window.pickCompany = function(index) {
+    var dropdown = document.getElementById('companyDropdown');
+    var results = dropdown._results || [];
+    var co = results[index];
+    if (!co) return;
+
+    selectedCompany = co;
+    state.companyId = co.id;
+
+    // Fill in fields from the selected company
+    document.getElementById('companyName').value = co.operator_name;
+    if (co.type) document.getElementById('firmType').value = co.type;
+    if (co.ceo) document.getElementById('ceo').value = co.ceo;
+    if (co.website) document.getElementById('website').value = co.website;
+    if (co.linkedin_ceo) document.getElementById('linkedinCeo').value = co.linkedin_ceo;
+    if (co.founding_year) document.getElementById('foundingYear').value = co.founding_year;
+
+    // Pre-select asset class pills
+    if (Array.isArray(co.asset_classes) && co.asset_classes.length > 0) {
+      selectedAssetClasses = co.asset_classes.slice();
+      var pills = document.querySelectorAll('#assetClassPills .pill-option');
+      for (var i = 0; i < pills.length; i++) {
+        var val = pills[i].getAttribute('data-value');
+        pills[i].classList.toggle('selected', selectedAssetClasses.indexOf(val) !== -1);
+      }
+    }
+
+    // Pre-fill IR contact if available
+    if (co.ir_contact_name) document.getElementById('irContactName').value = co.ir_contact_name;
+    if (co.ir_contact_email) document.getElementById('irContactEmail').value = co.ir_contact_email;
+    if (co.booking_url) document.getElementById('bookingUrl').value = co.booking_url;
+
+    dropdown.style.display = 'none';
+  };
+
+  window.createNewCompany = function() {
+    selectedCompany = null;
+    document.getElementById('companyDropdown').style.display = 'none';
+    // Keep whatever they typed — they'll create a new one on save
+  };
+
   window.saveCompanyProfile = function() {
     var companyName = document.getElementById('companyName').value.trim();
     if (!companyName) { document.getElementById('companyName').focus(); return; }
