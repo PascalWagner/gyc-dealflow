@@ -2090,6 +2090,47 @@ html.dark .credit-chart-legend-divider {
   #page-managers .content-area { padding: 8px 12px !important; padding-bottom: 80px !important; }
   #managersStats { display:none !important; }
   #page-managers .filter-bar { padding: 8px 12px !important; }
+
+  /* ── Mobile: Clean up topbar (match cap-ios) ── */
+  .mobile-menu-btn { display: none !important; }
+  .topbar-spacer { display: none; }
+  .topbar-view-toggle { display: none !important; }
+  .topbar {
+    padding: 0 12px !important;
+    height: 44px;
+    gap: 8px;
+    align-items: center;
+    padding-bottom: 0 !important;
+  }
+  .topbar-title { font-size: 17px; font-weight: 600; margin-right: 6px; white-space: nowrap; flex-shrink: 0; }
+
+  /* ── Mobile: Stats bar compact ── */
+  .stats-bar {
+    padding: 5px 12px !important;
+    font-size: 11px;
+    line-height: 1.3;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .stats-bar::-webkit-scrollbar { display: none; }
+  .stats-bar .stat-divider { margin: 0 6px !important; }
+
+  /* ── Mobile: Dashboard portfolio — stack chart + table ── */
+  .dash-portfolio { padding: 16px !important; }
+  .dash-portfolio-layout { flex-direction: column !important; gap: 16px !important; }
+  .dash-portfolio-chart { width: 100% !important; }
+  .dash-portfolio-chart svg { width: 120px !important; height: 120px !important; }
+  .dash-portfolio-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+  .dash-portfolio table { font-size: 12px; }
+  .dash-portfolio thead th { padding: 8px 8px !important; font-size: 9px !important; }
+  .dash-portfolio tbody td { padding: 10px 8px !important; font-size: 12px !important; }
+  .dash-portfolio thead th:nth-child(3),
+  .dash-portfolio thead th:nth-child(4),
+  .dash-portfolio tbody td:nth-child(3),
+  .dash-portfolio tbody td:nth-child(4) { display: none; }
 }
 
 /* Mobile Bottom Tab Bar */
@@ -21141,10 +21182,10 @@ function renderDashboard() {
         cumAngle += angle;
         legendItems += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:3px;background:' + color + ';flex-shrink:0;"></div><div style="font-size:12px;color:var(--text-secondary);"><span style="font-weight:700;color:var(--text-dark);">' + Math.round(pct * 100) + '%</span> ' + ac + '</div></div>';
       });
-      pieHtml = '<div style="flex-shrink:0;width:220px;">'
+      pieHtml = '<div class="dash-portfolio-chart" style="flex-shrink:0;width:220px;">'
         + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Asset Allocation</div>'
         + '<svg viewBox="0 0 160 160" width="140" height="140" style="display:block;margin:0 auto 12px;">' + slices + '<circle cx="80" cy="80" r="35" fill="var(--bg-card)"/></svg>'
-        + legendItems
+        + '<div class="dash-portfolio-legend">' + legendItems + '</div>'
         + '</div>';
     }
 
@@ -21153,7 +21194,7 @@ function renderDashboard() {
       + '<div class="dash-section-title">Your Portfolio</div>'
       + '<button class="dash-section-link" onclick="navigateTo(\'portfolio\')">View Full Portfolio &rarr;</button>'
       + '</div>'
-      + '<div style="display:flex;gap:24px;align-items:flex-start;">'
+      + '<div class="dash-portfolio-layout" style="display:flex;gap:24px;align-items:flex-start;">'
       + pieHtml
       + '<div style="flex:1;overflow-x:auto;">'
       + '<table><thead><tr><th>Investment</th><th>Invested</th><th>Distributions</th><th>Status</th></tr></thead>'
@@ -23541,8 +23582,12 @@ fetchBuyBoxFromGHL();
     document.querySelectorAll('.mobile-tab-item').forEach(tab => {
       tab.classList.toggle('active', tab.dataset.page === page);
     });
+    // Dashboard sub-pages highlight Dashboard tab
+    if (['buybox','portfolio','taxprep'].includes(page)) {
+      document.querySelector('.mobile-tab-item[data-page="dashboard"]')?.classList.add('active');
+    }
     // "More" tab is active for pages not in the tab bar
-    const tabPages = ['deals', 'debtfunds', 'portfolio', 'managers'];
+    const tabPages = ['dashboard', 'buybox', 'portfolio', 'taxprep', 'deals', 'marketintel', 'managers'];
     if (!tabPages.includes(page)) {
       document.querySelector('.mobile-tab-item[data-page="more"]')?.classList.add('active');
       tabPages.forEach(p => document.querySelector(`.mobile-tab-item[data-page="${p}"]`)?.classList.remove('active'));
@@ -24191,21 +24236,21 @@ function undoLastSwipe() {
 
 <!-- Mobile Bottom Tab Bar -->
 <div class="mobile-tab-bar">
-  <button class="mobile-tab-item active" data-page="deals" onclick="navigateTo('deals')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-    <span>Deals</span>
+  <button class="mobile-tab-item" data-page="dashboard" onclick="navigateTo('dashboard')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span>Dashboard</span>
   </button>
   <button class="mobile-tab-item" data-page="marketintel" onclick="navigateTo('marketintel')">
     <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     <span>Intel</span>
   </button>
-  <button class="mobile-tab-item" data-page="portfolio" onclick="navigateTo('portfolio')">
-    <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-    <span>Portfolio</span>
+  <button class="mobile-tab-item active" data-page="deals" onclick="navigateTo('deals')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Deal Flow</span>
   </button>
   <button class="mobile-tab-item" data-page="managers" onclick="navigateTo('managers')">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    <span>Managers</span>
+    <span>Operators</span>
   </button>
   <button class="mobile-tab-item" data-page="more" onclick="navigateTo('more')">
     <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
