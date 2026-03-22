@@ -1285,15 +1285,15 @@ body {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Top Industries by Employment</div>
               <div id="empViewToggle" style="display:flex;background:var(--border-light);border-radius:6px;overflow:hidden;">
-                <button onclick="toggleEmpView('list')" id="empViewList" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">List</button>
-                <button onclick="toggleEmpView('chart')" id="empViewChart" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">Trend</button>
+                <button onclick="toggleEmpView('list')" id="empViewList" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">List</button>
+                <button onclick="toggleEmpView('chart')" id="empViewChart" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">Trend</button>
               </div>
             </div>
             <div id="employmentSubtitle" class="mi-subtitle"></div>
-            <div id="empListView">
+            <div id="empListView" style="display:none;">
               <ul id="industryList" class="mi-industry-list"></ul>
             </div>
-            <div id="empChartView" style="display:none;">
+            <div id="empChartView">
               <div style="height:300px;position:relative;">
                 <canvas id="industryTrendChart"></canvas>
               </div>
@@ -1310,21 +1310,13 @@ body {
 
       <!-- Nearby Assets -->
       <div class="section" id="nearbySection" style="display:none;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div class="section-label" style="margin-bottom:0;">Nearby Assets</div>
-          <div style="display:flex;background:var(--border-light);border-radius:6px;overflow:hidden;">
-            <button onclick="toggleNearbyView('map')" id="nearbyViewMap" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">Map</button>
-            <button onclick="toggleNearbyView('table')" id="nearbyViewTable" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">Table</button>
-          </div>
-        </div>
+        <div class="section-label">Nearby Assets</div>
         <div class="section-card">
-          <div id="nearbyMapView">
-            <div id="nearbyMapWrap" style="position:relative;height:400px;">
-              <div id="nearbyMap" style="width:100%;height:100%;"></div>
-            </div>
+          <div id="nearbyMapWrap" style="position:relative;height:400px;">
+            <div id="nearbyMap" style="width:100%;height:100%;"></div>
           </div>
-          <div id="nearbyTableView" style="display:none;"></div>
-          <div id="nearbyList" style="padding:16px 20px;border-top:1px solid var(--border-light);display:none;"></div>
+          <div id="nearbyTableView" style="border-top:1px solid var(--border-light);"></div>
+          <div id="nearbyList" style="display:none;"></div>
         </div>
       </div>
 
