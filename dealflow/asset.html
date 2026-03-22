@@ -899,6 +899,167 @@ body {
   border-color: var(--primary) !important;
 }
 
+/* ====== MARKET INTELLIGENCE ====== */
+.mi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+}
+.mi-chart-wrap {
+  position: relative;
+}
+.mi-chart-container {
+  height: 220px;
+  position: relative;
+}
+.mi-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+}
+.mi-trend-badge.positive { background: var(--green-bg); color: var(--green); }
+.mi-trend-badge.negative { background: #FEE2E2; color: var(--red); }
+.mi-trend-badge.neutral { background: var(--blue-bg); color: var(--blue); }
+.mi-subtitle {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.mi-industry-list {
+  list-style: none;
+  padding: 0;
+}
+.mi-industry-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.mi-industry-item:last-child { border-bottom: none; }
+.mi-industry-rank {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 20px;
+  text-align: center;
+}
+.mi-industry-name {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.mi-industry-bar-wrap {
+  width: 120px;
+  height: 6px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mi-industry-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.mi-industry-count {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+.mi-risk-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.mi-risk-card:last-child { margin-bottom: 0; }
+.mi-risk-card.warning {
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+}
+.mi-risk-card.danger {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+.mi-risk-card.positive {
+  background: var(--green-bg);
+  border: 1px solid rgba(81,190,123,0.2);
+}
+.mi-risk-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.mi-risk-icon.warning { color: var(--orange); }
+.mi-risk-icon.danger { color: var(--red); }
+.mi-risk-icon.positive { color: var(--green); }
+.mi-risk-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.mi-risk-detail {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.mi-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+.mi-stat {
+  text-align: center;
+}
+.mi-stat-value {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.3px;
+}
+.mi-stat-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.mi-source {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(37,99,235,0.08);
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* ====== RESPONSIVE ====== */
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
@@ -916,6 +1077,8 @@ body {
   .deal-grid { grid-template-columns: 1fr; padding: 16px; }
   .records-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; }
   .nearby-grid { grid-template-columns: 1fr; padding: 16px; }
+  .mi-grid { grid-template-columns: 1fr; }
+  .mi-stat-row { grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px; }
   .price-table { font-size: 12px; }
   .price-table th, .price-table td { padding: 12px 12px; }
   .price-table .col-deck { display: none; }
@@ -1029,6 +1192,53 @@ body {
         <div class="section-label">Property Records</div>
         <div class="section-card">
           <div id="recordsContent"></div>
+        </div>
+      </div>
+
+      <!-- Market Intelligence -->
+      <div class="section" id="marketIntelSection" style="display:none;">
+        <div class="section-label">Market Intelligence</div>
+        <div class="section-card">
+          <!-- Risk Flags (shown at top when present) -->
+          <div id="marketRisks" style="display:none;padding:20px 24px 0;"></div>
+          <!-- Summary Stats -->
+          <div id="marketStats" class="mi-stat-row" style="display:none;"></div>
+          <!-- Charts -->
+          <div class="mi-grid" id="marketCharts" style="display:none;">
+            <!-- Population Chart -->
+            <div class="mi-chart-wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Population</div>
+                <div id="popTrendBadge"></div>
+              </div>
+              <div id="popChartSubtitle" class="mi-subtitle"></div>
+              <div class="mi-chart-container">
+                <canvas id="populationChart"></canvas>
+              </div>
+            </div>
+            <!-- Income Chart -->
+            <div class="mi-chart-wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Median Household Income</div>
+                <div id="incomeTrendBadge"></div>
+              </div>
+              <div id="incomeChartSubtitle" class="mi-subtitle"></div>
+              <div class="mi-chart-container">
+                <canvas id="incomeChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- Employment -->
+          <div id="employmentSection" style="display:none;padding:24px;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Top Industries by Employment</div>
+            <div id="employmentSubtitle" class="mi-subtitle"></div>
+            <ul id="industryList" class="mi-industry-list"></ul>
+          </div>
+          <!-- Source -->
+          <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;">
+            <span class="mi-source">via US Census Bureau</span>
+            <span class="mi-source">Bureau of Labor Statistics</span>
+          </div>
         </div>
       </div>
 
@@ -1936,6 +2146,269 @@ function renderMap(lat, lng, label) {
   }
 }
 
+// ========== MARKET INTELLIGENCE ==========
+async function fetchMarketData(zip, state, countyFips) {
+  var params = [];
+  if (zip) params.push('zip=' + encodeURIComponent(zip));
+  if (countyFips) params.push('fips=' + encodeURIComponent(countyFips));
+  if (!params.length) return null;
+
+  try {
+    var resp = await fetch('/api/market-data?' + params.join('&'));
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    return data.success ? data : null;
+  } catch (e) {
+    console.log('Market data fetch failed:', e);
+    return null;
+  }
+}
+
+function renderMarketIntelligence(data) {
+  if (!data || (!data.population || !data.population.length)) return;
+
+  var section = document.getElementById('marketIntelSection');
+  section.style.display = 'block';
+
+  var pop = data.population.filter(function(d) { return d.population > 0; });
+  var income = data.population.filter(function(d) { return d.medianIncome > 0; });
+
+  // ── Summary Stats ──
+  if (pop.length >= 2) {
+    var statsEl = document.getElementById('marketStats');
+    var latestPop = pop[pop.length - 1];
+    var latestIncome = income.length ? income[income.length - 1] : null;
+    var trend = data.populationTrend;
+
+    var statsHtml = '';
+    statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div></div>';
+    if (latestIncome) {
+      statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div></div>';
+    }
+    if (trend) {
+      var trendColor = trend.annualGrowth >= 0 ? 'var(--green)' : 'var(--red)';
+      var trendSign = trend.annualGrowth >= 0 ? '+' : '';
+      statsHtml += '<div class="mi-stat"><div class="mi-stat-value" style="color:' + trendColor + ';">' + trendSign + trend.annualGrowth + '%</div><div class="mi-stat-label">Annual Growth</div></div>';
+    }
+    statsEl.innerHTML = statsHtml;
+    statsEl.style.display = 'grid';
+  }
+
+  // ── Population Chart ──
+  if (pop.length >= 3) {
+    document.getElementById('marketCharts').style.display = 'grid';
+
+    var labels = pop.map(function(d) { return d.year; });
+    var values = pop.map(function(d) { return d.population; });
+    var trend = data.populationTrend;
+
+    // Trend badge
+    if (trend) {
+      var badgeCls = trend.declining ? 'negative' : (trend.annualGrowth > 0.5 ? 'positive' : 'neutral');
+      var arrowSvg = trend.declining
+        ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>'
+        : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
+      document.getElementById('popTrendBadge').innerHTML = '<span class="mi-trend-badge ' + badgeCls + '">' + arrowSvg + (trend.pctChange > 0 ? '+' : '') + trend.pctChange + '%</span>';
+    }
+
+    var areaName = pop[0].name || '';
+    document.getElementById('popChartSubtitle').textContent = areaName ? areaName + ' (' + pop[0].year + '–' + pop[pop.length - 1].year + ')' : '';
+
+    var lineColor = trend && trend.declining ? '#D04040' : '#51BE7B';
+    var fillColor = trend && trend.declining ? 'rgba(208,64,64,0.06)' : 'rgba(81,190,123,0.06)';
+
+    var ctx = document.getElementById('populationChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderColor: lineColor,
+          backgroundColor: fillColor,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: lineColor,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0A1E21',
+            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+            bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(ctx) { return ctx.parsed.y.toLocaleString() + ' residents'; }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+          },
+          y: {
+            grid: { color: '#EDF1F2' },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+              color: '#8A9AA0',
+              callback: function(val) {
+                if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+                return val;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Income Chart ──
+  if (income.length >= 3) {
+    var incLabels = income.map(function(d) { return d.year; });
+    var incValues = income.map(function(d) { return d.medianIncome; });
+
+    var firstInc = incValues[0];
+    var lastInc = incValues[incValues.length - 1];
+    var incChange = Math.round(((lastInc - firstInc) / firstInc) * 1000) / 10;
+    var incDeclining = lastInc < firstInc;
+
+    var incBadgeCls = incDeclining ? 'negative' : 'positive';
+    var incArrow = incDeclining
+      ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>'
+      : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
+    document.getElementById('incomeTrendBadge').innerHTML = '<span class="mi-trend-badge ' + incBadgeCls + '">' + incArrow + (incChange > 0 ? '+' : '') + incChange + '%</span>';
+    document.getElementById('incomeChartSubtitle').textContent = '$' + firstInc.toLocaleString() + ' → $' + lastInc.toLocaleString();
+
+    var incLineColor = incDeclining ? '#D04040' : '#2563EB';
+    var incFillColor = incDeclining ? 'rgba(208,64,64,0.06)' : 'rgba(37,99,235,0.06)';
+
+    var incCtx = document.getElementById('incomeChart').getContext('2d');
+    new Chart(incCtx, {
+      type: 'line',
+      data: {
+        labels: incLabels,
+        datasets: [{
+          data: incValues,
+          borderColor: incLineColor,
+          backgroundColor: incFillColor,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: incLineColor,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0A1E21',
+            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+            bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(ctx) { return '$' + ctx.parsed.y.toLocaleString(); }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+          },
+          y: {
+            grid: { color: '#EDF1F2' },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+              color: '#8A9AA0',
+              callback: function(val) { return '$' + (val / 1000).toFixed(0) + 'K'; }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Employment ──
+  if (data.employment && data.employment.topIndustries && data.employment.topIndustries.length) {
+    var empSection = document.getElementById('employmentSection');
+    empSection.style.display = 'block';
+
+    var industries = data.employment.topIndustries
+      .filter(function(i) { return !i.industry.includes('Total') && !i.industry.includes('Unclassified'); })
+      .slice(0, 8);
+
+    if (!industries.length) { empSection.style.display = 'none'; return; }
+
+    var maxEmpl = industries[0].employment;
+    document.getElementById('employmentSubtitle').textContent = data.employment.year + ' annual averages' + (data.employment.totalEmployment ? ' · ' + data.employment.totalEmployment.toLocaleString() + ' total jobs' : '');
+
+    var listHtml = '';
+    for (var i = 0; i < industries.length; i++) {
+      var ind = industries[i];
+      var barPct = Math.round((ind.employment / maxEmpl) * 100);
+      var payStr = ind.avgAnnualPay ? '$' + Math.round(ind.avgAnnualPay / 1000) + 'K avg' : '';
+      listHtml += '<li class="mi-industry-item">' +
+        '<span class="mi-industry-rank">' + (i + 1) + '</span>' +
+        '<span class="mi-industry-name">' + esc(ind.industry) + (payStr ? '<div style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:1px;">' + payStr + '</div>' : '') + '</span>' +
+        '<span class="mi-industry-bar-wrap"><span class="mi-industry-bar" style="width:' + barPct + '%;"></span></span>' +
+        '<span class="mi-industry-count">' + ind.employment.toLocaleString() + '</span>' +
+        '</li>';
+    }
+    document.getElementById('industryList').innerHTML = listHtml;
+  }
+
+  // ── Risk Flags ──
+  var risks = data.risks || [];
+  // Add positive signal if population is growing
+  if (data.populationTrend && !data.populationTrend.declining && data.populationTrend.annualGrowth > 0.5) {
+    risks.push({
+      type: 'population_growth',
+      severity: 'positive',
+      message: 'Strong population growth',
+      detail: '+' + data.populationTrend.pctChange + '% over ' + (data.populationTrend.endYear - data.populationTrend.startYear) + ' years (' + data.populationTrend.annualGrowth + '%/yr)'
+    });
+  }
+
+  if (risks.length) {
+    var risksEl = document.getElementById('marketRisks');
+    risksEl.style.display = 'block';
+
+    var warnIcon = '<svg class="mi-risk-icon warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    var dangerIcon = '<svg class="mi-risk-icon danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    var positiveIcon = '<svg class="mi-risk-icon positive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+
+    var html = '';
+    risks.forEach(function(r) {
+      var icon = r.severity === 'danger' ? dangerIcon : (r.severity === 'positive' ? positiveIcon : warnIcon);
+      html += '<div class="mi-risk-card ' + r.severity + '">' +
+        icon +
+        '<div><div class="mi-risk-title">' + esc(r.message) + '</div>' +
+        '<div class="mi-risk-detail">' + esc(r.detail) + '</div></div>' +
+        '</div>';
+    });
+    risksEl.innerHTML = html;
+  }
+}
+
 // ========== INIT ==========
 async function init() {
   var params = new URLSearchParams(window.location.search);
@@ -2050,13 +2523,29 @@ async function init() {
   renderNearby(nearby, currentCoords, propertyName);
 
   // RentCast enrichment (async, non-blocking — may also update hero map with more precise coords)
+  var rcZip = null;
+  var rcCountyFips = null;
   if (propertyAddress && propertyAddress.length > 10) {
     var rc = await enrichWithRentCast(propertyAddress);
     if (rc) {
       renderPropertyRecords(rc, matchingDeals);
       if (rc.latitude && rc.longitude) renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
       if (rc.unitCount) renderPriceHistory(matchingDeals, rc.unitCount);
+      rcZip = rc.zipCode || null;
+      rcCountyFips = rc.countyFips || null;
     }
+  }
+
+  // Market Intelligence (Census + BLS data)
+  var miZip = rcZip || null;
+  // Try to extract zip from property address
+  if (!miZip && propertyAddress) {
+    var zipMatch = propertyAddress.match(/\b(\d{5})\b/);
+    if (zipMatch) miZip = zipMatch[1];
+  }
+  if (miZip || rcCountyFips) {
+    var marketData = await fetchMarketData(miZip, null, rcCountyFips);
+    if (marketData) renderMarketIntelligence(marketData);
   }
 }
 
