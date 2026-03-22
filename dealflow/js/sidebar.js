@@ -170,10 +170,9 @@
   html += '<div id="' + (isSPA ? 'adminNav' : 'adminNavSidebar') + '" style="display:none;">'
     + '<div class="nav-section-label">Admin</div>';
   var adminPages = [
-    ['growth', icons.growth, 'Growth & Analytics'],
+    ['admindash', icons.schema, 'Admin Dashboard'],
     ['admin-manage', icons.manage, 'Manage Data'],
     ['outreach', icons.outreach, 'Operator Outreach'],
-    ['admindash', icons.schema, 'Admin Dashboard'],
     ['casestudies', icons.casestudies, 'Case Studies']
   ];
   adminPages.forEach(function(p) {
