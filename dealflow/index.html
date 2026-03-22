@@ -16470,6 +16470,7 @@ let _adminTab = 'deals';
 let _adminPage = 1;
 let _adminSearchTimer = null;
 let _adminQualityMode = true;
+let _adminHideComplete = true;
 
 function adminShowTab(tab, btn) {
   _adminTab = tab;
@@ -16490,6 +16491,8 @@ function adminShowTab(tab, btn) {
   if (qStats) qStats.style.display = 'none';
   var qBanner = document.getElementById('adminQualityBanner');
   if (qBanner) qBanner.style.display = 'none';
+  var hcToggle = document.getElementById('adminHideCompleteToggle');
+  if (hcToggle) hcToggle.remove();
   adminLoadData();
 }
 
@@ -16934,10 +16937,142 @@ adminSaveEdit = async function(id) {
 
 // ========== DATA QUALITY DASHBOARD ==========
 function adminToggleQuality(){_adminQualityMode=!_adminQualityMode;var b=document.getElementById('adminQualityToggle');if(b){if(_adminQualityMode){b.classList.add('primary');b.classList.remove('secondary');b.style.background='var(--primary)';b.style.color='#fff';}else{b.classList.remove('primary');b.classList.add('secondary');b.style.background='';b.style.color='';}}var q=document.getElementById('adminQualityStats');if(q)q.style.display=_adminQualityMode?'grid':'none';var bn=document.getElementById('adminQualityBanner');if(bn)bn.style.display=_adminQualityMode?'block':'none';var p=document.getElementById('adminPagination');if(p)p.style.display=_adminQualityMode?'none':'flex';adminLoadData();}
-function adminRenderQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' deals';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 0 0 1px rgba(0,0,0,0.03);"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.3px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Deals',stats.total_deals)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Deck',stats.no_deck,stats.no_deck>0?'var(--orange)':'var(--primary)')+sc('No PPM',stats.no_ppm,stats.no_ppm>0?'var(--orange)':'var(--primary)')+sc('No SEC Filing',stats.no_sec||0,(stats.no_sec||0)>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);';head.innerHTML='<th style="'+thS+'">Deal Name</th><th style="'+thS+'">Operator</th><th style="'+thS+'text-align:center;width:50px;">Deck</th><th style="'+thS+'text-align:center;width:50px;">PPM</th><th style="'+thS+'text-align:center;width:50px;">SEC</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="width:60px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';var chk='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';var xm='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fde8e8;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:'+barBg+';border-radius:3px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:3px;transition:width 0.3s ease;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:12px 16px;border-bottom:1px solid var(--border-light);';return'<tr style="cursor:pointer;transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'" onclick="if(!event.target.closest(\'button\'))window.location.href=\'deal.html?id='+r.id+'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--primary);">'+(r.investment_name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.management_company_name||'\u2014')+'</td><td style="'+tdS+'text-align:center;">'+(r.has_deck?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_ppm?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_sec?chk:xm)+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" class="admin-edit-btn">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No deals found</td></tr>';}
+function adminRenderQualityView(rows, stats) {
+  var countEl = document.getElementById('adminResultCount');
+  var completedCount = rows.filter(function(r) { return r.completeness_pct === 100; }).length;
+  var visibleRows = _adminHideComplete ? rows.filter(function(r) { return r.completeness_pct < 100; }) : rows;
+  if (countEl) countEl.textContent = visibleRows.length + ' deals';
+
+  var statsEl = document.getElementById('adminQualityStats');
+  if (statsEl && stats) {
+    var sc = function(label, val, color) {
+      return '<div style="background:var(--bg-card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 0 0 1px rgba(0,0,0,0.03);"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:' + (color || 'var(--text-dark)') + ';">' + val + '</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.3px;">' + label + '</div></div>';
+    };
+    statsEl.innerHTML = sc('Total Deals', stats.total_deals) +
+      sc('Avg Completeness', stats.avg_completeness + '%', stats.avg_completeness >= 70 ? 'var(--primary)' : stats.avg_completeness >= 50 ? 'var(--orange)' : 'var(--red)') +
+      sc('Above 80%', stats.above_80, 'var(--primary)') +
+      sc('Below 50%', stats.below_50, 'var(--red)') +
+      sc('No Deck', stats.no_deck, stats.no_deck > 0 ? 'var(--orange)' : 'var(--primary)') +
+      sc('No PPM', stats.no_ppm, stats.no_ppm > 0 ? 'var(--orange)' : 'var(--primary)') +
+      sc('No SEC Filing', stats.no_sec || 0, (stats.no_sec || 0) > 0 ? 'var(--orange)' : 'var(--primary)');
+  }
+
+  // Hide completed toggle
+  var toggleEl = document.getElementById('adminHideCompleteToggle');
+  if (!toggleEl) {
+    var wrapper = document.getElementById('adminQualityStats');
+    if (wrapper && wrapper.parentElement) {
+      var toggleDiv = document.createElement('div');
+      toggleDiv.id = 'adminHideCompleteToggle';
+      toggleDiv.style.cssText = 'margin-bottom:16px;display:flex;align-items:center;gap:8px;';
+      wrapper.parentElement.insertBefore(toggleDiv, wrapper.nextSibling);
+      toggleEl = toggleDiv;
+    }
+  }
+  if (toggleEl) {
+    var label = _adminTab === 'operators' ? 'Hide completed profiles' : 'Hide completed deals';
+    toggleEl.innerHTML = '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);font-weight:500;user-select:none;">' +
+      '<input type="checkbox" ' + (_adminHideComplete ? 'checked' : '') + ' onchange="adminToggleHideComplete()" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;">' +
+      label + ' <span style="color:var(--text-muted);">(' + completedCount + ')</span></label>';
+  }
+
+  var head = document.querySelector('#adminTableHead tr');
+  var body = document.getElementById('adminTableBody');
+  var thS = 'text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);';
+  head.innerHTML = '<th style="' + thS + '">Deal Name</th><th style="' + thS + '">Operator</th><th style="' + thS + 'text-align:center;width:50px;">Deck</th><th style="' + thS + 'text-align:center;width:50px;">PPM</th><th style="' + thS + 'text-align:center;width:50px;">SEC</th><th style="' + thS + 'text-align:center;width:140px;">Completeness</th><th style="' + thS + '">Missing Fields</th><th style="width:60px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';
+  var chk = '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  var xm = '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fde8e8;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';
+  body.innerHTML = visibleRows.map(function(r) {
+    var color = r.completeness_pct >= 80 ? 'var(--primary)' : r.completeness_pct >= 50 ? 'var(--orange)' : 'var(--red)';
+    var barBg = r.completeness_pct >= 80 ? 'var(--green-bg)' : r.completeness_pct >= 50 ? 'var(--orange-bg)' : '#fde8e8';
+    var bar = '<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:' + barBg + ';border-radius:3px;overflow:hidden;"><div style="width:' + r.completeness_pct + '%;height:100%;background:' + color + ';border-radius:3px;transition:width 0.3s ease;"></div></div><span style="font-weight:700;font-size:12px;color:' + color + ';min-width:32px;text-align:right;">' + r.completeness_pct + '%</span></div>';
+    var mf = (r.missing_fields || []).slice(0, 4).map(function(f) {
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">' + f + '</span>';
+    }).join('') + (r.missing_fields.length > 4 ? '<span style="font-size:10px;color:var(--text-muted);"> +' + (r.missing_fields.length - 4) + '</span>' : '');
+    var tdS = 'padding:12px 16px;border-bottom:1px solid var(--border-light);';
+    return '<tr style="cursor:pointer;transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'" onclick="if(!event.target.closest(\'button\'))window.location.href=\'deal.html?id=' + r.id + '\'">' +
+      '<td style="' + tdS + 'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--primary);">' + (r.investment_name || '\u2014') + '</td>' +
+      '<td style="' + tdS + 'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.management_company_name || '\u2014') + '</td>' +
+      '<td style="' + tdS + 'text-align:center;">' + (r.has_deck ? chk : xm) + '</td>' +
+      '<td style="' + tdS + 'text-align:center;">' + (r.has_ppm ? chk : xm) + '</td>' +
+      '<td style="' + tdS + 'text-align:center;">' + (r.has_sec ? chk : xm) + '</td>' +
+      '<td style="' + tdS + '">' + bar + '</td>' +
+      '<td style="' + tdS + 'max-width:250px;overflow:hidden;">' + mf + '</td>' +
+      '<td style="' + tdS + 'text-align:right;"><button onclick="adminEditRow(\'' + r.id + '\')" class="admin-edit-btn">Edit</button></td></tr>';
+  }).join('');
+  if (visibleRows.length === 0) body.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No deals found</td></tr>';
+}
 
 // ========== OPERATOR QUALITY AUDIT ==========
-function adminRenderOperatorQualityView(rows,stats){var countEl=document.getElementById('adminResultCount');if(countEl)countEl.textContent=rows.length+' operators';var statsEl=document.getElementById('adminQualityStats');if(statsEl&&stats){var sc=function(label,val,color){return'<div style="background:var(--bg-card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 0 0 1px rgba(0,0,0,0.03);"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:'+(color||'var(--text-dark)')+';">'+val+'</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.3px;">'+label+'</div></div>';};statsEl.innerHTML=sc('Total Operators',stats.total_operators)+sc('Avg Completeness',stats.avg_completeness+'%',stats.avg_completeness>=70?'var(--primary)':stats.avg_completeness>=50?'var(--orange)':'var(--red)')+sc('Above 80%',stats.above_80,'var(--primary)')+sc('Below 50%',stats.below_50,'var(--red)')+sc('No Website',stats.no_website,stats.no_website>0?'var(--orange)':'var(--primary)')+sc('No LinkedIn',stats.no_linkedin,stats.no_linkedin>0?'var(--orange)':'var(--primary)');}var head=document.querySelector('#adminTableHead tr');var body=document.getElementById('adminTableBody');var thS='text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);';head.innerHTML='<th style="'+thS+'">Operator</th><th style="'+thS+'">Type</th><th style="'+thS+'text-align:center;width:60px;">Deals</th><th style="'+thS+'text-align:center;width:140px;">Completeness</th><th style="'+thS+'">Missing Fields</th><th style="'+thS+'text-align:center;width:50px;">Web</th><th style="'+thS+'text-align:center;width:50px;">LI</th><th style="width:60px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';var chk='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';var xm='<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fde8e8;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';body.innerHTML=rows.map(function(r){var color=r.completeness_pct>=80?'var(--primary)':r.completeness_pct>=50?'var(--orange)':'var(--red)';var barBg=r.completeness_pct>=80?'var(--green-bg)':r.completeness_pct>=50?'var(--orange-bg)':'#fde8e8';var bar='<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:'+barBg+';border-radius:3px;overflow:hidden;"><div style="width:'+r.completeness_pct+'%;height:100%;background:'+color+';border-radius:3px;transition:width 0.3s ease;"></div></div><span style="font-weight:700;font-size:12px;color:'+color+';min-width:32px;text-align:right;">'+r.completeness_pct+'%</span></div>';var mf=(r.missing_fields||[]).slice(0,4).map(function(f){return'<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">'+f+'</span>';}).join('')+(r.missing_fields.length>4?'<span style="font-size:10px;color:var(--text-muted);"> +'+(r.missing_fields.length-4)+'</span>':'');var tdS='padding:12px 16px;border-bottom:1px solid var(--border-light);';var dealBadge=r.deal_count>0?'<span style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;border-radius:12px;background:var(--green-bg);font-size:12px;font-weight:700;color:var(--primary);padding:0 6px;">'+r.deal_count+'</span>':'<span style="color:var(--text-muted);opacity:0.4;">0</span>';return'<tr style="cursor:pointer;transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'" onclick="if(!event.target.closest(\'button\'))window.location.href=\'sponsor.html?id='+r.id+'\'"><td style="'+tdS+'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--primary);">'+(r.name||'\u2014')+'</td><td style="'+tdS+'color:var(--text-secondary);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(r.type||'\u2014')+'</td><td style="'+tdS+'text-align:center;">'+dealBadge+'</td><td style="'+tdS+'">'+bar+'</td><td style="'+tdS+'max-width:250px;overflow:hidden;">'+mf+'</td><td style="'+tdS+'text-align:center;">'+(r.has_website?chk:xm)+'</td><td style="'+tdS+'text-align:center;">'+(r.has_linkedin?chk:xm)+'</td><td style="'+tdS+'text-align:right;"><button onclick="adminEditRow(\''+r.id+'\')" class="admin-edit-btn">Edit</button></td></tr>';}).join('');if(rows.length===0)body.innerHTML='<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No operators found</td></tr>';}
+function adminToggleHideComplete() {
+  _adminHideComplete = !_adminHideComplete;
+  adminLoadData();
+}
+
+function adminRenderOperatorQualityView(rows, stats) {
+  var countEl = document.getElementById('adminResultCount');
+  var completedCount = rows.filter(function(r) { return r.completeness_pct === 100; }).length;
+  var visibleRows = _adminHideComplete ? rows.filter(function(r) { return r.completeness_pct < 100; }) : rows;
+  if (countEl) countEl.textContent = visibleRows.length + ' operators';
+
+  var statsEl = document.getElementById('adminQualityStats');
+  if (statsEl && stats) {
+    var sc = function(label, val, color) {
+      return '<div style="background:var(--bg-card);border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 0 0 1px rgba(0,0,0,0.03);"><div style="font-family:var(--font-ui);font-size:22px;font-weight:800;color:' + (color || 'var(--text-dark)') + ';">' + val + '</div><div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.3px;">' + label + '</div></div>';
+    };
+    statsEl.innerHTML = sc('Total Operators', stats.total_operators) +
+      sc('Avg Completeness', stats.avg_completeness + '%', stats.avg_completeness >= 70 ? 'var(--primary)' : stats.avg_completeness >= 50 ? 'var(--orange)' : 'var(--red)') +
+      sc('Above 80%', stats.above_80, 'var(--primary)') +
+      sc('Below 50%', stats.below_50, 'var(--red)') +
+      sc('No Website', stats.no_website, stats.no_website > 0 ? 'var(--orange)' : 'var(--primary)') +
+      sc('No LinkedIn', stats.no_linkedin, stats.no_linkedin > 0 ? 'var(--orange)' : 'var(--primary)');
+  }
+
+  // Hide completed toggle
+  var toggleEl = document.getElementById('adminHideCompleteToggle');
+  if (!toggleEl) {
+    var wrapper = document.getElementById('adminQualityStats');
+    if (wrapper && wrapper.parentElement) {
+      var toggleDiv = document.createElement('div');
+      toggleDiv.id = 'adminHideCompleteToggle';
+      toggleDiv.style.cssText = 'margin-bottom:16px;display:flex;align-items:center;gap:8px;';
+      wrapper.parentElement.insertBefore(toggleDiv, wrapper.nextSibling);
+      toggleEl = toggleDiv;
+    }
+  }
+  if (toggleEl) {
+    toggleEl.innerHTML = '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);font-weight:500;user-select:none;">' +
+      '<input type="checkbox" ' + (_adminHideComplete ? 'checked' : '') + ' onchange="adminToggleHideComplete()" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;">' +
+      'Hide completed profiles <span style="color:var(--text-muted);">(' + completedCount + ')</span></label>';
+  }
+
+  var head = document.querySelector('#adminTableHead tr');
+  var body = document.getElementById('adminTableBody');
+  var thS = 'text-align:left;padding:11px 16px;font-family:var(--font-ui);font-weight:600;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);';
+  head.innerHTML = '<th style="' + thS + '">Operator</th><th style="' + thS + '">Type</th><th style="' + thS + 'text-align:center;width:60px;">Deals</th><th style="' + thS + 'text-align:center;width:140px;">Completeness</th><th style="' + thS + '">Missing Fields</th><th style="' + thS + 'text-align:center;width:50px;">Web</th><th style="' + thS + 'text-align:center;width:50px;">LI</th><th style="width:60px;padding:11px 16px;background:var(--bg-cream);border-bottom:1px solid var(--border-light);"></th>';
+  var chk = '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--green-bg);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  var xm = '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fde8e8;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" width="10" height="10"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';
+  body.innerHTML = visibleRows.map(function(r) {
+    var color = r.completeness_pct >= 80 ? 'var(--primary)' : r.completeness_pct >= 50 ? 'var(--orange)' : 'var(--red)';
+    var barBg = r.completeness_pct >= 80 ? 'var(--green-bg)' : r.completeness_pct >= 50 ? 'var(--orange-bg)' : '#fde8e8';
+    var bar = '<div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:' + barBg + ';border-radius:3px;overflow:hidden;"><div style="width:' + r.completeness_pct + '%;height:100%;background:' + color + ';border-radius:3px;transition:width 0.3s ease;"></div></div><span style="font-weight:700;font-size:12px;color:' + color + ';min-width:32px;text-align:right;">' + r.completeness_pct + '%</span></div>';
+    var mf = (r.missing_fields || []).slice(0, 4).map(function(f) {
+      return '<span style="display:inline-block;padding:2px 8px;background:var(--bg-cream);border-radius:6px;font-size:10px;font-weight:600;color:var(--text-muted);margin:1px 2px;">' + f + '</span>';
+    }).join('') + (r.missing_fields.length > 4 ? '<span style="font-size:10px;color:var(--text-muted);"> +' + (r.missing_fields.length - 4) + '</span>' : '');
+    var tdS = 'padding:12px 16px;border-bottom:1px solid var(--border-light);';
+    var dealBadge = r.deal_count > 0 ? '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;border-radius:12px;background:var(--green-bg);font-size:12px;font-weight:700;color:var(--primary);padding:0 6px;">' + r.deal_count + '</span>' : '<span style="color:var(--text-muted);opacity:0.4;">0</span>';
+    return '<tr style="cursor:pointer;transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'" onclick="if(!event.target.closest(\'button\'))window.location.href=\'sponsor.html?id=' + r.id + '\'">' +
+      '<td style="' + tdS + 'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--primary);">' + (r.name || '\u2014') + '</td>' +
+      '<td style="' + tdS + 'color:var(--text-secondary);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.type || '\u2014') + '</td>' +
+      '<td style="' + tdS + 'text-align:center;">' + dealBadge + '</td>' +
+      '<td style="' + tdS + '">' + bar + '</td>' +
+      '<td style="' + tdS + 'max-width:250px;overflow:hidden;">' + mf + '</td>' +
+      '<td style="' + tdS + 'text-align:center;">' + (r.has_website ? chk : xm) + '</td>' +
+      '<td style="' + tdS + 'text-align:center;">' + (r.has_linkedin ? chk : xm) + '</td>' +
+      '<td style="' + tdS + 'text-align:right;"><button onclick="adminEditRow(\'' + r.id + '\')" class="admin-edit-btn">Edit</button></td></tr>';
+  }).join('');
+  if (visibleRows.length === 0) body.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-muted);font-family:var(--font-ui);">No operators found</td></tr>';
+}
 
 // ========== DATA CLEANUP WIZARD ==========
 var _cleanupQueue = [], _cleanupIdx = 0, _cleanupEnriching = false, _cleanupResult = null, _cleanupProcessed = 0, _cleanupUpdated = 0;
