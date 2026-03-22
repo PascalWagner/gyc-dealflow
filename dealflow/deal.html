@@ -4701,6 +4701,21 @@ async function renderDeal() {
   }
 
   // === Shared variables needed by multiple sections ===
+  var userTier = (typeof getUser === 'function' && getUser() && getUser().tier) || 'free';
+  var isPaidUser = userTier !== 'free';
+
+  // Reusable academy gate overlay for locked sections
+  function academyGateOverlay(title, subtitle) {
+    return '<div style="position:relative;overflow:hidden;">'
+      + '<div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.85);backdrop-filter:blur(6px);border-radius:var(--radius);">'
+      + '<div style="text-align:center;max-width:340px;padding:28px 20px;">'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>'
+      + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">' + title + '</div>'
+      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.5;">' + subtitle + '</div>'
+      + '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="display:inline-block;padding:10px 24px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+      + '</div></div>';
+  }
+
   var currentStage = getDealStage(deal.id);
   var stages = [
     { key: 'browse', label: 'Browse', num: '1' },
@@ -4833,21 +4848,18 @@ async function renderDeal() {
   var _heroDeckBlocked = !_heroPerm.granted || !_heroPerm.canShowDeck;
   var _heroDeckExpired = deal.deckUrl && (deal.deckUrl.indexOf('airtableusercontent.com') >= 0 || deal.deckUrl.indexOf('dl.airtable.com') >= 0);
   if (deal.deckUrl && !_heroDeckExpired) {
-    if (_compIsAdmin || (!_heroDeckBlocked && isPaidUser)) {
+    if (_compIsAdmin || !_heroDeckBlocked) {
+      // Deck is free for all users (only blocked if operator hasn't granted permission)
       heroHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="hero-deck-btn" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">'
         + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
         + 'View Investment Deck</a>';
       if (_heroDeckBlocked && _compIsAdmin) {
         heroHtml += '<div style="font-size:10px;color:#f59e0b;margin-top:2px;">No operator permission</div>';
       }
-    } else if (_heroDeckBlocked) {
+    } else {
       heroHtml += '<div class="hero-deck-btn hero-deck-locked">'
         + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
         + 'Deck — Pending Approval</div>';
-    } else {
-      heroHtml += '<div class="hero-deck-btn hero-deck-locked" onclick="showUpgradeModal()">'
-        + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
-        + 'Unlock Deck — Academy</div>';
     }
   } else if (deal.ppmUrl) {
     var _heroPpmBlocked = !_heroPerm.granted || !_heroPerm.canShowPpm;
@@ -4943,29 +4955,37 @@ async function renderDeal() {
   if (isCreditFund(deal)) {
     if (deal.targetIRR) metricsToShow.push(metricCard('Target Yield', fmt(deal.targetIRR, 'pct'), true));
     if (deal.investmentMinimum) metricsToShow.push(metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), !deal.targetIRR));
-    if (deal.holdPeriod) metricsToShow.push(metricCard('Lockup', formatHoldPeriod(deal.holdPeriod), false));
-    if (deal.fundAUM) metricsToShow.push(metricCard('Fund AUM', fmt(deal.fundAUM, 'money'), false));
-    if (deal.loanCount) metricsToShow.push(metricCard('Loan Count', deal.loanCount, false));
-    if (deal.avgLoanLTV) metricsToShow.push(metricCard('Avg LTV', fmt(deal.avgLoanLTV, 'pct'), false));
+    if (isPaidUser || _compIsAdmin) {
+      if (deal.holdPeriod) metricsToShow.push(metricCard('Lockup', formatHoldPeriod(deal.holdPeriod), false));
+      if (deal.fundAUM) metricsToShow.push(metricCard('Fund AUM', fmt(deal.fundAUM, 'money'), false));
+      if (deal.loanCount) metricsToShow.push(metricCard('Loan Count', deal.loanCount, false));
+      if (deal.avgLoanLTV) metricsToShow.push(metricCard('Avg LTV', fmt(deal.avgLoanLTV, 'pct'), false));
+    }
   } else {
     if (deal.targetIRR) metricsToShow.push(metricCard('Target IRR', fmt(deal.targetIRR, 'pct'), true));
-    if (deal.equityMultiple) metricsToShow.push(metricCard('Equity Multiple', fmt(deal.equityMultiple, 'multiple'), !deal.targetIRR));
-    if (deal.preferredReturn) metricsToShow.push(metricCard('Pref Return', fmt(deal.preferredReturn, 'pct'), false));
     if (deal.investmentMinimum) metricsToShow.push(metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), false));
-    if (deal.holdPeriod) metricsToShow.push(metricCard('Hold Period', formatHoldPeriod(deal.holdPeriod), false));
-    if (deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit)) metricsToShow.push(metricCard('LP/GP Split', deal.lpGpSplit, false));
+    if (isPaidUser || _compIsAdmin) {
+      if (deal.equityMultiple) metricsToShow.push(metricCard('Equity Multiple', fmt(deal.equityMultiple, 'multiple'), false));
+      if (deal.preferredReturn) metricsToShow.push(metricCard('Pref Return', fmt(deal.preferredReturn, 'pct'), false));
+      if (deal.holdPeriod) metricsToShow.push(metricCard('Hold Period', formatHoldPeriod(deal.holdPeriod), false));
+      if (deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit)) metricsToShow.push(metricCard('LP/GP Split', deal.lpGpSplit, false));
+    }
   }
   if (metricsToShow.length > 0) {
     var gridCols = Math.min(metricsToShow.length, 6);
     metricsHtml += '<div class="metrics-strip" style="grid-template-columns:repeat(' + gridCols + ',1fr)">';
     metricsHtml += metricsToShow.join('');
+    if (!isPaidUser && !_compIsAdmin) {
+      metricsHtml += '<div style="display:flex;align-items:center;justify-content:center;padding:8px 14px;background:rgba(59,130,246,0.04);border:1px dashed rgba(59,130,246,0.2);border-radius:var(--radius-sm);cursor:pointer;min-height:52px;" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">'
+        + '<span style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#3b82f6;">+ More Metrics</span></div>';
+    }
     metricsHtml += '</div>';
   }
 
   // --- Buy Box Match ---
   var buyBoxHtml = '';
   var bbRaw = localStorage.getItem('gycBuyBoxWizard');
-  if (bbRaw) {
+  if ((isPaidUser || _compIsAdmin) && bbRaw) {
     try {
       var bb = JSON.parse(bbRaw);
       var checks = [];
@@ -5046,7 +5066,7 @@ async function renderDeal() {
         buyBoxHtml += '</div>';
       }
     } catch(e) {}
-  } else {
+  } else if (isPaidUser || _compIsAdmin) {
     buyBoxHtml += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">';
     buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);">See how this deal matches your investment criteria</span>';
     buyBoxHtml += '<a href="index.html#buybox" style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);text-decoration:none;">Set Up Buy Box \u2192</a>';
@@ -5395,16 +5415,33 @@ async function renderDeal() {
   thesisHtml += '</div>';
 
   // Risks column
-  thesisHtml += '<div>';
+  thesisHtml += '<div style="position:relative;">';
   thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:10px;">Key Risks</div>';
-  if (risks.length > 0) {
-    for (var r = 0; r < risks.length; r++) {
-      thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
-      thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-      thesisHtml += '<div><span style="font-weight:600;color:var(--text-dark);">' + esc(risks[r].label) + '</span><br><span style="color:var(--text-secondary);">' + esc(risks[r].detail) + '</span></div></div>';
+  if (!isPaidUser && !_compIsAdmin) {
+    // Free users: show risk labels only, blur the details
+    if (risks.length > 0) {
+      thesisHtml += '<div style="position:relative;">';
+      for (var r = 0; r < risks.length; r++) {
+        thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-family:var(--font-body);font-size:13px;line-height:1.5;">';
+        thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        thesisHtml += '<div><span style="font-weight:600;color:var(--text-dark);">' + esc(risks[r].label) + '</span><br><span style="color:var(--text-secondary);filter:blur(5px);user-select:none;">' + esc(risks[r].detail) + '</span></div></div>';
+      }
+      thesisHtml += '<div style="position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(transparent,rgba(255,255,255,0.95));display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;">';
+      thesisHtml += '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#3b82f6;text-decoration:none;">Unlock Risk Analysis \u2192</a>';
+      thesisHtml += '</div></div>';
+    } else {
+      thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">Risk analysis available for Academy members.</div>';
     }
   } else {
-    thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">No significant risks auto-detected. Review the PPM for risk factors specific to this offering.</div>';
+    if (risks.length > 0) {
+      for (var r = 0; r < risks.length; r++) {
+        thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
+        thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        thesisHtml += '<div><span style="font-weight:600;color:var(--text-dark);">' + esc(risks[r].label) + '</span><br><span style="color:var(--text-secondary);">' + esc(risks[r].detail) + '</span></div></div>';
+      }
+    } else {
+      thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">No significant risks auto-detected. Review the PPM for risk factors specific to this offering.</div>';
+    }
   }
   thesisHtml += '</div>';
 
@@ -5899,9 +5936,7 @@ async function renderDeal() {
 
   // --- Pascal's Take ---
   var pascalTakeHtml = '';
-  var userTier = (typeof getUser === 'function' && getUser() && getUser().tier) || 'free';
   var hasPascalContent = deal.pascalVideoUrl || deal.pascalTakeText;
-  var isPaidUser = userTier !== 'free';
 
   if (hasPascalContent || true) { // always show section, with fallback CTA
     pascalTakeHtml += '<div class="section">';
@@ -5993,6 +6028,10 @@ async function renderDeal() {
 
     cashFlowHtml += '<div class="section">';
     cashFlowHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Projected LP Cash Flow</span></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      cashFlowHtml += academyGateOverlay('Unlock Cash Flow Projections', 'See year-by-year projected distributions, capital returns, and cash-on-cash analysis for this deal.');
+      cashFlowHtml += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:180px;">';
+    }
     cashFlowHtml += '<div class="section-body">';
 
     // Assumption banner
@@ -6137,6 +6176,9 @@ async function renderDeal() {
     cashFlowHtml += '</div>';
 
     cashFlowHtml += '</div></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      cashFlowHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
   })();
 
   // --- 5. Performance Chart + Share Classes ---
@@ -6159,6 +6201,10 @@ async function renderDeal() {
   if (deal.shareClasses && deal.shareClasses.length > 0) {
     chartHtml += '<div class="section">';
     chartHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg><span class="section-title">Share Classes</span></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      chartHtml += academyGateOverlay('Unlock Share Class Comparison', 'Compare minimum investments, target returns, lockup periods, and terms across all share classes.');
+      chartHtml += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:120px;">';
+    }
     chartHtml += '<div class="section-body" style="padding:0;">';
     var _scActiveIdx = window._activeShareClassIdx;
     var _scOrder = deal.shareClasses.map(function(sc, i) { return { sc: sc, origIdx: i }; })
@@ -6242,6 +6288,9 @@ async function renderDeal() {
       chartHtml += '</div>';
     }
     
+    if (!isPaidUser && !_compIsAdmin) {
+      chartHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
     chartHtml += '</div></div>';
   }
 
@@ -6257,6 +6306,10 @@ async function renderDeal() {
 
     var h = '<div class="section" style="margin-top:20px;">';
     h += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Deal Economics</span></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      h += academyGateOverlay('Unlock Deal Economics', 'See sources & uses, LTV analysis, loan terms, and the full capital structure.');
+      h += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:120px;">';
+    }
     h += '<div class="section-body">';
 
     var pp = d.purchasePrice;
@@ -6290,6 +6343,9 @@ async function renderDeal() {
     }
 
     h += '</div></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      h += '</div></div>'; // close blur wrapper + gate overlay
+    }
     return h;
   }
 
@@ -6314,23 +6370,26 @@ async function renderDeal() {
   detailsHtml += detailItem('Distributions', deal.distributions);
   detailsHtml += detailItem('Available To', deal.availableTo);
   detailsHtml += detailItem('Offering Type', deal.offeringType);
-  if (isCreditFund(deal)) {
-    detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
+  if (isPaidUser || _compIsAdmin) {
+    if (isCreditFund(deal)) {
+      detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
+    } else {
+      detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
+    }
+    if (!isCreditFund(deal)) {
+      detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
+      detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
+    }
+    detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
+    detailsHtml += detailItem('Strategy', deal.strategy);
+    if (deal.debtPosition) detailsHtml += detailItem('Debt Position', deal.debtPosition);
+    if (deal.fundAUM) detailsHtml += detailItem('Fund AUM', fmt(deal.fundAUM, 'money'));
+    if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
+    if (deal.avgLoanLTV) detailsHtml += detailItem('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
+    if (deal.financials) detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">' + esc('Financials') + '</div><div class="detail-value">' + esc(String(deal.financials)) + '</div></div>';
   } else {
-    detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
+    detailsHtml += '<div class="detail-item" style="grid-column:1/-1;text-align:center;padding:12px;"><a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:#3b82f6;text-decoration:none;">Unlock Full Deal Terms \u2192</a></div>';
   }
-  if (!isCreditFund(deal)) {
-    detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
-    detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
-  }
-  detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
-  detailsHtml += detailItem('Strategy', deal.strategy);
-  if (deal.debtPosition) detailsHtml += detailItem('Debt Position', deal.debtPosition);
-  if (deal.fundAUM) detailsHtml += detailItem('Fund AUM', fmt(deal.fundAUM, 'money'));
-  if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
-  if (deal.avgLoanLTV) detailsHtml += detailItem('Avg Loan LTV', fmt(deal.avgLoanLTV, 'pct'));
-  if (deal.financials) detailsHtml += '<div class="detail-item detail-item-wide"><div class="detail-label">' + esc('Financials') + '</div><div class="detail-value">' + esc(String(deal.financials)) + '</div></div>';
-  // Fees moved to Fee Benchmark section
   detailsHtml += '</div>';
   // Geography moved to dedicated map card
   detailsHtml += '</div></div>';
@@ -6671,6 +6730,10 @@ async function renderDeal() {
 
     feeBenchHtml = '<div class="section">';
     feeBenchHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">How This Deal Compares</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      feeBenchHtml += academyGateOverlay('Unlock Peer Comparison', 'See how this deal stacks up against ' + peers.length + ' similar deals on returns, fees, minimums, and more.');
+      feeBenchHtml += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:120px;">';
+    }
     feeBenchHtml += '<div class="section-body">';
     feeBenchHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;">';
     metrics.forEach(function(m) {
@@ -6684,6 +6747,9 @@ async function renderDeal() {
         + '<div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);">' + m.count + ' peers with data</div>'
         + '</div>';
     });
+    if (!isPaidUser && !_compIsAdmin) {
+      feeBenchHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
     feeBenchHtml += '</div></div></div>';
   })();
 
@@ -6878,6 +6944,10 @@ async function renderDeal() {
 
     feeCompareHtml = '<div class="section">';
     feeCompareHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Fees &amp; Compensation</span>' + (hasPeerComparison ? '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span>' : '') + '</div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      feeCompareHtml += academyGateOverlay('Unlock Fee Analysis', 'See how this deal\'s fees compare to market benchmarks.');
+      feeCompareHtml += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:100px;">';
+    }
     feeCompareHtml += '<div class="section-body">';
 
     // Raw fee pills removed — all fees shown in comparison table below
@@ -6916,6 +6986,9 @@ async function renderDeal() {
         + '</div>';
     }
 
+    if (!isPaidUser && !_compIsAdmin) {
+      feeCompareHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
     feeCompareHtml += '</div></div>';
   })();
 
@@ -6939,12 +7012,11 @@ async function renderDeal() {
   var _hasAnyDoc = false;
   if (deal.deckUrl && !_deckExpired) {
     _hasAnyDoc = true;
-    if (_compIsAdmin || (!_deckBlocked && isPaidUser)) {
+    if (_compIsAdmin || !_deckBlocked) {
+      // Deck is free for all users (only blocked if operator hasn't granted permission)
       materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + _docIcon + '<span>Investment Deck</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-left:auto;color:var(--text-muted);"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
-    } else if (_deckBlocked) {
-      materialsHtml += '<div class="material-tile-locked">' + _docIcon + '<span>Investment Deck</span><span class="lock-badge" style="margin-left:auto;">Pending</span></div>';
     } else {
-      materialsHtml += '<div class="material-tile-locked">' + _docIcon + '<span>Investment Deck</span><span class="lock-badge" style="margin-left:auto;">Academy</span></div>';
+      materialsHtml += '<div class="material-tile-locked">' + _docIcon + '<span>Investment Deck</span><span class="lock-badge" style="margin-left:auto;">Pending</span></div>';
     }
   }
   // Don't show PPM if it's the same URL as the deck (likely an OM mislabeled as PPM)
@@ -7024,11 +7096,17 @@ async function renderDeal() {
   ddHtml += '<div class="section" style="position:relative;overflow:hidden;">';
   ddHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span class="section-title">Deal Research Checklist</span>' + ddRingSvg + '</div>';
   ddHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
-  ddHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
-  ddHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
-  ddHtml += '<div style="font-size:13px;color:var(--text-secondary);">Interactive due diligence checklist for every deal</div>';
-  ddHtml += '</div>';
-  ddHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
+  if (!isPaidUser && !_compIsAdmin) {
+    ddHtml += academyGateOverlay('Unlock Due Diligence Checklist', 'Academy members get a ' + checklist.sections.length + '-section interactive DD checklist with auto-filled answers for every deal.');
+    ddHtml += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:180px;">';
+  } else {
+    // Coming Soon overlay for paid users too (feature not yet live)
+    ddHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
+    ddHtml += '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>';
+    ddHtml += '<div style="font-size:13px;color:var(--text-secondary);">Interactive due diligence checklist for every deal</div>';
+    ddHtml += '</div>';
+    ddHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
+  }
   ddHtml += '<div id="gpAgendaPanel"></div>';
   ddHtml += '<div class="dd-checklist-subtitle">' + esc(checklist.label) + ' &middot; ' + checklist.sections.length + ' sections</div>';
   ddHtml += '<div class="dd-accordion">';
@@ -7079,16 +7157,11 @@ async function renderDeal() {
     ddHtml += '</div>';
   }
   ddHtml += '</div>';
-  // Academy CTA for locked DD sections
-  if (!isPaidUser) {
-    ddHtml += '<div class="academy-gate-inline" style="margin-top:16px;">';
-    ddHtml += '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>';
-    ddHtml += '<div class="gate-title">Unlock Full Due Diligence</div>';
-    ddHtml += '<div class="gate-sub">Academy members get all ' + checklist.sections.length + ' DD sections unlocked, plus Pascal\'s completed answers and live deal reviews every week.</div>';
-    ddHtml += '<button class="gate-btn" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')">Join Cashflow Academy \u2192</button>';
-    ddHtml += '</div>';
+  if (!isPaidUser && !_compIsAdmin) {
+    ddHtml += '</div></div>'; // close blur wrapper + gate overlay
+  } else {
+    ddHtml += '</div>'; // close opacity wrapper (coming soon)
   }
-  ddHtml += '</div>'; // close opacity wrapper
   ddHtml += '</div></div>';
 
   // --- 8c. Q&A Section --- (Coming Soon)

@@ -12197,6 +12197,22 @@ function navigateTo(page) {
   if (page === 'outreach') outreachInit();
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
+    // Gate buy box for free users
+    var _bbUser = getUser();
+    var _bbTier = (_bbUser && _bbUser.tier) || 'free';
+    var _bbIsAdmin = typeof isAdmin === 'function' && isAdmin();
+    if (_bbTier === 'free' && !_bbIsAdmin) {
+      var reportEl = document.getElementById('reportContent');
+      if (reportEl) {
+        reportEl.innerHTML = '<div style="text-align:center;padding:60px 32px;">'
+          + '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>'
+          + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Investment Plan Builder</div>'
+          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6;">Academy members get a personalized deployment plan with buy box criteria, deal matching, and portfolio construction guidance.</div>'
+          + '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+          + '</div>';
+      }
+      return;
+    }
     // Try to render from localStorage first
     renderReport();
     // Also trigger a fresh GHL fetch in case data hasn't loaded yet
@@ -13033,6 +13049,14 @@ const STRATEGY_OPTIONS = {
 };
 
 function openBuyBoxWizard() {
+  // Gate wizard for free users
+  var _wzUser = getUser();
+  var _wzTier = (_wzUser && _wzUser.tier) || 'free';
+  var _wzIsAdmin = typeof isAdmin === 'function' && isAdmin();
+  if (_wzTier === 'free' && !_wzIsAdmin) {
+    window.open('https://growyourcashflow.io/cashflow-academy', '_blank');
+    return;
+  }
   wizardStepIndex = 0;
   wizardStep = 0;
   wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
@@ -17604,34 +17628,28 @@ function saveInvestmentFromModal(editId, linkDealId) {
 
 function assignInvestmentToPlanBucket(investment) {
   var plan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
-  if (!plan || !plan.buckets || plan.buckets.length === 0) return;
+  var slots = plan && (plan.slots || plan.buckets);
+  if (!slots || !slots.length || !slots[0].asset_class) return;
 
-  // Auto-match: find the best unfilled bucket for this investment's asset class
   var investAC = investment.assetClass || '';
-  var bestBucket = null;
+  // Find best matching unfilled slot
+  var bestSlot = null;
   var bestScore = -1;
-
-  plan.buckets.forEach(function(b) {
-    if ((b.filled_by || []).length >= b.target_deals) return; // bucket full
+  slots.forEach(function(s) {
+    if (s.filled_by) return;
     var score = 0;
-    var criteria = b.criteria || {};
-    var bucketACs = criteria.asset_classes || [];
-    // Direct asset class match
-    if (bucketACs.some(function(ac) { return ac === investAC; })) score += 10;
-    // Lending strategy match
-    if (LENDING_ASSETS.includes(investAC) && b.id === 'diversifier') score += 8;
-    // General type match via classification
-    var investType = classifyAssetClass(investAC);
-    if (investType === b.id) score += 5;
-    // Prefer emptier buckets
-    score += (b.target_deals - (b.filled_by || []).length);
-
-    if (score > bestScore) { bestScore = score; bestBucket = b; }
+    if (s.asset_class === investAC) score += 10;
+    if (s.asset_class === 'Lending' && (investAC === 'Private Debt' || investAC === 'Lending')) score += 10;
+    if (score > bestScore) { bestScore = score; bestSlot = s; }
   });
-
-  if (bestBucket && bestScore > 0) {
-    if (!bestBucket.filled_by) bestBucket.filled_by = [];
-    bestBucket.filled_by.push(investment.id || investment._recordId);
+  if (!bestSlot && slots.find(function(s) { return !s.filled_by; })) {
+    bestSlot = slots.find(function(s) { return !s.filled_by; });
+  }
+  if (bestSlot) {
+    bestSlot.filled_by = investment.id || investment._recordId;
+    bestSlot.filled_name = investment.investmentName || investment.investment_name || '';
+    plan.slots = slots;
+    plan.buckets = slots;
     savePortfolioPlan(plan);
   }
 }
@@ -19593,6 +19611,23 @@ function renderMiDealflowTab() {
 }
 
 function renderMarketIntel() {
+  // Gate market intel for free users
+  var _miUser = getUser();
+  var _miTier = (_miUser && _miUser.tier) || 'free';
+  var _miIsAdmin = typeof isAdmin === 'function' && isAdmin();
+  if (_miTier === 'free' && !_miIsAdmin) {
+    var miEl = document.getElementById('marketintelContent');
+    if (miEl) {
+      miEl.innerHTML = '<div style="text-align:center;padding:60px 32px;">'
+        + '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>'
+        + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Market Intelligence</div>'
+        + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6;">Academy members get real-time market data, SEC filing trends, asset class benchmarks, and deal flow analytics across the private markets.</div>'
+        + '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+        + '</div>';
+    }
+    return;
+  }
+
   // Destroy existing charts
   Object.values(miCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
   miCharts = {};
@@ -22308,82 +22343,98 @@ function buildDashPathToGoal(d, branch, deals) {
   return '';
 }
 
-// ========== PORTFOLIO PLAN: Generation + Blueprint ==========
-
-var INCOME_ASSETS = ['Multi-Family', 'Self Storage', 'NNN', 'Mobile Home Parks', 'RV/Mobile Home Parks', 'Medical Receivables'];
-var GROWTH_ASSETS = ['Hotels/Hospitality', 'Hotels / Hospitality', 'Industrial', 'Retail', 'Single Family', 'Short Term Rental', 'Short-Term Rentals'];
-var LENDING_ASSETS = ['Private Debt / Credit', 'Lending', 'Debt'];
-var TAX_ASSETS = ['Oil & Gas', 'Oil & Gas / Energy'];
-
-function classifyAssetClass(ac) {
-  if (LENDING_ASSETS.includes(ac)) return 'diversifier';
-  if (TAX_ASSETS.includes(ac)) return 'taxAdvantaged';
-  if (GROWTH_ASSETS.includes(ac)) return 'growth';
-  return 'income';
-}
+// ========== PORTFOLIO PLAN: Generation + Blueprint (v2 — slot-based) ==========
 
 function generatePortfolioPlan(wizData, goalsData) {
   var branch = wizData._branch || wizData.branch || 'cashflow';
   var totalCapital = parseDollar(wizData.capital12mo) || parseDollar(wizData.growthCapital) || parseDollar(wizData.investableCapital) || (goalsData && goalsData.capitalAvailable ? parseDollar(goalsData.capitalAvailable) : 0) || 500000;
   var checkSize = parseDollar(wizData.checkSize) || 100000;
-  var riskTolerance = wizData.maxLossPct || wizData.riskTolerance || 'moderate';
-  var diversification = wizData.diversificationPref || 'balanced';
   var rawAssets = wizData.assetClasses || [];
+  var allDeals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
 
-  if (riskTolerance === '1-2%' || riskTolerance === 'conservative') riskTolerance = 'conservative';
-  else if (riskTolerance === '10%+' || riskTolerance === 'aggressive' || riskTolerance === 'no_limit') riskTolerance = 'aggressive';
-  else riskTolerance = 'moderate';
+  // Derive target income
+  var targetIncome = 0;
+  if (branch === 'cashflow') targetIncome = parseDollar(wizData.targetCashFlow) || (goalsData ? (goalsData.targetIncome || 0) : 0) || 100000;
+  else if (branch === 'growth') targetIncome = Math.round(totalCapital * 0.15); // 15% IRR as income proxy
+  else if (branch === 'tax') targetIncome = parseDollar(wizData.taxableIncome) || 100000;
 
-  var alloc;
-  if (branch === 'cashflow') alloc = { income: 60, growth: 25, diversifier: 15 };
-  else if (branch === 'growth') alloc = { income: 20, growth: 60, diversifier: 20 };
-  else if (branch === 'tax') alloc = { income: 25, growth: 20, taxAdvantaged: 40, diversifier: 15 };
-  else alloc = { income: 50, growth: 30, diversifier: 20 };
+  // Map wizard asset classes to deal database names
+  var assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
+  var lendingAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
+  var mappedAssets = rawAssets.filter(function(a) { return !lendingAliases.includes(a); }).map(function(a) { return assetMap[a] || a; });
+  var wantsLending = rawAssets.some(function(a) { return lendingAliases.includes(a); });
+  if (wantsLending && !mappedAssets.includes('Lending')) mappedAssets.push('Lending');
+  if (mappedAssets.length === 0) mappedAssets = ['Multi-Family'];
 
-  if (riskTolerance === 'conservative') { alloc.income = (alloc.income || 0) + 10; alloc.growth = Math.max(0, (alloc.growth || 0) - 10); }
-  else if (riskTolerance === 'aggressive') { alloc.income = Math.max(0, (alloc.income || 0) - 10); alloc.growth = (alloc.growth || 0) + 10; }
-
-  var bucketAssets = { income: [], growth: [], diversifier: [], taxAdvantaged: [] };
-  rawAssets.forEach(function(ac) { var type = classifyAssetClass(ac); if (bucketAssets[type]) bucketAssets[type].push(ac); });
-  if (bucketAssets.income.length === 0) bucketAssets.income = ['Multi-Family'];
-  if (bucketAssets.growth.length === 0 && alloc.growth > 0) bucketAssets.growth = bucketAssets.income.slice(0, 1);
-  if (bucketAssets.diversifier.length === 0) bucketAssets.diversifier = ['Lending'];
-
-  if (diversification === 'focused') {
-    alloc.income = (alloc.income || 0) + (alloc.growth || 0);
-    alloc.growth = 0;
-    bucketAssets.income = [...new Set([...bucketAssets.income, ...bucketAssets.growth])];
-    bucketAssets.growth = [];
+  // Get average CoC per asset class from real deal data
+  var cocByClass = {};
+  allDeals.forEach(function(d) {
+    if (d.isStale || d.status === 'Closed') return;
+    var ac = d.assetClass || '';
+    var coc = d.cashOnCash || d.preferredReturn || 0;
+    if (coc > 0 && coc < 1) {
+      if (!cocByClass[ac]) cocByClass[ac] = [];
+      cocByClass[ac].push(coc);
+    }
+  });
+  function avgCocFor(ac) {
+    // Check direct match
+    if (cocByClass[ac] && cocByClass[ac].length > 0) return cocByClass[ac].reduce(function(a, b) { return a + b; }, 0) / cocByClass[ac].length;
+    // Check lending strategy
+    if (ac === 'Lending') {
+      var lendingYields = [];
+      allDeals.forEach(function(d) { if (d.strategy === 'Lending' && (d.cashOnCash || d.preferredReturn) > 0) lendingYields.push(d.cashOnCash || d.preferredReturn); });
+      if (lendingYields.length > 0) return lendingYields.reduce(function(a, b) { return a + b; }, 0) / lendingYields.length;
+    }
+    return 0.08; // default 8%
   }
 
-  var totalDeals = Math.max(1, Math.round(totalCapital / checkSize));
-  var buckets = [];
-  var bucketMeta = {
-    income:       { label: 'Income',      color: '#51BE7B', strategies: ['Income', 'Core-Plus'],      minCoC: 0.07, minIRR: null },
-    growth:       { label: 'Growth',      color: '#2563EB', strategies: ['Value-Add', 'Development'], minCoC: null, minIRR: 0.15 },
-    diversifier:  { label: 'Diversifier', color: '#8b5cf6', strategies: ['Lending'],                  minCoC: 0.06, minIRR: null },
-    taxAdvantaged:{ label: 'Tax Shield',  color: '#CF7A30', strategies: ['Tax-Advantaged'],            minCoC: null, minIRR: null }
-  };
+  // Build slots: distribute across asset classes, round-robin
+  var slots = [];
+  var runningIncome = 0;
+  var slotId = 1;
+  var currentYear = new Date().getFullYear();
+  var dealsPerYear = Math.max(1, Math.min(4, Math.floor(totalCapital / checkSize / 3))); // ~1-4 deals/yr
+  if (dealsPerYear < 1) dealsPerYear = 1;
 
-  Object.keys(alloc).forEach(function(type) {
-    var pct = alloc[type];
-    if (!pct || pct <= 0) return;
-    var meta = bucketMeta[type] || bucketMeta.income;
-    buckets.push({
-      id: type, label: meta.label, color: meta.color, pct: pct,
-      capital: Math.round(totalCapital * pct / 100),
-      target_deals: Math.max(1, Math.round(totalDeals * pct / 100)),
-      criteria: { asset_classes: bucketAssets[type] || [], strategies: meta.strategies, min_coc: meta.minCoC, min_irr: meta.minIRR },
-      filled_by: []
+  // Keep adding slots until we hit the target income (or a reasonable max)
+  var maxSlots = Math.max(Math.ceil(totalCapital / checkSize), 20);
+  var acIndex = 0;
+
+  while (runningIncome < targetIncome && slots.length < maxSlots) {
+    var ac = mappedAssets[acIndex % mappedAssets.length];
+    var isLending = (ac === 'Lending');
+    var coc = avgCocFor(ac);
+    var estIncome = Math.round(checkSize * coc);
+    var year = currentYear + Math.floor(slots.length / dealsPerYear);
+
+    slots.push({
+      id: slotId,
+      asset_class: ac,
+      strategy: isLending ? 'Lending' : (branch === 'growth' ? 'Value-Add' : 'Income'),
+      check_size: checkSize,
+      target_coc: Math.round(coc * 100) / 100,
+      est_income: estIncome,
+      year: year,
+      filled_by: null, // portfolio investment id when filled
+      filled_name: null // investment name when filled
     });
-  });
 
-  var targetIncome = null, targetIRR = null, targetTaxOffset = null;
-  if (branch === 'cashflow') targetIncome = parseDollar(wizData.targetCashFlow) || (goalsData ? (goalsData.targetIncome || 0) : 0) || 0;
-  else if (branch === 'growth') targetIRR = parseFloat(wizData.minIRR) || 0.18;
-  else if (branch === 'tax') targetTaxOffset = parseDollar(wizData.taxableIncome) || (goalsData ? (goalsData.taxReduction || 0) : 0) || 0;
+    runningIncome += estIncome;
+    slotId++;
+    acIndex++;
+  }
 
-  return { total_capital: totalCapital, check_size: checkSize, target_annual_income: targetIncome, target_irr: targetIRR, target_tax_offset: targetTaxOffset, buckets: buckets, generated_from: 'wizard' };
+  return {
+    target_income: targetIncome,
+    total_capital: totalCapital,
+    check_size: checkSize,
+    deals_per_year: dealsPerYear,
+    blended_coc: slots.length > 0 ? Math.round(slots.reduce(function(s, sl) { return s + sl.target_coc; }, 0) / slots.length * 100) / 100 : 0.08,
+    slots: slots,
+    buckets: slots, // backwards compat with Supabase column name
+    generated_from: 'wizard'
+  };
 }
 
 async function savePortfolioPlan(plan) {
@@ -22391,88 +22442,98 @@ async function savePortfolioPlan(plan) {
   var user = getUser();
   if (!user || !user.token) return;
   try {
-    await fetch(SYNC_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token }, body: JSON.stringify({ type: 'plan', data: plan }) });
+    // Store slots in the buckets JSONB column (schemaless)
+    var payload = { total_capital: plan.total_capital, check_size: plan.check_size, target_annual_income: plan.target_income, buckets: plan.slots || plan.buckets, generated_from: plan.generated_from || 'manual' };
+    await fetch(SYNC_API, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token }, body: JSON.stringify({ type: 'plan', data: payload }) });
   } catch(e) { console.warn('Failed to save portfolio plan:', e.message); }
 }
 
-function getMatchingDealsForBucket(bucket, deals, stages) {
-  if (!bucket || !bucket.criteria || !deals) return [];
-  var c = bucket.criteria, assetClasses = c.asset_classes || [], minCoC = c.min_coc || 0, minIRR = c.min_irr || 0;
+function getMatchingDealsForSlot(slot, deals, stages) {
+  if (!slot || !deals) return [];
   return deals.filter(function(deal) {
-    if (deal.status === 'Closed' || deal.status === 'Inactive' || deal.isStale) return false;
+    if (deal.isStale || deal.status === 'Closed' || deal.status === 'Inactive') return false;
     if (stages && stages[deal.id] === 'passed') return false;
-    if (assetClasses.length > 0) {
-      var matchesAsset = assetClasses.some(function(ac) { return deal.assetClass === ac; });
-      var matchesLending = assetClasses.some(function(ac) { return LENDING_ASSETS.includes(ac); }) && deal.strategy === 'Lending';
-      if (!matchesAsset && !matchesLending) return false;
-    }
-    if (minCoC > 0 && (deal.cashOnCash || 0) < minCoC && (deal.preferredReturn || 0) < minCoC) return false;
-    if (minIRR > 0 && (deal.targetIRR || deal.target_irr || 0) < minIRR) return false;
+    // Asset class match
+    if (slot.asset_class === 'Lending') {
+      if (deal.strategy !== 'Lending') return false;
+    } else if (deal.assetClass !== slot.asset_class) return false;
+    // Yield match (within 2% of target)
+    var dealYield = deal.cashOnCash || deal.preferredReturn || 0;
+    if (dealYield > 0 && slot.target_coc > 0 && dealYield < slot.target_coc * 0.7) return false;
     return true;
   });
 }
 
 function buildDashBlueprint(plan, portfolio, deals, stages) {
-  if (!plan || !plan.buckets || plan.buckets.length === 0) return '';
-  var buckets = plan.buckets, totalSlots = 0, filledSlots = 0;
-  buckets.forEach(function(b) { totalSlots += b.target_deals; filledSlots += (b.filled_by || []).length; });
+  if (!plan) return '';
+  var slots = plan.slots || plan.buckets || [];
+  if (!slots.length || !slots[0].asset_class) return ''; // Not slot-based data
+  var totalSlots = slots.length;
+  var filledSlots = slots.filter(function(s) { return s.filled_by; }).length;
+  var totalEstIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+  var filledIncome = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+  var targetIncome = plan.target_income || totalEstIncome;
 
-  var bucketsHtml = buckets.map(function(b) {
-    var filled = (b.filled_by || []).length, target = b.target_deals, color = b.color || 'var(--primary)', dots = '';
-    for (var i = 0; i < target; i++) {
-      dots += i < filled
-        ? '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + color + ';margin:2px;"></span>'
-        : '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid ' + color + '40;margin:2px;box-sizing:border-box;"></span>';
+  // Build roster table rows
+  var rowsHtml = slots.map(function(slot, i) {
+    var isFilled = !!slot.filled_by;
+    var fillName = slot.filled_name || '';
+    var cocPct = Math.round((slot.target_coc || 0) * 100);
+    var yearLabel = slot.year ? String(slot.year) : '';
+
+    if (isFilled) {
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
+        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0;"></span>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + fillName + '</div>'
+        + '<div style="font-size:11px;color:var(--text-muted);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; ' + cocPct + '% CoC &middot; $' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
+        + '</div>'
+        + '</div>';
+    } else {
+      var matchCount = deals ? getMatchingDealsForSlot(slot, deals, stages).length : 0;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
+        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;box-sizing:border-box;"></span>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);">' + slot.asset_class + ' &middot; $' + (slot.check_size || 0).toLocaleString() + ' &middot; ~' + cocPct + '% CoC &middot; ~$' + (slot.est_income || 0).toLocaleString() + '/yr</div>'
+        + (matchCount > 0 ? '<div style="font-size:11px;color:var(--primary);margin-top:2px;">' + matchCount + ' matching deal' + (matchCount !== 1 ? 's' : '') + '</div>' : '')
+        + '</div>'
+        + (yearLabel ? '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);flex-shrink:0;">' + yearLabel + '</div>' : '')
+        + '</div>';
     }
-    return '<div style="flex:1;min-width:120px;background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;">'
-      + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:' + color + ';margin-bottom:8px;">' + b.label + '</div>'
-      + '<div style="font-family:var(--font-headline);font-size:22px;color:var(--text-dark);margin-bottom:2px;">' + b.pct + '%</div>'
-      + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-bottom:10px;">$' + (b.capital || 0).toLocaleString() + '</div>'
-      + '<div style="margin-bottom:6px;line-height:1.8;">' + dots + '</div>'
-      + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-secondary);">' + filled + ' of ' + target + ' filled</div>'
-      + '</div>';
   }).join('');
 
-  var filledListHtml = '', allFilledIds = [];
-  buckets.forEach(function(b) { (b.filled_by || []).forEach(function(id) { allFilledIds.push({ id: id, bucket: b }); }); });
-  if (allFilledIds.length > 0 && portfolio) {
-    var items = allFilledIds.map(function(entry) {
-      var inv = portfolio.find(function(p) { return p.id === entry.id || p._recordId === entry.id; });
-      if (!inv) return '';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">'
-        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + (entry.bucket.color || 'var(--primary)') + ';flex-shrink:0;"></span>'
-        + '<div style="flex:1;min-width:0;"><div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (inv.investmentName || inv.investment_name || 'Investment') + '</div>'
-        + '<div style="font-size:11px;color:var(--text-muted);">' + entry.bucket.label + ' / ' + (inv.assetClass || inv.asset_class || '') + '</div></div></div>';
-    }).filter(Boolean).join('');
-    if (items) filledListHtml = '<div style="margin-top:16px;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Filled Slots</div>' + items + '</div>';
-  }
-
-  var nextSlotHtml = '', nextBucket = buckets.find(function(b) { return (b.filled_by || []).length < b.target_deals; });
-  if (nextBucket && deals) {
-    var matching = getMatchingDealsForBucket(nextBucket, deals, stages);
-    var assetLabel = (nextBucket.criteria.asset_classes || []).slice(0, 2).join(', ') || 'Any';
-    var yieldLabel = nextBucket.criteria.min_coc ? Math.round(nextBucket.criteria.min_coc * 100) + '%+ CoC' : (nextBucket.criteria.min_irr ? Math.round(nextBucket.criteria.min_irr * 100) + '%+ IRR' : '');
+  // Next unfilled slot
+  var nextSlot = slots.find(function(s) { return !s.filled_by; });
+  var nextSlotHtml = '';
+  if (nextSlot && deals) {
+    var matching = getMatchingDealsForSlot(nextSlot, deals, stages);
     nextSlotHtml = '<div style="margin-top:16px;padding:14px 18px;background:linear-gradient(135deg,rgba(81,190,123,0.06),rgba(37,99,235,0.06));border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
       + '<div style="flex:1;min-width:200px;">'
-      + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Next Slot to Fill</div>'
-      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;"><strong>' + nextBucket.label + '</strong> / ' + assetLabel + (yieldLabel ? ' / ' + yieldLabel : '') + '</div>'
-      + '<div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:4px;">' + matching.length + ' deal' + (matching.length !== 1 ? 's' : '') + ' match this slot</div>'
+      + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Next Investment</div>'
+      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;"><strong>' + nextSlot.asset_class + '</strong> &middot; $' + (nextSlot.check_size || 0).toLocaleString() + ' &middot; ~' + Math.round((nextSlot.target_coc || 0) * 100) + '% CoC</div>'
+      + '<div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:4px;">' + matching.length + ' deal' + (matching.length !== 1 ? 's' : '') + ' match</div>'
       + '</div>'
       + '<button onclick="navigateTo(\'deals\')" style="flex-shrink:0;padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">View Matching Deals &rarr;</button>'
       + '</div>';
   }
 
-  var summaryLine = totalSlots + ' deals &times; $' + (plan.check_size || 100000).toLocaleString() + ' avg';
-  if (plan.target_annual_income) summaryLine += ' &rarr; $' + plan.target_annual_income.toLocaleString() + '/yr target';
+  // Summary
+  var blendedPct = plan.blended_coc ? Math.round(plan.blended_coc * 100) : Math.round(slots.reduce(function(s, sl) { return s + (sl.target_coc || 0); }, 0) / slots.length * 100);
 
   return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow-card);">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
-    + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Your Portfolio Plan</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    + '<div>'
+    + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Your Investment Plan</div>'
+    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">' + filledSlots + ' of ' + totalSlots + ' investments &middot; $' + filledIncome.toLocaleString() + ' of $' + targetIncome.toLocaleString() + '/yr</div>'
+    + '</div>'
     + '<button onclick="navigateTo(\'buybox\')" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;">Edit Plan</button>'
     + '</div>'
-    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:16px;">' + summaryLine + '</div>'
-    + '<div style="display:flex;gap:12px;flex-wrap:wrap;">' + bucketsHtml + '</div>'
-    + filledListHtml + nextSlotHtml
+    + '<div>' + rowsHtml + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:4px;font-family:var(--font-ui);font-size:12px;font-weight:700;">'
+    + '<span style="color:var(--text-muted);">Total: ' + totalSlots + ' deals &times; $' + (plan.check_size || 100000).toLocaleString() + ' avg &middot; ~' + blendedPct + '% blended CoC</span>'
+    + '<span style="color:var(--primary);">$' + totalEstIncome.toLocaleString() + '/yr</span>'
+    + '</div>'
+    + nextSlotHtml
     + '</div>';
 }
 
