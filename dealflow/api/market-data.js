@@ -51,6 +51,7 @@ export default async function handler(req, res) {
 
   // Resolve county FIPS from lat/lng using FCC Census Area API
   let resolvedCountyFips = fips || null;
+  let resolvedCountyName = null;
   if (!resolvedCountyFips && lat && lng) {
     try {
       const fccResp = await fetch(`https://geo.fcc.gov/api/census/area?lat=${lat}&lon=${lng}&format=json`);
@@ -58,6 +59,7 @@ export default async function handler(req, res) {
         const fccData = await fccResp.json();
         if (fccData.results && fccData.results.length > 0) {
           resolvedCountyFips = fccData.results[0].county_fips;
+          resolvedCountyName = fccData.results[0].county_name || null;
           if (!resolvedStateFips && resolvedCountyFips) {
             resolvedStateFips = resolvedCountyFips.substring(0, 2);
           }
@@ -167,10 +169,9 @@ export default async function handler(req, res) {
 
     if (countyFips && countyFips.length === 5) {
       try {
-        // BLS QCEW data via CSV endpoint (more reliable than API for county-level)
-        // Format: https://data.bls.gov/cew/data/api/YEAR/QTR/area/FIPS.csv
+        // BLS QCEW data via CSV endpoint
         const currentYear = new Date().getFullYear();
-        const qcewYear = currentYear - 1; // Latest complete year
+        const qcewYear = currentYear - 2; // Annual data lags ~18 months
 
         const qcewUrl = `https://data.bls.gov/cew/data/api/${qcewYear}/a/area/${countyFips}.csv`;
         const qcewResp = await fetch(qcewUrl);
@@ -180,41 +181,74 @@ export default async function handler(req, res) {
           const lines = csvText.split('\n');
           const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
 
+          // Supersector industry code → label mapping
+          const INDUSTRY_LABELS = {
+            '10': 'All Industries',
+            '101': 'Goods-Producing',
+            '1011': 'Natural Resources & Mining',
+            '1012': 'Construction',
+            '1013': 'Manufacturing',
+            '102': 'Service-Providing',
+            '1021': 'Trade, Transportation & Utilities',
+            '1022': 'Information',
+            '1023': 'Financial Activities',
+            '1024': 'Professional & Business Services',
+            '1025': 'Education & Health Services',
+            '1026': 'Leisure & Hospitality',
+            '1027': 'Other Services',
+            '1028': 'Government'
+          };
+
           const industries = [];
           const emplIdx = headers.indexOf('annual_avg_emplvl');
           const wageIdx = headers.indexOf('avg_annual_pay');
-          const titleIdx = headers.indexOf('industry_title');
-          const ownerIdx = headers.indexOf('own_title');
-          const sizeIdx = headers.indexOf('size_title');
+          const indCodeIdx = headers.indexOf('industry_code');
+          const ownCodeIdx = headers.indexOf('own_code');
+          const sizeCodeIdx = headers.indexOf('size_code');
+          const agglvlIdx = headers.indexOf('agglvl_code');
+          var totalEmpl = null;
 
           for (let i = 1; i < lines.length; i++) {
             const cols = lines[i].split(',').map(c => c.replace(/"/g, '').trim());
-            if (!cols[titleIdx]) continue;
+            if (!cols[indCodeIdx]) continue;
 
-            // Only get "Total, all sizes" and "Private" ownership rows for major industries
-            const owner = cols[ownerIdx] || '';
-            const size = cols[sizeIdx] || '';
-            if (!size.includes('all sizes')) continue;
-            if (!owner.includes('Private') && !owner.includes('Total')) continue;
+            const ownCode = cols[ownCodeIdx];
+            const sizeCode = cols[sizeCodeIdx];
+            const agglvl = cols[agglvlIdx];
+            const indCode = cols[indCodeIdx];
+
+            // size_code=0 means all sizes, own_code=0 is all ownership, 5 is private
+            if (sizeCode !== '0') continue;
+
+            // Capture total employment (all ownership, all industries, county total)
+            if (indCode === '10' && ownCode === '0' && agglvl === '70') {
+              totalEmpl = parseInt(cols[emplIdx]) || null;
+              continue;
+            }
+
+            // Get supersector level (agglvl=74) for private sector (own_code=5)
+            if (ownCode !== '5' || agglvl !== '74') continue;
+
+            const label = INDUSTRY_LABELS[indCode];
+            if (!label) continue;
 
             const empl = parseInt(cols[emplIdx]);
             const wage = parseInt(cols[wageIdx]);
-            if (!empl || empl < 100) continue;
+            if (!empl || empl < 50) continue;
 
             industries.push({
-              industry: cols[titleIdx],
+              industry: label,
               employment: empl,
-              avgAnnualPay: wage || null,
-              ownership: owner
+              avgAnnualPay: wage || null
             });
           }
 
-          // Sort by employment, take top industries
           industries.sort((a, b) => b.employment - a.employment);
           results.employment = {
             year: qcewYear,
             topIndustries: industries.slice(0, 12),
-            totalEmployment: industries.find(i => i.industry.includes('Total'))?.employment || null
+            totalEmployment: totalEmpl,
+            countyName: null // Will be enriched from FCC data
           };
         }
       } catch (e) {
@@ -263,7 +297,7 @@ export default async function handler(req, res) {
     results.risks = risks;
 
     // Include query params for deep-linking
-    results.query = { zip: zip || null, fips: resolvedCountyFips || null, stateAbbr: stateAbbr || null };
+    results.query = { zip: zip || null, fips: resolvedCountyFips || null, stateAbbr: stateAbbr || null, countyName: resolvedCountyName };
 
     return res.status(200).json({ success: true, ...results });
 

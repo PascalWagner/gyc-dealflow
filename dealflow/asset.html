@@ -2412,7 +2412,8 @@ function renderMarketIntelligence(data) {
     if (!industries.length) { empSection.style.display = 'none'; return; }
 
     var maxEmpl = industries[0].employment;
-    document.getElementById('employmentSubtitle').textContent = data.employment.year + ' annual averages' + (data.employment.totalEmployment ? ' · ' + data.employment.totalEmployment.toLocaleString() + ' total jobs' : '');
+    var countyLabel = (data.query && data.query.countyName) ? data.query.countyName + ', ' + (data.query.stateAbbr || '') + ' · ' : '';
+    document.getElementById('employmentSubtitle').textContent = countyLabel + data.employment.year + ' annual averages' + (data.employment.totalEmployment ? ' · ' + data.employment.totalEmployment.toLocaleString() + ' total jobs' : '');
 
     var listHtml = '';
     for (var i = 0; i < industries.length; i++) {
