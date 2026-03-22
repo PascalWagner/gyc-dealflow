@@ -9720,13 +9720,13 @@ function renderCardStageExtras(deal) {
     const total = getDDTotalQuestions(deal);
     const pct = total > 0 ? Math.min(Math.round((done / total) * 100), 100) : 0;
     const btnLabel = done > 0 ? 'Continue DD (' + done + '/' + total + ')' : 'Start DD Checklist';
-    return '<div style="margin-top:8px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-      '<span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">DD Progress</span>' +
-      '<span style="font-size:10px;font-weight:700;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-muted)') + ';">' + done + ' of ~' + total + '</span></div>' +
-      '<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">' +
-      '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:2px;transition:width 0.3s;"></div></div>' +
-      '<a href="deal.html?id=' + deal.id + '" onclick="event.stopPropagation()" style="display:block;margin-top:6px;padding:6px 10px;background:rgba(81,190,123,0.08);border-radius:6px;font-size:11px;font-weight:700;color:var(--primary);text-align:center;text-decoration:none;">' + btnLabel + '</a>' +
+    return '<div style="margin-top:12px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+      '<span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">DD Progress</span>' +
+      '<span style="font-size:11px;font-weight:600;color:' + (pct >= 60 ? 'var(--primary)' : 'var(--text-secondary)') + ';">' + done + ' of ' + total + ' items</span></div>' +
+      '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">' +
+      '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--primary),#3bba78);border-radius:3px;transition:width 0.3s;"></div></div>' +
+      '<a href="deal.html?id=' + deal.id + '" onclick="event.stopPropagation()" style="display:block;margin-top:10px;padding:10px 14px;background:var(--primary);border-radius:8px;font-size:13px;font-weight:700;color:#fff;text-align:center;text-decoration:none;">' + btnLabel + '</a>' +
       '</div>';
   } else if (stage === 'diligence') {
     return '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">' +
@@ -12316,10 +12316,10 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 // Accreditation → Goal → Baseline → 90-day → 12-mo → Net worth
 //   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
-  common_start: [15, 0],
-  cashflow: [23, 4, 21, 22, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
-  growth: [23, 5, 21, 22, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
-  tax: [23, 6, 21, 22, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
+  common_start: [15, 21, 22, 0],
+  cashflow: [23, 4, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
+  growth: [26, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
+  tax: [27, 6, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
   common_end: [20]
 };
 
@@ -12328,7 +12328,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital', 'Growth Priority', 'Tax Baseline'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -12339,10 +12339,9 @@ function getPhaseLabel() {
 // Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
 // 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=Plan
 const STEP_TO_PHASE = {
-  15: 0,                 // accreditation → You
+  15: 0, 21: 0, 22: 0,  // accreditation, income source, RE pro → You
   0: 1,                  // goalSelect → Goal
-  23: 1, 24: 1, 4: 1, 5: 1, 6: 1,  // baseline, 90-day, 12-mo target → Goal
-  21: 1, 22: 1,          // income source, RE pro (tax branch) → Goal
+  23: 1, 24: 1, 4: 1, 5: 1, 6: 1, 26: 1, 27: 1,  // baseline, 90-day, targets, growth pref, tax baseline → Goal
   8: 2, 25: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
   9: 2,                  // loss tolerance → Finances
   10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 16: 3, 20: 3  // asset class, strategy, operator focus, lockup, dist, LP network, completion → Preferences
@@ -12507,7 +12506,11 @@ const WIZARD_STEPS = [
     timerSec: 30
   },
   // 25: 90-day deployable capital (radio buttons like 12-mo)
-  { type: 'capital90Day' }
+  { type: 'capital90Day' },
+  // 26: Growth investment priority (growth branch)
+  { type: 'growthPriority' },
+  // 27: Tax baseline — annual taxable income (tax branch)
+  { type: 'taxBaseline' }
 ];
 
 // Asset class definitions with goal-specific context
@@ -13111,6 +13114,91 @@ function renderWizardStep() {
     return;
   }
 
+  // ===== SCREEN 26: GROWTH INVESTMENT PRIORITY =====
+  if (step.type === 'growthPriority') {
+    html += '<div class="wizard-card-title">What\u2019s your investment priority?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This helps us rank deals by total return potential vs. capital preservation.</div>';
+    var growthOptions = [
+      { val: 'max_return', label: 'Highest projected returns', desc: 'I\u2019ll accept longer lockups and less liquidity for maximum upside', icon: '\uD83D\uDE80' },
+      { val: 'balanced', label: 'Balanced \u2014 some cash now, some growth', desc: 'A mix of income-producing and appreciation-focused deals', icon: '\u2696\uFE0F' },
+      { val: 'preservation', label: 'Capital preservation first', desc: 'Protect my principal \u2014 I\u2019ll take lower returns for less risk', icon: '\uD83D\uDEE1\uFE0F' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    growthOptions.forEach(function(opt) {
+      var isSel = wizardData.growthPriority === opt.val;
+      html += '<div onclick="wizardData.growthPriority=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 27: TAX BASELINE (annual taxable income) =====
+  if (step.type === 'taxBaseline') {
+    html += '<div class="wizard-card-title">What\u2019s your annual taxable income?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:16px;">This helps us size strategies to your actual tax situation.</div>';
+    var tbVal = parseDollar(wizardData.taxableIncomeBaseline) || 250000;
+    html += '<div class="wizard-target-input">';
+    html += '<input type="text" id="wizTargetInput" value="' + fmtDollar(tbVal) + '" data-key="taxableIncomeBaseline" inputmode="numeric" autocomplete="off">';
+    html += '<div class="wizard-target-suffix">/ year</div>';
+    html += '</div>';
+    var tbPresets = [100000, 200000, 500000, 1000000, 2000000];
+    var tbLabels = ['$100K','$200K','$500K','$1M','$2M+'];
+    html += '<div class="wizard-preset-chips">';
+    tbPresets.forEach(function(p, i) {
+      var sel = tbVal === p ? 'selected' : '';
+      html += '<div class="wizard-chip ' + sel + '" onclick="selectWizardPreset(' + p + ', \'taxableIncomeBaseline\')">' + tbLabels[i] + '</div>';
+    });
+    html += '</div>';
+    // Smart context based on income source + RE Pro
+    var tbCalc = 'At a 37% bracket, you\u2019re paying ~$' + Math.round(tbVal * 0.37).toLocaleString() + '/yr in federal taxes.';
+    html += '<div class="wizard-live-calc" id="wizLiveCalc">' + tbCalc + '</div>';
+    // Contextual note based on income source + RE Pro status
+    if (wizardData.incomeStructure && wizardData.reProfessional) {
+      var ctxNote = '';
+      if (wizardData.incomeStructure === 'w2' && wizardData.reProfessional === 'no') {
+        ctxNote = '<strong style="color:#f59e0b;">\u26A0\uFE0F W-2 without RE Pro status:</strong> Passive losses can only offset passive income \u2014 not your salary. We\u2019ll focus on strategies that generate passive losses you can use against your investment returns.';
+      } else if (wizardData.incomeStructure === 'w2' && wizardData.reProfessional === 'yes') {
+        ctxNote = '<strong style="color:#4ade80;">\u2705 W-2 + RE Pro status:</strong> You can deduct passive losses against your salary. This unlocks aggressive depreciation strategies like cost segregation and bonus depreciation.';
+      } else if (wizardData.incomeStructure === 'self_employed') {
+        ctxNote = '<strong style="color:#3b82f6;">\uD83D\uDEE0\uFE0F Self-employed:</strong> You have more flexibility with how losses flow through your entity structure. We\u2019ll match you with strategies that complement your business tax planning.';
+      } else if (wizardData.incomeStructure === 'mixed') {
+        ctxNote = '<strong style="color:#3b82f6;">\uD83D\uDD00 Mixed income:</strong> With multiple income sources, we can target depreciation strategies for both your passive and active income streams.';
+      }
+      if (ctxNote) {
+        html += '<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:12px;color:var(--text-secondary);line-height:1.5;">' + ctxNote + '</div>';
+      }
+    }
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    // Wire up live input
+    var tbInp = document.getElementById('wizTargetInput');
+    if (tbInp) {
+      tbInp.addEventListener('input', function() {
+        var n = parseDollar(this.value);
+        wizardData.taxableIncomeBaseline = String(n);
+        var calcEl = document.getElementById('wizLiveCalc');
+        if (calcEl && n > 0) calcEl.textContent = 'At a 37% bracket, you\u2019re paying ~$' + Math.round(n * 0.37).toLocaleString() + '/yr in federal taxes.';
+        document.querySelectorAll('.wizard-preset-chips .wizard-chip').forEach(function(c) { c.classList.remove('selected'); });
+      });
+      tbInp.addEventListener('blur', function() { var n = parseDollar(this.value); if (n > 0) this.value = fmtDollar(n); });
+      tbInp.addEventListener('focus', function() { var n = parseDollar(this.value); if (n > 0) this.value = String(n); });
+    }
+    return;
+  }
+
   // ===== SCREEN 7: CHECK SIZE =====
   if (step.type === 'checkSize') {
     html += '<div class="wizard-card-title">What\'s the most you\'d invest in a single deal?</div>';
@@ -13386,11 +13474,16 @@ function renderWizardStep() {
       { val: '5', label: '5 years', detail: 'Stabilized assets, longer hold syndications', count: lockCounts['5'] },
       { val: '5+', label: '5+ years', detail: 'Development, ground-up, opportunistic', count: lockCounts['5+'] }
     ];
+    // Branch-aware dimming: highlight options that fit the goal
+    var lockBranch = wizardData._branch || 'cashflow';
+    var lockHighlight = { cashflow: ['flexible','1','3'], growth: ['3','5','5+'], tax: [] };
+    var lockBranchHighlights = lockHighlight[lockBranch] || [];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     lockupOptions.forEach(function(opt) {
       var isSel = wizardData.lockup === opt.val;
+      var isDimmed = lockBranchHighlights.length > 0 && !lockBranchHighlights.includes(opt.val) && !isSel;
       var pct = lockTotal > 0 ? Math.round(opt.count / lockTotal * 100) : 0;
-      html += '<div onclick="wizardData.lockup=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div onclick="wizardData.lockup=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;' + (isDimmed ? 'opacity:0.45;' : '') + '">';
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
@@ -13447,10 +13540,15 @@ function renderWizardStep() {
       { val: 'Annual', label: 'Annually or more often', desc: 'Includes development and growth deals', count: annualTotal },
       { val: 'Any', label: 'No minimum \u2014 I\u2019m flexible', desc: 'Includes at-exit and event-driven payouts', count: anyTotal }
     ];
+    // Branch-aware dimming: cashflow highlights frequent payouts, growth highlights flexible
+    var distBranch = wizardData._branch || 'cashflow';
+    var distHighlight = { cashflow: ['Monthly','Quarterly'], growth: ['Annual','Any'], tax: [] };
+    var distBranchHighlights = distHighlight[distBranch] || [];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     distOptions.forEach(function(opt) {
       var isSel = wizardData.distributions === opt.val;
-      html += '<div onclick="wizardData.distributions=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      var isDimmed = distBranchHighlights.length > 0 && !distBranchHighlights.includes(opt.val) && !isSel;
+      html += '<div onclick="wizardData.distributions=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;' + (isDimmed ? 'opacity:0.45;' : '') + '">';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
       html += '<div style="flex-shrink:0;text-align:right;">';
@@ -13888,7 +13986,9 @@ function wizardNext() {
     distributionPrefs: 'distributions',
     accreditationPrefs: 'accreditation',
     incomeSource: 'incomeStructure',
-    reProfessional: 'reProfessional'
+    reProfessional: 'reProfessional',
+    growthPriority: 'growthPriority',
+    taxBaseline: 'taxableIncomeBaseline'
   };
   var reqField = curStep ? requiredMap[curStep.type] : null;
   // Asset classes and strategies are arrays — require at least 1
@@ -14000,8 +14100,10 @@ function syncWizardToBuyBox() {
   if (d.targetCashFlow) buyBox.targetCashFlow = d.targetCashFlow;
   if (d.growthCapital) buyBox.growthCapital = d.growthCapital;
   if (d.taxableIncome) buyBox.taxableIncome = d.taxableIncome;
+  if (d.taxableIncomeBaseline) buyBox.taxableIncomeBaseline = d.taxableIncomeBaseline;
   if (d.taxOffset) buyBox.taxOffset = d.taxOffset;
   if (d.riskTolerance) buyBox.riskTolerance = d.riskTolerance;
+  if (d.growthPriority) buyBox.growthPriority = d.growthPriority;
   if (d._branch) buyBox._branch = d._branch;
   if (d.lockup) buyBox.holdMin = d.lockup;
   if (d.distributions) {
