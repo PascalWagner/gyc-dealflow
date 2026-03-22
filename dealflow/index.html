@@ -2888,6 +2888,15 @@ html.cap-ios .debt-metric-select-mobile {
   #page-managers .filter-bar select {
     font-size: 12px !important;
   }
+  /* Hide sort & reset in expanded filters (sort is in ios-filter-row) */
+  #page-managers .filter-bar.ios-filters-open > #managersSortBy { display: none !important; }
+  #page-managers .filter-bar.ios-filters-open > button { display: none !important; }
+  /* Show reset link inside expanded filters */
+  #page-managers .filter-bar.ios-filters-open > .managers-reset-mobile { display: block !important; width: 100%; text-align: center; }
+  /* Card metrics: hide pipe separators on mobile */
+  .manager-card .metric-sep { display: none !important; }
+  .manager-card .manager-metrics { gap: 6px 12px !important; }
+  .manager-card .manager-metrics > span { font-size: 11px !important; }
 
   /* ── More menu: better spacing ── */
   .more-menu-section { margin-bottom: 20px; }
@@ -16291,8 +16300,8 @@ function renderManagersPage() {
             <div class="manager-card-meta">${c.ceo ? c.ceo : ''} ${c.ceo && c.type ? '·' : ''} ${c.type || ''}</div>
           </div>
         </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:6px 0;">
-          ${metrics.join('<span style="color:var(--border);">|</span>')}
+        <div class="manager-metrics" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:6px 0;">
+          ${metrics.join('<span class="metric-sep" style="color:var(--border);">|</span>')}
         </div>
         <div class="manager-card-badges">
           ${assetBadges}${moreCount > 0 ? `<span style="display:inline-block;padding:2px 8px;background:var(--bg-main);border:1px solid var(--border);border-radius:12px;font-size:10px;font-weight:600;color:var(--text-muted);">+${moreCount}</span>` : ''}
@@ -24023,6 +24032,22 @@ fetchBuyBoxFromGHL();
         </select>
       `;
       managersFilter.insertBefore(mRow, managersFilter.firstChild);
+      // Add mobile reset button (shown only when filters expanded)
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'managers-reset-mobile';
+      resetBtn.style.cssText = 'display:none;padding:8px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;color:var(--text-secondary);width:100%;';
+      resetBtn.textContent = 'Reset Filters';
+      resetBtn.onclick = function() {
+        document.getElementById('managersNameSearch').value='';
+        document.getElementById('managersAssetFilter').value='';
+        document.getElementById('managersTypeFilter').value='';
+        document.getElementById('managersMinDeals').value='0';
+        document.getElementById('managersSortBy').value='deals';
+        mRow.querySelector('input').value='';
+        mRow.querySelector('select').value='deals';
+        renderManagersPage();
+      };
+      managersFilter.appendChild(resetBtn);
     }
   }
 })();
