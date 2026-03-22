@@ -92,6 +92,7 @@ export default async function handler(req, res) {
         sponsors, unitCount: row.unit_count, yearBuilt: row.year_built,
         squareFootage: row.square_footage, occupancyPct: row.occupancy_pct,
         propertyType: row.property_type, secCik: row.sec_cik || '',
+        secEntityName: row.sec_entity_name || '',
         dateOfFirstSale: row.date_of_first_sale, totalAmountSold: row.total_amount_sold,
         totalInvestors: row.total_investors,
         pctFunded: (row.total_amount_sold && row.offering_size && row.offering_size > 0)
@@ -124,7 +125,8 @@ export default async function handler(req, res) {
           type,
           asset_classes,
           total_investors,
-          authorized_emails
+          authorized_emails,
+          booking_url
         )
       `)
       .not('investment_name', 'eq', '')
@@ -323,6 +325,7 @@ export default async function handler(req, res) {
           waterfallDetails: d.waterfall_details,
           // SEC EDGAR fields
           secCik: d.sec_cik || '',
+          secEntityName: d.sec_entity_name || '',
           dateOfFirstSale: d.date_of_first_sale,
           totalAmountSold: d.total_amount_sold,
           totalInvestors: d.total_investors,
