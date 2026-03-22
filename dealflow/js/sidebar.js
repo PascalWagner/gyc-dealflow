@@ -132,12 +132,7 @@
   html += '<div class="nav-section-label">Research</div>';
   html += navItem('marketintel', icons.marketIntel, 'Market Intel');
   html += navItem('deals', icons.deals, 'Deal Flow', { badge: 'dealCountBadge' });
-  html += navItem('debtfunds', icons.debtfunds, 'Debt Funds');
   html += navItem('managers', icons.operators, 'Operators');
-  if (isSPA) {
-    html += navItem('compare', icons.compare, 'Compare', { badge: 'compareCountBadge' });
-  }
-  html += navItem('assets', icons.assets, 'Assets', { id: 'navAssets', disabled: true, comingSoon: 'assetsComingSoon' });
 
   // SUPPORT
   html += '<div class="nav-section-label">Support</div>';
