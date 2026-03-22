@@ -21,10 +21,16 @@ export function generateSaveUrl(dealId, email) {
   return `https://dealflow.growyourcashflow.io/api/deal-save?id=${dealId}&email=${encodeURIComponent(email)}&token=${token}`;
 }
 
+export function generateSkipUrl(dealId, email) {
+  const token = generateSaveToken(email, dealId);
+  return `https://dealflow.growyourcashflow.io/api/deal-save?id=${dealId}&email=${encodeURIComponent(email)}&token=${token}&action=skip`;
+}
+
 export default async function handler(req, res) {
   setCors(res);
 
-  const { id, email, token } = req.query;
+  const { id, email, token, action } = req.query;
+  const stage = action === 'skip' ? 'passed' : 'saved';
 
   if (!id || !email || !token) {
     return res.redirect(302, `https://dealflow.growyourcashflow.io/deal.html?id=${id || ''}`);
@@ -47,23 +53,24 @@ export default async function handler(req, res) {
       .single();
 
     if (user) {
-      // Save deal to their pipeline (upsert to avoid duplicates)
       await supabase
         .from('deal_stages')
         .upsert({
           user_id: user.id,
           deal_id: id,
-          stage: 'saved',
+          stage,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id,deal_id',
-          ignoreDuplicates: true
+          onConflict: 'user_id,deal_id'
         });
     }
   } catch (err) {
-    console.error('Deal save error:', err.message);
+    console.error('Deal action error:', err.message);
   }
 
-  // Always redirect to deal page, even if save fails
-  return res.redirect(302, `https://dealflow.growyourcashflow.io/deal.html?id=${id}&saved=true`);
+  // Save → deal page, Skip → back to browse
+  const redirect = stage === 'passed'
+    ? 'https://dealflow.growyourcashflow.io'
+    : `https://dealflow.growyourcashflow.io/deal.html?id=${id}&saved=true`;
+  return res.redirect(302, redirect);
 }

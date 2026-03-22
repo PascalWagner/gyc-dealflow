@@ -16,7 +16,7 @@
 //   POST { dryRun: false } → returns full digest data for Make.com to send
 
 import { getAdminClient, setCors, ASSET_MAP } from './_supabase.js';
-import { generateSaveUrl } from './deal-save.js';
+import { generateSaveUrl, generateSkipUrl } from './deal-save.js';
 
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const DIGEST_SECRET = process.env.DIGEST_SECRET || '';
