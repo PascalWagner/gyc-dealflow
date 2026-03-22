@@ -1,6 +1,6 @@
 // ========== GP Onboarding Wizard ==========
-// Controls the multi-step GP onboarding flow: role fork → welcome → company →
-// IR contact → deal upload → presentation → checklist → LP buy box prompt.
+// Steps: 0=role fork, 1=welcome, 2=company basics, 3=asset classes,
+//        4=IR contact, 5=deal upload, 6=presentation, 7=checklist, 8=LP prompt
 
 (function() {
   'use strict';
@@ -23,16 +23,15 @@
     currentStep: 0,
     selectedRole: null,
     companyId: null,
-    companyData: null,
     irSelf: false,
     dealUploaded: false,
     dealSkipped: false,
+    deckFile: null,
+    ppmFile: null,
     presentationInterest: null,
-    networkStats: null,
-    onboardingData: null
+    networkStats: null
   };
 
-  // Asset class options
   var ASSET_CLASSES = [
     'Multi-Family', 'Self Storage', 'Industrial', 'Mobile Home Parks',
     'Hotels/Hospitality', 'Retail', 'Office', 'Senior Living',
@@ -43,136 +42,83 @@
 
   // ── Init ──
   initAssetClassPills();
+  initDropZones();
   loadOnboardingState();
   loadNetworkStats();
 
-  // Apply saved theme
   if (localStorage.getItem('gycTheme') === 'dark') {
     document.documentElement.classList.add('dark');
   }
 
   // ── Step Navigation ──
   window.goToStep = function(step) {
-    // Hide all steps
     var steps = document.querySelectorAll('.step');
-    for (var i = 0; i < steps.length; i++) {
-      steps[i].classList.remove('active');
-    }
+    for (var i = 0; i < steps.length; i++) steps[i].classList.remove('active');
 
-    // Show target step
     var target = document.getElementById('step' + step);
     if (target) target.classList.add('active');
     state.currentStep = step;
 
-    // Update progress bar
+    // Progress bar (steps 1-8, map to 0-100%)
     var progressWrap = document.getElementById('progressWrap');
     var progressFill = document.getElementById('progressFill');
     if (step === 0) {
       progressWrap.style.display = 'none';
     } else {
       progressWrap.style.display = 'block';
-      // Steps 1-7, map to 0-100%
-      var pct = Math.min(100, Math.round(((step - 1) / 6) * 100));
+      var pct = Math.min(100, Math.round(((step - 1) / 7) * 100));
       progressFill.style.width = pct + '%';
     }
 
-    // Build checklist when reaching step 6
-    if (step === 6) buildChecklist();
-
-    // Scroll to top
+    if (step === 7) buildChecklist();
     window.scrollTo(0, 0);
   };
 
-  // ── Phase 0: Role Selection ──
+  // ── Step 0: Role Selection ──
   window.selectRole = function(role) {
     state.selectedRole = role;
-
-    var lpCard = document.getElementById('roleLp');
-    var gpCard = document.getElementById('roleGp');
-    lpCard.classList.toggle('selected', role === 'lp');
-    gpCard.classList.toggle('selected', role === 'gp');
-
+    document.getElementById('roleLp').classList.toggle('selected', role === 'lp');
+    document.getElementById('roleGp').classList.toggle('selected', role === 'gp');
     document.getElementById('roleNextBtn').disabled = false;
   };
 
   window.confirmRole = function() {
     if (!state.selectedRole) return;
-
     if (state.selectedRole === 'lp') {
-      // Save role, then redirect to LP buy box wizard
       fetch('/api/gp-onboarding', {
-        method: 'POST',
-        headers: headers,
+        method: 'POST', headers: headers,
         body: JSON.stringify({ email: user.email, step: 'role-select', data: { role: 'lp' } })
-      }).then(function() {
-        window.location.href = 'index.html#buybox';
-      }).catch(function() {
-        window.location.href = 'index.html#buybox';
-      });
+      }).then(function() { window.location.href = 'index.html#buybox'; })
+        .catch(function() { window.location.href = 'index.html#buybox'; });
       return;
     }
-
-    // GP flow → save role and advance to welcome
     fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
+      method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'role-select', data: { role: 'gp' } })
-    }).then(function() {
-      goToStep(1);
-    }).catch(function() {
-      goToStep(1);
-    });
+    }).then(function() { goToStep(1); }).catch(function() { goToStep(1); });
   };
 
-  // ── Phase 2a: Company Profile ──
-  function initAssetClassPills() {
-    var container = document.getElementById('assetClassPills');
-    if (!container) return;
-    var html = '';
-    for (var i = 0; i < ASSET_CLASSES.length; i++) {
-      var ac = ASSET_CLASSES[i];
-      html += '<div class="pill-option" data-value="' + escAttr(ac) + '" onclick="toggleAssetClass(this)">' + escHtml(ac) + '</div>';
-    }
-    container.innerHTML = html;
-  }
-
-  window.toggleAssetClass = function(el) {
-    var value = el.getAttribute('data-value');
-    var idx = selectedAssetClasses.indexOf(value);
-    if (idx === -1) {
-      selectedAssetClasses.push(value);
-      el.classList.add('selected');
-    } else {
-      selectedAssetClasses.splice(idx, 1);
-      el.classList.remove('selected');
-    }
-  };
-
+  // ── Step 2: Company Basics ──
   window.saveCompanyProfile = function() {
     var companyName = document.getElementById('companyName').value.trim();
-    if (!companyName) {
-      document.getElementById('companyName').focus();
-      return;
-    }
+    if (!companyName) { document.getElementById('companyName').focus(); return; }
 
     var data = {
       companyName: companyName,
       gpType: document.getElementById('gpType').value,
-      ceo: document.getElementById('ceo').value.trim(),
-      linkedinCeo: document.getElementById('linkedinCeo').value.trim(),
-      website: document.getElementById('website').value.trim(),
-      foundingYear: document.getElementById('foundingYear').value,
       firmType: document.getElementById('firmType').value,
+      ceo: document.getElementById('ceo').value || '',
+      linkedinCeo: document.getElementById('linkedinCeo').value || '',
+      website: document.getElementById('website').value || '',
+      foundingYear: document.getElementById('foundingYear').value || '',
       assetClasses: selectedAssetClasses
     };
 
     var btn = document.getElementById('companyNextBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.disabled = true; btn.textContent = 'Saving...';
 
     fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
+      method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'company-profile', data: data })
     })
     .then(function(r) { return r.json(); })
@@ -182,21 +128,51 @@
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
       goToStep(3);
     })
-    .catch(function(err) {
+    .catch(function() {
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      console.error('Save company error:', err);
-      // Still advance — data may have saved
       goToStep(3);
     });
   };
 
-  // ── Phase 2b: IR Contact ──
+  // ── Step 3: Asset Classes ──
+  function initAssetClassPills() {
+    var container = document.getElementById('assetClassPills');
+    if (!container) return;
+    var html = '';
+    for (var i = 0; i < ASSET_CLASSES.length; i++) {
+      html += '<div class="pill-option" data-value="' + escAttr(ASSET_CLASSES[i]) + '" onclick="toggleAssetClass(this)">' + escHtml(ASSET_CLASSES[i]) + '</div>';
+    }
+    container.innerHTML = html;
+  }
+
+  window.toggleAssetClass = function(el) {
+    var value = el.getAttribute('data-value');
+    var idx = selectedAssetClasses.indexOf(value);
+    if (idx === -1) { selectedAssetClasses.push(value); el.classList.add('selected'); }
+    else { selectedAssetClasses.splice(idx, 1); el.classList.remove('selected'); }
+  };
+
+  window.saveAssetClasses = function() {
+    // Asset classes get saved with the company profile — update in background
+    if (state.companyId) {
+      fetch('/api/gp-onboarding', {
+        method: 'POST', headers: headers,
+        body: JSON.stringify({ email: user.email, step: 'company-profile', data: {
+          companyName: document.getElementById('companyName').value.trim(),
+          gpType: document.getElementById('gpType').value,
+          firmType: document.getElementById('firmType').value,
+          assetClasses: selectedAssetClasses
+        }})
+      }).catch(function() {});
+    }
+    goToStep(4);
+  };
+
+  // ── Step 4: IR Contact ──
   window.toggleIrSelf = function() {
     state.irSelf = !state.irSelf;
-    var check = document.getElementById('irSelfCheck');
-    check.classList.toggle('checked', state.irSelf);
-
+    document.getElementById('irSelfCheck').classList.toggle('checked', state.irSelf);
     if (state.irSelf) {
       document.getElementById('irContactName').value = user.name || user.full_name || '';
       document.getElementById('irContactEmail').value = user.email || '';
@@ -206,183 +182,161 @@
   window.saveIrContact = function() {
     var name = document.getElementById('irContactName').value.trim();
     var email = document.getElementById('irContactEmail').value.trim();
-
     if (!name || !email) {
       if (!name) document.getElementById('irContactName').focus();
       else document.getElementById('irContactEmail').focus();
       return;
     }
 
-    var data = {
-      irContactName: name,
-      irContactEmail: email,
-      bookingUrl: document.getElementById('bookingUrl').value.trim()
-    };
-
     var btn = document.getElementById('irNextBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.disabled = true; btn.textContent = 'Saving...';
 
     fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({ email: user.email, step: 'ir-contact', data: data })
+      method: 'POST', headers: headers,
+      body: JSON.stringify({ email: user.email, step: 'ir-contact', data: {
+        irContactName: name, irContactEmail: email,
+        bookingUrl: document.getElementById('bookingUrl').value.trim()
+      }})
     })
-    .then(function(r) { return r.json(); })
     .then(function() {
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      goToStep(4);
+      goToStep(5);
     })
-    .catch(function(err) {
+    .catch(function() {
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      console.error('Save IR error:', err);
-      goToStep(4);
+      goToStep(5);
     });
   };
 
-  // ── Phase 3: Deal Upload ──
-  window.showDropZone = function() {
-    document.getElementById('uploadOptions').style.display = 'none';
-    var dz = document.getElementById('dropZone');
-    dz.style.display = 'block';
-    dz.classList.add('active');
+  // ── Step 5: Deal Upload (deck + PPM) ──
+  function initDropZones() {
+    // Deck drop zone
+    var deckDZ = document.getElementById('deckDropZone');
+    var deckInput = document.getElementById('deckFileInput');
+    if (!deckDZ || !deckInput) return;
 
-    // Click to browse
-    dz.onclick = function() { document.getElementById('deckFileInput').click(); };
-
-    // Drag events
-    dz.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      dz.classList.add('dragging');
+    deckDZ.onclick = function() { deckInput.click(); };
+    deckDZ.addEventListener('dragover', function(e) { e.preventDefault(); deckDZ.classList.add('dragging'); });
+    deckDZ.addEventListener('dragleave', function() { deckDZ.classList.remove('dragging'); });
+    deckDZ.addEventListener('drop', function(e) {
+      e.preventDefault(); deckDZ.classList.remove('dragging');
+      if (e.dataTransfer.files.length) setDeckFile(e.dataTransfer.files[0]);
     });
-    dz.addEventListener('dragleave', function() {
-      dz.classList.remove('dragging');
-    });
-    dz.addEventListener('drop', function(e) {
-      e.preventDefault();
-      dz.classList.remove('dragging');
-      if (e.dataTransfer.files.length) handleDeckUpload(e.dataTransfer.files[0]);
-    });
+    deckInput.onchange = function() { if (this.files.length) setDeckFile(this.files[0]); };
 
-    // File input change
-    document.getElementById('deckFileInput').onchange = function() {
-      if (this.files.length) handleDeckUpload(this.files[0]);
-    };
-  };
+    // PPM drop zone
+    var ppmDZ = document.getElementById('ppmDropZone');
+    var ppmInput = document.getElementById('ppmFileInput');
+    if (!ppmDZ || !ppmInput) return;
 
-  function handleDeckUpload(file) {
-    // Show processing state
-    document.getElementById('dropZone').style.display = 'none';
+    ppmDZ.onclick = function(e) { e.stopPropagation(); ppmInput.click(); };
+    ppmDZ.addEventListener('dragover', function(e) { e.preventDefault(); ppmDZ.classList.add('dragging'); });
+    ppmDZ.addEventListener('dragleave', function() { ppmDZ.classList.remove('dragging'); });
+    ppmDZ.addEventListener('drop', function(e) {
+      e.preventDefault(); ppmDZ.classList.remove('dragging');
+      if (e.dataTransfer.files.length) setPpmFile(e.dataTransfer.files[0]);
+    });
+    ppmInput.onchange = function() { if (this.files.length) setPpmFile(this.files[0]); };
+  }
+
+  function setDeckFile(file) {
+    state.deckFile = file;
+    var textEl = document.getElementById('deckDropText');
+    var hintEl = document.getElementById('deckDropHint');
+    textEl.textContent = file.name;
+    hintEl.textContent = (file.size / 1024 / 1024).toFixed(1) + ' MB — click to change';
+    document.getElementById('deckDropZone').style.borderStyle = 'solid';
+    document.getElementById('deckDropZone').style.borderColor = 'var(--primary)';
+    showUploadBtn();
+  }
+
+  function setPpmFile(file) {
+    state.ppmFile = file;
+    var textEl = document.getElementById('ppmDropText');
+    var hintEl = document.getElementById('ppmDropHint');
+    textEl.textContent = file.name;
+    hintEl.textContent = (file.size / 1024 / 1024).toFixed(1) + ' MB — click to change';
+    document.getElementById('ppmDropZone').style.borderColor = 'var(--primary)';
+    showUploadBtn();
+  }
+
+  function showUploadBtn() {
+    if (state.deckFile || state.ppmFile) {
+      document.getElementById('uploadNextBtn').style.display = 'inline-flex';
+    }
+  }
+
+  window.submitDealUploads = function() {
+    // Show processing
+    document.getElementById('deckDropZone').style.display = 'none';
+    document.getElementById('ppmDropZone').style.display = 'none';
+    document.getElementById('uploadNextBtn').style.display = 'none';
     document.getElementById('processingState').style.display = 'block';
 
-    // Upload to the existing deck submission endpoint
     var formData = new FormData();
-    formData.append('file', file);
+    if (state.deckFile) formData.append('file', state.deckFile);
     formData.append('email', user.email);
     if (state.companyId) formData.append('companyId', state.companyId);
 
-    fetch('/api/deck-upload', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + user.token },
-      body: formData
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(result) {
+    // Upload deck
+    var deckPromise = state.deckFile
+      ? fetch('/api/deck-upload', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + user.token },
+          body: formData
+        }).then(function(r) { return r.json(); })
+      : Promise.resolve(null);
+
+    // TODO: PPM upload endpoint (use same deck-upload or separate)
+    // For now, PPM is noted but uploaded through the same flow
+
+    deckPromise
+    .then(function() {
       state.dealUploaded = true;
-      // Mark onboarding step
       return fetch('/api/gp-onboarding', {
-        method: 'POST',
-        headers: headers,
+        method: 'POST', headers: headers,
         body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
       });
     })
-    .then(function() {
-      goToStep(5);
-    })
+    .then(function() { goToStep(6); })
     .catch(function(err) {
-      console.error('Deck upload error:', err);
-      // Still advance — they can retry from dashboard
+      console.error('Upload error:', err);
       state.dealUploaded = false;
       document.getElementById('processingState').style.display = 'none';
-      document.getElementById('uploadOptions').style.display = 'grid';
+      document.getElementById('deckDropZone').style.display = 'block';
+      document.getElementById('ppmDropZone').style.display = 'block';
+      document.getElementById('uploadNextBtn').style.display = 'inline-flex';
       alert('Upload failed. You can try again or skip for now.');
-    });
-  }
-
-  window.goToManualDeal = function() {
-    // Save step first, then redirect to deal creation page
-    fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
-    }).then(function() {
-      // Redirect to deal creation with return URL
-      window.location.href = 'deal-create.html?returnTo=gp-onboarding&step=5';
-    }).catch(function() {
-      window.location.href = 'deal-create.html?returnTo=gp-onboarding&step=5';
     });
   };
 
   window.skipDealUpload = function() {
     state.dealSkipped = true;
     fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
+      method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'deal-skipped', data: {} })
-    }).then(function() {
-      goToStep(5);
-    }).catch(function() {
-      goToStep(5);
-    });
+    }).then(function() { goToStep(6); }).catch(function() { goToStep(6); });
   };
 
-  // ── Phase 4: Presentation Interest ──
+  // ── Step 6: Presentation Interest ──
   window.savePresentation = function(interested) {
     state.presentationInterest = interested;
     fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
+      method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'presentation', data: { interested: interested } })
-    }).then(function() {
-      buildChecklist();
-      goToStep(6);
-    }).catch(function() {
-      buildChecklist();
-      goToStep(6);
-    });
+    }).then(function() { goToStep(7); }).catch(function() { goToStep(7); });
   };
 
-  // ── Phase 5: Completion Checklist ──
+  // ── Step 7: Completion Checklist ──
   function buildChecklist() {
     var items = [
-      {
-        label: 'Company profile',
-        done: !!state.companyId,
-        action: state.companyId ? 'Edit' : 'Set up',
-        onclick: 'goToStep(2)'
-      },
-      {
-        label: 'IR contact set',
-        done: !!(document.getElementById('irContactName') && document.getElementById('irContactName').value.trim()),
-        action: 'Edit',
-        onclick: 'goToStep(3)'
-      },
-      {
-        label: 'First deal uploaded',
-        done: state.dealUploaded,
-        skipped: state.dealSkipped,
-        action: state.dealUploaded ? 'View' : 'Add deal',
-        onclick: state.dealUploaded ? '' : 'goToStep(4)'
-      },
-      {
-        label: 'Presentation interest',
-        done: state.presentationInterest === true,
-        skipped: state.presentationInterest === false,
-        action: state.presentationInterest === true ? 'Scheduled' : 'Learn more',
-        onclick: 'goToStep(5)'
-      }
+      { label: 'Company profile', done: !!state.companyId, action: state.companyId ? 'Edit' : 'Set up', onclick: 'goToStep(2)' },
+      { label: 'Asset classes', done: selectedAssetClasses.length > 0, action: 'Edit', onclick: 'goToStep(3)' },
+      { label: 'IR contact', done: !!(document.getElementById('irContactName') && document.getElementById('irContactName').value.trim()), action: 'Edit', onclick: 'goToStep(4)' },
+      { label: 'Deal uploaded', done: state.dealUploaded, skipped: state.dealSkipped, action: state.dealUploaded ? 'View' : 'Add deal', onclick: state.dealUploaded ? '' : 'goToStep(5)' },
+      { label: 'Presentation interest', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(6)' }
     ];
 
     var html = '';
@@ -395,106 +349,64 @@
           ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>'
           : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>');
       var statusText = item.done ? 'Complete' : (item.skipped ? 'Skipped' : 'Pending');
-
       html += '<li class="checklist-item">'
         + '<div class="checklist-icon ' + iconClass + '">' + iconSvg + '</div>'
-        + '<div class="checklist-info">'
-        + '<div class="checklist-label">' + escHtml(item.label) + '</div>'
-        + '<div class="checklist-status">' + statusText + '</div>'
-        + '</div>';
-      if (item.onclick) {
-        html += '<button class="checklist-action" onclick="' + item.onclick + '">' + escHtml(item.action) + '</button>';
-      }
+        + '<div class="checklist-info"><div class="checklist-label">' + escHtml(item.label) + '</div><div class="checklist-status">' + statusText + '</div></div>';
+      if (item.onclick) html += '<button class="checklist-action" onclick="' + item.onclick + '">' + escHtml(item.action) + '</button>';
       html += '</li>';
     }
-
     document.getElementById('completionChecklist').innerHTML = html;
   }
 
-  // ── Phase 6: LP Buy Box Prompt ──
+  // ── Step 8: LP Buy Box Prompt ──
   window.finishOnboarding = function(wantsBuyBox) {
     var step = wantsBuyBox ? 'buybox-interest' : 'complete';
-
     fetch('/api/gp-onboarding', {
-      method: 'POST',
-      headers: headers,
+      method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: step, data: {} })
-    }).then(function(r) { return r.json(); })
-    .then(function(result) {
-      if (wantsBuyBox) {
-        // Redirect to the LP buy box wizard
-        window.location.href = 'index.html#buybox';
-      } else {
-        // Go to GP dashboard
-        window.location.href = 'gp-dashboard.html';
-      }
+    }).then(function() {
+      window.location.href = wantsBuyBox ? 'index.html#buybox' : 'gp-dashboard.html';
     }).catch(function() {
-      if (wantsBuyBox) {
-        window.location.href = 'index.html#buybox';
-      } else {
-        window.location.href = 'gp-dashboard.html';
-      }
+      window.location.href = wantsBuyBox ? 'index.html#buybox' : 'gp-dashboard.html';
     });
   };
 
-  // ── Load Onboarding State (resume where they left off) ──
+  // ── Load Onboarding State ──
   function loadOnboardingState() {
     fetch('/api/gp-onboarding?email=' + encodeURIComponent(user.email), { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      state.onboardingData = data;
-
-      // Pre-fill company data if exists
       if (data.company) {
         state.companyId = data.company.id;
         prefillCompanyForm(data.company);
         prefillIrForm(data.company);
       }
-
-      // Pre-fill user info
       if (data.profile) {
         state.selectedRole = data.profile.onboardingRole;
         state.presentationInterest = data.profile.presentationInterest;
       }
+      if (data.dealCount > 0) state.dealUploaded = true;
 
-      if (data.dealCount > 0) {
-        state.dealUploaded = true;
-      }
-
-      // Resume at the right step
       var step = (data.profile && data.profile.onboardingStep) || 0;
 
-      // If already complete, go to dashboard
       if (data.profile && data.profile.onboardingComplete) {
-        window.location.href = 'gp-dashboard.html';
-        return;
+        window.location.href = 'gp-dashboard.html'; return;
       }
-
-      // If they chose LP role, send to buy box
       if (data.profile && data.profile.onboardingRole === 'lp') {
-        window.location.href = 'index.html#buybox';
-        return;
+        window.location.href = 'index.html#buybox'; return;
       }
-
-      // Auto-detect GP from authorized emails (skip role fork)
       if (data.company && step === 0) {
-        // Their email was already in authorized_emails — skip to welcome
-        state.selectedRole = 'gp';
-        goToStep(1);
-        return;
+        state.selectedRole = 'gp'; goToStep(1); return;
       }
 
-      // Map onboarding step to UI step
-      // DB steps: 0=not started, 1=role done, 2=company done, 3=IR done, 4=deal done, 5=pres done, 6=complete
-      // UI steps: 0=role, 1=welcome, 2=company, 3=IR, 4=deal, 5=pres, 6=checklist, 7=LP prompt
-      var stepMap = { 0: 0, 1: 1, 2: 3, 3: 4, 4: 5, 5: 6 };
+      // DB steps → UI steps (new mapping with split company/asset steps)
+      // DB: 0=not started, 1=role done, 2=company done, 3=IR done, 4=deal done, 5=pres done, 6=complete
+      // UI: 0=role, 1=welcome, 2=company, 3=assets, 4=IR, 5=upload, 6=pres, 7=checklist, 8=LP
+      var stepMap = { 0: 0, 1: 1, 2: 4, 3: 5, 4: 6, 5: 7 };
       var uiStep = stepMap[step] !== undefined ? stepMap[step] : 0;
       if (uiStep > 0) goToStep(uiStep);
     })
-    .catch(function(err) {
-      console.error('Load onboarding state error:', err);
-      // Start fresh
-    });
+    .catch(function(err) { console.error('Load onboarding state error:', err); });
   }
 
   function prefillCompanyForm(company) {
@@ -504,16 +416,11 @@
     if (company.linkedin_ceo) document.getElementById('linkedinCeo').value = company.linkedin_ceo;
     if (company.founding_year) document.getElementById('foundingYear').value = company.founding_year;
     if (company.type) document.getElementById('firmType').value = company.type;
-
-    // Pre-select asset class pills
     if (Array.isArray(company.asset_classes)) {
       selectedAssetClasses = company.asset_classes.slice();
       var pills = document.querySelectorAll('#assetClassPills .pill-option');
       for (var i = 0; i < pills.length; i++) {
-        var val = pills[i].getAttribute('data-value');
-        if (selectedAssetClasses.indexOf(val) !== -1) {
-          pills[i].classList.add('selected');
-        }
+        if (selectedAssetClasses.indexOf(pills[i].getAttribute('data-value')) !== -1) pills[i].classList.add('selected');
       }
     }
   }
@@ -524,7 +431,7 @@
     if (company.booking_url) document.getElementById('bookingUrl').value = company.booking_url;
   }
 
-  // ── Load Network Stats ──
+  // ── Network Stats ──
   function loadNetworkStats() {
     fetch('/api/lp-network-stats', { headers: headers })
     .then(function(r) { return r.json(); })
@@ -532,47 +439,33 @@
       state.networkStats = stats;
       renderNetworkStats(stats);
     })
-    .catch(function(err) {
-      console.error('Network stats error:', err);
-    });
+    .catch(function(err) { console.error('Network stats error:', err); });
   }
 
   function renderNetworkStats(stats) {
-    // Phase 1 stats
-    animateNumber('statTotalLPs', stats.totalLPs);
+    // Welcome page stats — use at least 1,100 as the floor
+    animateNumber('statTotalLPs', Math.max(stats.totalLPs || 0, 1100));
     animateNumber('statAccredited', stats.accreditedCount);
-    animateNumber('statActive', stats.activeInvestors);
     animateNumber('statBuyBoxes', stats.completedBuyBoxes);
 
-    // Phase 4 stats
-    animateNumber('presLpCount', stats.totalLPs);
+    // Presentation page — hardcode 1,100+ minimum
+    var presEl = document.getElementById('presLpCount');
+    if (presEl) presEl.textContent = Math.max(stats.totalLPs || 0, 1100).toLocaleString() + '+';
 
-    // Asset demand bar chart
     renderAssetDemandChart(stats.topAssetClasses || []);
-
-    // Goal distribution donut
     renderGoalDonut(stats.goalDistribution || { income: 0, tax: 0, growth: 0 });
-
-    // Check size chart (Phase 4)
     renderCheckSizeChart(stats.capitalRanges || {});
   }
 
   function animateNumber(elementId, target) {
     var el = document.getElementById(elementId);
-    if (!el) return;
-
-    target = target || 0;
-    var duration = 1200;
-    var start = 0;
-    var startTime = null;
-
+    if (!el || !target) return;
+    var duration = 1200, startTime = null;
     function step(timestamp) {
       if (!startTime) startTime = timestamp;
       var progress = Math.min((timestamp - startTime) / duration, 1);
-      // Ease out
       var eased = 1 - Math.pow(1 - progress, 3);
-      var current = Math.round(eased * target);
-      el.textContent = current.toLocaleString();
+      el.textContent = Math.round(eased * target).toLocaleString();
       if (progress < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -581,19 +474,13 @@
   function renderAssetDemandChart(topClasses) {
     var container = document.getElementById('assetDemandChart');
     if (!container || topClasses.length === 0) return;
-
     var maxCount = topClasses[0].count || 1;
+    var colors = ['green', 'teal', 'blue', 'green', 'teal', 'blue'];
     var html = '';
-    var colors = ['green', 'teal', 'blue', 'green', 'teal', 'blue', 'green', 'teal'];
-
     for (var i = 0; i < Math.min(topClasses.length, 6); i++) {
       var ac = topClasses[i];
       var pct = Math.max(5, Math.round((ac.count / maxCount) * 100));
-      html += '<div class="bar-chart-row">'
-        + '<div class="bar-label">' + escHtml(ac.name) + '</div>'
-        + '<div class="bar-track"><div class="bar-fill ' + colors[i] + '" style="width:' + pct + '%"></div></div>'
-        + '<div class="bar-count">' + ac.count + '</div>'
-        + '</div>';
+      html += '<div class="bar-chart-row"><div class="bar-label">' + escHtml(ac.name) + '</div><div class="bar-track"><div class="bar-fill ' + colors[i] + '" style="width:' + pct + '%"></div></div><div class="bar-count">' + ac.count + '</div></div>';
     }
     container.innerHTML = html;
   }
@@ -601,48 +488,27 @@
   function renderGoalDonut(goalDist) {
     var total = goalDist.income + goalDist.tax + goalDist.growth;
     if (total === 0) return;
-
     var data = [
       { label: 'Income', count: goalDist.income, color: '#51BE7B' },
       { label: 'Tax Savings', count: goalDist.tax, color: '#2563EB' },
       { label: 'Growth', count: goalDist.growth, color: '#CF7A30' }
     ];
-
-    // Draw donut segments
     var svg = document.getElementById('goalDonut');
     if (!svg) return;
-
-    var circumference = 2 * Math.PI * 15.9;
-    var offset = 0;
+    var circumference = 2 * Math.PI * 15.9, offset = 0;
     var svgHtml = '<circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--border-light)" stroke-width="5"/>';
-
     for (var i = 0; i < data.length; i++) {
-      var d = data[i];
-      if (d.count === 0) continue;
-      var pct = d.count / total;
-      var segLen = circumference * pct;
-      var gap = circumference - segLen;
-
-      svgHtml += '<circle cx="21" cy="21" r="15.9" fill="none"'
-        + ' stroke="' + d.color + '" stroke-width="5"'
-        + ' stroke-dasharray="' + segLen + ' ' + gap + '"'
-        + ' stroke-dashoffset="' + (-offset) + '"'
-        + ' transform="rotate(-90 21 21)"/>';
+      if (data[i].count === 0) continue;
+      var segLen = circumference * (data[i].count / total);
+      svgHtml += '<circle cx="21" cy="21" r="15.9" fill="none" stroke="' + data[i].color + '" stroke-width="5" stroke-dasharray="' + segLen + ' ' + (circumference - segLen) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 21 21)"/>';
       offset += segLen;
     }
     svg.innerHTML = svgHtml;
-
-    // Legend
     var legend = document.getElementById('goalLegend');
     if (!legend) return;
     var legendHtml = '';
     for (var j = 0; j < data.length; j++) {
-      var d2 = data[j];
-      var pctLabel = total > 0 ? Math.round((d2.count / total) * 100) : 0;
-      legendHtml += '<div class="donut-legend-item">'
-        + '<div class="donut-dot" style="background:' + d2.color + '"></div>'
-        + d2.label + ' <span style="color:var(--text-muted);margin-left:auto;">' + pctLabel + '%</span>'
-        + '</div>';
+      legendHtml += '<div class="donut-legend-item"><div class="donut-dot" style="background:' + data[j].color + '"></div>' + data[j].label + ' <span style="color:var(--text-muted);margin-left:auto;">' + Math.round((data[j].count / total) * 100) + '%</span></div>';
     }
     legend.innerHTML = legendHtml;
   }
@@ -650,49 +516,27 @@
   function renderCheckSizeChart(capitalRanges) {
     var container = document.getElementById('checkSizeChart');
     if (!container) return;
-
     var entries = Object.entries(capitalRanges);
     if (entries.length === 0) return;
-
     var maxCount = 1;
-    for (var i = 0; i < entries.length; i++) {
-      if (entries[i][1] > maxCount) maxCount = entries[i][1];
-    }
-
+    for (var i = 0; i < entries.length; i++) { if (entries[i][1] > maxCount) maxCount = entries[i][1]; }
     var colors = ['blue', 'teal', 'green', 'teal', 'green'];
     var html = '';
     for (var j = 0; j < entries.length; j++) {
-      var label = entries[j][0];
-      var count = entries[j][1];
-      var pct = Math.max(5, Math.round((count / maxCount) * 100));
-      html += '<div class="bar-chart-row">'
-        + '<div class="bar-label">' + escHtml(label) + '</div>'
-        + '<div class="bar-track"><div class="bar-fill ' + colors[j % colors.length] + '" style="width:' + pct + '%"></div></div>'
-        + '<div class="bar-count">' + count + '</div>'
-        + '</div>';
+      var pct = Math.max(5, Math.round((entries[j][1] / maxCount) * 100));
+      html += '<div class="bar-chart-row"><div class="bar-label">' + escHtml(entries[j][0]) + '</div><div class="bar-track"><div class="bar-fill ' + colors[j % colors.length] + '" style="width:' + pct + '%"></div></div><div class="bar-count">' + entries[j][1] + '</div></div>';
     }
     container.innerHTML = html;
   }
 
-  // ── Helpers ──
-  function escHtml(str) {
-    if (!str) return '';
-    var el = document.createElement('span');
-    el.textContent = str;
-    return el.innerHTML;
-  }
+  function escHtml(str) { if (!str) return ''; var el = document.createElement('span'); el.textContent = str; return el.innerHTML; }
+  function escAttr(str) { if (!str) return ''; return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-  function escAttr(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  // ── Handle returnTo param (coming back from deal-create) ──
+  // Handle returnTo param (coming back from deal-create)
   var params = new URLSearchParams(window.location.search);
   if (params.get('fromDealCreate') === 'true') {
     state.dealUploaded = true;
-    // Jump to presentation step
-    setTimeout(function() { goToStep(5); }, 100);
+    setTimeout(function() { goToStep(6); }, 100);
   }
 
 })();

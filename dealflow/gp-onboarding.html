@@ -890,55 +890,52 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== PHASE 1: Welcome & Value Prop ===== -->
+    <!-- ===== PHASE 1: Welcome & Value Prop (Hormozi-style) ===== -->
     <div class="step" id="step1">
       <div class="step-header">
-        <div class="step-counter">Welcome to the GP Network</div>
-        <div class="step-title">Put your deals in front of investors who are actively looking</div>
+        <div class="step-counter">Here's what you get</div>
+        <div class="step-title">We fill your deal with qualified investors. You close.</div>
+        <div class="step-subtitle">Here's exactly how it works and why operators keep coming back.</div>
       </div>
       <div class="step-body">
         <div class="welcome-layout">
           <div class="welcome-left">
             <div class="value-prop">
               <div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-              <div class="value-prop-text"><strong>Get matched to LPs</strong> whose buy box and investment criteria fit your deal's asset class, returns, and check size</div>
-            </div>
-            <div class="value-prop">
-              <div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div>
-              <div class="value-prop-text"><strong>Real-time analytics</strong> on investor interest — see who's saving, vetting, and asking about your deals</div>
+              <div class="value-prop-text"><strong>We match your deal to investors who are already looking for it.</strong> Every LP on the platform has a buy box — asset class, check size, return targets. Your deal gets surfaced to the ones it fits.</div>
             </div>
             <div class="value-prop">
               <div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-              <div class="value-prop-text"><strong>Present to our community</strong> — weekly live sessions where you pitch directly to qualified investors</div>
+              <div class="value-prop-text"><strong>We make direct introductions to your IR team.</strong> When an investor is interested, we don't send a form — we connect them directly to the person on your team who can close.</div>
             </div>
             <div class="value-prop">
-              <div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
-              <div class="value-prop-text"><strong>Direct introductions</strong> — we connect interested LPs directly to your IR team, no middleman</div>
+              <div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
+              <div class="value-prop-text"><strong>You present live to investors whose buy box matches your deal.</strong> 90-minute session, directly marketed to the LPs most likely to invest. No cold audience — warm, qualified, ready to evaluate.</div>
+            </div>
+            <div class="value-prop">
+              <div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div>
+              <div class="value-prop-text"><strong>You see exactly what investors do with your deal.</strong> Who viewed it, who saved it, who's vetting it, who requested an intro. No guessing — real data on real investor behavior.</div>
             </div>
           </div>
           <div class="welcome-right">
             <div class="network-stats-grid">
-              <div class="net-stat highlight">
+              <div class="net-stat highlight" style="grid-column:1/-1;">
                 <div class="net-stat-value" id="statTotalLPs">--</div>
-                <div class="net-stat-label">Registered Investors</div>
+                <div class="net-stat-label">Investors in our database right now</div>
               </div>
               <div class="net-stat highlight">
                 <div class="net-stat-value" id="statAccredited">--</div>
                 <div class="net-stat-label">Accredited</div>
               </div>
               <div class="net-stat">
-                <div class="net-stat-value" id="statActive">--</div>
-                <div class="net-stat-label">Active (30 days)</div>
-              </div>
-              <div class="net-stat">
                 <div class="net-stat-value" id="statBuyBoxes">--</div>
-                <div class="net-stat-label">Buy Boxes Set</div>
+                <div class="net-stat-label">Active Buy Boxes</div>
               </div>
             </div>
 
             <!-- Asset class demand chart -->
             <div class="mini-chart-wrap">
-              <div class="mini-chart-title">Top Asset Classes in Demand</div>
+              <div class="mini-chart-title">What They're Looking For</div>
               <div id="assetDemandChart"></div>
             </div>
 
@@ -958,22 +955,22 @@ select.form-input { cursor: pointer; appearance: auto; }
       <div class="step-footer">
         <span></span>
         <button class="btn-primary" onclick="goToStep(2)">
-          Let's Get Started
+          Let's Set Up Your Profile
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- ===== PHASE 2a: Company Profile ===== -->
+    <!-- ===== STEP 2: Company Basics (3 fields) ===== -->
     <div class="step" id="step2">
       <div class="step-header">
-        <div class="step-counter">Step 1 of 5</div>
-        <div class="step-title">Tell us about your firm</div>
-        <div class="step-subtitle">This creates your operator profile on the platform</div>
+        <div class="step-counter">Step 1 of 6</div>
+        <div class="step-title">What's your firm?</div>
+        <div class="step-subtitle">We'll create your operator profile from this</div>
       </div>
       <div class="step-body">
         <div class="form-grid">
-          <div class="form-group">
+          <div class="form-group full-width">
             <label class="form-label">Company Name *</label>
             <input class="form-input" type="text" id="companyName" placeholder="e.g. Blackstone Real Estate">
           </div>
@@ -984,22 +981,6 @@ select.form-input { cursor: pointer; appearance: auto; }
               <option value="sponsor">Sponsor</option>
               <option value="operator">Operator / Manager</option>
             </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">CEO / Managing Partner</label>
-            <input class="form-input" type="text" id="ceo" placeholder="Full name">
-          </div>
-          <div class="form-group">
-            <label class="form-label">CEO LinkedIn</label>
-            <input class="form-input" type="url" id="linkedinCeo" placeholder="https://linkedin.com/in/...">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Website</label>
-            <input class="form-input" type="url" id="website" placeholder="https://yourfirm.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Founded</label>
-            <input class="form-input" type="number" id="foundingYear" placeholder="2015" min="1900" max="2030">
           </div>
           <div class="form-group">
             <label class="form-label">Firm Type</label>
@@ -1013,13 +994,9 @@ select.form-input { cursor: pointer; appearance: auto; }
               <option value="Other">Other</option>
             </select>
           </div>
-          <div class="form-group full-width">
-            <label class="form-label">Asset Classes (select all that apply)</label>
-            <div class="pill-grid" id="assetClassPills">
-              <!-- Populated by JS -->
-            </div>
-          </div>
         </div>
+        <!-- Hidden fields for later profile completion -->
+        <input type="hidden" id="ceo"><input type="hidden" id="linkedinCeo"><input type="hidden" id="website"><input type="hidden" id="foundingYear">
       </div>
       <div class="step-footer">
         <button class="btn-secondary" onclick="goToStep(1)">
@@ -1033,12 +1010,36 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== PHASE 2b: IR Contact ===== -->
+    <!-- ===== STEP 3: Asset Classes ===== -->
     <div class="step" id="step3">
       <div class="step-header">
-        <div class="step-counter">Step 2 of 5</div>
-        <div class="step-title">Who should investors reach out to?</div>
-        <div class="step-subtitle">When an LP wants to learn more about your deals, we'll connect them with this person</div>
+        <div class="step-counter">Step 2 of 6</div>
+        <div class="step-title">What asset classes do you operate in?</div>
+        <div class="step-subtitle">This helps us match your deals to the right investors</div>
+      </div>
+      <div class="step-body">
+        <div class="pill-grid" id="assetClassPills">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToStep(2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" onclick="saveAssetClasses()">
+          Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 4: IR Contact ===== -->
+    <div class="step" id="step4">
+      <div class="step-header">
+        <div class="step-counter">Step 3 of 6</div>
+        <div class="step-title">Who should we introduce investors to?</div>
+        <div class="step-subtitle">When an LP is interested in your deal, we connect them directly to this person</div>
       </div>
       <div class="step-body">
         <div class="ir-toggle-row" onclick="toggleIrSelf()">
@@ -1049,11 +1050,11 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
         <div class="form-grid">
           <div class="form-group">
-            <label class="form-label">IR Contact Name *</label>
+            <label class="form-label">Name *</label>
             <input class="form-input" type="text" id="irContactName" placeholder="Full name">
           </div>
           <div class="form-group">
-            <label class="form-label">IR Contact Email *</label>
+            <label class="form-label">Email *</label>
             <input class="form-input" type="email" id="irContactEmail" placeholder="ir@yourfirm.com">
           </div>
           <div class="form-group full-width">
@@ -1063,7 +1064,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(2)">
+        <button class="btn-secondary" onclick="goToStep(3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1074,87 +1075,90 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== PHASE 3: Upload Deal ===== -->
-    <div class="step" id="step4">
+    <!-- ===== STEP 5: Upload Deal (deck + PPM) ===== -->
+    <div class="step" id="step5">
       <div class="step-header">
-        <div class="step-counter">Step 3 of 5</div>
-        <div class="step-title">Add your first deal</div>
-        <div class="step-subtitle">Upload your pitch deck and we'll auto-extract the key details, or fill them in manually</div>
+        <div class="step-counter">Step 4 of 6</div>
+        <div class="step-title">Upload your deal</div>
+        <div class="step-subtitle">We'll use AI to extract the key terms from your documents</div>
       </div>
       <div class="step-body">
-        <div class="upload-options" id="uploadOptions">
-          <div class="upload-card primary-option" onclick="showDropZone()">
-            <div class="upload-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            </div>
-            <div class="upload-card-title">Upload a pitch deck</div>
-            <div class="upload-card-desc">PDF or PowerPoint — we'll analyze it with AI and extract deal terms</div>
-          </div>
-          <div class="upload-card" onclick="goToManualDeal()">
-            <div class="upload-card-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </div>
-            <div class="upload-card-title">Fill in manually</div>
-            <div class="upload-card-desc">Enter your deal details yourself — takes about 5 minutes</div>
-          </div>
-        </div>
-        <div class="drop-zone" id="dropZone">
+        <!-- Deck upload -->
+        <div class="drop-zone active" id="deckDropZone" style="display:block;">
           <div class="drop-zone-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           </div>
-          <div class="drop-zone-text">Drag & drop your pitch deck here</div>
-          <div class="drop-zone-hint">PDF or PowerPoint, up to 50MB</div>
+          <div class="drop-zone-text" id="deckDropText">Drag & drop your pitch deck</div>
+          <div class="drop-zone-hint" id="deckDropHint">PDF or PowerPoint, up to 50MB</div>
           <input type="file" id="deckFileInput" accept=".pdf,.pptx,.ppt" style="display:none;">
         </div>
+        <!-- PPM upload (secondary) -->
+        <div class="drop-zone" id="ppmDropZone" style="display:block; margin-top:12px; padding:24px; border-style:dashed;">
+          <div style="display:flex;align-items:center;gap:12px;justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;color:var(--text-muted);flex-shrink:0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div>
+              <div class="drop-zone-text" id="ppmDropText" style="font-size:14px;">Also have a PPM? Drop it here</div>
+              <div class="drop-zone-hint" id="ppmDropHint">Optional — PDF only</div>
+            </div>
+          </div>
+          <input type="file" id="ppmFileInput" accept=".pdf" style="display:none;">
+        </div>
+        <!-- Processing state -->
         <div class="processing-state" id="processingState">
           <div class="processing-spinner"></div>
-          <div class="processing-text">Analyzing your deck...</div>
+          <div class="processing-text">Analyzing your documents...</div>
           <div class="processing-sub">Extracting deal terms, fees, and structure. This usually takes 30-60 seconds.</div>
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(3)">
+        <button class="btn-secondary" onclick="goToStep(4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
-        <button class="btn-skip" onclick="skipDealUpload()">I'll add a deal later</button>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="btn-skip" onclick="skipDealUpload()">I'll add a deal later</button>
+          <button class="btn-primary" id="uploadNextBtn" onclick="submitDealUploads()" style="display:none;">
+            Continue
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- ===== PHASE 4: Presentation Interest ===== -->
-    <div class="step" id="step5">
+    <!-- ===== STEP 6: Presentation Interest ===== -->
+    <div class="step" id="step6">
       <div class="step-header">
-        <div class="step-counter">Step 4 of 5</div>
-        <div class="step-title">Present to our investor community</div>
-        <div class="step-subtitle">Every week, a GP walks through their deal live with our investor network</div>
+        <div class="step-counter">Step 5 of 6</div>
+        <div class="step-title">Present your deal live to qualified investors</div>
+        <div class="step-subtitle">This is the fastest way to get in front of investors who are actively deploying capital</div>
       </div>
       <div class="step-body">
         <div class="presentation-layout">
           <div>
             <ul class="pres-benefits">
               <li class="pres-benefit">
+                <div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                <div class="pres-benefit-text"><strong>Your event is directly marketed to every investor whose buy box matches your deal.</strong> No cold audience — these are LPs who have already told us they want your asset class, return profile, and check size.</div>
+              </li>
+              <li class="pres-benefit">
                 <div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-                <div class="pres-benefit-text"><strong>30-minute presentation slot</strong> to walk investors through your deal, team, and track record</div>
+                <div class="pres-benefit-text"><strong>90-minute live session.</strong> 40-45 minutes for your presentation, 45 minutes of live Q&A where investors can ask you anything. This is where trust gets built and deals move forward.</div>
               </li>
               <li class="pres-benefit">
                 <div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
-                <div class="pres-benefit-text"><strong>Recording shared</strong> with the full LP network — investors who couldn't attend watch on their own time</div>
+                <div class="pres-benefit-text"><strong>Recording shared with our full investor database.</strong> Investors who couldn't make the live event watch the replay. Your pitch keeps working after the event ends.</div>
               </li>
               <li class="pres-benefit">
                 <div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div>
-                <div class="pres-benefit-text"><strong>Post-event analytics</strong> — see who attended, engagement levels, and follow-up interest</div>
-              </li>
-              <li class="pres-benefit">
-                <div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                <div class="pres-benefit-text"><strong>Direct Q&A</strong> — investors ask questions live, building trust and moving deals forward</div>
+                <div class="pres-benefit-text"><strong>Full post-event analytics.</strong> See exactly who attended, how engaged they were, and who requested a follow-up introduction to your IR team.</div>
               </li>
             </ul>
           </div>
           <div>
             <div class="network-stats-grid">
               <div class="net-stat highlight" style="grid-column:1/-1;">
-                <div class="net-stat-value" id="presLpCount">--</div>
-                <div class="net-stat-label">Investors in the Network</div>
+                <div class="net-stat-value" id="presLpCount">1,100+</div>
+                <div class="net-stat-label">Investors in our database</div>
               </div>
             </div>
             <div class="match-highlight" id="matchHighlight" style="display:none;">
@@ -1170,7 +1174,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(4)">
+        <button class="btn-secondary" onclick="goToStep(5)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1184,10 +1188,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== PHASE 5: Completion Checklist ===== -->
-    <div class="step" id="step6">
+    <!-- ===== STEP 7: Completion Checklist ===== -->
+    <div class="step" id="step7">
       <div class="step-header">
-        <div class="step-counter">Step 5 of 5</div>
+        <div class="step-counter">Step 6 of 6</div>
         <div class="step-title">You're all set!</div>
         <div class="step-subtitle">Here's a summary of your onboarding. You can always update these from your dashboard.</div>
       </div>
@@ -1198,15 +1202,15 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
       <div class="step-footer">
         <span></span>
-        <button class="btn-primary" onclick="goToStep(7)">
+        <button class="btn-primary" onclick="goToStep(8)">
           Continue
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- ===== PHASE 6: Also an LP? ===== -->
-    <div class="step" id="step7">
+    <!-- ===== STEP 8: Also an LP? ===== -->
+    <div class="step" id="step8">
       <div class="step-header">
         <div class="step-counter">One More Thing</div>
         <div class="step-title">Are you also an LP?</div>
