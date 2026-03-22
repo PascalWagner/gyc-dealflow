@@ -6694,6 +6694,55 @@ const _supa = window.supabase.createClient(
     </div>
   </div>
 
+  <!-- PAGE: Growth -->
+  <div class="page" id="page-growth">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Growth Dashboard</div>
+      <button onclick="renderGrowthPage()" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
+    </div>
+    <div class="sub-page" style="max-width:1000px">
+      <div class="settings-page-desc" style="margin-top:0;">Week-over-week platform growth. Focus on increasing the rate of GP and LP acquisition.</div>
+
+      <!-- North Star Banner -->
+      <div id="growthNorthStar" style="background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02));border:1px solid rgba(81,190,123,0.2);border-radius:12px;padding:24px 28px;margin-bottom:28px;">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">North Star Metric</div>
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:var(--text-dark);" id="growthNorthStarValue">--</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Deals added to LP pipelines (all time)</div>
+          <div id="growthNorthStarDelta" style="font-family:var(--font-ui);font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto;"></div>
+        </div>
+        <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:8px;">This measures real engagement: an LP cared enough about a deal to move it into their pipeline. It combines GP supply quality + LP demand activation.</div>
+      </div>
+
+      <!-- Key Metrics Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;" id="growthMetricsGrid"></div>
+
+      <!-- WoW Charts -->
+      <div class="section" style="margin-top:0;">
+        <div class="section-header"><span class="section-title">Week-over-Week Trends</span></div>
+        <div class="section-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" id="growthChartsGrid">
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">LPs Added</div><div id="growthChartLPs" style="height:120px;"></div></div>
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">GPs Added</div><div id="growthChartGPs" style="height:120px;"></div></div>
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Deals Added</div><div id="growthChartDeals" style="height:120px;"></div></div>
+            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Pipeline Adds (LP &rarr; Deal)</div><div id="growthChartPipeline" style="height:120px;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Suggestions -->
+      <div class="section">
+        <div class="section-header"><span class="section-title">Growth Playbook</span></div>
+        <div class="section-body" id="growthSuggestions">
+          <div style="color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading suggestions...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- PAGE: Transaction Strategy -->
   <div class="page" id="page-transactions">
     <div class="topbar">
@@ -10958,6 +11007,7 @@ function navigateTo(page) {
   if (page === 'admin-manage') adminLoadData();
   if (page === 'outreach') outreachInit();
   if (page === 'network-moat') renderNetworkMoat();
+  if (page === 'growth') renderGrowthPage();
   if (page === 'compare') renderComparePage();
   if (page === 'buybox') {
     // Try to render from localStorage first
@@ -18651,6 +18701,141 @@ function renderNetworkMoat() {
       if (el2) el2.textContent = deals.length;
     }
   } catch(e) {}
+}
+
+// --- Growth Dashboard ---
+async function renderGrowthPage() {
+  if (!isAdmin()) return;
+  var grid = document.getElementById('growthMetricsGrid');
+  var northVal = document.getElementById('growthNorthStarValue');
+  var northDelta = document.getElementById('growthNorthStarDelta');
+  if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading growth metrics...</div>';
+
+  try {
+    var result = await adminFetch({ action: 'growth-metrics' });
+    if (!result.success) { if (grid) grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);">Failed to load metrics</div>'; return; }
+
+    var t = result.totals;
+    var gr = result.growthRates;
+    var series = result.series;
+    var labels = result.weekLabels;
+
+    // North star
+    if (northVal) northVal.textContent = t.pipelineAdds.toLocaleString();
+    if (northDelta) {
+      var pGr = gr.pipeline;
+      northDelta.textContent = (pGr >= 0 ? '+' : '') + pGr + '% this week';
+      northDelta.style.background = pGr >= 0 ? 'rgba(81,190,123,0.12)' : 'rgba(239,68,68,0.12)';
+      northDelta.style.color = pGr >= 0 ? '#10b981' : '#ef4444';
+    }
+
+    // Metrics grid
+    function growthBadge(rate) {
+      var color = rate >= 0 ? '#10b981' : '#ef4444';
+      var bg = rate >= 0 ? 'rgba(81,190,123,0.1)' : 'rgba(239,68,68,0.1)';
+      return '<span style="font-size:11px;font-weight:700;color:' + color + ';background:' + bg + ';padding:2px 8px;border-radius:12px;">' + (rate >= 0 ? '+' : '') + rate + '%</span>';
+    }
+    var cards = [
+      { label: 'Total LPs', value: t.lps, growth: gr.lps },
+      { label: 'Total GPs', value: t.gps, growth: gr.gps },
+      { label: 'Total Deals', value: t.deals, growth: gr.deals },
+      { label: 'Active Deals', value: t.activeDeals, growth: null },
+      { label: 'Pipeline Adds', value: t.pipelineAdds, growth: gr.pipeline },
+      { label: 'Deals Funded', value: t.funded, growth: gr.funded },
+    ];
+    if (grid) {
+      grid.innerHTML = cards.map(function(c) {
+        return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;">'
+          + '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + c.value.toLocaleString() + '</div>'
+          + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">' + c.label + '</div>'
+          + (c.growth !== null ? '<div style="margin-top:6px;">' + growthBadge(c.growth) + ' <span style="font-size:10px;color:var(--text-muted);">WoW</span></div>' : '')
+          + '</div>';
+      }).join('');
+    }
+
+    // Bar charts (simple CSS bars)
+    function renderMiniChart(elId, data, color) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      var max = Math.max.apply(null, data.concat([1]));
+      el.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:100%;">'
+        + data.map(function(v, i) {
+          var pct = Math.round((v / max) * 100);
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">'
+            + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">' + v + '</div>'
+            + '<div style="width:100%;max-width:40px;height:' + Math.max(pct, 4) + '%;background:' + color + ';border-radius:4px 4px 0 0;transition:height 0.3s;"></div>'
+            + '<div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);margin-top:3px;white-space:nowrap;">' + labels[i] + '</div>'
+            + '</div>';
+        }).join('')
+        + '</div>';
+    }
+    renderMiniChart('growthChartLPs', series.lps, '#3b82f6');
+    renderMiniChart('growthChartGPs', series.gps, '#8b5cf6');
+    renderMiniChart('growthChartDeals', series.deals, '#10b981');
+    renderMiniChart('growthChartPipeline', series.pipeline, '#f59e0b');
+
+    // Dynamic suggestions
+    growthRenderSuggestions(t, gr);
+  } catch (e) {
+    console.error('Growth page error:', e);
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);">Could not load growth data</div>';
+  }
+}
+
+function growthRenderSuggestions(totals, rates) {
+  var el = document.getElementById('growthSuggestions');
+  if (!el) return;
+  var suggestions = [];
+
+  // LP growth suggestions
+  if (rates.lps <= 0) {
+    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'LP growth is stalling', body: 'LP signups declined or stayed flat this week. Consider: (1) Run a free webinar or market intel email to drive traffic, (2) Post deal highlights on social media with a CTA to sign up, (3) Activate Academy members to refer friends, (4) Create a lead magnet like a "Top 10 Deals This Month" PDF.' });
+  } else if (rates.lps < 20) {
+    suggestions.push({ priority: 'medium', icon: '&#8593;', title: 'LP growth is positive but slow', body: 'You&rsquo;re adding LPs but the rate is under 20% WoW. To accelerate: (1) Partner with CPA or wealth advisors who serve accredited investors, (2) Run targeted Facebook/LinkedIn ads to accredited investor lookalikes, (3) Guest on real estate podcasts and pitch the free deal database.' });
+  }
+
+  // GP growth suggestions
+  if (rates.gps <= 0) {
+    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'GP pipeline is flat', body: 'No new operators added this week. Supply drives the marketplace. Try: (1) Scrape SEC EDGAR for new Reg D filings and cold outreach, (2) Attend multifamily/self-storage meetups and onboard operators, (3) Offer free deal page + LP exposure in exchange for listing, (4) Use LP intro data to pitch GPs: "We have X LPs looking for your asset class."' });
+  } else if (totals.gps < 50) {
+    suggestions.push({ priority: 'medium', icon: '&#8593;', title: 'Build GP supply to critical mass', body: 'Target is 50 GPs for marketplace credibility. Currently at ' + totals.gps + '. Focus on: (1) Batch-import operators from SEC filings, (2) Prioritize asset classes with highest LP demand, (3) Create GP success stories showing LP intros received.' });
+  }
+
+  // Deal quality suggestions
+  if (rates.deals > 0 && rates.pipeline <= 0) {
+    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'Deals growing but pipeline adds are not', body: 'You&rsquo;re adding deals but LPs aren&rsquo;t moving them into their pipeline. This means deal quality or presentation may be off. Try: (1) Improve deal page completeness (deck, PPM, photos), (2) Add operator track record data, (3) Send weekly digest email highlighting top deals, (4) Add "Featured Deal" badges to high-quality opportunities.' });
+  }
+
+  // Pipeline to funded conversion
+  if (totals.pipelineAdds > 10 && totals.funded === 0) {
+    suggestions.push({ priority: 'medium', icon: '&#128176;', title: 'Pipeline activity but zero funded deals', body: 'LPs are exploring deals but none have moved to "portfolio" stage. This could mean: (1) Deal sizes or minimums are too high, (2) LPs need more DD support to gain confidence, (3) Consider adding 1-on-1 deal consultation calls, (4) Create a DD checklist template that walks LPs through evaluation.' });
+  }
+
+  // General growth levers
+  if (totals.lps < 100) {
+    suggestions.push({ priority: 'low', icon: '&#128640;', title: 'Pre-100 LP growth tactics', body: '(1) Personal outreach: email your network with a compelling deal example, (2) Post "deal of the week" breakdowns on LinkedIn/Twitter, (3) Run a free "Passive Income 101" workshop, (4) Create a referral incentive (e.g., free month of premium for each referral).' });
+  }
+  if (totals.gps > 0 && totals.lps > 0 && totals.pipelineAdds === 0) {
+    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'Zero pipeline activity despite having GPs and LPs', body: 'The platform has both supply (GPs) and demand (LPs) but no engagement. This is a UX or awareness issue. Try: (1) Send a "new deals this week" email blast, (2) Add push notifications or in-app alerts for new deals, (3) Simplify the "Add to Pipeline" action, (4) Feature deals on the dashboard immediately after login.' });
+  }
+
+  // Always show at least one suggestion
+  if (suggestions.length === 0) {
+    suggestions.push({ priority: 'low', icon: '&#127775;', title: 'Growth is healthy!', body: 'All metrics are trending up. Keep doing what&rsquo;s working. Consider: (1) Document your current growth channels so you can double down, (2) Start tracking acquisition channel (organic vs paid vs referral), (3) Set WoW growth rate targets for each metric.' });
+  }
+
+  // Sort by priority
+  var order = { high: 0, medium: 1, low: 2 };
+  suggestions.sort(function(a, b) { return order[a.priority] - order[b.priority]; });
+
+  var colors = { high: { bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.15)', title: '#ef4444' }, medium: { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.15)', title: '#f59e0b' }, low: { bg: 'rgba(81,190,123,0.06)', border: 'rgba(81,190,123,0.15)', title: 'var(--primary)' } };
+  el.innerHTML = '<div style="display:grid;gap:14px;">' + suggestions.map(function(s) {
+    var c = colors[s.priority];
+    return '<div style="padding:16px;background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:8px;">'
+      + '<div style="font-family:var(--font-ui);font-weight:700;color:' + c.title + ';margin-bottom:6px;">' + s.icon + ' ' + s.title + '</div>'
+      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">' + s.body + '</div>'
+      + '</div>';
+  }).join('') + '</div>';
 }
 
 async function outreachInit() {

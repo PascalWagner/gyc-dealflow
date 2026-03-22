@@ -474,6 +474,87 @@ async function intakeCreate(supabase, body) {
   return { data: newDeal, operatorId: mcId };
 }
 
+// --- Growth metrics ---
+
+async function growthMetrics(supabase) {
+  const now = new Date();
+  const weeks = [];
+  for (let i = 7; i >= 0; i--) {
+    const start = new Date(now);
+    start.setDate(now.getDate() - (i + 1) * 7);
+    const end = new Date(now);
+    end.setDate(now.getDate() - i * 7);
+    weeks.push({ start: start.toISOString(), end: end.toISOString(), label: i === 0 ? 'This Week' : i === 1 ? 'Last Week' : `${i}w ago` });
+  }
+
+  // Fetch all raw data in parallel
+  const [usersRes, opsRes, dealsRes, stagesRes] = await Promise.all([
+    supabase.from('user_profiles').select('id, created_at', { count: 'exact' }),
+    supabase.from('management_companies').select('id, created_at', { count: 'exact' }),
+    supabase.from('opportunities').select('id, added_date, status', { count: 'exact' }),
+    supabase.from('user_deal_stages').select('id, stage, updated_at', { count: 'exact' }),
+  ]);
+
+  const users = usersRes.data || [];
+  const ops = opsRes.data || [];
+  const deals = dealsRes.data || [];
+  const stages = stagesRes.data || [];
+
+  // Build week-over-week counts
+  function countByWeek(items, dateField) {
+    return weeks.map(w => {
+      const count = items.filter(item => {
+        const d = item[dateField];
+        return d && d >= w.start && d < w.end;
+      }).length;
+      return count;
+    });
+  }
+
+  const lpsByWeek = countByWeek(users, 'created_at');
+  const gpsByWeek = countByWeek(ops, 'created_at');
+  const dealsByWeek = countByWeek(deals, 'added_date');
+  const pipelineByWeek = countByWeek(stages, 'updated_at');
+
+  // Portfolio = funded
+  const portfolioStages = stages.filter(s => s.stage === 'portfolio');
+  const fundedByWeek = countByWeek(portfolioStages, 'updated_at');
+
+  // Growth rates (this week vs last week)
+  function growthRate(arr) {
+    const curr = arr[arr.length - 1] || 0;
+    const prev = arr[arr.length - 2] || 0;
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return Math.round(((curr - prev) / prev) * 100);
+  }
+
+  return {
+    totals: {
+      lps: users.length,
+      gps: ops.length,
+      deals: deals.length,
+      activeDeals: deals.filter(d => d.status !== 'Archived').length,
+      pipelineAdds: stages.length,
+      funded: portfolioStages.length,
+    },
+    weekLabels: weeks.map(w => w.label),
+    series: {
+      lps: lpsByWeek,
+      gps: gpsByWeek,
+      deals: dealsByWeek,
+      pipeline: pipelineByWeek,
+      funded: fundedByWeek,
+    },
+    growthRates: {
+      lps: growthRate(lpsByWeek),
+      gps: growthRate(gpsByWeek),
+      deals: growthRate(dealsByWeek),
+      pipeline: growthRate(pipelineByWeek),
+      funded: growthRate(fundedByWeek),
+    },
+  };
+}
+
 // --- Action router ---
 
 const ACTION_MAP = {
@@ -490,6 +571,7 @@ const ACTION_MAP = {
   'list-deals-quality': listDealsQuality,
   'list-operators-quality': listOperatorsQuality,
   'intake-create': intakeCreate,
+  'growth-metrics': growthMetrics,
 };
 
 export default async function handler(req, res) {
