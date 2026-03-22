@@ -23540,12 +23540,21 @@ if (window.location.hash.startsWith('#buybox')) {
 }
 
 // Handle #settings from email — navigate to settings page, notifications tab
-if (window.location.hash === '#settings') {
+if (window.location.hash.startsWith('#settings')) {
+  const isUnsub = window.location.hash.includes('unsubscribed=true');
   setTimeout(() => {
     navigateTo('settings');
     setTimeout(() => {
       const notifTab = document.querySelector('.settings-tab[data-stab="notifications"]');
       if (notifTab) { switchSettingsTab(notifTab); }
+      // If coming from unsubscribe, set frequency to Off and show confirmation
+      if (isUnsub) {
+        setTimeout(() => {
+          setNotifFreq('off', true);
+          const msg = document.getElementById('notifSavedMsg');
+          if (msg) { msg.innerHTML = '&#10003; You have been unsubscribed from deal alerts'; msg.style.display = 'block'; }
+        }, 300);
+      }
     }, 200);
   }, 300);
   history.replaceState(null, '', window.location.pathname);

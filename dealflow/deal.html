@@ -7741,6 +7741,23 @@ async function renderDeal() {
     loadStagesFromDb(deal.id);
   }
 
+  // Handle email action params (?saved=true or ?skipped=true)
+  (function() {
+    var p = new URLSearchParams(window.location.search);
+    if (p.get('saved') === 'true') {
+      setJourneyStage(deal.id, 'saved');
+      // Clean URL
+      var clean = new URL(window.location);
+      clean.searchParams.delete('saved');
+      window.history.replaceState({}, '', clean.toString());
+    } else if (p.get('skipped') === 'true') {
+      setJourneyStage(deal.id, 'passed');
+      var clean = new URL(window.location);
+      clean.searchParams.delete('skipped');
+      window.history.replaceState({}, '', clean.toString());
+    }
+  })();
+
   // Load GP Insights Panel (admin only)
   if (document.getElementById('gpInsightsPanel') && deal.managementCompany) {
     loadGPInsights(deal);

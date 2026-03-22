@@ -55,20 +55,18 @@ export default async function handler(req, res) {
     console.error('Unsubscribe error:', err.message);
   }
 
-  // Show confirmation page
-  res.setHeader('Content-Type', 'text/html');
-  res.send(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Unsubscribed</title></head>
-<body style="margin:0;padding:0;background:#FAF9F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">
-<div style="text-align:center;max-width:400px;padding:40px 20px;">
-  <div style="font-size:48px;margin-bottom:16px;">&#9989;</div>
-  <h1 style="font-size:24px;font-weight:700;color:#141413;margin:0 0 12px;">You've been unsubscribed</h1>
-  <p style="font-size:14px;color:#607179;line-height:1.6;margin:0 0 24px;">
-    You won't receive any more deal alert emails from Grow Your Cashflow.
-    You can always re-subscribe from your settings.
-  </p>
-  <a href="https://dealflow.growyourcashflow.io" style="display:inline-block;padding:12px 24px;background:#51BE7B;color:#fff;font-weight:700;font-size:14px;border-radius:8px;text-decoration:none;">Back to Deal Flow</a>
-</div>
-</body></html>`);
+  // Also update notif_frequency to 'off' in Supabase
+  try {
+    const { getAdminClient } = await import('./_supabase.js');
+    const supabase = getAdminClient();
+    await supabase
+      .from('user_profiles')
+      .update({ notif_frequency: 'off' })
+      .eq('email', email);
+  } catch (e) {
+    console.error('Failed to update notif_frequency:', e.message);
+  }
+
+  // Redirect to Settings → Notifications with unsubscribed flag
+  return res.redirect(302, 'https://dealflow.growyourcashflow.io/index.html#settings?unsubscribed=true');
 }

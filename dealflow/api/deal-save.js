@@ -84,9 +84,8 @@ export default async function handler(req, res) {
     console.error('Deal action error:', err.message);
   }
 
-  // Save → deal page, Skip → back to browse
-  const redirect = stage === 'passed'
-    ? 'https://dealflow.growyourcashflow.io'
-    : `https://dealflow.growyourcashflow.io/deal.html?id=${id}&saved=true`;
+  // Both Save and Skip go to the deal page with the action result
+  const actionParam = stage === 'passed' ? 'skipped=true' : 'saved=true';
+  const redirect = `https://dealflow.growyourcashflow.io/deal.html?id=${id}&${actionParam}`;
   return res.redirect(302, redirect);
 }
