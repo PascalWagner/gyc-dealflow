@@ -4522,8 +4522,32 @@ async function renderDeal() {
 
   if (!deal) deal = DEALS.find(d => d.id === id);
 
-  // Check localStorage for user-submitted deals
-  if (!deal) {
+  // Check localStorage for user-submitted deals — but prefer Supabase data
+  if (!deal && id && id.startsWith('user_')) {
+    // Local-only deal: try to find it in Supabase first (it may have been promoted)
+    try {
+      const localDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
+      const localDeal = localDeals.find(d => d.id === id);
+      if (localDeal) {
+        // Try fetching the real deal from Supabase by name
+        container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-muted);">Loading deal...</div>';
+        const searchResp = await fetch('/api/deals');
+        if (searchResp.ok) {
+          const searchData = await searchResp.json();
+          const allDeals = (searchData && searchData.deals) ? searchData.deals : [];
+          const match = allDeals.find(d => d.investmentName === localDeal.investmentName);
+          if (match) {
+            // Redirect to the real Supabase deal
+            window.location.href = 'deal.html?id=' + match.id;
+            return;
+          }
+          DEALS = allDeals;
+        }
+        // Fall back to local deal if no Supabase match
+        deal = localDeal;
+      }
+    } catch(e) {}
+  } else if (!deal) {
     try {
       const userDeals = JSON.parse(localStorage.getItem('gycUserDeals') || '[]');
       deal = userDeals.find(d => d.id === id);
