@@ -2588,6 +2588,10 @@ html.cap-ios .debt-metric-select-mobile {
 .settings-page { padding: 32px; max-width: 900px; }
 .settings-page-title { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin-bottom: 8px; }
 .settings-page-desc { font-family: var(--font-body); font-size: 15px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.6; }
+/* Notification toggle switch */
+#notifDealAlerts:checked + span { background: var(--primary); }
+#notifDealAlerts:checked + span + .notif-slider-dot { transform: translateX(20px); }
+.notif-freq-btn:hover { border-color: var(--primary) !important; color: var(--primary) !important; }
 
 .settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 32px; }
 .settings-tab { padding: 12px 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition); }
@@ -11455,6 +11459,67 @@ function switchSettingsTab(el) {
   const panel = document.getElementById('stab-' + el.dataset.stab);
   if (panel) panel.style.display = '';
 }
+
+// ========== NOTIFICATION PREFERENCES ==========
+function loadNotifPrefs() {
+  const prefs = JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}');
+  const alertsOn = prefs.dealAlerts !== false; // default on
+  const freq = prefs.frequency || 'weekly';
+  const cb = document.getElementById('notifDealAlerts');
+  if (cb) cb.checked = alertsOn;
+  setNotifFreq(freq, true);
+}
+
+function setNotifFreq(freq, silent) {
+  document.querySelectorAll('.notif-freq-btn').forEach(btn => {
+    const isActive = btn.dataset.freq === freq;
+    btn.classList.toggle('active', isActive);
+    btn.style.borderColor = isActive ? 'var(--primary)' : 'var(--border)';
+    btn.style.background = isActive ? 'rgba(81,190,123,0.08)' : 'var(--bg-main)';
+    btn.style.color = isActive ? 'var(--primary)' : 'var(--text-secondary)';
+  });
+  if (!silent) {
+    // If user picks "off", also uncheck the toggle
+    const cb = document.getElementById('notifDealAlerts');
+    if (freq === 'off' && cb) cb.checked = false;
+    if (freq !== 'off' && cb) cb.checked = true;
+    saveNotifPrefs();
+  }
+}
+
+function saveNotifPrefs() {
+  const cb = document.getElementById('notifDealAlerts');
+  const activeBtn = document.querySelector('.notif-freq-btn.active');
+  const freq = activeBtn ? activeBtn.dataset.freq : 'weekly';
+  const prefs = { dealAlerts: cb ? cb.checked : true, frequency: freq };
+  localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
+  // Sync to Supabase
+  syncNotifPrefsToDb(prefs);
+  // Show saved message
+  const msg = document.getElementById('notifSavedMsg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
+}
+
+async function syncNotifPrefsToDb(prefs) {
+  try {
+    const token = localStorage.getItem('sb_token') || localStorage.getItem('ghlToken');
+    if (!token) return;
+    await fetch('/api/userdata', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'notif_prefs', data: prefs })
+    });
+  } catch (e) { /* silent */ }
+}
+
+// Load prefs when settings page opens
+(function() {
+  const origSwitch = switchSettingsTab;
+  switchSettingsTab = function(el) {
+    origSwitch(el);
+    if (el.dataset.stab === 'notifications') loadNotifPrefs();
+  };
+})();
 
 // ========== FIND A GP ==========
 function getGPs() {
@@ -22902,9 +22967,15 @@ if (window.location.hash.startsWith('#buybox')) {
   history.replaceState(null, '', window.location.pathname);
 }
 
-// Handle #settings from email — navigate to settings page
+// Handle #settings from email — navigate to settings page, notifications tab
 if (window.location.hash === '#settings') {
-  setTimeout(() => navigateTo('settings'), 300);
+  setTimeout(() => {
+    navigateTo('settings');
+    setTimeout(() => {
+      const notifTab = document.querySelector('.settings-tab[data-stab="notifications"]');
+      if (notifTab) { switchSettingsTab(notifTab); }
+    }, 200);
+  }, 300);
   history.replaceState(null, '', window.location.pathname);
 }
 
