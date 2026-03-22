@@ -5618,6 +5618,7 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
 <!-- Google Analytics 4 — Replace G-F8B5NMB9J9 with your actual GA4 Measurement ID -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-F8B5NMB9J9"></script>
@@ -7798,6 +7799,10 @@ const _supa = window.supabase.createClient(
           <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Risk Analysis</div>
           <div id="portfolioRiskInsights"></div>
         </div>
+      </div>
+      <div id="portfolioTimelineContainer" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;display:none;">
+        <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Capital Deployed Over Time</div>
+        <div style="position:relative;height:260px;"><canvas id="portfolioTimelineChart"></canvas></div>
       </div>
       <div id="portfolioTableContainer">
         <table class="table-view" id="portfolioTable" style="display:table;width:100%;">
@@ -12574,6 +12579,36 @@ function getUser() {
       }
     } catch (e) { /* token still present, let it proceed */ }
   }
+
+  // ── Onboarding redirect for first-time users ──
+  // If user hasn't selected a role (GP vs LP), send to onboarding.
+  // Skip for admins and existing users who already have data.
+  const _obUser = getUser();
+  if (_obUser && _obUser.email && !_obUser.onboardingChecked) {
+    try {
+      const _obResp = await fetch('/api/gp-onboarding?email=' + encodeURIComponent(_obUser.email), {
+        headers: { 'Authorization': 'Bearer ' + _obUser.token }
+      });
+      if (_obResp.ok) {
+        const _obData = await _obResp.json();
+        const _obProfile = _obData.profile || {};
+        // User has never selected a role and isn't an admin → onboarding
+        if (!_obProfile.onboardingRole && !_obProfile.onboardingComplete && !_obProfile.gpType) {
+          // Check if they have a buy box (existing LP user) — skip if so
+          if (!_obData.hasBuyBox) {
+            const ADMIN_EMAILS = ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','pascal@growyourcashflow.io','info@pascalwagner.com'];
+            if (ADMIN_EMAILS.indexOf(_obUser.email.toLowerCase()) === -1) {
+              window.location.href = 'gp-onboarding.html';
+              return;
+            }
+          }
+        }
+      }
+    } catch (e) { /* non-blocking — skip onboarding check on error */ }
+    // Mark as checked so we don't re-check on every page load this session
+    _obUser.onboardingChecked = true;
+    localStorage.setItem('gycUser', JSON.stringify(_obUser));
+  }
 })();
 
 function initAuth() {
@@ -14799,7 +14834,7 @@ function renderReport() {
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Target</div>'
     + '<div class="bb-goal-line">' + goalLine + '</div>'
     + '</div>'
-    + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
+    + '<button class="bb-edit-link" onclick="openPlanBuilder()">Edit</button>'
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Thesis</div>'
     + '<div class="bb-thesis">' + thesisText + '</div>'
@@ -16923,6 +16958,7 @@ function renderPortfolio() {
       tableC.style.display = 'none';
       summaryC.style.display = 'none';
       if (chartArea) chartArea.style.display = 'none';
+      const tlc = document.getElementById('portfolioTimelineContainer'); if (tlc) tlc.style.display = 'none';
       empty.innerHTML = '<div class="portfolio-empty-goal">'
         + '<div style="color:var(--text-muted);font-size:14px;">Loading your investments...</div>'
         + '</div>';
@@ -16935,6 +16971,7 @@ function renderPortfolio() {
     tableC.style.display = 'none';
     summaryC.style.display = 'none';
     if (chartArea) chartArea.style.display = 'none';
+    const tlc2 = document.getElementById('portfolioTimelineContainer'); if (tlc2) tlc2.style.display = 'none';
     // Goal-aware empty state
     const wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
     const branch = wd._branch;
@@ -16976,6 +17013,7 @@ function renderPortfolio() {
     renderPortfolioSummary();
     renderPortfolioChart();
     renderPortfolioRisk();
+    renderPortfolioTimeline();
     renderPortfolioTable();
   }
 }
@@ -17093,6 +17131,125 @@ function renderPortfolioRisk() {
   } else {
     el.innerHTML = insights.map(i => `<div class="${i.type === 'warn' ? 'risk-insight' : 'risk-insight-ok'}">${i.text}</div>`).join('');
   }
+}
+
+let portfolioTimelineInstance = null;
+function renderPortfolioTimeline() {
+  const container = document.getElementById('portfolioTimelineContainer');
+  const canvas = document.getElementById('portfolioTimelineChart');
+  if (!container || !canvas) return;
+
+  // Need at least 1 investment with a date to show the chart
+  const dated = portfolioInvestments.filter(i => i.dateInvested && (parseFloat(i.amountInvested) || 0) > 0);
+  if (dated.length === 0) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+
+  // Sort investments by date
+  const sorted = [...dated].sort((a, b) => new Date(a.dateInvested) - new Date(b.dateInvested));
+
+  // Build cumulative data points
+  const points = [];
+  let cumulative = 0;
+  sorted.forEach(inv => {
+    const amt = parseFloat(inv.amountInvested) || 0;
+    points.push({ x: inv.dateInvested, y: cumulative, label: null });
+    cumulative += amt;
+    points.push({ x: inv.dateInvested, y: cumulative, label: inv.investmentName + ' ($' + amt.toLocaleString() + ')' });
+  });
+  // Extend to today
+  const today = new Date().toISOString().split('T')[0];
+  if (points.length > 0 && points[points.length - 1].x < today) {
+    points.push({ x: today, y: cumulative, label: null });
+  }
+
+  // Calculate goal line if buy box data exists
+  const wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  let goalCapital = null;
+  let goalLabel = '';
+  if (wd._branch === 'cashflow' && wd.targetCashFlow) {
+    const target = parseDollar(wd.targetCashFlow) || 0;
+    const yieldRate = 0.09;
+    if (target > 0) {
+      goalCapital = Math.round(target / yieldRate);
+      goalLabel = '$' + goalCapital.toLocaleString() + ' needed for $' + target.toLocaleString() + '/yr at 9%';
+    }
+  } else if (wd._branch === 'growth' && wd.targetGrowth) {
+    goalCapital = parseDollar(wd.targetGrowth) || null;
+    if (goalCapital) goalLabel = '$' + goalCapital.toLocaleString() + ' deployment target';
+  }
+
+  if (portfolioTimelineInstance) portfolioTimelineInstance.destroy();
+
+  const datasets = [{
+    label: 'Capital Deployed',
+    data: points.map(p => ({ x: p.x, y: p.y })),
+    borderColor: '#51BE7B',
+    backgroundColor: 'rgba(81,190,123,0.08)',
+    fill: true,
+    stepped: 'after',
+    borderWidth: 2.5,
+    pointRadius: points.map(p => p.label ? 5 : 0),
+    pointBackgroundColor: '#51BE7B',
+    pointBorderColor: '#fff',
+    pointBorderWidth: 2,
+    tension: 0
+  }];
+
+  if (goalCapital && points.length >= 2) {
+    datasets.push({
+      label: 'Goal',
+      data: [{ x: points[0].x, y: goalCapital }, { x: today, y: goalCapital }],
+      borderColor: 'rgba(245,158,11,0.5)',
+      borderDash: [6, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    });
+  }
+
+  portfolioTimelineInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'nearest' },
+      scales: {
+        x: {
+          type: 'time',
+          time: { unit: 'month', displayFormats: { month: 'MMM yyyy' } },
+          grid: { display: false },
+          ticks: { font: { family: 'Plus Jakarta Sans', size: 11 }, color: 'var(--text-muted)' }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: {
+            font: { family: 'Plus Jakarta Sans', size: 11 },
+            color: 'var(--text-muted)',
+            callback: function(v) { return v >= 1000000 ? '$' + (v/1000000).toFixed(1) + 'M' : v >= 1000 ? '$' + (v/1000).toFixed(0) + 'K' : '$' + v; }
+          }
+        }
+      },
+      plugins: {
+        legend: { display: goalCapital ? true : false, position: 'top', labels: { font: { family: 'Plus Jakarta Sans', size: 11 }, usePointStyle: true, padding: 16 } },
+        tooltip: {
+          callbacks: {
+            title: function(ctx) {
+              const d = new Date(ctx[0].parsed.x);
+              return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            },
+            label: function(ctx) {
+              if (ctx.datasetIndex === 1) return goalLabel;
+              const pt = points[ctx.dataIndex];
+              const val = '$' + ctx.parsed.y.toLocaleString();
+              return pt && pt.label ? pt.label + ' — Total: ' + val : 'Total deployed: ' + val;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 
 function renderPortfolioTable() {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Cashflow Academy - Sign In</title>
+<title>GYC Deal Marketplace - Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,7 +56,7 @@ body {
   margin: 0 auto 16px;
   font-family: var(--font-ui);
   font-weight: 800;
-  font-size: 18px;
+  font-size: 15px;
   color: #fff;
   letter-spacing: -0.5px;
 }
@@ -374,23 +374,23 @@ body {
 <div class="login-wrapper">
   <div class="login-left">
     <div class="login-header">
-      <div class="brand-icon">CA</div>
-      <div class="brand-name">Cashflow Academy</div>
-      <div class="brand-tagline">Find, Vet & Invest in CRE Deals</div>
+      <div class="brand-icon">GYC</div>
+      <div class="brand-name">GYC Deal Marketplace</div>
+      <div class="brand-tagline">By Cashflow Academy</div>
     </div>
 
     <div class="stats-bar">
       <div class="stat-item">
+        <div class="stat-number">1,200+</div>
+        <div class="stat-label">Accredited<br>investors</div>
+      </div>
+      <div class="stat-item">
         <div class="stat-number">838</div>
-        <div class="stat-label">Live deals</div>
+        <div class="stat-label">Live<br>deals</div>
       </div>
       <div class="stat-item">
         <div class="stat-number">455</div>
-        <div class="stat-label">Sponsors</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-number">19</div>
-        <div class="stat-label">Asset classes</div>
+        <div class="stat-label">Vetted<br>sponsors</div>
       </div>
     </div>
 
@@ -407,13 +407,17 @@ body {
         <div class="value-prop-icon">&#x1F4CA;</div>
         <div class="value-prop-text"><strong>Research sponsors</strong> with track records, AUM, and deal history before you invest</div>
       </div>
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x1F514;</div>
+        <div class="value-prop-text"><strong>Get notified</strong> when new deals match your criteria — never miss an opportunity</div>
+      </div>
     </div>
   </div>
 
   <div class="login-right">
     <div class="login-card">
       <div class="login-card-title" id="cardTitle">Sign in</div>
-      <div class="login-card-desc" id="cardDesc">Access the deal marketplace.</div>
+      <div class="login-card-desc" id="cardDesc">Browse 800+ live deals from vetted sponsors.</div>
 
       <div class="verifying-state" id="verifyingState">
         <div class="verifying-spinner"></div>
@@ -442,7 +446,7 @@ body {
             <div class="magic-sent-title">Check your email</div>
             <div class="magic-sent-desc">
               We sent a login link to <strong id="sentEmail"></strong>.<br>
-              Click the link in the email to log in.
+              Click the link to access your deals.
             </div>
             <div id="signinMailCta"></div>
             <div class="magic-sent-desc" style="margin-top:12px;">
@@ -469,19 +473,6 @@ body {
               <label class="field-label">Email</label>
               <input type="email" class="field-input" id="signupEmail" placeholder="you@example.com" autocomplete="email">
             </div>
-            <div class="field">
-              <label class="field-label">How did you hear about us?</label>
-              <select class="field-input" id="signupSource" style="cursor:pointer">
-                <option value="">Select one...</option>
-                <option value="podcast">Best Ever CRE Podcast</option>
-                <option value="email">Email list</option>
-                <option value="social">Social media</option>
-                <option value="referral">Friend or colleague</option>
-                <option value="search">Google search</option>
-                <option value="academy">Cashflow Academy</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
             <div class="error-msg" id="signupError"></div>
             <button class="btn-submit btn-submit-primary" onclick="handleSignUp()">Sign Up</button>
             <div class="login-footer">
@@ -492,8 +483,24 @@ body {
             <div class="magic-sent-icon">&#10003;</div>
             <div class="magic-sent-title">You're in!</div>
             <div class="magic-sent-desc">
-              We sent a login link to <strong id="signupSentEmail"></strong>.<br>
-              Click the link in the email to access the deal marketplace.
+              We sent a login link to <strong id="signupSentEmail"></strong>.
+            </div>
+            <div style="text-align:left;margin:20px 0 16px;padding:16px 20px;background:var(--mint-bg);border-radius:10px;">
+              <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--teal-deep);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Here's what happens next</div>
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;align-items:flex-start;gap:10px;font-family:var(--font-body);font-size:13px;color:var(--charcoal);line-height:1.4;">
+                  <span style="background:var(--primary);color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:10px;font-weight:800;margin-top:1px;">1</span>
+                  Click the link in your email
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;font-family:var(--font-body);font-size:13px;color:var(--charcoal);line-height:1.4;">
+                  <span style="background:var(--primary);color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:10px;font-weight:800;margin-top:1px;">2</span>
+                  Set your investment criteria (60 seconds)
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;font-family:var(--font-body);font-size:13px;color:var(--charcoal);line-height:1.4;">
+                  <span style="background:var(--primary);color:#fff;border-radius:50%;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:10px;font-weight:800;margin-top:1px;">3</span>
+                  Start browsing deals matched to your goals
+                </div>
+              </div>
             </div>
             <div id="signupMailCta"></div>
             <div class="magic-sent-desc" style="margin-top:12px;">
@@ -516,6 +523,10 @@ body {
       <div class="value-prop">
         <div class="value-prop-icon">&#x1F4CA;</div>
         <div class="value-prop-text"><strong>Research sponsors</strong> with track records and deal history</div>
+      </div>
+      <div class="value-prop">
+        <div class="value-prop-icon">&#x1F514;</div>
+        <div class="value-prop-text"><strong>Get notified</strong> when new deals match your criteria</div>
       </div>
     </div>
   </div>
@@ -600,6 +611,9 @@ const _supa = window.supabase.createClient(
       tier: d.tier || 'free',
       isAdmin: d.isAdmin || false,
       tags: d.tags || [],
+      gpType: d.gpType || null,
+      onboardingRole: d.onboardingRole || null,
+      gpOnboardingComplete: d.gpOnboardingComplete || false,
       loggedInAt: new Date().toISOString()
     }));
     window.location.href = 'index.html';
@@ -616,11 +630,11 @@ function switchAuthTab(tab) {
   if (tab === 'signin') {
     document.getElementById('panel-signin').classList.add('active');
     document.getElementById('cardTitle').textContent = 'Sign in';
-    document.getElementById('cardDesc').textContent = 'Access the deal marketplace.';
+    document.getElementById('cardDesc').textContent = 'Browse 800+ live deals from vetted sponsors.';
   } else {
     document.getElementById('panel-signup').classList.add('active');
     document.getElementById('cardTitle').textContent = 'Sign up';
-    document.getElementById('cardDesc').textContent = 'Create your free account.';
+    document.getElementById('cardDesc').textContent = 'Free access to real-time deal flow. No credit card needed.';
   }
   document.getElementById('signinForm').style.display = '';
   document.getElementById('signinSent').classList.remove('show');
