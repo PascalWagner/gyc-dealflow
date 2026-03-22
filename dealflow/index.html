@@ -5929,16 +5929,16 @@ const _supa = window.supabase.createClient(
           <div class="profile-row">
             <div class="profile-field">
               <div class="profile-label">First Name</div>
-              <input type="text" class="profile-input" value="Pascal">
+              <input type="text" class="profile-input" id="profileFirstName" placeholder="First name">
             </div>
             <div class="profile-field">
               <div class="profile-label">Last Name</div>
-              <input type="text" class="profile-input" value="Wagner">
+              <input type="text" class="profile-input" id="profileLastName" placeholder="Last name">
             </div>
           </div>
           <div class="profile-field">
             <div class="profile-label">Email</div>
-            <input type="email" class="profile-input" value="info@pascalwagner.com">
+            <input type="email" class="profile-input" id="profileEmail" placeholder="Email" readonly>
           </div>
           <div class="profile-row">
             <div class="profile-field">
@@ -12243,7 +12243,7 @@ function navigateTo(page) {
   if (page === 'deals') { updateDealsChecklist(); if (typeof renderAll === 'function') renderAll(); }
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
-  if (page === 'settings') initBuyBox();
+  if (page === 'settings') { initBuyBox(); populateProfileFields(); }
   if (page === 'managers') renderManagersPage();
   if (page === 'assets') renderAssetsPage();
   if (page === 'dashboard') { if (typeof checkActivationMilestones === 'function') checkActivationMilestones(); renderDashboard(); }
@@ -12357,6 +12357,23 @@ function resetBuyBox() {
   buyBox = { assetClasses: ['Multi-Family','Self Storage','Industrial'], strategies: ['Value-Add','Lending'], dealTypes: ['Fund','Syndication'], irrMin: '8%', irrMax: '25%', minInvest: '$25,000', maxInvest: '$250,000', holdMin: '2 years', holdMax: '10 years' };
   initBuyBox();
   showSaveStatus();
+}
+
+function populateProfileFields() {
+  const user = getUser();
+  if (!user) return;
+  // Parse name into first/last
+  let firstName = user.firstName || '';
+  let lastName = user.lastName || '';
+  if (!firstName && user.name) {
+    const parts = user.name.trim().split(/\s+/);
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ') || '';
+  }
+  const el = id => document.getElementById(id);
+  if (el('profileFirstName')) el('profileFirstName').value = firstName;
+  if (el('profileLastName')) el('profileLastName').value = lastName;
+  if (el('profileEmail')) el('profileEmail').value = user.email || '';
 }
 
 function showSaveStatus() {
@@ -12620,9 +12637,8 @@ function initAuth() {
 
   const user = getUser();
   if (user && user.email) {
-    // Populate profile fields if available
-    const firstInput = document.querySelector('#stab-profile .profile-input[type="text"]');
-    if (firstInput && user.firstName) firstInput.value = user.firstName;
+    // Populate profile fields
+    populateProfileFields();
 
     // If name looks like email prefix (no space, matches email), fetch real name — once per session
     // Skip for impersonated users — their name comes from the admin search, not GHL lookup
@@ -23920,7 +23936,7 @@ function searchViewAsUsers(query) {
           : c.tier === 'alumni' ? '<span style="font-size:8px;font-weight:700;color:#8b5cf6;text-transform:uppercase;">Alumni</span>'
           : c.tier === 'investor' ? '<span style="font-size:8px;font-weight:700;color:#3b82f6;text-transform:uppercase;">Investor</span>'
           : '<span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Free</span>';
-        return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'free') + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
+        return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'free') + '\', \'' + (c.firstName || '').replace(/'/g, "\\'") + '\', \'' + (c.lastName || '').replace(/'/g, "\\'") + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
           + '<div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">' + initials + '</div>'
           + '<div style="flex:1;min-width:0;">'
           + '<div style="font-size:12px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.name + '</div>'
@@ -24042,7 +24058,7 @@ async function fetchUserDataAsAdmin(targetEmail) {
   }
 }
 
-async function viewAsUser(email, name, contactId, tier) {
+async function viewAsUser(email, name, contactId, tier, firstName, lastName) {
   // Save admin's real session
   if (!adminRealUser) {
     adminRealUser = JSON.parse(localStorage.getItem('gycUser'));
@@ -24058,10 +24074,19 @@ async function viewAsUser(email, name, contactId, tier) {
     saveUserScopedData(currentUser.email);
   }
 
+  // Parse firstName/lastName from name if not provided
+  if (!firstName && name) {
+    const parts = name.trim().split(/\s+/);
+    firstName = parts[0] || '';
+    lastName = parts.slice(1).join(' ') || '';
+  }
+
   // Swap to target user
   const impersonatedUser = {
     email: email,
     name: name,
+    firstName: firstName || '',
+    lastName: lastName || '',
     id: contactId,
     contactId: contactId,
     tier: tier,

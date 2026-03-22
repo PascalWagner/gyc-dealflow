@@ -383,7 +383,7 @@
                 : c.tier === 'alumni' ? '<span style="font-size:8px;font-weight:700;color:#8b5cf6;text-transform:uppercase;">Alumni</span>'
                 : c.tier === 'investor' ? '<span style="font-size:8px;font-weight:700;color:#3b82f6;text-transform:uppercase;">Investor</span>'
                 : '<span style="font-size:8px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Free</span>';
-              return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'free') + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
+              return '<div onclick="viewAsUser(\'' + c.email.replace(/'/g, "\\'") + '\', \'' + c.name.replace(/'/g, "\\'") + '\', \'' + c.id + '\', \'' + (c.tier || 'free') + '\', \'' + (c.firstName || '').replace(/'/g, "\\'") + '\', \'' + (c.lastName || '').replace(/'/g, "\\'") + '\')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background var(--transition);" onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'\'">'
                 + '<div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;">' + ini + '</div>'
                 + '<div style="flex:1;min-width:0;">'
                 + '<div style="font-size:12px;font-weight:700;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + c.name + '</div>'
@@ -397,19 +397,24 @@
       }, 400);
     };
 
-    window.viewAsUser = window.viewAsUser || function(email, name, contactId, tier) {
+    window.viewAsUser = window.viewAsUser || function(email, name, contactId, tier, firstName, lastName) {
       // Save admin session
       var adminUser = JSON.parse(localStorage.getItem('gycUser'));
       sessionStorage.setItem('gycAdminRealUser', JSON.stringify(adminUser));
+      // Parse firstName/lastName from name if not provided
+      if (!firstName && name) {
+        var parts = name.trim().split(/\s+/);
+        firstName = parts[0] || '';
+        lastName = parts.slice(1).join(' ') || '';
+      }
       // Swap to target user
-      localStorage.setItem('gycUser', JSON.stringify({ email: email, name: name, contactId: contactId, tier: tier, token: 'impersonated' }));
+      localStorage.setItem('gycUser', JSON.stringify({ email: email, name: name, firstName: firstName || '', lastName: lastName || '', contactId: contactId, tier: tier, token: 'impersonated' }));
       window.location.reload();
     };
 
     window.exitViewAs = window.exitViewAs || function() {
       var stored = sessionStorage.getItem('gycAdminRealUser');
       if (stored) {
-        localStorage.setItem('gycUser', JSON.parse(stored));
         localStorage.setItem('gycUser', stored);
         sessionStorage.removeItem('gycAdminRealUser');
         window.location.reload();
