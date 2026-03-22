@@ -22901,6 +22901,12 @@ if (window.location.hash.startsWith('#buybox')) {
   history.replaceState(null, '', window.location.pathname);
 }
 
+// Handle #settings from email — navigate to settings page
+if (window.location.hash === '#settings') {
+  setTimeout(() => navigateTo('settings'), 300);
+  history.replaceState(null, '', window.location.pathname);
+}
+
 // If buy box is complete, pre-render report and enable buttons
 if (localStorage.getItem('gycBuyBoxComplete')) {
   renderReport();
