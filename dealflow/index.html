@@ -11393,15 +11393,13 @@ let wizardStep = 0;
 let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Flow v3: 0=goal, 1=capital timeline, 2/3/4=branch target, 5=risk & concentration,
-//   6=asset classes, 7=strategies, 8=deal prefs, 9=LP network, 10/11/12=plan, 13=done
-// Natural order: Goal → Where are you? → 90-day goal → 12-mo goal → Net worth
-//   → 90-day capital → 12-mo capital → Readiness → Source → Check size → Loss tolerance → Preferences → Plan
+// Accreditation → Goal → Baseline → 90-day → 12-mo → Net worth
+//   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
-  common_start: [0],
-  cashflow: [8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 16],
-  growth: [22, 5, 8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 17],
-  tax: [22, 6, 20, 21, 8, 24, 1, 2, 3, 7, 9, 10, 11, 12, 13, 14, 15, 18],
+  common_start: [14, 0],
+  cashflow: [22, 23, 4, 8, 24, 1, 3, 9, 10, 11, 12, 13, 15, 16],
+  growth: [22, 5, 8, 24, 1, 3, 9, 10, 11, 12, 13, 15, 17],
+  tax: [22, 6, 20, 21, 8, 24, 1, 3, 9, 10, 11, 12, 13, 15, 18],
   common_end: [19]
 };
 
@@ -11419,17 +11417,18 @@ function getPhaseLabel() {
 }
 
 // Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
-// 0=Goal, 1=Finances, 2=Risk, 3=Preferences, 4=Plan
+// 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=Plan
 const STEP_TO_PHASE = {
-  0: 0,                 // goalSelect → Goal
-  22: 0, 23: 0, 4: 0, 5: 0, 6: 0,  // baseline, 90-day, 12-mo target → Goal
-  20: 0, 21: 0,         // income source, RE pro (tax branch) → Goal
-  8: 1, 24: 1, 1: 1, 2: 1, 3: 1,  // net worth, 90-day capital, 12-mo capital, readiness, source → Finances
-  7: 2, 9: 2,           // check size, loss tolerance → Risk
-  10: 3, 11: 3, 12: 3, 13: 3, 14: 3,  // asset class, strategy, lockup, dist, accreditation → Preferences
+  14: 0,                 // accreditation → You
+  0: 1,                  // goalSelect → Goal
+  22: 1, 23: 1, 4: 1, 5: 1, 6: 1,  // baseline, 90-day, 12-mo target → Goal
+  20: 1, 21: 1,          // income source, RE pro (tax branch) → Goal
+  8: 2, 24: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
+  9: 2,                  // loss tolerance → Finances
+  10: 3, 11: 3, 12: 3, 13: 3,  // asset class, strategy, lockup, dist → Preferences
   15: 4, 16: 4, 17: 4, 18: 4, 19: 4   // LP network, plan outputs, completion → Plan
 };
-const PHASE_NAMES = ['Goal', 'Finances', 'Risk', 'Preferences', 'Plan'];
+const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'Plan'];
 
 function updateWizardPhases(seq, currentIdx) {
   var container = document.getElementById('wizardPhases');
@@ -11902,12 +11901,18 @@ function renderWizardStep() {
   if (step.type === 'capitalAmount') {
     html += '<div class="wizard-card-title">How much can you deploy in the next 12 months?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">No commitments \u2014 just helps us size recommendations to deals you can actually invest in.</div>';
+    var nwVal = parseInt(wizardData.netWorth || '0', 10);
+    function nwPct(midpoint) {
+      if (!nwVal || nwVal <= 0) return '';
+      var pct = Math.round(midpoint / nwVal * 100);
+      return pct + '% of net worth';
+    }
     var capOptions = [
-      { val: '<$100k', label: 'Under $100K', desc: 'Getting started' },
-      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals at typical minimums' },
-      { val: '$250k-$500k', label: '$250K \u2013 $500K', desc: 'Well-diversified portfolio' },
-      { val: '$500k-$1M', label: '$500K \u2013 $1M', desc: 'Significant deployment' },
-      { val: '$1M+', label: '$1M+', desc: 'Institutional-level capital' }
+      { val: '<$100k', label: 'Under $100K', desc: 'Getting started', nwCtx: nwPct(75000) },
+      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals at typical minimums', nwCtx: nwPct(175000) },
+      { val: '$250k-$500k', label: '$250K \u2013 $500K', desc: 'Well-diversified portfolio', nwCtx: nwPct(375000) },
+      { val: '$500k-$1M', label: '$500K \u2013 $1M', desc: 'Significant deployment', nwCtx: nwPct(750000) },
+      { val: '$1M+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct(1500000) }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     capOptions.forEach(function(opt) {
@@ -11916,6 +11921,7 @@ function renderWizardStep() {
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
+      if (opt.nwCtx) html += '<div style="font-size:12px;font-weight:600;color:var(--primary);white-space:nowrap;">' + opt.nwCtx + '</div>';
       html += '</div>';
     });
     html += '</div>';
@@ -12461,8 +12467,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 11: ACCREDITATION STATUS =====
   if (step.type === 'accreditationPrefs') {
-    html += '<div class="wizard-card-title">Are you an <span class="wiz-tip" data-tip="SEC designation for investors who meet income ($200K+) or net worth ($1M+) thresholds, allowing access to private investments.">accredited investor</span>?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most <span class="wiz-tip" data-tip="Investment offerings not registered with the SEC, typically only available to accredited investors. Higher return potential but less liquidity.">private placements</span> require accreditation. This determines which deals we can show you.</div>';
+    html += '<div class="wizard-card-title">What\u2019s your investor accreditation level?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">You\u2019ll see every deal in our database, but when you apply your Buy Box, we\u2019ll only show deals you\u2019re eligible to invest in.</div>';
     var accOptions = [
       { val: 'net_worth', label: 'Yes \u2014 Net worth over $1M', desc: 'Excluding primary residence' },
       { val: 'income', label: 'Yes \u2014 Income over $200K', desc: '$200K individual or $300K with spouse' },
@@ -16992,7 +16998,7 @@ function adminRenderQualityView(rows, stats) {
     var tdS = 'padding:12px 16px;border-bottom:1px solid var(--border-light);';
     return '<tr style="cursor:pointer;transition:background 0.1s ease;" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'\'" onclick="if(!event.target.closest(\'button\'))window.location.href=\'deal.html?id=' + r.id + '\'">' +
       '<td style="' + tdS + 'font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--primary);">' + (r.investment_name || '\u2014') + '</td>' +
-      '<td style="' + tdS + 'color:var(--text-secondary);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.management_company_name || '\u2014') + '</td>' +
+      '<td style="' + tdS + 'max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (r.management_company_id ? '<a href="sponsor.html?id=' + r.management_company_id + '" style="color:var(--primary);text-decoration:none;font-weight:500;" onclick="event.stopPropagation()">' + (r.management_company_name || '\u2014') + '</a>' : '<span style="color:var(--text-muted);">' + (r.management_company_name || '\u2014') + '</span>') + '</td>' +
       '<td style="' + tdS + 'text-align:center;">' + (r.has_deck ? chk : xm) + '</td>' +
       '<td style="' + tdS + 'text-align:center;">' + (r.has_ppm ? chk : xm) + '</td>' +
       '<td style="' + tdS + 'text-align:center;">' + (r.has_sec ? chk : xm) + '</td>' +

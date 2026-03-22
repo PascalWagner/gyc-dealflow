@@ -248,7 +248,10 @@ const QUALITY_FIELDS = [
   { key: 'investing_geography', label: 'Geography' },
   { key: 'instrument', label: 'Instrument' },
   { key: 'deck_url', label: 'Deck' },
+  { key: 'ppm_url', label: 'PPM' },
+  { key: 'sec_cik', label: 'SEC Filing' },
   { key: 'management_company_id', label: 'Operator' },
+  { key: 'purchase_price', label: 'Purchase Price' },
   { key: 'status', label: 'Status' },
 ];
 
@@ -262,11 +265,18 @@ function computeQuality(deal) {
     if (isFilled) filled++;
     else missing.push(f.label);
   }
+  let pct = Math.round((filled / QUALITY_FIELDS.length) * 100);
+  // Deck, PPM, and SEC filing are required for 100% — cap at 99% if any are missing
+  const hasDeck = !!deal.deck_url;
+  const hasPPM = !!deal.ppm_url;
+  const hasSEC = !!(deal.sec_cik);
+  if (pct === 100 && (!hasDeck || !hasPPM || !hasSEC)) pct = 99;
   return {
-    pct: Math.round((filled / QUALITY_FIELDS.length) * 100),
+    pct,
     missing,
-    hasDeck: !!deal.deck_url,
-    hasPPM: !!deal.ppm_url
+    hasDeck,
+    hasPPM,
+    hasSEC
   };
 }
 
@@ -292,17 +302,19 @@ async function listDealsQuality(supabase, body) {
       id: d.id,
       investment_name: d.investment_name,
       asset_class: d.asset_class,
+      management_company_id: d.management_company?.id || null,
       management_company_name: d.management_company?.operator_name || '—',
       completeness_pct: q.pct,
       missing_fields: q.missing,
       has_deck: q.hasDeck,
       has_ppm: q.hasPPM,
+      has_sec: q.hasSEC,
       added_date: d.added_date
     };
   });
 
-  // Sort by completeness ascending (worst first)
-  rows.sort((a, b) => a.completeness_pct - b.completeness_pct);
+  // Sort by completeness descending (most complete first)
+  rows.sort((a, b) => b.completeness_pct - a.completeness_pct);
 
   const total = rows.length;
   const avgPct = total > 0 ? Math.round(rows.reduce((s, r) => s + r.completeness_pct, 0) / total) : 0;
@@ -316,7 +328,8 @@ async function listDealsQuality(supabase, body) {
       above_80: rows.filter(r => r.completeness_pct >= 80).length,
       below_50: rows.filter(r => r.completeness_pct < 50).length,
       no_deck: rows.filter(r => !r.has_deck).length,
-      no_ppm: rows.filter(r => !r.has_ppm).length
+      no_ppm: rows.filter(r => !r.has_ppm).length,
+      no_sec: rows.filter(r => !r.has_sec).length
     }
   };
 }
@@ -397,7 +410,7 @@ async function listOperatorsQuality(supabase, body) {
     };
   });
 
-  rows.sort((a, b) => a.completeness_pct - b.completeness_pct);
+  rows.sort((a, b) => b.completeness_pct - a.completeness_pct);
 
   const total = rows.length;
   const avgPct = total > 0 ? Math.round(rows.reduce((s, r) => s + r.completeness_pct, 0) / total) : 0;
