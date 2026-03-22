@@ -11874,11 +11874,11 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 // Accreditation → Goal → Baseline → 90-day → 12-mo → Net worth
 //   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
-  common_start: [14, 0],
-  cashflow: [22, 4, 8, 24, 1, 3, 9, 10, 11, 12, 13, 15, 16],
-  growth: [22, 5, 8, 24, 1, 3, 9, 10, 11, 12, 13, 15, 17],
-  tax: [22, 6, 20, 21, 8, 24, 1, 3, 9, 10, 11, 12, 13, 15, 18],
-  common_end: [19]
+  common_start: [15, 0],
+  cashflow: [23, 4, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16, 17],
+  growth: [23, 5, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16, 18],
+  tax: [23, 6, 21, 22, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16, 19],
+  common_end: [20]
 };
 
 function getStepSequence() {
@@ -11886,7 +11886,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital'];
+const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -11897,14 +11897,14 @@ function getPhaseLabel() {
 // Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
 // 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=Plan
 const STEP_TO_PHASE = {
-  14: 0,                 // accreditation → You
+  15: 0,                 // accreditation → You
   0: 1,                  // goalSelect → Goal
-  22: 1, 23: 1, 4: 1, 5: 1, 6: 1,  // baseline, 90-day, 12-mo target → Goal
-  20: 1, 21: 1,          // income source, RE pro (tax branch) → Goal
-  8: 2, 24: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
+  23: 1, 24: 1, 4: 1, 5: 1, 6: 1,  // baseline, 90-day, 12-mo target → Goal
+  21: 1, 22: 1,          // income source, RE pro (tax branch) → Goal
+  8: 2, 25: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
   9: 2,                  // loss tolerance → Finances
-  10: 3, 11: 3, 12: 3, 13: 3,  // asset class, strategy, lockup, dist → Preferences
-  15: 4, 16: 4, 17: 4, 18: 4, 19: 4   // LP network, plan outputs, completion → Plan
+  10: 3, 11: 3, 12: 3, 13: 3, 14: 3,  // asset class, strategy, operator focus, lockup, dist → Preferences
+  16: 4, 17: 4, 18: 4, 19: 4, 20: 4   // LP network, plan outputs, completion → Plan
 };
 const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'Plan'];
 
@@ -12010,27 +12010,29 @@ const WIZARD_STEPS = [
   { type: 'assetClassSelect' },
   // 11: Strategy preferences (goal-contextualized)
   { type: 'strategySelect' },
-  // 12: Lockup preference
+  // 12: Operator focus preference
+  { type: 'operatorFocus' },
+  // 13: Lockup preference
   { type: 'lockupPrefs' },
-  // 13: Distribution preference
+  // 14: Distribution preference
   { type: 'distributionPrefs' },
-  // 14: Accreditation status
+  // 15: Accreditation status
   { type: 'accreditationPrefs' },
-  // 15: LP Network opt-in
+  // 16: LP Network opt-in
   { type: 'lpNetwork' },
-  // 16: Plan — cash flow
+  // 17: Plan — cash flow
   { type: 'planOutput', branch: 'cashflow' },
-  // 17: Plan — growth
+  // 18: Plan — growth
   { type: 'planOutput', branch: 'growth' },
-  // 18: Plan — tax
+  // 19: Plan — tax
   { type: 'planOutput', branch: 'tax' },
-  // 19: Completion
+  // 20: Completion
   { type: 'completion' },
-  // 20: Income source (tax branch only)
+  // 21: Income source (tax branch only)
   { type: 'incomeSource' },
-  // 21: RE Professional status (tax branch only)
+  // 22: RE Professional status (tax branch only)
   { type: 'reProfessional' },
-  // 22: Current passive income baseline (all paths)
+  // 23: Current passive income baseline (all paths)
   { type: 'targetInput',
     title: 'What\u2019s your current passive income?',
     suffix: '/ year',
@@ -12044,7 +12046,7 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 23: 90-day income goal (cashflow branch)
+  // 24: 90-day income goal (cashflow branch)
   { type: 'targetInput', branch: 'cashflow',
     title: 'What could you earn in the next 90 days?',
     subtitle: 'Be realistic \u2014 this is your first milestone, not your finish line.',
@@ -12063,7 +12065,7 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 24: 90-day deployable capital (radio buttons like 12-mo)
+  // 25: 90-day deployable capital (radio buttons like 12-mo)
   { type: 'capital90Day' }
 ];
 
@@ -12833,7 +12835,37 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 12: LOCKUP PREFERENCE =====
+  // ===== SCREEN 12: OPERATOR FOCUS =====
+  if (step.type === 'operatorFocus') {
+    html += '<div class="wizard-card-title">What kind of operator do you want behind your investment?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This is about focus vs. diversification at the <em>operator</em> level \u2014 not your portfolio.<br><br>';
+    html += '<strong><span class="wiz-tip" data-tip="A specialist operator focuses on a single asset class \u2014 like self-storage or multi-family \u2014 day in, day out. They know every nuance of their niche.">Specialist operators</span></strong> do one thing \u2014 like self-storage or multi-family \u2014 day in, day out. They know every nuance of their niche.<br><br>';
+    html += '<strong>Diversified operators</strong> manage across multiple asset classes. This is common with larger firms ($100M+ AUM), where scale and team depth make diversification a strength, not a distraction.<br><br>';
+    html += 'Neither is better \u2014 it depends on how you want to build your portfolio.</div>';
+    var opFocusOptions = [
+      { val: 'specialist', label: 'Specialists Only', detail: 'I want operators laser-focused on one asset class' },
+      { val: 'both', label: 'Open to Both', detail: 'I\u2019ll evaluate any operator based on their track record' },
+      { val: 'diversified', label: 'Prefer Diversified', detail: 'I like firms that can deploy across multiple strategies' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+    opFocusOptions.forEach(function(opt) {
+      var isSel = wizardData.operatorFocus === opt.val;
+      html += '<div onclick="wizardData.operatorFocus=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
+      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.detail + '</div></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 13: LOCKUP PREFERENCE =====
   if (step.type === 'lockupPrefs') {
     html += '<div class="wizard-card-title">How long are you comfortable not having access to your invested capital?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are <span class="wiz-tip" data-tip="You cannot sell or withdraw your investment before the hold period ends. Your capital is locked in until the deal completes.">illiquid</span> \u2014 once you invest, you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
@@ -13367,6 +13399,7 @@ function wizardNext() {
     checkSize: 'checkSize',
     netWorth: 'netWorth',
     lossTolerance: 'maxOperatorPct',
+    operatorFocus: 'operatorFocus',
     lockupPrefs: 'lockup',
     distributionPrefs: 'distributions',
     accreditationPrefs: 'accreditation',
@@ -13498,6 +13531,7 @@ function syncWizardToBuyBox() {
   if (d.reProfessional) buyBox.reProfessional = d.reProfessional;
   if (d.maxOperatorPct) buyBox.maxOperatorPct = d.maxOperatorPct;
   if (d.accreditation) buyBox.accreditation = d.accreditation;
+  if (d.operatorFocus) buyBox.deal_structure = d.operatorFocus;
 
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
   if (typeof renderReport === 'function') renderReport();
