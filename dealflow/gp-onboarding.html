@@ -802,6 +802,121 @@ select.form-input { cursor: pointer; appearance: auto; }
   line-height: 1.3;
 }
 
+/* ====== AGREEMENT STEP ====== */
+.agreement-scroll {
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 24px 28px;
+  background: var(--off-white);
+  margin-bottom: 20px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.agreement-scroll h3 {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 20px 0 8px;
+  letter-spacing: -0.2px;
+}
+.agreement-scroll h3:first-child { margin-top: 0; }
+.agreement-scroll p { margin-bottom: 10px; }
+.agreement-scroll ul {
+  margin: 0 0 12px 20px;
+  padding: 0;
+}
+.agreement-scroll li { margin-bottom: 4px; }
+.agreement-scroll strong { color: var(--text-dark); }
+
+.consent-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+.consent-box {
+  width: 22px; height: 22px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+  margin-top: 1px;
+}
+.consent-box.checked {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.consent-box svg { width: 13px; height: 13px; color: #fff; display: none; }
+.consent-box.checked svg { display: block; }
+.consent-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-dark);
+  line-height: 1.4;
+}
+.consent-text strong { font-weight: 700; }
+
+.signature-section {
+  background: var(--off-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 20px 24px;
+}
+.signature-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.offering-type-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.offering-type-option {
+  flex: 1;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: center;
+}
+.offering-type-option:hover { border-color: var(--primary); }
+.offering-type-option.selected {
+  border-color: var(--primary);
+  background: var(--green-bg);
+}
+.offering-type-option .ot-label {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.offering-type-option .ot-desc {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* ====== COMPANY TYPEAHEAD ====== */
 .company-result {
   display: flex;
@@ -1016,7 +1131,7 @@ select.form-input { cursor: pointer; appearance: auto; }
     <!-- ===== STEP 2: Company Basics (3 fields) ===== -->
     <div class="step" id="step2">
       <div class="step-header">
-        <div class="step-counter">Step 1 of 6</div>
+        <div class="step-counter">Step 1 of 7</div>
         <div class="step-title">What's your firm?</div>
         <div class="step-subtitle">We'll create your operator profile from this</div>
       </div>
@@ -1066,7 +1181,7 @@ select.form-input { cursor: pointer; appearance: auto; }
     <!-- ===== STEP 3: Asset Classes ===== -->
     <div class="step" id="step3">
       <div class="step-header">
-        <div class="step-counter">Step 2 of 6</div>
+        <div class="step-counter">Step 2 of 7</div>
         <div class="step-title">What asset classes do you operate in?</div>
         <div class="step-subtitle">This helps us match your deals to the right investors</div>
       </div>
@@ -1090,7 +1205,7 @@ select.form-input { cursor: pointer; appearance: auto; }
     <!-- ===== STEP 4: IR Contact ===== -->
     <div class="step" id="step4">
       <div class="step-header">
-        <div class="step-counter">Step 3 of 6</div>
+        <div class="step-counter">Step 3 of 7</div>
         <div class="step-title">Who should we introduce investors to?</div>
         <div class="step-subtitle">When an LP is interested in your deal, we connect them directly to this person</div>
       </div>
@@ -1128,10 +1243,149 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 5: Upload Deal (deck + PPM) ===== -->
+    <!-- ===== STEP 5: Operator Listing Agreement ===== -->
     <div class="step" id="step5">
       <div class="step-header">
-        <div class="step-counter">Step 4 of 6</div>
+        <div class="step-counter">Step 4 of 7</div>
+        <div class="step-title">Operator Listing Agreement</div>
+        <div class="step-subtitle">Review and accept the terms for listing your deals on the platform</div>
+      </div>
+      <div class="step-body">
+        <!-- Offering type selector -->
+        <div style="margin-bottom:20px;">
+          <div class="signature-label">What type of offering are you raising?</div>
+          <div class="offering-type-row">
+            <div class="offering-type-option selected" id="ot506c" onclick="selectOfferingType('506c')">
+              <div class="ot-label">Reg D 506(c)</div>
+              <div class="ot-desc">General solicitation allowed, accredited investors only</div>
+            </div>
+            <div class="offering-type-option" id="ot506b" onclick="selectOfferingType('506b')">
+              <div class="ot-label">Reg D 506(b)</div>
+              <div class="ot-desc">Pre-existing relationships only, not publicly marketed</div>
+            </div>
+            <div class="offering-type-option" id="otOther" onclick="selectOfferingType('other')">
+              <div class="ot-label">Other / Unsure</div>
+              <div class="ot-desc">Reg A+, non-US, or not yet determined</div>
+            </div>
+          </div>
+          <div id="offering506bNote" style="display:none;background:var(--yellow-bg);border:1px solid rgba(202,138,4,0.3);border-radius:var(--radius-sm);padding:12px 16px;font-family:var(--font-ui);font-size:13px;color:var(--text-dark);line-height:1.5;">
+            <strong>506(b) deals are not publicly marketed.</strong> Your deal will be stored in our database and available for portfolio tracking, but it will not appear as a public deal card or be promoted to investors. This protects your compliance with Regulation D.
+          </div>
+        </div>
+
+        <!-- Scrollable agreement text -->
+        <div class="agreement-scroll" id="agreementText">
+          <h3>Grow Your Cashflow — Operator Listing Agreement</h3>
+          <p><em>Version 1.0 — Effective Date: March 2026</em></p>
+
+          <p>This Operator Listing Agreement ("Agreement") is entered into between you ("Operator," "you," or "your") and Grow Your Cashflow LLC ("GYC," "we," "us," or "our"), a Florida limited liability company, governing your use of the GYC Dealflow Platform ("Platform") as a deal sponsor, operator, or fund manager.</p>
+
+          <p>By checking the boxes below and providing your electronic signature, you acknowledge that you have read, understand, and agree to be bound by the following terms:</p>
+
+          <h3>1. Platform Terms of Service</h3>
+          <p>You agree to comply with the GYC Platform Terms of Service, which govern your access to and use of the Platform, including account registration, data privacy, acceptable use, and intellectual property rights. The full Terms of Service are available at <strong>growyourcashflow.com/terms</strong>.</p>
+
+          <h3>2. Authorization to Display & Distribute Deal Materials</h3>
+          <p>You grant GYC a non-exclusive, royalty-free license to:</p>
+          <ul>
+            <li>Display your deal information, offering summary, and key terms on the Platform</li>
+            <li>Share your pitch deck, PPM, and other uploaded documents with registered investors on the Platform</li>
+            <li>Include your deal in filtered search results, deal alerts, and personalized recommendations sent to investors whose investment criteria match your offering</li>
+            <li>Feature your deal in email communications, newsletters, and marketing materials distributed to the GYC investor network</li>
+            <li>Facilitate direct introductions between interested investors and your designated Investor Relations contact</li>
+          </ul>
+          <p>This license continues for as long as your deal is active on the Platform. You may request removal of your deal at any time by contacting us.</p>
+
+          <h3>3. Presentation Recording & Distribution</h3>
+          <p>If you participate in a GYC live deal presentation event, you consent to:</p>
+          <ul>
+            <li>The session being recorded in its entirety (audio, video, and screen share)</li>
+            <li>The recording being shared with investors in the GYC database, including those who did not attend the live event</li>
+            <li>The recording being embedded on your deal page within the Platform</li>
+            <li>GYC using excerpts from the recording in marketing materials to promote future events</li>
+          </ul>
+
+          <h3>4. Data Accuracy & Representations</h3>
+          <p>You represent and warrant that:</p>
+          <ul>
+            <li>All deal information, financial projections, terms, and materials you provide are <strong>truthful, accurate, and not misleading</strong></li>
+            <li>You are <strong>duly authorized</strong> to distribute the offering materials and to grant the permissions described in this Agreement</li>
+            <li>Your offering is <strong>properly structured</strong> in compliance with applicable securities laws, including but not limited to Regulation D of the Securities Act of 1933</li>
+            <li>You will <strong>promptly notify GYC</strong> if any material facts about your offering change after submission</li>
+            <li>You will <strong>update your deal information</strong> on the Platform if terms, status, or availability change</li>
+          </ul>
+
+          <h3>5. Regulatory Compliance</h3>
+          <p><strong>For 506(c) offerings:</strong> You acknowledge that GYC may share your deal materials with accredited investors and that GYC will take reasonable steps to verify accreditation status before facilitating introductions.</p>
+          <p><strong>For 506(b) offerings:</strong> You acknowledge that your deal will <strong>not</strong> be publicly marketed or displayed as a deal card on the Platform. Your deal will be stored in our database for portfolio tracking purposes only and will only be visible to investors with whom a pre-existing substantive relationship exists.</p>
+          <p><strong>GYC is not a broker-dealer</strong> and does not provide investment advice, make investment recommendations, or facilitate securities transactions. GYC operates as a technology platform that connects operators with potential investors. All investment decisions are made independently by the parties involved.</p>
+
+          <h3>6. Limitation of Liability</h3>
+          <p>GYC shall not be liable for any investment losses, failed capital raises, or investor disputes arising from your use of the Platform. You agree to indemnify and hold harmless GYC, its officers, employees, and agents from any claims, damages, or expenses arising from your breach of this Agreement or your offering activities.</p>
+
+          <h3>7. Term & Termination</h3>
+          <p>This Agreement remains in effect for as long as you have an active operator account on the Platform. Either party may terminate by providing written notice. Upon termination, GYC will remove your active deal listings within a reasonable timeframe, but may retain records of your account and agreement acceptance for legal and compliance purposes.</p>
+        </div>
+
+        <!-- Consent checkboxes -->
+        <div class="consent-checks">
+          <div class="consent-row" onclick="toggleConsent('tos')">
+            <div class="consent-box" id="consentTos">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="consent-text">I have read and agree to the <strong>Platform Terms of Service</strong> and the terms of this Operator Listing Agreement.</div>
+          </div>
+          <div class="consent-row" onclick="toggleConsent('listing')">
+            <div class="consent-box" id="consentListing">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="consent-text">I authorize GYC to <strong>display, distribute, and promote my deal</strong> to investors on the Platform as described in Sections 2 and 3 above.</div>
+          </div>
+          <div class="consent-row" onclick="toggleConsent('accuracy')">
+            <div class="consent-box" id="consentAccuracy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="consent-text">I represent that all information I provide is <strong>accurate and not misleading</strong>, and I am authorized to distribute these offering materials.</div>
+          </div>
+          <div class="consent-row" onclick="toggleConsent('recording')">
+            <div class="consent-box" id="consentRecording">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="consent-text">I consent to <strong>recording and distribution</strong> of any live presentation events I participate in. <span style="color:var(--text-muted);font-size:13px;">(Optional if not presenting)</span></div>
+          </div>
+        </div>
+
+        <!-- E-Signature -->
+        <div class="signature-section">
+          <div class="signature-label">Electronic Signature</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Full Legal Name *</label>
+              <input class="form-input" type="text" id="sigName" placeholder="Type your full name as signature">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input class="form-input" type="text" id="sigTitle" placeholder="e.g. Managing Partner">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToStep(4)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" id="agreementNextBtn" onclick="saveAgreement()" disabled>
+          I Agree — Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 6: Upload Deal (deck + PPM) ===== -->
+    <div class="step" id="step6">
+      <div class="step-header">
+        <div class="step-counter">Step 5 of 7</div>
         <div class="step-title">Upload your deal</div>
         <div class="step-subtitle">We'll use AI to extract the key terms from your documents</div>
       </div>
@@ -1164,7 +1418,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(4)">
+        <button class="btn-secondary" onclick="goToStep(5)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1178,10 +1432,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 6: Presentation Interest ===== -->
-    <div class="step" id="step6">
+    <!-- ===== STEP 7: Presentation Interest ===== -->
+    <div class="step" id="step7">
       <div class="step-header">
-        <div class="step-counter">Step 5 of 6</div>
+        <div class="step-counter">Step 6 of 7</div>
         <div class="step-title">Present your deal live to qualified investors</div>
         <div class="step-subtitle">This is the fastest way to get in front of investors who are actively deploying capital</div>
       </div>
@@ -1227,7 +1481,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(5)">
+        <button class="btn-secondary" onclick="goToStep(6)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1241,10 +1495,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 7: Completion Checklist ===== -->
-    <div class="step" id="step7">
+    <!-- ===== STEP 8: Completion Checklist ===== -->
+    <div class="step" id="step8">
       <div class="step-header">
-        <div class="step-counter">Step 6 of 6</div>
+        <div class="step-counter">Step 7 of 7</div>
         <div class="step-title">You're all set!</div>
         <div class="step-subtitle">Here's a summary of your onboarding. You can always update these from your dashboard.</div>
       </div>
@@ -1255,15 +1509,15 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
       <div class="step-footer">
         <span></span>
-        <button class="btn-primary" onclick="goToStep(8)">
+        <button class="btn-primary" onclick="goToStep(9)">
           Continue
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- ===== STEP 8: Also an LP? ===== -->
-    <div class="step" id="step8">
+    <!-- ===== STEP 9: Also an LP? ===== -->
+    <div class="step" id="step9">
       <div class="step-header">
         <div class="step-counter">One More Thing</div>
         <div class="step-title">Are you also an LP?</div>

@@ -26,6 +26,9 @@
     irSelf: false,
     dealUploaded: false,
     dealSkipped: false,
+    agreementSigned: false,
+    offeringType: '506c',
+    consents: { tos: false, listing: false, accuracy: false, recording: false },
     deckFile: null,
     ppmFile: null,
     presentationInterest: null,
@@ -59,18 +62,18 @@
     if (target) target.classList.add('active');
     state.currentStep = step;
 
-    // Progress bar (steps 1-8, map to 0-100%)
+    // Progress bar (steps 1-9, map to 0-100%)
     var progressWrap = document.getElementById('progressWrap');
     var progressFill = document.getElementById('progressFill');
     if (step === 0) {
       progressWrap.style.display = 'none';
     } else {
       progressWrap.style.display = 'block';
-      var pct = Math.min(100, Math.round(((step - 1) / 7) * 100));
+      var pct = Math.min(100, Math.round(((step - 1) / 8) * 100));
       progressFill.style.width = pct + '%';
     }
 
-    if (step === 7) buildChecklist();
+    if (step === 8) buildChecklist();
     window.scrollTo(0, 0);
   };
 
@@ -308,7 +311,93 @@
     });
   };
 
-  // ── Step 5: Deal Upload (deck + PPM) ──
+  // ── Step 5: Operator Listing Agreement ──
+  window.selectOfferingType = function(type) {
+    state.offeringType = type;
+    document.getElementById('ot506c').classList.toggle('selected', type === '506c');
+    document.getElementById('ot506b').classList.toggle('selected', type === '506b');
+    document.getElementById('otOther').classList.toggle('selected', type === 'other');
+    document.getElementById('offering506bNote').style.display = type === '506b' ? 'block' : 'none';
+  };
+
+  window.toggleConsent = function(key) {
+    state.consents[key] = !state.consents[key];
+    var box = document.getElementById('consent' + key.charAt(0).toUpperCase() + key.slice(1));
+    if (box) box.classList.toggle('checked', state.consents[key]);
+    updateAgreementBtn();
+  };
+
+  function updateAgreementBtn() {
+    var btn = document.getElementById('agreementNextBtn');
+    var sigName = document.getElementById('sigName').value.trim();
+    // Required: tos + listing + accuracy + signature name. Recording is optional.
+    var canProceed = state.consents.tos && state.consents.listing && state.consents.accuracy && sigName.length > 0;
+    btn.disabled = !canProceed;
+  }
+
+  // Listen to signature name input
+  (function() {
+    var sigInput = document.getElementById('sigName');
+    if (sigInput) sigInput.addEventListener('input', updateAgreementBtn);
+  })();
+
+  window.saveAgreement = function() {
+    var sigName = document.getElementById('sigName').value.trim();
+    var sigTitle = document.getElementById('sigTitle').value.trim();
+    if (!sigName) { document.getElementById('sigName').focus(); return; }
+    if (!state.consents.tos || !state.consents.listing || !state.consents.accuracy) return;
+
+    var btn = document.getElementById('agreementNextBtn');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    // Hash the agreement text for the record
+    var agreementText = document.getElementById('agreementText').innerText;
+    var hash = simpleHash(agreementText);
+
+    fetch('/api/gp-agreement', {
+      method: 'POST', headers: headers,
+      body: JSON.stringify({
+        email: user.email,
+        signatoryName: sigName,
+        signatoryEmail: user.email,
+        signatoryTitle: sigTitle,
+        offeringType: state.offeringType,
+        acceptedTos: state.consents.tos,
+        acceptedListing: state.consents.listing,
+        acceptedDataAccuracy: state.consents.accuracy,
+        acceptedRecording: state.consents.recording,
+        agreementTextHash: hash
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      state.agreementSigned = true;
+      btn.disabled = false;
+      btn.innerHTML = 'I Agree — Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+      goToStep(6);
+    })
+    .catch(function(err) {
+      console.error('Agreement save error:', err);
+      btn.disabled = false;
+      btn.innerHTML = 'I Agree — Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+      // Still advance — we'll re-prompt if not saved
+      state.agreementSigned = true;
+      goToStep(6);
+    });
+  };
+
+  // Simple string hash for agreement text snapshot
+  function simpleHash(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+      var chr = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return 'v1-' + Math.abs(hash).toString(36);
+  }
+
+  // ── Step 6: Deal Upload (deck + PPM) ──
   function initDropZones() {
     // Deck drop zone
     var deckDZ = document.getElementById('deckDropZone');
@@ -398,7 +487,7 @@
         body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
       });
     })
-    .then(function() { goToStep(6); })
+    .then(function() { goToStep(7); })
     .catch(function(err) {
       console.error('Upload error:', err);
       state.dealUploaded = false;
@@ -415,26 +504,27 @@
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'deal-skipped', data: {} })
-    }).then(function() { goToStep(6); }).catch(function() { goToStep(6); });
+    }).then(function() { goToStep(7); }).catch(function() { goToStep(7); });
   };
 
-  // ── Step 6: Presentation Interest ──
+  // ── Step 7: Presentation Interest ──
   window.savePresentation = function(interested) {
     state.presentationInterest = interested;
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'presentation', data: { interested: interested } })
-    }).then(function() { goToStep(7); }).catch(function() { goToStep(7); });
+    }).then(function() { goToStep(8); }).catch(function() { goToStep(8); });
   };
 
-  // ── Step 7: Completion Checklist ──
+  // ── Step 8: Completion Checklist ──
   function buildChecklist() {
     var items = [
       { label: 'Company profile', done: !!state.companyId, action: state.companyId ? 'Edit' : 'Set up', onclick: 'goToStep(2)' },
       { label: 'Asset classes', done: selectedAssetClasses.length > 0, action: 'Edit', onclick: 'goToStep(3)' },
       { label: 'IR contact', done: !!(document.getElementById('irContactName') && document.getElementById('irContactName').value.trim()), action: 'Edit', onclick: 'goToStep(4)' },
-      { label: 'Deal uploaded', done: state.dealUploaded, skipped: state.dealSkipped, action: state.dealUploaded ? 'View' : 'Add deal', onclick: state.dealUploaded ? '' : 'goToStep(5)' },
-      { label: 'Presentation interest', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(6)' }
+      { label: 'Listing agreement', done: state.agreementSigned, action: state.agreementSigned ? 'Signed' : 'Review', onclick: state.agreementSigned ? '' : 'goToStep(5)' },
+      { label: 'Deal uploaded', done: state.dealUploaded, skipped: state.dealSkipped, action: state.dealUploaded ? 'View' : 'Add deal', onclick: state.dealUploaded ? '' : 'goToStep(6)' },
+      { label: 'Presentation interest', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(7)' }
     ];
 
     var html = '';
@@ -456,7 +546,7 @@
     document.getElementById('completionChecklist').innerHTML = html;
   }
 
-  // ── Step 8: LP Buy Box Prompt ──
+  // ── Step 9: LP Buy Box Prompt ──
   window.finishOnboarding = function(wantsBuyBox) {
     var step = wantsBuyBox ? 'buybox-interest' : 'complete';
     fetch('/api/gp-onboarding', {
@@ -497,10 +587,10 @@
         state.selectedRole = 'gp'; goToStep(1); return;
       }
 
-      // DB steps → UI steps (new mapping with split company/asset steps)
-      // DB: 0=not started, 1=role done, 2=company done, 3=IR done, 4=deal done, 5=pres done, 6=complete
-      // UI: 0=role, 1=welcome, 2=company, 3=assets, 4=IR, 5=upload, 6=pres, 7=checklist, 8=LP
-      var stepMap = { 0: 0, 1: 1, 2: 4, 3: 5, 4: 6, 5: 7 };
+      // DB steps → UI steps
+      // DB: 0=not started, 1=role done, 2=company done, 3=IR done, 4=agreement done, 5=deal done, 6=pres done, 7=complete
+      // UI: 0=role, 1=welcome, 2=company, 3=assets, 4=IR, 5=agreement, 6=upload, 7=pres, 8=checklist, 9=LP
+      var stepMap = { 0: 0, 1: 1, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8 };
       var uiStep = stepMap[step] !== undefined ? stepMap[step] : 0;
       if (uiStep > 0) goToStep(uiStep);
     })
@@ -634,7 +724,7 @@
   var params = new URLSearchParams(window.location.search);
   if (params.get('fromDealCreate') === 'true') {
     state.dealUploaded = true;
-    setTimeout(function() { goToStep(6); }, 100);
+    setTimeout(function() { goToStep(7); }, 100);
   }
 
 })();
