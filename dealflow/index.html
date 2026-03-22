@@ -12414,11 +12414,12 @@ function renderWizardStep() {
     }
     var cap90Options = [
       { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: 'under-$25k', label: 'Under $25K', desc: '1 deal at a lower minimum', nwCtx: nwPct90(12500) },
-      { val: '$25k-$50k', label: '$25K \u2013 $50K', desc: '1 deal at typical minimums', nwCtx: nwPct90(37500) },
-      { val: '$50k-$100k', label: '$50K \u2013 $100K', desc: '1\u20132 deals', nwCtx: nwPct90(75000) },
-      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct90(175000) },
-      { val: '$250k+', label: '$250K+', desc: 'Ready to move', nwCtx: nwPct90(250000) }
+      { val: '$1-$49k', label: '$1 \u2013 $49K', desc: '1 deal at a lower minimum', nwCtx: nwPct90(25000) },
+      { val: '$50k-$99k', label: '$50K \u2013 $99K', desc: '1\u20132 deals at typical minimums', nwCtx: nwPct90(75000) },
+      { val: '$100k-$249k', label: '$100K \u2013 $249K', desc: '2\u20134 deals', nwCtx: nwPct90(175000) },
+      { val: '$250k-$499k', label: '$250K \u2013 $499K', desc: 'Well-diversified portfolio', nwCtx: nwPct90(375000) },
+      { val: '$500k-$999k', label: '$500K \u2013 $999K', desc: 'Significant deployment', nwCtx: nwPct90(750000) },
+      { val: '$1m+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct90(1000000) }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     cap90Options.forEach(function(opt) {
@@ -12674,11 +12675,13 @@ function renderWizardStep() {
     html += '<div class="wizard-card-title">What\'s the most you\'d invest in a single deal?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This helps us filter deals to ones that fit your check size. You can always adjust later.</div>';
     var checkOptions = [
-      { val: '25000', label: '$25K', desc: 'Entry-level minimums' },
-      { val: '50000', label: '$50K', desc: 'Most common minimum' },
-      { val: '100000', label: '$100K', desc: 'Standard LP check' },
-      { val: '200000', label: '$200K', desc: 'Preferred LP access' },
-      { val: '500000', label: '$500K+', desc: 'Priority allocation' }
+      { val: '0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first' },
+      { val: '49000', label: '$1 \u2013 $49K', desc: '1 deal at a lower minimum' },
+      { val: '99000', label: '$50K \u2013 $99K', desc: '1\u20132 deals at typical minimums' },
+      { val: '249000', label: '$100K \u2013 $249K', desc: '2\u20134 deals' },
+      { val: '499000', label: '$250K \u2013 $499K', desc: 'Well-diversified portfolio' },
+      { val: '999000', label: '$500K \u2013 $999K', desc: 'Significant deployment' },
+      { val: '1000000', label: '$1M+', desc: 'Institutional-level capital' }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     checkOptions.forEach(function(opt) {
@@ -12690,7 +12693,7 @@ function renderWizardStep() {
       html += '</div>';
     });
     html += '</div>';
-    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px;">Most private investments require a minimum of $50K. <span style="opacity:0.6;">~25% of deals on our platform have a $50K minimum.</span></div>';
+    html += '<div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px;">No commitments \u2014 just helps us size recommendations to deals you can actually invest in.</div>';
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
