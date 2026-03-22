@@ -4658,6 +4658,17 @@ async function renderDeal() {
 
   let html = '';
 
+  // === Handle email save/skip actions ===
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('saved') === 'true') {
+    var existingStage = getDealStage(deal.id);
+    if (existingStage === 'browse' || existingStage === 'new') {
+      setJourneyStage(deal.id, 'saved');
+    }
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname + '?id=' + deal.id);
+  }
+
   // === Shared variables needed by multiple sections ===
   var currentStage = getDealStage(deal.id);
   var stages = [

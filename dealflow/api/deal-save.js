@@ -30,7 +30,8 @@ export default async function handler(req, res) {
   setCors(res);
 
   const { id, email, token, action } = req.query;
-  const stage = action === 'skip' ? 'passed' : 'saved';
+  // Map to DB stage names (same as deal.html's dbStageMap)
+  const stage = action === 'skip' ? 'passed' : 'interested';
 
   if (!id || !email || !token) {
     return res.redirect(302, `https://dealflow.growyourcashflow.io/deal.html?id=${id || ''}`);
@@ -54,11 +55,12 @@ export default async function handler(req, res) {
 
     if (user) {
       await supabase
-        .from('deal_stages')
+        .from('user_deal_stages')
         .upsert({
           user_id: user.id,
           deal_id: id,
           stage,
+          notes: '',
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,deal_id'
