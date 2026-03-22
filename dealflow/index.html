@@ -23916,7 +23916,7 @@ function renderSwipeCard(deal) {
     + (strategy ? '<div class="swipe-strategy">' + strategy + '</div>' : '')
     + buildHighlightPills(deal)
     + '<div class="swipe-metrics">'
-    + '<div><div class="swipe-metric-label">Target IRR</div><div class="swipe-metric-value" style="color:var(--primary);">' + (deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Pref Return</div><div class="swipe-metric-value" style="color:var(--primary);">' + (deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Minimum</div><div class="swipe-metric-value">' + (deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Lockup</div><div class="swipe-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div></div>'
     + '<div><div class="swipe-metric-label">Distribution</div><div class="swipe-metric-value">' + formatDistribution(deal) + '</div></div>'
