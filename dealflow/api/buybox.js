@@ -8,7 +8,7 @@
 
 import { getAdminClient, getUserClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
 
-// GHL field mapping (for sync)
+// GHL field mapping (for sync): Supabase column → GHL custom field key
 const GHL_FIELD_MAP = {
   trigger_event: 'contact.investment_trigger_event',
   check_size: 'contact.investment_amount',
@@ -30,12 +30,27 @@ const GHL_FIELD_MAP = {
   financial_reporting: 'contact.audited_financials_requirement',
   accreditation: 'contact.accreditation_type',
   goal: 'contact.primary_investment_objective',
-  fund_source: 'contact.where_is_the_money_coming_from'
+  fund_source: 'contact.where_is_the_money_coming_from',
+  // New fields synced to GHL
+  branch: 'contact.onboarding_branch',
+  income_structure: 'contact.income_source_type',
+  re_professional: 'contact.re_professional_status',
+  baseline_income: 'contact.current_passive_income',
+  target_cashflow: 'contact.target_passive_income',
+  taxable_income: 'contact.tax_offset_target',
+  taxable_income_baseline: 'contact.annual_taxable_income',
+  growth_priority: 'contact.growth_investment_priority',
+  capital_12mo: 'contact.capital_12_month',
+  capital_90day: 'contact.capital_90_day',
+  capital_readiness: 'contact.investment_timeline',
+  max_loss_pct: 'contact.max_loss_tolerance',
+  operator_focus: 'contact.operator_focus_preference'
 };
 
 // Map frontend wizard keys → Supabase column names
 const WIZARD_TO_COLUMN = {
-  trigger: 'trigger_event',
+  triggerEvent: 'trigger_event',       // was 'trigger' — fixed to match frontend key
+  trigger: 'trigger_event',           // keep backwards compat for old data
   checkSize: 'check_size',
   networth: 'net_worth',
   capitalReady: 'capital_ready',
@@ -55,7 +70,22 @@ const WIZARD_TO_COLUMN = {
   financialReporting: 'financial_reporting',
   accreditation: 'accreditation',
   goal: 'goal',
-  fundSource: 'fund_source'
+  fundSource: 'fund_source',
+  // New onboarding fields (migration 030)
+  _branch: 'branch',
+  baselineIncome: 'baseline_income',
+  targetCashFlow: 'target_cashflow',
+  taxableIncome: 'taxable_income',
+  taxableIncomeBaseline: 'taxable_income_baseline',
+  growthPriority: 'growth_priority',
+  incomeStructure: 'income_structure',
+  reProfessional: 're_professional',
+  maxOperatorPct: 'max_loss_pct',
+  capital12mo: 'capital_12mo',
+  capital90Day: 'capital_90day',
+  capitalReadiness: 'capital_readiness',
+  operatorFocus: 'operator_focus',
+  sharePortfolio: 'share_portfolio'
 };
 
 // Reverse: column → wizard key (for GET response)
