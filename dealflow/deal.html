@@ -963,6 +963,10 @@ body {
   .deal-page-content div[style*="grid-template-columns: repeat(3"] {
     grid-template-columns: 1fr 1fr !important;
   }
+  /* Buy box criteria: 2 columns on mobile */
+  .buybox-criteria-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
   /* Cash flow table: horizontal scroll */
   .cf-table { font-size: 11px; }
   .cf-table th, .cf-table td { padding: 8px 8px; white-space: nowrap; }
@@ -5002,50 +5006,44 @@ async function renderDeal() {
         var cardBorder = pctMatch >= 80 ? 'rgba(74,222,128,0.2)' : pctMatch >= 50 ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)';
         var matchLabel = pctMatch >= 80 ? 'Strong Match' : pctMatch >= 50 ? 'Partial Match' : 'Low Match';
 
-        buyBoxHtml += '<div class="section">';
-        // Header row
-        buyBoxHtml += '<div class="section-header" style="justify-content:space-between;">';
-        buyBoxHtml += '<div style="display:flex;align-items:center;gap:10px;">';
-        buyBoxHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
-        buyBoxHtml += '<span class="section-title">Buy Box Match</span>';
+        // Full-width horizontal buy box banner
+        buyBoxHtml += '<div style="background:' + cardBg + ';border:1px solid ' + cardBorder + ';border-radius:var(--radius);padding:16px 20px;margin-bottom:8px;">';
+        // Header: icon + title + badge + score + edit link
+        buyBoxHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">';
+        buyBoxHtml += '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="' + matchColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+        buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:var(--text-dark);">Buy Box Match</span>';
         buyBoxHtml += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-family:var(--font-ui);font-size:11px;font-weight:700;background:' + matchColor + '18;color:' + matchColor + ';">' + matchLabel + '</span>';
+        buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:' + matchColor + ';">' + matched + '/' + total + '</span>';
+        // Progress bar inline
+        buyBoxHtml += '<div style="flex:1;min-width:60px;max-width:120px;height:5px;background:var(--border-light);border-radius:3px;overflow:hidden;">';
+        buyBoxHtml += '<div style="height:100%;width:' + pctMatch + '%;background:' + matchColor + ';border-radius:3px;"></div>';
         buyBoxHtml += '</div>';
-        buyBoxHtml += '<span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:' + matchColor + ';">' + matched + '/' + total + '</span>';
+        buyBoxHtml += '<a href="index.html#buybox" style="margin-left:auto;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--primary);text-decoration:none;opacity:0.8;">Edit Buy Box \u2192</a>';
         buyBoxHtml += '</div>';
-        buyBoxHtml += '<div class="section-body">';
-        // Progress bar
-        buyBoxHtml += '<div style="height:5px;background:var(--border-light);border-radius:3px;margin-bottom:20px;overflow:hidden;">';
-        buyBoxHtml += '<div style="height:100%;width:' + pctMatch + '%;background:' + matchColor + ';border-radius:3px;transition:width 0.3s;"></div>';
-        buyBoxHtml += '</div>';
-        // Criteria rows
-        buyBoxHtml += '<div style="display:flex;flex-direction:column;gap:10px;">';
+        // Criteria grid — horizontal on desktop, wraps on mobile
+        buyBoxHtml += '<div style="display:grid;grid-template-columns:repeat(' + checks.length + ', 1fr);gap:10px;" class="buybox-criteria-grid">';
         for (var ci = 0; ci < checks.length; ci++) {
           var c = checks[ci];
           var icon = c.match
-            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
-            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-          var rowBg = c.match ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)';
-          var rowBorder = c.match ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)';
-          buyBoxHtml += '<a href="index.html#buybox" style="text-decoration:none;display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:' + rowBg + ';border:1px solid ' + rowBorder + ';border-radius:10px;transition:background 0.15s;" onmouseover="this.style.background=\'' + (c.match ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+          var rowBg = c.match ? 'rgba(74,222,128,0.06)' : 'rgba(248,113,113,0.06)';
+          var rowBorder = c.match ? 'rgba(74,222,128,0.15)' : 'rgba(248,113,113,0.15)';
+          buyBoxHtml += '<a href="index.html#buybox" style="text-decoration:none;display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:' + rowBg + ';border:1px solid ' + rowBorder + ';border-radius:10px;transition:background 0.15s;" onmouseover="this.style.background=\'' + (c.match ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">';
           buyBoxHtml += '<div style="flex-shrink:0;margin-top:1px;">' + icon + '</div>';
           buyBoxHtml += '<div style="flex:1;min-width:0;">';
           buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:' + (c.match ? '#4ade80' : '#f87171') + ';">' + esc(c.label) + '</div>';
           buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:3px;line-height:1.4;">';
           buyBoxHtml += 'You want <span style="color:var(--text-secondary);font-weight:600;">' + esc(c.want) + '</span>';
-          buyBoxHtml += ' &middot; Deal offers <span style="color:' + (c.match ? '#4ade80' : '#f87171') + ';font-weight:600;">' + esc(c.got) + '</span>';
+          buyBoxHtml += '</div>';
+          buyBoxHtml += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;">';
+          buyBoxHtml += 'Deal offers <span style="color:' + (c.match ? '#4ade80' : '#f87171') + ';font-weight:600;">' + esc(c.got) + '</span>';
           buyBoxHtml += '</div>';
           buyBoxHtml += '</div>';
-          if (!c.match) {
-            buyBoxHtml += '<div style="flex-shrink:0;margin-top:1px;color:var(--text-muted);opacity:0.5;" title="Edit in Buy Box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>';
-          }
           buyBoxHtml += '</a>';
         }
         buyBoxHtml += '</div>';
-        // Edit link
-        buyBoxHtml += '<div style="text-align:right;margin-top:14px;">';
-        buyBoxHtml += '<a href="index.html#buybox" style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--primary);text-decoration:none;opacity:0.8;">Edit Buy Box \u2192</a>';
         buyBoxHtml += '</div>';
-        buyBoxHtml += '</div></div>';
       }
     } catch(e) {}
   } else {
@@ -7694,9 +7692,10 @@ async function renderDeal() {
     + pipelineHtml
     + '<div id="dealSocialProofBar" style="display:none;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);align-items:center;gap:16px;padding:8px 0;"></div>'
     // --- Job 3: Deal terms + operator (two-column) ---
+    + buyBoxHtml
     + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">'
     + detailsHtml
-    + '<div>' + operatorHtml + chartHtml + materialsHtml + buyBoxHtml + '</div>'
+    + '<div>' + operatorHtml + chartHtml + materialsHtml + '</div>'
     + '</div>'
     + buildDealEconomicsHtml(deal)
     // --- Job 5: How does it compare? ---
