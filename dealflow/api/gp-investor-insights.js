@@ -280,7 +280,7 @@ export default async function handler(req, res) {
 
     // ---- AGGREGATE: Investor Goals ----
     // Normalize all goal values to 3 canonical options with original labels
-    const GOAL_LABELS = ['Cash Flow (income now)', 'Tax Savings (shelter income)', 'Wealth Growth (long-term)'];
+    const GOAL_LABELS = ['Cash Flow (income now)', 'Tax Savings (shelter income)', 'Equity Growth (high upside)'];
     const GOAL_MAP = {
       'passive_income': GOAL_LABELS[0],
       'income': GOAL_LABELS[0],
@@ -292,7 +292,7 @@ export default async function handler(req, res) {
       'tax': GOAL_LABELS[1],
       'growth': GOAL_LABELS[2],
       'capital_growth': GOAL_LABELS[2],
-      'Wealth Growth (long-term)': GOAL_LABELS[2],
+      'Equity Growth (high upside)': GOAL_LABELS[2],
       'appreciation': GOAL_LABELS[2],
     };
 
