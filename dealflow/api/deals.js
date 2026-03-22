@@ -11,13 +11,102 @@ import { getAdminClient, setCors, rateLimit } from './_supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
-  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (!rateLimit(req, res)) return;
 
+  // Single-deal fetches skip CDN cache (need fresh data after uploads)
+  const singleId = req.query?.id;
+  if (singleId) {
+    res.setHeader('Cache-Control', 'no-store');
+  } else {
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+  }
+
   try {
     const supabase = getAdminClient();
+
+    // Single-deal fetch shortcut: /api/deals?id=UUID
+    if (singleId && /^[0-9a-f-]{36}$/i.test(singleId)) {
+      const { data: row, error: sErr } = await supabase
+        .from('opportunities')
+        .select(`*, management_company:management_companies (
+          id, operator_name, ceo, website, linkedin_ceo, invest_clearly_profile,
+          founding_year, type, asset_classes, total_investors, authorized_emails, booking_url
+        )`)
+        .eq('id', singleId)
+        .single();
+      if (sErr || !row) return res.status(404).json({ error: 'Deal not found' });
+
+      // Fetch sponsors for this deal
+      const { data: spRows } = await supabase
+        .from('deal_sponsors')
+        .select(`deal_id, role, is_primary, display_order,
+          company:management_companies (id, operator_name, ceo, website, linkedin_ceo,
+            invest_clearly_profile, founding_year, type, asset_classes, total_investors, booking_url)`)
+        .eq('deal_id', singleId)
+        .order('display_order', { ascending: true });
+      const sponsors = (spRows || []).filter(r => r.company).map(r => ({
+        id: r.company.id, name: r.company.operator_name, ceo: r.company.ceo,
+        role: r.role, isPrimary: r.is_primary, website: r.company.website || '',
+        linkedin: r.company.linkedin_ceo || '', investClearly: r.company.invest_clearly_profile || '',
+        foundingYear: r.company.founding_year, type: r.company.type || '',
+        bookingUrl: r.company.booking_url || '', investmentCriteria: [], portfolioSnapshot: []
+      }));
+
+      // Fetch share classes
+      const { data: children } = await supabase
+        .from('opportunities')
+        .select('id, share_class_label, investment_name, target_irr, preferred_return, investment_minimum, hold_period_years, lp_gp_split, cash_on_cash, financials')
+        .eq('parent_deal_id', singleId);
+      const shareClasses = (children && children.length > 0)
+        ? children.map(c => ({ id: c.id, label: c.share_class_label || c.investment_name, targetReturn: c.target_irr, preferredReturn: c.preferred_return, investmentMinimum: c.investment_minimum, lockup: c.hold_period_years, lpGpSplit: c.lp_gp_split, financials: c.financials, cashOnCash: c.cash_on_cash }))
+        : null;
+
+      const mc = row.management_company || {};
+      const deal = {
+        id: row.id, dealNumber: row.deal_number, investmentName: row.investment_name,
+        assetClass: row.asset_class, dealType: row.deal_type, targetIRR: row.target_irr,
+        equityMultiple: row.equity_multiple, preferredReturn: row.preferred_return,
+        investmentMinimum: row.investment_minimum, lpGpSplit: row.lp_gp_split,
+        holdPeriod: row.hold_period_years, addedDate: row.added_date, status: row.status,
+        offeringType: row.offering_type, offeringSize: row.offering_size,
+        purchasePrice: row.purchase_price, investingGeography: row.investing_geography,
+        investmentStrategy: row.investment_strategy, distributions: row.distributions,
+        financials: row.financials, availableTo: row.available_to,
+        sponsorInDeal: row.sponsor_in_deal_pct, ceo: mc.ceo || '',
+        managementCompany: mc.operator_name || '', managementCompanyId: mc.id || '',
+        mcWebsite: mc.website || '', mcFoundingYear: mc.founding_year, mcType: mc.type || '',
+        mcLinkedin: mc.linkedin_ceo || '', mcInvestClearly: mc.invest_clearly_profile || '',
+        mcTotalInvestors: mc.total_investors, mcBookingUrl: mc.booking_url || '',
+        mcAuthorizedEmails: mc.authorized_emails || [],
+        fees: row.fees || [], firstYrDepreciation: row.first_yr_depreciation,
+        strategy: row.strategy, instrument: row.instrument, cashOnCash: row.cash_on_cash,
+        debtPosition: row.debt_position, fundAUM: row.fund_aum, loanCount: row.loan_count,
+        avgLoanLTV: row.avg_loan_ltv, location: row.location, address: row.property_address,
+        deckUrl: row.deck_url, ppmUrl: row.ppm_url, subAgreementUrl: row.sub_agreement_url,
+        parentDealId: row.parent_deal_id, shareClassLabel: row.share_class_label,
+        verticalIntegration: row.vertical_integration, caseStudy: row.case_study || null,
+        shareClasses, is506b: row.is_506b || false, issuerEntity: row.issuer_entity || '',
+        gpEntity: row.gp_entity || '', sponsorEntity: row.sponsor_entity || '',
+        sponsors, unitCount: row.unit_count, yearBuilt: row.year_built,
+        squareFootage: row.square_footage, occupancyPct: row.occupancy_pct,
+        propertyType: row.property_type, secCik: row.sec_cik || '',
+        dateOfFirstSale: row.date_of_first_sale, totalAmountSold: row.total_amount_sold,
+        totalInvestors: row.total_investors,
+        pctFunded: (row.total_amount_sold && row.offering_size && row.offering_size > 0)
+          ? Math.round(row.total_amount_sold / row.offering_size * 100) : null,
+        acquisitionLoan: row.acquisition_loan, loanToValue: row.loan_to_value,
+        loanRate: row.loan_rate, loanTermYears: row.loan_term_years,
+        loanIOYears: row.loan_io_years, capexBudget: row.capex_budget,
+        closingCosts: row.closing_costs, acquisitionFeePct: row.acquisition_fee_pct,
+        assetMgmtFeePct: row.asset_mgmt_fee_pct, propertyMgmtFeePct: row.property_mgmt_fee_pct,
+        capitalEventFeePct: row.capital_event_fee_pct, dispositionFeePct: row.disposition_fee_pct,
+        constructionMgmtFeePct: row.construction_mgmt_fee_pct,
+        waterfallDetails: row.waterfall_details
+      };
+      return res.status(200).json({ deal });
+    }
 
     // Single query: deals + operator info via foreign key join
     const { data: allDeals, error: dealsError } = await supabase

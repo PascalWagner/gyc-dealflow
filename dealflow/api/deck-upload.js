@@ -86,13 +86,24 @@ export default async function handler(req, res) {
 
     // 2. Update the deal record with the URL (deck_url or ppm_url based on docType)
     let dealUpdated = false;
+    let dealUpdateError = null;
     if (dealId && deckUrl) {
       const urlField = docType === 'ppm' ? 'ppm_url' : 'deck_url';
-      const { error: updateErr } = await supabase
+      const { data: updateData, error: updateErr, count } = await supabase
         .from('opportunities')
         .update({ [urlField]: deckUrl })
-        .eq('id', dealId);
-      dealUpdated = !updateErr;
+        .eq('id', dealId)
+        .select('id')
+        .single();
+      if (updateErr) {
+        console.error('Deal update failed:', updateErr.message, updateErr.code, { dealId, urlField });
+        dealUpdateError = updateErr.message;
+      } else if (!updateData) {
+        console.error('Deal update matched no rows:', { dealId, urlField });
+        dealUpdateError = 'No matching deal found for ID: ' + dealId;
+      } else {
+        dealUpdated = true;
+      }
     }
 
     // 3. Log to deck_submissions table
@@ -153,6 +164,7 @@ export default async function handler(req, res) {
       success: true,
       driveUrl: deckUrl,
       dealUpdated,
+      ...(dealUpdateError ? { dealUpdateError } : {}),
       enriched,
       enrichedFields,
       extractedData,

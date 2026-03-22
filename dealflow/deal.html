@@ -3866,7 +3866,7 @@ function toggleAccordion(el) {
 }
 
 function mapStageName(stage) {
-  var legacyMap = { 'new': 'browse', 'interested': 'saved', 'duediligence': 'vetting', 'portfolio': 'invested' };
+  var legacyMap = { 'new': 'browse', 'interested': 'saved', 'duediligence': 'vetting', 'portfolio': 'invested', 'ready': 'decision' };
   return legacyMap[stage] || stage;
 }
 
@@ -3886,6 +3886,10 @@ function setJourneyStage(dealId, stage) {
   } catch(e) {}
   // Re-render the journey bar and sticky bar
   updateJourneyUI(dealId, stage);
+  // Show intro nudge when entering decision stage
+  renderIntroNudge(dealId, stage);
+  // Render the deck-viewed prompt
+  renderDeckViewedPrompt(dealId, stage);
   // Sync stage to Supabase in background
   syncStageToDb(dealId, stage);
 }
@@ -3896,7 +3900,7 @@ function syncStageToDb(dealId, stage) {
   if (!user || !user.token) return;
 
   // Map new stage names back to DB format
-  var dbStageMap = { 'browse': 'new', 'saved': 'interested', 'vetting': 'duediligence', 'ready': 'ready', 'invested': 'portfolio', 'passed': 'passed' };
+  var dbStageMap = { 'browse': 'new', 'saved': 'interested', 'vetting': 'duediligence', 'diligence': 'diligence', 'decision': 'decision', 'ready': 'decision', 'invested': 'portfolio', 'passed': 'passed' };
   var dbStage = dbStageMap[stage] || stage;
 
   fetch('/api/userdata', {
@@ -3970,7 +3974,7 @@ function loadStagesFromDb(dealId) {
 function updateJourneyUI(dealId, stage) {
   // Map legacy stage names to new names
   stage = mapStageName(stage);
-  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'ready': 3, 'invested': 4 };
+  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'diligence': 3, 'decision': 4, 'invested': 5 };
   var idx = stageOrder[stage] || 0;
 
   // Update journey bar steps
@@ -3994,21 +3998,104 @@ function updateJourneyUI(dealId, stage) {
     c.classList.toggle('done', i < idx);
   });
 
-  // Update sticky bar
-  var stageLabels = { 'browse': 'Browse', 'saved': 'Saved', 'vetting': 'Vetting', 'ready': 'Ready to Invest', 'invested': 'Invested', 'passed': 'Passed' };
-  var nextStages = { 'browse': 'saved', 'saved': 'vetting', 'vetting': 'ready', 'ready': 'invested' };
-  var nextLabels = { 'browse': 'Save Deal', 'saved': 'Start Vetting', 'vetting': 'Mark Ready to Invest', 'ready': 'Mark as Invested' };
-  var labelEl = document.getElementById('stickyStageLabel');
-  var advBtn = document.getElementById('stickyAdvanceBtn');
-  if (labelEl) labelEl.textContent = stageLabels[stage] || 'Browse';
-  if (advBtn) {
-    if (nextLabels[stage]) {
-      advBtn.textContent = nextLabels[stage] + ' \u2192';
-      advBtn.style.display = 'flex';
-      advBtn.onclick = function() { setJourneyStage(dealId, nextStages[stage]); };
+  // Update sticky bar with smart contextual CTAs
+  updateStickyBar(dealId, stage);
+}
+
+function updateStickyBar(dealId, stage) {
+  var stickyBar = document.querySelector('.sticky-action-bar');
+  if (!stickyBar) return;
+
+  var passBtn = '<button class="btn-pass" onclick="setJourneyStage(\'' + dealId + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>';
+  var advHtml = '';
+
+  if (stage === 'browse' || !stage) {
+    advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'saved\')">Save Deal \u2192</button>';
+  } else if (stage === 'saved') {
+    if (!hasDeckBeenViewed(dealId)) {
+      // Deck not viewed — prompt to view deck
+      var deckUrl = '';
+      var deckLink = document.querySelector('a.hero-deck-btn[href]');
+      if (deckLink) deckUrl = deckLink.getAttribute('href');
+      if (deckUrl) {
+        advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="trackDeckView(\'' + dealId + '\');window.open(\'' + deckUrl.replace(/'/g, "\\'") + '\',\'_blank\')">View Investment Deck \u2192</button>';
+      } else {
+        advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'vetting\')">Start Vetting \u2192</button>';
+      }
     } else {
-      advBtn.style.display = 'none';
+      advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'vetting\')">Start Vetting \u2192</button>';
     }
+  } else if (stage === 'vetting') {
+    advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')">Start Due Diligence \u2192</button>';
+  } else if (stage === 'diligence') {
+    advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'decision\')">Make Decision \u2192</button>';
+  } else if (stage === 'decision') {
+    advHtml = '<button class="btn-pass" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>Back to DD</button>'
+      + passBtn
+      + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'invested\')">I\'m Investing \u2192</button>';
+  } else if (stage === 'invested') {
+    advHtml = '<a href="index.html#portfolio" class="btn-pass" style="text-decoration:none;">My Portfolio</a>'
+      + '<button class="btn-advance" id="stickyAdvanceBtn" style="opacity:0.5;cursor:default;" disabled>Generate Investment Report</button>';
+  } else if (stage === 'passed') {
+    advHtml = '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'saved\')">Reconsider Deal \u2192</button>';
+  }
+
+  stickyBar.innerHTML = advHtml;
+}
+
+function renderDeckViewedPrompt(dealId, stage) {
+  // Remove existing prompt if any
+  var existing = document.getElementById('deckViewedPrompt');
+  if (existing) existing.remove();
+
+  // Only show if saved + deck viewed
+  if (stage !== 'saved' || !hasDeckBeenViewed(dealId)) return;
+
+  var promptHtml = '<div id="deckViewedPrompt" style="background:rgba(81,190,123,0.08);border:1px solid rgba(81,190,123,0.2);border-radius:10px;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">'
+    + '<div>'
+    + '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">You\'ve reviewed the deck.</span>'
+    + '<span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-left:4px;">Interested in this deal?</span>'
+    + '</div>'
+    + '<button onclick="setJourneyStage(\'' + dealId + '\', \'vetting\')" style="padding:8px 20px;border:none;background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;">Start Vetting \u2192</button>'
+    + '</div>';
+
+  // Insert after the pipeline stepper
+  var journeyBar = document.getElementById('journeyBar');
+  if (journeyBar && journeyBar.parentNode) {
+    var tempDiv = document.createElement('div');
+    tempDiv.innerHTML = promptHtml;
+    journeyBar.parentNode.insertBefore(tempDiv.firstChild, journeyBar.nextSibling);
+  }
+}
+
+function renderIntroNudge(dealId, stage) {
+  // Remove existing nudge if any
+  var existing = document.getElementById('introNudgeBanner');
+  if (existing) existing.remove();
+
+  // Only show at decision stage if no intro requested
+  if (stage !== 'decision' || hasIntroBeenRequested(dealId)) return;
+
+  var nudgeHtml = '<div id="introNudgeBanner" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;">'
+    + '<div style="width:40px;height:40px;border-radius:50%;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+    + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+    + '</div>'
+    + '<div style="flex:1;">'
+    + '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">Talk to the operator before investing</div>'
+    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Most successful investors speak with the sponsor before committing.</div>'
+    + '</div>'
+    + '<button onclick="requestIntro(\'' + dealId + '\')" style="padding:8px 20px;border:none;background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;white-space:nowrap;">Request Introduction</button>'
+    + '</div>';
+
+  // Insert after the pipeline stepper (and after deck prompt if present)
+  var journeyBar = document.getElementById('journeyBar');
+  if (journeyBar && journeyBar.parentNode) {
+    // Find insertion point: after deckViewedPrompt if it exists, otherwise after journeyBar
+    var deckPrompt = document.getElementById('deckViewedPrompt');
+    var insertAfter = deckPrompt || journeyBar;
+    var tempDiv = document.createElement('div');
+    tempDiv.innerHTML = nudgeHtml;
+    insertAfter.parentNode.insertBefore(tempDiv.firstChild, insertAfter.nextSibling);
   }
 }
 
@@ -4026,7 +4113,57 @@ function handleDDInput(input) {
   updateChecklistProgress();
 }
 
+// ========== DECK VIEW TRACKING ==========
 
+function trackDeckView(dealId) {
+  try {
+    var views = JSON.parse(localStorage.getItem('gycDeckViews') || '{}');
+    views[dealId] = Date.now();
+    localStorage.setItem('gycDeckViews', JSON.stringify(views));
+  } catch(e) {}
+
+  // Fire analytics event
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  if (user && user.email) {
+    fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: user.email, event: 'viewed_deck', data: { dealId: dealId } })
+    }).catch(function() {});
+  }
+  return true;
+}
+
+function hasDeckBeenViewed(dealId) {
+  try {
+    var views = JSON.parse(localStorage.getItem('gycDeckViews') || '{}');
+    return !!views[dealId];
+  } catch(e) { return false; }
+}
+
+// Wrapper for intro requests that also tracks in localStorage
+function requestIntro(dealId) {
+  // Store in localStorage
+  try {
+    var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '{}');
+    intros[dealId] = Date.now();
+    localStorage.setItem('gycIntroRequests', JSON.stringify(intros));
+  } catch(e) {}
+
+  // Find the Request Introduction button on the page and click it
+  var introBtn = document.querySelector('button[onclick*="requestIntroduction"]');
+  if (introBtn) {
+    introBtn.click();
+  }
+}
+
+function hasIntroBeenRequested(dealId) {
+  try {
+    var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '{}');
+    return !!intros[dealId];
+  } catch(e) { return false; }
+}
 
 // ========== GP INSIGHTS ==========
 
@@ -4532,10 +4669,11 @@ async function renderDeal() {
     { key: 'browse', label: 'Browse', num: '1' },
     { key: 'saved', label: 'Saved', num: '2' },
     { key: 'vetting', label: 'Vetting', num: '3' },
-    { key: 'ready', label: 'Ready to Invest', num: '4' },
-    { key: 'invested', label: 'Invested', num: '5' }
+    { key: 'diligence', label: 'Due Diligence', num: '4' },
+    { key: 'decision', label: 'Decision', num: '5' },
+    { key: 'invested', label: 'Invested', num: '6' }
   ];
-  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'ready': 3, 'invested': 4 };
+  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'diligence': 3, 'decision': 4, 'invested': 5 };
   var currentIdx = stageOrder[currentStage] || 0;
 
   // === Build each section into its own variable ===
@@ -4634,7 +4772,7 @@ async function renderDeal() {
   var _heroDeckExpired = deal.deckUrl && (deal.deckUrl.indexOf('airtableusercontent.com') >= 0 || deal.deckUrl.indexOf('dl.airtable.com') >= 0);
   if (deal.deckUrl && !_heroDeckExpired) {
     if (_compIsAdmin || (!_heroDeckBlocked && isPaidUser)) {
-      heroHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="hero-deck-btn">'
+      heroHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="hero-deck-btn" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">'
         + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
         + 'View Investment Deck</a>';
       if (_heroDeckBlocked && _compIsAdmin) {
@@ -4946,6 +5084,22 @@ async function renderDeal() {
 
         el.innerHTML = avatarHtml + textHtml;
         el.style.display = 'flex';
+
+        // --- Social Proof Bar (below pipeline stepper) ---
+        var views = stats.views || total;
+        var spBarTotal = views + saved + vetting + invested;
+        if (spBarTotal > 2) {
+          var spBarEl = document.getElementById('dealSocialProofBar');
+          if (spBarEl) {
+            var parts = [];
+            if (views > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + views + ' views</span>');
+            if (saved > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' + saved + ' saved</span>');
+            if (vetting > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' + vetting + ' vetting</span>');
+            if (invested > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>' + invested + ' invested</span>');
+            spBarEl.innerHTML = parts.join('<span style="opacity:0.3;margin:0 2px;">\u00b7</span>');
+            spBarEl.style.display = 'flex';
+          }
+        }
       })
       .catch(function() {});
   })();
@@ -6686,7 +6840,7 @@ async function renderDeal() {
   if (deal.deckUrl && !_deckExpired2) {
     _hasAnyDoc = true;
     if (_compIsAdmin || (!_deckBlocked && isPaidUser)) {
-      materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile">' + _docIcon + '<span>Investment Deck</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-left:auto;color:var(--text-muted);"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+      materialsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="material-tile" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + _docIcon + '<span>Investment Deck</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-left:auto;color:var(--text-muted);"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
     } else if (_deckBlocked) {
       materialsHtml += '<div class="material-tile-locked">' + _docIcon + '<span>Investment Deck</span><span class="lock-badge" style="margin-left:auto;">Pending</span></div>';
     } else {
@@ -7065,7 +7219,7 @@ async function renderDeal() {
     primaryCTA = '<button class="btn-action btn-primary" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'vetting\');setTimeout(function(){var dd=document.querySelector(\'.dd-accordion\');if(dd)dd.scrollIntoView({behavior:\'smooth\'});},300)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Start Due Diligence</button>';
   } else if (currentStage === 'vetting') {
     primaryCTA = deal.deckUrl
-      ? '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-primary" style="text-decoration:none;">' + deckSvg + 'View Deal Deck</a>'
+      ? '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-primary" style="text-decoration:none;" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + deckSvg + 'View Deal Deck</a>'
       : '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
   } else {
     primaryCTA = '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
@@ -7073,7 +7227,7 @@ async function renderDeal() {
   actionsHtml += '<div class="section"><div class="section-body"><div class="action-buttons">';
   actionsHtml += primaryCTA;
   if (deal.deckUrl) {
-    actionsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary">' + deckSvg + 'View Deal Deck</a>';
+    actionsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + deckSvg + 'View Deal Deck</a>';
   } else {
     actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
     actionsHtml += '<button class="btn-action btn-link" onclick="openDeckSubmitModal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Submit a Deck Link</button>';
@@ -7162,8 +7316,8 @@ async function renderDeal() {
     function getStageLabel(d) {
       var stage = typeof getDealStage === 'function' ? getDealStage(d.id) : null;
       if (!stage || stage === 'browse') return '';
-      var labels = { saved: 'SAVED', vetting: 'VETTING', ready: 'READY', invested: 'INVESTED', passed: 'PASSED' };
-      var colors = { saved: '#3b82f6', vetting: '#f59e0b', ready: '#22c55e', invested: '#22c55e', passed: '#6b7280' };
+      var labels = { saved: 'SAVED', vetting: 'VETTING', diligence: 'IN DD', decision: 'DECISION', invested: 'INVESTED', passed: 'PASSED' };
+      var colors = { saved: '#3b82f6', vetting: '#f59e0b', diligence: '#f59e0b', decision: '#22c55e', invested: '#22c55e', passed: '#6b7280' };
       return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:' + (colors[stage] || '#6b7280') + ';color:#fff;margin-top:2px;">' + (labels[stage] || '') + '</span>';
     }
 
@@ -7432,19 +7586,8 @@ async function renderDeal() {
     dealFitHtml += '</div></div>';
   })();
 
-  // --- Sticky action bar ---
-  var stickyHtml = '';
-  var nextStages = { 'browse': 'saved', 'saved': 'vetting', 'vetting': 'ready', 'ready': 'invested' };
-  var nextLabels = { 'browse': 'Save Deal', 'saved': 'Start Vetting', 'vetting': 'Mark Ready to Invest', 'ready': 'Mark as Invested' };
-  var stageLabels = { 'browse': 'Browse', 'saved': 'Saved', 'vetting': 'Vetting', 'ready': 'Ready to Invest', 'invested': 'Invested', 'passed': 'Passed' };
-  stickyHtml += '<div class="sticky-action-bar">';
-  stickyHtml += '<button class="btn-pass" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Pass</button>';
-  if (nextLabels[currentStage]) {
-    stickyHtml += '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'' + nextStages[currentStage] + '\')">' + nextLabels[currentStage] + ' \u2192</button>';
-  } else {
-    stickyHtml += '<button class="btn-advance" id="stickyAdvanceBtn" style="display:none"></button>';
-  }
-  stickyHtml += '</div>';
+  // --- Sticky action bar (initial render — will be updated dynamically by updateStickyBar) ---
+  var stickyHtml = '<div class="sticky-action-bar"></div>';
 
   // === Assemble (JTBD redesign v3) ===
   // Job 1: Quick assessment → Job 2: Where am I? → Job 3: Does it fit?
@@ -7458,6 +7601,7 @@ async function renderDeal() {
     + complianceBannerHtml
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
+    + '<div id="dealSocialProofBar" style="display:none;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);align-items:center;gap:16px;padding:8px 0;"></div>'
     // --- Job 3: Deal terms + operator (two-column) ---
     + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">'
     + detailsHtml
@@ -7497,6 +7641,11 @@ async function renderDeal() {
   container.innerHTML = html;
 
   document.body.classList.add('page-loaded');
+
+  // Initialize smart sticky bar and contextual banners
+  updateStickyBar(deal.id, currentStage);
+  renderDeckViewedPrompt(deal.id, currentStage);
+  renderIntroNudge(deal.id, currentStage);
 
   // Load deal stages from database (merges with localStorage)
   if (typeof loadStagesFromDb === 'function') {
@@ -8115,13 +8264,18 @@ async function submitDeck(dealId, dealName) {
         try { sessionStorage.removeItem('gycDealsCache'); } catch(e) {}
         document.getElementById('deckModalForm').style.display = 'none';
 
+        // If deal record wasn't updated, warn and log
+        if (!data.dealUpdated) {
+          console.error('PPM/Deck uploaded to storage but deal record not updated:', data.dealUpdateError || 'unknown');
+        }
+
         // If enrichment extracted data, show confirmation wizard
         if (data.enriched && data.extractedData) {
           showEnrichmentWizard(dealId, data.extractedData, data.driveUrl, docLabel, userEmail);
         } else {
           var successMsg = document.getElementById('deckSuccessMsg');
-          var enrichNote = '';
-          if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '') + enrichNote;
+          var saveNote = data.dealUpdated ? '' : '<br><span style="color:#f59e0b;font-size:12px;">⚠ File uploaded but deal record not saved — try refreshing.</span>';
+          if (successMsg) successMsg.innerHTML = docLabel + ' uploaded successfully!' + (data.driveUrl ? '<br><a href="' + data.driveUrl + '" target="_blank" style="color:var(--primary);font-size:13px;">View file →</a>' : '') + saveNote;
           document.getElementById('deckModalSuccess').style.display = 'block';
         }
       } else {
