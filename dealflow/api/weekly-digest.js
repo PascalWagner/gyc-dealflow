@@ -197,7 +197,7 @@ function dealCard(deal, opts = {}) {
   const minVal = deal.investment_minimum;
   const minStr = minVal >= 1000000 ? '$' + (minVal / 1000000).toFixed(1) + 'M' : minVal >= 1000 ? '$' + (minVal / 1000).toFixed(0) + 'K' : minVal ? '$' + minVal : '\u2014';
   const holdStr = deal.hold_period_years ? deal.hold_period_years + ' Yrs' : '\u2014';
-  const splitStr = deal.lp_gp_split || '\u2014';
+  const splitStr = deal.lp_gp_split && /\d+\s*\/\s*\d+/.test(deal.lp_gp_split) ? deal.lp_gp_split : '\u2014';
   const distStr = deal.distributions || '\u2014';
 
   // Badge colors
@@ -303,7 +303,7 @@ function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals =
   const yieldPct = yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1);
   const min = heroDeal.investment_minimum;
   const minStr = min >= 1000000 ? '$' + (min / 1000000).toFixed(1) + 'M' : min >= 1000 ? '$' + (min / 1000).toFixed(0) + 'K min' : '';
-  const splitStr = heroDeal.lp_gp_split ? heroDeal.lp_gp_split + ' split' : '';
+  const splitStr = heroDeal.lp_gp_split && /\d+\s*\/\s*\d+/.test(heroDeal.lp_gp_split) ? heroDeal.lp_gp_split + ' split' : '';
   const parts = [heroDeal.asset_class, yieldVal > 0 ? yieldPct + '% pref' : '', splitStr, minStr].filter(Boolean);
   let subject = heroDeal.investment_name + ' \u2014 ' + parts.slice(0, 3).join(', ');
   if (heroPctFunded >= 70) subject = heroDeal.investment_name + ' is ' + heroPctFunded + '% funded \u2014 ' + parts.slice(0, 2).join(', ');

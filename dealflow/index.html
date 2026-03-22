@@ -10075,7 +10075,7 @@ function renderCreditCard(deal) {
           </div>
           <div class="metric">
             <div class="metric-label">LP/GP Split</div>
-            <div class="metric-value">${deal.lpGpSplit || '—'}</div>
+            <div class="metric-value">${deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit) ? deal.lpGpSplit : '—'}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Equity Mult.</div>
@@ -10377,7 +10377,7 @@ function renderCard(deal) {
           </div>
           <div class="metric">
             <div class="metric-label">LP/GP Split</div>
-            <div class="metric-value">${deal.lpGpSplit || '—'}</div>
+            <div class="metric-value">${deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit) ? deal.lpGpSplit : '—'}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Equity Mult.</div>
@@ -10540,7 +10540,7 @@ function renderPanel(deal) {
           </div>
           <div class="panel-detail-item">
             <div class="panel-detail-label">LP/GP Split</div>
-            <div class="panel-detail-value">${deal.lpGpSplit || '---'}</div>
+            <div class="panel-detail-value">${deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit) ? deal.lpGpSplit : '---'}</div>
           </div>
           <div class="panel-detail-item">
             <div class="panel-detail-label">Hold Period</div>
@@ -23901,7 +23901,7 @@ function renderSwipeCard(deal) {
     + '<div><div class="swipe-metric-label">Minimum</div><div class="swipe-metric-value">' + (deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Lockup</div><div class="swipe-metric-value">' + formatHoldPeriod(deal.holdPeriod) + '</div></div>'
     + '<div><div class="swipe-metric-label">Distribution</div><div class="swipe-metric-value">' + formatDistribution(deal) + '</div></div>'
-    + '<div><div class="swipe-metric-label">LP/GP Split</div><div class="swipe-metric-value">' + (deal.lpGpSplit || '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">LP/GP Split</div><div class="swipe-metric-value">' + (deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit) ? deal.lpGpSplit : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Equity Mult.</div><div class="swipe-metric-value">' + (deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Manager Size</div><div class="swipe-metric-value">' + (mgr.label !== '—' ? mgr.label : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Founded</div><div class="swipe-metric-value">' + (deal.mcFoundingYear || '—') + '</div></div>'

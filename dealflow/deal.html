@@ -4949,7 +4949,7 @@ async function renderDeal() {
     if (deal.preferredReturn) metricsToShow.push(metricCard('Pref Return', fmt(deal.preferredReturn, 'pct'), false));
     if (deal.investmentMinimum) metricsToShow.push(metricCard('Min Investment', fmt(deal.investmentMinimum, 'money'), false));
     if (deal.holdPeriod) metricsToShow.push(metricCard('Hold Period', formatHoldPeriod(deal.holdPeriod), false));
-    if (deal.lpGpSplit) metricsToShow.push(metricCard('LP/GP Split', deal.lpGpSplit, false));
+    if (deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit)) metricsToShow.push(metricCard('LP/GP Split', deal.lpGpSplit, false));
   }
   if (metricsToShow.length > 0) {
     var gridCols = Math.min(metricsToShow.length, 6);

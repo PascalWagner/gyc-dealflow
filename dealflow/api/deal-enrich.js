@@ -27,7 +27,7 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "offeringType": "506(b) or 506(c)",
   "availableTo": "Accredited Investors, Qualified Purchasers, etc.",
   "distributions": "Monthly, Quarterly, Annual, or None",
-  "lpGpSplit": "e.g. 80/20",
+  "lpGpSplit": "LP/GP profit split ONLY in the format 'XX/XX' (e.g. '80/20', '70/30'). Must be two numbers separated by a slash. If the deal uses a fee-only structure (e.g. management fee, asset fee) with no profit split, return null.",
   "fees": "Full fee structure description",
   "financials": "Audited or Unaudited",
   "investingGeography": "Geographic focus",
@@ -37,6 +37,7 @@ const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extr
   "redemption": "Redemption terms if mentioned",
   "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
   "taxForm": "K-1, 1099, etc.",
+  "secEntityName": "The exact legal entity name of the issuer as it appears on the PPM cover page (e.g. 'NCG Burgundy Investors LLC'). This is the entity filed with the SEC, not the marketing name.",
   "propertyAddress": "Full street address of the property if a single-asset deal",
   "unitCount": "Number of units (apartments, storage units, etc.)",
   "yearBuilt": "Year the property was built",
@@ -114,6 +115,7 @@ const SUPABASE_FIELD_MAP = {
   dispositionFeePct:      'disposition_fee_pct',
   constructionMgmtFeePct: 'construction_mgmt_fee_pct',
   waterfallDetails:       'waterfall_details',
+  secEntityName:          'sec_entity_name',
 };
 
 export default async function handler(req, res) {
