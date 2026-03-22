@@ -9820,6 +9820,47 @@ function setDealStage(id, stage) {
   }
   if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
   if (typeof updateDealsChecklist === 'function') updateDealsChecklist();
+
+  // When marking as Invested, prompt to log in portfolio if not already tracked
+  if (stage === 'invested') {
+    var _portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+    var alreadyLogged = _portfolio.some(function(inv) { return inv.dealId === id; });
+    if (!alreadyLogged) {
+      setTimeout(function() { showInvestmentPrompt(id); }, 300);
+    }
+  }
+}
+
+function showInvestmentPrompt(dealId) {
+  var deals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+  var deal = deals.find(function(d) { return d.id === dealId; });
+  if (!deal) return;
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'investmentModal';
+  overlay.onclick = function(e) { if (e.target === overlay) { overlay.remove(); } };
+  overlay.innerHTML = '<div class="modal-card" style="max-width:440px;text-align:center;">'
+    + '<button onclick="this.closest(\'.modal-overlay\').remove()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button>'
+    + '<div style="font-size:40px;margin-bottom:12px;">&#127881;</div>'
+    + '<div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);margin-bottom:8px;">Track This Investment?</div>'
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">You marked <strong>' + (deal.investmentName || 'this deal') + '</strong> as invested. Log it in your portfolio to track performance, distributions, and plan progress.</div>'
+    + '<div style="display:flex;gap:10px;justify-content:center;">'
+    + '<button onclick="this.closest(\'.modal-overlay\').remove()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Not Now</button>'
+    + '<button onclick="this.closest(\'.modal-overlay\').remove();showInvestmentModalForDeal(\'' + dealId + '\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Log Investment &rarr;</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+}
+
+function showInvestmentModalForDeal(linkDealId) {
+  var deals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
+  var deal = linkDealId ? deals.find(function(d) { return d.id === linkDealId; }) : null;
+  if (deal) {
+    showAddInvestmentModal(null, deal, linkDealId);
+  } else {
+    showDealSearchModal();
+  }
 }
 // Migrate old savedDeals → saved
 const _oldSaved = JSON.parse(localStorage.getItem('gycSavedDeals') || '[]');
@@ -12879,6 +12920,15 @@ function updateWizardPhases(seq, currentIdx) {
   var currentStep = seq[currentIdx];
   var currentPhase = STEP_TO_PHASE[currentStep] !== undefined ? STEP_TO_PHASE[currentStep] : 0;
 
+  // Build a map of phase → first step index in the sequence for navigation
+  var phaseFirstIdx = {};
+  for (var si = 0; si < seq.length; si++) {
+    var ph = STEP_TO_PHASE[seq[si]];
+    if (ph !== undefined && phaseFirstIdx[ph] === undefined) {
+      phaseFirstIdx[ph] = si;
+    }
+  }
+
   var html = '';
   for (var i = 0; i < PHASE_NAMES.length; i++) {
     if (i > 0) {
@@ -12887,6 +12937,7 @@ function updateWizardPhases(seq, currentIdx) {
     var nodeClass = 'wizard-phase-node';
     var labelClass = 'wizard-phase-label';
     var nodeContent = '';
+    var clickable = i <= currentPhase && phaseFirstIdx[i] !== undefined;
     if (i < currentPhase) {
       nodeClass += ' completed';
       labelClass += ' completed';
@@ -12898,7 +12949,8 @@ function updateWizardPhases(seq, currentIdx) {
     } else {
       nodeContent = (i + 1);
     }
-    html += '<div class="wizard-phase-wrap">'
+    var clickAttr = clickable ? ' onclick="jumpToWizardPhase(' + i + ')" style="cursor:pointer;"' : '';
+    html += '<div class="wizard-phase-wrap"' + clickAttr + '>'
       + '<div class="' + nodeClass + '">' + nodeContent + '</div>'
       + '<div class="' + labelClass + '">' + PHASE_NAMES[i] + '</div>'
       + '</div>';
@@ -17816,7 +17868,7 @@ function saveInvestmentFromModal(editId, linkDealId) {
         investingEntity: data.investingEntity || '',
         entityInvestedInto: data.entityInvestedInto || '',
         formType: 'K-1',
-        status: 'Pending',
+        uploadStatus: 'Pending',
         dateReceived: '',
         portalUrl: '',
         contact: '',
@@ -17956,6 +18008,27 @@ function deleteInvestment(id) {
   portfolioInvestments = portfolioInvestments.filter(i => i.id !== id);
   savePortfolio();
   renderPortfolio();
+  // Un-fill matching plan slot
+  unassignInvestmentFromPlanBucket(id);
+}
+
+function unassignInvestmentFromPlanBucket(investmentId) {
+  var plan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+  var slots = plan && (plan.slots || plan.buckets);
+  if (!slots || !slots.length) return;
+  var changed = false;
+  slots.forEach(function(s) {
+    if (s.filled_by === investmentId) {
+      s.filled_by = null;
+      s.filled_name = null;
+      changed = true;
+    }
+  });
+  if (changed) {
+    plan.slots = slots;
+    plan.buckets = slots;
+    savePortfolioPlan(plan);
+  }
 }
 
 function closeModal() {
@@ -22133,13 +22206,83 @@ function renderDashboard() {
     });
   }
 
-  if (stageCounts.interested === 0 && stageCounts.duediligence === 0) {
+  if (stageCounts.interested === 0 && stageCounts.duediligence === 0 && portfolio.length === 0) {
     actionItems.push({
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:20px;height:20px;"><path d="M12 5v14M5 12h14"/></svg>',
       text: 'Browse deals and save ones that match your criteria',
       action: 'navigateTo(\'deals\')',
       link: 'Explore Deals'
     });
+  }
+
+  // ===== Plan-aware action items =====
+  const _aiPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+  const _aiSlots = _aiPlan && (_aiPlan.slots || _aiPlan.buckets);
+  if (_aiSlots && _aiSlots.length > 0 && _aiSlots[0].asset_class) {
+    const filledCount = _aiSlots.filter(function(s) { return s.filled_by; }).length;
+    const unfilledCount = _aiSlots.length - filledCount;
+    const nextSlot = _aiSlots.find(function(s) { return !s.filled_by; });
+
+    // Allocation drift: check if portfolio concentrates >70% in one asset class
+    if (portfolio.length >= 2 && totalInvested > 0) {
+      const _driftMap = {};
+      portfolio.forEach(function(p) { var ac = p.assetClass || 'Other'; _driftMap[ac] = (_driftMap[ac] || 0) + (parseFloat(p.amountInvested) || 0); });
+      const _planAcCounts = {};
+      _aiSlots.forEach(function(s) { _planAcCounts[s.asset_class] = (_planAcCounts[s.asset_class] || 0) + 1; });
+      const _planTotal = _aiSlots.length;
+      Object.entries(_driftMap).forEach(function([ac, amt]) {
+        var actualPct = Math.round(amt / totalInvested * 100);
+        var planPct = _planAcCounts[ac] ? Math.round(_planAcCounts[ac] / _planTotal * 100) : 0;
+        if (actualPct > 70 && actualPct > planPct + 20) {
+          actionItems.push({
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="width:20px;height:20px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            text: '<strong>' + actualPct + '% in ' + ac + '</strong> \u2014 your plan targets ' + planPct + '%. Consider diversifying your next investment.',
+            action: 'navigateTo(\'buybox\')',
+            link: 'View Plan'
+          });
+        }
+      });
+    }
+
+    // Plan slot progress nudge
+    if (filledCount > 0 && unfilledCount > 0 && nextSlot) {
+      actionItems.push({
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:20px;height:20px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        text: '<strong>' + filledCount + ' of ' + _aiSlots.length + '</strong> plan slots filled. Next: <strong>' + nextSlot.asset_class + '</strong> at $' + (nextSlot.check_size || 0).toLocaleString(),
+        action: 'navigateTo(\'buybox\')',
+        link: 'View Plan'
+      });
+    }
+
+    // Deals in "invested" stage but not logged in portfolio
+    const _investedDealIds = Object.entries(stages).filter(function(e) { return e[1] === 'invested'; }).map(function(e) { return e[0]; });
+    const _portfolioDealIds = portfolio.map(function(p) { return p.dealId; }).filter(Boolean);
+    const _unloggedInvested = _investedDealIds.filter(function(id) { return !_portfolioDealIds.includes(id); });
+    if (_unloggedInvested.length > 0) {
+      var _ulDeal = deals.find(function(d) { return d.id === _unloggedInvested[0]; });
+      actionItems.push({
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width:20px;height:20px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+        text: (_ulDeal ? '<strong>' + _ulDeal.investmentName + '</strong>' : '<strong>' + _unloggedInvested.length + ' deal' + (_unloggedInvested.length > 1 ? 's' : '') + '</strong>') + ' marked as invested but not logged in portfolio',
+        action: 'showInvestmentPrompt(\'' + _unloggedInvested[0] + '\')',
+        link: 'Log Now'
+      });
+    }
+  }
+
+  // Tax prep seasonal reminder (Jan-April)
+  const _taxMonth = new Date().getMonth(); // 0-indexed
+  if (_taxMonth >= 0 && _taxMonth <= 3 && portfolio.length > 0) {
+    const _taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+    const _taxYear = new Date().getFullYear() - 1;
+    const _pendingTax = _taxDocs.filter(function(d) { return d.taxYear == _taxYear && d.uploadStatus === 'Pending'; });
+    if (_pendingTax.length > 0) {
+      actionItems.push({
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="width:20px;height:20px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+        text: '<strong>' + _pendingTax.length + ' K-1' + (_pendingTax.length > 1 ? 's' : '') + ' still pending</strong> for ' + _taxYear + ' tax year',
+        action: 'navigateTo(\'taxprep\')',
+        link: 'Tax Prep'
+      });
+    }
   }
 
   if (actionItems.length > 0) {
@@ -22414,7 +22557,7 @@ function renderDashboard() {
       blueprintHtml = thesisHtml + pathHtml;
     }
 
-    var sections = heroHtml + blueprintHtml + actionItemsHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
+    var sections = heroHtml + blueprintHtml + actionItemsHtml + portfolioHtml + incomeGapHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
     container.innerHTML = sections;
   }
 }
