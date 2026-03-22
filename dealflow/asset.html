@@ -1972,7 +1972,7 @@ function renderOperatorComparison(deals) {
       return d.preferredReturn ? '<div class="op-comp-value">' + pct(d.preferredReturn) + '</div>' : '--';
     }, compare: 'higher'},
     { label: 'LP/GP Split', key: 'lpGpSplit', fmt: function(d) {
-      return d.lpGpSplit ? '<div class="op-comp-value">' + esc(d.lpGpSplit) + '</div>' : '--';
+      return d.lpGpSplit && /\d+\s*\/\s*\d+/.test(d.lpGpSplit) ? '<div class="op-comp-value">' + esc(d.lpGpSplit) + '</div>' : '--';
     }},
     { label: 'Min Investment', key: 'investmentMinimum', fmt: function(d) {
       return d.investmentMinimum ? '<div class="op-comp-value">' + currency(d.investmentMinimum) + '</div>' : '--';
@@ -2369,43 +2369,44 @@ function renderMarketIntelligence(data, assetClass) {
     var stateB = b.state || {};
     var natB = b.national || {};
 
-    function compLine(val, benchVal, benchLabel) {
-      if (!benchVal || !val) return '';
-      var diff = Math.round(((val - benchVal) / benchVal) * 100);
-      var color = diff >= 0 ? 'var(--green)' : 'var(--red)';
-      var sign = diff >= 0 ? '+' : '';
-      return '<span style="font-size:10px;color:' + color + ';font-weight:600;">' + sign + diff + '% vs ' + benchLabel + '</span>';
-    }
+    function fmtK(n) { return n >= 1000000 ? (n/1000000).toFixed(1) + 'M' : n >= 1000 ? (n/1000).toFixed(0) + 'K' : n.toLocaleString(); }
 
     var statsHtml = '';
 
-    // Population with growth comparison vs state/national
-    var popComps = '';
-    if (trend && (stateB.popGrowthPct !== undefined || natB.popGrowthPct !== undefined)) {
-      popComps = '<div style="display:flex;gap:10px;justify-content:center;margin-top:4px;">';
-      if (stateB.popGrowthPct !== undefined && stateB.name) {
-        var diff = Math.round((trend.pctChange - stateB.popGrowthPct) * 10) / 10;
-        var color = diff >= 0 ? 'var(--green)' : 'var(--red)';
-        var sign = diff >= 0 ? '+' : '';
-        popComps += '<span style="font-size:10px;color:' + color + ';font-weight:600;">' + sign + diff + 'pp vs ' + stateB.name.replace(/,.*/, '') + '</span>';
+    // Population with benchmark context
+    var popSub = '';
+    if (trend) {
+      var growthColor = trend.pctChange >= 0 ? 'var(--green)' : 'var(--red)';
+      var growthSign = trend.pctChange >= 0 ? '+' : '';
+      popSub = '<div style="font-size:11px;color:' + growthColor + ';font-weight:600;margin-top:4px;">' + growthSign + trend.pctChange + '% since ' + trend.startYear + '</div>';
+      // Context line
+      var ctx = [];
+      if (stateB.popGrowthPct !== null && stateB.popGrowthPct !== undefined) {
+        var stName = (stateB.name || '').replace(/,.*/, '');
+        ctx.push(stName + ' ' + (stateB.popGrowthPct >= 0 ? '+' : '') + stateB.popGrowthPct + '%');
       }
-      if (natB.popGrowthPct !== undefined) {
-        var diff2 = Math.round((trend.pctChange - natB.popGrowthPct) * 10) / 10;
-        var color2 = diff2 >= 0 ? 'var(--green)' : 'var(--red)';
-        var sign2 = diff2 >= 0 ? '+' : '';
-        popComps += (stateB.popGrowthPct !== undefined ? '<span style="font-size:10px;color:var(--text-muted);">·</span>' : '');
-        popComps += '<span style="font-size:10px;color:' + color2 + ';font-weight:600;">' + sign2 + diff2 + 'pp vs US</span>';
+      if (natB.popGrowthPct !== null && natB.popGrowthPct !== undefined) {
+        ctx.push('US ' + (natB.popGrowthPct >= 0 ? '+' : '') + natB.popGrowthPct + '%');
       }
-      popComps += '</div>';
+      if (ctx.length) {
+        popSub += '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + ctx.join(' · ') + ' over same period</div>';
+      }
     }
-    statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div>' + popComps + '</div>';
+    statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div>' + popSub + '</div>';
 
+    // Income with benchmark values
     if (latestIncome) {
-      var incComps = '<div style="display:flex;gap:10px;justify-content:center;margin-top:4px;">';
-      if (stateB.medianIncome) incComps += compLine(latestIncome.medianIncome, stateB.medianIncome, stateB.name.replace(/,.*/,''));
-      if (natB.medianIncome) incComps += (stateB.medianIncome ? '<span style="font-size:10px;color:var(--text-muted);">·</span>' : '') + compLine(latestIncome.medianIncome, natB.medianIncome, 'US');
-      incComps += '</div>';
-      statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div>' + incComps + '</div>';
+      var incSub = '';
+      var benchmarks = [];
+      if (stateB.medianIncome) benchmarks.push((stateB.name || '').replace(/,.*/, '') + ': $' + fmtK(stateB.medianIncome));
+      if (natB.medianIncome) benchmarks.push('US: $' + fmtK(natB.medianIncome));
+      if (benchmarks.length) {
+        var localInc = latestIncome.medianIncome;
+        var refInc = natB.medianIncome || stateB.medianIncome;
+        var incColor = localInc >= refInc ? 'var(--green)' : 'var(--text-muted)';
+        incSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + benchmarks.join(' · ') + '</div>';
+      }
+      statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div>' + incSub + '</div>';
     }
     statsEl.innerHTML = statsHtml;
     statsEl.style.display = 'grid';
