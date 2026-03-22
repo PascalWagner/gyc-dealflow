@@ -1959,6 +1959,21 @@ body {
             <div class="save-status" id="calendarSaveStatus"></div>
           </div>
 
+          <!-- Investor Relations Contact -->
+          <div class="settings-group">
+            <div class="settings-label">Investor Relations Contact</div>
+            <div class="settings-hint">This is the person investors will be introduced to when they request a connection. If left blank, intros will go through our team manually.</div>
+            <div class="settings-input-row" style="flex-wrap:wrap;gap:8px;">
+              <input type="text" class="settings-input" id="irContactName" placeholder="Jane Smith" style="flex:1;min-width:140px;" />
+              <input type="email" class="settings-input" id="irContactEmail" placeholder="ir@yourcompany.com" style="flex:1;min-width:200px;" />
+              <button class="btn-save" id="btnSaveIR" onclick="saveIRContact()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save
+              </button>
+            </div>
+            <div class="save-status" id="irSaveStatus"></div>
+          </div>
+
           <!-- Authorized Emails -->
           <div class="settings-group">
             <div class="settings-label">Authorized Emails</div>
@@ -2480,6 +2495,8 @@ function renderGPDashboard(deals, settings) {
   // Settings
   gpState.calendarUrl = settings.calendar_url || settings.calendarUrl || '';
   gpState.authorizedEmails = settings.authorized_emails || settings.authorizedEmails || [];
+  gpState.irContactName = settings.ir_contact_name || settings.irContactName || '';
+  gpState.irContactEmail = settings.ir_contact_email || settings.irContactEmail || '';
 
   // If no authorized emails from API, use the current user's email
   if (gpState.authorizedEmails.length === 0 && user && user.email) {
@@ -2487,6 +2504,8 @@ function renderGPDashboard(deals, settings) {
   }
 
   document.getElementById('calendarUrl').value = gpState.calendarUrl;
+  document.getElementById('irContactName').value = gpState.irContactName;
+  document.getElementById('irContactEmail').value = gpState.irContactEmail;
   renderEmailList();
 }
 
@@ -2572,6 +2591,81 @@ function saveCalendarUrl() {
     statusEl.textContent = 'Saved locally (API unavailable).';
     statusEl.style.color = 'var(--orange)';
     showToast('Calendar URL saved locally');
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save';
+  });
+}
+
+// ========== SAVE IR CONTACT ==========
+function saveIRContact() {
+  var name = document.getElementById('irContactName').value.trim();
+  var email = document.getElementById('irContactEmail').value.trim();
+  var statusEl = document.getElementById('irSaveStatus');
+  var btn = document.getElementById('btnSaveIR');
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    statusEl.textContent = 'Please enter a valid email address.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  statusEl.textContent = '';
+
+  var user = getUser();
+  var headers = { 'Content-Type': 'application/json' };
+  if (user && user.token) {
+    headers['Authorization'] = 'Bearer ' + user.token;
+  }
+
+  if (!gpState.companyId) {
+    gpState.irContactName = name;
+    gpState.irContactEmail = email;
+    try {
+      var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+      gpSettings.irContactName = name;
+      gpSettings.irContactEmail = email;
+      localStorage.setItem('gycGPSettings', JSON.stringify(gpSettings));
+    } catch (e) {}
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save';
+    statusEl.textContent = 'Saved locally.';
+    showToast('IR contact saved');
+    return;
+  }
+
+  fetch('/api/management-companies/' + encodeURIComponent(gpState.companyId) + '/settings', {
+    method: 'PATCH',
+    headers: headers,
+    body: JSON.stringify({ ir_contact_name: name, ir_contact_email: email })
+  })
+  .then(function(resp) {
+    if (!resp.ok) throw new Error('Failed to save');
+    return resp.json();
+  })
+  .then(function() {
+    gpState.irContactName = name;
+    gpState.irContactEmail = email;
+    statusEl.textContent = 'Saved successfully.';
+    statusEl.style.color = 'var(--green)';
+    showToast('IR contact saved');
+  })
+  .catch(function(e) {
+    console.warn('Save failed, storing locally:', e.message);
+    try {
+      var gpSettings = JSON.parse(localStorage.getItem('gycGPSettings') || '{}');
+      gpSettings.irContactName = name;
+      gpSettings.irContactEmail = email;
+      localStorage.setItem('gycGPSettings', JSON.stringify(gpSettings));
+    } catch (ex) {}
+    gpState.irContactName = name;
+    gpState.irContactEmail = email;
+    statusEl.textContent = 'Saved locally (API unavailable).';
+    statusEl.style.color = 'var(--orange)';
+    showToast('IR contact saved locally');
   })
   .finally(function() {
     btn.disabled = false;
