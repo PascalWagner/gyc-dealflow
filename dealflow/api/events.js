@@ -169,6 +169,21 @@ export default async function handler(req, res) {
       .update(profileUpdate)
       .eq('id', profile.id);
 
+    // Persist goals_complete data to user_goals
+    if (event === 'goals_complete' && data) {
+      const goalsUpdate = {};
+      if (data.incomeGoal !== undefined) goalsUpdate.monthly_goal = data.incomeGoal;
+      if (data.incomeGap !== undefined) goalsUpdate.income_gap = data.incomeGap;
+      if (Object.keys(goalsUpdate).length > 0) {
+        await supabase
+          .from('user_goals')
+          .update(goalsUpdate)
+          .eq('user_id', profile.id)
+          .then(() => {})
+          .catch(e => console.warn('Goals event persist failed:', e.message));
+      }
+    }
+
     // Sync to GHL in background
     const ghlResult = await syncEventToGhl(email, event, data);
 
