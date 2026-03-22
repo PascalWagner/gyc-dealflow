@@ -5378,6 +5378,7 @@ const _supa = window.supabase.createClient(
         <option value="decision">Decision</option>
         <option value="invested">Invested</option>
         <option value="passed">Not Interested</option>
+        <option value="debtfunds">Debt Funds</option>
       </select>
       <!-- Desktop tabs (hidden on cap-ios) -->
       <div class="topbar-tabs" id="dealWorkflowTabs">
@@ -5388,6 +5389,8 @@ const _supa = window.supabase.createClient(
         <button class="topbar-tab" data-tab="decision" onclick="switchTab(this)">Decision</button>
         <button class="topbar-tab" data-tab="invested" onclick="switchTab(this)">Invested</button>
         <button class="topbar-tab" data-tab="passed" onclick="switchTab(this)">Not Interested</button>
+        <span style="width:1px;height:20px;background:var(--border);margin:0 4px;align-self:center;"></span>
+        <button class="topbar-tab" data-tab="debtfunds" onclick="switchToDebtFunds()">Debt Funds</button>
       </div>
       <div class="topbar-spacer"></div>
       <div class="topbar-view-toggle">
@@ -5474,7 +5477,131 @@ const _supa = window.supabase.createClient(
         Feed
       </button>
     </div>
+    <!-- Debt Funds sub-view (shown when Debt Funds tab is active) -->
+    <div id="debtFundsView" style="display:none;">
+      <div class="sub-page" style="max-width:1200px">
+        <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
+        <!-- Debt Fund Filters -->
+        <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+          <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
+            <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+            Apply My Buy Box
+          </button>
+          <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
+          <div style="width:1px;height:36px;background:var(--border);align-self:center;"></div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Financials</label>
+            <select id="debtFinancialsFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="Audited">Audited</option>
+              <option value="Unaudited">Unaudited</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">AUM Size</label>
+            <select id="debtAUMFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="small">Small (&lt;$100M)</option>
+              <option value="mid">Mid ($100M-$1B)</option>
+              <option value="institutional">Institutional ($1B+)</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Debt Position</label>
+            <select id="debtPositionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="1st">1st Position</option>
+              <option value="2nd">2nd Position</option>
+              <option value="Mezzanine">Mezzanine</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</label>
+            <select id="debtDistributionFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Min Investment</label>
+            <select id="debtMinimumFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="25000">Under $25K</option>
+              <option value="50000">Under $50K</option>
+              <option value="100000">Under $100K</option>
+              <option value="250000">Under $250K</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">2025 Return</label>
+            <select id="debtYieldFilter" onchange="syncDebtFilters()" style="padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;appearance:none;background-image:url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;">
+              <option value="all">All</option>
+              <option value="8">8%+</option>
+              <option value="9">9%+</option>
+              <option value="10">10%+</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;">
+            <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Search</label>
+            <input id="debtSearchInput" type="text" placeholder="Search funds..." oninput="syncDebtFilters()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);font-family:var(--font-ui);font-size:12px;color:var(--text-dark);box-sizing:border-box;">
+          </div>
+          <button onclick="clearDebtFilters()" style="align-self:center;padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.15s;white-space:nowrap;" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'"
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear Filters
+          </button>
+        </div>
+        <!-- Stat Cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;" id="debtFundStats"></div>
+        <!-- Chart Section -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin:0;">Fund Comparison</h3>
+            <div class="debt-metric-toggle" style="display:flex;gap:8px;" id="debtChartToggles">
+              <button class="topbar-tab active" onclick="switchDebtMetric('yield', this)">Yield</button>
+              <button class="topbar-tab" onclick="switchDebtMetric('leverage', this)">Leverage</button>
+              <button class="topbar-tab" onclick="switchDebtMetric('ltv', this)">Loan-to-Value</button>
+              <button class="topbar-tab" onclick="switchDebtMetric('delinquency', this)">Delinquency Rate</button>
+            </div>
+            <select class="debt-metric-select-mobile" style="display:none;padding:6px 28px 6px 10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);background:var(--bg-card);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%2712%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23607179%27 stroke-width=%272.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 8px center;" onchange="switchDebtMetric(this.value, null, true)">
+              <option value="yield">Yield</option>
+              <option value="leverage">Leverage</option>
+              <option value="ltv">Loan-to-Value</option>
+              <option value="delinquency">Delinquency Rate</option>
+            </select>
+          </div>
+          <div class="debt-chart-wrapper" style="position:relative;">
+            <div style="position:relative;height:360px;flex:1;min-width:0;order:1;">
+              <canvas id="debtFundChart"></canvas>
+            </div>
+            <div id="debtChartLegend" style="min-width:180px;max-width:220px;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:8px 0;font-family:var(--font-ui);font-size:12px;order:0;"></div>
+            <div id="debtChartComingSoon" style="display:none;position:absolute;inset:0;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);border-radius:var(--radius);z-index:10;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+              <div style="font-family:var(--font-ui);font-size:22px;font-weight:700;color:var(--text-secondary);">Coming Soon</div>
+              <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);max-width:340px;text-align:center;">Delinquency rate data is not yet available. We're working on sourcing verified metrics from fund managers.</div>
+            </div>
+          </div>
+        </div>
+        <!-- Debt Funds Table -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;">
+          <table class="table-view" id="debtFundTable" style="display:table;">
+            <thead>
+              <tr>
+                <th onclick="sortDebtTable('investmentName')">Fund Name <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('debtPosition')">Debt Position <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('fundAUM')">AUM <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('financials')">Financials <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2025')">2025 <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2024')">2024 <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2023')">2023 <span class="sort-arrow">&#9650;</span></th>
+                <th onclick="sortDebtTable('_return2022')">2022 <span class="sort-arrow">&#9650;</span></th>
+              </tr>
+            </thead>
+            <tbody id="debtFundTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <div class="content-area">
+      <div id="decisionCompareContainer" style="display:none;margin-bottom:24px;"></div>
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
       <div class="card-grid" id="cardGrid"><div id="dealsMilestoneChecklist" style="display:contents;"></div></div>
       <!-- Mobile Swipe Feed -->
@@ -12379,12 +12506,12 @@ function renderWizardStep() {
     }
     var capOptions = [
       { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: 'under-$50k', label: 'Under $50K', desc: '1 deal at a lower minimum', nwCtx: nwPct(25000) },
-      { val: '$50k-$100k', label: '$50K \u2013 $100K', desc: '1\u20132 deals at typical minimums', nwCtx: nwPct(75000) },
-      { val: '$100k-$250k', label: '$100K \u2013 $250K', desc: '2\u20134 deals', nwCtx: nwPct(175000) },
-      { val: '$250k-$500k', label: '$250K \u2013 $500K', desc: 'Well-diversified portfolio', nwCtx: nwPct(375000) },
-      { val: '$500k-$1M', label: '$500K \u2013 $1M', desc: 'Significant deployment', nwCtx: nwPct(750000) },
-      { val: '$1M+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct(1500000) }
+      { val: '$1-$49k', label: '$1 \u2013 $49K', desc: '1 deal at a lower minimum', nwCtx: nwPct(25000) },
+      { val: '$50k-$99k', label: '$50K \u2013 $99K', desc: '1\u20132 deals at typical minimums', nwCtx: nwPct(75000) },
+      { val: '$100k-$249k', label: '$100K \u2013 $249K', desc: '2\u20134 deals', nwCtx: nwPct(175000) },
+      { val: '$250k-$499k', label: '$250K \u2013 $499K', desc: 'Well-diversified portfolio', nwCtx: nwPct(375000) },
+      { val: '$500k-$999k', label: '$500K \u2013 $999K', desc: 'Significant deployment', nwCtx: nwPct(750000) },
+      { val: '$1m+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct(1500000) }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     capOptions.forEach(function(opt) {
@@ -23792,9 +23919,9 @@ function undoLastSwipe() {
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
     <span>Deals</span>
   </button>
-  <button class="mobile-tab-item" data-page="debtfunds" onclick="navigateTo('debtfunds')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg>
-    <span>Funds</span>
+  <button class="mobile-tab-item" data-page="marketintel" onclick="navigateTo('marketintel')">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>Intel</span>
   </button>
   <button class="mobile-tab-item" data-page="portfolio" onclick="navigateTo('portfolio')">
     <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
