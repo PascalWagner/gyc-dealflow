@@ -22814,7 +22814,12 @@ function renderCaseStudies() {
     + '</div></div>'
     + '</div>';
 
-  container.innerHTML = pubBanner + tierCards
+  const sampleBanner = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">'
+    + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    + '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">All data on this page is sample data for layout purposes. Real metrics will be pulled from Supabase, member surveys, and GP confirmations.</span>'
+    + '</div>';
+
+  container.innerHTML = sampleBanner + pubBanner + tierCards
 
     // Controls
     + '<div class="ms-controls">'

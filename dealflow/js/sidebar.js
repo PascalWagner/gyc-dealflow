@@ -166,7 +166,7 @@
     ['admindash', icons.schema, 'Admin Dashboard'],
     ['admin-manage', icons.manage, 'Manage Data'],
     // Outreach is now a sub-view inside Manage Data → Operators
-    ['casestudies', icons.casestudies, 'Case Studies']
+    ['casestudies', icons.casestudies, 'Member Success']
   ];
   adminPages.forEach(function(p) {
     html += navItem(p[0], p[1], p[2]);
