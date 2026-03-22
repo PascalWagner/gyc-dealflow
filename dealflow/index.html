@@ -5770,9 +5770,9 @@ const _supa = window.supabase.createClient(
     <div class="filter-bar" style="position:relative;">
       <button class="buybox-toggle" id="dealsBuyBoxToggle" onclick="toggleDealsBuyBox()">
         <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-        Apply My Buy Box
+        Apply My Plan
       </button>
-      <button class="buybox-update-btn" id="dealsBuyBoxUpdate" onclick="updateDealsBuyBox()">Update Buy Box?</button>
+      <button class="buybox-update-btn" id="dealsBuyBoxUpdate" onclick="updateDealsBuyBox()">Update Plan?</button>
       <button id="filtersToggleBtn" onclick="toggleFilterPanel()" style="padding:6px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;color:var(--text-secondary);transition:all 0.15s;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         Filters <span id="filterCountBadge" style="display:none;background:var(--primary);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;min-width:16px;text-align:center;"></span>
@@ -6082,7 +6082,7 @@ const _supa = window.supabase.createClient(
       <div class="dash-tabs" id="dashTabBar_dashboard">
         <button class="dash-tab active" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
-        <button class="dash-tab" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
         <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
     </div>
@@ -6121,7 +6121,7 @@ const _supa = window.supabase.createClient(
       <div class="dash-tabs" id="dashTabBar_buybox">
         <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
-        <button class="dash-tab active" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab active" onclick="navigateTo('buybox')">My Plan</button>
         <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
       <div class="topbar-spacer"></div>
@@ -6130,15 +6130,15 @@ const _supa = window.supabase.createClient(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;vertical-align:middle"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></polyline></svg>
         Print / Save PDF
       </button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openBuyBoxWizard()">Edit Buy Box</button>
+      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openBuyBoxWizard()">Edit Plan</button>
       </span>
     </div>
     <div class="report-page" id="reportContent">
       <div style="text-align:center;padding:80px 32px;color:var(--text-muted)">
         <div style="font-size:48px;margin-bottom:16px;opacity:0.3">&#x1f4cb;</div>
-        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text-dark)">No Buy Box Yet</div>
-        <div style="font-size:14px;margin-bottom:24px">Complete the Buy Box Builder to generate your personalized investment profile.</div>
-        <button class="btn-cta btn-cta-primary" style="width:auto;display:inline-block;padding:14px 32px" onclick="openBuyBoxWizard()">Build My Buy Box</button>
+        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text-dark)">No Investment Plan Yet</div>
+        <div style="font-size:14px;margin-bottom:24px">Answer a few questions to generate your personalized portfolio plan.</div>
+        <button class="btn-cta btn-cta-primary" style="width:auto;display:inline-block;padding:14px 32px" onclick="openBuyBoxWizard()">Build My Plan</button>
       </div>
     </div>
   </div>
@@ -6803,9 +6803,9 @@ const _supa = window.supabase.createClient(
         <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
           <button class="buybox-toggle" id="debtBuyBoxToggle" onclick="toggleDebtBuyBox()" style="align-self:center;">
             <svg class="bb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-            Apply My Buy Box
+            Apply My Plan
           </button>
-          <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Buy Box?</button>
+          <button class="buybox-update-btn" id="debtBuyBoxUpdate" onclick="updateDebtBuyBox()">Update Plan?</button>
           <div style="width:1px;height:36px;background:var(--border);align-self:center;"></div>
           <div style="display:flex;flex-direction:column;gap:4px;">
             <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Financials</label>
@@ -7779,7 +7779,7 @@ const _supa = window.supabase.createClient(
       <div class="dash-tabs" id="dashTabBar_portfolio">
         <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab active" onclick="navigateTo('portfolio')">Portfolio</button>
-        <button class="dash-tab" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
         <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
       <div class="topbar-spacer"></div>
@@ -7835,7 +7835,7 @@ const _supa = window.supabase.createClient(
       <div class="dash-tabs" id="dashTabBar_taxprep">
         <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
-        <button class="dash-tab" onclick="navigateTo('buybox')">Buy Box</button>
+        <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
         <button class="dash-tab active" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
     </div>
@@ -7893,7 +7893,7 @@ const _supa = window.supabase.createClient(
         </a>
         <a class="more-menu-item" href="#" onclick="navigateTo('buybox'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-          <span>Buy Box</span>
+          <span>My Plan</span>
         </a>
         <a class="more-menu-item" href="#" onclick="navigateTo('taxprep'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -8933,14 +8933,14 @@ function renderComparePage() {
   });
   h += '</tr></thead><tbody>';
 
-  // --- Buy Box Fit ---
-  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Buy Box Fit</td>';
+  // --- Plan Fit ---
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Plan Fit</td>';
   deals.forEach(function(d, i) {
     var ms = matchScores[i];
     var isBest = highlightBest && bestMatchIndices.indexOf(i) >= 0 && bestMatchIndices.length < deals.length;
     h += '<td class="' + colClass(i) + '" style="text-align:center;">';
     if (!bb) {
-      h += '<span style="color:var(--text-muted);font-size:11px;">Set Buy Box first</span>';
+      h += '<span style="color:var(--text-muted);font-size:11px;">Set up plan first</span>';
     } else {
       h += '<span style="font-weight:700;font-size:14px;color:' + (isBest ? 'var(--primary)' : 'var(--text-dark)') + ';">' + ms.score + '/' + ms.max + '</span>';
       h += '<div class="compare-match-bar"><div class="compare-match-bar-fill" style="width:' + Math.round((ms.score / ms.max) * 100) + '%;' + (isBest ? 'background:var(--primary);' : '') + '"></div></div>';
@@ -9191,14 +9191,14 @@ function renderDecisionCompare() {
   });
   h += '</tr></thead><tbody>';
 
-  // Buy Box Fit
-  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Buy Box Fit</td>';
+  // Plan Fit
+  h += '<tr><td class="col-label" style="font-weight:700;color:var(--primary);">Plan Fit</td>';
   deals.forEach(function(d, i) {
     var ms = matchScores[i];
     var isBest = highlightBest && bestMatchIndices.indexOf(i) >= 0 && bestMatchIndices.length < deals.length;
     h += '<td class="' + colClass(i) + '" style="text-align:center;">';
     if (!bb) {
-      h += '<span style="color:var(--text-muted);font-size:11px;">Set Buy Box first</span>';
+      h += '<span style="color:var(--text-muted);font-size:11px;">Set up plan first</span>';
     } else {
       h += '<span style="font-weight:700;font-size:14px;color:' + (isBest ? 'var(--primary)' : 'var(--text-dark)') + ';">' + ms.score + '/' + ms.max + '</span>';
       h += '<div class="compare-match-bar"><div class="compare-match-bar-fill" style="width:' + Math.round((ms.score / ms.max) * 100) + '%;' + (isBest ? 'background:var(--primary);' : '') + '"></div></div>';
@@ -13957,7 +13957,7 @@ function renderWizardStep() {
     }
     if (!wizardData.accreditation) wizardData.accreditation = [];
     html += '<div class="wizard-card-title">What\u2019s your investor accreditation level?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Select all that apply. You\u2019ll see every deal in our database, but when you apply your Buy Box, we\u2019ll only show deals you\u2019re eligible to invest in.</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Select all that apply. You\u2019ll see every deal in our database, but when you apply your plan filters, we\u2019ll only show deals that match your criteria.</div>';
     var accQualified = [
       { val: 'net_worth', label: 'Net worth over $1M', desc: 'Individual or joint net worth exceeding $1M, excluding your primary residence (SEC Rule 501)' },
       { val: 'income', label: 'Income over $200K', desc: 'Earned $200K+ individually (or $300K+ jointly) in each of the past 2 years, with reasonable expectation of the same this year' },
@@ -14080,128 +14080,65 @@ function renderWizardStep() {
       heroSub = 'We found <strong>' + getWizardPlanDeals(branch).length + ' high-growth deals</strong> targeting 15%+ IRR.';
     }
 
-    // Minimal centered layout
-    html += '<div style="text-align:center;padding:40px 0 20px;">';
-    html += '<div style="font-family:var(--font-headline);font-size:48px;font-weight:800;color:var(--text-dark);line-height:1.1;margin-bottom:8px;">' + heroNumber + '</div>';
-    html += '<div style="font-family:var(--font-body);font-size:18px;color:var(--text-secondary);margin-bottom:32px;">' + heroLabel + '</div>';
-    html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);line-height:1.6;max-width:360px;margin:0 auto;">' + heroSub + '</div>';
+    // Goal-oriented headline
+    var goalHeadline = '';
+    if (branch === 'cashflow') goalHeadline = 'Here\u2019s your plan to reach ' + heroNumber + '/yr';
+    else if (branch === 'tax') goalHeadline = 'Here\u2019s your plan to save ' + heroNumber + ' in taxes';
+    else goalHeadline = 'Here\u2019s your plan to reach ' + heroNumber + ' in 5 years';
+
+    html += '<div style="text-align:center;padding:32px 0 8px;">';
+    html += '<div style="font-family:var(--font-headline);font-size:28px;font-weight:800;color:var(--text-dark);line-height:1.2;margin-bottom:10px;">' + goalHeadline + '</div>';
+    html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);line-height:1.6;max-width:380px;margin:0 auto;">' + heroSub + '</div>';
     html += '</div>';
 
-    // Quick buy box summary
-    var planAssets = (wizardData.assetClasses || []).slice(0, 3).join(', ');
-    var planStrategies = (wizardData.strategies || []).slice(0, 2).join(', ');
-    var planLockup = wizardData.lockup || '';
-    var planDist = wizardData.distributions || '';
-    html += '<div style="background:var(--bg-cream);border:1px solid var(--border-light);border-radius:10px;padding:16px 20px;margin-top:8px;text-align:left;">';
-    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Your Buy Box</div>';
-    if (planAssets) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><strong>Assets:</strong> ' + planAssets + '</div>';
-    if (planStrategies) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><strong>Strategy:</strong> ' + planStrategies + '</div>';
-    if (planLockup) html += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;"><strong>Lockup:</strong> ' + planLockup + ' years</div>';
-    if (planDist) html += '<div style="font-size:13px;color:var(--text-secondary);"><strong>Distributions:</strong> ' + planDist + '</div>';
+    // Generate the portfolio plan and show buckets
+    var _wizPlan = generatePortfolioPlan(wizardData, JSON.parse(localStorage.getItem('gycGoals') || 'null'));
+    var _wizBuckets = _wizPlan.buckets || [];
+
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;">';
+    _wizBuckets.forEach(function(b) {
+      var dots = '';
+      for (var i = 0; i < b.target_deals; i++) {
+        dots += '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid ' + b.color + '40;margin:2px;box-sizing:border-box;"></span>';
+      }
+      html += '<div style="flex:1;min-width:100px;background:var(--bg-main);border:1px solid var(--border-light);border-radius:10px;padding:14px;text-align:center;">'
+        + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:' + b.color + ';margin-bottom:6px;">' + b.label + '</div>'
+        + '<div style="font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:2px;">' + b.pct + '%</div>'
+        + '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">$' + (b.capital || 0).toLocaleString() + '</div>'
+        + '<div style="line-height:1.8;">' + dots + '</div>'
+        + '<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">' + b.target_deals + ' deal' + (b.target_deals !== 1 ? 's' : '') + '</div>'
+        + '</div>';
+    });
     html += '</div>';
 
-    // Concentration warning
-    var planCap = { '<$100k': 75000, '$100k-$250k': 175000, '$250k-$500k': 375000, '$500k-$1M': 750000, '$1M+': 1500000 };
-    var planCapAmt = planCap[wizardData.capital12mo] || 200000;
-    var planCheckAmt = parseInt(wizardData.checkSize) || 50000;
-    var concPct = Math.round(planCheckAmt / planCapAmt * 100);
-    if (concPct > 30) {
-      html += '<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--text-secondary);line-height:1.5;">';
-      html += '<strong style="color:#f59e0b;">Heads up:</strong> At $' + planCheckAmt.toLocaleString() + '/deal, each investment is ~' + concPct + '% of your deployable capital. Consider spreading across more deals or reducing your check size for better diversification.';
-      html += '</div>';
-    }
+    // Summary line
+    var _wizTotalDeals = 0;
+    _wizBuckets.forEach(function(b) { _wizTotalDeals += b.target_deals; });
+    html += '<div style="font-size:13px;color:var(--text-secondary);text-align:center;margin-top:16px;line-height:1.6;">'
+      + _wizTotalDeals + ' deals &times; $' + (_wizPlan.check_size || 100000).toLocaleString() + ' each'
+      + '</div>';
+
+    html += '<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:8px;line-height:1.6;">'
+      + 'You\u2019ll build toward this over time \u2014 we\u2019ll recommend which slot to fill next.'
+      + '</div>';
 
     // Nav
     html += '<div class="wizard-inline-nav" style="margin-top:24px;">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Browse my deals \u2192</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Start Browsing Deals \u2192</button>';
     html += '</div>';
 
     document.getElementById('wizardContent').innerHTML = html;
     return;
   }
 
-  // ===== SCREEN 8: COMPLETION =====
+  // ===== SCREEN 8: COMPLETION (simplified — plan was shown on previous screen) =====
   if (step.type === 'completion') {
     html += '<div class="wizard-completion">';
     html += '<div class="wizard-completion-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
     html += '<div class="wizard-card-title" style="text-align:center;">Your plan is saved.</div>';
-    html += '<div class="wizard-card-desc" style="text-align:center;">Deals are filtered to match your goal. You can update your preferences anytime in Settings.</div>';
-    // Plan summary
-    const summaryBranch = wizardData._branch || 'cashflow';
-    let goalSummary = '';
-    if (summaryBranch === 'cashflow') {
-      const t = parseDollar(wizardData.targetCashFlow) || 0;
-      goalSummary = t > 0 ? '$' + t.toLocaleString() + '/yr projected cash flow' : 'Cash flow goal';
-    } else if (summaryBranch === 'tax') {
-      const t = parseDollar(wizardData.taxableIncome) || 200000;
-      goalSummary = 'Offset $' + t.toLocaleString() + ' in taxable income';
-    } else {
-      const t = parseDollar(wizardData.growthCapital) || 500000;
-      goalSummary = 'Grow $' + t.toLocaleString() + ' to $' + (t * 2).toLocaleString();
-    }
-    const capLabel = wizardData.capital12mo || wizardData._capitalRange || 'Not set';
-    const checkLabel = wizardData.checkSize ? '$' + parseInt(wizardData.checkSize).toLocaleString() : 'Not set';
-    const savedCount = typeof window._wizardSavedDeals !== 'undefined' ? window._wizardSavedDeals.size : 0;
-    html += '<div class="wizard-plan-summary">';
-    html += '<div class="wizard-plan-summary-title">Your Plan Summary</div>';
-    html += '<div class="wizard-plan-summary-row"><span>Goal</span><span>' + goalSummary + '</span></div>';
-    html += '<div class="wizard-plan-summary-row"><span>Capital</span><span>' + capLabel + ' available</span></div>';
-    html += '<div class="wizard-plan-summary-row"><span>Max per deal</span><span>' + checkLabel + '</span></div>';
-    html += '<div class="wizard-plan-summary-row"><span>Deals saved</span><span>' + (savedCount > 0 ? savedCount + ' of 3 recommended' : '<em style="color:var(--text-muted);font-style:italic;">You can save deals from your dashboard</em>') + '</span></div>';
-    html += '</div>';
-
-    // Deployment timeline
-    var capMap = { '<$100k': 75000, '$100k-$250k': 175000, '$250k-$500k': 375000, '$500k-$1M': 750000, '$1M+': 1500000, '$50-100K': 75000, '$100-250K': 175000, '$250-500K': 375000, '$500K-1M': 750000 };
-    var totalCap = capMap[wizardData.capital12mo] || capMap[wizardData._capitalRange] || 200000;
-    var checkAmt = parseInt(wizardData.checkSize) || 100000;
-    var numDeals = Math.ceil(totalCap / checkAmt);
-    var avgYield = summaryBranch === 'cashflow' ? 0.09 : summaryBranch === 'tax' ? 0.06 : 0.15;
-    var projectedIncome = Math.round(totalCap * avgYield);
-    var quarters = Math.ceil(numDeals / 2); // ~2 deals per quarter
-
-    html += '<div style="background:rgba(81,190,123,0.04);border:1px solid rgba(81,190,123,0.12);border-radius:10px;padding:20px;margin-top:16px;text-align:left;">';
-    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:12px;">Your Deployment Roadmap</div>';
-
-    // Timeline steps
-    for (var q = 1; q <= Math.min(quarters, 4); q++) {
-      var dealsThisQ = Math.min(2, numDeals - (q - 1) * 2);
-      var cumDeals = Math.min(numDeals, q * 2);
-      var cumCapital = Math.min(totalCap, cumDeals * checkAmt);
-      var cumIncome = Math.round(cumCapital * avgYield);
-      var isLast = q === Math.min(quarters, 4);
-      html += '<div style="display:flex;gap:12px;margin-bottom:' + (isLast ? '0' : '12px') + ';">';
-      html += '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:24px;">';
-      html += '<div style="width:10px;height:10px;border-radius:50%;background:var(--primary);flex-shrink:0;"></div>';
-      if (!isLast) html += '<div style="width:2px;flex:1;background:rgba(81,190,123,0.3);"></div>';
-      html += '</div>';
-      html += '<div style="padding-bottom:' + (isLast ? '0' : '4px') + ';">';
-      html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">';
-      if (q === 1) html += 'Month 1\u20133';
-      else if (q === 2) html += 'Month 4\u20136';
-      else if (q === 3) html += 'Month 7\u20139';
-      else html += 'Month 10\u201312';
-      html += '</div>';
-      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">';
-      html += 'Deploy ' + dealsThisQ + ' deal' + (dealsThisQ > 1 ? 's' : '') + ' at $' + checkAmt.toLocaleString() + ' each';
-      html += ' \u2192 $' + cumCapital.toLocaleString() + ' deployed, ~$' + cumIncome.toLocaleString() + '/yr';
-      html += '</div></div></div>';
-    }
-
-    html += '<div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(81,190,123,0.15);text-align:center;">';
-    html += '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--primary);">$' + projectedIncome.toLocaleString() + '/yr</div>';
-    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">projected annual income from ' + numDeals + ' deals</div>';
-    html += '</div></div>';
-
-    // Video placeholder — hidden until video URLs are configured
-    // if (false) {
-    // html += '<div class="wizard-video-slot" onclick="">';
-    // html += '<div class="wizard-video-play"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><polygon points="8,5 20,12 8,19"/></svg></div>';
-    // html += '<div class="wizard-video-title">Watch: How I built $150K/yr in passive income</div>';
-    // html += '<div class="wizard-video-duration">3 min</div>';
-    // html += '</div>';
-    // }
-    html += '<button class="wizard-btn wizard-btn-next" style="width:100%;margin-top:20px;" onclick="wizardNext()">Go to my dashboard \u2192</button>';
+    html += '<div class="wizard-card-desc" style="text-align:center;max-width:360px;margin:0 auto;">Your portfolio plan is ready. Browse deals and we\u2019ll show you which ones fit each slot in your plan.</div>';
+    html += '<button class="wizard-btn wizard-btn-next" style="width:100%;margin-top:24px;" onclick="wizardNext()">Go to my dashboard \u2192</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -14858,10 +14795,24 @@ function renderReport() {
     + '<button onclick="navigateTo(\'officehours\')" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;">Join Office Hours</button>'
     + '</div>';
 
+  // ===== PORTFOLIO BLUEPRINT =====
+  var planData = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+  if (!planData && (d._branch || d.goal)) {
+    planData = generatePortfolioPlan(d, JSON.parse(localStorage.getItem('gycGoals') || 'null'));
+    savePortfolioPlan(planData);
+  }
+  var blueprintHtml = '';
+  if (planData) {
+    var _rpPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+    var _rpStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+    blueprintHtml = buildDashBlueprint(planData, _rpPortfolio, allDeals, _rpStages);
+  }
+
   // ===== RENDER =====
   const container = document.getElementById('reportContent');
   container.innerHTML = '<div class="bb-report">'
     + thesisHtml
+    + blueprintHtml
     + pathHtml
     + snapshotHtml
     + ctaHtml
@@ -16011,7 +15962,7 @@ function renderDebtFunds() {
     _return2022: generateYearReturn(f.targetIRR, 2022)
   }));
 
-  // Buy Box is NOT auto-applied — user clicks "Apply My Buy Box" manually
+  // Buy Box is NOT auto-applied — user clicks "Apply My Plan" manually
   // This ensures all funds show by default on first visit
 
   renderDebtStats(getFilteredDebtFunds(), debtFundData);
@@ -16102,7 +16053,7 @@ function renderDebtChart() {
       emptyEl.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:360px;width:100%;gap:12px;order:1;';
       emptyEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;opacity:0.5;"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 5-5"/></svg>'
         + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);">No funds match your filters</div>'
-        + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);text-align:center;max-width:320px;">Try adjusting your filters or clearing your Buy Box to see all available debt funds.</div>';
+        + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);text-align:center;max-width:320px;">Try adjusting your filters or clearing your plan filters to see all available debt funds.</div>';
       chartWrapper.appendChild(emptyEl);
     }
     if (emptyEl) emptyEl.style.display = 'flex';
@@ -21721,11 +21672,20 @@ function renderDashboard() {
       ? activeInvestments + ' active investment' + (activeInvestments !== 1 ? 's' : '') + ' &middot; $' + (totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(2) + 'M' : totalInvested.toLocaleString()) + ' deployed'
       : 'No investments yet &mdash; start building your portfolio';
 
+    // Slot progress from portfolio plan
+    var _heroPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+    var slotLine = '';
+    if (_heroPlan && _heroPlan.buckets) {
+      var _hTotal = 0, _hFilled = 0;
+      _heroPlan.buckets.forEach(function(b) { _hTotal += b.target_deals; _hFilled += (b.filled_by || []).length; });
+      if (_hTotal > 0) slotLine = ' &middot; ' + _hFilled + ' of ' + _hTotal + ' plan slots filled';
+    }
+
     heroHtml = '<div class="dash-hero">'
       + '<div class="dash-hero-label">' + goalLabel + '</div>'
       + '<div class="dash-hero-progress"><div class="dash-hero-progress-fill" style="width:' + goalProgress + '%;' + (goalProgress > 0 ? 'min-width:6px;' : '') + '"></div></div>'
       + '<div class="dash-hero-value">' + goalValueText + ' <span class="dash-hero-pct">' + goalProgress + '%</span></div>'
-      + '<div class="dash-hero-stats">' + statsLine + '</div>'
+      + '<div class="dash-hero-stats">' + statsLine + slotLine + '</div>'
       + '</div>';
   } else {
     // No onboarding — show CTA
@@ -24011,7 +23971,7 @@ function renderCaseStudies() {
   };
 
   const journeySteps = [
-    { key: 'buybox', label: 'Buy Box' },
+    { key: 'buybox', label: 'My Plan' },
     { key: 'saved3', label: 'Saved 3' },
     { key: 'bookedCall', label: 'Intro Call' },
     { key: 'firstDD', label: 'First DD' },
@@ -24303,7 +24263,7 @@ function showOnboarding() {
     } else if (step === 4) {
       // ===== BUY BOX INTRO =====
       html += '<div style="font-size:48px;margin-bottom:8px;">&#127919;</div>';
-      html += '<div class="onboarding-title">Build Your Buy Box</div>';
+      html += '<div class="onboarding-title">Build Your Investment Criteria</div>';
       html += '<div class="onboarding-subtitle">Answer a few questions and we\'ll match you with deals that fit your goals.</div>';
       html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;text-align:left;">';
       html += '<div style="display:flex;flex-direction:column;gap:14px;">';
@@ -24330,10 +24290,10 @@ function showOnboarding() {
       html += '</div>';
       html += '<div style="font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);line-height:1.4;">Members can see who else invested in each deal</div>';
       html += '</div>';
-      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">Opt in during the Buy Box setup to join the LP Network. You can only see others who also opted in.</div>';
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.6;">Opt in during plan setup to join the LP Network. You can only see others who also opted in.</div>';
       html += '</div>';
       html += '<button class="onboarding-cta" onclick="window._tourFinish()">Start Browsing Deals</button>';
-      html += '<button class="onboarding-skip" style="margin-top:4px;" onclick="window._tourFinish();setTimeout(function(){openBuyBoxWizard();},400);">Build My Buy Box First</button>';
+      html += '<button class="onboarding-skip" style="margin-top:4px;" onclick="window._tourFinish();setTimeout(function(){openBuyBoxWizard();},400);">Build My Plan First</button>';
     }
 
     html += '</div></div>';
