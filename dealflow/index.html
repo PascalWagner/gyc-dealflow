@@ -19142,8 +19142,21 @@ function renderNetworkMoat() {
   var el = function(id) { return document.getElementById(id); };
 
   // Load intros from Supabase first, fallback to localStorage
-  adminFetch({ action: 'list-intros' }).then(function(result) {
-    var intros = (result && result.intros) || [];
+  // Also fetch user profiles to resolve emails to names
+  Promise.all([
+    adminFetch({ action: 'list-intros' }),
+    adminFetch({ action: 'list-users' })
+  ]).then(function(results) {
+    var introResult = results[0] || {};
+    var usersResult = results[1] || {};
+    var intros = introResult.intros || [];
+    var users = usersResult.users || [];
+
+    // Build email-to-name lookup
+    var nameMap = {};
+    users.forEach(function(u) {
+      if (u.email && u.full_name) nameMap[u.email.toLowerCase()] = u.full_name;
+    });
 
     // If no Supabase data, try localStorage
     if (!intros.length) {
@@ -19152,9 +19165,12 @@ function renderNetworkMoat() {
         if (!Array.isArray(local)) {
           local = Object.keys(local).map(function(k) { return { deal_name: k, created_at: new Date(local[k]).toISOString() }; });
         }
+        // Get current admin email for unknown entries
+        var adminEmail = '';
+        try { var u = getUser(); adminEmail = u && u.email ? u.email : ''; } catch(e2) {}
         intros = local.map(function(l) {
           return {
-            user_email: l.userEmail || l.user_email || 'unknown',
+            user_email: l.userEmail || l.user_email || adminEmail || 'unknown',
             operator_name: l.company || l.operator_name || '--',
             operator_ceo: l.person || l.operator_ceo || '',
             deal_name: l.deal || l.deal_name || l.dealId || '--',
@@ -19165,16 +19181,22 @@ function renderNetworkMoat() {
       } catch(e) { intros = []; }
     }
 
+    // Resolve names
+    function lpName(email) {
+      if (!email || email === 'unknown') {
+        var adminUser = getUser();
+        email = adminUser && adminUser.email ? adminUser.email : '';
+      }
+      return nameMap[email.toLowerCase()] || email || '--';
+    }
+
     if (el('introTotalCount')) el('introTotalCount').textContent = intros.length;
-    // Unique GPs
     var gpSet = {};
     intros.forEach(function(i) { gpSet[i.operator_name || 'unknown'] = true; });
     if (el('introUniqueGPs')) el('introUniqueGPs').textContent = Object.keys(gpSet).length;
-    // Unique LPs
     var lpSet = {};
     intros.forEach(function(i) { lpSet[i.user_email || 'unknown'] = true; });
     if (el('introUniqueLPs')) el('introUniqueLPs').textContent = Object.keys(lpSet).length;
-    // This month
     var monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     var thisMonth = intros.filter(function(i) {
       var t = i.created_at ? new Date(i.created_at).getTime() : (i.timestamp || 0);
@@ -19190,9 +19212,11 @@ function renderNetworkMoat() {
         var date = i.created_at ? new Date(i.created_at).toLocaleDateString() : '--';
         var statusColor = i.status === 'completed' ? '#22c55e' : i.status === 'declined' ? '#ef4444' : '#f59e0b';
         var statusLabel = (i.status || 'pending').charAt(0).toUpperCase() + (i.status || 'pending').slice(1);
+        var name = lpName(i.user_email);
+        var nameHtml = '<a href="#" onclick="navigateTo(\'settings\');return false;" style="color:var(--primary);text-decoration:none;font-weight:600;" title="' + (i.user_email || '') + '">' + name + '</a>';
         html += '<tr style="border-bottom:1px solid var(--border-light);">';
         html += '<td style="padding:8px 12px;font-size:12px;">' + date + '</td>';
-        html += '<td style="padding:8px 12px;font-size:12px;font-weight:600;">' + (i.user_email || '--') + '</td>';
+        html += '<td style="padding:8px 12px;font-size:12px;">' + nameHtml + '</td>';
         html += '<td style="padding:8px 12px;font-size:12px;">' + (i.operator_name || '--') + '</td>';
         html += '<td style="padding:8px 12px;font-size:12px;">' + (i.deal_name || '--') + '</td>';
         html += '<td style="padding:8px 12px;font-size:12px;text-align:center;"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + statusColor + '22;color:' + statusColor + ';">' + statusLabel + '</span></td>';
