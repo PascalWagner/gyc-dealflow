@@ -127,22 +127,23 @@ export default async function handler(req, res) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
-    // ---- AGGREGATE: Deal Structure (Fund vs Syndication) ----
-    // This comes from opportunities.deal_type, NOT buy box deal_structure
-    const dealStructureCounts = {};
+    // ---- AGGREGATE: Deal Structure (Fund vs Syndication only) ----
+    // Only count Fund and Syndication — everything else is noise
+    const VALID_DEAL_TYPES = new Set(['Fund', 'Syndication']);
+    const dealStructureCounts = { 'Fund': 0, 'Syndication': 0 };
 
     // From deal stages (what LPs are actually saving)
     for (const s of allStages) {
       const deal = dealMap[s.deal_id];
-      if (deal && deal.deal_type) {
-        dealStructureCounts[deal.deal_type] = (dealStructureCounts[deal.deal_type] || 0) + 1;
+      if (deal && deal.deal_type && VALID_DEAL_TYPES.has(deal.deal_type)) {
+        dealStructureCounts[deal.deal_type] += 1;
       }
     }
 
     // Supplement from all opportunities
     for (const d of allOpps) {
-      if (d.deal_type) {
-        dealStructureCounts[d.deal_type] = (dealStructureCounts[d.deal_type] || 0) + 0.1;
+      if (d.deal_type && VALID_DEAL_TYPES.has(d.deal_type)) {
+        dealStructureCounts[d.deal_type] += 0.1;
       }
     }
 
@@ -153,8 +154,7 @@ export default async function handler(req, res) {
         count: Math.round(count),
         pct: Math.round((count / totalStructVotes) * 100)
       }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
+      .sort((a, b) => b.count - a.count);
 
     // ---- AGGREGATE: Operator Preferences (from buy box) ----
     // deal_structure field = operator type (Multi-Strategy, Single-Strategy, etc.)
@@ -278,20 +278,38 @@ export default async function handler(req, res) {
       .filter(c => c.count > 0)
       .sort((a, b) => b.count - a.count)[0]?.label || 'Not enough data';
 
-    // ---- AGGREGATE: Top Goals ----
-    const goalCounts = {};
+    // ---- AGGREGATE: Investor Goals ----
+    // Normalize all goal values to 3 canonical options
+    const GOAL_MAP = {
+      'passive_income': 'Passive Income',
+      'income': 'Passive Income',
+      'Cash Flow (income now)': 'Passive Income',
+      'cash_flow': 'Passive Income',
+      'tax_reduction': 'Tax Benefits',
+      'tax_benefits': 'Tax Benefits',
+      'Tax Savings (shelter income)': 'Tax Benefits',
+      'tax': 'Tax Benefits',
+      'growth': 'Growth',
+      'capital_growth': 'Growth',
+      'Wealth Growth (long-term)': 'Growth',
+      'appreciation': 'Growth',
+    };
+
+    const goalCounts = { 'Passive Income': 0, 'Tax Benefits': 0, 'Growth': 0 };
 
     // From user_goals
     for (const g of goals) {
       if (g.goal_type) {
-        goalCounts[g.goal_type] = (goalCounts[g.goal_type] || 0) + 1;
+        const normalized = GOAL_MAP[g.goal_type] || GOAL_MAP[g.goal_type.toLowerCase()] || null;
+        if (normalized) goalCounts[normalized]++;
       }
     }
 
     // From buy box goal field
     for (const bb of completedBuyBoxes) {
       if (bb.goal) {
-        goalCounts[bb.goal] = (goalCounts[bb.goal] || 0) + 1;
+        const normalized = GOAL_MAP[bb.goal] || GOAL_MAP[bb.goal.toLowerCase()] || null;
+        if (normalized) goalCounts[normalized]++;
       }
     }
 
@@ -299,10 +317,9 @@ export default async function handler(req, res) {
     const topGoals = Object.entries(goalCounts)
       .map(([name, count]) => ({
         name,
-        pct: Math.round((count / totalGoalVotes) * 100)
+        pct: totalGoalVotes > 0 ? Math.round((count / totalGoalVotes) * 100) : 0
       }))
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 5);
+      .sort((a, b) => b.pct - a.pct);
 
     // ---- Total unique investors ----
     const buyBoxUsers = new Set(completedBuyBoxes.map(() => 'bb')); // approximate
