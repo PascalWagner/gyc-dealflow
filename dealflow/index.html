@@ -9085,15 +9085,47 @@ function toggleCompareExtraField(fieldId, isOn) {
 }
 
 // --- Decision Compare Table (embedded in Decision tab) ---
+var MAX_DECISION_COMPARE = 4;
+
+function getDecisionCompareIds() {
+  try { return JSON.parse(localStorage.getItem('gycDecisionCompareIds') || '[]'); } catch(e) { return []; }
+}
+function setDecisionCompareIds(ids) {
+  localStorage.setItem('gycDecisionCompareIds', JSON.stringify(ids));
+}
+function toggleDecisionCompare(dealId) {
+  var ids = getDecisionCompareIds();
+  var idx = ids.indexOf(dealId);
+  if (idx >= 0) {
+    ids.splice(idx, 1);
+  } else if (ids.length < MAX_DECISION_COMPARE) {
+    ids.push(dealId);
+  }
+  setDecisionCompareIds(ids);
+  renderDecisionCompare();
+  renderAll();
+}
+
 function renderDecisionCompare() {
   var container = document.getElementById('decisionCompareContainer');
   if (!container) return;
 
   var decisionIds = Object.keys(dealStages).filter(function(id) { return dealStages[id] === 'decision'; });
   var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
-  var deals = decisionIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
+  var allDecisionDeals = decisionIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
 
-  if (deals.length < 2) {
+  // Clean up compare IDs — remove any that are no longer in Decision
+  var compareIds = getDecisionCompareIds().filter(function(id) { return decisionIds.indexOf(id) >= 0; });
+  // Auto-select first deals if none selected and we have 2-4 deals
+  if (compareIds.length === 0 && allDecisionDeals.length >= 2) {
+    compareIds = allDecisionDeals.slice(0, Math.min(allDecisionDeals.length, MAX_DECISION_COMPARE)).map(function(d) { return d.id; });
+  }
+  setDecisionCompareIds(compareIds);
+
+  var deals = compareIds.map(function(id) { return allDeals.find(function(d) { return d.id === id; }); }).filter(Boolean);
+  var remainingDeals = allDecisionDeals.filter(function(d) { return compareIds.indexOf(d.id) < 0; });
+
+  if (allDecisionDeals.length < 2) {
     container.style.display = 'none';
     container.innerHTML = '';
     return;
@@ -9161,29 +9193,30 @@ function renderDecisionCompare() {
   var h = '';
 
   // Nudge or affirmation banner
-  if (deals.length < 3 && !sessionStorage.getItem('gycNudgeDismissed')) {
+  if (allDecisionDeals.length < 3 && !sessionStorage.getItem('gycNudgeDismissed')) {
     h += '<div style="background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(168,85,247,0.02));border:1px solid rgba(168,85,247,0.2);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;">';
     h += '<div style="font-size:28px;">&#128161;</div>';
     h += '<div>';
     h += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Compare at least 3 deals before investing</div>';
-    h += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">You have ' + deals.length + '/3 deals in Decision. Investors who compare 3+ deals report higher confidence.</div>';
+    h += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">You have ' + allDecisionDeals.length + '/3 deals in Decision. Investors who compare 3+ deals report higher confidence.</div>';
     h += '</div>';
     h += '<button onclick="this.closest(\'div[style]\').style.display=\'none\';sessionStorage.setItem(\'gycNudgeDismissed\',\'1\')" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:4px;">&times;</button>';
     h += '</div>';
-  } else if (deals.length >= 3) {
+  } else if (allDecisionDeals.length >= 3) {
     h += '<div style="background:rgba(5,150,105,0.06);border:1px solid rgba(5,150,105,0.2);border-radius:var(--radius);padding:12px 20px;margin-bottom:20px;font-family:var(--font-ui);font-size:13px;color:#059669;">';
-    h += '&#10003; Great &mdash; ' + deals.length + ' deals to compare. Review below before committing capital.';
+    h += '&#10003; Great &mdash; ' + allDecisionDeals.length + ' deals to compare. Review below before committing capital.';
     h += '</div>';
   }
 
-  // Comparison table
+  // Comparison table (only if we have 2+ selected)
+  if (deals.length >= 2) {
   h += '<div class="compare-table-wrap"><table class="compare-table">';
 
   // Header row
   h += '<thead><tr><th class="col-label"></th>';
   deals.forEach(function(d, i) {
     h += '<th class="deal-header ' + colClass(i) + '">';
-    h += '<button class="compare-remove-btn" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();" title="Remove from comparison">&times;</button>';
+    h += '<button class="compare-remove-btn" onclick="toggleDecisionCompare(\'' + d.id + '\')" title="Remove from comparison">&times;</button>';
     h += '<div class="deal-header-badge">' + (d.assetClass || 'Deal') + '</div>';
     h += '<a href="deal.html?id=' + d.id + '" class="deal-header-name" style="color:inherit;text-decoration:underline;">' + d.investmentName + '</a>';
     h += '<div class="deal-header-mgr">' + (d.managementCompany || '') + '</div>';
@@ -9226,14 +9259,39 @@ function renderDecisionCompare() {
   deals.forEach(function(d, i) {
     h += '<td class="' + colClass(i) + '" style="vertical-align:top;">';
     h += '<div style="display:flex;gap:6px;">';
-    h += '<button class="compare-action-btn primary" style="flex:1;margin-bottom:0;" onclick="setDealStage(\'' + d.id + '\',\'invested\');renderDecisionCompare();renderAll();">Mark as Invested</button>';
     h += '<button class="compare-action-btn" style="flex:1;margin-bottom:0;" onclick="setDealStage(\'' + d.id + '\',\'diligence\');renderDecisionCompare();renderAll();">Back to DD</button>';
+    h += '<button class="compare-action-btn primary" style="flex:1;margin-bottom:0;" onclick="setDealStage(\'' + d.id + '\',\'invested\');renderDecisionCompare();renderAll();">Mark as Invested</button>';
     h += '</div>';
     h += '</td>';
   });
   h += '</tr>';
 
   h += '</tbody></table></div>';
+  } // end if deals.length >= 2
+
+  // Remaining deals not in comparison — show as inline cards with "Add to Compare"
+  if (remainingDeals.length > 0) {
+    var atMax = compareIds.length >= MAX_DECISION_COMPARE;
+    h += '<div style="margin-top:24px;">';
+    h += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">' + remainingDeals.length + ' more deal' + (remainingDeals.length > 1 ? 's' : '') + ' in Decision</div>';
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
+    remainingDeals.forEach(function(d) {
+      h += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:8px;">';
+      h += '<div style="display:flex;align-items:center;gap:6px;">';
+      h += '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:100px;background:var(--green-bg);color:var(--green);">' + (d.assetClass || 'Deal') + '</span>';
+      h += '</div>';
+      h += '<a href="deal.html?id=' + d.id + '" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);text-decoration:underline;">' + d.investmentName + '</a>';
+      if (d.managementCompany) h += '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);">' + d.managementCompany + '</div>';
+      h += '<div style="display:flex;gap:12px;font-family:var(--font-ui);font-size:11px;color:var(--text-secondary);">';
+      if (d.targetIRR) { var irr = typeof d.targetIRR === 'number' ? (d.targetIRR > 1 ? d.targetIRR : d.targetIRR * 100).toFixed(1) + '%' : d.targetIRR; h += '<span>IRR ' + irr + '</span>'; }
+      if (d.investmentMinimum) h += '<span>Min ' + fmt(d.investmentMinimum, 'money') + '</span>';
+      h += '</div>';
+      h += '<button onclick="toggleDecisionCompare(\'' + d.id + '\')" style="margin-top:auto;padding:6px 12px;background:' + (atMax ? 'var(--bg-hover)' : 'rgba(168,85,247,0.08)') + ';border:1px solid ' + (atMax ? 'var(--border)' : 'rgba(168,85,247,0.2)') + ';border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:11px;font-weight:600;cursor:' + (atMax ? 'not-allowed' : 'pointer') + ';color:' + (atMax ? 'var(--text-muted)' : '#a855f7') + ';"' + (atMax ? ' disabled' : '') + '>' + (atMax ? 'Table full (max ' + MAX_DECISION_COMPARE + ')' : '+ Add to Compare') + '</button>';
+      h += '</div>';
+    });
+    h += '</div></div>';
+  }
+
   container.innerHTML = h;
 }
 
@@ -9692,6 +9750,12 @@ function setDealStage(id, stage) {
   if (stage === 'browse') { delete dealStages[id]; }
   else { dealStages[id] = stage; }
   saveDealStages();
+  // Remove from decision compare if moving out of decision
+  if (stage !== 'decision') {
+    var cids = getDecisionCompareIds();
+    var cidx = cids.indexOf(id);
+    if (cidx >= 0) { cids.splice(cidx, 1); setDecisionCompareIds(cids); }
+  }
   if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
   if (typeof updateDealsChecklist === 'function') updateDealsChecklist();
 }
