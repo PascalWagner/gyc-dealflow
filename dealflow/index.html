@@ -21266,289 +21266,228 @@ function renderSchemaPage() {
       + '</div>';
   }
 
-  container.innerHTML = `
-    <div style="margin-bottom:24px;">
-      <div style="font-family:var(--font-headline);font-size:24px;font-weight:400;color:var(--text-dark);margin-bottom:4px;">Database Schema</div>
-      <div style="font-size:13px;color:var(--text-secondary);">Complete inventory of all data tables, storage locations, and current record counts.</div>
-    </div>
+  var h = '<div style="margin-bottom:24px;">'
+    + '<div style="font-family:var(--font-headline);font-size:24px;font-weight:400;color:var(--text-dark);margin-bottom:4px;">Database Schema</div>'
+    + '<div style="font-size:13px;color:var(--text-secondary);">Complete inventory of all data tables. Click <strong>Browse Data</strong> to view live records.</div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px;">'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Backend</div><div style="font-size:24px;font-weight:800;color:#51BE7B;">Supabase</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Tables</div><div style="font-size:24px;font-weight:800;color:var(--text-dark);">21</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Deals</div><div style="font-size:24px;font-weight:800;color:var(--text-dark);">' + dealsCount + '</div></div>'
+    + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">CRM</div><div style="font-size:24px;font-weight:800;color:var(--text-dark);">GHL</div></div>'
+    + '</div>';
 
-    <!-- Summary Cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:32px;">
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Primary Backend</div>
-        <div style="font-size:24px;font-weight:800;color:#51BE7B;">Supabase</div>
-        <div style="font-size:10px;color:var(--text-muted);">Auth, Data, Storage, Realtime</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Total Tables</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">21</div>
-        <div style="font-size:10px;color:var(--text-muted);">All in Supabase (PostgreSQL)</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">CRM Sync</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">GHL</div>
-        <div style="font-size:10px;color:var(--text-muted);">Tags, Tier, Event Sync</div>
-      </div>
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Analytics</div>
-        <div style="font-size:24px;font-weight:800;color:var(--text-dark);">GA4</div>
-        <div style="font-size:10px;color:var(--text-muted);">G-F8B5NMB9J9</div>
-      </div>
-    </div>
+  function section(label) { return '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">' + label + '</div>'; }
 
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;padding-left:4px;">Core Data Tables (Supabase)</div>
+  h += section('Core Data Tables');
+  h += tableCard('Opportunities (Deals)', 'opportunities', [
+    { name: 'id / investment_name', type: 'uuid / text', example: dealsCount + ' records' },
+    { name: 'asset_class / deal_type / status', type: 'text' },
+    { name: 'target_irr / preferred_return / investment_minimum', type: 'numeric' },
+    { name: 'purchase_price / waterfall_details', type: 'numeric / jsonb' },
+    { name: '+ 40 more columns', type: '...', example: 'fees, property, loan terms, SEC, etc.' }
+  ]);
+  h += tableCard('Management Companies', 'management_companies', [
+    { name: 'id / operator_name / ceo / website', type: 'uuid / text' },
+    { name: 'asset_classes / hq_city / hq_state', type: 'text[] / text' },
+    { name: 'investment_criteria / portfolio_snapshot', type: 'jsonb[]' },
+    { name: 'authorized_emails / booking_url', type: 'text[] / text' }
+  ]);
 
-    ${tableCard('Opportunities (Deals)', 'persistent', 'Supabase · opportunities', [
-      { name: 'id', type: 'uuid (PK)', example: dealsCount + ' deals loaded' },
-      { name: 'investment_name', type: 'text', example: 'The Heritage Fund' },
-      { name: 'asset_class', type: 'text', example: 'Multi Family, Lending, Self Storage...' },
-      { name: 'deal_type', type: 'text', example: 'Fund / Syndication' },
-      { name: 'target_irr', type: 'numeric', example: '0.08 - 0.25' },
-      { name: 'preferred_return', type: 'numeric', example: '0.08' },
-      { name: 'investment_minimum', type: 'integer', example: '25000 - 250000' },
-      { name: 'management_company_id', type: 'uuid (FK)', example: 'Linked to management_companies' },
-      { name: 'status', type: 'text', example: 'Open / Evergreen / Closed' },
-      { name: 'deck_url', type: 'text', example: 'Supabase Storage signed URL' },
-      { name: 'archived', type: 'boolean', example: 'Soft-delete flag' },
-      { name: 'case_study', type: 'jsonb', example: 'Worked example: title, overview, result, metrics' },
-      { name: 'purchase_price', type: 'numeric', example: 'Property acquisition cost' },
-      { name: 'sec_cik / sec_entity_name', type: 'text', example: 'SEC EDGAR entity matching' },
-      { name: 'property_address / unit_count', type: 'text / int', example: 'Property details from PPM' },
-      { name: 'acquisition_fee_pct + 5 fee fields', type: 'numeric', example: 'Fee structure decimals' },
-      { name: 'waterfall_details', type: 'jsonb', example: 'Multi-tier return structure' },
-      { name: 'issuer_entity / gp_entity', type: 'text', example: 'Legal entity names' },
-      { name: '+ 30 more fields', type: '...', example: 'strategy, distributions, geography, loan terms, etc.' }
-    ], dealsCount)}
+  h += section('User Data Tables');
+  h += tableCard('User Profiles', 'user_profiles', [
+    { name: 'id / email / full_name / tier', type: 'uuid / text' },
+    { name: 'is_admin / gp_verified / gp_type', type: 'bool / text' },
+    { name: 'buy_box_data / ghl_contact_id', type: 'jsonb / text' }
+  ]);
+  h += tableCard('User Buy Box', 'user_buy_box', [
+    { name: 'user_id / goal_type', type: 'uuid / text' },
+    { name: 'asset_classes / strategies', type: 'text[]' },
+    { name: 'irr_min / irr_max / check_size', type: 'text' }
+  ]);
+  h += tableCard('User Deal Stages', 'user_deal_stages', [
+    { name: 'user_id / deal_id', type: 'uuid (FK)' },
+    { name: 'stage', type: 'enum', example: 'interested / duediligence / portfolio / passed' },
+    { name: 'notes / updated_at', type: 'text / timestamptz' }
+  ]);
+  h += tableCard('User Events', 'user_events', [
+    { name: 'id / user_id / event', type: 'uuid / text', example: 'deal_viewed, wizard_complete' },
+    { name: 'data / created_at', type: 'jsonb / timestamptz' }
+  ]);
+  h += tableCard('User Goals', 'user_goals', [
+    { name: 'user_id / goal_type / timeline', type: 'uuid / enum / int' },
+    { name: 'current_income / target_income / capital', type: 'numeric' }
+  ]);
+  h += tableCard('User Portfolio', 'user_portfolio', [
+    { name: 'user_id / investment_name / sponsor', type: 'uuid / text' },
+    { name: 'amount_invested / date_invested / status', type: 'numeric / date / enum' }
+  ]);
 
-    ${tableCard('Management Companies', 'persistent', 'Supabase · management_companies', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'operator_name', type: 'text', example: 'Cedar, Hornet Capital, etc.' },
-      { name: 'ceo', type: 'text', example: 'AJ Osborne' },
-      { name: 'website', type: 'url', example: 'https://...' },
-      { name: 'type', type: 'text', example: 'Operator / Fund Manager' },
-      { name: 'asset_classes', type: 'text[]', example: 'Array of asset classes' },
-      { name: 'hq_city / hq_state / hq_zip', type: 'text', example: 'HQ location from SEC filings' },
-      { name: 'authorized_emails', type: 'text[]', example: 'GP login whitelist' },
-      { name: 'booking_url', type: 'text', example: 'Calendly / booking link' },
-      { name: 'investment_criteria', type: 'jsonb[]', example: 'Structured buy box criteria' },
-      { name: 'portfolio_snapshot', type: 'jsonb[]', example: 'Existing portfolio properties' },
-      { name: 'legal_entity', type: 'text', example: 'Legal entity name for SEC matching' }
-    ], '25+')}
+  h += section('Feature Tables');
+  h += tableCard('DD Checklist', 'dd_checklist', [
+    { name: 'user_id / deal_id', type: 'uuid (FK)' },
+    { name: 'answers', type: 'boolean[]', example: '10-item checklist' },
+    { name: 'updated_at', type: 'timestamptz', example: 'Realtime sync' }
+  ]);
+  h += tableCard('Deal Q&A', 'deal_qa', [
+    { name: 'id / deal_id / user_email', type: 'uuid / text' },
+    { name: 'question / answer / upvotes', type: 'text / int' }
+  ]);
+  h += tableCard('Investment Memos', 'investment_memos', [
+    { name: 'id / deal_id / created_by', type: 'uuid / text' },
+    { name: 'content', type: 'text', example: 'AI-generated or admin-written' }
+  ]);
+  h += tableCard('Deck Submissions', 'deck_submissions', [
+    { name: 'id / deal_id / submitted_by_email', type: 'uuid / text' },
+    { name: 'deck_url / notes / created_at', type: 'text / timestamptz' }
+  ]);
 
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">User Data Tables (Supabase)</div>
+  h += section('Operator Management');
+  h += tableCard('Operator Permissions', 'operator_permissions', [
+    { name: 'id / company_id', type: 'uuid' },
+    { name: 'outreach_status', type: 'enum', example: 'backlog / researching / contacted / approved' },
+    { name: 'ghl_contact_id / contact_linkedin', type: 'text' }
+  ]);
+  h += tableCard('Operator Interactions', 'operator_interactions', [
+    { name: 'id / company_id', type: 'uuid' },
+    { name: 'interaction_type / details / created_at', type: 'text / timestamptz' }
+  ]);
+  h += tableCard('Deal Stage Counts (View)', 'deal_stage_counts', [
+    { name: 'deal_id', type: 'uuid' },
+    { name: 'interested / duediligence / portfolio / passed', type: 'integer' }
+  ]);
 
-    ${tableCard('User Profiles', 'persistent', 'Supabase · user_profiles', [
-      { name: 'id', type: 'uuid (PK)', example: 'Supabase Auth user ID' },
-      { name: 'email', type: 'text (unique)', example: user?.email || '' },
-      { name: 'full_name', type: 'text', example: user?.name || '' },
-      { name: 'tier', type: 'text', example: user?.tier || 'free' },
-      { name: 'is_admin', type: 'boolean', example: '' },
-      { name: 'ghl_contact_id', type: 'text', example: 'Synced from GoHighLevel' },
-      { name: 'buy_box_data', type: 'jsonb', example: 'Wizard selections stored as JSON' },
-      { name: 'share_portfolio', type: 'boolean', example: 'Opt-in social proof' },
-      { name: 'gp_type', type: 'text', example: 'founder / sponsor / operator' },
-      { name: 'management_company_id', type: 'uuid (FK)', example: 'GP company link' },
-      { name: 'gp_verified', type: 'boolean', example: 'GP login verification status' }
-    ], 'Per user')}
+  h += section('SEC & Market Data');
+  h += tableCard('SEC Filings', 'sec_filings', [
+    { name: 'id / cik / entity_name', type: 'uuid / text' },
+    { name: 'total_offering_amount / total_amount_sold', type: 'numeric' },
+    { name: 'is_506b / is_equity / industry_group', type: 'bool / text' }
+  ]);
+  h += tableCard('Related Persons', 'related_persons', [
+    { name: 'id / filing_id', type: 'uuid' },
+    { name: 'person_name / relationship', type: 'text' }
+  ]);
+  h += tableCard('Deal Sponsors', 'deal_sponsors', [
+    { name: 'id / deal_id / company_id', type: 'uuid' },
+    { name: 'role / is_primary / display_order', type: 'text / bool / int' }
+  ]);
+  h += tableCard('Background Checks', 'background_checks', [
+    { name: 'id / person_name / company_name', type: 'uuid / text' },
+    { name: 'status / sec_filings_count / court_cases_count', type: 'text / int' },
+    { name: 'finra_found / ofac_found', type: 'boolean' }
+  ]);
 
-    ${tableCard('User Buy Box', 'persistent', 'Supabase · user_buy_box', [
-      { name: 'user_id', type: 'uuid (FK)', example: '' },
-      { name: 'asset_classes', type: 'text[]', example: (bbData?.assetClasses || []).join(', ') || '' },
-      { name: 'strategies', type: 'text[]', example: (bbData?.strategies || []).join(', ') || '' },
-      { name: 'irr_min / irr_max', type: 'text', example: bbData?.irrMin || '' },
-      { name: 'check_size', type: 'text', example: bbData?.minInvest || '' },
-      { name: 'goal_type', type: 'text', example: 'cashflow / tax / growth' }
-    ], 'Per user')}
+  h += section('Platform Infrastructure');
+  h += tableCard('Google Drive Deck Index', 'gdrive_deck_files', [
+    { name: 'id / gdrive_id / file_name', type: 'uuid / text' },
+    { name: 'doc_type / deal_name / matched_deal_id', type: 'text / uuid' }
+  ]);
+  h += tableCard('API Keys', 'api_keys', [
+    { name: 'id / key_hash / key_prefix / tier', type: 'uuid / text' },
+    { name: 'rate_limit / scopes', type: 'int / text[]' }
+  ]);
+  h += tableCard('API Request Log', 'api_request_log', [
+    { name: 'id / key_id / endpoint / method', type: 'uuid / text' },
+    { name: 'status_code / response_time_ms', type: 'integer' }
+  ]);
 
-    ${tableCard('User Deal Stages', 'persistent', 'Supabase · user_deal_stages', [
-      { name: 'user_id', type: 'uuid (FK)', example: '' },
-      { name: 'deal_id', type: 'uuid (FK)', example: Object.keys(stages)[0] || '' },
-      { name: 'stage', type: 'enum', example: 'new / interested / duediligence / portfolio / passed' },
-      { name: 'notes', type: 'text', example: '' },
-      { name: 'updated_at', type: 'timestamptz', example: '' }
-    ], stageCount)}
+  h += section('External Integrations');
+  h += tableCard('GoHighLevel (CRM)', null, [
+    { name: 'Tier Tags / Event Tags', type: 'tag-based' },
+    { name: 'Funnel Status / Activity Fields', type: 'custom fields' },
+    { name: 'Buy Box Fields', type: 'custom fields', example: 'Synced from Supabase' }
+  ]);
 
-    ${tableCard('User Events', 'persistent', 'Supabase · user_events', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'user_id', type: 'uuid (FK)', example: '' },
-      { name: 'event', type: 'text', example: 'deal_viewed, wizard_complete, call_booked' },
-      { name: 'data', type: 'jsonb', example: '{ dealId, viewCount, source, ... }' },
-      { name: 'created_at', type: 'timestamptz', example: 'Also synced to GHL tags/fields' }
-    ], 'Append-only log')}
-
-    ${tableCard('User Goals', 'persistent', 'Supabase · user_goals (local-first sync)', [
-      { name: 'user_id', type: 'uuid (FK)', example: '' },
-      { name: 'goal_type', type: 'enum', example: goals?.type || '' },
-      { name: 'current_income', type: 'numeric', example: goals ? '$' + (goals.currentIncome || 0).toLocaleString() : '' },
-      { name: 'target_income', type: 'numeric', example: goals ? '$' + (goals.targetIncome || 0).toLocaleString() : '' },
-      { name: 'capital', type: 'numeric', example: goals ? '$' + (goals.capital || 0).toLocaleString() : '' },
-      { name: 'timeline', type: 'integer', example: goals?.timeline || '' },
-      { name: 'tax_reduction', type: 'numeric', example: goals ? '$' + (goals.taxReduction || 0).toLocaleString() : '' }
-    ], goals ? 1 : 0)}
-
-    ${tableCard('User Portfolio', 'persistent', 'Supabase · user_portfolio (local-first sync)', [
-      { name: 'user_id', type: 'uuid (FK)', example: '' },
-      { name: 'investment_name', type: 'text', example: portfolio[0]?.investmentName || '' },
-      { name: 'sponsor', type: 'text', example: portfolio[0]?.sponsor || '' },
-      { name: 'amount_invested', type: 'numeric', example: portfolio[0]?.amountInvested ? '$' + parseFloat(portfolio[0].amountInvested).toLocaleString() : '' },
-      { name: 'date_invested', type: 'date', example: portfolio[0]?.dateInvested || '' },
-      { name: 'status', type: 'enum', example: 'Active / Exited / Pending / Distributing' },
-      { name: '+ 8 more fields', type: '...', example: 'entity, target IRR, notes, asset class, etc.' }
-    ], portfolio.length)}
-
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">Feature Tables (Supabase)</div>
-
-    ${tableCard('DD Checklist', 'persistent', 'Supabase · dd_checklist', [
-      { name: 'user_id', type: 'uuid (FK)', example: '' },
-      { name: 'deal_id', type: 'uuid (FK)', example: '' },
-      { name: 'answers', type: 'boolean[]', example: '10-item checklist state' },
-      { name: 'updated_at', type: 'timestamptz', example: 'Realtime sync via Supabase channels' }
-    ], 'Per user+deal')}
-
-    ${tableCard('Deal Q&A', 'persistent', 'Supabase · deal_qa', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'deal_id', type: 'uuid (FK)', example: '' },
-      { name: 'user_email', type: 'text', example: '' },
-      { name: 'question', type: 'text', example: 'User-submitted questions about deals' },
-      { name: 'answer', type: 'text', example: 'Admin responses' },
-      { name: 'upvotes', type: 'integer', example: '' }
-    ], 'Per deal')}
-
-    ${tableCard('Investment Memos', 'persistent', 'Supabase · investment_memos', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'deal_id', type: 'uuid (FK)', example: '' },
-      { name: 'content', type: 'text', example: 'AI-generated or admin-written memo' },
-      { name: 'created_by', type: 'text', example: '' }
-    ], 'Per deal')}
-
-    ${tableCard('Deck Submissions', 'persistent', 'Supabase · deck_submissions', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'deal_id', type: 'uuid (FK)', example: '' },
-      { name: 'deck_url', type: 'text', example: 'Supabase Storage signed URL' },
-      { name: 'submitted_by_email', type: 'text', example: '' },
-      { name: 'notes', type: 'text', example: '' },
-      { name: 'created_at', type: 'timestamptz', example: 'Auto-enriched via Claude API' }
-    ], 'Append-only')}
-
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">Operator Management (Supabase)</div>
-
-    ${tableCard('Operator Permissions', 'persistent', 'Supabase · operator_permissions', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'company_id', type: 'uuid (FK)', example: 'Linked to management_companies' },
-      { name: 'outreach_status', type: 'enum', example: 'backlog / researching / contacted / approved / denied' },
-      { name: '506b_compliant', type: 'boolean', example: 'Offering type compliance' },
-      { name: 'ghl_contact_id', type: 'text', example: 'CRM contact link' },
-      { name: 'contact_linkedin', type: 'text', example: 'LinkedIn profile URL' },
-      { name: 'granted_at', type: 'timestamptz', example: '' }
-    ], 'Per operator')}
-
-    ${tableCard('Operator Interactions', 'persistent', 'Supabase · operator_interactions', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'company_id', type: 'uuid (FK)', example: '' },
-      { name: 'interaction_type', type: 'text', example: 'email_sent, permission_granted, note' },
-      { name: 'details', type: 'text', example: 'Interaction notes and context' },
-      { name: 'created_at', type: 'timestamptz', example: '' }
-    ], 'Append-only log')}
-
-    ${tableCard('Deal Stage Counts (View)', 'persistent', 'Supabase · deal_stage_counts', [
-      { name: 'deal_id', type: 'uuid', example: '' },
-      { name: 'interested_count', type: 'integer', example: 'Aggregated from user_deal_stages' },
-      { name: 'duediligence_count', type: 'integer', example: '' },
-      { name: 'portfolio_count', type: 'integer', example: '' },
-      { name: 'passed_count', type: 'integer', example: 'Materialized view for performance' }
-    ], 'Per deal')}
-
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">SEC & Market Data (Supabase)</div>
-
-    ${tableCard('SEC Filings', 'persistent', 'Supabase · sec_filings', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'cik / accession_number', type: 'text', example: 'SEC EDGAR identifiers' },
-      { name: 'entity_name', type: 'text', example: 'Legal entity from Form D' },
-      { name: 'filing_date / date_of_first_sale', type: 'date', example: 'Filing timeline' },
-      { name: 'total_offering_amount', type: 'numeric', example: 'Target raise amount' },
-      { name: 'total_amount_sold', type: 'numeric', example: 'Capital raised to date' },
-      { name: 'total_investors', type: 'integer', example: '' },
-      { name: 'is_506b / is_equity', type: 'boolean', example: 'Offering classification' },
-      { name: 'industry_group', type: 'text', example: 'Real Estate, Pooled Investment, etc.' }
-    ], 'SEC data')}
-
-    ${tableCard('Related Persons', 'persistent', 'Supabase · related_persons', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'filing_id', type: 'uuid (FK)', example: 'Linked to sec_filings' },
-      { name: 'person_name', type: 'text', example: 'Full name from Form D' },
-      { name: 'relationship', type: 'text', example: 'Executive Officer, Director, Promoter' }
-    ], 'Per filing')}
-
-    ${tableCard('Deal Sponsors', 'persistent', 'Supabase · deal_sponsors', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'deal_id', type: 'uuid (FK)', example: 'Linked to opportunities' },
-      { name: 'company_id', type: 'uuid (FK)', example: 'Linked to management_companies' },
-      { name: 'role', type: 'text', example: 'operator / capital_raiser / co_gp / property_manager' },
-      { name: 'is_primary', type: 'boolean', example: 'Primary sponsor flag' },
-      { name: 'display_order', type: 'integer', example: '' }
-    ], 'Per deal+sponsor')}
-
-    ${tableCard('Background Checks', 'persistent', 'Supabase · background_checks', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'person_name / company_name', type: 'text', example: 'Search target' },
-      { name: 'status', type: 'text', example: 'clean / flagged / pending' },
-      { name: 'sec_filings_count', type: 'integer', example: 'SEC EDGAR results' },
-      { name: 'finra_found / iapd_found', type: 'boolean', example: 'FINRA BrokerCheck / IAPD' },
-      { name: 'ofac_found', type: 'boolean', example: 'OFAC sanctions check' },
-      { name: 'court_cases_count', type: 'integer', example: 'CourtListener results' },
-      { name: 'summary', type: 'text', example: 'Aggregated findings' }
-    ], 'Per person/company')}
-
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">Platform Infrastructure (Supabase)</div>
-
-    ${tableCard('Google Drive Deck Index', 'persistent', 'Supabase · gdrive_deck_files', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'gdrive_id', type: 'text (unique)', example: 'Google Drive file ID' },
-      { name: 'file_name', type: 'text', example: 'Original filename' },
-      { name: 'doc_type', type: 'text', example: 'deck / ppm / supplement' },
-      { name: 'deal_name', type: 'text', example: 'Extracted deal name' },
-      { name: 'matched_deal_id', type: 'uuid (FK)', example: 'Auto-matched to opportunities' }
-    ], 'Indexed files')}
-
-    ${tableCard('API Keys', 'persistent', 'Supabase · api_keys', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'key_hash', type: 'text', example: 'SHA-256 hash of API key' },
-      { name: 'key_prefix', type: 'text', example: 'gyc_...' },
-      { name: 'tier', type: 'text', example: 'free / pro / enterprise' },
-      { name: 'rate_limit', type: 'integer', example: 'Requests per hour' },
-      { name: 'scopes', type: 'text[]', example: 'deals:read, market:read' }
-    ], 'Per key')}
-
-    ${tableCard('API Request Log', 'persistent', 'Supabase · api_request_log', [
-      { name: 'id', type: 'uuid (PK)', example: '' },
-      { name: 'key_id', type: 'uuid (FK)', example: 'Linked to api_keys' },
-      { name: 'endpoint / method', type: 'text', example: '/api/deals · GET' },
-      { name: 'status_code', type: 'integer', example: '200 / 429 / 500' },
-      { name: 'response_time_ms', type: 'integer', example: '' },
-      { name: 'ip_address', type: 'text', example: '' }
-    ], 'Append-only')}
-
-    <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;margin-top:24px;padding-left:4px;">External Integrations</div>
-
-    ${tableCard('GoHighLevel (CRM)', 'persistent', 'GHL Contacts · Tags + Custom Fields', [
-      { name: 'Tier Tags', type: 'tag-based', example: 'dealflow-academy, bought cashflow academy, etc.' },
-      { name: 'Funnel Status', type: 'custom field', example: 'new / qualified / high-intent / call-booked' },
-      { name: 'Event Tags', type: 'tag-based', example: 'wizard-complete, academy-interest, call-booked' },
-      { name: 'Activity Fields', type: 'custom fields', example: 'deals_viewed_count, deals_saved_count' },
-      { name: 'Buy Box Fields', type: 'custom fields', example: 'Synced from Supabase on wizard complete' }
-    ], 'Per contact')}
-
-    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:var(--radius);padding:20px;margin-top:16px;">
-      <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:#16a34a;margin-bottom:8px;">Fully Migrated to Supabase</div>
-      <div style="font-size:13px;color:#166534;line-height:1.8;">
-        All 21 tables live in Supabase (PostgreSQL). Auth via Supabase Auth (JWT). File storage via Supabase Storage. Realtime sync for DD checklists. SEC EDGAR data indexed for market intelligence. Background checks cached for sponsor DD. GHL serves as CRM only (tags, funnel status, event sync). Analytics via GA4 (G-F8B5NMB9J9). Zero Airtable dependencies remain.
-      </div>
-    </div>
-  `;
+  container.innerHTML = h;
   } catch(e) {
     console.error('Schema page render error:', e);
     container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);">Failed to render schema: ' + e.message + '</div>';
   }
+}
+
+// Schema data browser functions
+async function schemaToggleData(table, idx) {
+  var panel = document.getElementById('schemaData' + idx);
+  var btn = document.getElementById('schemaBtn' + idx);
+  if (!panel) return;
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+    if (btn) { btn.textContent = 'Browse Data'; btn.style.color = 'var(--primary)'; }
+    return;
+  }
+  panel.style.display = 'block';
+  if (btn) { btn.textContent = 'Hide Data'; btn.style.color = 'var(--text-muted)'; }
+  var cacheKey = table + '_1';
+  if (_schemaDataCache[cacheKey]) { schemaRenderDataPanel(panel, table, _schemaDataCache[cacheKey], 1); return; }
+  panel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Loading ' + table + '...</div>';
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/admin-manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (user?.token || '') },
+      body: JSON.stringify({ action: 'browse-table', table: table, page: 1, limit: 50 })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Failed');
+    _schemaDataCache[cacheKey] = result;
+    schemaRenderDataPanel(panel, table, result, 1);
+  } catch(e) { panel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);font-size:12px;">Error: ' + e.message + '</div>'; }
+}
+
+async function schemaLoadPage(table, idx, page) {
+  var panel = document.getElementById('schemaData' + idx);
+  if (!panel) return;
+  var cacheKey = table + '_' + page;
+  if (_schemaDataCache[cacheKey]) { schemaRenderDataPanel(panel, table, _schemaDataCache[cacheKey], page); return; }
+  panel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">Loading page ' + page + '...</div>';
+  try {
+    var user = getUser();
+    var resp = await fetch('/api/admin-manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (user?.token || '') },
+      body: JSON.stringify({ action: 'browse-table', table: table, page: page, limit: 50 })
+    });
+    var result = await resp.json();
+    if (!result.success) throw new Error(result.error || 'Failed');
+    _schemaDataCache[cacheKey] = result;
+    schemaRenderDataPanel(panel, table, result, page);
+  } catch(e) { panel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);font-size:12px;">Error: ' + e.message + '</div>'; }
+}
+
+function schemaRenderDataPanel(panel, table, result, page) {
+  var rows = result.data || [];
+  var total = result.total || 0;
+  var limit = result.limit || 50;
+  var totalPages = Math.ceil(total / limit) || 1;
+  var idx = panel.id.replace('schemaData', '');
+  if (!rows.length) { panel.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No records in ' + table + '</div>'; return; }
+  var allCols = Object.keys(rows[0]);
+  var priority = ['id','investment_name','operator_name','email','full_name','name','person_name','entity_name','file_name','deal_id','user_id','company_id','stage','status','tier','role','event','created_at','updated_at','added_date'];
+  var cols = priority.filter(function(c) { return allCols.indexOf(c) !== -1; });
+  allCols.forEach(function(c) { if (cols.indexOf(c) === -1) cols.push(c); });
+  var displayCols = cols.slice(0, 8);
+  var html = '<div style="padding:12px 20px 8px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + total.toLocaleString() + ' records</div>'
+    + '<div style="display:flex;gap:6px;align-items:center;">';
+  if (page > 1) html += '<button onclick="schemaLoadPage(\'' + table + '\',' + idx + ',' + (page-1) + ')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;">\u2190 Prev</button>';
+  html += '<span style="font-size:11px;color:var(--text-muted);">Page ' + page + '/' + totalPages + '</span>';
+  if (page < totalPages) html += '<button onclick="schemaLoadPage(\'' + table + '\',' + idx + ',' + (page+1) + ')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;">Next \u2192</button>';
+  html += '</div></div><div style="overflow-x:auto;max-height:500px;overflow-y:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--bg-card);">';
+  displayCols.forEach(function(col) { html += '<th style="text-align:left;padding:6px 8px;font-family:var(--font-ui);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);white-space:nowrap;">' + col + '</th>'; });
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(row) {
+    html += '<tr style="border-bottom:1px solid var(--border);">';
+    displayCols.forEach(function(col) {
+      var val = row[col]; var d = '';
+      if (val === null || val === undefined) d = '<span style="color:var(--text-muted);">null</span>';
+      else if (typeof val === 'object') { var j = JSON.stringify(val); d = '<span style="color:#8b5cf6;font-family:monospace;font-size:10px;">' + (j.length > 60 ? j.slice(0,60) + '...' : j) + '</span>'; }
+      else if (typeof val === 'boolean') d = val ? '<span style="color:#51BE7B;">true</span>' : '<span style="color:#e74c3c;">false</span>';
+      else { var s = String(val); d = s.length > 50 ? s.slice(0,50) + '...' : s; }
+      html += '<td style="padding:6px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + d + '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  panel.innerHTML = html;
 }
 
 // ========== ADMIN: VIEW AS USER ==========
