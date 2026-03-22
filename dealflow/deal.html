@@ -7201,6 +7201,10 @@ async function renderDeal() {
 
     stressHtml += '<div class="section">';
     stressHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="section-title">Stress Test Calculator</span></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      stressHtml += academyGateOverlay('Unlock Stress Test Calculator', 'Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.');
+      stressHtml += '<div style="opacity:0.12;pointer-events:none;user-select:none;min-height:200px;">';
+    }
     stressHtml += '<div class="section-body stress-test-section">';
     stressHtml += '<div class="stress-test-content">';
 
@@ -7272,7 +7276,11 @@ async function renderDeal() {
     stressHtml += '</table>';
     stressHtml += '</div>';
 
-    stressHtml += '</div></div></div>'; // close stress-test-content, section-body, section
+    stressHtml += '</div></div>';
+    if (!isPaidUser && !_compIsAdmin) {
+      stressHtml += '</div></div>'; // close blur wrapper + gate overlay
+    }
+    stressHtml += '</div>'; // close section
 
     // Store base values as data attributes for the calculator
     stressHtml += '<script id="stressTestData" type="application/json">' + JSON.stringify({
@@ -7342,7 +7350,11 @@ async function renderDeal() {
   officeHoursHtml += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">Bring this deal to Office Hours</div>';
   officeHoursHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Every Thursday 12\u20131pm ET \u2014 get Pascal\'s take on any deal</div>';
   officeHoursHtml += '</div>';
-  officeHoursHtml += '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Join This Week</a>';
+  if (isPaidUser || _compIsAdmin) {
+    officeHoursHtml += '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Join This Week</a>';
+  } else {
+    officeHoursHtml += '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:#3b82f6;color:#fff;border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Academy Only</a>';
+  }
   officeHoursHtml += '</div></div>';
 
   // --- GP Insights Panel (admin / sponsor only) ---
@@ -7392,7 +7404,11 @@ async function renderDeal() {
       ? '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-primary" style="text-decoration:none;" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + deckSvg + 'View Deal Deck</a>'
       : '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
   } else {
-    primaryCTA = '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
+    if (isPaidUser || _compIsAdmin) {
+      primaryCTA = '<button class="btn-action btn-primary" onclick="requestIntroduction(\'' + escAttr(deal.managementCompany || '') + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName || '') + '\', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
+    } else {
+      primaryCTA = '<button class="btn-action btn-primary" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="background:linear-gradient(135deg,#3b82f6,#4ade80);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Get Introduced (Academy)</button>';
+    }
   }
   actionsHtml += '<div class="section"><div class="section-body"><div class="action-buttons">';
   actionsHtml += primaryCTA;
@@ -7416,7 +7432,11 @@ async function renderDeal() {
       actionsHtml += '<button class="btn-action btn-secondary" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="opacity:0.6;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Sub Docs (Academy)</button>';
     }
   }
-  actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
+  if (isPaidUser || _compIsAdmin) {
+    actionsHtml += '<button class="btn-action btn-secondary" style="opacity:0.4;cursor:default;" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Request Data Room</button>';
+  } else {
+    actionsHtml += '<button class="btn-action btn-secondary" onclick="window.open(\'https://growyourcashflow.io/cashflow-academy\',\'_blank\')" style="opacity:0.6;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Data Room (Academy)</button>';
+  }
   actionsHtml += '</div></div></div>';
 
   // --- Similar Deals Comparison Table ---
@@ -8922,6 +8942,14 @@ function copyGPAgenda(dealId) {
 // ========== INVESTMENT REPORT ==========
 
 function generateInvestmentReport() {
+  // Gate for free users
+  var _rpUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var _rpIsAdmin = _rpUser && _rpUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf((_rpUser.email || '').toLowerCase()) >= 0;
+  var _rpTier = (_rpUser && _rpUser.tier) || 'free';
+  if (_rpTier === 'free' && !_rpIsAdmin) {
+    window.open('https://growyourcashflow.io/cashflow-academy', '_blank');
+    return;
+  }
   // Access deal from the closure/global scope where renderDeal stored it
   var d = window._currentDeal;
   if (!d) { alert('Deal data not available. Please refresh the page.'); return; }

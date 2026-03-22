@@ -6153,18 +6153,18 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="sub-page">
       <div class="settings-page-title">Membership</div>
-      <div class="settings-page-desc">From free deal access to having Pascal in your corner for every investment decision.</div>
+      <div class="settings-page-desc">From free deal browsing to having Pascal in your corner for every investment decision.</div>
       <div class="plan-grid">
         <div class="plan-card">
           <div class="plan-name">Free</div>
           <div class="plan-price">$0</div>
-          <div class="plan-desc">Browse live deals, build your buy box, and start evaluating opportunities.</div>
+          <div class="plan-desc">Browse every deal, view investment decks, and get the weekly digest.</div>
           <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>View all live deals</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Build your investment buy box</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Browse all live deals</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>View investment decks</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Deal filtering &amp; search</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Debt Fund Explorer</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly deal digest email</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Basic deal overview &amp; thesis</li>
           </ul>
           <button class="btn-cta btn-cta-secondary plan-btn">Current Plan</button>
         </div>
@@ -6172,17 +6172,18 @@ const _supa = window.supabase.createClient(
           <div class="plan-name">Academy</div>
           <div class="plan-price">$400<span>/month</span></div>
           <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:-4px;margin-bottom:12px;">Billed annually at $5,000/year</div>
-          <div class="plan-desc">Your annual mastermind. Someone in your corner for every deal, every question, every decision.</div>
+          <div class="plan-desc">Your annual mastermind. Full deal analysis, GP introductions, and Pascal in your corner.</div>
           <ul class="plan-features">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Cashflow Academy curriculum</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly live office hours with Pascal</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full deal data: cash flow, terms, fees, peer comparisons</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Risk analysis &amp; stress test calculator</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>PPM, sub docs &amp; data room access</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>GP introductions &amp; deal reviews</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly live office hours with Pascal</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Investment plan builder &amp; market intel</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Private investor community</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Priority deal alerts &amp; scoring</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full framework &amp; template library</li>
           </ul>
-          <button class="btn-cta btn-cta-primary plan-btn">Join the Academy</button>
+          <button class="btn-cta btn-cta-primary plan-btn" onclick="window.open('https://growyourcashflow.io/cashflow-academy','_blank')">Join the Academy</button>
         </div>
         <div class="plan-card" style="border-color:var(--teal-deep);background:linear-gradient(180deg,var(--bg-card) 0%,rgba(31,81,89,0.04) 100%);">
           <div class="plan-name" style="color:var(--teal-deep);">Family Office</div>
@@ -12779,11 +12780,11 @@ let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 // Flow: Accreditation → Income Source → RE Pro → Goal → [Branch targets] → Net Worth
 //   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
 const ONBOARDING_FLOW = {
-  common_start: [15, 21, 22, 0],
-  cashflow: [23, 4, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
-  growth: [26, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
-  tax: [27, 6, 8, 25, 1, 3, 9, 10, 11, 12, 13, 14, 16],
-  common_end: [20]
+  common_start: [16, 22, 23, 0],
+  cashflow: [24, 4, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 17, 18],
+  growth: [27, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 17, 19],
+  tax: [28, 6, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 17, 20],
+  common_end: [21]
 };
 
 function getStepSequence() {

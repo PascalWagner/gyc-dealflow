@@ -376,6 +376,14 @@ function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals =
         <a href="${BASE}/#buybox" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Set Up Buy Box \u2192</a>
       </td></tr></table>
     </td></tr>` : ''}
+    <!-- Academy tease for free users -->
+    ${!isAcademy ? `<tr><td style="padding:12px 0 0;">
+      <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg,#EFF6FF,#F0FDF4);border:1px solid #BFDBFE;border-radius:10px;"><tr><td style="padding:16px 20px;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Academy members get more</div>
+        <div style="font-size:12px;color:#607179;margin-bottom:2px;">Full deal analysis, risk breakdowns, GP introductions, and Pascal's personal take on every deal.</div>
+        <a href="https://growyourcashflow.io/cashflow-academy" style="font-weight:700;font-size:13px;color:#3b82f6;text-decoration:none;">Learn More \u2192</a>
+      </td></tr></table>
+    </td></tr>` : ''}
     <!-- Footer -->
     <tr><td align="center" style="padding:20px 0 0;">
       <div style="font-size:11px;color:#8A9AA0;">

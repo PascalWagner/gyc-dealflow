@@ -1418,6 +1418,13 @@ function renderSponsor(data) {
   const s = data.sponsor;
   const deals = s.deals || [];
 
+  // Tier check for gating
+  const _spUser = getUser();
+  const _spTier = (_spUser && _spUser.tier) || 'free';
+  const ADMIN_EMAILS = ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'];
+  const _spIsAdmin = _spUser && _spUser.email && ADMIN_EMAILS.indexOf(_spUser.email.toLowerCase()) >= 0;
+  const _spIsPaid = _spTier !== 'free' || _spIsAdmin;
+
   // Update page title
   document.title = s.name + ' - GYC Dealflow';
   document.getElementById('mobileTitle').textContent = s.name;
@@ -1527,6 +1534,22 @@ function renderSponsor(data) {
   // Existing Portfolio
   if (s.portfolioSnapshot && Array.isArray(s.portfolioSnapshot) && s.portfolioSnapshot.length > 0) {
     document.getElementById('portfolioSnapshotSection').style.opacity = '1';
+    if (!_spIsPaid) {
+      // Gate portfolio for free users
+      var _pSec = document.getElementById('portfolioSnapshotSection');
+      if (_pSec) {
+        var _pBody = _pSec.querySelector('.section-body');
+        if (_pBody) {
+          _pBody.innerHTML = '<div style="text-align:center;padding:32px 20px;">'
+            + '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>'
+            + '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Portfolio Data — Academy Only</div>'
+            + '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">See this operator\'s full portfolio, property details, and performance metrics.</div>'
+            + '<a href="https://growyourcashflow.io/cashflow-academy" target="_blank" style="display:inline-block;padding:8px 20px;background:#3b82f6;color:#fff;border-radius:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+            + '</div>';
+        }
+      }
+      // Skip rest of portfolio rendering
+    } else {
     document.getElementById('portfolioEmpty').style.display = 'none';
     document.getElementById('portfolioDataWrap').style.display = '';
     document.getElementById('portfolioCount').textContent = s.portfolioSnapshot.length;
@@ -1567,6 +1590,7 @@ function renderSponsor(data) {
       + '<td style="padding:10px;text-align:right;">' + (avgCap ? avgCap + '%' : '') + '</td>'
       + '<td style="padding:10px;text-align:right;color:var(--primary);">' + (totalValue > 0 ? '$' + totalValue.toLocaleString() : '') + '</td>'
       + '</tr>';
+    } // close else (paid users see portfolio)
   }
 
   // Key People

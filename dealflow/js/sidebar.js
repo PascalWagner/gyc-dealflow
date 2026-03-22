@@ -80,6 +80,12 @@
   };
 
   // Build nav item HTML
+  // Check if current user is free tier (for lock badges)
+  var _sbUser = getUser();
+  var _sbTier = (_sbUser && _sbUser.tier) || 'free';
+  var _sbIsAdmin = isAdmin();
+  var _sbIsFree = _sbTier === 'free' && !_sbIsAdmin;
+
   function navItem(page, icon, label, opts) {
     opts = opts || {};
     var cls = navClass(page);
@@ -89,6 +95,7 @@
     var extra = '';
     if (opts.badge) extra += '<span class="nav-badge" id="' + opts.badge + '"></span>';
     if (opts.comingSoon) extra += '<span style="font-size:8px;font-weight:700;color:var(--text-muted);opacity:0.6;margin-left:auto;white-space:nowrap;" id="' + opts.comingSoon + '">COMING SOON</span>';
+    if (opts.paidOnly && _sbIsFree) extra += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="margin-left:auto;opacity:0.35;flex-shrink:0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
     var id = opts.id ? ' id="' + opts.id + '"' : '';
     var onclickAttr = onclick ? ' onclick="' + onclick + '"' : '';
     if (opts.disabled) onclickAttr = ' onclick="if(this.classList.contains(\'nav-item-disabled\')){return false;}' + (onclick ? onclick.replace(/"/g, '&quot;') : '') + '"';
@@ -120,7 +127,7 @@
 
   // RESEARCH
   html += '<div class="nav-section-label">Research</div>';
-  html += navItem('marketintel', icons.marketIntel, 'Market Intel');
+  html += navItem('marketintel', icons.marketIntel, 'Market Intel', { paidOnly: true });
   html += navItem('deals', icons.deals, 'Deal Flow', { badge: 'dealCountBadge' });
   html += navItem('managers', icons.operators, 'Operators');
 
