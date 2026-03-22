@@ -11416,7 +11416,7 @@ async function fetchUserDataFromSupabase(email) {
         stagesData.records.forEach(r => {
           const dealId = r.deal_id;
           const stage = r.stage;
-          if (dealId && stage && !localStages[dealId]) {
+          if (dealId && stage && localStages[dealId] !== stage) { // Supabase wins — handles email Save/Skip
             localStages[dealId] = stage;
             merged = true;
           }
