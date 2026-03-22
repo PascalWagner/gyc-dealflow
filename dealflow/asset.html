@@ -2238,10 +2238,11 @@ async function renderNearby(nearbyDeals, currentCoords, currentName) {
 
   // Build nearby table
   var thStyle = 'padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;';
-  var tableHtml = '<table style="width:100%;border-collapse:collapse;">' +
+  var tableHtml = '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">' +
+    '<colgroup><col style="width:80px;"><col style="width:120px;"><col><col><col style="width:160px;"></colgroup>' +
     '<thead><tr style="border-bottom:2px solid var(--border);">' +
     '<th style="' + thStyle + 'text-align:right;padding-left:20px;">Target IRR</th>' +
-    '<th style="' + thStyle + '">Asset Class</th>' +
+    '<th style="' + thStyle + 'white-space:nowrap;">Asset Class</th>' +
     '<th style="' + thStyle + '">Asset</th>' +
     '<th style="' + thStyle + '">Deal</th>' +
     '<th style="' + thStyle + 'padding-right:20px;">Operator</th>' +
@@ -2265,9 +2266,9 @@ async function renderNearby(nearbyDeals, currentCoords, currentName) {
 
     tableHtml += '<tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">' +
       '<td style="padding:14px 16px;text-align:right;padding-left:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--green);">' + (d.targetIRR ? pct(d.targetIRR) : '—') + '</td>' +
-      '<td style="padding:14px 16px;"><span style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);">' + esc(d.assetClass || '—') + '</span></td>' +
+      '<td style="padding:14px 16px;"><span style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);white-space:nowrap;">' + esc(d.assetClass || '—') + '</span></td>' +
       '<td style="padding:14px 16px;"><a href="' + escAttr(assetHref) + '" style="' + linkStyle + 'color:var(--blue);font-family:var(--font-ui);font-size:13px;">' + esc(assetName) + '</a></td>' +
-      '<td style="padding:14px 16px;"><a href="' + escAttr(dealHref) + '" style="' + linkStyle + 'color:var(--text-dark);font-family:var(--font-ui);font-size:13px;">' + esc(d.investmentName) + '</a></td>' +
+      '<td style="padding:14px 16px;"><a href="' + escAttr(dealHref) + '" style="' + linkStyle + 'color:var(--blue);font-family:var(--font-ui);font-size:13px;">' + esc(d.investmentName) + '</a></td>' +
       '<td style="padding:14px 16px;padding-right:20px;">' + opHtml + '</td>' +
       '</tr>';
   });
