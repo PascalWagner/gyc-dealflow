@@ -12958,6 +12958,23 @@ function updateWizardPhases(seq, currentIdx) {
   container.innerHTML = html;
 }
 
+// Navigate to the first step in a given phase
+function jumpToWizardPhase(targetPhase) {
+  collectWizardInputs();
+  localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  var seq = getStepSequence();
+  for (var i = 0; i < seq.length; i++) {
+    var ph = STEP_TO_PHASE[seq[i]];
+    if (ph === targetPhase) {
+      wizardStepIndex = i;
+      renderWizardStep();
+      var body = document.getElementById('wizardBody');
+      if (body) body.scrollTop = 0;
+      return;
+    }
+  }
+}
+
 const WIZARD_STEPS = [
   // 0: Goal selection (all paths) — auto-advance on tap
   { type: 'goalSelect' },
