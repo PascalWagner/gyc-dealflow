@@ -5356,73 +5356,35 @@ async function renderDeal() {
   if (_strategyLc === 'distressed') risks.push({ label: 'Turnaround Risk', detail: 'Distressed assets may have deferred maintenance, occupancy issues, or structural problems that cost more than projected to fix.' });
   if (deal.investmentMinimum >= 200000) risks.push({ label: 'High Entry Point', detail: '$' + (deal.investmentMinimum / 1000).toFixed(0) + 'K minimum \u2014 larger allocation increases your portfolio concentration in a single deal.' });
   if (!deal.sponsorInDeal || deal.sponsorInDeal === 0) risks.push({ label: 'Alignment Risk', detail: 'No disclosed sponsor co-investment \u2014 the GP may not have meaningful capital at risk alongside LPs.' });
+  // Additional risk factors
+  if (_strategyLc === 'value-add' || _strategyLc === 'opportunistic') risks.push({ label: 'Execution Risk', detail: 'Returns depend on the operator completing renovations on budget and on time, then leasing up at projected rents. Delays or cost overruns directly reduce investor returns.' });
+  if (_isSyndicationDeal && _holdYears >= 3) risks.push({ label: 'Market Timing Risk', detail: 'Exit returns depend on cap rates and market conditions ' + formatHoldPeriod(_holdYears) + ' from now. A rising rate environment or recession at exit could compress returns significantly.' });
+  if (deal.investmentMinimum && deal.investmentMinimum <= 10) risks.push({ label: 'Reg D Risk', detail: 'Very low minimum investment \u2014 verify the offering structure, accreditation requirements, and whether this is a 506(b) or 506(c) offering.' });
+  if (_isFundDeal && !deal.fundAUM) risks.push({ label: 'Blind Pool Risk', detail: 'Fund may not have fully identified its underlying investments yet. You are trusting the GP to deploy your capital wisely into deals you haven\'t evaluated.' });
+  if (deal.cashOnCash && deal.cashOnCash > 0 && deal.preferredReturn && deal.cashOnCash > deal.preferredReturn * 100) risks.push({ label: 'Distribution Risk', detail: 'Projected cash-on-cash exceeds the preferred return \u2014 distributions at this level may not be sustainable if occupancy or rent growth underperforms.' });
+  if (_holdYears >= 1 && _holdYears <= 2 && _isSyndicationDeal) risks.push({ label: 'Short Flip Risk', detail: formatHoldPeriod(_holdYears) + ' hold period on a syndication \u2014 short timeline leaves little margin for error. Any delays in execution compress or eliminate returns.' });
+  if (_peerIRRs.length >= 5 && _irrPercentile !== null && _irrPercentile >= 85) risks.push({ label: 'Outlier Return', detail: 'Target IRR is in the top 15% of ' + _peerIRRs.length + ' ' + esc(deal.assetClass) + ' peers. Significantly above-market returns usually indicate higher risk \u2014 ask the sponsor what specifically drives the premium.' });
 
   // === RENDER ===
   thesisHtml += '<div class="section">';
-  thesisHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Investment Thesis &amp; Key Risks</span></div>';
+  thesisHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Key Risks</span></div>';
   thesisHtml += '<div class="section-body">';
 
   // Compensation thesis banner
   if (compensationThesis) {
     thesisHtml += '<div style="padding:14px 16px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px;margin-bottom:18px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.6;">';
-    thesisHtml += '<span style="font-weight:700;color:#d97706;">What risk are you taking?</span> ';
+    thesisHtml += '<span style="font-weight:700;color:#d97706;">What risk are you being compensated for?</span> ';
     thesisHtml += compensationThesis;
     thesisHtml += '</div>';
   }
 
-  // Return positioning bar (where does this deal sit vs peers?)
-  if (_irrPercentile !== null && _peerIRRs.length >= 5 && _targetIRRpct > 0) {
-    var _posLeft = Math.max(2, Math.min(98, _irrPercentile));
-    var _posColor = _irrPercentile >= 50 ? 'var(--primary)' : '#f59e0b';
-    var _medianIRRpct = _medianIRR <= 1 ? _medianIRR * 100 : _medianIRR;
-    thesisHtml += '<div style="margin-bottom:18px;">';
-    thesisHtml += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">';
-    thesisHtml += '<span style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Return Positioning vs ' + _peerIRRs.length + ' ' + esc(deal.assetClass) + ' Peers</span>';
-    thesisHtml += '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">Median: ' + _medianIRRpct.toFixed(1) + '% IRR</span>';
-    thesisHtml += '</div>';
-    // The bar
-    thesisHtml += '<div style="position:relative;height:28px;background:linear-gradient(to right,rgba(245,158,11,0.12),rgba(245,158,11,0.06) 25%,rgba(200,200,200,0.08) 50%,rgba(81,190,123,0.06) 75%,rgba(81,190,123,0.12));border-radius:6px;border:1px solid var(--border-light);">';
-    // Median marker
-    var _medianPos = _percentile(_peerIRRs, _medianIRR);
-    if (_medianPos !== null) {
-      thesisHtml += '<div style="position:absolute;left:' + Math.max(2, Math.min(98, _medianPos)) + '%;top:0;bottom:0;width:1px;background:var(--text-muted);opacity:0.3;"></div>';
-    }
-    // This deal marker
-    thesisHtml += '<div style="position:absolute;left:' + _posLeft + '%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;">';
-    thesisHtml += '<div style="width:10px;height:10px;border-radius:50%;background:' + _posColor + ';border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></div>';
-    thesisHtml += '<span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);white-space:nowrap;">' + _targetIRRpct.toFixed(1) + '% IRR</span>';
-    thesisHtml += '</div>';
-    // Labels
-    thesisHtml += '<span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Lower</span>';
-    thesisHtml += '<span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-family:var(--font-ui);font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;">Higher</span>';
-    thesisHtml += '</div></div>';
-  }
-
-  thesisHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">';
-
-  // Pros column
-  thesisHtml += '<div>';
-  thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#4ade80;margin-bottom:10px;">Why This Deal</div>';
-  if (pros.length > 0) {
-    for (var p = 0; p < pros.length; p++) {
-      thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
-      thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg>';
-      thesisHtml += '<span>' + esc(pros[p]) + '</span></div>';
-    }
-  } else {
-    thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">Not enough data to highlight strengths. Review the deck for the sponsor\'s value proposition and track record.</div>';
-  }
-  thesisHtml += '</div>';
-
-  // Risks column
-  thesisHtml += '<div style="position:relative;">';
-  thesisHtml += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#f59e0b;margin-bottom:10px;">Key Risks</div>';
+  // Risks (full width)
   if (!isPaidUser && !_compIsAdmin) {
     // Free users: show risk labels only, blur the details
     if (risks.length > 0) {
       thesisHtml += '<div style="position:relative;">';
       for (var r = 0; r < risks.length; r++) {
-        thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-family:var(--font-body);font-size:13px;line-height:1.5;">';
+        thesisHtml += '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-family:var(--font-body);font-size:13px;line-height:1.5;">';
         thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
         thesisHtml += '<div><span style="font-weight:600;color:var(--text-dark);">' + esc(risks[r].label) + '</span><br><span style="color:var(--text-secondary);filter:blur(5px);user-select:none;">' + esc(risks[r].detail) + '</span></div></div>';
       }
@@ -5435,7 +5397,7 @@ async function renderDeal() {
   } else {
     if (risks.length > 0) {
       for (var r = 0; r < risks.length; r++) {
-        thesisHtml += '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
+        thesisHtml += '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);line-height:1.5;">';
         thesisHtml += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="flex-shrink:0;margin-top:2px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
         thesisHtml += '<div><span style="font-weight:600;color:var(--text-dark);">' + esc(risks[r].label) + '</span><br><span style="color:var(--text-secondary);">' + esc(risks[r].detail) + '</span></div></div>';
       }
@@ -5443,9 +5405,8 @@ async function renderDeal() {
       thesisHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);font-style:italic;">No significant risks auto-detected. Review the PPM for risk factors specific to this offering.</div>';
     }
   }
-  thesisHtml += '</div>';
 
-  thesisHtml += '</div></div></div>';
+  thesisHtml += '</div></div>';
 
   // --- Who's Behind This Deal — now in hero, removed from sidebar ---
   // --- Who's Behind the Deal ---
