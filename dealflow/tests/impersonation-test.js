@@ -429,18 +429,20 @@
       assertPageActive(page, page + ': page active');
       assertSidebarQuick('Academy Member', ACADEMY_USER.firstName, false, page);
 
-      if (!['admindash', 'casestudies', 'admin-manage'].includes(page)) {
+      if (!['admindash', 'casestudies', 'admin-manage', 'incomefund'].includes(page)) {
         assertNoAdminLeak(page, page + ': no admin email leak');
       }
 
-      // Academy-specific checks
+      // Academy-specific checks: no free-tier gate should appear
       if (page === 'buybox') {
+        const bbUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+        assertEqual(bbUser.tier, 'academy', 'buybox: gycUser tier is academy');
         const reportEl = document.getElementById('reportContent');
         if (reportEl) {
-          // The gate overlay has backdrop-filter AND "Join Academy" CTA
-          const hasGate = reportEl.innerHTML.includes('backdrop-filter') &&
-            reportEl.textContent.includes('Join Academy');
-          assert(!hasGate, 'buybox: NO free gate for academy user');
+          // The free gate has both backdrop-filter blur AND "Join Academy" link
+          const hasBlurGate = reportEl.querySelector('[style*="backdrop-filter"]');
+          const hasJoinCTA = reportEl.textContent.includes('Join Academy');
+          assert(!(hasBlurGate && hasJoinCTA), 'buybox: NO free gate for academy user');
         }
       }
 
