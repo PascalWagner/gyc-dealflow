@@ -1437,7 +1437,9 @@ html.dark .daily-limit-banner {
   position: relative;
   padding: 14px 18px 8px;
   background: linear-gradient(135deg, #0A1E21 0%, #1F5159 100%);
-  min-height: 200px;
+  height: 200px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 html.dark .credit-card-hero {
   background: linear-gradient(135deg, #061215 0%, #14333A 100%);
@@ -1635,7 +1637,8 @@ html.dark .credit-chart-legend-divider {
 .equity-card-hero {
   position: relative;
   padding: 14px 18px;
-  min-height: 200px;
+  height: 200px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
