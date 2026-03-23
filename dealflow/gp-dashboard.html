@@ -2112,11 +2112,11 @@ html.dark .mobile-tab-bar {
             <div class="analytics-grid" id="analyticsMetrics">
               <div class="analytics-metric">
                 <div class="analytics-metric-value" id="metricSaves">--</div>
-                <div class="analytics-metric-label">LPs Interested</div>
+                <div class="analytics-metric-label">In Review</div>
               </div>
               <div class="analytics-metric">
                 <div class="analytics-metric-value" id="metricVetting">--</div>
-                <div class="analytics-metric-label">In Vetting</div>
+                <div class="analytics-metric-label">Connecting</div>
               </div>
               <div class="analytics-metric">
                 <div class="analytics-metric-value" id="metricInvested">--</div>
@@ -2131,8 +2131,8 @@ html.dark .mobile-tab-bar {
             <div class="weekly-chart-wrap" id="weeklyChartWrap">
               <div class="weekly-chart-title">Investor Activity Over Time</div>
               <div class="weekly-chart-legend">
-                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>Saved / Interested</span>
-                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>In Vetting</span>
+                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>In Review</span>
+                <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>Connecting</span>
                 <span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
               </div>
               <div class="weekly-chart-container" id="weeklyChartBars">
@@ -3139,7 +3139,7 @@ function renderLPActivity(analytics) {
     }
 
     // Stage label
-    var stageLabel = (item.stage === 'saved' || item.stage === 'interested') ? 'Saved deal' : (item.stage === 'vetting' || item.stage === 'duediligence') ? 'Moved to vetting' : (item.stage === 'invested' || item.stage === 'portfolio') ? 'Marked as invested' : item.stage;
+    var stageLabel = (item.stage === 'saved' || item.stage === 'interested') ? 'Started review' : (item.stage === 'vetting' || item.stage === 'duediligence' || item.stage === 'diligence') ? 'Ready to connect' : (item.stage === 'invested' || item.stage === 'portfolio') ? 'Invested' : item.stage;
 
     // Capital signal
     var signalParts = [stageLabel];
@@ -3221,8 +3221,8 @@ function renderWeeklyChart(weeklyActivity) {
     barsHtml += '<div class="weekly-chart-bar-group">' +
       '<div class="weekly-chart-tooltip">' +
         '<strong>' + formatWeek(w.week) + '</strong><br>' +
-        'Interested: ' + intCount + '<br>' +
-        'Vetting: ' + ddCount + '<br>' +
+        'In Review: ' + intCount + '<br>' +
+        'Connecting: ' + ddCount + '<br>' +
         'Invested: ' + portCount +
       '</div>' +
       '<div class="weekly-chart-bar-stack">' +

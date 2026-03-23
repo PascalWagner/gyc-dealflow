@@ -8831,7 +8831,7 @@ function renderSocialProof(dealId) {
   }
   if (total > 0) parts.push((parts.length ? '<span class="sp-dot"></span>' : '') + '<span class="sp-item">' + eyeSvg + total + ' watching</span>');
   var ddCount = (stats.vetting || 0) + (stats.ready || 0);
-  if (ddCount > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + ddSvg + ddCount + ' in DD</span>');
+  if (ddCount > 0) parts.push('<span class="sp-dot"></span><span class="sp-item">' + ddSvg + ddCount + ' reviewing</span>');
   return '<div class="card-social-proof">' + parts.join('') + '</div>';
 }
 
@@ -11121,8 +11121,8 @@ function buildHighlightPills(deal) {
 function renderUserStageIndicator(dealId) {
   var userStage = getDealStage(dealId);
   if (!userStage || userStage === 'browse') return '';
-  var stageLabels = { saved: 'Saved', vetting: 'In DD', ready: 'Ready', invested: 'Invested', passed: 'Not Interested' };
-  var stageColors = { saved: '#3b82f6', vetting: '#f59e0b', ready: '#4ade80', invested: '#059669', passed: '#6b7280' };
+  var stageLabels = { saved: 'Review', vetting: 'Review', diligence: 'Connect', decision: 'Decide', invested: 'Invested', passed: 'Skipped' };
+  var stageColors = { saved: '#3b82f6', vetting: '#3b82f6', diligence: '#f97316', decision: '#a855f7', invested: '#059669', passed: '#6b7280' };
   var label = stageLabels[userStage] || '';
   var color = stageColors[userStage] || 'var(--text-muted)';
   if (!label) return '';
@@ -24913,9 +24913,9 @@ function renderDashboard() {
         actionBtnText = 'Browse Deals \u2192'; break;
       }
       case 'first_dd':
-        actionIcon = '\uD83D\uDD0D'; actionTitle = 'Move a Deal to Due Diligence';
+        actionIcon = '\uD83D\uDD0D'; actionTitle = 'Start Reviewing a Deal';
         actionDesc = 'You have ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' saved. Pick one to dive deeper.';
-        actionBtnText = 'Review Saved Deals \u2192'; break;
+        actionBtnText = 'Review Deals \u2192'; break;
       case 'viewed_5_deals': {
         const vc = parseInt(localStorage.getItem('gycViewCount') || '0');
         actionIcon = '\uD83D\uDC41'; actionTitle = 'Explore More Deals';
@@ -25096,18 +25096,18 @@ function renderDashboard() {
   if (stageCounts.interested > 0) {
     actionItems.push({
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:20px;height:20px;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
-      text: 'You have <strong>' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' saved</strong> — pick one to move to Due Diligence',
+      text: 'You have <strong>' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' to review</strong> — pick one and work through the checklist',
       action: 'navigateTo(\'deals\')',
-      link: 'View Saved Deals'
+      link: 'Review Deals'
     });
   }
 
   if (stageCounts.duediligence > 0) {
     actionItems.push({
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" style="width:20px;height:20px;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
-      text: '<strong>' + stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' in Due Diligence</strong> — review your checklist',
+      text: '<strong>' + stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' ready to connect</strong> — request an intro with the operator',
       action: 'navigateTo(\'deals\')',
-      link: 'Open DD Checklist'
+      link: 'Connect Now'
     });
   }
 
@@ -25234,11 +25234,11 @@ function renderDashboard() {
     coachMsg = 'Your plan is set. Start reviewing deals that match your next investment slot.';
     coachCta = ''; coachCtaAction = ''; // Plan card already has the CTA
   } else if (stageCounts.interested > 0 && stageCounts.duediligence === 0) {
-    coachMsg = 'You\'ve saved ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' \u2014 great start! Pick your strongest one and move it to Due Diligence.';
-    coachCta = 'Review Saved Deals'; coachCtaAction = 'navigateTo(\'deals\')';
+    coachMsg = 'You\'ve saved ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' \u2014 great start! Pick your strongest one and work through the review checklist.';
+    coachCta = 'Review Deals'; coachCtaAction = 'navigateTo(\'deals\')';
   } else if (stageCounts.duediligence > 0) {
-    coachMsg = 'You have ' + stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' in Due Diligence. Review your DD checklist and get ready for office hours.';
-    coachCta = 'Open DD Checklist'; coachCtaAction = 'navigateTo(\'deals\')';
+    coachMsg = 'You have ' + stageCounts.duediligence + ' deal' + (stageCounts.duediligence !== 1 ? 's' : '') + ' ready to connect. Request an intro with the operator and ask your questions.';
+    coachCta = 'Connect Now'; coachCtaAction = 'navigateTo(\'deals\')';
   } else if (activeInvestments > 0 && hasGoals) {
     coachMsg = 'You\'re ' + goalProgress + '% to your income goal with ' + activeInvestments + ' active investment' + (activeInvestments !== 1 ? 's' : '') + '. Keep the momentum going.';
     coachCta = 'View Portfolio'; coachCtaAction = 'navigateTo(\'portfolio\')';
@@ -25399,7 +25399,7 @@ function renderDashboard() {
     // Sort by answer count descending (most researched first)
     ddDeals.sort(function(a, b) { return b.answeredCount - a.answeredCount; });
 
-    const stageLabels = { browse: 'Browsing', saved: 'Saved', vetting: 'In DD', ready: 'Ready', invested: 'Invested', passed: 'Passed' };
+    const stageLabels = { browse: 'Filtering', saved: 'Reviewing', vetting: 'Reviewing', diligence: 'Connecting', decision: 'Deciding', invested: 'Invested', passed: 'Skipped' };
     const stageColors = { browse: '#6b7280', saved: '#f59e0b', vetting: '#3b82f6', ready: '#4ade80', invested: 'var(--primary)', passed: '#6b7280' };
 
     const rows = ddDeals.slice(0, 5).map(function(d) {
@@ -26652,7 +26652,7 @@ function loadAdminEngagement() {
       var html = '<h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">User Engagement</h3>';
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;">';
       html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Active Users</div><div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + s.totalUsers + '</div></div>';
-      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Users in DD</div><div style="font-size:28px;font-weight:800;color:#3b82f6;">' + s.usersInDD + '</div></div>';
+      html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Reviewing</div><div style="font-size:28px;font-weight:800;color:#3b82f6;">' + s.usersInDD + '</div></div>';
       html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Users Invested</div><div style="font-size:28px;font-weight:800;color:var(--primary);">' + s.usersInvested + '</div></div>';
       html += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Total Actions</div><div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + s.totalRecords + '</div></div>';
       html += '</div>';
@@ -27598,7 +27598,7 @@ const DUMMY_MEMBERS = [
     capitalDeployed: 150000, dealsSaved: 22, dealsInDD: 5, dealsInvested: 2,
     assetClasses: ['Multifamily', 'ATM Fund'],
     journey: { buybox: true, saved3: true, bookedCall: true, firstDD: true, officeHours: true, invested: true },
-    story: 'Software engineer who wanted to diversify beyond tech stocks. Used the deal flow tool to compare 22 deals, narrowed to 5 in DD, invested in 2. Already receiving monthly distributions from both.',
+    story: 'Software engineer who wanted to diversify beyond tech stocks. Used the deal flow tool to compare 22 deals, narrowed to 5 in review, invested in 2. Already receiving monthly distributions from both.',
     lastActive: '2026-03-21', loginCount: 98,
     outreach: 'hot',
     publishableStats: '$150K deployed in 6 months, 2 cash-flowing investments, $3.1K/mo distributions',
@@ -27686,7 +27686,7 @@ const DUMMY_MEMBERS = [
     capitalDeployed: 0, dealsSaved: 4, dealsInDD: 1, dealsInvested: 0,
     assetClasses: [],
     journey: { buybox: true, saved3: true, bookedCall: true, firstDD: true, officeHours: false, invested: false },
-    story: 'New member, fast mover. Joined Feb 1, already in DD on her first deal. Booked intro call within 48 hours of joining. Watch this one.',
+    story: 'New member, fast mover. Joined Feb 1, already reviewing her first deal. Booked intro call within 48 hours of joining. Watch this one.',
     lastActive: '2026-03-21', loginCount: 38,
     outreach: 'new',
     publishableStats: null,
@@ -27833,7 +27833,7 @@ function renderCaseStudies() {
         + '<div style="margin-bottom:14px;">' + assetHtml + '</div>'
         + '<div style="display:flex;gap:12px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
         + '<span>' + m.loginCount + ' sessions</span>'
-        + '<span>' + m.dealsInDD + ' in DD</span>'
+        + '<span>' + m.dealsInDD + ' reviewing</span>'
         + '</div>'
         + '</div>'
         + '</div></td></tr>';
@@ -27907,7 +27907,7 @@ function renderCaseStudies() {
     + '<button class="ms-filter-btn ' + (msFilter === 'all' ? 'active' : '') + '" onclick="msFilter=\'all\';renderCaseStudies();">All</button>'
     + '<button class="ms-filter-btn ' + (msFilter === 'hot' ? 'active' : '') + '" onclick="msFilter=\'hot\';renderCaseStudies();">Testimonial Ready</button>'
     + '<button class="ms-filter-btn ' + (msFilter === 'invested' ? 'active' : '') + '" onclick="msFilter=\'invested\';renderCaseStudies();">Invested</button>'
-    + '<button class="ms-filter-btn ' + (msFilter === 'active' ? 'active' : '') + '" onclick="msFilter=\'active\';renderCaseStudies();">In DD</button>'
+    + '<button class="ms-filter-btn ' + (msFilter === 'active' ? 'active' : '') + '" onclick="msFilter=\'active\';renderCaseStudies();">Active</button>'
     + '<button class="ms-filter-btn ' + (msFilter === 'tax' ? 'active' : '') + '" onclick="msFilter=\'tax\';renderCaseStudies();">Tax Strategy</button>'
     + '</div>'
 
@@ -27974,7 +27974,7 @@ function showWalkthrough() {
     var _ftT = { cashflow: 'Filter by asset class, minimum investment, or distribution frequency.', tax: 'Filter by asset class and strategy. Value-add multifamily and oil & gas offer the highest depreciation.', growth: 'Filter by strategy \u2014 value-add and development deals have the highest growth potential.' };
     _wtSteps.push({ target: '#dealSearchInput', text: _ftT[goal] || _ftT.cashflow });
   }
-  _wtSteps.push({ target: '.stage-tab', text: 'Track your research: Interested \u2192 Vetting \u2192 Invested. Your pipeline is private and saved automatically.' });
+  _wtSteps.push({ target: '.stage-tab', text: 'Track your research: Filter \u2192 Review \u2192 Connect \u2192 Decide. Your pipeline is private and saved automatically.' });
   if (isPaid) { _wtSteps.push({ target: '.nav-item[data-page="dashboard"]', text: 'Your investment plan is ready. Open My Plan to see your full roster and track progress.' }); }
   else { _wtSteps.push({ target: '.nav-item[data-page="academy"]', text: 'Want a personalized investment plan? Academy members get the full plan builder.', cta: { text: 'See What\u2019s Included', fn: function() { if (typeof navigateTo === 'function') navigateTo('academy'); } } }); }
 
@@ -28102,8 +28102,8 @@ function showOnboarding() {
     } else if (step === 3) {
       // ===== VETTING PIPELINE =====
       html += '<div style="font-size:48px;margin-bottom:8px;">&#128269;</div>';
-      html += '<div class="onboarding-title">Your Vetting Pipeline</div>';
-      html += '<div class="onboarding-subtitle">Track every deal through your personal due diligence process.</div>';
+      html += '<div class="onboarding-title">Your Deal Pipeline</div>';
+      html += '<div class="onboarding-subtitle">Track every deal from discovery to investment.</div>';
       html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:20px 0;">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:16px;">';
       var stages = [
