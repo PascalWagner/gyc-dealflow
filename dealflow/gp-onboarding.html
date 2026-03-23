@@ -1426,7 +1426,10 @@ select.form-input { cursor: pointer; appearance: auto; }
         <div class="completion-summary" id="completionSummary"></div>
       </div>
       <div class="step-footer">
-        <span></span>
+        <button class="btn-secondary" onclick="goToLpStep('stepLpBaseline', true)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
         <button class="btn-primary" id="completionBtn" onclick="completeLpOnboarding()" style="min-width:220px;">
           <span id="completionBtnText">Start Browsing Deals</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
