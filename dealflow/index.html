@@ -6542,17 +6542,17 @@ const _supa = window.supabase.createClient(
         <div class="settings-card" style="margin-top:16px;">
           <div class="settings-card-title">Share My Deal Activity</div>
           <div class="settings-card-desc" style="margin-bottom:16px;">When on, your deal activity counts toward "X LPs are reviewing this deal" on deal pages. Your name and dollar amounts are never shown.</div>
-          <label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:12px 16px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:var(--radius-sm);">
-            <div style="position:relative;width:48px;height:26px;flex-shrink:0;">
-              <input type="checkbox" id="shareActivityToggle" onchange="updateShareActivity(this.checked)" style="opacity:0;width:0;height:0;position:absolute;">
-              <div id="shareActivityTrack" style="position:absolute;inset:0;background:var(--border);border-radius:13px;transition:background 0.2s;cursor:pointer;" onclick="var cb=document.getElementById('shareActivityToggle');cb.checked=!cb.checked;cb.dispatchEvent(new Event('change'));"></div>
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:var(--radius-sm);">
+            <div style="position:relative;width:48px;height:26px;flex-shrink:0;cursor:pointer;" onclick="var cb=document.getElementById('shareActivityToggle');cb.checked=!cb.checked;updateShareActivity(cb.checked);">
+              <input type="checkbox" id="shareActivityToggle" style="opacity:0;width:0;height:0;position:absolute;">
+              <div id="shareActivityTrack" style="position:absolute;inset:0;background:var(--border);border-radius:13px;transition:background 0.2s;"></div>
               <div id="shareActivityThumb" style="position:absolute;top:2px;left:2px;width:22px;height:22px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.2);transition:transform 0.2s;pointer-events:none;"></div>
             </div>
             <div>
               <div id="shareActivityLabel" style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Activity sharing is on</div>
               <div id="shareActivityDesc" style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">You're contributing to community deal intelligence</div>
             </div>
-          </label>
+          </div>
         </div>
 
         <!-- Preview: Your Profile -->
@@ -22758,16 +22758,7 @@ function renderMiDealflowTab() {
 
 // ========== RESOURCES PAGE ==========
 var RESOURCE_VIDEOS = [
-  // Replace with real data. For YouTube: set youtubeId. For GHL/Drive: set url + thumbnail.
-  { youtubeId: '', title: 'Welcome to the Cashflow Academy', date: '2026-01-15', duration: '3 min', category: 'Education', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'Office Hours: March 2026 Deal Review', date: '2026-03-13', duration: '47 min', category: 'Office Hours', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'How to Evaluate a Debt Fund', date: '2026-02-27', duration: '62 min', category: 'Education', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'GP Spotlight: RSN Property Group', date: '2026-02-13', duration: '55 min', category: 'Deal Reviews', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'Office Hours: February 2026', date: '2026-02-06', duration: '51 min', category: 'Office Hours', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'Understanding PPMs & Subscription Docs', date: '2026-01-30', duration: '38 min', category: 'Education', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'Deal Teardown: NNN Lease Portfolio', date: '2026-01-23', duration: '44 min', category: 'Deal Reviews', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'Office Hours: January 2026', date: '2026-01-09', duration: '49 min', category: 'Office Hours', url: '', thumbnail: '' },
-  { youtubeId: '', title: 'Tax Benefits of Passive Real Estate', date: '2025-12-19', duration: '35 min', category: 'Education', url: '', thumbnail: '' }
+  // Add real videos here: { youtubeId: 'abc', title: '...', date: '2026-01-15', duration: '47 min', category: 'Office Hours', url: '', thumbnail: '' }
 ];
 var _resourceFilter = 'All';
 function renderResources() {
@@ -22775,6 +22766,27 @@ function renderResources() {
   if (!container) return;
   if (isGated()) {
     container.innerHTML = '<div style="padding:60px 20px;text-align:center;">' + renderAcademyGateCTA('resources', 'Unlock the Resource Library', 'Office hours recordings, deal reviews, and educational content — exclusively for Academy members.') + '</div>';
+    return;
+  }
+  // Coming soon state when no videos are loaded yet
+  if (RESOURCE_VIDEOS.length === 0) {
+    var previewCards = '';
+    var previewTitles = ['Office Hours: Deal Review', 'How to Evaluate a Debt Fund', 'GP Spotlight Interview', 'Understanding PPMs', 'Tax Benefits of Passive RE', 'Office Hours: Q&A Session'];
+    var previewCats = ['Office Hours', 'Education', 'Deal Reviews', 'Education', 'Education', 'Office Hours'];
+    var badgeMap = { 'Office Hours': 'resource-badge-office', 'Deal Reviews': 'resource-badge-deal', 'Education': 'resource-badge-education' };
+    previewTitles.forEach(function(t, i) {
+      previewCards += '<div class="resource-card" style="pointer-events:none;"><div class="resource-thumb"><div class="play-overlay"><div class="play-btn"><svg viewBox="0 0 24 24" fill="none" width="24" height="24"><polygon points="5 3 19 12 5 21 5 3" fill="#1a2e35"/></svg></div></div></div>';
+      previewCards += '<div class="resource-meta"><h3>' + t + '</h3><div class="resource-info"><span class="resource-badge ' + (badgeMap[previewCats[i]] || '') + '">' + previewCats[i] + '</span><span>Coming soon</span></div></div></div>';
+    });
+    container.innerHTML = '<div style="margin-bottom:24px;"><div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);max-width:500px;">Office hours recordings, deal reviews, and educational content from the Cashflow Academy.</div></div>'
+      + '<div style="position:relative;">'
+      + '<div class="resource-grid" style="filter:blur(3px);opacity:0.5;user-select:none;">' + previewCards + '</div>'
+      + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;">'
+      + '<div style="text-align:center;background:rgba(255,255,255,0.92);border:1px solid var(--border);border-radius:var(--radius);padding:40px 48px;box-shadow:0 4px 24px rgba(0,0,0,0.08);">'
+      + '<div style="font-size:48px;margin-bottom:12px;">&#127916;</div>'
+      + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Coming Soon</div>'
+      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);max-width:320px;line-height:1.6;">Office hours recordings, deal reviews, and educational sessions are being added. Check back soon.</div>'
+      + '</div></div></div>';
     return;
   }
   var categories = ['All', 'Office Hours', 'Deal Reviews', 'Education'];
