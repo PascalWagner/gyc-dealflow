@@ -7,7 +7,7 @@
     "api/ghl-sync.js": { "maxDuration": 120 }
   },
   "crons": [
-    { "path": "/api/ghl-sync", "schedule": "0 */3 * * *" }
+    { "path": "/api/ghl-sync", "schedule": "0 * * * *" }
   ],
   "headers": [
     {

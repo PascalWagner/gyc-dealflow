@@ -189,22 +189,18 @@ export default async function handler(req, res) {
       }
     }
 
-    // GHL sync: only for high-value events (wizard_complete, call_booked, deal_saved with 3+ saves)
-    // Low-frequency events get real-time GHL sync; everything else is batched
-    const HIGH_VALUE_EVENTS = ['wizard_complete', 'goals_complete', 'call_booked', 'fund_cta_clicked', 'academy_cta_clicked'];
-    const isHighValue = HIGH_VALUE_EVENTS.includes(event)
-      || (event === 'deal_saved' && data?.saveCount >= 3)
-      || (event === 'session_start' && data?.sessionCount >= 3);
-
+    // Always try GHL sync — but never block or fail the response
+    // If GHL is down or rate-limited, the cron job catches it later
     let ghlResult = { fieldsUpdated: 0, tagsAdded: [] };
-    if (isHighValue) {
+    try {
       ghlResult = await syncEventToGhl(email, event, data);
+    } catch (ghlErr) {
+      console.warn('GHL sync failed (will retry via cron):', ghlErr.message);
     }
 
     return res.status(200).json({
       success: true,
       event,
-      ghlSynced: isHighValue,
       fieldsUpdated: ghlResult.fieldsUpdated,
       tagsAdded: ghlResult.tagsAdded
     });
