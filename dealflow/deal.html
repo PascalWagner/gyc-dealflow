@@ -7388,6 +7388,7 @@ async function renderDeal() {
 
   // --- GP Insights Panel (admin / sponsor only) ---
   var gpInsightsHtml = '';
+  var gpShareHtml = '';
   var _gpUser = null;
   try { _gpUser = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
   var _gpIsAdmin = _gpUser && _gpUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf((_gpUser.email || '').toLowerCase()) >= 0;
@@ -7399,24 +7400,24 @@ async function renderDeal() {
 
     // --- Share with investors card (admin only) ---
     var shareUrl = window.location.origin + '/deal.html?id=' + deal.id;
-    gpInsightsHtml += '<div class="section" style="border:1px dashed var(--primary);background:rgba(81,190,123,0.03);">';
-    gpInsightsHtml += '<div class="section-header" style="border-bottom-color:rgba(81,190,123,0.15);">';
-    gpInsightsHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="18" height="18"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
-    gpInsightsHtml += '<span class="section-title" style="color:var(--primary);">Share with Investors</span>';
-    gpInsightsHtml += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;padding:2px 8px;background:rgba(59,130,246,0.1);color:#3b82f6;border-radius:10px;margin-left:8px;">ADMIN</span>';
-    gpInsightsHtml += '</div>';
-    gpInsightsHtml += '<div class="section-body">';
-    gpInsightsHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Send this link to the operator so they can share their deal page with their own investor list. Every visitor who signs up becomes a GYC lead.</div>';
-    gpInsightsHtml += '<div style="display:flex;gap:8px;align-items:center;">';
-    gpInsightsHtml += '<input id="gpShareUrl" type="text" value="' + shareUrl + '" readonly style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;color:var(--text-dark);background:var(--bg-cream);cursor:text;">';
-    gpInsightsHtml += '<button onclick="copyGPShareLink()" style="padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Copy Link</button>';
-    gpInsightsHtml += '</div>';
-    gpInsightsHtml += '<div style="margin-top:12px;display:flex;gap:8px;">';
-    gpInsightsHtml += '<button onclick="gpShareEmail(\'' + escAttr(deal.investmentName) + '\',\'' + escAttr(deal.managementCompany || '') + '\')" style="padding:8px 16px;background:rgba(81,190,123,0.08);color:var(--primary);border:1px solid rgba(81,190,123,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">';
-    gpInsightsHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
-    gpInsightsHtml += 'Draft email to operator</button>';
-    gpInsightsHtml += '</div>';
-    gpInsightsHtml += '</div></div>';
+    gpShareHtml += '<div class="section" style="border:1px dashed var(--primary);background:rgba(81,190,123,0.03);">';
+    gpShareHtml += '<div class="section-header" style="border-bottom-color:rgba(81,190,123,0.15);">';
+    gpShareHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="18" height="18"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+    gpShareHtml += '<span class="section-title" style="color:var(--primary);">Share with Investors</span>';
+    gpShareHtml += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;padding:2px 8px;background:rgba(59,130,246,0.1);color:#3b82f6;border-radius:10px;margin-left:8px;">ADMIN</span>';
+    gpShareHtml += '</div>';
+    gpShareHtml += '<div class="section-body">';
+    gpShareHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:14px;">Send this link to the operator so they can share their deal page with their own investor list. Every visitor who signs up becomes a GYC lead.</div>';
+    gpShareHtml += '<div style="display:flex;gap:8px;align-items:center;">';
+    gpShareHtml += '<input id="gpShareUrl" type="text" value="' + shareUrl + '" readonly style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;color:var(--text-dark);background:var(--bg-cream);cursor:text;">';
+    gpShareHtml += '<button onclick="copyGPShareLink()" style="padding:10px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Copy Link</button>';
+    gpShareHtml += '</div>';
+    gpShareHtml += '<div style="margin-top:12px;display:flex;gap:8px;">';
+    gpShareHtml += '<button onclick="gpShareEmail(\'' + escAttr(deal.investmentName) + '\',\'' + escAttr(deal.managementCompany || '') + '\')" style="padding:8px 16px;background:rgba(81,190,123,0.08);color:var(--primary);border:1px solid rgba(81,190,123,0.2);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">';
+    gpShareHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+    gpShareHtml += 'Draft email to operator</button>';
+    gpShareHtml += '</div>';
+    gpShareHtml += '</div></div>';
   }
 
   // --- Action buttons ---
@@ -7870,8 +7871,9 @@ async function renderDeal() {
     + qaHtml
     // --- Bottom CTAs ---
     + officeHoursHtml
-    + noPermissionHtml
     + gpInsightsHtml
+    + noPermissionHtml
+    + gpShareHtml
     + '</div>'
     + stickyHtml;
 
