@@ -6497,7 +6497,10 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
         <div class="settings-card" style="margin-top:16px;">
-          <div class="settings-card-title">Activity Sharing</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="settings-card-title">Activity Sharing</div>
+            <button onclick="toggleAllPrivacy()" id="toggleAllPrivacyBtn" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;">Select All</button>
+          </div>
           <div class="settings-card-desc">Choose what other members can see about your deal activity. Each toggle is independent.</div>
           <div style="display:grid;gap:0;">
             <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px 0;border-bottom:1px solid var(--border-light);"><input type="checkbox" id="shareSavedToggle" onchange="updatePrivacyToggle('share_saved', this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);flex-shrink:0;"><div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Show when I save a deal</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:3px;line-height:1.5;">Your name appears in "X investors saved this" on deal pages</div></div></label>
@@ -13520,19 +13523,49 @@ function updatePrivacyToggle(field, checked) {
   var data = {};
   data[field] = checked;
   syncToBackend('profile', data);
+  updateToggleAllBtn();
   showToast('Privacy setting updated');
 }
 
 function loadPrivacySettings() {
   var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  // Default to true (opt-in by default) — only false if explicitly set to false
   var el = document.getElementById('shareSavedToggle');
-  if (el) el.checked = !!u.share_saved;
+  if (el) el.checked = u.share_saved !== false;
   el = document.getElementById('shareDdToggle');
-  if (el) el.checked = !!u.share_dd;
+  if (el) el.checked = u.share_dd !== false;
   el = document.getElementById('shareInvestedToggle');
-  if (el) el.checked = !!u.share_invested;
+  if (el) el.checked = u.share_invested !== false;
   el = document.getElementById('allowFollowsToggle');
-  if (el) el.checked = !!u.allow_follows;
+  if (el) el.checked = u.allow_follows !== false;
+  updateToggleAllBtn();
+}
+
+function toggleAllPrivacy() {
+  var ids = ['shareSavedToggle', 'shareDdToggle', 'shareInvestedToggle', 'allowFollowsToggle'];
+  var fields = ['share_saved', 'share_dd', 'share_invested', 'allow_follows'];
+  var allOn = ids.every(function(id) { var el = document.getElementById(id); return el && el.checked; });
+  var newVal = !allOn;
+  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var data = {};
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el) el.checked = newVal;
+    u[fields[i]] = newVal;
+    data[fields[i]] = newVal;
+  }
+  localStorage.setItem('gycUser', JSON.stringify(u));
+  syncToBackend('profile', data);
+  updateToggleAllBtn();
+  showToast(newVal ? 'All sharing enabled' : 'All sharing disabled');
+}
+
+function updateToggleAllBtn() {
+  var btn = document.getElementById('toggleAllPrivacyBtn');
+  if (!btn) return;
+  var ids = ['shareSavedToggle', 'shareDdToggle', 'shareInvestedToggle', 'allowFollowsToggle'];
+  var allOn = ids.every(function(id) { var el = document.getElementById(id); return el && el.checked; });
+  btn.textContent = allOn ? 'Deselect All' : 'Select All';
 }
 
 function switchSettingsTab(el) {
