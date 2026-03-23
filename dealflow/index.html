@@ -13096,8 +13096,8 @@ let wizardStep = 0;
 let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Flow: Goal → Income Source → RE Pro → Baseline → [Branch targets] → Net Worth
-//   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan → LP Network
+// Flow: Goal → RE Pro → Baseline → 90-Day Goal → [Branch targets] → Net Worth
+//   → Growth Priority → 12-mo Capital → Source → Loss Tolerance → Preferences → Accreditation → LP Network → Plan
 const ONBOARDING_FLOW = {
   common_start: [0, 22, 23, 24],
   cashflow: [4, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17],
@@ -13199,7 +13199,7 @@ const WIZARD_STEPS = [
   { type: 'goalSelect' },
   // 1: Capital amount (all paths)
   { type: 'capitalAmount' },
-  // 2: Capital readiness (all paths)
+  // 2: Capital readiness (unused — not in any sequence)
   { type: 'capitalReadiness' },
   // 3: Capital source (all paths)
   { type: 'capitalSource' },
@@ -13280,7 +13280,7 @@ const WIZARD_STEPS = [
   { type: 'planOutput', branch: 'tax' },
   // 20: Completion
   { type: 'completion' },
-  // 21: Income source (all paths — before goal selection)
+  // 21: Income source (unused — not in any sequence)
   { type: 'incomeSource' },
   // 22: RE Professional status (all paths — before goal selection)
   { type: 'reProfessional' },
@@ -13317,7 +13317,7 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 25: 90-day deployable capital (radio buttons like 12-mo)
+  // 25: 90-day deployable capital (unused — not in any sequence)
   { type: 'capital90Day' },
   // 26: Growth investment priority (growth branch)
   { type: 'growthPriority' },
