@@ -5441,7 +5441,7 @@ async function renderDeal() {
     academyNudgeHtml += '<div style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">PW</div>';
     academyNudgeHtml += '<div style="flex:1;min-width:0;">';
     academyNudgeHtml += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Need help evaluating this deal?</div>';
-    academyNudgeHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Academy members get weekly live deal reviews with Pascal + a personal deployment plan.</div>';
+    academyNudgeHtml += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Academy members get weekly office hours + a personal deployment plan.</div>';
     academyNudgeHtml += '</div>';
     academyNudgeHtml += '<a href="index.html#academy" target="_blank" style="padding:8px 16px;background:#3b82f6;color:#fff;border-radius:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">Learn More</a>';
     academyNudgeHtml += '</div>';
@@ -7312,13 +7312,13 @@ async function renderDeal() {
   qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
   qaHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
   if (!isPaidUser && !_compIsAdmin) {
-    qaHtml += academyGateOverlay('Unlock Investor Q&A', 'Academy members can ask questions and get answers from Pascal on any deal.');
+    qaHtml += academyGateOverlay('Unlock Investor Q&A', 'Academy members can ask questions and discuss any deal during weekly office hours.');
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">What is the redemption policy for this fund?</div>';
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">How are distributions calculated and paid?</div>';
     qaHtml += '<div style="padding:12px 0;font-size:13px;color:var(--text-secondary);">What happens if the fund doesn\'t hit its raise target?</div>';
     qaHtml += '</div></div>';
   } else {
-    qaHtml += comingSoonOverlay('Ask questions and get answers from Pascal');
+    qaHtml += comingSoonOverlay('Ask questions and discuss deals during weekly office hours');
     qaHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">What is the redemption policy for this fund?</div>';
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">How are distributions calculated and paid?</div>';
