@@ -96,27 +96,27 @@ export default async function handler(req, res) {
       }
     }
 
-    // Ensure user exists and is confirmed before generating link.
-    const { data: existingUser } = await adminSupabase.auth.admin.getUserByEmail(email);
-    if (!existingUser?.user) {
-      // Pre-create user as confirmed so magic link works on first click
-      await adminSupabase.auth.admin.createUser({
-        email,
-        email_confirm: true
-      });
-    } else if (existingUser.user.email_confirmed_at === null) {
-      // User exists but unconfirmed — confirm them now
-      await adminSupabase.auth.admin.updateUserById(existingUser.user.id, {
-        email_confirm: true
-      });
-    }
-
     // Generate magic link server-side and send via Resend
     // (Supabase's built-in OTP email requires SMTP config we don't have)
     const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
     const redirectTo = siteUrl + '/deal-login.html';
 
     try {
+      // Ensure user exists and is confirmed before generating link.
+      const { data: existingUser } = await adminSupabase.auth.admin.getUserByEmail(email);
+      if (!existingUser?.user) {
+        // Pre-create user as confirmed so magic link works on first click
+        const { error: createErr } = await adminSupabase.auth.admin.createUser({
+          email,
+          email_confirm: true
+        });
+        if (createErr) console.error('[AUTH] createUser error:', createErr.message);
+      } else if (existingUser.user.email_confirmed_at === null) {
+        // User exists but unconfirmed — confirm them now
+        await adminSupabase.auth.admin.updateUserById(existingUser.user.id, {
+          email_confirm: true
+        });
+      }
       const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
         type: 'magiclink',
         email
