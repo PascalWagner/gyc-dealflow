@@ -22741,12 +22741,12 @@ function renderNetworkMoat() {
   // Also fetch user profiles to resolve emails to names
   Promise.all([
     adminFetch({ action: 'list-intros' }),
-    adminFetch({ action: 'list-users' })
+    adminFetch({ action: 'list-users', limit: 5000 })
   ]).then(function(results) {
     var introResult = results[0] || {};
     var usersResult = results[1] || {};
     var intros = introResult.intros || [];
-    var users = usersResult.users || [];
+    var users = usersResult.data || [];
 
     // Build email-to-name lookup
     var nameMap = {};
