@@ -13064,59 +13064,9 @@ function toggleStageDropdown(dealId, btn) {
   }, 10);
 }
 
-async function requestIntro(dealId) {
-  const deal = DEALS.find(d => d.id === dealId);
-  if (!deal) return;
-  const operatorName = deal.managementCompany || 'Unknown Operator';
-
-  // Check if already requested (localStorage)
-  const introKey = 'gycIntroRequested_' + dealId;
-  if (localStorage.getItem(introKey)) {
-    showToast('You\'ve already requested an intro to ' + operatorName, 'info');
-    return;
-  }
-
-  if (!confirm('Request an introduction to ' + operatorName + ' for ' + deal.investmentName + '?\n\nPascal will connect you via email.')) return;
-
-  try {
-    const session = typeof supabase !== 'undefined' ? await supabase.auth.getSession() : null;
-    const token = session?.data?.session?.access_token;
-    if (!token) {
-      showToast('Please log in to request an introduction', 'error');
-      return;
-    }
-
-    const resp = await fetch('/api/intro-request', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        dealId: deal.id,
-        dealName: deal.investmentName,
-        operatorName: operatorName,
-        operatorCeo: deal.ceo || '',
-        managementCompanyId: deal.managementCompanyId || ''
-      })
-    });
-
-    if (resp.ok) {
-      const data = await resp.json();
-      localStorage.setItem(introKey, Date.now().toString());
-      if (data.introSent) {
-        showToast('Introduction sent! Check your email \u2014 you\'ve been CC\'d.', 'success');
-      } else {
-        showToast('Intro requested! Pascal will connect you shortly.', 'success');
-      }
-      renderAll();
-    } else {
-      showToast('Something went wrong. Please try again.', 'error');
-    }
-  } catch (err) {
-    console.error('requestIntro error:', err);
-    showToast('Something went wrong. Please try again.', 'error');
-  }
+function requestIntro(dealId) {
+  // Navigate to deal page with intro action — the confirmation modal opens there
+  window.location.href = 'deal.html?id=' + encodeURIComponent(dealId) + '&action=intro';
 }
 
 function changeDealStage(dealId, newStage) {

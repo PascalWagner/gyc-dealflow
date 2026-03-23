@@ -2100,6 +2100,92 @@ body {
   color: var(--text-muted);
 }
 
+/* ====== INTRO CONFIRMATION MODAL ====== */
+
+.intro-confirm-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding: 20px;
+}
+.intro-confirm-overlay.visible { opacity: 1; }
+.intro-confirm-modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  max-width: 680px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+.intro-confirm-header {
+  background: linear-gradient(135deg, #0f2027, #1a3a4a);
+  padding: 28px 32px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.intro-confirm-body {
+  overflow-y: auto;
+  padding: 24px 32px;
+  flex: 1;
+}
+.intro-confirm-section-title {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin: 20px 0 10px;
+}
+.intro-confirm-section-title:first-child { margin-top: 0; }
+.intro-confirm-q {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.intro-confirm-q .ic-check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.intro-confirm-q .ic-check.answered { background: rgba(81,190,123,0.15); }
+.intro-confirm-q .ic-check.unanswered { background: rgba(0,0,0,0.06); }
+.intro-confirm-q .ic-val {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  margin-left: 4px;
+}
+.intro-confirm-actions {
+  padding: 20px 32px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .intro-confirm-header { padding: 20px; }
+  .intro-confirm-body { padding: 16px 20px; }
+  .intro-confirm-actions { padding: 16px 20px; }
+}
+
 /* ====== DECK SUBMIT MODAL ====== */
 
 .deck-modal-overlay {
@@ -4145,43 +4231,7 @@ function hasDeckBeenViewed(dealId) {
 
 // Wrapper for intro requests that also tracks in localStorage
 function requestIntro(dealId) {
-  // Store structured data in localStorage for admin dashboard
-  try {
-    var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
-    if (!Array.isArray(intros)) {
-      // Migrate old object format to array
-      var old = intros;
-      intros = Object.keys(old).map(function(k) { return { dealId: k, timestamp: old[k] }; });
-    }
-    var userEmail = '';
-    try { userEmail = JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e2) {}
-    if (!userEmail) {
-      try {
-        for (var i = 0; i < localStorage.length; i++) {
-          var lk = localStorage.key(i);
-          if (lk && lk.indexOf('-auth-token') > -1) {
-            var lv = JSON.parse(localStorage.getItem(lk) || '{}');
-            if (lv.user && lv.user.email) { userEmail = lv.user.email; break; }
-          }
-        }
-      } catch(e3) {}
-    }
-    intros.push({
-      dealId: dealId,
-      deal: document.title.replace(' | Grow Your Cashflow', '').trim() || dealId,
-      company: (document.querySelector('.panel-company-name') || {}).textContent || '',
-      person: '',
-      userEmail: userEmail,
-      timestamp: Date.now()
-    });
-    localStorage.setItem('gycIntroRequests', JSON.stringify(intros));
-  } catch(e) {}
-
-  // Find the Request Introduction button on the page and click it
-  var introBtn = document.querySelector('button[onclick*="requestIntroduction"]');
-  if (introBtn) {
-    introBtn.click();
-  }
+  openIntroConfirmation();
 }
 
 function hasIntroBeenRequested(dealId) {
@@ -8016,6 +8066,12 @@ async function renderDeal() {
       clean.searchParams.delete('skipped');
       window.history.replaceState({}, '', clean.toString());
     }
+    if (p.get('action') === 'intro') {
+      var clean = new URL(window.location);
+      clean.searchParams.delete('action');
+      window.history.replaceState({}, '', clean.toString());
+      setTimeout(function() { openIntroConfirmation(); }, 300);
+    }
   })();
 
   // Load GP Insights Panel (admin only)
@@ -8406,14 +8462,175 @@ async function loadDealBgReport(sponsor) {
   }
 }
 
-function requestIntroduction(company, ceo, dealName, btnEl) {
+// ========== INTRO CONFIRMATION MODAL ==========
+
+function openIntroConfirmation() {
   if (!requireAuth('request an introduction')) return;
 
-  // Disable button immediately and show loading
-  if (btnEl) {
-    btnEl.disabled = true;
-    btnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="animation:spin 1s linear infinite;"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg>Requesting...';
+  var deal = window._currentDeal;
+  if (!deal) { alert('Deal data not loaded. Please refresh.'); return; }
+
+  // Check if already requested
+  var dealId = deal.id;
+  if (localStorage.getItem('gycIntroRequested_' + dealId)) {
+    showShareToast('You\'ve already requested an intro for this deal.');
+    return;
   }
+
+  // Remove existing modal
+  var existing = document.getElementById('introConfirmOverlay');
+  if (existing) existing.remove();
+
+  // Get operator info
+  var sponsors = deal.sponsors || [];
+  var op = sponsors.find(function(s) { return s.role === 'operator'; });
+  if (!op && deal.managementCompany) {
+    op = { name: deal.managementCompany, ceo: deal.ceo, foundingYear: deal.mcFoundingYear, website: deal.mcWebsite };
+  }
+  var opName = op ? op.name : (deal.managementCompany || 'the operator');
+  var opCeo = op ? (op.ceo || '') : (deal.ceo || '');
+  var opWebsite = op ? (op.website || '') : (deal.mcWebsite || '');
+  var opInitials = getInitials(opName);
+
+  // Build prep workbook from DD checklist
+  var checklist = getChecklistForDeal(deal);
+  var answers = loadDDAnswers(dealId);
+  var prepHtml = '';
+  // Sections to show for call prep (skip External DD, Post-Research)
+  var skipSections = ['External Due Diligence (LP Led)', 'Post-Research Questions'];
+  // Sections specifically for intro calls get priority
+  var introCallSections = ['Deal Details (Asked on Intro Call)'];
+
+  checklist.sections.forEach(function(section) {
+    if (skipSections.indexOf(section.title) >= 0) return;
+    var isIntroSection = introCallSections.indexOf(section.title) >= 0;
+    var questionsHtml = '';
+    var shownCount = 0;
+
+    section.questions.forEach(function(qObj, qi) {
+      var qKey = section.title + '_' + qi;
+      var autoVal = qObj.autoField ? getAutoValue(deal, qObj.autoField, qObj.format) : null;
+      var savedVal = answers[qKey] || '';
+      var hasAnswer = autoVal || savedVal;
+
+      // For non-intro sections, only show unanswered questions (max 5 per section)
+      if (!isIntroSection && hasAnswer) return;
+      if (!isIntroSection && shownCount >= 5) return;
+
+      shownCount++;
+      if (hasAnswer) {
+        questionsHtml += '<div class="intro-confirm-q">'
+          + '<div class="ic-check answered"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
+          + '<span>' + esc(qObj.q) + '<span class="ic-val"> ' + esc(String(autoVal || savedVal)) + '</span></span>'
+          + '</div>';
+      } else {
+        questionsHtml += '<div class="intro-confirm-q">'
+          + '<div class="ic-check unanswered"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="3"><circle cx="12" cy="12" r="4"/></svg></div>'
+          + '<span>' + esc(qObj.q) + '</span>'
+          + '</div>';
+      }
+    });
+
+    if (questionsHtml) {
+      prepHtml += '<div class="intro-confirm-section-title">'
+        + (isIntroSection ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="margin-right:4px;vertical-align:-1px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>' : '')
+        + esc(section.title) + '</div>'
+        + questionsHtml;
+    }
+  });
+
+  if (!prepHtml) {
+    prepHtml = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Your DD checklist is looking great! No major gaps to address on the call.</div>';
+  }
+
+  // Determine paid status
+  var _icUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var _icTier = _icUser.tier || 'free';
+  var _icIsPaid = _icTier !== 'free';
+  var _icIsAdmin = _icUser && _icUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf((_icUser.email || '').toLowerCase()) >= 0;
+  var canSubmit = _icIsPaid || _icIsAdmin;
+
+  // Build modal HTML
+  var modalHtml = '<div class="intro-confirm-modal">'
+    // Header
+    + '<div class="intro-confirm-header">'
+    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;">'
+    + '<div style="display:flex;align-items:center;gap:14px;">'
+    + '<div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-family:var(--font-ui);font-size:16px;font-weight:700;color:#fff;flex-shrink:0;">' + opInitials + '</div>'
+    + '<div>'
+    + '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;">' + esc(opName) + '</div>'
+    + (opCeo ? '<div style="font-size:13px;color:rgba(255,255,255,0.6);margin-top:2px;">' + esc(opCeo) + (opWebsite ? ' &middot; <a href="' + esc(opWebsite) + '" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.6);text-decoration:underline;">Website</a>' : '') + '</div>' : '')
+    + '</div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'introConfirmOverlay\').remove()" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.5);font-size:22px;line-height:1;padding:0 0 0 12px;">&times;</button>'
+    + '</div>'
+    + '<div style="margin-top:16px;font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;">'
+    + 'We\'re about to connect you with <strong style="color:#fff;">' + esc(opName) + '</strong> for <strong style="color:#fff;">' + esc(deal.investmentName) + '</strong>. We limit introductions to maintain quality — please confirm you\'re serious about this opportunity.'
+    + '</div>'
+    + '</div>'
+    // Body — prep workbook
+    + '<div class="intro-confirm-body">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">'
+    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
+    + '<span style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);">Prepare for Your Call</span>'
+    + '</div>'
+    + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Here are the key questions to cover on your intro call, based on gaps in your due diligence checklist.</div>'
+    + prepHtml
+    + '</div>'
+    // Actions
+    + '<div class="intro-confirm-actions">';
+
+  if (canSubmit) {
+    modalHtml += '<textarea id="introConfirmMessage" placeholder="Add a personal note to the operator (optional)" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);resize:none;height:60px;margin-bottom:12px;background:var(--bg-page,#f8f8f8);"></textarea>'
+      + '<div style="display:flex;align-items:center;gap:12px;">'
+      + '<button id="introConfirmBtn" onclick="submitIntroConfirmation()" style="flex:1;padding:14px 24px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'#3dbd6d\'" onmouseout="this.style.background=\'var(--primary)\'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Confirm &amp; Request Introduction</button>'
+      + '<button onclick="document.getElementById(\'introConfirmOverlay\').remove()" style="padding:14px 20px;background:none;border:1px solid var(--border);border-radius:10px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;">Cancel</button>'
+      + '</div>';
+  } else {
+    // Free user gate
+    modalHtml += '<div style="position:relative;min-height:120px;">'
+      + '<div style="filter:blur(6px);opacity:0.2;pointer-events:none;user-select:none;">'
+      + '<textarea disabled style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:8px;height:50px;margin-bottom:12px;"></textarea>'
+      + '<button disabled style="width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:14px;">Confirm & Request Introduction</button>'
+      + '</div>'
+      + '<div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;">'
+      + '<div style="text-align:center;max-width:340px;padding:16px 20px;">'
+      + '<div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>'
+      + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">Academy Members Get Personal Introductions</div>'
+      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">Get warm introductions to vetted operators, plus call prep notes and due diligence tools.</div>'
+      + '<a href="index.html#academy" style="display:inline-block;padding:10px 24px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+      + '</div></div>'
+      + '</div>';
+  }
+
+  modalHtml += '</div></div>';
+
+  // Create overlay
+  var overlay = document.createElement('div');
+  overlay.id = 'introConfirmOverlay';
+  overlay.className = 'intro-confirm-overlay';
+  overlay.innerHTML = modalHtml;
+  // Close on backdrop click
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function() { overlay.classList.add('visible'); });
+}
+
+function submitIntroConfirmation() {
+  var deal = window._currentDeal;
+  if (!deal) return;
+
+  var btn = document.getElementById('introConfirmBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="animation:spin 1s linear infinite;"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83"/></svg>Sending...';
+  }
+
+  var message = '';
+  var msgEl = document.getElementById('introConfirmMessage');
+  if (msgEl) message = msgEl.value.trim();
 
   var token = '';
   try {
@@ -8426,41 +8643,81 @@ function requestIntroduction(company, ceo, dealName, btnEl) {
     }
   } catch(e) {}
 
-  var dealId = new URLSearchParams(window.location.search).get('id') || '';
-  var restoreBtn = function() {
-    if (btnEl) {
-      btnEl.disabled = false;
-      btnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Request Introduction';
-    }
-  };
+  var sponsors = deal.sponsors || [];
+  var op = sponsors.find(function(s) { return s.role === 'operator'; });
+  var opName = op ? op.name : (deal.managementCompany || '');
+  var opCeo = op ? (op.ceo || '') : (deal.ceo || '');
 
   fetch('/api/intro-request', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ dealId: dealId, dealName: dealName, operatorName: company, operatorCeo: ceo || '' })
+    body: JSON.stringify({
+      dealId: deal.id,
+      dealName: deal.investmentName,
+      operatorName: opName,
+      operatorCeo: opCeo,
+      managementCompanyId: deal.managementCompanyId || '',
+      message: message
+    })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.success) {
-      if (btnEl) {
-        btnEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>Request Sent';
-        btnEl.style.background = 'rgba(81,190,123,0.15)';
-        btnEl.style.color = 'var(--primary)';
-        btnEl.style.border = '1px solid var(--primary)';
+      // Store in localStorage for dedup
+      localStorage.setItem('gycIntroRequested_' + deal.id, Date.now().toString());
+      // Also store in gycIntroRequests array
+      try {
+        var intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
+        if (!Array.isArray(intros)) intros = [];
+        var userEmail = '';
+        try { userEmail = JSON.parse(localStorage.getItem('gycUser') || '{}').email || ''; } catch(e2) {}
+        intros.push({ dealId: deal.id, deal: deal.investmentName, company: opName, userEmail: userEmail, timestamp: Date.now() });
+        localStorage.setItem('gycIntroRequests', JSON.stringify(intros));
+      } catch(e) {}
+
+      // Show success state in modal
+      var actionsEl = document.querySelector('.intro-confirm-actions');
+      if (actionsEl) {
+        actionsEl.innerHTML = '<div style="text-align:center;padding:8px 0;">'
+          + '<div style="width:48px;height:48px;border-radius:50%;background:rgba(81,190,123,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>'
+          + '<div style="font-family:var(--font-ui);font-size:16px;font-weight:800;color:var(--text-dark);margin-bottom:4px;">Introduction Requested!</div>'
+          + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;">Pascal will connect you with ' + esc(opName) + ' shortly. Check your email for the introduction.</div>'
+          + '<button onclick="document.getElementById(\'introConfirmOverlay\').remove()" style="margin-top:16px;padding:10px 28px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">Done</button>'
+          + '</div>';
+      }
+
+      // Update hero button
+      var heroIntroBtn = document.querySelector('button[onclick*="requestIntroduction"]');
+      if (heroIntroBtn) {
+        heroIntroBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>Request Sent';
+        heroIntroBtn.style.background = 'rgba(81,190,123,0.15)';
+        heroIntroBtn.style.color = 'var(--primary)';
+        heroIntroBtn.style.border = '1px solid var(--primary)';
+        heroIntroBtn.disabled = true;
       }
     } else {
-      restoreBtn();
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Confirm &amp; Request Introduction';
+      }
       alert('Something went wrong. Please try again.');
     }
   })
   .catch(function() {
-    restoreBtn();
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:6px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Confirm &amp; Request Introduction';
+    }
     alert('Something went wrong. Please try again.');
   });
 
   if (typeof gtag === 'function') {
-    gtag('event', 'request_introduction', { company: company, person: ceo, deal: dealName });
+    gtag('event', 'request_introduction', { company: opName, person: opCeo, deal: deal.investmentName });
   }
+}
+
+function requestIntroduction(company, ceo, dealName, btnEl) {
+  openIntroConfirmation();
 }
 
 // ========== DECK SUBMIT MODAL ==========
