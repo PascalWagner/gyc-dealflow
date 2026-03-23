@@ -6899,7 +6899,6 @@ async function renderDeal() {
             if (cat.patterns[p].test(feeStr)) {
               var pct = extractPct(feeStr);
               if (pct !== null) result[cat.key] = { pct: pct, raw: feeStr };
-              else result[cat.key] = { pct: null, raw: feeStr };
               break;
             }
           }
@@ -6998,7 +6997,7 @@ async function renderDeal() {
         }
         rows.push({
           label: cat.label,
-          dealVal: dealFee.pct !== null ? dealFee.pct.toFixed(1) + '%' : 'Charged (see PPM)',
+          dealVal: dealFee.pct.toFixed(1) + '%',
           marketVal: peerMed !== null ? peerMed.toFixed(1) + '%' : '—',
           peerCount: peerVals.length,
           verdict: verdict,
