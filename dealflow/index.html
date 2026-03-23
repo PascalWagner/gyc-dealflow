@@ -13833,8 +13833,9 @@ function isLoggedIn() {
       }
     } catch (e) { /* non-blocking — skip onboarding check on error */ }
     // Mark as checked so we don't re-check on every page load this session
-    _obUser.onboardingChecked = true;
-    localStorage.setItem('gycUser', JSON.stringify(_obUser));
+    // Re-read latest gycUser to avoid overwriting changes (e.g. impersonation)
+    const _freshOb = getUser();
+    if (_freshOb) { _freshOb.onboardingChecked = true; localStorage.setItem('gycUser', JSON.stringify(_freshOb)); }
   }
 })();
 
@@ -13861,15 +13862,18 @@ function initAuth() {
         body: JSON.stringify({ action: 'lookup', email: user.email })
       }).then(r => r.json()).then(d => {
         if (d.success && d.name && d.name.toLowerCase() !== emailPrefix) {
-          user.name = d.name;
-          user.id = d.contactId || user.id;
-          user.tier = d.tier || user.tier;
-          if (d.isAdmin) user.isAdmin = true;
-          if (d.tags) user.tags = d.tags;
-          if (d.gpType) user.gpType = d.gpType;
-          if (d.onboardingRole) user.onboardingRole = d.onboardingRole;
-          if (d.gpOnboardingComplete) user.gpOnboardingComplete = d.gpOnboardingComplete;
-          localStorage.setItem('gycUser', JSON.stringify(user));
+          // Re-read latest gycUser to avoid overwriting impersonation
+          const freshUser = getUser();
+          if (!freshUser || freshUser.token === 'impersonated') return;
+          freshUser.name = d.name;
+          freshUser.id = d.contactId || freshUser.id;
+          freshUser.tier = d.tier || freshUser.tier;
+          if (d.isAdmin) freshUser.isAdmin = true;
+          if (d.tags) freshUser.tags = d.tags;
+          if (d.gpType) freshUser.gpType = d.gpType;
+          if (d.onboardingRole) freshUser.onboardingRole = d.onboardingRole;
+          if (d.gpOnboardingComplete) freshUser.gpOnboardingComplete = d.gpOnboardingComplete;
+          localStorage.setItem('gycUser', JSON.stringify(freshUser));
           const n = d.name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
           document.getElementById('sidebarName').textContent = n;
           document.getElementById('sidebarAvatar').textContent = n.split(' ').map(x => x[0]).join('').toUpperCase().slice(0, 2);
@@ -13910,17 +13914,21 @@ function initAuth() {
 // Fetch deal stages, goals, and portfolio from Supabase and populate localStorage
 async function fetchUserDataFromSupabase(email) {
   if (!email) return;
-  // Refresh token upfront — stored JWT may be expired (Supabase tokens expire in 60 min)
+  // Skip entirely when impersonating — token is 'impersonated' so all Supabase calls fail anyway
   let token = getUserToken();
-  if (!token) return;
+  if (!token || token === 'impersonated') return;
   const user = getUser();
   if (user && user.refreshToken && typeof _supa !== 'undefined') {
     try {
       const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
       if (data?.session) {
-        user.token = data.session.access_token;
-        user.refreshToken = data.session.refresh_token;
-        localStorage.setItem('gycUser', JSON.stringify(user));
+        // Re-read latest gycUser to avoid overwriting changes (e.g. impersonation)
+        const freshUser = getUser();
+        if (freshUser && freshUser.token !== 'impersonated') {
+          freshUser.token = data.session.access_token;
+          freshUser.refreshToken = data.session.refresh_token;
+          localStorage.setItem('gycUser', JSON.stringify(freshUser));
+        }
         token = data.session.access_token;
       }
     } catch (e) { /* use existing token as fallback */ }
