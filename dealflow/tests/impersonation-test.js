@@ -437,6 +437,9 @@
       if (page === 'buybox') {
         const bbUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
         assertEqual(bbUser.tier, 'academy', 'buybox: gycUser tier is academy');
+        // Re-trigger navigateTo to ensure gate logic runs with fresh user check
+        navigateTo('buybox');
+        await wait(WAIT_MS);
         // The free gate contains "Join Academy" CTA text — this is the definitive marker
         const reportEl = document.getElementById('reportContent');
         if (reportEl) {
