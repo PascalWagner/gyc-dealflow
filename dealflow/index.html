@@ -21380,6 +21380,10 @@ function switchMiTab(tab) {
     renderDebtFunds();
     miTabRendered.debtfunds = true;
   }
+  // Reposition blur overlay for free users when switching tabs
+  if (window._miFreeUser && typeof applyMiBlurOverlay === 'function') {
+    setTimeout(function() { applyMiBlurOverlay(); }, 200);
+  }
 }
 
 function renderMiSecTab() {
@@ -21409,22 +21413,11 @@ function renderMarketIntel() {
   var _miTier = (_miUser && _miUser.tier) || 'free';
   var _miIsAdmin = typeof isAdmin === 'function' && isAdmin();
   var _miFreeUser = (_miTier === 'free' && !_miIsAdmin);
+  window._miFreeUser = _miFreeUser;
 
   // Remove any existing blur overlay
   var existingOverlay = document.getElementById('mi-blur-overlay');
   if (existingOverlay) existingOverlay.remove();
-
-  // For free users: render real content but add blur + upgrade CTA over everything after summary cards
-  if (_miFreeUser) {
-    // Disable tab clicks for free users
-    var tabBtns = document.querySelectorAll('#miTabBar .mi-tab-btn');
-    tabBtns.forEach(function(btn) {
-      if (btn.getAttribute('data-tab') !== 'sec') {
-        btn.style.opacity = '0.4';
-        btn.style.pointerEvents = 'none';
-      }
-    });
-  }
 
   // Destroy existing charts
   Object.values(miCharts).forEach(function(c) { if (c && c.destroy) c.destroy(); });
@@ -21433,40 +21426,56 @@ function renderMarketIntel() {
   // Reset rendered state so tabs re-render with fresh data
   miTabRendered = { sec: false, deals: false, dealflow: false, debtfunds: false };
 
-  // Render the currently active tab
-  switchMiTab(_miFreeUser ? 'sec' : miCurrentTab);
-
-  // After rendering, apply blur overlay for free users
+  // Render all tabs for free users so content is visible behind blur
   if (_miFreeUser) {
-    setTimeout(function() {
-      var miContent = document.getElementById('marketintelContent');
-      if (!miContent) return;
-      // Find the first chart row (grid after summary cards) to position the overlay
-      var secTab = document.getElementById('mi-tab-sec');
-      if (!secTab) return;
-      var grids = secTab.querySelectorAll('div[style*="grid-template-columns"]');
-      // Summary cards = first grid, charts start at second grid
-      if (grids.length < 2) return;
-      var firstChartRow = grids[1];
-      var offsetTop = firstChartRow.offsetTop - miContent.offsetTop;
-
-      var overlay = document.createElement('div');
-      overlay.id = 'mi-blur-overlay';
-      overlay.style.cssText = 'position:absolute;left:0;right:0;top:' + (offsetTop - 20) + 'px;bottom:0;z-index:10;pointer-events:auto;';
-      overlay.innerHTML = ''
-        + '<div style="position:absolute;inset:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:linear-gradient(to bottom,transparent 0%,var(--bg-cream) 100%);"></div>'
-        + '<div style="position:sticky;top:40%;text-align:center;padding:32px;z-index:11;">'
-        +   '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:480px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,0.12);">'
-        +     '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>'
-        +     '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Unlock Full Market Intelligence</div>'
-        +     '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">Get SEC filing trends, asset class benchmarks, deal flow analytics, and more with Academy membership.</div>'
-        +     '<a href="#" onclick="navigateTo(\'academy\');return false;" style="display:inline-block;padding:14px 32px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
-        +   '</div>'
-        + '</div>';
-      miContent.style.position = 'relative';
-      miContent.appendChild(overlay);
-    }, 100);
+    miContent = document.getElementById('marketintelContent');
+    if (miContent) miContent.style.position = 'relative';
+    // Render all tabs so they have content when switched
+    ['sec', 'deals', 'dealflow', 'debtfunds'].forEach(function(t) {
+      switchMiTab(t);
+    });
+    // Switch back to current tab
+    switchMiTab(miCurrentTab);
+    // Apply blur overlay after a tick so DOM is ready
+    setTimeout(function() { applyMiBlurOverlay(); }, 150);
+  } else {
+    switchMiTab(miCurrentTab);
   }
+}
+
+function applyMiBlurOverlay() {
+  var existing = document.getElementById('mi-blur-overlay');
+  if (existing) existing.remove();
+  if (!window._miFreeUser) return;
+
+  var miContent = document.getElementById('marketintelContent');
+  if (!miContent) return;
+
+  // Find the active tab panel
+  var activeTab = document.getElementById('mi-tab-' + miCurrentTab);
+  if (!activeTab) return;
+
+  // Find first chart/grid row after summary cards — skip the first grid (summary cards)
+  var grids = activeTab.querySelectorAll('div[style*="grid-template-columns"]');
+  var targetEl = grids.length >= 2 ? grids[1] : (grids.length === 1 ? grids[0] : null);
+  if (!targetEl) return;
+
+  var offsetTop = targetEl.getBoundingClientRect().top - miContent.getBoundingClientRect().top;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'mi-blur-overlay';
+  overlay.style.cssText = 'position:absolute;left:0;right:0;top:' + offsetTop + 'px;bottom:0;z-index:10;pointer-events:auto;';
+  overlay.innerHTML = ''
+    + '<div style="position:absolute;inset:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);mask-image:linear-gradient(to bottom,transparent 0%,black 60px);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 60px);"></div>'
+    + '<div style="position:sticky;top:40%;text-align:center;padding:32px;z-index:11;">'
+    +   '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:40px 32px;max-width:480px;margin:0 auto;box-shadow:0 8px 32px rgba(0,0,0,0.12);">'
+    +     '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>'
+    +     '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Unlock Full Market Intelligence</div>'
+    +     '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.6;">Get SEC filing trends, asset class benchmarks, deal flow analytics, and more with Academy membership.</div>'
+    +     '<a href="#" onclick="navigateTo(\'academy\');return false;" style="display:inline-block;padding:14px 32px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+    +   '</div>'
+    + '</div>';
+  miContent.appendChild(overlay);
 }
 
 function renderSECData(secData) {
