@@ -687,29 +687,62 @@ body {
 
 /* ─── Mobile ─── */
 @media (max-width: 899px) {
+  .split-layout {
+    flex-direction: column;
+  }
   .mobile-header {
     display: block;
     background: linear-gradient(160deg, #0F2D33, #1F5159);
-    padding: 40px 24px 32px;
-  }
-  .mobile-screenshot {
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-    background: #1a1a1a;
-  }
-  .mobile-screenshot .screen-deals { display: block; opacity: 1; position: relative; }
-  .mobile-caption {
+    padding: 48px 24px 28px;
+    padding-top: calc(48px + env(safe-area-inset-top, 0px));
     text-align: center;
-    margin-top: 16px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.5);
+  }
+  .mobile-screenshot { display: none; }
+  .mobile-caption { display: none; }
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .mobile-brand .brand-mark-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .mobile-brand .brand-mark-text {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: 17px;
+    color: #fff;
+  }
+  .mobile-tagline {
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.4;
   }
   .right-panel {
     min-height: auto;
     flex: 1;
-    padding: 32px 24px 40px;
+    padding: 28px 20px 40px;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
   }
+  .right-panel .brand-mark { display: none; }
+  .form-container { max-width: 100%; }
+  .form-title { font-size: 24px; margin-bottom: 6px; }
+  .form-desc { font-size: 14px; margin-bottom: 24px; }
+  .field-input { padding: 14px 16px; font-size: 16px; }
+  .submit-btn { padding: 14px 20px; font-size: 16px; margin-top: 16px; }
+  .helper-text { margin-top: 16px; font-size: 12px; }
+  .success-state h2 { font-size: 22px; }
+  .success-state p { font-size: 13px; }
 }
 @media (min-width: 900px) {
   .mobile-header { display: none; }
@@ -943,27 +976,11 @@ body {
 
   <!-- Mobile header -->
   <div class="mobile-header">
-    <div class="mobile-screenshot">
-      <div class="screen-deals" style="padding:16px;font-family:'Plus Jakarta Sans',sans-serif;">
-        <div style="font-family:'DM Serif Display',serif;font-size:14px;color:#141413;margin-bottom:8px;">Deal Flow</div>
-        <div class="deal-grid" style="grid-template-columns:1fr;">
-          <div class="deal-card">
-            <div class="deal-card-header">
-              <div class="deal-card-icon" style="background:#EBF5FF;">&#x1F3E2;</div>
-              <div>
-                <div class="deal-card-name">Meridian Self Storage Fund III</div>
-                <div class="deal-card-sponsor">Meridian Capital Partners</div>
-              </div>
-            </div>
-            <div class="deal-card-metrics">
-              <div class="deal-metric"><strong>8.2%</strong>Pref</div>
-              <div class="deal-metric"><strong>18.5%</strong>IRR</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="mobile-brand">
+      <div class="brand-mark-icon">GYC</div>
+      <div class="brand-mark-text">Grow Your Cashflow</div>
     </div>
-    <div class="mobile-caption">Every deal vetted. Every sponsor tracked.</div>
+    <div class="mobile-tagline">Research vetted sponsors. Invest with a plan.</div>
   </div>
 
   <!-- ─── Right: Form ─── -->
