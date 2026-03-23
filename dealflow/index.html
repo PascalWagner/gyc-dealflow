@@ -16557,7 +16557,7 @@ function printMyPlan() {
 
     // Active investments
     if (activeItems.length > 0) {
-      holdingsHtml += '<div style="margin-top:10px;margin-bottom:6px;font-family:\'Plus Jakarta Sans\',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;">Active Investments</div>'
+      holdingsHtml += '<div style="margin-top:16px;margin-bottom:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#51BE7B;">Active Investments</div>'
         + '<table class="p-table"><thead><tr><th class="left">Deal</th><th class="left">Operator</th><th>Asset Class</th><th>Invested</th><th>Date</th></tr></thead><tbody>';
       activeItems.forEach(function(p) {
         holdingsHtml += '<tr>'
@@ -16572,7 +16572,7 @@ function printMyPlan() {
 
     // Exited investments
     if (exitedItems.length > 0) {
-      holdingsHtml += '<div style="margin-top:14px;margin-bottom:6px;font-family:\'Plus Jakarta Sans\',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#8A9AA0;">Exited Investments</div>'
+      holdingsHtml += '<div style="margin-top:24px;margin-bottom:10px;font-family:\'Plus Jakarta Sans\',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#8A9AA0;">Exited Investments</div>'
         + '<table class="p-table"><thead><tr><th class="left">Deal</th><th class="left">Operator</th><th>Asset Class</th><th>Invested</th><th>Date</th></tr></thead><tbody>';
       exitedItems.forEach(function(p) {
         holdingsHtml += '<tr class="muted">'
@@ -16599,70 +16599,70 @@ function printMyPlan() {
     + '<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
     + '<style>'
     + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
-    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.45; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
-    + '.page { max-width: 760px; margin: 0 auto; padding: 36px 40px; }'
+    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.5; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
+    + '.page { max-width: 800px; margin: 0 auto; padding: 60px 64px; }'
 
     // Header
-    + '.hdr { display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:12px; border-bottom:2px solid #0A1E21; margin-bottom:24px; }'
-    + '.hdr-logo { font-family:"DM Serif Display",Georgia,serif; font-size:20px; color:#0A1E21; }'
-    + '.hdr-sub { font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; color:#8A9AA0; letter-spacing:0.5px; margin-top:1px; }'
+    + '.hdr { display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:16px; border-bottom:2px solid #0A1E21; margin-bottom:36px; }'
+    + '.hdr-logo { font-family:"DM Serif Display",Georgia,serif; font-size:22px; color:#0A1E21; }'
+    + '.hdr-sub { font-family:"Plus Jakarta Sans",sans-serif; font-size:11px; color:#8A9AA0; letter-spacing:0.5px; margin-top:2px; }'
     + '.hdr-right { text-align:right; font-family:"Plus Jakarta Sans",sans-serif; }'
-    + '.hdr-name { font-size:12px; font-weight:700; color:#141413; }'
-    + '.hdr-date { font-size:9px; color:#8A9AA0; margin-top:1px; }'
+    + '.hdr-name { font-size:14px; font-weight:700; color:#141413; }'
+    + '.hdr-date { font-size:11px; color:#8A9AA0; margin-top:2px; }'
 
     // Goal hero
-    + '.goal { margin-bottom:16px; }'
-    + '.goal-badge { display:inline-block; padding:3px 10px; border-radius:100px; font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }'
-    + '.goal h1 { font-family:"DM Serif Display",Georgia,serif; font-size:24px; font-weight:400; color:#141413; line-height:1.15; margin-bottom:0; }'
+    + '.goal { margin-bottom:24px; }'
+    + '.goal-badge { display:inline-block; padding:4px 14px; border-radius:100px; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; }'
+    + '.goal h1 { font-family:"DM Serif Display",Georgia,serif; font-size:30px; font-weight:400; color:#141413; line-height:1.2; margin-bottom:0; }'
 
     // Progress
-    + '.prog { margin-bottom:18px; }'
-    + '.prog-track { height:8px; background:#EDF1F2; border-radius:4px; overflow:hidden; margin-bottom:5px; }'
-    + '.prog-fill { height:100%; border-radius:4px; }'
-    + '.prog-labels { display:flex; justify-content:space-between; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; }'
+    + '.prog { margin-bottom:28px; }'
+    + '.prog-track { height:10px; background:#EDF1F2; border-radius:5px; overflow:hidden; margin-bottom:8px; }'
+    + '.prog-fill { height:100%; border-radius:5px; }'
+    + '.prog-labels { display:flex; justify-content:space-between; font-family:"Plus Jakarta Sans",sans-serif; font-size:12px; }'
     + '.prog-left { font-weight:700; color:#141413; }'
     + '.prog-right { font-weight:600; color:#8A9AA0; }'
 
     // Thesis
-    + '.thesis-box { background:#FAF9F5; border-radius:8px; padding:14px 18px; margin-bottom:16px; }'
-    + '.thesis-label { font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#8A9AA0; margin-bottom:5px; }'
-    + '.thesis-text { font-size:13px; line-height:1.65; color:#607179; }'
+    + '.thesis-box { background:#FAF9F5; border-radius:10px; padding:20px 24px; margin-bottom:24px; }'
+    + '.thesis-label { font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#8A9AA0; margin-bottom:8px; }'
+    + '.thesis-text { font-size:15px; line-height:1.75; color:#607179; }'
     + '.thesis-text strong { color:#141413; }'
 
     // Criteria pills
-    + '.criteria { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }'
-    + '.crit-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:100px; border:1px solid #EDF1F2; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; }'
+    + '.criteria { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:28px; }'
+    + '.crit-pill { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:100px; border:1px solid #DDE5E8; font-family:"Plus Jakarta Sans",sans-serif; font-size:12px; }'
     + '.crit-pill-label { color:#8A9AA0; font-weight:600; }'
     + '.crit-pill-val { color:#141413; font-weight:700; }'
 
     // Section
-    + '.p-section { margin-bottom:18px; }'
-    + '.p-section h3 { font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#8A9AA0; margin-bottom:8px; padding-bottom:5px; border-bottom:1px solid #EDF1F2; }'
-    + '.p-section p { font-size:11px; color:#607179; line-height:1.45; margin-bottom:8px; }'
+    + '.p-section { margin-bottom:28px; }'
+    + '.p-section h3 { font-family:"Plus Jakarta Sans",sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#8A9AA0; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid #EDF1F2; }'
+    + '.p-section p { font-size:13px; color:#607179; line-height:1.6; margin-bottom:12px; }'
     + '.p-section p strong { color:#141413; }'
 
     // Tables
-    + '.p-table { width:100%; border-collapse:collapse; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; }'
-    + '.p-table th { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A9AA0; text-align:center; padding:0 5px 5px 0; border-bottom:1px solid #EDF1F2; }'
+    + '.p-table { width:100%; border-collapse:collapse; font-family:"Plus Jakarta Sans",sans-serif; font-size:12px; }'
+    + '.p-table th { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A9AA0; text-align:center; padding:0 8px 8px 0; border-bottom:1px solid #EDF1F2; }'
     + '.p-table th.left { text-align:left; }'
-    + '.p-table td { padding:4px 5px 4px 0; border-bottom:1px solid #EDF1F2; text-align:center; color:#141413; font-weight:600; }'
+    + '.p-table td { padding:8px 8px 8px 0; border-bottom:1px solid #EDF1F2; text-align:center; color:#141413; font-weight:600; }'
     + '.p-table td.left { text-align:left; }'
     + '.p-table tr:last-child td { border-bottom:none; }'
     + '.p-table .muted td, .p-table tr.muted td { color:#8A9AA0; font-weight:400; }'
-    + '.year-row td { font-weight:700 !important; background:#FAF9F5; font-size:10px; padding:4px 5px !important; }'
-    + '.total-row td { font-weight:700 !important; border-top:2px solid #141413; padding-top:6px !important; }'
-    + '.dot { display:inline-block; width:5px; height:5px; border-radius:50%; border:1.5px solid #DDE5E8; margin-right:5px; vertical-align:middle; box-sizing:border-box; }'
+    + '.year-row td { font-weight:700 !important; background:#FAF9F5; font-size:12px; padding:8px !important; }'
+    + '.total-row td { font-weight:700 !important; border-top:2px solid #141413; padding-top:10px !important; }'
+    + '.dot { display:inline-block; width:7px; height:7px; border-radius:50%; border:1.5px solid #DDE5E8; margin-right:6px; vertical-align:middle; box-sizing:border-box; }'
     + '.dot.filled { border:none; }'
-    + '.muted-text { color:#8A9AA0; font-size:9px; }'
+    + '.muted-text { color:#8A9AA0; font-size:10px; }'
 
     // Footer
-    + '.ftr { margin-top:20px; padding-top:8px; border-top:1px solid #EDF1F2; display:flex; justify-content:space-between; font-family:"Plus Jakarta Sans",sans-serif; font-size:8px; color:#8A9AA0; }'
+    + '.ftr { margin-top:32px; padding-top:12px; border-top:1px solid #EDF1F2; display:flex; justify-content:space-between; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; color:#8A9AA0; }'
     + '.ftr-center { text-align:center; flex:1; }'
-    + '.disclaimer { margin-top:14px; padding:8px 12px; background:#FAF9F5; border-radius:4px; font-family:"Plus Jakarta Sans",sans-serif; font-size:7.5px; line-height:1.35; color:#8A9AA0; }'
+    + '.disclaimer { margin-top:24px; padding:14px 18px; background:#FAF9F5; border-radius:8px; font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; line-height:1.5; color:#8A9AA0; }'
 
     // Print
-    + '.page-break { page-break-before:always; padding-top:6px; }'
-    + '@media print { body { padding:0; } .page { padding:10px 0; } .year-row { page-break-after:avoid; } .disclaimer { page-break-inside:avoid; } }'
+    + '.page-break { page-break-before:always; padding-top:12px; }'
+    + '@media print { body { padding:0; } .page { padding:40px 48px; } .year-row { page-break-after:avoid; } .disclaimer { page-break-inside:avoid; } }'
     + '</style></head><body><div class="page">';
 
   // =============================================
