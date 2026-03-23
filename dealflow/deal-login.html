@@ -630,6 +630,9 @@ function getReturnUrl() {
       gpOnboardingComplete: d.gpOnboardingComplete || false,
       academyStart: d.academyStart || null,
       academyEnd: d.academyEnd || null,
+      autoRenew: d.autoRenew !== false,
+      cardLast4: d.cardLast4 || null,
+      cardBrand: d.cardBrand || null,
       loggedInAt: new Date().toISOString()
     }));
     window.location.href = getReturnUrl();
@@ -698,6 +701,9 @@ async function handleSignIn() {
           onboardingRole: lookupResp.onboardingRole || null,
           academyStart: lookupResp.academyStart || null,
           academyEnd: lookupResp.academyEnd || null,
+          autoRenew: lookupResp.autoRenew !== false,
+          cardLast4: lookupResp.cardLast4 || null,
+          cardBrand: lookupResp.cardBrand || null,
           loggedInAt: new Date().toISOString()
         }));
         window.location.href = getReturnUrl();

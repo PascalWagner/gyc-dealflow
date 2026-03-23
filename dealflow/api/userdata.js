@@ -350,6 +350,18 @@ async function handlePost(req, res, supabase, user) {
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
   }
 
+  // Handle auto-renew preference
+  if (type === 'autoRenew') {
+    const { data: updated, error } = await supabase
+      .from('user_profiles')
+      .update({ auto_renew: !!data.autoRenew })
+      .eq('id', user.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
+  }
+
   // Handle notif_prefs: update user_profiles.notif_frequency + sync GHL tag
   if (type === 'notif_prefs') {
     const freq = data.frequency === 'off' ? 'off' : 'weekly';

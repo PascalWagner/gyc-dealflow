@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       // Fetch onboarding state from profile
       const { data: existingProfile } = await adminSupabase
         .from('user_profiles')
-        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end')
+        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end, auto_renew, card_last4, card_brand')
         .eq('id', user.id)
         .single();
 
@@ -148,6 +148,9 @@ export default async function handler(req, res) {
         gpOnboardingComplete: existingProfile?.gp_onboarding_complete || false,
         academyStart: existingProfile?.academy_start || null,
         academyEnd: existingProfile?.academy_end || null,
+        autoRenew: existingProfile?.auto_renew !== false,
+        cardLast4: existingProfile?.card_last4 || null,
+        cardBrand: existingProfile?.card_brand || null,
         ...(gpInfo && {
           gpType: gpInfo.gp_type,
           managementCompanyId: gpInfo.management_company_id,
@@ -227,7 +230,7 @@ export default async function handler(req, res) {
     // Fetch academy dates
     const { data: loginProfileData } = await adminSupabase
       .from('user_profiles')
-      .select('academy_start, academy_end')
+      .select('academy_start, academy_end, auto_renew, card_last4, card_brand')
       .eq('id', data.user.id)
       .single();
 
@@ -242,6 +245,9 @@ export default async function handler(req, res) {
       refreshToken: data.session.refresh_token, // for token refresh
       academyStart: loginProfileData?.academy_start || null,
       academyEnd: loginProfileData?.academy_end || null,
+      autoRenew: loginProfileData?.auto_renew !== false,
+      cardLast4: loginProfileData?.card_last4 || null,
+      cardBrand: loginProfileData?.card_brand || null,
       ...(gpInfo && {
         gpType: gpInfo.gp_type,
         managementCompanyId: gpInfo.management_company_id,
