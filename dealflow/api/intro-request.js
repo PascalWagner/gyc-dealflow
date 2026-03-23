@@ -45,21 +45,29 @@ export default async function handler(req, res) {
     let contactEmail = '';
     let contactName = '';
 
-    // 2. Store in Supabase
-    const { error: insertError } = await supabase
-      .from('intro_requests')
-      .insert({
-        user_id: user.id,
-        user_email: user.email,
-        deal_id: dealId || null,
-        deal_name: dealName,
-        operator_name: operatorName,
-        operator_ceo: operatorCeo || null,
-        message: message || null,
-        status: contactEmail ? 'sent' : 'pending'
-      });
-    if (insertError) {
-      console.warn('intro_requests insert failed:', insertError.message);
+    // 2. Store in Supabase (non-blocking — don't fail the request if DB insert fails)
+    try {
+      // Validate deal_id is a proper UUID before inserting, otherwise set null
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const safeDealId = dealId && uuidRegex.test(dealId) ? dealId : null;
+
+      const { error: insertError } = await supabase
+        .from('intro_requests')
+        .insert({
+          user_id: user.id,
+          user_email: user.email,
+          deal_id: safeDealId,
+          deal_name: dealName,
+          operator_name: operatorName,
+          operator_ceo: operatorCeo || null,
+          message: message || null,
+          status: 'pending'
+        });
+      if (insertError) {
+        console.warn('intro_requests insert failed:', insertError.message);
+      }
+    } catch (dbErr) {
+      console.warn('intro_requests insert threw:', dbErr.message);
     }
 
     // 3. Send email via Resend
@@ -135,61 +143,60 @@ export default async function handler(req, res) {
       }
     }
 
-    // 4. GHL sync — add note + tag
-    const ghlResp = await ghlFetch(
-      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(user.email)}`
-    );
-
+    // 4. GHL sync — add note + tag (non-blocking)
     let ghlContactId = null;
-    if (ghlResp?.ok) {
-      const ghlData = await ghlResp.json();
-      const contact = (ghlData.contacts || [])[0];
-      if (contact) {
-        ghlContactId = contact.id;
-
-        const noteBody = [
-          `🤝 Introduction Requested`,
-          `Deal: ${dealName}`,
-          `Operator: ${operatorName}`,
-          contactEmail ? `Intro sent to: ${contactName || contactEmail}` : 'No IR contact — Pascal notified',
-          message ? `Message: ${message}` : null,
-          `Date: ${new Date().toISOString().split('T')[0]}`,
-          `Source: Deal Database`
-        ].filter(Boolean).join('\n');
-
-        await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${ghlContactId}/notes`, {
-          method: 'POST',
-          body: JSON.stringify({ body: noteBody })
-        });
-
-        const fullResp = await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${ghlContactId}`);
-        if (fullResp?.ok) {
-          const full = await fullResp.json();
-          const existingTags = (full.contact || full).tags || [];
-          if (!existingTags.includes('intro-requested')) {
-            await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${ghlContactId}`, {
-              method: 'PUT',
-              body: JSON.stringify({ tags: [...existingTags, 'intro-requested'] })
-            });
+    try {
+      const ghlResp = await ghlFetch(
+        `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(user.email)}`
+      );
+      if (ghlResp?.ok) {
+        const ghlData = await ghlResp.json();
+        const contact = (ghlData.contacts || [])[0];
+        if (contact) {
+          ghlContactId = contact.id;
+          const noteBody = [
+            `🤝 Introduction Requested`,
+            `Deal: ${dealName}`,
+            `Operator: ${operatorName}`,
+            'No IR contact — Pascal notified',
+            `Date: ${new Date().toISOString().split('T')[0]}`,
+            `Source: Deal Database`
+          ].join('\n');
+          await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${ghlContactId}/notes`, {
+            method: 'POST',
+            body: JSON.stringify({ body: noteBody })
+          });
+          const fullResp = await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${ghlContactId}`);
+          if (fullResp?.ok) {
+            const full = await fullResp.json();
+            const existingTags = (full.contact || full).tags || [];
+            if (!existingTags.includes('intro-requested')) {
+              await ghlFetch(`https://rest.gohighlevel.com/v1/contacts/${ghlContactId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ tags: [...existingTags, 'intro-requested'] })
+              });
+            }
           }
         }
       }
+    } catch (ghlErr) {
+      console.warn('GHL sync failed (non-blocking):', ghlErr.message);
     }
 
-    // 5. Slack notification
-    const slackWebhook = process.env.SLACK_INTRO_WEBHOOK_URL;
-    if (slackWebhook) {
-      try {
+    // 5. Slack notification (non-blocking)
+    try {
+      const slackWebhook = process.env.SLACK_INTRO_WEBHOOK_URL;
+      if (slackWebhook) {
         await fetch(slackWebhook, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: `🤝 *New Intro Request*\n• *Deal:* ${dealName}\n• *Operator:* ${operatorName}\n• *LP:* ${userName} (${user.email})\n• *Contact:* ${contactEmail ? `${contactName || contactEmail} (email sent)` : '⚠️ No IR contact — Pascal notified'}\n• *Date:* ${new Date().toISOString().split('T')[0]}`
+            text: `🤝 *New Intro Request*\n• *Deal:* ${dealName}\n• *Operator:* ${operatorName}\n• *LP:* ${userName} (${user.email})\n• *Contact:* ⚠️ No IR contact — Pascal notified\n• *Date:* ${new Date().toISOString().split('T')[0]}`
           })
         });
-      } catch (slackErr) {
-        console.warn('Slack notification failed:', slackErr.message);
       }
+    } catch (slackErr) {
+      console.warn('Slack notification failed:', slackErr.message);
     }
 
     return res.status(200).json({
