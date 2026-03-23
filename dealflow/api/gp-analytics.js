@@ -80,9 +80,9 @@ export default async function handler(req, res) {
       // Count total interactions per deal
       dealViews[s.deal_id] = (dealViews[s.deal_id] || 0) + 1;
 
-      if (s.stage === 'interested' || s.stage === 'saved') totalSaves++;
-      else if (s.stage === 'duediligence') totalVetting++;
-      else if (s.stage === 'portfolio') totalInvested++;
+      if (s.stage === 'saved' || s.stage === 'interested') totalSaves++;
+      else if (s.stage === 'vetting' || s.stage === 'duediligence') totalVetting++;
+      else if (s.stage === 'invested' || s.stage === 'portfolio') totalInvested++;
     }
 
     // 4. Recent activity (last 10) — enriched with capital signals
@@ -111,9 +111,9 @@ export default async function handler(req, res) {
 
       // Determine intent tier
       let intentTier = 'browsing';
-      if ((s.stage === 'duediligence' || s.stage === 'portfolio') && capital > 50000) {
+      if ((s.stage === 'vetting' || s.stage === 'duediligence' || s.stage === 'invested' || s.stage === 'portfolio') && capital > 50000) {
         intentTier = 'high';
-      } else if (s.stage === 'interested' || s.stage === 'saved' || s.stage === 'duediligence') {
+      } else if (s.stage === 'saved' || s.stage === 'interested' || s.stage === 'vetting' || s.stage === 'duediligence') {
         intentTier = 'engaged';
       }
 
@@ -148,7 +148,7 @@ export default async function handler(req, res) {
       if (dt < monthAgo) continue;
       const userGoal = capitalMap[s.user_id] || {};
       const capital = userGoal.capital_available;
-      if ((s.stage === 'duediligence' || s.stage === 'portfolio') && capital > 50000) {
+      if ((s.stage === 'vetting' || s.stage === 'duediligence' || s.stage === 'invested' || s.stage === 'portfolio') && capital > 50000) {
         highIntentSet.add(s.user_id);
       }
     }
@@ -174,9 +174,9 @@ export default async function handler(req, res) {
       monday.setDate(monday.getDate() - ((day + 6) % 7));
       const key = monday.toISOString().slice(0, 10);
       if (weeklyMap[key]) {
-        if (s.stage === 'interested' || s.stage === 'saved') weeklyMap[key].interested++;
-        else if (s.stage === 'duediligence') weeklyMap[key].duediligence++;
-        else if (s.stage === 'portfolio') weeklyMap[key].portfolio++;
+        if (s.stage === 'saved' || s.stage === 'interested') weeklyMap[key].interested++;
+        else if (s.stage === 'vetting' || s.stage === 'duediligence') weeklyMap[key].duediligence++;
+        else if (s.stage === 'invested' || s.stage === 'portfolio') weeklyMap[key].portfolio++;
       }
     }
 

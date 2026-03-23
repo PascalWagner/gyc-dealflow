@@ -588,7 +588,7 @@ async function growthMetrics(supabase) {
   const dealsCumulative = cumulativeByWeek(activeDeals, 'added_date');
 
   // Portfolio = funded
-  const portfolioStages = stages.filter(s => s.stage === 'portfolio');
+  const portfolioStages = stages.filter(s => s.stage === 'invested' || s.stage === 'portfolio');
 
   // Growth rates (this week vs last week)
   function growthRate(arr) {

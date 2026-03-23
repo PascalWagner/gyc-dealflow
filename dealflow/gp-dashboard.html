@@ -3139,7 +3139,7 @@ function renderLPActivity(analytics) {
     }
 
     // Stage label
-    var stageLabel = (item.stage === 'interested' || item.stage === 'saved') ? 'Saved deal' : item.stage === 'duediligence' ? 'Moved to vetting' : item.stage === 'portfolio' ? 'Marked as invested' : item.stage;
+    var stageLabel = (item.stage === 'saved' || item.stage === 'interested') ? 'Saved deal' : (item.stage === 'vetting' || item.stage === 'duediligence') ? 'Moved to vetting' : (item.stage === 'invested' || item.stage === 'portfolio') ? 'Marked as invested' : item.stage;
 
     // Capital signal
     var signalParts = [stageLabel];

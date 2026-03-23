@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         for (const row of publicInvestors) {
           const name = row.user_profiles?.full_name;
           if (!name) continue;
-          if (row.stage === 'portfolio') {
+          if (row.stage === 'invested' || row.stage === 'portfolio') {
             result.namedInvestors.push(name);
           } else {
             result.namedWatchers.push(name);

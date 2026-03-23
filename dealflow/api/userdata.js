@@ -497,7 +497,7 @@ async function handlePost(req, res, supabase, user) {
       await supabase.from('user_deal_stages').upsert({
         user_id: user.id,
         deal_id: result.deal_id,
-        stage: 'portfolio',
+        stage: 'invested',
         notes: '',
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,deal_id', ignoreDuplicates: true }).catch(() => {});

@@ -3955,9 +3955,8 @@ function syncStageToDb(dealId, stage) {
   try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
   if (!user || !user.token) return;
 
-  // Map new stage names back to DB format
-  var dbStageMap = { 'browse': 'new', 'saved': 'saved', 'vetting': 'duediligence', 'diligence': 'diligence', 'decision': 'decision', 'ready': 'decision', 'invested': 'portfolio', 'passed': 'passed' };
-  var dbStage = dbStageMap[stage] || stage;
+  // Normalize stage name (no more legacy reverse-mapping needed)
+  var dbStage = stage;
 
   fetch('/api/userdata', {
     method: 'POST',

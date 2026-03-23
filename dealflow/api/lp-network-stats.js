@@ -116,7 +116,7 @@ export default async function handler(req, res) {
     const { count: totalVetting } = await supabase
       .from('user_deal_stages')
       .select('id', { count: 'exact', head: true })
-      .eq('stage', 'duediligence');
+      .in('stage', ['vetting', 'duediligence']);
 
     return res.status(200).json({
       totalLPs: totalLPs || 0,
