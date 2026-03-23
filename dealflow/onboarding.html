@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Onboarding - GYC Dealflow</title>
+<title>Welcome - GYC Dealflow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1167,6 +1167,11 @@ select.form-input { cursor: pointer; appearance: auto; }
   .network-stats-grid { grid-template-columns: 1fr; }
   .role-card-icon { width: 44px; height: 44px; }
 }
+
+/* Hide number input spinner arrows */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
 </style>
 </head>
 <body>
@@ -1186,8 +1191,8 @@ select.form-input { cursor: pointer; appearance: auto; }
         <div class="gyc-logo-sub">Dealflow Platform</div>
       </div>
       <div class="step-header">
-        <div class="step-title">Let's get you in front of investors.</div>
-        <div class="step-subtitle">First, what's your name?</div>
+        <div class="step-title">Welcome! What's your name?</div>
+        <div class="step-subtitle">Let's get to know each other.</div>
       </div>
       <div class="step-body">
         <div class="form-grid">
@@ -1223,14 +1228,14 @@ select.form-input { cursor: pointer; appearance: auto; }
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             </div>
             <div class="role-card-title">I'm an Investor (LP)</div>
-            <div class="role-card-desc">Build a cash-flowing portfolio with vetted deals matched to my goals</div>
+            <div class="role-card-desc">Find and vet private deals matched to my goals</div>
           </div>
           <div class="role-card" onclick="selectRole('gp')" id="roleGp">
             <div class="role-card-icon gp-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
             </div>
             <div class="role-card-title">I'm an Operator / Sponsor (GP)</div>
-            <div class="role-card-desc">Fill my deals with qualified, accredited investors who are ready to deploy</div>
+            <div class="role-card-desc">Get my deals in front of qualified, accredited investors</div>
           </div>
         </div>
       </div>
@@ -1241,6 +1246,126 @@ select.form-input { cursor: pointer; appearance: auto; }
         </button>
         <button class="btn-primary" id="roleNextBtn" onclick="confirmRole()" disabled>
           Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== LP STEP: Goal Selection (U3) ===== -->
+    <div class="step" id="stepLpGoal">
+      <div class="step-header">
+        <div class="step-counter">Step 1 of 3</div>
+        <div class="step-title">What's your #1 investing goal right now?</div>
+        <div class="step-subtitle">This shapes everything &mdash; which deals you see first, how we sort them, and what success looks like for you.</div>
+      </div>
+      <div class="step-body">
+        <div class="role-cards" style="grid-template-columns:1fr;">
+          <div class="role-card" onclick="selectGoal('cashflow')" id="goalCashflow" style="text-align:left;display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="font-size:32px;flex-shrink:0;">&#128176;</div>
+            <div>
+              <div class="role-card-title" style="font-size:16px;">Build Passive Income</div>
+              <div class="role-card-desc" style="font-size:13px;margin-top:4px;">I want predictable monthly/quarterly income from my investments</div>
+            </div>
+          </div>
+          <div class="role-card" onclick="selectGoal('tax')" id="goalTax" style="text-align:left;display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="font-size:32px;flex-shrink:0;">&#127974;</div>
+            <div>
+              <div class="role-card-title" style="font-size:16px;">Reduce My Tax Bill</div>
+              <div class="role-card-desc" style="font-size:13px;margin-top:4px;">I'm getting crushed on taxes and want to legally offset my income</div>
+            </div>
+          </div>
+          <div class="role-card" onclick="selectGoal('growth')" id="goalGrowth" style="text-align:left;display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="font-size:32px;flex-shrink:0;">&#128640;</div>
+            <div>
+              <div class="role-card-title" style="font-size:16px;">Grow My Wealth</div>
+              <div class="role-card-desc" style="font-size:13px;margin-top:4px;">I want to 2x or more &mdash; I'm playing for appreciation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToStep(1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- ===== LP STEP: Deal Count (U4) ===== -->
+    <div class="step" id="stepLpDeals">
+      <div class="step-header">
+        <div class="step-counter">Step 2 of 3</div>
+        <div class="step-title">How many deals have you invested in as an LP?</div>
+        <div class="step-subtitle">Syndications, private funds, real estate deals &mdash; anything outside of stocks, 401k, or your primary home.</div>
+      </div>
+      <div class="step-body">
+        <div style="max-width:360px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px;">
+            <button class="btn-secondary" onclick="adjustDealCount(-1)" style="width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;font-weight:700;">−</button>
+            <input type="number" id="lpDealCountInput" min="0" max="999" value="" placeholder="0"
+              style="width:100px;text-align:center;font-family:var(--font-headline);font-size:42px;color:var(--text-dark);border:2px solid var(--border);border-radius:var(--radius);padding:12px 8px;background:var(--bg-card);outline:none;-moz-appearance:textfield;"
+              oninput="onDealCountChange()">
+            <button class="btn-secondary" onclick="adjustDealCount(1)" style="width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;font-weight:700;">+</button>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
+            <button class="pill-option" onclick="setDealCount(0)">None yet</button>
+            <button class="pill-option" onclick="setDealCount(2)">1&ndash;3</button>
+            <button class="pill-option" onclick="setDealCount(7)">4&ndash;10</button>
+            <button class="pill-option" onclick="setDealCount(15)">10+</button>
+          </div>
+          <div id="dealCountFeedback" style="text-align:center;font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;min-height:48px;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);display:none;"></div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToLpStep('stepLpGoal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" id="dealCountNextBtn" onclick="saveDealCount()">
+          Next
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== LP STEP: Baseline Income (U5) ===== -->
+    <div class="step" id="stepLpBaseline">
+      <div class="step-header">
+        <div class="step-counter">Step 3 of 3</div>
+        <div class="step-title">Where are you starting from?</div>
+        <div class="step-subtitle" id="baselineSubtitle">What's your current passive income? Rental checks, fund distributions, interest &mdash; anything that hits your account without you working for it.</div>
+      </div>
+      <div class="step-body">
+        <div style="max-width:440px;margin:0 auto;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;" id="baselinePills">
+            <button class="pill-option" onclick="selectBaseline(0)">$0 &mdash; starting fresh</button>
+            <button class="pill-option" onclick="selectBaseline(6000)">~$500/mo</button>
+            <button class="pill-option" onclick="selectBaseline(12000)">~$1K/mo</button>
+            <button class="pill-option" onclick="selectBaseline(24000)">~$2K/mo</button>
+            <button class="pill-option" onclick="selectBaseline(60000)">~$5K/mo</button>
+            <button class="pill-option" onclick="selectBaseline(120000)">~$10K+/mo</button>
+            <button class="pill-option" onclick="showCustomBaseline()">Custom</button>
+          </div>
+          <div id="customBaselineWrap" style="display:none;text-align:center;margin-bottom:16px;">
+            <div style="display:inline-flex;align-items:center;gap:8px;">
+              <span style="font-family:var(--font-ui);font-size:18px;color:var(--text-muted);">$</span>
+              <input type="number" id="customBaselineInput" min="0" placeholder="Annual amount"
+                style="width:180px;font-family:var(--font-ui);font-size:18px;padding:10px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);color:var(--text-dark);outline:none;"
+                oninput="onCustomBaselineChange()">
+              <span style="font-family:var(--font-ui);font-size:14px;color:var(--text-muted);">/yr</span>
+            </div>
+          </div>
+          <div id="baselineFeedback" style="text-align:center;font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);display:none;"></div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToLpStep('stepLpDeals')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" id="baselineNextBtn" onclick="completeLpOnboarding()">
+          <span id="baselineBtnText">Start Browsing Deals</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
@@ -1321,8 +1446,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step3">
       <div class="step-header">
         <div class="step-counter">Step 1 of 8</div>
-        <div class="step-title">Tell us about your operation.</div>
-        <div class="step-subtitle">We'll create your operator profile so investors can find you.</div>
+        <div class="step-title">What's your firm?</div>
+        <div class="step-subtitle">We'll create your operator profile from this</div>
       </div>
       <div class="step-body">
         <div class="form-grid">
@@ -1360,8 +1485,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step4">
       <div class="step-header">
         <div class="step-counter">Step 2 of 8</div>
-        <div class="step-title">What do you build?</div>
-        <div class="step-subtitle">This helps us match your deals to investors who are actively looking for these asset classes.</div>
+        <div class="step-title">What asset classes do you operate in?</div>
+        <div class="step-subtitle">This helps us match your deals to the right investors</div>
       </div>
       <div class="step-body">
         <div class="pill-grid" id="assetClassPills">
@@ -1384,8 +1509,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step5">
       <div class="step-header">
         <div class="step-counter">Step 3 of 8</div>
-        <div class="step-title">When an LP wants in, who do we call?</div>
-        <div class="step-subtitle">We make direct introductions \u2014 no forms, no middlemen. This person gets the warm intro.</div>
+        <div class="step-title">Who should we introduce investors to?</div>
+        <div class="step-subtitle">When an LP is interested in your deal, we connect them directly to this person</div>
       </div>
       <div class="step-body">
         <div class="ir-toggle-row" onclick="toggleIrSelf()">
@@ -1429,8 +1554,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step6">
       <div class="step-header">
         <div class="step-counter">Step 4 of 8</div>
-        <div class="step-title">One quick agreement.</div>
-        <div class="step-subtitle">Standard listing terms \u2014 no exclusivity, no fees to list. Takes 30 seconds.</div>
+        <div class="step-title">Operator Listing Agreement</div>
+        <div class="step-subtitle">Review and accept the terms for listing your deals on the platform</div>
       </div>
       <div class="step-body">
         <!-- Offering type selector -->
@@ -1568,8 +1693,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step7">
       <div class="step-header">
         <div class="step-counter">Step 5 of 8</div>
-        <div class="step-title">Drop your deck.</div>
-        <div class="step-subtitle">We'll use AI to extract the key terms automatically \u2014 pref return, hold period, minimums, everything.</div>
+        <div class="step-title">Upload your deal</div>
+        <div class="step-subtitle">We'll use AI to extract the key terms from your documents</div>
       </div>
       <div class="step-body">
         <!-- Deck upload -->
@@ -1619,8 +1744,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step8">
       <div class="step-header">
         <div class="step-counter">Step 6 of 8</div>
-        <div class="step-title">Present your deal to investors who are ready to write checks.</div>
-        <div class="step-subtitle">90-minute live session, directly marketed to LPs whose buy box matches your deal. No cold audience.</div>
+        <div class="step-title">Present your deal live to qualified investors</div>
+        <div class="step-subtitle">This is the fastest way to get in front of investors who are actively deploying capital</div>
       </div>
       <div class="step-body">
         <div class="presentation-layout">
@@ -1696,8 +1821,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step9">
       <div class="step-header">
         <div class="step-counter">Reserve Your Slot</div>
-        <div class="step-title">Book your Thursday presentation.</div>
-        <div class="step-subtitle">1,100+ accredited investors. 90 minutes. The fastest way to fill your deal.</div>
+        <div class="step-title">Book your Thursday presentation</div>
+        <div class="step-subtitle">Get in front of 1,100+ investors in a single 90-minute session</div>
       </div>
       <div class="step-body">
         <div class="upsell-card">
@@ -1770,8 +1895,8 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step10">
       <div class="step-header">
         <div class="step-counter">You're In</div>
-        <div class="step-title">You're live.</div>
-        <div class="step-subtitle">Your deal is in front of investors. Here's a summary of your setup \u2014 you can update anything from your dashboard.</div>
+        <div class="step-title">Welcome to the GP network!</div>
+        <div class="step-subtitle">Here's a summary of your onboarding. You can always update these from your dashboard.</div>
       </div>
       <div class="step-body">
         <ul class="checklist" id="completionChecklist">
@@ -1791,14 +1916,14 @@ select.form-input { cursor: pointer; appearance: auto; }
     <div class="step" id="step11">
       <div class="step-header">
         <div class="step-counter">One More Thing</div>
-        <div class="step-title">Most operators are also investors.</div>
+        <div class="step-title">Are you also an LP?</div>
       </div>
       <div class="step-body">
         <div class="lp-prompt">
           <div class="lp-prompt-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
           </div>
-          <div class="lp-prompt-desc">If you invest in other operators' deals, set up your own buy box in 3 minutes. We'll match you with deals from other GPs in the network.</div>
+          <div class="lp-prompt-desc">Many GPs are also active investors. If you invest in other operators' deals, setting up your LP buy box helps us match you with opportunities that fit your criteria.</div>
           <div class="lp-prompt-benefits">
             <div class="lp-benefit-card">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -1827,6 +1952,6 @@ select.form-input { cursor: pointer; appearance: auto; }
   </div>
 </div>
 
-<script src="js/onboarding.js"></script>
+<script src="js/gp-onboarding.js"></script>
 </body>
 </html>

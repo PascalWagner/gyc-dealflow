@@ -33,7 +33,8 @@ const GHL_FIELD_MAP = {
   max_loss_pct: 'contact.max_loss_tolerance',
   operator_focus: 'contact.operator_focus_preference',
   share_portfolio: 'contact.lp_network_optin',
-  diversification_pref: 'contact.diversification_preference'
+  diversification_pref: 'contact.diversification_preference',
+  lp_deals_count: 'contact.lp_deals_count'
 };
 
 // Map frontend wizard keys → Supabase column names
@@ -62,7 +63,8 @@ const WIZARD_TO_COLUMN = {
   capitalReadiness: 'capital_readiness',
   operatorFocus: 'operator_focus',
   sharePortfolio: 'share_portfolio',
-  diversificationPref: 'diversification_pref'
+  diversificationPref: 'diversification_pref',
+  lpDealsCount: 'lp_deals_count'
 };
 
 // Reverse: column → wizard key (for GET response)

@@ -6371,13 +6371,8 @@ const _supa = window.supabase.createClient(
             </div>
           </div>
           <div class="profile-field">
-            <div class="profile-label">Investment Experience</div>
-            <select class="filter-select" style="width:100%;min-width:0">
-              <option>New to LP investing</option>
-              <option>1-3 LP investments</option>
-              <option selected>4-10 LP investments</option>
-              <option>10+ LP investments</option>
-            </select>
+            <div class="profile-label">LP Deals Invested In</div>
+            <input type="number" id="settingsLpDealCount" class="filter-select" style="width:100%;min-width:0;-moz-appearance:textfield;" min="0" max="999" placeholder="0">
           </div>
         </div>
 
@@ -27337,9 +27332,75 @@ function updateDealsChecklist() {
   el.innerHTML = renderMilestoneTracker();
 }
 
-// ========== NEW USER ONBOARDING (4-step) ==========
-// ========== PRODUCT TOUR (5 educational slides, no forms) ==========
+// ========== INTERACTIVE WALKTHROUGH (replaces old product tour) ==========
+function showWalkthrough() {
+  if (localStorage.getItem('gycWalkthroughComplete')) return;
+  if (!localStorage.getItem('gycUser')) return;
+  if (window._isGuest) return;
+
+  var bb = {};
+  try { bb = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}'); } catch(e) {}
+  var goal = bb.goal || bb._branch || 'cashflow';
+  var dealCount = bb.lpDealsCount || 0;
+  var tier = 'free';
+  try { var _wtu = JSON.parse(localStorage.getItem('gycUser') || '{}'); tier = (_wtu.tier || 'free').toLowerCase(); } catch(e) {}
+  var isPaid = tier !== 'free';
+
+  var _wtSteps = [];
+  if (dealCount === 0) _wtSteps.push({ target: '.deal-card', text: 'Welcome to the deal database! Each card is a private investment opportunity \u2014 real estate syndications, lending funds, and more. Let\u2019s walk you through how to use this.' });
+  var _dcT = { cashflow: 'These are your income deals \u2014 sorted by yield. Look for preferred returns of 8%+ with monthly or quarterly distributions.', tax: 'These deals are sorted by first-year depreciation potential. Look for cost segregation, bonus depreciation, and oil & gas IDCs.', growth: 'These deals are sorted by target IRR and equity multiple \u2014 the highest upside first.' };
+  _wtSteps.push({ target: '.deal-card', text: _dcT[goal] || _dcT.cashflow });
+  if (dealCount < 4) {
+    _wtSteps.push({ target: '.deal-card .stage-btn', text: 'Tap the bookmark to save any deal. Saved deals go to your Interested list so you can come back to them.' });
+    var _ftT = { cashflow: 'Filter by asset class, minimum investment, or distribution frequency.', tax: 'Filter by asset class and strategy. Value-add multifamily and oil & gas offer the highest depreciation.', growth: 'Filter by strategy \u2014 value-add and development deals have the highest growth potential.' };
+    _wtSteps.push({ target: '#dealSearchInput', text: _ftT[goal] || _ftT.cashflow });
+  }
+  _wtSteps.push({ target: '.stage-tab', text: 'Track your research: Interested \u2192 Vetting \u2192 Invested. Your pipeline is private and saved automatically.' });
+  if (isPaid) { _wtSteps.push({ target: '.nav-item[data-page="dashboard"]', text: 'Your investment plan is ready. Open My Plan to see your full roster and track progress.' }); }
+  else { _wtSteps.push({ target: '.nav-item[data-page="academy"]', text: 'Want a personalized investment plan? Academy members get the full plan builder.', cta: { text: 'See What\u2019s Included', fn: function() { if (typeof navigateTo === 'function') navigateTo('academy'); } } }); }
+
+  var _wtIdx = 0;
+  function _wtFindTgt(s) { var a = s.split(','); for (var i=0;i<a.length;i++) { var e = document.querySelector(a[i].trim()); if (e && e.offsetParent !== null) return e; } return null; }
+  function _wtRender() {
+    var o = document.getElementById('wtOverlay'); if (o) o.remove();
+    var t = document.getElementById('wtTip'); if (t) t.remove();
+    if (_wtIdx >= _wtSteps.length) { _wtFinish(); return; }
+    var st = _wtSteps[_wtIdx], tgt = _wtFindTgt(st.target);
+    var ov = document.createElement('div'); ov.id = 'wtOverlay';
+    ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;';
+    if (tgt) { var r = tgt.getBoundingClientRect(), p = 8; ov.style.boxShadow='0 0 0 9999px rgba(0,0,0,0.5)'; ov.style.clipPath='polygon(0 0,100% 0,100% 100%,0 100%,0 0,'+(r.left-p)+'px '+(r.top-p)+'px,'+(r.left-p)+'px '+(r.bottom+p)+'px,'+(r.right+p)+'px '+(r.bottom+p)+'px,'+(r.right+p)+'px '+(r.top-p)+'px,'+(r.left-p)+'px '+(r.top-p)+'px)'; }
+    else { ov.style.background='rgba(0,0,0,0.5)'; }
+    ov.onclick = function(e){e.stopPropagation();}; document.body.appendChild(ov);
+
+    var tip = document.createElement('div'); tip.id = 'wtTip';
+    tip.style.cssText = 'position:fixed;z-index:9999;max-width:360px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:var(--font-body);';
+    if (tgt) { var r2 = tgt.getBoundingClientRect(), tt = r2.bottom+16, tl = Math.max(16,Math.min(r2.left,window.innerWidth-376)); if (tt+200>window.innerHeight) tt=Math.max(16,r2.top-200); tip.style.top=tt+'px'; tip.style.left=tl+'px'; }
+    else { tip.style.top='50%'; tip.style.left='50%'; tip.style.transform='translate(-50%,-50%)'; }
+
+    var h='<div style="display:flex;gap:6px;margin-bottom:12px;">';
+    for(var d=0;d<_wtSteps.length;d++) h+='<div style="width:'+(d===_wtIdx?8:6)+'px;height:'+(d===_wtIdx?8:6)+'px;border-radius:50%;background:'+(d<=_wtIdx?'var(--primary)':'var(--border)')+';"></div>';
+    h+='</div><div style="font-size:14px;color:var(--text-dark);line-height:1.6;margin-bottom:16px;">'+st.text+'</div>';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;">';
+    h+='<button onclick="window._wtSkip()" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);cursor:pointer;">Skip</button>';
+    h+='<div style="display:flex;gap:8px;">';
+    if(st.cta) h+='<button onclick="window._wtCta()" style="padding:8px 16px;background:var(--bg-cream);border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);cursor:pointer;">'+st.cta.text+'</button>';
+    h+='<button onclick="window._wtNext()" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;">'+(_wtIdx===_wtSteps.length-1?'Got it':'Next')+'</button></div></div>';
+    tip.innerHTML=h; document.body.appendChild(tip);
+  }
+  function _wtFinish() {
+    localStorage.setItem('gycWalkthroughComplete','true');
+    if(typeof trackActivity==='function') trackActivity('walkthrough_complete',{goal:goal,steps:_wtSteps.length});
+    var o=document.getElementById('wtOverlay'); if(o) o.remove(); var t=document.getElementById('wtTip'); if(t) t.remove();
+  }
+  window._wtNext=function(){_wtIdx++;if(typeof trackActivity==='function') trackActivity('walkthrough_step',{step:_wtIdx,goal:goal});_wtRender();};
+  window._wtSkip=function(){if(typeof trackActivity==='function') trackActivity('walkthrough_skipped',{step:_wtIdx,goal:goal});_wtFinish();};
+  window._wtCta=function(){var s=_wtSteps[_wtIdx];if(s&&s.cta&&s.cta.fn) s.cta.fn();_wtFinish();};
+  setTimeout(_wtRender, 1500);
+}
+
+// ========== OLD PRODUCT TOUR (deprecated — replaced by walkthrough) ==========
 function showOnboarding() {
+  return; // Disabled — walkthrough replaces this
   if (localStorage.getItem('gycTourComplete')) return;
   if (!localStorage.getItem('gycUser')) return;
 
@@ -27494,6 +27555,7 @@ initAuth();
 initViewAs();
 loadDeals(); // Fetches from Supabase API
 initSubscription();
+showWalkthrough(); // Interactive walkthrough for new users (after onboarding)
 
 // ========== GUEST SIGNUP BANNER ==========
 if (window._isGuest) {

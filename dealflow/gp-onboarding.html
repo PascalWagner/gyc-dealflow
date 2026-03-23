@@ -1246,6 +1246,126 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
+    <!-- ===== LP STEP: Goal Selection (U3) ===== -->
+    <div class="step" id="stepLpGoal">
+      <div class="step-header">
+        <div class="step-counter">Step 1 of 3</div>
+        <div class="step-title">What's your #1 investing goal right now?</div>
+        <div class="step-subtitle">This shapes everything &mdash; which deals you see first, how we sort them, and what success looks like for you.</div>
+      </div>
+      <div class="step-body">
+        <div class="role-cards" style="grid-template-columns:1fr;">
+          <div class="role-card" onclick="selectGoal('cashflow')" id="goalCashflow" style="text-align:left;display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="font-size:32px;flex-shrink:0;">&#128176;</div>
+            <div>
+              <div class="role-card-title" style="font-size:16px;">Build Passive Income</div>
+              <div class="role-card-desc" style="font-size:13px;margin-top:4px;">I want predictable monthly/quarterly income from my investments</div>
+            </div>
+          </div>
+          <div class="role-card" onclick="selectGoal('tax')" id="goalTax" style="text-align:left;display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="font-size:32px;flex-shrink:0;">&#127974;</div>
+            <div>
+              <div class="role-card-title" style="font-size:16px;">Reduce My Tax Bill</div>
+              <div class="role-card-desc" style="font-size:13px;margin-top:4px;">I'm getting crushed on taxes and want to legally offset my income</div>
+            </div>
+          </div>
+          <div class="role-card" onclick="selectGoal('growth')" id="goalGrowth" style="text-align:left;display:flex;align-items:center;gap:16px;padding:20px 24px;">
+            <div style="font-size:32px;flex-shrink:0;">&#128640;</div>
+            <div>
+              <div class="role-card-title" style="font-size:16px;">Grow My Wealth</div>
+              <div class="role-card-desc" style="font-size:13px;margin-top:4px;">I want to 2x or more &mdash; I'm playing for appreciation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToStep(1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <span></span>
+      </div>
+    </div>
+
+    <!-- ===== LP STEP: Deal Count (U4) ===== -->
+    <div class="step" id="stepLpDeals">
+      <div class="step-header">
+        <div class="step-counter">Step 2 of 3</div>
+        <div class="step-title">How many deals have you invested in as an LP?</div>
+        <div class="step-subtitle">Syndications, private funds, real estate deals &mdash; anything outside of stocks, 401k, or your primary home.</div>
+      </div>
+      <div class="step-body">
+        <div style="max-width:360px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px;">
+            <button class="btn-secondary" onclick="adjustDealCount(-1)" style="width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;font-weight:700;">−</button>
+            <input type="number" id="lpDealCountInput" min="0" max="999" value="" placeholder="0"
+              style="width:100px;text-align:center;font-family:var(--font-headline);font-size:42px;color:var(--text-dark);border:2px solid var(--border);border-radius:var(--radius);padding:12px 8px;background:var(--bg-card);outline:none;-moz-appearance:textfield;"
+              oninput="onDealCountChange()">
+            <button class="btn-secondary" onclick="adjustDealCount(1)" style="width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;font-weight:700;">+</button>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
+            <button class="pill-option" onclick="setDealCount(0)">None yet</button>
+            <button class="pill-option" onclick="setDealCount(2)">1&ndash;3</button>
+            <button class="pill-option" onclick="setDealCount(7)">4&ndash;10</button>
+            <button class="pill-option" onclick="setDealCount(15)">10+</button>
+          </div>
+          <div id="dealCountFeedback" style="text-align:center;font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;min-height:48px;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);display:none;"></div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToLpStep('stepLpGoal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" id="dealCountNextBtn" onclick="saveDealCount()">
+          Next
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== LP STEP: Baseline Income (U5) ===== -->
+    <div class="step" id="stepLpBaseline">
+      <div class="step-header">
+        <div class="step-counter">Step 3 of 3</div>
+        <div class="step-title">Where are you starting from?</div>
+        <div class="step-subtitle" id="baselineSubtitle">What's your current passive income? Rental checks, fund distributions, interest &mdash; anything that hits your account without you working for it.</div>
+      </div>
+      <div class="step-body">
+        <div style="max-width:440px;margin:0 auto;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;" id="baselinePills">
+            <button class="pill-option" onclick="selectBaseline(0)">$0 &mdash; starting fresh</button>
+            <button class="pill-option" onclick="selectBaseline(6000)">~$500/mo</button>
+            <button class="pill-option" onclick="selectBaseline(12000)">~$1K/mo</button>
+            <button class="pill-option" onclick="selectBaseline(24000)">~$2K/mo</button>
+            <button class="pill-option" onclick="selectBaseline(60000)">~$5K/mo</button>
+            <button class="pill-option" onclick="selectBaseline(120000)">~$10K+/mo</button>
+            <button class="pill-option" onclick="showCustomBaseline()">Custom</button>
+          </div>
+          <div id="customBaselineWrap" style="display:none;text-align:center;margin-bottom:16px;">
+            <div style="display:inline-flex;align-items:center;gap:8px;">
+              <span style="font-family:var(--font-ui);font-size:18px;color:var(--text-muted);">$</span>
+              <input type="number" id="customBaselineInput" min="0" placeholder="Annual amount"
+                style="width:180px;font-family:var(--font-ui);font-size:18px;padding:10px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);color:var(--text-dark);outline:none;"
+                oninput="onCustomBaselineChange()">
+              <span style="font-family:var(--font-ui);font-size:14px;color:var(--text-muted);">/yr</span>
+            </div>
+          </div>
+          <div id="baselineFeedback" style="text-align:center;font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);display:none;"></div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goToLpStep('stepLpDeals')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" id="baselineNextBtn" onclick="completeLpOnboarding()">
+          <span id="baselineBtnText">Start Browsing Deals</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- ===== STEP 2: Welcome & Value Prop (Hormozi-style) ===== -->
     <div class="step" id="step2">
       <div class="step-header">
