@@ -6292,6 +6292,7 @@ const _supa = window.supabase.createClient(
       </div>
     </div>
     <div class="stats-bar" id="statsBar"></div>
+    <span id="dailyViewsBadge" style="display:none;font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;background:rgba(245,158,11,0.1);margin-left:8px;"></span>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
     <!-- Mobile View Toggle: Swipe vs Feed -->
     <div class="mobile-view-toggle" id="mobileViewToggle">
@@ -7462,7 +7463,6 @@ const _supa = window.supabase.createClient(
 
       <!-- TAB: Debt Fund Explorer -->
       <div id="mi-tab-debtfunds" style="display:none;">
-      <div class="sub-page" style="max-width:1200px">
         <div class="settings-page-desc" style="margin-top:0;">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</div>
         <!-- Debt Fund Filters -->
         <div id="debtFilterBar" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
@@ -7581,7 +7581,6 @@ const _supa = window.supabase.createClient(
             <tbody id="debtFundTableBody"></tbody>
           </table>
         </div>
-      </div>
       </div><!-- /mi-tab-debtfunds -->
 
     </div>
@@ -8900,38 +8899,75 @@ function getDailyDealData() {
     var data = JSON.parse(localStorage.getItem('gycDailyDeals') || '{}');
     var today = new Date().toISOString().slice(0, 10);
     if (data.date !== today) {
-      // New day — reset counter
-      data = { date: today, count: 0 };
+      data = { date: today, count: 0, viewed: [] };
       localStorage.setItem('gycDailyDeals', JSON.stringify(data));
     }
+    if (!data.viewed) data.viewed = [];
     return data;
-  } catch(e) { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
+  } catch(e) { return { date: new Date().toISOString().slice(0, 10), count: 0, viewed: [] }; }
 }
 
 function getDailyDealsRemaining() {
   var user = getUser();
   var tier = (user && user.tier) || 'free';
-  // Paid tiers + admins get unlimited
   if (tier !== 'free') return Infinity;
+  if (user && user.isAdmin) return Infinity;
   var data = getDailyDealData();
   return Math.max(0, FREE_DAILY_DEAL_LIMIT - data.count);
 }
 
-function recordDailyDealView(count) {
+// Called when user clicks a deal card — returns true if allowed, false if limit hit
+function tryOpenDeal(dealId) {
+  var user = getUser();
+  var tier = (user && user.tier) || 'free';
+  if (tier !== 'free') return true;
+  if (user && user.isAdmin) return true;
+
   var data = getDailyDealData();
-  data.count = Math.max(data.count, count);
+  // Already viewed this deal today — allow re-visit without spending a view
+  if (data.viewed.indexOf(dealId) !== -1) return true;
+
+  if (data.count >= FREE_DAILY_DEAL_LIMIT) {
+    showDailyLimitModal();
+    return false;
+  }
+  // Record the view
+  data.count++;
+  data.viewed.push(dealId);
   localStorage.setItem('gycDailyDeals', JSON.stringify(data));
+  updateDailyLimitBadge();
+  return true;
 }
 
-function renderDailyLimitBanner(remaining, total) {
-  var locked = total - remaining;
-  return '<div class="daily-limit-banner">'
-    + '<div class="limit-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>'
-    + '<div class="limit-title">You\'ve seen today\'s 20 free deals</div>'
-    + '<div class="limit-sub">Come back tomorrow for 20 more, or unlock unlimited access with the Academy. You can still open any deal link shared with you.</div>'
-    + '<button class="limit-btn" onclick="trackActivity(\'daily_limit_cta\',{locked:' + locked + '});navigateTo(\'academy\')">Unlock Unlimited Deals &rarr;</button>'
-    + '<span class="limit-or">Resets at midnight &mdash; ' + locked + ' more deal' + (locked !== 1 ? 's' : '') + ' waiting</span>'
+function showDailyLimitModal() {
+  var existing = document.getElementById('dailyLimitModal');
+  if (existing) existing.remove();
+  trackActivity('daily_limit_hit', { count: FREE_DAILY_DEAL_LIMIT });
+  var overlay = document.createElement('div');
+  overlay.id = 'dailyLimitModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;animation:slideUp 0.25s ease;">'
+    + '<div style="width:56px;height:56px;background:linear-gradient(135deg,#f59e0b,#f97316);border-radius:14px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>'
+    + '<div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">You\'ve used your 20 free views today</div>'
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:24px;">Come back tomorrow for 20 more, or unlock unlimited access with the Academy. You can still open any deal link shared with you.</div>'
+    + '<button onclick="document.getElementById(\'dailyLimitModal\').remove();trackActivity(\'daily_limit_cta\');navigateTo(\'academy\')" style="display:block;width:100%;padding:14px 24px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Unlock Unlimited Access</button>'
+    + '<button onclick="document.getElementById(\'dailyLimitModal\').remove()" style="display:block;width:100%;padding:10px;background:none;border:none;font-family:var(--font-ui);font-size:13px;color:var(--text-muted);cursor:pointer;">I\'ll come back tomorrow</button>'
+    + '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-light);font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">Resets at midnight</div>'
     + '</div>';
+  document.body.appendChild(overlay);
+}
+
+function updateDailyLimitBadge() {
+  var badge = document.getElementById('dailyViewsBadge');
+  if (!badge) return;
+  var user = getUser();
+  var tier = (user && user.tier) || 'free';
+  if (tier !== 'free') { badge.style.display = 'none'; return; }
+  var remaining = getDailyDealsRemaining();
+  badge.textContent = remaining + ' of ' + FREE_DAILY_DEAL_LIMIT + ' views left';
+  badge.style.display = 'inline-block';
+  badge.style.color = remaining <= 5 ? '#e74c3c' : remaining <= 10 ? '#f59e0b' : 'var(--text-muted)';
 }
 
 // ========== SOCIAL PROOF: BULK DEAL STATS ==========
@@ -12631,7 +12667,9 @@ function renderTable(deals) {
   }).join('');
 
   tbody.querySelectorAll('tr').forEach(row => {
-    row.addEventListener('click', () => openPanel(row.dataset.id));
+    row.addEventListener('click', () => {
+      if (tryOpenDeal(row.dataset.id)) openPanel(row.dataset.id);
+    });
   });
 }
 
@@ -12735,13 +12773,6 @@ function renderAll() {
     return;
   }
 
-  // Daily deal limit for free tier on browse tab
-  var _dlUser = getUser();
-  var _dlTier = (_dlUser && _dlUser.tier) || 'free';
-  var _dlApply = (_dlTier === 'free' && currentTab === 'browse' && !document.getElementById('filterSearch').value.trim());
-  var _dlRemaining = _dlApply ? getDailyDealsRemaining() : Infinity;
-  var _dlLimit = Math.min(deals.length, _dlRemaining === Infinity ? deals.length : FREE_DAILY_DEAL_LIMIT);
-
   if (currentView === 'grid' || currentView === 'feed') {
     grid.style.display = '';
     table.style.display = 'none';
@@ -12773,34 +12804,15 @@ function renderAll() {
       return;
     }
     const cardRenderer = renderCard;
-
-    if (_dlApply && deals.length > 0) {
-      // Record how many deals the user is seeing today (high-water mark)
-      recordDailyDealView(Math.min(deals.length, FREE_DAILY_DEAL_LIMIT));
-    }
-
-    var cardHtml = '';
-    for (var _ci = 0; _ci < deals.length; _ci++) {
-      if (_dlApply && _ci === _dlLimit && _dlLimit < deals.length) {
-        // Insert daily limit banner between free and locked cards
-        cardHtml += renderDailyLimitBanner(_dlLimit, deals.length);
-      }
-      cardHtml += cardRenderer(deals[_ci]);
-    }
-    grid.innerHTML = cardHtml;
-
-    // Apply locked state to cards beyond daily limit
-    if (_dlApply && _dlLimit < deals.length) {
-      var _allCards = grid.querySelectorAll('.deal-card');
-      // Cards after the banner — account for banner element offset
-      _allCards.forEach(function(card, idx) {
-        if (idx >= _dlLimit) card.classList.add('deal-card-locked');
+    grid.innerHTML = deals.map(cardRenderer).join('');
+    grid.querySelectorAll('.deal-card').forEach(card => {
+      card.addEventListener('click', () => {
+        if (tryOpenDeal(card.dataset.id)) {
+          window.location.href = 'deal.html?id=' + card.dataset.id;
+        }
       });
-    }
-
-    grid.querySelectorAll('.deal-card:not(.deal-card-locked)').forEach(card => {
-      card.addEventListener('click', () => window.location.href = 'deal.html?id=' + card.dataset.id);
     });
+    updateDailyLimitBadge();
     // Initialize Chart.js charts for credit fund cards
     requestAnimationFrame(() => initCreditCharts());
     // Behavioral fund nudge (Job 6) — show after 12th card if user has saved deals but not invested
@@ -12836,18 +12848,6 @@ function renderAll() {
       return;
     }
     renderTable(deals);
-    // Daily limit in table view for free users
-    if (_dlApply && _dlLimit < deals.length) {
-      var _tRows = document.getElementById('tableBody').querySelectorAll('tr');
-      _tRows.forEach(function(row, idx) {
-        if (idx >= _dlLimit) { row.style.filter = 'blur(5px)'; row.style.pointerEvents = 'none'; row.style.userSelect = 'none'; }
-      });
-      var _bannerRow = document.createElement('tr');
-      _bannerRow.innerHTML = '<td colspan="' + TABLE_COLS.length + '" style="padding:0;">' + renderDailyLimitBanner(_dlLimit, deals.length) + '</td>';
-      var _tbody = document.getElementById('tableBody');
-      var _limitRow = _tbody.querySelectorAll('tr')[_dlLimit];
-      if (_limitRow) _tbody.insertBefore(_bannerRow, _limitRow); else _tbody.appendChild(_bannerRow);
-    }
   }
   // Decision tab: hide card grid when comparison table is active
   if (currentTab === 'decision') {
@@ -26054,7 +26054,7 @@ function renderDealFlowContent(container) {
   const sourceValues = sourceLabels.map(k => knownSources[k]);
   const sourceColors = ['#2C6E49', '#4C956C', '#FEFEE3', '#D68C45', '#3D405B', '#8B5E3C'];
 
-  container.innerHTML = '<div class="sub-page" style="max-width:1200px;">' +
+  container.innerHTML = '' +
     '<h2 style="font-family:var(--font-ui);font-size:22px;font-weight:800;margin-bottom:4px;color:var(--text-dark);">Deal Flow Stats</h2>' +
     '<p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:24px;">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>' +
 
@@ -26144,8 +26144,7 @@ function renderDealFlowContent(container) {
     '<div style="background:linear-gradient(135deg,#2C3E2D,#3D5A3E);border-radius:var(--radius);padding:24px;color:#fff;text-align:center;margin-bottom:24px;">' +
       '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;margin-bottom:8px;">This database can\'t be rebuilt overnight.</div>' +
       '<div style="font-family:var(--font-body);font-size:13px;opacity:0.85;">With ' + totalDeals + ' deals tracked, ' + Object.keys(assetClasses).length + ' asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>' +
-    '</div>' +
-  '</div>';
+    '</div>';
 
   // Load user engagement analytics (admin only)
   loadAdminEngagement();
