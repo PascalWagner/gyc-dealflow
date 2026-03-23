@@ -14170,7 +14170,7 @@ var STEP_ID = {
   ACCREDITATION: 16, LP_NETWORK: 17, PLAN_CF: 18, PLAN_GROWTH: 19, PLAN_TAX: 20,
   COMPLETION: 21, INCOME_SRC: 22, RE_PRO: 23, BASELINE: 24,
   MILESTONE_90D: 25, DELETED: 26, GROWTH_PRIORITY: 27, TAX_BASELINE: 28,
-  ROLE: 29, EXPERIENCE: 30
+  ROLE: 29, EXPERIENCE: 30, PROFILE_REVIEW: 31
 };
 var S = STEP_ID;
 
@@ -14179,9 +14179,9 @@ var S = STEP_ID;
 //   → Diversification → Operator Focus → Lockup → Distributions → Plan → LP Network → Completion
 const ONBOARDING_FLOW = {
   free:           [S.ROLE, S.GOAL, S.EXPERIENCE, S.RE_PRO, S.BASELINE, S.ASSETS, S.STRATEGIES, S.RISK, S.ACCREDITATION],
-  paid_cashflow:  [S.CF_TARGET, S.NET_WORTH, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_CF, S.LP_NETWORK, S.COMPLETION],
-  paid_growth:    [S.GROWTH_TARGET, S.GROWTH_PRIORITY, S.NET_WORTH, S.TAX_BASELINE, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_GROWTH, S.LP_NETWORK, S.COMPLETION],
-  paid_tax:       [S.TAX_TARGET, S.TAX_BASELINE, S.NET_WORTH, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_TAX, S.LP_NETWORK, S.COMPLETION]
+  paid_cashflow:  [S.CF_TARGET, S.NET_WORTH, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_CF, S.LP_NETWORK, S.PROFILE_REVIEW, S.COMPLETION],
+  paid_growth:    [S.GROWTH_TARGET, S.GROWTH_PRIORITY, S.NET_WORTH, S.TAX_BASELINE, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_GROWTH, S.LP_NETWORK, S.PROFILE_REVIEW, S.COMPLETION],
+  paid_tax:       [S.TAX_TARGET, S.TAX_BASELINE, S.NET_WORTH, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_TAX, S.LP_NETWORK, S.PROFILE_REVIEW, S.COMPLETION]
 };
 
 function getStepSequence() {
@@ -14216,7 +14216,7 @@ const STEP_TO_PHASE = {
   [S.CF_TARGET]: 1, [S.GROWTH_TARGET]: 1, [S.TAX_TARGET]: 1, [S.TAX_BASELINE]: 1,  // branch targets → Goal
   [S.NET_WORTH]: 2, [S.GROWTH_PRIORITY]: 2, [S.CAPITAL]: 2, [S.SOURCE]: 2, [S.READINESS]: 2,  // financials → Finances
   [S.DIVERSIFICATION]: 3, [S.OPERATOR_FOCUS]: 3, [S.LOCKUP]: 3, [S.DISTRIBUTIONS]: 3,  // preferences → Preferences
-  [S.PLAN_CF]: 4, [S.PLAN_GROWTH]: 4, [S.PLAN_TAX]: 4, [S.LP_NETWORK]: 4, [S.COMPLETION]: 4  // plan output → My Plan
+  [S.PLAN_CF]: 4, [S.PLAN_GROWTH]: 4, [S.PLAN_TAX]: 4, [S.LP_NETWORK]: 4, [S.PROFILE_REVIEW]: 4, [S.COMPLETION]: 4  // plan output → My Plan
 };
 const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'My Plan'];
 
@@ -14419,7 +14419,9 @@ const WIZARD_STEPS = [
   // 28: LP/GP role selector (first screen for all new users)
   { type: 'roleSelect' },
   // 29: Deal experience count (free tier)
-  { type: 'dealExperience' }
+  { type: 'dealExperience' },
+  // 30: Profile review summary (penultimate step before completion)
+  { type: 'profileReview' }
 ];
 
 // Asset class definitions with goal-specific context
@@ -14575,6 +14577,10 @@ function openBuyBoxWizard(jumpToPlan) {
   if (user && !wizardData.firstName) {
     wizardData.firstName = user.firstName || (user.name || '').split(' ')[0] || '';
     wizardData.lastName = user.lastName || (user.name || '').split(' ').slice(1).join(' ') || '';
+  }
+  // Pre-populate LP Network opt-in from onboarding choice (captured in step 0)
+  if (user && user.sharePortfolio !== undefined && wizardData.sharePortfolio === undefined) {
+    wizardData.sharePortfolio = user.sharePortfolio;
   }
   // Fetch saved progress from Supabase if localStorage is mostly empty
   if (user && user.email && Object.keys(wizardData).length <= 2) {

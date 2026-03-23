@@ -666,7 +666,11 @@ function loadDeal() {
       dealData = data;
       populateForm(data);
       document.getElementById('loadingState').style.display = 'none';
-      showStep(0);
+      // Deep link: deal-review.html?id=X#terms|financials|property|fees|publish
+      var hashRoutes = { terms: 0, financials: 1, property: 2, fees: 3, publish: 4 };
+      var hash = window.location.hash.replace('#', '');
+      var startStep = hashRoutes[hash] !== undefined ? hashRoutes[hash] : 0;
+      showStep(startStep);
     })
     .catch(function(err) {
       document.getElementById('loadingState').textContent = 'Failed to load deal: ' + err.message;

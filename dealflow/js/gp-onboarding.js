@@ -53,6 +53,29 @@
     document.documentElement.classList.add('dark');
   }
 
+  // ── Deep Link Hash Router ──
+  // onboarding.html#name, #role, #gp, #gp-company, #gp-assets, #gp-ir, #gp-agreement,
+  // #gp-upload, #gp-presentation, #gp-checklist, #gp-also-lp, #lp-goal, #lp-deals, #lp-baseline
+  (function handleDeepLink() {
+    var hash = window.location.hash.replace('#', '');
+    if (!hash) return;
+    var gpStepMap = {
+      'name': 0, 'role': 1, 'gp': 2, 'gp-company': 3, 'gp-assets': 4,
+      'gp-ir': 5, 'gp-agreement': 6, 'gp-upload': 7, 'gp-presentation': 8,
+      'gp-upsell': 9, 'gp-checklist': 10, 'gp-also-lp': 11
+    };
+    var lpStepMap = {
+      'lp-goal': 'stepLpGoal', 'lp-deals': 'stepLpDeals',
+      'lp-baseline': 'stepLpBaseline', 'lp-complete': 'stepLpComplete'
+    };
+    if (gpStepMap[hash] !== undefined) {
+      setTimeout(function() { window.goToStep(gpStepMap[hash]); }, 100);
+    } else if (lpStepMap[hash]) {
+      state.selectedRole = 'lp';
+      setTimeout(function() { window.goToLpStep(lpStepMap[hash]); }, 100);
+    }
+  })();
+
   // ── Step Navigation ──
   window.goToStep = function(step) {
     var steps = document.querySelectorAll('.step');
@@ -88,12 +111,21 @@
     document.getElementById('onboardFirstName').value = firstName;
     document.getElementById('onboardLastName').value = lastName;
 
-    // Update localStorage user name
+    // Update localStorage user name + LP Network opt-in
     var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
     u.name = firstName + ' ' + lastName;
     u.firstName = firstName;
     u.lastName = lastName;
+    var lpNetworkCheckbox = document.getElementById('lpNetworkOptIn');
+    if (lpNetworkCheckbox) {
+      u.sharePortfolio = lpNetworkCheckbox.checked;
+    }
     localStorage.setItem('gycUser', JSON.stringify(u));
+
+    // Also seed wizardData so Buy Box Wizard picks it up
+    var wzData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+    wzData.sharePortfolio = u.sharePortfolio;
+    localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wzData));
 
     // Update the module-scoped user reference
     user.name = u.name;
@@ -916,6 +948,23 @@
 
   // ── Load Onboarding State ──
   function loadOnboardingState() {
+    // Also fetch any existing buy box data from Supabase for cross-device continuity
+    fetch('/api/buybox?email=' + encodeURIComponent(user.email))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (data && data.success && data.buyBox) {
+          var wzData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+          var bb = data.buyBox;
+          // Merge fields from Supabase if not already in localStorage
+          if (bb.goal && !wzData.goal) wzData.goal = bb.goal;
+          if (bb._branch && !wzData._branch) wzData._branch = bb._branch;
+          if (bb.sharePortfolio !== undefined && wzData.sharePortfolio === undefined) wzData.sharePortfolio = bb.sharePortfolio;
+          if (bb._freeComplete && !wzData._freeComplete) wzData._freeComplete = bb._freeComplete;
+          localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wzData));
+        }
+      })
+      .catch(function() {});
+
     fetch('/api/gp-onboarding?email=' + encodeURIComponent(user.email), { headers: headers })
     .then(function(r) { return r.json(); })
     .then(function(data) {
