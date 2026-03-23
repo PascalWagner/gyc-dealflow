@@ -13662,7 +13662,7 @@ const WIZARD_STEPS = [
   { type: 'capitalSource' },
   // 4: Cash flow target (12 months)
   { type: 'targetInput', branch: 'cashflow',
-    title: 'What\u2019s your 12-month passive income goal?',
+    title: 'How much passive income do you want in 12 months?',
     suffix: '/ year',
     key: 'targetCashFlow',
     defaultVal: '100000',
@@ -13679,7 +13679,7 @@ const WIZARD_STEPS = [
   },
   // 5: Growth target
   { type: 'targetInput', branch: 'growth',
-    title: 'How much do you want to grow your portfolio to?',
+    title: 'What\u2019s your portfolio growth target?',
     suffix: '',
     key: 'growthCapital',
     defaultVal: '500000',
@@ -13698,7 +13698,7 @@ const WIZARD_STEPS = [
   // 8: Net worth (slider)
   { type: 'targetInput',
     title: 'What\u2019s your total net worth?',
-    subtitle: 'Include everything \u2014 investments, savings, real estate (including your home), retirement accounts.',
+    subtitle: 'Include everything \u2014 investments, savings, real estate, retirement. This helps us right-size recommendations. Never shared.',
     suffix: '',
     key: 'netWorth',
     defaultVal: '1000000',
@@ -13743,7 +13743,8 @@ const WIZARD_STEPS = [
   { type: 'reProfessional' },
   // 23: Current passive income baseline (all paths)
   { type: 'targetInput',
-    title: 'What\u2019s your current passive income?',
+    title: 'Where are you starting from?',
+    subtitle: 'Your current passive income \u2014 rental checks, distributions, interest. Don\u2019t overthink it.',
     suffix: '/ year',
     key: 'baselineIncome',
     defaultVal: '0',
@@ -13751,14 +13752,16 @@ const WIZARD_STEPS = [
     presetLabels: ['$0','$12K','$25K','$50K','$100K+'],
     calcFn: function(v) {
       var mo = Math.round(v / 12).toLocaleString();
-      return v === 0 ? 'No worries \u2014 everyone starts somewhere.' : 'That\u2019s $' + mo + '/mo. Let\u2019s grow it.';
+      if (v === 0) return 'Most of our members started at $0. That\u2019s the whole point.';
+      if (v < 25000) return 'That\u2019s $' + mo + '/mo. Good \u2014 you\u2019ve already started. Let\u2019s accelerate it.';
+      return 'That\u2019s $' + mo + '/mo. Nice foundation \u2014 let\u2019s build on it.';
     },
     timerSec: 30
   },
   // 24: 90-day income goal (cashflow branch)
   { type: 'targetInput', branch: 'cashflow',
-    title: 'What could you earn in the next 90 days?',
-    subtitle: 'Be realistic \u2014 this is your first milestone, not your finish line.',
+    title: 'What\u2019s a realistic first milestone?',
+    subtitle: 'Your 90-day target. Your first deal is always the hardest \u2014 after that, it compounds.',
     suffix: '/ year',
     key: 'target90DayIncome',
     defaultVal: '0',
@@ -13766,11 +13769,11 @@ const WIZARD_STEPS = [
     presetLabels: ['$0','$6K','$12K','$25K','$50K'],
     calcFn: function(v) {
       var mo = Math.round(v / 12).toLocaleString();
-      if (v === 0) return 'That\u2019s okay \u2014 the first deal takes the longest to find.';
+      if (v === 0) return 'That\u2019s fine \u2014 focus on finding your first deal. The income follows.';
       var baseline = parseInt(wizardData.baselineIncome || '0', 10);
       var delta = v - baseline;
-      if (delta > 0) return '+$' + Math.round(delta/12).toLocaleString() + '/mo from where you are. Doable with 1\u20132 deals.';
-      return 'That\u2019s $' + mo + '/mo.';
+      if (delta > 0) return '+$' + Math.round(delta/12).toLocaleString() + '/mo from where you are. One to two deals gets you there.';
+      return 'That\u2019s $' + mo + '/mo. Achievable with the right deal.';
     },
     timerSec: 30
   },
@@ -14119,13 +14122,13 @@ function renderWizardStep() {
 
   // ===== SCREEN 0: GOAL SELECTION =====
   if (step.type === 'goalSelect') {
-    html += '<div class="wizard-card-title">What\u2019s your investing goal?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Pick one and we\u2019ll build your personalized investment plan.</div>';
+    html += '<div class="wizard-card-title">What do you want your money to do for you?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Whether you\u2019re evaluating your first deal or your fifteenth, this takes 3 minutes and shapes everything you see.</div>';
     html += '<div class="wizard-goal-cards">';
     const goals = [
-      { branch: 'cashflow', title: 'I want passive income', desc: 'Build predictable cash flow from private investments', icon: '\uD83D\uDCB0', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
-      { branch: 'tax', title: 'I want to cut my tax bill', desc: 'Use depreciation and write-offs to offset $100K+ in income', icon: '\uD83C\uDFE6', iconClass: 'tax', goalVal: 'Tax Optimization (tax shield now)' },
-      { branch: 'growth', title: 'I want to grow my wealth', desc: '2x or more through value-add and development deals', icon: '\uD83D\uDE80', iconClass: 'eq', goalVal: 'Equity Growth (wealth later)' }
+      { branch: 'cashflow', title: 'Replace my income', desc: 'Monthly checks that cover real bills \u2014 mortgage, school, car \u2014 from day one', icon: '\uD83D\uDCB0', iconClass: 'cf', goalVal: 'Cash Flow (income now)' },
+      { branch: 'tax', title: 'Keep more of what I make', desc: 'I\u2019m tired of writing six-figure checks to the IRS \u2014 depreciation and write-offs can fix that', icon: '\uD83C\uDFE6', iconClass: 'tax', goalVal: 'Tax Optimization (tax shield now)' },
+      { branch: 'growth', title: 'Build generational wealth', desc: 'I want my money compounding while I sleep \u2014 2x or more through value-add and development', icon: '\uD83D\uDE80', iconClass: 'eq', goalVal: 'Equity Growth (wealth later)' }
     ];
     goals.forEach(g => {
       const sel = wizardData._branch === g.branch ? 'selected' : '';
@@ -14144,8 +14147,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 1: CAPITAL AMOUNT =====
   if (step.type === 'capitalAmount') {
-    html += '<div class="wizard-card-title">How much do you plan to deploy over the next 12 months?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">No commitments \u2014 just helps us size recommendations to deals you can actually invest in.</div>';
+    html += '<div class="wizard-card-title">How much capital could you put to work in the next 12 months?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Not a commitment \u2014 just helps us show you deals you can actually get into.</div>';
     var nwVal = parseInt(wizardData.netWorth || '0', 10);
     function nwPct(midpoint) {
       if (!nwVal || nwVal <= 0) return '';
@@ -14153,13 +14156,13 @@ function renderWizardStep() {
       return pct + '% of net worth';
     }
     var capOptions = [
-      { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: '$1-$49k', label: '$1 \u2013 $49K', desc: '1 deal at a lower minimum', nwCtx: nwPct(25000) },
-      { val: '$50k-$99k', label: '$50K \u2013 $99K', desc: '1\u20132 deals at typical minimums', nwCtx: nwPct(75000) },
-      { val: '$100k-$249k', label: '$100K \u2013 $249K', desc: '2\u20134 deals', nwCtx: nwPct(175000) },
-      { val: '$250k-$499k', label: '$250K \u2013 $499K', desc: 'Well-diversified portfolio', nwCtx: nwPct(375000) },
-      { val: '$500k-$999k', label: '$500K \u2013 $999K', desc: 'Significant deployment', nwCtx: nwPct(750000) },
-      { val: '$1m+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct(1500000) }
+      { val: '$0', label: '$0 \u2014 just learning for now', desc: 'Build your watchlist and learn the landscape first', nwCtx: '' },
+      { val: '$1-$49k', label: '$1 \u2013 $49K', desc: 'Enough for one deal at a lower minimum', nwCtx: nwPct(25000) },
+      { val: '$50k-$99k', label: '$50K \u2013 $99K', desc: 'One to two deals at typical minimums', nwCtx: nwPct(75000) },
+      { val: '$100k-$249k', label: '$100K \u2013 $249K', desc: 'Two to four deals \u2014 real diversification starts here', nwCtx: nwPct(175000) },
+      { val: '$250k-$499k', label: '$250K \u2013 $499K', desc: 'A well-diversified portfolio across asset classes', nwCtx: nwPct(375000) },
+      { val: '$500k-$999k', label: '$500K \u2013 $999K', desc: 'Serious deployment \u2014 you can build a full portfolio', nwCtx: nwPct(750000) },
+      { val: '$1m+', label: '$1M+', desc: 'Institutional-level capital with negotiating leverage', nwCtx: nwPct(1500000) }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     capOptions.forEach(function(opt) {
@@ -14249,8 +14252,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 2: CAPITAL SOURCE =====
   if (step.type === 'capitalSource') {
-    html += '<div class="wizard-card-title">What\'s making this possible?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Understanding your capital source helps us match you with the right deal structures.</div>';
+    html += '<div class="wizard-card-title">What\u2019s making this possible?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Different capital sources unlock different deal structures. A 1031 exchange has a 45-day clock. Savings don\u2019t.</div>';
 
     var triggerOptions = [
       { val: 'business_exit', label: 'Sold a business', desc: 'Looking to redeploy proceeds into passive investments', icon: '\uD83C\uDFE2' },
@@ -14311,7 +14314,7 @@ function renderWizardStep() {
       html += `<div style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;" id="wizSofterCtx">Your first ${capitalNeeded < 500000 ? 'few' : 'several'} investments will get you started \u2014 you don\u2019t need it all at once.</div>`;
     }
     // Anchoring hint
-    const anchorHints = { cashflow: 'Most members start by targeting $50\u2013100K/yr.', tax: 'Most members look to offset $100\u2013200K.', growth: 'Most members start with $250K\u2013500K.' };
+    const anchorHints = { cashflow: 'Sarah started at $0 and hit $4,200/mo in 11 months with 3 deals.', tax: 'Most members look to shelter $100\u2013200K in year one.', growth: 'Michael doubled a $300K portfolio in 4 years with 5 deals.' };
     html += `<div style="font-size:13px;color:var(--text-muted);font-style:italic;text-align:center;margin-top:8px;">${anchorHints[step.branch] || ''}</div>`;
     // Nav
     html += '<div class="wizard-inline-nav">';
@@ -14346,7 +14349,7 @@ function renderWizardStep() {
 
   // ===== SCREEN 4: TAX TARGET (with income structure + RE pro context) =====
   if (step.type === 'taxTarget') {
-    html += '<div class="wizard-card-title">How much of that do you want to offset through real estate?</div>';
+    html += '<div class="wizard-card-title">How much income do you want to shelter?</div>';
     // Show baseline reference if available
     var taxBaseline = parseDollar(wizardData.taxableIncomeBaseline) || 0;
     if (taxBaseline > 0) {
@@ -14437,8 +14440,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 22: RE PROFESSIONAL STATUS (all paths, before goal selection) =====
   if (step.type === 'reProfessional') {
-    html += '<div class="wizard-card-title">Do you (or your spouse) qualify as a Real Estate Professional?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">750+ hours/yr in RE activities. This unlocks unlimited passive loss deductions against W-2 income.</div>';
+    html += '<div class="wizard-card-title">Are you (or your spouse) a Real Estate Professional?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This is an IRS designation (750+ hrs/yr in RE). It unlocks aggressive tax strategies most W-2 earners can\u2019t use.</div>';
     var reProOptions = [
       { val: 'yes', label: 'Yes, I qualify', desc: 'I or my spouse spend 750+ hours/yr in real estate', icon: '\u2705' },
       { val: 'no', label: 'No', desc: 'I don\u2019t meet the hours requirement', icon: '\u274C' },
@@ -14471,8 +14474,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 26: GROWTH INVESTMENT PRIORITY =====
   if (step.type === 'growthPriority') {
-    html += '<div class="wizard-card-title">What\u2019s your investment priority?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This helps us rank deals by total return potential vs. capital preservation.</div>';
+    html += '<div class="wizard-card-title">What matters more \u2014 upside or safety?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">There\u2019s no wrong answer. This shapes how we rank deals for you.</div>';
     var growthOptions = [
       { val: 'max_return', label: 'Highest projected returns', desc: 'I\u2019ll accept longer lockups and less liquidity for maximum upside', icon: '\uD83D\uDE80' },
       { val: 'balanced', label: 'Balanced \u2014 some cash now, some growth', desc: 'A mix of income-producing and appreciation-focused deals', icon: '\u2696\uFE0F' },
@@ -14499,8 +14502,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 27: TAX BASELINE (annual taxable income) =====
   if (step.type === 'taxBaseline') {
-    html += '<div class="wizard-card-title">What\u2019s your annual taxable income?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:16px;">This helps us size strategies to your actual tax situation.</div>';
+    html += '<div class="wizard-card-title">How much are you earning (before taxes)?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:16px;">We need this to size depreciation strategies to your actual tax bracket. Never shared.</div>';
     var tbVal = parseDollar(wizardData.taxableIncomeBaseline) || 250000;
     html += '<div class="wizard-target-input">';
     html += '<input type="text" id="wizTargetInput" value="' + fmtDollar(tbVal) + '" data-key="taxableIncomeBaseline" inputmode="numeric" autocomplete="off">';
@@ -14590,7 +14593,8 @@ function renderWizardStep() {
   if (step.type === 'lossTolerance') {
     var nw = parseInt(wizardData.netWorth || '0', 10);
     function fmtNw(n) { return n >= 1000000 ? '$' + (n/1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M' : '$' + Math.round(n/1000) + 'K'; }
-    html += '<div class="wizard-card-title">What\'s the max you\'d be comfortable losing in any single deal?</div>';
+    html += '<div class="wizard-card-title">What lets you sleep at night?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:12px;">The max you\u2019d be comfortable losing in any single deal. Private investments are illiquid and carry real risk.</div>';
     if (nw > 0) {
       var oneP = fmtNw(Math.round(nw * 0.01));
       var twoP = fmtNw(Math.round(nw * 0.02));
@@ -14652,8 +14656,8 @@ function renderWizardStep() {
       if (!dealCounts[ac]) dealCounts[ac] = 0;
       dealCounts[ac]++;
     });
-    html += '<div class="wizard-card-title">What asset classes interest you?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">Select any that interest you. We\u2019ll prioritize deals in these categories.</div>';
+    html += '<div class="wizard-card-title">What types of deals interest you?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">Select any that interest you. You\u2019re not locked in \u2014 this just shapes what we show you first.</div>';
 
     // All asset classes in one flat grid
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">';
@@ -14704,8 +14708,8 @@ function renderWizardStep() {
     stratActiveDeals.forEach(function(d) {
       if (d.strategy) stratCounts[d.strategy] = (stratCounts[d.strategy] || 0) + 1;
     });
-    html += '<div class="wizard-card-title">What strategies appeal to you?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy affects your returns differently. Best for <strong>' + branchLabel + '</strong> shown first.</div>';
+    html += '<div class="wizard-card-title">How do you want your money working?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:24px;">Each strategy has a different risk/return profile. Best strategies for <strong>' + branchLabel + '</strong> shown first.</div>';
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     sorted.forEach(function(entry) {
       var key = entry[0];
@@ -14740,7 +14744,7 @@ function renderWizardStep() {
   if (step.type === 'diversificationPref') {
     var divSel = wizardData.diversificationPref || '';
     var assetCount = (wizardData.assetClasses || []).length;
-    html += '<div class="wizard-card-title">How do you want to spread your capital?</div>';
+    html += '<div class="wizard-card-title">Concentrated or diversified?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">';
     html += 'You selected <strong>' + assetCount + ' asset class' + (assetCount !== 1 ? 'es' : '') + '</strong>. How concentrated do you want your portfolio to be?</div>';
     var divOptions = [
@@ -14766,7 +14770,7 @@ function renderWizardStep() {
 
   // ===== SCREEN 12: OPERATOR FOCUS =====
   if (step.type === 'operatorFocus') {
-    html += '<div class="wizard-card-title">What kind of operator do you want behind your investment?</div>';
+    html += '<div class="wizard-card-title">Who do you want managing your money?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This is about focus vs. diversification at the <em>operator</em> level \u2014 not your portfolio.<br><br>';
     html += '<strong><span class="wiz-tip" data-tip="A specialist operator focuses on a single asset class \u2014 like self-storage or multi-family \u2014 day in, day out. They know every nuance of their niche.">Specialist operators</span></strong> do one thing \u2014 like self-storage or multi-family \u2014 day in, day out. They know every nuance of their niche.<br><br>';
     html += '<strong>Diversified operators</strong> manage across multiple asset classes. This is common with larger firms ($100M+ AUM), where scale and team depth make diversification a strength, not a distraction.<br><br>';
@@ -14822,8 +14826,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 13: LOCKUP PREFERENCE =====
   if (step.type === 'lockupPrefs') {
-    html += '<div class="wizard-card-title">How long are you comfortable not having access to your invested capital?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private investments are <span class="wiz-tip" data-tip="You cannot sell or withdraw your investment before the hold period ends. Your capital is locked in until the deal completes.">illiquid</span> \u2014 once you invest, you can\u2019t withdraw early. Longer lockups typically mean higher returns.</div>';
+    html += '<div class="wizard-card-title">How long can you lock up your capital?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Once you\u2019re in, you can\u2019t withdraw early. That\u2019s the tradeoff \u2014 longer lockups typically mean higher returns.</div>';
     // Count deals filtered by user's asset class + strategy selections
     var lockSelAssets = wizardData.assetClasses || [];
     var lockSelStrategies = wizardData.strategies || [];
@@ -14884,8 +14888,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 10: DISTRIBUTION PREFERENCE =====
   if (step.type === 'distributionPrefs') {
-    html += '<div class="wizard-card-title">What\u2019s the minimum payout frequency you\u2019d accept?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">More frequent payouts narrows your options. Monthly limits you mostly to lending funds. Being flexible opens up more deals.</div>';
+    html += '<div class="wizard-card-title">How often do you want to get paid?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Monthly checks feel great, but they narrow your options to mostly lending funds. Being flexible opens up significantly more deals.</div>';
     // Count deals matching ALL user preferences so far
     var distCounts = { monthly: 0, quarterly: 0, annual: 0, other: 0 };
     var selectedAssets = wizardData.assetClasses || [];
@@ -14959,8 +14963,8 @@ function renderWizardStep() {
       wizardData.accreditation = [wizardData.accreditation];
     }
     if (!wizardData.accreditation) wizardData.accreditation = [];
-    html += '<div class="wizard-card-title">What\u2019s your investor accreditation level?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Select all that apply. You\u2019ll see every deal in our database, but when you apply your plan filters, we\u2019ll only show deals that match your criteria.</div>';
+    html += '<div class="wizard-card-title">Are you an accredited investor?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Most private placements require accreditation. Select all that apply \u2014 this determines which deals you can legally invest in.</div>';
     var accQualified = [
       { val: 'net_worth', label: 'Net worth over $1M', desc: 'Individual or joint net worth exceeding $1M, excluding your primary residence (SEC Rule 501)' },
       { val: 'income', label: 'Income over $200K', desc: 'Earned $200K+ individually (or $300K+ jointly) in each of the past 2 years, with reasonable expectation of the same this year' },
@@ -14993,8 +14997,8 @@ function renderWizardStep() {
 
   // ===== SCREEN 9: LP NETWORK OPT-IN =====
   if (step.type === 'lpNetwork') {
-    html += '<div class="wizard-card-title">Join the <span class="wiz-tip" data-tip="LP = Limited Partner. That\'s you \u2014 the investor. The LP Network lets you see other investors in the same deals.">LP Network</span></div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">Investing is better together. See who else is in the same deals \u2014 and let them find you.</div>';
+    html += '<div class="wizard-card-title">Invest alongside other LPs</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:20px;">The best investors don\u2019t go alone. See who else is in the same deals, share diligence, and deploy together.</div>';
 
     // Benefits cards
     html += '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">';
@@ -15038,7 +15042,7 @@ function renderWizardStep() {
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Finish & Browse Deals \u2192</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Build My Plan \u2192</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -15149,9 +15153,27 @@ function renderWizardStep() {
   if (step.type === 'completion') {
     html += '<div class="wizard-completion">';
     html += '<div class="wizard-completion-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
-    html += '<div class="wizard-card-title" style="text-align:center;">Your plan is saved.</div>';
-    html += '<div class="wizard-card-desc" style="text-align:center;max-width:360px;margin:0 auto;">Your portfolio plan is ready. Browse deals and we\u2019ll show you which ones fit each slot in your plan.</div>';
-    html += '<button class="wizard-btn wizard-btn-next" style="width:100%;margin-top:24px;" onclick="wizardNext()">Go to my dashboard \u2192</button>';
+    html += '<div class="wizard-card-title" style="text-align:center;">Your plan is ready.</div>';
+    // Persona-aware messaging
+    var baseline = parseInt(wizardData.baselineIncome || '0', 10);
+    var capital = wizardData.capital12mo || '';
+    var isNew = baseline === 0 || capital === '$0' || capital === '$1-$49k';
+    if (isNew) {
+      html += '<div class="wizard-card-desc" style="text-align:center;max-width:400px;margin:0 auto;">Most members who complete this deploy their first check within 60 days. You don\u2019t have to do it alone.</div>';
+      // Academy CTA for newer investors
+      html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:20px;margin-top:20px;text-align:center;">';
+      html += '<div style="font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Want a guide?</div>';
+      html += '<div style="font-size:13px;color:var(--text-secondary);line-height:1.5;margin-bottom:14px;">Cashflow Academy members deploy their first check in 90 days \u2014 with a coach who\u2019s done it 23 times across $3.3M in LP investments.</div>';
+      html += '<a href="javascript:void(0)" onclick="closeWizard();navigateTo(\'academy\');" style="display:inline-block;padding:10px 24px;background:var(--primary);color:#fff;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;">Learn About the Academy</a>';
+      html += '</div>';
+    } else {
+      html += '<div class="wizard-card-desc" style="text-align:center;max-width:400px;margin:0 auto;">Your personalized deal matches are ready. We\u2019ll notify you when new deals hit your buy box.</div>';
+      // Subtle upgrade nudge for experienced investors
+      html += '<div style="background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:12px;padding:16px 20px;margin-top:20px;text-align:center;">';
+      html += '<div style="font-size:13px;color:var(--text-secondary);line-height:1.5;">Want live deal reviews and weekly office hours? <a href="javascript:void(0)" onclick="closeWizard();navigateTo(\'academy\');" style="color:var(--primary);font-weight:700;text-decoration:none;">See what\u2019s included in the Academy \u2192</a></div>';
+      html += '</div>';
+    }
+    html += '<button class="wizard-btn wizard-btn-next" style="width:100%;margin-top:20px;" onclick="wizardNext()">Browse My Matches \u2192</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
