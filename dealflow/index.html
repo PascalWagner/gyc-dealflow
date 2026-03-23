@@ -11327,12 +11327,10 @@ function renderCreditCard(deal) {
   const strategy = getCreditStrategy(deal);
   const hasDocs = !!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl);
 
-  // Audit badge
+  // Audit badge — only show when audited (unaudited is default, not worth highlighting)
   let auditBadge = '';
   if (deal.financials === 'Audited') {
     auditBadge = '<span class="credit-badge audit-yes">Audited</span>';
-  } else if (deal.financials === 'Unaudited') {
-    auditBadge = '<span class="credit-badge audit-no">Unaudited</span>';
   }
 
   // Build chart or empty state
@@ -11867,7 +11865,7 @@ function renderCard(deal) {
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${deal.strategy ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
-          ${deal.financials === 'Audited' ? '<span class="credit-badge audit-yes">Audited</span>' : deal.financials === 'Unaudited' ? '<span class="credit-badge audit-no">Unaudited</span>' : ''}
+          ${deal.financials === 'Audited' ? '<span class="credit-badge audit-yes">Audited</span>' : ''}
           ${deal.pctFunded >= 70 && deal.pctFunded < 100 ? `<span class="credit-badge" style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;">Almost Full &mdash; ${deal.pctFunded}%</span>` : ''}
           ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
           ${renderFreshnessBadge(deal)}
