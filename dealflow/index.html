@@ -11906,8 +11906,8 @@ function renderCard(deal) {
         ${strategy ? `<div class="credit-card-strategy">${strategy}</div>` : ''}
         <div class="credit-card-metrics">
           <div class="metric">
-            <div class="metric-label">Target IRR</div>
-            <div class="metric-value" style="color:var(--primary);">${deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '—'}</div>
+            <div class="metric-label">Pref Return</div>
+            <div class="metric-value" style="color:var(--primary);">${deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '—'}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Minimum</div>
@@ -12578,11 +12578,29 @@ function updateStats(deals) {
   const syndications = deals.filter(d => d.dealType === 'Syndication').length;
 
   const isIOS = document.documentElement.classList.contains('cap-ios');
-  if (isIOS) {
+  const isMobileStats = isIOS || window.innerWidth <= 767;
+  var activeFilterCount = 0;
+  if (isMobileStats) {
+    ['filterAssetClass','filterDealType','filterStrategy','filterMaxMin','filterMaxLockup','filterDistributions','filterMinIRR'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && el.value) activeFilterCount++;
+    });
+    var searchEl = document.getElementById('filterSearch');
+    if (searchEl && searchEl.value) activeFilterCount++;
+  }
+  var filterBtnHtml = isMobileStats ? `
+      <div style="margin-left:auto;flex-shrink:0;">
+        <button onclick="var fb=document.querySelector('#page-deals .filter-bar');if(fb){fb.classList.toggle('ios-filters-open');var toggles=fb.querySelectorAll('.ios-filter-toggle');toggles.forEach(function(t){t.classList.toggle('open')});}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:${activeFilterCount > 0 ? 'var(--mint-bg)' : 'var(--bg-card)'};border:1px solid ${activeFilterCount > 0 ? 'var(--primary)' : 'var(--border)'};border-radius:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:${activeFilterCount > 0 ? 'var(--primary)' : 'var(--text-dark)'};cursor:pointer;-webkit-tap-highlight-color:transparent;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters${activeFilterCount > 0 ? ' (' + activeFilterCount + ')' : ''}
+        </button>
+      </div>` : '';
+  if (isMobileStats) {
     document.getElementById('statsBar').innerHTML = `
       <div class="stat-item"><span class="stat-label">Deals:</span> <span class="stat-value">${totalDeals}</span></div>
       <div class="stat-divider"></div>
       <div class="stat-item"><span class="stat-label">Avg IRR:</span> <span class="stat-value">${avgIRR}%</span></div>
+      ${filterBtnHtml}
     `;
   } else {
     document.getElementById('statsBar').innerHTML = `
