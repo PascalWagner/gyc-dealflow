@@ -1340,7 +1340,7 @@ select.form-input { cursor: pointer; appearance: auto; }
             <div class="consent-box" id="consentRecording">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <div class="consent-text">I consent to <strong>recording and distribution</strong> of any live presentation events I participate in. <span style="color:var(--text-muted);font-size:13px;">(Optional if not presenting)</span></div>
+            <div class="consent-text">I consent to <strong>recording and distribution</strong> of any live presentation events I participate in.</div>
           </div>
         </div>
 
@@ -1461,6 +1461,30 @@ select.form-input { cursor: pointer; appearance: auto; }
               <div class="match-number" id="matchCount">--</div>
               <div class="match-label">LPs with a buy box matching your deal</div>
             </div>
+            <!-- Weekly timeslots -->
+            <div class="mini-chart-wrap" style="margin-top:16px;">
+              <div class="mini-chart-title">Available Presentation Slots</div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-card);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <div>
+                    <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Tuesdays</div>
+                    <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">12:00 PM – 1:30 PM ET</div>
+                  </div>
+                  <span style="margin-left:auto;font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);background:var(--green-bg);padding:3px 8px;border-radius:10px;">OPEN</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg-card);">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <div>
+                    <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Thursdays</div>
+                    <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">12:00 PM – 1:30 PM ET</div>
+                  </div>
+                  <span style="margin-left:auto;font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--primary);background:var(--green-bg);padding:3px 8px;border-radius:10px;">OPEN</span>
+                </div>
+              </div>
+              <div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:8px;text-align:center;">Slots fill up fast — express interest to reserve yours</div>
+            </div>
+
             <!-- Capital check size distribution -->
             <div class="mini-chart-wrap" style="margin-top:16px;">
               <div class="mini-chart-title">LP Check Size Distribution</div>

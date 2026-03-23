@@ -330,8 +330,8 @@
   function updateAgreementBtn() {
     var btn = document.getElementById('agreementNextBtn');
     var sigName = document.getElementById('sigName').value.trim();
-    // Required: tos + listing + accuracy + signature name. Recording is optional.
-    var canProceed = state.consents.tos && state.consents.listing && state.consents.accuracy && sigName.length > 0;
+    // All 4 consents + signature name required.
+    var canProceed = state.consents.tos && state.consents.listing && state.consents.accuracy && state.consents.recording && sigName.length > 0;
     btn.disabled = !canProceed;
   }
 
