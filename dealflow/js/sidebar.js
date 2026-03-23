@@ -147,17 +147,8 @@
     + '<a class="nav-item" id="' + (isSPA ? 'gpOnboardingLink' : 'gpOnboardingLinkSidebar') + '" href="onboarding.html" style="display:none;">' + icons.buybox + ' Onboarding</a>'
     + '</div>';
 
-  // ACCOUNT
-  html += '<div class="nav-section-label" style="margin-top:auto;">Account</div>';
-  // Tier badge with upgrade link (replaces old Subscription nav item)
-  var _tierLabel = _sbTier === 'academy' ? 'Academy Member' : _sbTier === 'alumni' ? 'Alumni' : _sbTier === 'investor' ? 'Investor' : _sbTier === 'family_office' ? 'Family Office' : 'Free Plan';
-  var _tierColor = _sbTier !== 'free' && !_sbIsFree ? '#51BE7B' : 'var(--text-muted)';
-  var _tierUpgrade = _sbIsFree ? (' <a href="#" ' + (isSPA ? 'onclick="navigateTo(\'academy\'); return false"' : 'onclick="window.location.href=\'index.html#academy\'"') + ' style="font-size:10px;font-weight:700;color:var(--primary);margin-left:auto;text-decoration:none;opacity:0.9;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.9\'">Upgrade</a>') : '';
-  html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 16px;margin:0 0 2px;">'
-    + '<div style="width:6px;height:6px;border-radius:50%;background:' + _tierColor + ';flex-shrink:0;"></div>'
-    + '<span style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:' + _tierColor + ';">' + _tierLabel + '</span>'
-    + _tierUpgrade
-    + '</div>';
+  // ACCOUNT (push to bottom)
+  html += '<div style="margin-top:auto;"></div>';
   html += navItem('settings', icons.settings, 'Settings');
 
   // ADMIN NAV
@@ -224,7 +215,7 @@
     + '<div class="sidebar-user-avatar" id="sidebarAvatar">PW</div>'
     + '<div class="sidebar-user-info">'
     + '<div class="sidebar-user-name" id="sidebarName">User</div>'
-    + '<div class="sidebar-user-email" id="sidebarEmail" style="font-family:var(--font-ui);font-size:11px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>'
+    + '<div class="sidebar-user-tier" id="sidebarTier" style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:#51BE7B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>'
     + '</div>'
     + icons.settingsGear
     + '</div>';
@@ -293,8 +284,14 @@
       var initials = name.split(' ').map(function(n) { return n[0]; }).join('').toUpperCase().slice(0, 2);
       document.getElementById('sidebarAvatar').textContent = initials;
       document.getElementById('sidebarName').textContent = name;
-      var sidebarEmailEl = document.getElementById('sidebarEmail');
-      if (sidebarEmailEl) sidebarEmailEl.textContent = user.email || '';
+      var sidebarTierEl = document.getElementById('sidebarTier');
+      if (sidebarTierEl) {
+        var t = (user.tier || 'free');
+        var tLabel = t === 'academy' ? 'Academy Member' : t === 'alumni' ? 'Alumni' : t === 'investor' ? 'Investor' : t === 'family_office' ? 'Family Office' : 'Free Plan';
+        var tColor = t !== 'free' ? '#51BE7B' : 'rgba(255,255,255,0.45)';
+        sidebarTierEl.textContent = tLabel;
+        sidebarTierEl.style.color = tColor;
+      }
     } else {
       // Show sign-in prompt for non-logged-in users
       userEl.innerHTML = '<a href="deal-login.html" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--primary);border-radius:8px;text-decoration:none;color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:700;width:100%;box-sizing:border-box;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Sign Up / Log In</a>';
