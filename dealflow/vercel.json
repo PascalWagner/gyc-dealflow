@@ -4,6 +4,8 @@
   "framework": null,
   "functions": {
     "api/deck-upload.js": { "maxDuration": 60 },
+    "api/portfolio-upload.js": { "maxDuration": 60 },
+    "api/portfolio-extract.js": { "maxDuration": 60 },
     "api/ghl-sync.js": { "maxDuration": 120 }
   },
   "crons": [
