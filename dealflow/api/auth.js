@@ -102,11 +102,7 @@ export default async function handler(req, res) {
     const redirectTo = siteUrl + '/deal-login.html';
 
     try {
-      // Ensure user exists and is confirmed before generating link.
-      // Use listUsers filter since getUserByEmail isn't available in this supabase-js version.
-      const { data: { users } } = await adminSupabase.auth.admin.listUsers({ perPage: 1, page: 1 });
-      // listUsers doesn't filter by email, so use a targeted approach:
-      // just try generateLink — if user doesn't exist, create them first then retry.
+      // Try generateLink — if user doesn't exist, create them first then retry.
       let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
         type: 'magiclink',
         email
