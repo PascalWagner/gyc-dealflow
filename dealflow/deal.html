@@ -2876,11 +2876,7 @@ body {
     width: 80px;
     height: 80px;
   }
-  /* LP Network: community section mobile */
-  #dealCommunitySection {
-    padding: 16px !important;
-    margin: 4px 0 !important;
-  }
+  /* LP Network: community section inherits grid stacking from sec-econ-grid */
 }
 
 @media (max-width: 480px) {
@@ -5360,11 +5356,14 @@ async function renderDeal() {
             lines.push('<div style="display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--primary);">'
               + checkSvg + invested + ' LP' + (invested === 1 ? '' : 's') + ' from the network ' + (invested === 1 ? 'has' : 'have') + ' invested</div>');
           }
-          communityEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
-            + peopleSvg
-            + '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">GYC Community</span></div>'
-            + '<div style="display:flex;flex-direction:column;gap:8px;">' + lines.join('') + '</div>'
-            + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);">Your financial details are never shared.</div>';
+          communityEl.innerHTML = '<div class="section" style="min-width:0;margin:0;">'
+            + '<div class="section-header" style="padding:12px 16px;">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+            + '<span class="section-title" style="font-size:14px;">GYC Community</span></div>'
+            + '<div class="section-body" style="padding:12px 16px 16px;">'
+            + '<div style="display:flex;flex-direction:column;gap:10px;">' + lines.join('') + '</div>'
+            + '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-top:14px;padding-top:10px;border-top:1px solid var(--border-light);">Your financial details are never shared.</div>'
+            + '</div></div>';
           communityEl.style.display = 'block';
         }
       })
@@ -7914,7 +7913,6 @@ async function renderDeal() {
     + complianceBannerHtml
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
-    + '<div id="dealCommunitySection" style="display:none;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:var(--radius);padding:20px 24px;margin:8px 0 4px;"></div>'
     // --- Job 3: Deal terms + operator (two-column) ---
     + buyBoxHtml
     + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">'
@@ -7924,8 +7922,9 @@ async function renderDeal() {
     + (isPaidUser || _compIsAdmin ? feeCompareHtml : '')
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="sec-econ-grid">'
     + secFilingHtml
-    + buildDealEconomicsHtml(deal)
+    + '<div id="dealCommunitySection" style="display:none;"></div>'
     + '</div>'
+    + buildDealEconomicsHtml(deal)
     + (isPaidUser || _compIsAdmin
       // --- Paid users: original section order ---
       ? (cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + thesisHtml)
