@@ -1059,9 +1059,50 @@ select.form-input { cursor: pointer; appearance: auto; }
 .company-create-option:hover { background: var(--green-bg); }
 .company-create-option svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-/* ====== STEP VISIBILITY ====== */
-.step { display: none; }
-.step.active { display: block; }
+/* ====== STEP VISIBILITY + SLIDE ANIMATIONS ====== */
+.step { display: none; opacity: 0; }
+.step.active { display: block; animation: stepSlideIn 0.4s cubic-bezier(.4,0,.2,1) forwards; }
+.step.slide-out-left { display: block; animation: stepSlideOutLeft 0.25s ease forwards; }
+.step.slide-out-right { display: block; animation: stepSlideOutRight 0.25s ease forwards; }
+@keyframes stepSlideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes stepSlideInReverse { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes stepSlideOutLeft { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-40px); } }
+@keyframes stepSlideOutRight { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
+.step.active.reverse { animation-name: stepSlideInReverse; }
+
+/* ====== LP PROGRESS DOTS ====== */
+.lp-progress-dots { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+.lp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all 0.3s ease; }
+.lp-dot.active { width: 24px; border-radius: 4px; background: var(--primary); }
+.lp-dot.done { background: var(--primary); }
+
+/* ====== LP DEAL COUNT CARD GRID ====== */
+.deal-pill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 360px; margin: 0 auto 20px; }
+.deal-pill {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 20px 16px; border: 2px solid var(--border); border-radius: var(--radius);
+  cursor: pointer; transition: all 0.2s ease; background: var(--bg-card); text-align: center;
+}
+.deal-pill:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-card-hover); }
+.deal-pill.selected { border-color: var(--primary); background: rgba(81,190,123,0.04); }
+.deal-pill-num { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin-bottom: 4px; }
+.deal-pill-label { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+/* ====== COMPLETION SCREEN ====== */
+.completion-checkmark {
+  width: 64px; height: 64px; border-radius: 50%; background: var(--green-bg);
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+  animation: completionPop 0.5s cubic-bezier(.175,.885,.32,1.275) forwards;
+}
+@keyframes completionPop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.completion-summary { max-width: 400px; margin: 0 auto; }
+.completion-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 0;
+  border-bottom: 1px solid var(--border-light); font-family: var(--font-ui); font-size: 14px;
+}
+.completion-row:last-child { border-bottom: none; }
+.completion-label { color: var(--text-muted); font-weight: 500; }
+.completion-value { color: var(--text-dark); font-weight: 700; }
 
 /* ====== GYC LOGO ====== */
 .gyc-logo {
