@@ -28225,12 +28225,15 @@ if (window._isGuest) {
   // Intercept deal.html navigation for guests — show signup modal instead
   // Use a MutationObserver + delegation to catch dynamically rendered cards
   function _guestifyCards() {
-    // Remove inline onclick handlers on deal card elements and replace with guest gate
+    // Stop intercepting if user has since logged in
+    if (!window._isGuest) return;
+    // Intercept inline onclick handlers on deal card body elements
     document.querySelectorAll('[onclick*="deal.html?id="]').forEach(function(el) {
       if (el.dataset.guestified) return;
       el.dataset.guestified = '1';
       el.removeAttribute('onclick');
       el.addEventListener('click', function(e) {
+        if (!window._isGuest) return; // let it bubble to .deal-card handler
         e.preventDefault();
         e.stopPropagation();
         showLoginPrompt('view full deal details, save deals, and build your investment plan');
@@ -28241,6 +28244,7 @@ if (window._isGuest) {
       if (el.dataset.guestified) return;
       el.dataset.guestified = '1';
       el.addEventListener('click', function(e) {
+        if (!window._isGuest) return; // allow default <a> navigation
         e.preventDefault();
         e.stopPropagation();
         showLoginPrompt('view full deal details, save deals, and build your investment plan');
