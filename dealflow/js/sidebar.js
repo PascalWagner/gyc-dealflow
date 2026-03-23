@@ -448,6 +448,15 @@
   if (typeof window.logout !== 'function') {
     window.logout = function() {
       localStorage.removeItem('gycUser');
+      localStorage.removeItem('gycDealStages');
+      localStorage.removeItem('gycPortfolio');
+      localStorage.removeItem('gycGoals');
+      localStorage.removeItem('gycPortfolioPlan');
+      localStorage.removeItem('gycBuyBoxWizard');
+      localStorage.removeItem('gycBuyBox');
+      localStorage.removeItem('gycUserDeals');
+      localStorage.removeItem('_gycAdminRealUser');
+      sessionStorage.clear();
       window.location.href = 'deal-login.html';
     };
   }

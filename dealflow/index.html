@@ -13982,26 +13982,19 @@ async function fetchUserDataFromSupabase(email) {
       fetch(SYNC_API + '?type=plan', { headers: authHeaders }).catch(() => null)
     ]);
 
-    // Merge deal stages from Supabase into localStorage
+    // Replace deal stages from Supabase (server is source of truth per-user)
     if (stagesResp && stagesResp.ok) {
       const stagesData = await stagesResp.json().catch(() => ({}));
-      if (stagesData.records && stagesData.records.length > 0) {
-        const localStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
-        let merged = false;
+      if (stagesData.records) {
+        const serverStages = {};
         stagesData.records.forEach(r => {
           const dealId = r.deal_id;
-          // Migrate DB stage names to frontend names (interested→saved, etc.)
           const stage = _migrateStage(r.stage);
-          if (dealId && stage && localStages[dealId] !== stage) {
-            localStages[dealId] = stage;
-            merged = true;
-          }
+          if (dealId && stage) serverStages[dealId] = stage;
         });
-        if (merged) {
-          dealStages = localStages;
-          localStorage.setItem('gycDealStages', JSON.stringify(dealStages));
-          if (typeof renderDeals === 'function') renderDeals();
-        }
+        dealStages = serverStages;
+        localStorage.setItem('gycDealStages', JSON.stringify(dealStages));
+        if (typeof renderDeals === 'function') renderDeals();
       }
     }
 
@@ -14081,6 +14074,15 @@ async function fetchUserDataFromSupabase(email) {
 
 function logout() {
   localStorage.removeItem('gycUser');
+  localStorage.removeItem('gycDealStages');
+  localStorage.removeItem('gycPortfolio');
+  localStorage.removeItem('gycGoals');
+  localStorage.removeItem('gycPortfolioPlan');
+  localStorage.removeItem('gycBuyBoxWizard');
+  localStorage.removeItem('gycBuyBox');
+  localStorage.removeItem('gycUserDeals');
+  localStorage.removeItem('_gycAdminRealUser');
+  sessionStorage.clear();
   window.location.href = 'deal-login.html';
 }
 
