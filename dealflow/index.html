@@ -13012,22 +13012,55 @@ function navigateTo(page) {
     var _bbUser = getUser();
     var _bbTier = (_bbUser && _bbUser.tier) || 'free';
     var _bbIsAdmin = typeof isAdmin === 'function' && isAdmin();
-    if (_bbTier === 'free' && !_bbIsAdmin) {
-      var reportEl = document.getElementById('reportContent');
-      if (reportEl) {
-        reportEl.innerHTML = '<div style="text-align:center;padding:60px 32px;">'
-          + '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>'
-          + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Investment Plan Builder</div>'
-          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.6;">Academy members get a personalized deployment plan with buy box criteria, deal matching, and portfolio construction guidance.</div>'
-          + '<a href="#" onclick="navigateTo(\'academy\');return false;" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
-          + '</div>';
-      }
-      return;
-    }
+    var _bbFreeGated = (_bbTier === 'free' && !_bbIsAdmin);
     // Try to render from localStorage first
     renderReport();
     // Also trigger a fresh GHL fetch in case data hasn't loaded yet
     fetchBuyBoxFromGHL();
+    if (_bbFreeGated) {
+      var reportEl = document.getElementById('reportContent');
+      if (reportEl) {
+        // Render a sample plan preview behind the gate
+        reportEl.innerHTML = '<div style="position:relative;">'
+          // Overlay
+          + '<div style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(1.5px);border-radius:var(--radius);">'
+          + '<div style="text-align:center;max-width:400px;padding:28px 20px 36px;">'
+          + '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#4ade80);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>'
+          + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Investment Plan Builder</div>'
+          + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6;">Academy members get a personalized deployment plan with buy box criteria, deal matching, and portfolio construction guidance.</div>'
+          + '<a href="#" onclick="navigateTo(\'academy\');return false;" style="display:inline-block;padding:12px 28px;background:#3b82f6;color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;">Join Academy \u2192</a>'
+          + '</div></div>'
+          // Blurred sample content
+          + '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;padding:32px;">'
+          // Sample thesis section
+          + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:24px;">'
+          + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:12px;">Your Investment Thesis</div>'
+          + '<div style="font-family:var(--font-body);font-size:22px;font-weight:800;color:var(--text-dark);line-height:1.4;margin-bottom:16px;">Build $60,000/yr in passive income through cash-flowing real estate</div>'
+          + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+          + '<span style="padding:4px 12px;background:rgba(81,190,123,0.1);border-radius:20px;font-size:12px;font-weight:600;color:var(--primary);">Multi-Family</span>'
+          + '<span style="padding:4px 12px;background:rgba(81,190,123,0.1);border-radius:20px;font-size:12px;font-weight:600;color:var(--primary);">Self-Storage</span>'
+          + '<span style="padding:4px 12px;background:rgba(81,190,123,0.1);border-radius:20px;font-size:12px;font-weight:600;color:var(--primary);">Private Lending</span>'
+          + '</div></div>'
+          // Sample buy box criteria
+          + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:24px;">'
+          + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px;">Buy Box Criteria</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">'
+          + '<div style="padding:16px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Check Size</div><div style="font-size:20px;font-weight:800;color:var(--text-dark);">$50K \u2013 $100K</div></div>'
+          + '<div style="padding:16px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Target Return</div><div style="font-size:20px;font-weight:800;color:var(--primary);">8\u201312% CoC</div></div>'
+          + '<div style="padding:16px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">Max Lockup</div><div style="font-size:20px;font-weight:800;color:var(--text-dark);">5 years</div></div>'
+          + '<div style="padding:16px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;margin-bottom:4px;">12-Mo Capital</div><div style="font-size:20px;font-weight:800;color:var(--text-dark);">$200,000</div></div>'
+          + '</div></div>'
+          // Sample matching deals
+          + '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:28px;">'
+          + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px;">Matching Deals <span style="background:var(--primary);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:6px;">12 matches</span></div>'
+          + '<div style="display:flex;flex-direction:column;gap:12px;">'
+          + '<div style="display:flex;align-items:center;gap:16px;padding:14px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="flex:1;"><div style="font-weight:700;color:var(--text-dark);margin-bottom:2px;">Sunbelt Multi-Family Fund III</div><div style="font-size:12px;color:var(--text-muted);">Multi-Family \u2022 Value-Add \u2022 $50K min</div></div><div style="font-size:18px;font-weight:800;color:var(--primary);">9.2%</div></div>'
+          + '<div style="display:flex;align-items:center;gap:16px;padding:14px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="flex:1;"><div style="font-weight:700;color:var(--text-dark);margin-bottom:2px;">Midwest Storage Partners LP</div><div style="font-size:12px;color:var(--text-muted);">Self-Storage \u2022 Buy & Hold \u2022 $25K min</div></div><div style="font-size:18px;font-weight:800;color:var(--primary);">10.5%</div></div>'
+          + '<div style="display:flex;align-items:center;gap:16px;padding:14px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border-light);"><div style="flex:1;"><div style="font-weight:700;color:var(--text-dark);margin-bottom:2px;">Bridge Lending Income Fund</div><div style="font-size:12px;color:var(--text-muted);">Private Debt \u2022 Lending \u2022 $100K min</div></div><div style="font-size:18px;font-weight:800;color:var(--primary);">11.0%</div></div>'
+          + '</div></div>'
+          + '</div></div>';
+      }
+    }
     const bbActions = document.getElementById('buyboxTopbarActions');
     if (bbActions) {
       if (!localStorage.getItem('gycBuyBoxComplete')) {
