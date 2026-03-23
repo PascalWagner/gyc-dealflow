@@ -4,6 +4,8 @@
 
 import { getAdminClient, setCors } from './_supabase.js';
 
+const ADMIN_EMAILS = ['pascal@growyourcashflow.com', 'pascalwagner@gmail.com', 'pascal.wagner@growyourcashflow.com', 'pascal@growyourcashflow.io', 'info@pascalwagner.com'];
+
 export default async function handler(req, res) {
   setCors(res);
   res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
@@ -17,7 +19,7 @@ export default async function handler(req, res) {
     const { data: profiles, error: profErr } = await supabase
       .from('user_profiles')
       .select('id, email, created_at, buy_box_complete, funnel_status, deals_viewed_count, deals_saved_count, sessions_count, last_activity_date, tier, is_admin')
-      .or('is_admin.eq.false,is_admin.is.null');
+      .limit(5000);
 
     if (profErr) throw profErr;
 
@@ -26,7 +28,8 @@ export default async function handler(req, res) {
       .from('user_events')
       .select('user_id, event, created_at')
       .in('event', ['wizard_complete', 'goals_complete', 'deal_viewed', 'deal_saved', 'call_booked', 'session_start', 'wizard_step', 'wizard_abandoned', 'wizard_started'])
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(10000);
 
     if (evtErr) throw evtErr;
 
@@ -43,7 +46,7 @@ export default async function handler(req, res) {
     const sevenDaysAgo = new Date(now - 7 * 86400000).toISOString();
 
     // --- Funnel Counts ---
-    const users = (profiles || []).filter(p => !p.is_admin);
+    const users = (profiles || []).filter(p => !p.is_admin && !ADMIN_EMAILS.includes((p.email || '').toLowerCase()));
     const totalSignups = users.length;
     const signups7d = users.filter(u => u.created_at >= sevenDaysAgo).length;
 
@@ -203,6 +206,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('SaaS metrics error:', err);
-    return res.status(500).json({ error: 'Failed to fetch SaaS metrics' });
+    return res.status(500).json({ error: 'Failed to fetch SaaS metrics', detail: err.message });
   }
 }
