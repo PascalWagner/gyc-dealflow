@@ -7530,126 +7530,133 @@ const _supa = window.supabase.createClient(
     <div class="sub-page" style="max-width:1100px">
       <!-- Tab Toggle Bar -->
       <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;flex-wrap:wrap;" id="admindashTabBar">
-        <button class="growth-tab-btn" data-tab="growth" onclick="switchAdminDashTab('growth')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Growth</button>
-        <button class="growth-tab-btn" data-tab="analytics" onclick="switchAdminDashTab('analytics')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Analytics</button>
+        <button class="growth-tab-btn" data-tab="overview" onclick="switchAdminDashTab('overview')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Overview</button>
+        <button class="growth-tab-btn" data-tab="users" onclick="switchAdminDashTab('users')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Users</button>
         <button class="growth-tab-btn" data-tab="schema" onclick="switchAdminDashTab('schema')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Database Schema</button>
         <button class="growth-tab-btn" data-tab="devnotes" onclick="switchAdminDashTab('devnotes')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Dev Notes</button>
         <button class="growth-tab-btn" data-tab="network" onclick="switchAdminDashTab('network')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Network &amp; Moat</button>
         <button class="growth-tab-btn" data-tab="transactions" onclick="switchAdminDashTab('transactions')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Transactions</button>
         <button class="growth-tab-btn" data-tab="feedback" onclick="switchAdminDashTab('feedback')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Feedback</button>
-        <button class="growth-tab-btn" data-tab="saas" onclick="switchAdminDashTab('saas')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">SaaS Metrics</button>
       </div>
 
-      <!-- TAB: Growth Dashboard -->
-      <div id="admindash-tab-growth">
-      <div class="settings-page-desc" style="margin-top:0;">Week-over-week platform growth. Focus on increasing the rate of GP and LP acquisition.</div>
+      <!-- TAB: Overview Dashboard -->
+      <div id="admindash-tab-overview">
+      <div id="overviewLoading" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading dashboard...</div>
+      <div id="overviewContent" style="display:none;">
 
-      <!-- North Star Banner -->
-      <div id="growthNorthStar" style="background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02));border:1px solid rgba(81,190,123,0.2);border-radius:12px;padding:24px 28px;margin-bottom:28px;">
-        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">North Star Metric</div>
-        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
-          <div style="font-family:var(--font-ui);font-size:36px;font-weight:800;color:var(--text-dark);" id="growthNorthStarValue">--</div>
-          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">Deals added to LP pipelines (all time)</div>
-          <div id="growthNorthStarDelta" style="font-family:var(--font-ui);font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto;"></div>
+      <!-- North Star: Deal Inventory Quality -->
+      <div style="background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02));border:1px solid rgba(81,190,123,0.2);border-radius:12px;padding:24px 28px;margin-bottom:24px;">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">North Star: Deal Inventory Quality</div>
+        <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+          <div style="font-family:var(--font-ui);font-size:42px;font-weight:800;color:var(--text-dark);" id="nsComplete100">--</div>
+          <div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);">deals at 100% completeness <span id="nsCompletePct" style="font-weight:700;color:var(--primary);"></span></div>
+          <div id="nsCompleteDelta" style="font-family:var(--font-ui);font-size:13px;font-weight:700;padding:3px 10px;border-radius:20px;margin-left:auto;"></div>
         </div>
-        <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:8px;">This measures real engagement: an LP cared enough about a deal to move it into their pipeline. It combines GP supply quality + LP demand activation.</div>
+        <div style="margin-top:14px;display:flex;gap:6px;align-items:center;" id="nsHistogram"></div>
+        <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:10px;">Average completeness: <strong id="nsAvgCompleteness">--</strong>% across all active deals. Your product is only as good as the deal data.</div>
       </div>
 
-      <!-- Key Metrics Grid -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;" id="growthMetricsGrid"></div>
+      <!-- Marketplace Health Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;" id="overviewMarketCards"></div>
 
-      <!-- WoW Charts -->
-      <div class="section" style="margin-top:0;">
-        <div class="section-header"><span class="section-title">Week-over-Week Trends</span></div>
-        <div class="section-body">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" id="growthChartsGrid">
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">LPs Added</div><div id="growthChartLPs" style="height:120px;"></div></div>
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">GPs Added</div><div id="growthChartGPs" style="height:120px;"></div></div>
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Deals Added</div><div id="growthChartDeals" style="height:120px;"></div></div>
-            <div><div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Pipeline Adds (LP &rarr; Deal)</div><div id="growthChartPipeline" style="height:120px;"></div></div>
-          </div>
+      <!-- Trends: 2-column -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Deals + Completeness (8-week)</div>
+          <div id="overviewChartDeals" style="height:140px;"></div>
         </div>
-      </div>
-
-      <!-- Growth Suggestions -->
-      <div class="section">
-        <div class="section-header"><span class="section-title">Growth Playbook</span></div>
-        <div class="section-body" id="growthSuggestions">
-          <div style="color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading suggestions...</div>
-        </div>
-      </div>
-      </div><!-- /admindash-tab-growth -->
-
-      <!-- TAB: Analytics -->
-      <div id="admindash-tab-analytics" style="display:none;">
-      <!-- Summary Cards -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px;" id="analyticsSummaryCards">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Total Pageviews</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsPageviews">0</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsPageviewsToday">0</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Unique Users</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsUsers">0</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Today: <span id="analyticsUsersToday">0</span></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Avg Session Time</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsAvgSession">--</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;">Based on page enter/leave</div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Most Viewed Page</div>
-          <div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="analyticsMostViewed">--</div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:2px;" id="analyticsMostViewedCount"></div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">LPs + GPs (8-week)</div>
+          <div id="overviewChartUsers" style="height:140px;"></div>
         </div>
       </div>
 
-      <!-- Charts Row -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Page Popularity</h3>
-          <div style="height:300px;"><canvas id="analyticsPageChart"></canvas></div>
-        </div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-          <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Deal Engagement</h3>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div>
-              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Viewed Deals</h4>
-              <div id="analyticsTopViewedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
-            </div>
-            <div>
-              <h4 style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Most Saved Deals</h4>
-              <div id="analyticsTopSavedDeals" style="font-family:var(--font-body);font-size:13px;color:var(--text-dark);"></div>
-            </div>
-          </div>
-        </div>
+      <!-- Top Missing Fields -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px;">
+        <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Top Data Gaps Across All Deals</div>
+        <div id="overviewMissingFields" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
       </div>
 
-      <!-- User Sessions Table -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:32px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">User Sessions</h3>
+      <!-- This Week's Focus -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;">
+        <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">This Week's Focus</div>
+        <div id="overviewRecommendations" style="display:grid;gap:10px;"></div>
+      </div>
+
+      </div><!-- /overviewContent -->
+      </div><!-- /admindash-tab-overview -->
+
+      <!-- TAB: Users Dashboard -->
+      <div id="admindash-tab-users" style="display:none;">
+      <div id="usersTabLoading" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading user metrics...</div>
+      <div id="usersTabContent" style="display:none;">
+
+      <!-- Funnel Snapshot -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Activation Funnel</div>
+        <div id="usersFunnelBars" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <div id="usersFunnelCallout" style="margin-top:12px;font-family:var(--font-body);font-size:12px;color:var(--text-secondary);"></div>
+      </div>
+
+      <!-- Action Lists (3 columns) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;" id="usersActionLists"></div>
+
+      <!-- All Users Table -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">All Users</div>
+          <span id="usersTableCount" style="font-size:11px;color:var(--text-muted);font-weight:400;"></span>
+        </div>
         <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:13px;">
+          <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;">
             <thead>
               <tr style="border-bottom:2px solid var(--border);">
-                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">User</th>
-                <th style="text-align:left;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Last Active</th>
-                <th style="text-align:right;padding:8px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Total Events</th>
+                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Email</th>
+                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Signed Up</th>
+                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Stage</th>
+                <th style="text-align:center;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Onboarded</th>
+                <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Views</th>
+                <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Saves</th>
+                <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Sessions</th>
+                <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Last Active</th>
+                <th style="text-align:center;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;"></th>
               </tr>
             </thead>
-            <tbody id="analyticsUserSessions"></tbody>
+            <tbody id="usersTableBody"></tbody>
           </table>
         </div>
       </div>
 
-      <!-- Activity Feed -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Activity Feed <span style="font-weight:400;font-size:13px;color:var(--text-muted);">(last 100 events)</span></h3>
-        <div id="analyticsActivityFeed" style="max-height:500px;overflow-y:auto;"></div>
+      <!-- Time to Value + Cohorts side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <!-- Time to Value -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Time to Value</div>
+          <div id="usersTTV" style="display:grid;gap:10px;"></div>
+        </div>
+        <!-- Cohort Retention -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;">
+          <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Weekly Signup Cohorts</div>
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:11px;">
+              <thead>
+                <tr style="border-bottom:2px solid var(--border);">
+                  <th style="text-align:left;padding:6px 8px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:10px;">Week</th>
+                  <th style="text-align:right;padding:6px 8px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:10px;">#</th>
+                  <th style="text-align:right;padding:6px 8px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:10px;">Onb</th>
+                  <th style="text-align:right;padding:6px 8px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:10px;">Active</th>
+                  <th style="text-align:right;padding:6px 8px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:10px;">Saved</th>
+                  <th style="text-align:right;padding:6px 8px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:10px;">Call</th>
+                </tr>
+              </thead>
+              <tbody id="usersCohortBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      </div><!-- /admindash-tab-analytics -->
+
+      </div><!-- /usersTabContent -->
+      </div><!-- /admindash-tab-users -->
 
       <!-- TAB: Database Schema -->
       <div id="admindash-tab-schema" style="display:none;">
@@ -16408,6 +16415,15 @@ function printMyPlan() {
   if (d.distributions) { thesisParts.push('targeting <strong>' + (typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions)).toLowerCase() + ' or better</strong> distributions'); }
   var thesisText = thesisParts.length > 1 ? thesisParts[0] + ', ' + thesisParts.slice(1).join(', ') + '.' : thesisParts[0] + '.';
 
+  // Investment criteria summary items
+  var criteriaItems = [];
+  if (assetList.length > 0) criteriaItems.push({ label: 'Asset Classes', value: assetList.join(', ') });
+  if (stratList.length > 0) criteriaItems.push({ label: 'Strategies', value: stratList.join(', ') });
+  if (d.checkSize) criteriaItems.push({ label: 'Check Size', value: String(d.checkSize).startsWith('$') ? d.checkSize : '$' + Number(d.checkSize).toLocaleString() });
+  if (d.lockup) criteriaItems.push({ label: 'Lockup Tolerance', value: (/year/i.test(String(d.lockup)) ? d.lockup : d.lockup + ' years') });
+  if (d.distributions) criteriaItems.push({ label: 'Distribution Freq.', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
+  if (d.accredited) criteriaItems.push({ label: 'Accreditation', value: 'Accredited Investor' });
+
   // Market snapshot data
   var _stratAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
   var assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
@@ -16418,80 +16434,37 @@ function printMyPlan() {
   var userCheckSizeNum = parseDollar(d.checkSize) || 0;
 
   var snapshotRows = '';
+  var totalMatchingDeals = 0;
   relevantAssets.forEach(function(ac) {
     var isLending = ac === 'Lending';
     var classDeals = activeDeals.filter(function(dl) { return isLending ? dl.strategy === 'Lending' : dl.assetClass === ac; });
     if (classDeals.length === 0) return;
+    totalMatchingDeals += classDeals.length;
     var irrs = classDeals.map(function(x) { return x.targetIRR; }).filter(function(v) { return v && v > 0; });
     var cocs = classDeals.map(function(x) { return x.cashOnCash; }).filter(function(v) { return v && v > 0; });
     var mins = classDeals.map(function(x) { return x.investmentMinimum; }).filter(function(v) { return v && v > 0; });
+    var affordable = userCheckSizeNum > 0 ? classDeals.filter(function(x) { return x.investmentMinimum && x.investmentMinimum <= userCheckSizeNum; }).length : null;
     snapshotRows += '<tr><td style="font-weight:700;">' + ac + ' <span style="color:#8A9AA0;font-weight:400;">(' + classDeals.length + ')</span></td>'
-      + '<td>' + (irrs.length >= 2 ? fmt(Math.min(...irrs), 'pct') + ' – ' + fmt(Math.max(...irrs), 'pct') : irrs.length === 1 ? fmt(irrs[0], 'pct') : '—') + '</td>'
-      + '<td>' + (cocs.length > 0 ? fmt(cocs.reduce(function(a, b) { return a + b; }, 0) / cocs.length, 'pct') : '—') + '</td>'
-      + '<td>' + (mins.length > 0 ? '$' + Math.round(mins.reduce(function(a, b) { return a + b; }, 0) / mins.length).toLocaleString() : '—') + '</td></tr>';
+      + '<td>' + (irrs.length >= 2 ? fmt(Math.min(...irrs), 'pct') + ' \u2013 ' + fmt(Math.max(...irrs), 'pct') : irrs.length === 1 ? fmt(irrs[0], 'pct') : '\u2014') + '</td>'
+      + '<td>' + (cocs.length > 0 ? fmt(cocs.reduce(function(a, b) { return a + b; }, 0) / cocs.length, 'pct') : '\u2014') + '</td>'
+      + '<td>' + (mins.length > 0 ? '$' + Math.round(mins.reduce(function(a, b) { return a + b; }, 0) / mins.length).toLocaleString() : '\u2014') + '</td>'
+      + (userCheckSizeNum > 0 ? '<td style="color:' + bc.color + ';font-weight:700;">' + (affordable !== null ? affordable : '\u2014') + '</td>' : '')
+      + '</tr>';
   });
-
-  // Path to goal
-  var pathHtml = '';
-  if (branch === 'cashflow') {
-    var g = goals || {};
-    var currentInc = g.currentIncome || parseDollar(d.currentCashFlow) || 0;
-    var targetInc = g.targetIncome || parseDollar(d.targetCashFlow) || 0;
-    var gap = Math.max(0, targetInc - currentInc);
-    if (gap > 0 && targetInc > 0) {
-      var cs = parseDollar(d.checkSize) || 100000;
-      var matchDeals = activeDeals.filter(function(dl) { return userAssets.length === 0 || userAssets.includes(dl.assetClass); });
-      var cocVals = matchDeals.map(function(dl) { return dl.cashOnCash || 0; }).filter(function(v) { return v > 0; });
-      var avgCoC = cocVals.length > 0 ? cocVals.reduce(function(a, b) { return a + b; }, 0) / cocVals.length : 0.08;
-      var annual = Math.round(cs * avgCoC);
-      var dealsN = annual > 0 ? Math.ceil(gap / annual) : 0;
-      pathHtml = '<div class="p-section"><h3>Your Path to Goal</h3>'
-        + '<p style="margin-bottom:16px;">To close your <strong>$' + gap.toLocaleString() + '/yr</strong> income gap:</p>'
-        + '<div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin:20px 0;">'
-        + '<div class="p-metric"><div class="p-metric-val">' + dealsN + '</div><div class="p-metric-label">Deals</div></div>'
-        + '<div class="p-metric-op">&times;</div>'
-        + '<div class="p-metric"><div class="p-metric-val">$' + cs.toLocaleString() + '</div><div class="p-metric-label">Each</div></div>'
-        + '<div class="p-metric-op">@</div>'
-        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">~' + Math.round(avgCoC * 100) + '%</div><div class="p-metric-label">Cash-on-Cash</div></div>'
-        + '<div class="p-metric-op">=</div>'
-        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + (dealsN * annual).toLocaleString() + '</div><div class="p-metric-label">Per Year</div></div>'
-        + '</div></div>';
-    }
-  } else if (branch === 'growth') {
-    var capG = parseDollar(d.growthCapital) || 0;
-    var irrNum = parseFloat(d.minIRR) || 18;
-    if (capG > 0) {
-      pathHtml = '<div class="p-section"><h3>Growth Projection</h3>'
-        + '<p>At <strong>' + irrNum + '% IRR</strong>, your <strong>$' + capG.toLocaleString() + '</strong> could become:</p>'
-        + '<div style="display:flex;gap:32px;margin:16px 0;">'
-        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + Math.round(capG * Math.pow(1 + irrNum / 100, 5)).toLocaleString() + '</div><div class="p-metric-label">In 5 Years</div></div>'
-        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + Math.round(capG * Math.pow(1 + irrNum / 100, 10)).toLocaleString() + '</div><div class="p-metric-label">In 10 Years</div></div>'
-        + '</div></div>';
-    }
-  } else if (branch === 'tax') {
-    var taxable = parseDollar(d.taxableIncome) || 0;
-    var offset = parseDollar(d.taxOffset) || 0;
-    if (taxable > 0 && offset > 0) {
-      var depDeals = activeDeals.filter(function(x) { return x.firstYrDepreciation && x.firstYrDepreciation > 0; });
-      var avgDep = depDeals.length > 0 ? depDeals.reduce(function(s, x) { return s + x.firstYrDepreciation; }, 0) / depDeals.length : 0.6;
-      pathHtml = '<div class="p-section"><h3>Tax Shelter Path</h3>'
-        + '<p>To shelter <strong>$' + offset.toLocaleString() + '</strong> at ~' + Math.round(avgDep * 100) + '% first-year depreciation:</p>'
-        + '<div style="display:flex;gap:32px;margin:16px 0;">'
-        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + Math.round(offset / avgDep).toLocaleString() + '</div><div class="p-metric-label">Capital Needed</div></div>'
-        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">' + depDeals.length + '</div><div class="p-metric-label">Matching Deals</div></div>'
-        + '</div></div>';
-    }
-  }
 
   // Investment plan roster
   var planHtml = '';
+  var totalCapitalDeployed = 0;
+  var totalEstIncome = 0;
   if (planData) {
     var slots = planData.slots || planData.buckets || [];
     var totalSlots = slots.length;
     var filledSlots = slots.filter(function(s) { return s.filled_by; }).length;
-    var totalIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+    totalEstIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
     var filledIncome = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
-    var targetIncome = planData.target_income || totalIncome;
+    var targetIncome = planData.target_income || totalEstIncome;
+    totalCapitalDeployed = slots.reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
+    var blendedYield = totalCapitalDeployed > 0 ? Math.round(totalEstIncome / totalCapitalDeployed * 100) : 0;
 
     var currentYear = new Date().getFullYear();
     var slotsByYear = {};
@@ -16499,8 +16472,9 @@ function printMyPlan() {
     var years = Object.keys(slotsByYear).sort();
     var cumInc = 0;
 
-    planHtml = '<div class="p-section" style="page-break-before:always;"><h3>Investment Plan</h3>'
-      + '<p style="margin-bottom:16px;"><strong>' + filledSlots + ' of ' + totalSlots + '</strong> investments · <strong style="color:' + bc.color + ';">$' + filledIncome.toLocaleString() + '</strong> of $' + targetIncome.toLocaleString() + '/yr</p>'
+    planHtml = '<div class="p-section p-plan-section"><h3>Deployment Schedule</h3>'
+      + '<p style="margin-bottom:4px;">This plan deploys <strong>$' + totalCapitalDeployed.toLocaleString() + '</strong> across <strong>' + totalSlots + ' investments</strong> over <strong>' + years.length + ' year' + (years.length !== 1 ? 's' : '') + '</strong>, targeting <strong>$' + targetIncome.toLocaleString() + '/yr</strong> in passive income at a blended <strong>' + blendedYield + '% yield</strong>.</p>'
+      + '<p style="margin-bottom:16px;font-size:13px;">Filled slots (<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';vertical-align:middle;margin:0 2px;"></span>) represent completed investments. Open slots (<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;vertical-align:middle;margin:0 2px;box-sizing:border-box;"></span>) are planned positions still to be filled.</p>'
       + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Check Size</th><th>Est. Income</th></tr></thead><tbody>';
 
     years.forEach(function(yr, yi) {
@@ -16508,16 +16482,18 @@ function printMyPlan() {
       var yearIncome = yearSlots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
       cumInc += yearIncome;
       var pct = targetIncome > 0 ? Math.min(100, Math.round(cumInc / targetIncome * 100)) : 0;
-      planHtml += '<tr class="p-year-header"><td colspan="4">Year ' + (yi + 1) + ' (' + yr + ') <span style="float:right;color:' + bc.color + ';">$' + cumInc.toLocaleString() + '/yr · ' + pct + '%</span></td></tr>';
+      planHtml += '<tr class="p-year-header"><td colspan="4">Year ' + (yi + 1) + ' (' + yr + ') <span style="float:right;color:' + bc.color + ';">$' + cumInc.toLocaleString() + '/yr \u00b7 ' + pct + '%</span></td></tr>';
       yearSlots.forEach(function(slot) {
         var filled = !!slot.filled_by;
+        var cocPct = Math.round((slot.target_coc || 0) * 100);
         planHtml += '<tr' + (filled ? '' : ' style="color:#8A9AA0;"') + '>'
           + '<td style="text-align:left;">' + (filled ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';margin-right:6px;vertical-align:middle;"></span>' + (slot.filled_name || 'Investment') : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;margin-right:6px;vertical-align:middle;box-sizing:border-box;"></span>Open slot') + '</td>'
           + '<td>' + slot.asset_class + '</td>'
           + '<td>$' + (slot.check_size || 0).toLocaleString() + '</td>'
-          + '<td>$' + (slot.est_income || 0).toLocaleString() + '/yr</td></tr>';
+          + '<td>$' + (slot.est_income || 0).toLocaleString() + '/yr' + (cocPct > 0 ? ' <span style="color:#8A9AA0;font-size:10px;">(' + cocPct + '%)</span>' : '') + '</td></tr>';
       });
     });
+    planHtml += '<tr style="font-weight:700;border-top:2px solid #141413;"><td style="text-align:left;">Total</td><td>' + totalSlots + ' investments</td><td>$' + totalCapitalDeployed.toLocaleString() + '</td><td style="color:' + bc.color + ';">$' + totalEstIncome.toLocaleString() + '/yr</td></tr>';
     planHtml += '</tbody></table></div>';
   }
 
@@ -16526,11 +16502,11 @@ function printMyPlan() {
   if (portfolio.length > 0) {
     var totalInvested = portfolio.reduce(function(s, p) { return s + (parseFloat(p.amountInvested) || 0); }, 0);
     holdingsHtml = '<div class="p-section"><h3>Current Portfolio</h3>'
-      + '<p style="margin-bottom:12px;">' + portfolio.length + ' investments · $' + totalInvested.toLocaleString() + ' deployed</p>'
+      + '<p style="margin-bottom:12px;">You currently have <strong>' + portfolio.length + ' investment' + (portfolio.length !== 1 ? 's' : '') + '</strong> totaling <strong>$' + totalInvested.toLocaleString() + '</strong> deployed.</p>'
       + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Invested</th><th>Status</th></tr></thead><tbody>';
     portfolio.forEach(function(p) {
       holdingsHtml += '<tr><td style="text-align:left;font-weight:600;">' + (p.dealName || p.name || 'Investment') + '</td>'
-        + '<td>' + (p.assetClass || '—') + '</td>'
+        + '<td>' + (p.assetClass || '\u2014') + '</td>'
         + '<td>$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
         + '<td>' + (p.status || 'Active') + '</td></tr>';
     });
@@ -16541,42 +16517,39 @@ function printMyPlan() {
   var today = new Date();
   var dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   var firstName = d.firstName || '';
+  var lastName = d.lastName || '';
+  var fullName = (firstName + ' ' + lastName).trim();
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>My Investment Plan – Grow Your Cashflow</title>'
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Investment Plan' + (fullName ? ' \u2013 ' + fullName : '') + ' \u2013 Grow Your Cashflow</title>'
     + '<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
     + '<style>'
     + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
-    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.6; background: #fff; padding: 0; }'
+    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.6; background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
     + '.p-page { max-width: 800px; margin: 0 auto; padding: 48px 40px; }'
-    // Header
-    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #0A1E21; }'
-    + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 22px; color: #0A1E21; }'
-    + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; }'
-    + '.p-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; text-align: right; }'
-    // Hero
-    + '.p-hero { margin-bottom: 36px; }'
+    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid #0A1E21; }'
+    + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 24px; color: #0A1E21; }'
+    + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; letter-spacing: 0.5px; }'
+    + '.p-header-right { text-align: right; }'
+    + '.p-header-name { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 700; color: #141413; }'
+    + '.p-header-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; }'
+    + '.p-hero { margin-bottom: 36px; padding-bottom: 32px; border-bottom: 1px solid #EDF1F2; }'
     + '.p-badge { display: inline-block; padding: 4px 14px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }'
-    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 32px; font-weight: 400; margin-bottom: 16px; color: #141413; }'
+    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 32px; font-weight: 400; margin-bottom: 16px; color: #141413; line-height: 1.2; }'
     + '.p-hero .p-thesis { font-size: 16px; line-height: 1.8; color: #607179; }'
     + '.p-hero .p-thesis strong { color: #141413; }'
-    // Sections
+    + '.p-criteria { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 24px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #EDF1F2; }'
+    + '.p-criteria-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-bottom: 2px; }'
+    + '.p-criteria-val { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 600; color: #141413; }'
     + '.p-section { margin-bottom: 32px; }'
     + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #8A9AA0; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-section p { font-size: 15px; color: #607179; }'
+    + '.p-section p { font-size: 14px; color: #607179; line-height: 1.6; }'
     + '.p-section p strong { color: #141413; }'
-    // Metrics
-    + '.p-metric { text-align: center; padding: 16px 20px; background: #FAF9F5; border-radius: 8px; min-width: 100px; }'
-    + '.p-metric-val { font-family: "DM Serif Display", Georgia, serif; font-size: 26px; color: #141413; }'
-    + '.p-metric-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-top: 4px; }'
-    + '.p-metric-op { font-size: 20px; color: #8A9AA0; display: flex; align-items: center; }'
-    // Snapshot table
     + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 12px; }'
     + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 10px 10px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-snap-table th:first-child { text-align: left; }'
     + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 600; color: #141413; text-align: center; padding: 10px 10px 10px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-snap-table td:first-child { text-align: left; }'
     + '.p-snap-table tr:last-child td { border-bottom: none; }'
-    // Plan table
     + '.p-plan-table { width: 100%; border-collapse: collapse; font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; }'
     + '.p-plan-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 10px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-plan-table th:first-child { text-align: left; }'
@@ -16584,40 +16557,53 @@ function printMyPlan() {
     + '.p-plan-table td:first-child { text-align: left; }'
     + '.p-plan-table tr:last-child td { border-bottom: none; }'
     + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 12px; padding: 8px !important; }'
-    // Footer
-    + '.p-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; }'
-    // Print
-    + '@media print { body { padding: 0; } .p-page { padding: 24px 0; } .p-section { page-break-inside: avoid; } }'
+    + '.p-footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; align-items: center; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; }'
+    + '.p-footer-center { text-align: center; flex: 1; }'
+    + '.p-disclaimer { margin-top: 32px; padding: 16px 20px; background: #FAF9F5; border-radius: 8px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; line-height: 1.5; color: #8A9AA0; }'
+    + '@media print { body { padding: 0; } .p-page { padding: 20px 0; } .p-section { page-break-inside: avoid; } .p-plan-section { page-break-before: always; } .p-year-header { page-break-after: avoid; } .p-disclaimer { page-break-inside: avoid; } }'
     + '</style></head><body><div class="p-page">';
 
   // Header
-  html += '<div class="p-header"><div><div class="p-logo">Grow Your Cashflow</div><div class="p-logo-sub">Investment Plan</div></div><div class="p-date">' + dateStr + (firstName ? '<br>' + firstName : '') + '</div></div>';
+  html += '<div class="p-header"><div><div class="p-logo">Grow Your Cashflow</div><div class="p-logo-sub">Personal Investment Plan</div></div><div class="p-header-right">' + (fullName ? '<div class="p-header-name">' + fullName + '</div>' : '') + '<div class="p-header-date">Prepared ' + dateStr + '</div></div></div>';
 
   // Hero
   html += '<div class="p-hero">'
     + '<div class="p-badge" style="background:' + bc.color + '15;color:' + bc.color + ';border:1px solid ' + bc.color + '30;">' + bc.label + '</div>'
     + '<h1>' + goalLine + '</h1>'
-    + '<div class="p-thesis">' + thesisText + '</div>'
-    + '</div>';
+    + '<div class="p-thesis">' + thesisText + '</div>';
+  if (criteriaItems.length > 0) {
+    html += '<div class="p-criteria">';
+    criteriaItems.forEach(function(item) {
+      html += '<div><div class="p-criteria-label">' + item.label + '</div><div class="p-criteria-val">' + item.value + '</div></div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Portfolio holdings first (advisor sees current state)
+  html += holdingsHtml;
 
   // Market Snapshot
   if (snapshotRows) {
     html += '<div class="p-section"><h3>Market Snapshot</h3>'
-      + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th></tr></thead>'
+      + '<p style="margin-bottom:12px;">Based on <strong>' + totalMatchingDeals + ' active deals</strong> matching your investment criteria across the Grow Your Cashflow deal database.</p>'
+      + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
       + '<tbody>' + snapshotRows + '</tbody></table></div>';
   }
 
-  // Path to goal
-  html += pathHtml;
-
-  // Portfolio holdings
-  html += holdingsHtml;
-
-  // Investment plan
+  // Deployment schedule
   html += planHtml;
 
+  // Disclaimer
+  html += '<div class="p-disclaimer">'
+    + '<strong>Disclaimer:</strong> This investment plan is for informational and planning purposes only. It does not constitute investment advice, a solicitation, or an offer to sell securities. '
+    + 'All projected returns, income estimates, and market data are based on current deal listings and historical performance, which may change. '
+    + 'Past performance does not guarantee future results. Consult with a qualified financial advisor, tax professional, and/or attorney before making any investment decisions. '
+    + 'All investments involve risk, including the potential loss of principal.'
+    + '</div>';
+
   // Footer
-  html += '<div class="p-footer"><div>growyourcashflow.com</div><div>Confidential – For personal use only</div></div>';
+  html += '<div class="p-footer"><div>growyourcashflow.com</div><div class="p-footer-center">Confidential \u2013 Prepared for ' + (fullName || 'personal use') + '</div><div>' + dateStr + '</div></div>';
 
   html += '</div></body></html>';
 
