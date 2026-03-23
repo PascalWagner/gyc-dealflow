@@ -498,6 +498,20 @@
     }
   }
 
+  // Convert a File to base64 string
+  function fileToBase64(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() {
+        // result is "data:...;base64,XXXX" — strip the prefix
+        var base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   window.submitDealUploads = function() {
     // Show processing
     document.getElementById('deckDropZone').style.display = 'none';
@@ -505,32 +519,74 @@
     document.getElementById('uploadNextBtn').style.display = 'none';
     document.getElementById('processingState').style.display = 'block';
 
-    var formData = new FormData();
-    if (state.deckFile) formData.append('file', state.deckFile);
-    formData.append('email', user.email);
-    if (state.companyId) formData.append('companyId', state.companyId);
+    // Get a deal name from the filename (strip extension)
+    var file = state.deckFile || state.ppmFile;
+    var dealName = file ? file.name.replace(/\.[^.]+$/, '') : 'New Deal';
+    // Use a placeholder dealId to trigger deal creation in the API
+    var dealId = 'new-' + Date.now();
+    var docType = (state.ppmFile && !state.deckFile) ? 'ppm' : 'deck';
+    var uploadFile = state.deckFile || state.ppmFile;
 
-    // Upload deck
-    var deckPromise = state.deckFile
-      ? fetch('/api/deck-upload', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + user.token },
-          body: formData
-        }).then(function(r) { return r.json(); })
-      : Promise.resolve(null);
+    if (!uploadFile) {
+      goToStep(8);
+      return;
+    }
 
-    // TODO: PPM upload endpoint (use same deck-upload or separate)
-    // For now, PPM is noted but uploaded through the same flow
-
-    deckPromise
+    fileToBase64(uploadFile)
+    .then(function(base64data) {
+      return fetch('/api/deck-upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + user.token
+        },
+        body: JSON.stringify({
+          dealId: dealId,
+          dealName: dealName,
+          filedata: base64data,
+          filename: uploadFile.name,
+          docType: docType,
+          userEmail: user.email,
+          userName: user.name || '',
+          companyId: state.companyId || ''
+        })
+      });
+    })
+    .then(function(r) { return r.json(); })
     .then(function(uploadResult) {
       state.dealUploaded = true;
-      // Capture the deal ID for review page redirect
+      // Capture the deal ID — newDealId for newly created, or fallback
       var uploadedDealId = (uploadResult && uploadResult.newDealId) || null;
-      return fetch('/api/gp-onboarding', {
-        method: 'POST', headers: headers,
-        body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
-      }).then(function() { return uploadedDealId; });
+
+      // If we also have a PPM file (uploaded deck first), upload PPM too
+      var ppmPromise = (state.ppmFile && state.deckFile && uploadedDealId)
+        ? fileToBase64(state.ppmFile).then(function(ppmBase64) {
+            return fetch('/api/deck-upload', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + user.token
+              },
+              body: JSON.stringify({
+                dealId: uploadedDealId,
+                dealName: dealName,
+                filedata: ppmBase64,
+                filename: state.ppmFile.name,
+                docType: 'ppm',
+                userEmail: user.email,
+                userName: user.name || '',
+                companyId: state.companyId || ''
+              })
+            }).then(function(r) { return r.json(); });
+          })
+        : Promise.resolve(null);
+
+      return ppmPromise.then(function() {
+        return fetch('/api/gp-onboarding', {
+          method: 'POST', headers: headers,
+          body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
+        }).then(function() { return uploadedDealId; });
+      });
     })
     .then(function(uploadedDealId) {
       // Redirect to deal review page if we have a deal ID
