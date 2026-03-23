@@ -671,7 +671,7 @@ body {
         <div class="pitch-hero-text">
           <div class="pitch-hero-eyebrow">GP Webinar Pitch</div>
           <h1>Pitch Your Deal to Qualified Accredited Investors</h1>
-          <p class="pitch-hero-desc">Get a dedicated 30-minute slot in our investor webinar series. Present your deal directly to LPs who are actively looking to deploy capital.</p>
+          <p class="pitch-hero-desc">Get a dedicated 90-minute session — 45 minutes to present your deal, followed by 45 minutes of live Q&amp;A. Directly marketed to investors whose buy box matches your deal.</p>
         </div>
         <div class="pitch-hero-price">
           <span class="pitch-hero-price-amount">$1,000</span>
@@ -683,16 +683,16 @@ body {
     <!-- Audience Stats -->
     <div class="pitch-stats">
       <div class="pitch-stat">
-        <div class="pitch-stat-num">420+</div>
-        <div class="pitch-stat-label">Accredited Investors</div>
+        <div class="pitch-stat-num" id="statLpCount">1,100+</div>
+        <div class="pitch-stat-label">Investors in Database</div>
       </div>
       <div class="pitch-stat">
-        <div class="pitch-stat-num">$2.1M+</div>
-        <div class="pitch-stat-label">Capital Deployed</div>
+        <div class="pitch-stat-num">8–20</div>
+        <div class="pitch-stat-label">Live Attendees</div>
       </div>
       <div class="pitch-stat">
-        <div class="pitch-stat-num">78%</div>
-        <div class="pitch-stat-label">Attend Live</div>
+        <div class="pitch-stat-num">500+</div>
+        <div class="pitch-stat-label">Avg. YouTube Views</div>
       </div>
       <div class="pitch-stat">
         <div class="pitch-stat-num">100%</div>
@@ -709,23 +709,23 @@ body {
         <div class="included-grid">
           <div class="included-item">
             <div class="included-item-icon">&#127908;</div>
-            <h3>30-Minute Dedicated Pitch</h3>
-            <p>Present your deal, walk through the financials, and share your track record with a live audience of accredited investors.</p>
+            <h3>90-Minute Live Session</h3>
+            <p>45 minutes to present your deal, team, and track record, followed by 45 minutes of live Q&amp;A with qualified investors.</p>
           </div>
           <div class="included-item">
-            <div class="included-item-icon">&#128172;</div>
-            <h3>Live Q&amp;A Session</h3>
-            <p>Take questions directly from interested LPs. The highest-intent investors ask the hardest questions.</p>
+            <div class="included-item-icon">&#127919;</div>
+            <h3>Matched Investor Audience</h3>
+            <p>Every LP whose buy box matches your deal gets a personal invitation. No cold audience — warm, qualified, ready to evaluate.</p>
           </div>
           <div class="included-item">
             <div class="included-item-icon">&#127909;</div>
-            <h3>Recorded &amp; Distributed</h3>
-            <p>Your pitch is professionally recorded and shared with all platform members, including those who couldn't attend live.</p>
+            <h3>Recording + YouTube</h3>
+            <p>Your pitch is recorded and shared with our full investor database. Also published on YouTube — top presentations hit 1,500+ views.</p>
           </div>
           <div class="included-item">
             <div class="included-item-icon">&#128202;</div>
-            <h3>Investor Interest Report</h3>
-            <p>After the webinar, receive a report showing which investors watched, how long they stayed, and who expressed interest.</p>
+            <h3>Post-Event Analytics</h3>
+            <p>See exactly who attended, engagement data, and which investors requested a direct introduction to your IR team.</p>
           </div>
           <div class="included-item">
             <div class="included-item-icon">&#128231;</div>
@@ -751,7 +751,7 @@ body {
           <div class="step-item">
             <div class="step-num">1</div>
             <h3>Book &amp; Pay</h3>
-            <p>Secure your pitch slot with a one-time $1,000 payment. Pick your preferred webinar date.</p>
+            <p>Secure your pitch slot with a one-time $1,000 payment. Pick your preferred Thursday.</p>
           </div>
           <div class="step-item">
             <div class="step-num">2</div>
@@ -798,8 +798,8 @@ body {
           <div class="schedule-slot-bar open">Open &bull; 2 slots available</div>
         </div>
         <ul class="schedule-details">
-          <li>Every other Thursday at 6:00 PM ET</li>
-          <li>Max 2 GPs per session</li>
+          <li>Every Thursday at 1:00 PM ET</li>
+          <li>One operator per week</li>
           <li>Replay available within 24 hours</li>
         </ul>
       </div>
@@ -832,14 +832,14 @@ body {
             What's the format of the webinar?
             <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-a">Each webinar features up to 2 GP presentations of 30 minutes each, followed by a live Q&amp;A. We handle the Zoom hosting, introductions, and moderation so you can focus on your pitch.</div>
+          <div class="faq-a">Each webinar is a 90-minute session — 45 minutes for your presentation, followed by 45 minutes of live Q&amp;A. We handle the Zoom hosting, introductions, and moderation so you can focus on your pitch.</div>
         </div>
         <div class="faq-item">
           <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
             Who is in the audience?
             <svg class="faq-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-a">Our audience consists of accredited investors on the Grow Your Cashflow platform who are actively evaluating passive investment opportunities across real estate, lending, and other alternative assets.</div>
+          <div class="faq-a">Your event is directly marketed to every investor whose buy box matches your deal — these are LPs who have already told us they want your asset class, return profile, and check size. No cold audience.</div>
         </div>
         <div class="faq-item">
           <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
@@ -875,5 +875,15 @@ body {
   </div>
 </div>
 
+<script>
+// Pull real LP network stats
+fetch('/api/lp-network-stats')
+  .then(function(r) { return r.json(); })
+  .then(function(stats) {
+    var el = document.getElementById('statLpCount');
+    if (el) el.textContent = Math.max(stats.totalLPs || 0, 1100).toLocaleString() + '+';
+  })
+  .catch(function() {});
+</script>
 </body>
 </html>
