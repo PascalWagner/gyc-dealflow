@@ -2398,11 +2398,6 @@ html.cap-ios .mobile-pill-tabs {
 
 /* ── Hide elements not needed on iOS / mobile ──────────────── */
 html.cap-ios .mobile-menu-btn { display: none !important; }
-/* Hide office hours banner on iOS app and mobile */
-html.cap-ios .office-hours-banner { display: none !important; }
-@media (max-width: 767px) {
-  .office-hours-banner { display: none !important; }
-}
 
 /* ── Filter bar: collapsed by default on iOS / mobile ───────── */
 html.cap-ios .filter-bar,
@@ -2992,64 +2987,6 @@ html.cap-ios .debt-metric-select-mobile {
   #page-marketintel [style*="font-size:18px"] { font-size: 15px !important; }
 }
 
-/* ====== OFFICE HOURS CTA BANNER ====== */
-.office-hours-banner {
-  background: linear-gradient(135deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
-  padding: 14px 32px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: #fff;
-  position: relative;
-  overflow: hidden;
-}
-.office-hours-banner::after {
-  content: '';
-  position: absolute;
-  right: -60px; top: -60px;
-  width: 160px; height: 160px;
-  background: radial-gradient(circle, rgba(81,190,123,0.15), transparent 70%);
-  border-radius: 50%;
-}
-.office-hours-pulse {
-  width: 10px; height: 10px;
-  background: var(--accent-green);
-  border-radius: 50%;
-  animation: pulse 2s ease infinite;
-  flex-shrink: 0;
-}
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(64,228,127,0.6); }
-  50% { box-shadow: 0 0 0 8px rgba(64,228,127,0); }
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-.office-hours-text {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  font-weight: 600;
-  position: relative;
-}
-.office-hours-text span { color: var(--accent-green); }
-.office-hours-join {
-  margin-left: auto;
-  padding: 7px 20px;
-  background: var(--accent-green);
-  color: var(--teal-midnight);
-  border: none;
-  border-radius: 6px;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-}
-.office-hours-join:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(64,228,127,0.4); }
 
 /* ====== USER SIDEBAR ====== */
 .sidebar-user {
@@ -4185,7 +4122,7 @@ html.cap-ios .debt-metric-select-mobile {
 /* Print styles for report */
 @media print {
   body { background: #fff !important; }
-  .sidebar, .topbar, .wizard-overlay, .report-actions, .report-callout-btn, .office-hours-banner { display: none !important; }
+  .sidebar, .topbar, .wizard-overlay, .report-actions, .report-callout-btn { display: none !important; }
   .main { margin-left: 0 !important; }
   .report-container { box-shadow: none; border-radius: 0; }
   .report-hero { padding: 36px; }
@@ -4203,7 +4140,6 @@ html.cap-ios .debt-metric-select-mobile {
   .report-grid { grid-template-columns: 1fr; }
   .report-metric-row { grid-template-columns: 1fr; }
   .report-page { padding: 12px !important; }
-  .office-hours-banner { padding: 12px 16px; flex-wrap: wrap; }
 
   /* ── Debt Funds Explorer: mobile fixes ── */
   #debtFundStats {
@@ -5456,8 +5392,6 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 .bb-drift-new { background:rgba(37,99,235,0.08); color:#2563EB; }
 .bb-drift-check { width:20px; height:20px; border-radius:50%; background:var(--green-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
-/* Office Hours CTA */
-.bb-office-cta { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 36px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
 
 @media (max-width: 600px) {
   .bb-report { padding:16px; }
@@ -5466,8 +5400,6 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   .bb-thesis { font-size:15px; }
   .bb-snapshot-table th, .bb-snapshot-table td { padding:10px 6px 10px 0; font-size:12px; }
   .bb-snapshot-table .bb-ac-icon { width:26px; height:26px; font-size:13px; border-radius:6px; }
-  .bb-office-cta { flex-direction:column; align-items:stretch; text-align:center; padding:20px; }
-  .bb-office-cta .btn-cta { width:100% !important; }
 }
 
 /* ========== MOBILE SWIPE FEED ========== */
@@ -6450,9 +6382,8 @@ const _supa = window.supabase.createClient(
     <div class="settings-page">
       <div class="settings-tabs">
         <button class="settings-tab active" data-stab="profile" onclick="switchSettingsTab(this)">Profile</button>
-        <button class="settings-tab" data-stab="plan" onclick="switchSettingsTab(this)">My Plan</button>
-        <button class="settings-tab" data-stab="investor" onclick="switchSettingsTab(this)">Investor</button>
-        <button class="settings-tab" data-stab="privacy" onclick="switchSettingsTab(this)">Privacy</button>
+        <button class="settings-tab" data-stab="plan" onclick="switchSettingsTab(this)">Membership</button>
+        <button class="settings-tab" data-stab="privacy" onclick="switchSettingsTab(this)">Privacy &amp; Sharing</button>
         <button class="settings-tab" data-stab="notifications" onclick="switchSettingsTab(this)">Notifications</button>
       </div>
 
@@ -6517,28 +6448,36 @@ const _supa = window.supabase.createClient(
         <div id="myPlanContent"></div>
       </div>
 
-      <!-- Investor Tab -->
-      <div class="settings-panel" id="stab-investor" style="display:none">
-        <div class="settings-page-title">Investment Profile</div>
-        <div class="settings-page-desc">Your investment criteria and preferences. Changes update your deal matches and plan immediately.</div>
-        <div id="buyBoxEditor"></div>
-      </div>
-
-      <!-- Privacy Tab -->
+      <!-- Privacy & Sharing Tab -->
       <div class="settings-panel" id="stab-privacy" style="display:none">
-        <div class="settings-page-title">Privacy & Sharing</div>
-        <div class="settings-page-desc">Control what other GYC members can see about your activity.</div>
-
-        <div class="settings-card">
-          <div class="settings-card-title">Portfolio Visibility</div>
-          <div class="settings-card-desc">Manage how your investment activity appears to other members</div>
-          <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:12px 0;">
-            <input type="checkbox" id="sharePortfolioToggle" onchange="toggleSharePortfolio(this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Share my investments publicly</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;line-height:1.5;">When enabled, your name will appear on deal pages where you've invested or are vetting. This helps other members discover deals through people they trust.</div>
-            </div>
-          </label>
+        <div class="settings-page-title">Privacy &amp; Sharing</div>
+        <div class="settings-page-desc">Control exactly what other GYC members can see about your deal activity. Your financial details are never shared.</div>
+        <div class="settings-card" style="background:var(--bg-cream);border:1px solid var(--border-light);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="18" height="18"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div class="settings-card-title" style="margin-bottom:0;">Always Private</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;">
+            <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Net worth &amp; capital amounts</div>
+            <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Accreditation status</div>
+            <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Specific dollar amounts invested</div>
+            <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:13px;color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Contact information (email, phone)</div>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:16px;">
+          <div class="settings-card-title">Activity Sharing</div>
+          <div class="settings-card-desc">Choose what other members can see about your deal activity. Each toggle is independent.</div>
+          <div style="display:grid;gap:0;">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px 0;border-bottom:1px solid var(--border-light);"><input type="checkbox" id="shareSavedToggle" onchange="updatePrivacyToggle('share_saved', this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);flex-shrink:0;"><div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Show when I save a deal</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:3px;line-height:1.5;">Your name appears in "X investors saved this" on deal pages</div></div></label>
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px 0;border-bottom:1px solid var(--border-light);"><input type="checkbox" id="shareDdToggle" onchange="updatePrivacyToggle('share_dd', this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);flex-shrink:0;"><div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Show when I'm in due diligence</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:3px;line-height:1.5;">Your name appears in "X investors are vetting this" &mdash; find co-investors to compare notes with</div></div></label>
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px 0;border-bottom:1px solid var(--border-light);"><input type="checkbox" id="shareInvestedToggle" onchange="updatePrivacyToggle('share_invested', this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);flex-shrink:0;"><div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Show when I've invested</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:3px;line-height:1.5;">Your name appears in "X investors have committed" &mdash; let others reach out for feedback on shared deals</div></div></label>
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:14px 0;"><input type="checkbox" id="allowFollowsToggle" onchange="updatePrivacyToggle('allow_follows', this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);flex-shrink:0;"><div><div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Allow investors to follow me</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:3px;line-height:1.5;">Others can follow your activity and see your deal moves in their feed</div></div></label>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:16px;background:rgba(81,190,123,0.04);border:1px solid rgba(81,190,123,0.12);">
+          <div class="settings-card-title">What sharing unlocks</div>
+          <div style="display:grid;gap:14px;margin-top:8px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Find co-investors during due diligence</div><div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:2px;">See who else is vetting the same deal and compare notes before you commit</div></div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start;"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div><div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">See who you know in a deal</div><div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:2px;">"30 Academy members have invested in this fund" is more compelling than a deal no one you know has touched</div></div></div>
+          </div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:16px;padding-top:12px;border-top:1px solid rgba(81,190,123,0.12);line-height:1.5;">Your dollar amounts and personal financials are never shared. You control exactly what's visible.</div>
         </div>
       </div>
 
@@ -6662,69 +6601,9 @@ const _supa = window.supabase.createClient(
     </div>
   </div>
 
-  <!-- PAGE: Subscription -->
-  <div class="page" id="page-subscription">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Subscription</div>
-    </div>
-    <div class="sub-page">
-      <div class="settings-page-title">Membership</div>
-      <div class="settings-page-desc">From free deal browsing to having Pascal in your corner for every investment decision.</div>
-      <div class="plan-grid">
-        <div class="plan-card">
-          <div class="plan-name">Free</div>
-          <div class="plan-price">$0</div>
-          <div class="plan-desc">Browse every deal, view investment decks, and get the weekly digest.</div>
-          <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Browse all live deals</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>View investment decks</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Deal filtering &amp; search</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly deal digest email</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Basic deal overview &amp; thesis</li>
-          </ul>
-          <button class="btn-cta btn-cta-secondary plan-btn">Current Plan</button>
-        </div>
-        <div class="plan-card featured">
-          <div class="plan-name">Academy</div>
-          <div class="plan-price">$400<span>/month</span></div>
-          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:-4px;margin-bottom:12px;">Billed annually at $5,000/year</div>
-          <div class="plan-desc">Your annual mastermind. Full deal analysis, GP introductions, and Pascal in your corner.</div>
-          <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Free</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Full deal data: cash flow, terms, fees, peer comparisons</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Risk analysis &amp; stress test calculator</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>PPM, sub docs &amp; data room access</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>GP introductions &amp; deal reviews</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Weekly live office hours with Pascal</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Investment plan builder &amp; market intel</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Private investor community</li>
-          </ul>
-          <button class="btn-cta btn-cta-primary plan-btn" onclick="navigateTo('academy')">Join the Academy</button>
-        </div>
-        <div class="plan-card" style="border-color:var(--teal-deep);background:linear-gradient(180deg,var(--bg-card) 0%,rgba(31,81,89,0.04) 100%);">
-          <div class="plan-name" style="color:var(--teal-deep);">Family Office</div>
-          <div class="plan-price">$25,000<span>/year</span></div>
-          <div class="plan-desc">1:1 capital allocation partnership with Pascal. For serious deployers ready to build a portfolio.</div>
-          <ul class="plan-features">
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Everything in Academy</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Custom 12-month deployment plan</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Dedicated 1:1 calls with Pascal</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Co-underwriting on deals</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Direct GP access &amp; negotiation support</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Tax &amp; entity structuring guidance</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Portfolio construction &amp; rebalancing</li>
-          </ul>
-          <a href="https://growyourcashflow.io/introcall" target="_blank" class="btn-cta btn-cta-primary plan-btn" style="background:var(--teal-deep);text-decoration:none;text-align:center;display:block;">Schedule a Call</a>
-        </div>
-      </div>
-    </div>
-  </div>
 
 
-  <!-- PAGE: Investment Managers -->
+    <!-- PAGE: Investment Managers -->
   <div class="page" id="page-managers">
     <div class="topbar">
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
@@ -6816,105 +6695,6 @@ const _supa = window.supabase.createClient(
 
       <div style="margin-top:24px;font-family:var(--font-ui);font-size:9px;color:var(--text-muted);line-height:1.6;text-align:center;opacity:0.5">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</div>
 
-    </div>
-  </div>
-
-  <!-- PAGE: Office Hours -->
-  <div class="page" id="page-officehours">
-    <div class="topbar">
-      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div class="topbar-title">Office Hours</div>
-    </div>
-    <div class="sub-page" style="max-width:1000px;">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
-        <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
-        <div style="font-size:15px;color:var(--text-secondary);max-width:420px;line-height:1.6;margin-bottom:24px;">Live office hours, deal reviews, and GP spotlight sessions with Pascal are launching soon. Join the community to get notified.</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Weekly</div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Review & Q&A</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Monthly</div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Debt Fund Deep Dive</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Bi-weekly</div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">GP Spotlight Interviews</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:none;">
-      <div class="settings-page-desc" style="margin-top:0;">Join Pascal and the GYC community for live Q&A, deal reviews, and market analysis sessions.</div>
-
-      <!-- Upcoming Sessions -->
-      <div style="margin-bottom:32px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Upcoming Sessions</h3>
-        <div style="display:grid;gap:16px;" id="officeHoursUpcoming">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Weekly Deal Review &amp; Q&A</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Live walkthrough of this week's new deals, market updates, and open Q&A</div>
-              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Every Thursday @ 12:00 PM ET</div>
-            </div>
-            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Join Next Session</a>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Debt Fund Deep Dive</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Understanding private credit, yield analysis, and due diligence for lending funds</div>
-              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Monthly — Next: Mar 27, 2026 @ 1:00 PM ET</div>
-            </div>
-            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Register</a>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">GP Spotlight: Live Sponsor Interview</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Meet the operators behind the deals. Ask questions directly to fund managers.</div>
-              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Bi-weekly — Next: Apr 3, 2026 @ 12:00 PM ET</div>
-            </div>
-            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Register</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Past Recordings -->
-      <div>
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Past Recordings</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="officeHoursRecordings">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </div>
-            <div style="padding:16px;">
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Review: March 2026</div>
-              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Mar 13, 2026 — 47 min</div>
-            </div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </div>
-            <div style="padding:16px;">
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">How to Evaluate a Debt Fund</div>
-              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Feb 27, 2026 — 62 min</div>
-            </div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            </div>
-            <div style="padding:16px;">
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">GP Spotlight: RSN Property Group</div>
-              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Feb 13, 2026 — 55 min</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div><!-- end display:none -->
     </div>
   </div>
 
@@ -13130,7 +12910,7 @@ function updateStageDescription() {
     saved: { title: 'Saved', text: 'Deals you\'re interested in. Review the investment deck and decide if you want to dig deeper. If it looks promising, move it to Vetting.', color: 'var(--primary)' },
     vetting: { title: 'Vetting', text: 'Read through everything on the deal page \u2014 understand this deal intimately. If you like what you see, move it to Due Diligence.', color: '#2563EB' },
     diligence: { title: 'Due Diligence', text: 'Time to talk to the operator. Request an intro and we\'ll connect you via email. Ask clarifying questions and fill in any gaps. Once you\'ve spoken with them, move it to Decision.', color: '#f97316' },
-    decision: { title: 'Decision Time', text: 'Compare deals side by side. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7', cta: { label: 'Join Office Hours', action: "window.open('https://growyourcashflow.com/office-hours','_blank')" } },
+    decision: { title: 'Decision Time', text: 'Compare deals side by side. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7' },
     invested: { title: 'Your Portfolio', text: 'Deals you\'ve committed capital to. Track distributions, K-1s, and hold periods.', color: '#059669' },
     passed: { title: 'Not Interested', text: 'Deals you decided weren\'t right for you. You can always click Reconsider to move one back.', color: 'var(--text-muted)' }
   };
@@ -13663,7 +13443,6 @@ function resetBuyBox() {
 function populateProfileFields() {
   const user = getUser();
   if (!user) return;
-  // Parse name into first/last
   let firstName = user.firstName || '';
   let lastName = user.lastName || '';
   if (!firstName && user.name) {
@@ -13672,66 +13451,59 @@ function populateProfileFields() {
     lastName = parts.slice(1).join(' ') || '';
   }
   const el = id => document.getElementById(id);
-  // Capitalize names for display
   function titleCase(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''; }
   if (el('profileFirstName')) el('profileFirstName').value = titleCase(firstName);
   if (el('profileLastName')) el('profileLastName').value = titleCase(lastName);
   if (el('profileEmail')) el('profileEmail').value = user.email || '';
+  if (el('profilePhone')) el('profilePhone').value = user.phone || '';
+  if (el('profileLocation')) el('profileLocation').value = user.location || '';
 }
 
-function showSaveStatus() {
-  saveCalendarLink();
-  const el = document.getElementById('saveStatus');
-  if (!el) return;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
-}
+function saveProfile() {
+  var firstName = (document.getElementById('profileFirstName')?.value || '').trim();
+  var lastName = (document.getElementById('profileLastName')?.value || '').trim();
+  var phone = (document.getElementById('profilePhone')?.value || '').trim();
+  var location = (document.getElementById('profileLocation')?.value || '').trim();
+  var fullName = (firstName + ' ' + lastName).trim();
 
-function toggleSharePortfolio(checked) {
-  // Save to localStorage
+  // Update localStorage
   var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-  u.sharePortfolio = checked;
+  u.firstName = firstName;
+  u.lastName = lastName;
+  u.name = fullName;
+  u.phone = phone;
+  u.location = location;
   localStorage.setItem('gycUser', JSON.stringify(u));
-  // Sync to Supabase
-  syncToBackend('profile', { share_portfolio: checked });
+
+  // Sync to Supabase + GHL
+  var fields = { full_name: fullName };
+  if (phone) fields.phone = phone;
+  if (location) fields.location = location;
+  syncToBackend('profile', fields);
+  showToast('Profile saved');
 }
 
-function loadSharePortfolioSetting() {
+// ========== PRIVACY & SHARING ==========
+function updatePrivacyToggle(field, checked) {
   var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-  var toggle = document.getElementById('sharePortfolioToggle');
-  if (toggle) toggle.checked = !!u.sharePortfolio;
-}
-
-// Calendar link preview
-function loadCalendarLink() {
-  var inp = document.getElementById('calendarLinkInput');
-  var preview = document.getElementById('calendarLinkPreview');
-  if (!inp || !preview) return;
-  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-  inp.value = u.calendarLink || '';
-  if (u.calendarLink) { preview.href = u.calendarLink; preview.style.display = ''; }
-  else { preview.style.display = 'none'; }
-}
-(function() {
-  var inp = document.getElementById('calendarLinkInput');
-  var preview = document.getElementById('calendarLinkPreview');
-  if (!inp || !preview) return;
-  loadCalendarLink();
-  inp.addEventListener('input', function() {
-    var v = inp.value.trim();
-    if (v && /^https?:\/\/.+/.test(v)) { preview.href = v; preview.style.display = ''; }
-    else { preview.style.display = 'none'; }
-  });
-})();
-
-function saveCalendarLink() {
-  var inp = document.getElementById('calendarLinkInput');
-  if (!inp) return;
-  var v = inp.value.trim();
-  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-  u.calendarLink = v;
+  u[field] = checked;
   localStorage.setItem('gycUser', JSON.stringify(u));
-  syncToBackend('profile', { calendar_link: v });
+  var data = {};
+  data[field] = checked;
+  syncToBackend('profile', data);
+  showToast('Privacy setting updated');
+}
+
+function loadPrivacySettings() {
+  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  var el = document.getElementById('shareSavedToggle');
+  if (el) el.checked = !!u.share_saved;
+  el = document.getElementById('shareDdToggle');
+  if (el) el.checked = !!u.share_dd;
+  el = document.getElementById('shareInvestedToggle');
+  if (el) el.checked = !!u.share_invested;
+  el = document.getElementById('allowFollowsToggle');
+  if (el) el.checked = !!u.allow_follows;
 }
 
 function switchSettingsTab(el) {
@@ -13740,8 +13512,7 @@ function switchSettingsTab(el) {
   document.querySelectorAll('.settings-panel').forEach(p => p.style.display = 'none');
   const panel = document.getElementById('stab-' + el.dataset.stab);
   if (panel) panel.style.display = '';
-  // Render buy box editor when Investor tab is opened
-  if (el.dataset.stab === 'investor') renderBuyBoxEditor();
+  if (el.dataset.stab === 'privacy') loadPrivacySettings();
 }
 
 // ========== BUY BOX SETTINGS EDITOR ==========
@@ -13867,22 +13638,22 @@ function editBuyBoxField(stepType) {
   // Build a mini sequence: just the requested step + any closely related steps
   var miniSeq = [idx];
   // If editing goal, also show experience and RE pro
-  if (stepType === 'goalSelect') miniSeq = [0, 29, 22, 23];
+  if (stepType === 'goalSelect') miniSeq = [S.GOAL, S.EXPERIENCE, S.RE_PRO, S.BASELINE];
   // If editing asset classes, also show strategies
-  if (stepType === 'assetClassSelect') miniSeq = [10, 11];
+  if (stepType === 'assetClassSelect') miniSeq = [S.ASSETS, S.STRATEGIES];
   // If editing loss tolerance, also show accreditation
-  if (stepType === 'lossTolerance') miniSeq = [9, 16];
+  if (stepType === 'lossTolerance') miniSeq = [S.RISK, S.ACCREDITATION];
   // If editing financial targets, show branch-specific target + net worth
   if (stepType === 'targetInput') {
     var branch = wizardData._branch || 'cashflow';
-    if (branch === 'cashflow') miniSeq = [4, 8];
-    else if (branch === 'growth') miniSeq = [5, 27, 8, 26];
-    else if (branch === 'tax') miniSeq = [6, 27, 8];
+    if (branch === 'cashflow') miniSeq = [S.CF_TARGET, S.NET_WORTH];
+    else if (branch === 'growth') miniSeq = [S.GROWTH_TARGET, S.GROWTH_PRIORITY, S.NET_WORTH];
+    else if (branch === 'tax') miniSeq = [S.TAX_TARGET, S.TAX_BASELINE, S.NET_WORTH];
   }
   // If editing capital, show capital + source + readiness
-  if (stepType === 'capitalAmount') miniSeq = [1, 3, 2];
+  if (stepType === 'capitalAmount') miniSeq = [S.CAPITAL, S.SOURCE, S.READINESS];
   // If editing preferences, show all preference screens
-  if (stepType === 'diversificationPref') miniSeq = [12, 13, 14, 15];
+  if (stepType === 'diversificationPref') miniSeq = [S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS];
 
   // Override getStepSequence temporarily
   window._editMiniSeq = miniSeq;
@@ -14389,14 +14160,28 @@ let wizardStep = 0;
 let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Free tier: Role → Goal → Experience → RE Pro → Baseline → Asset Classes → Strategies → Loss Tolerance → Accreditation
+// Named step indices into WIZARD_STEPS array (actual array positions, 0-30)
+// NOTE: Comments inside WIZARD_STEPS use old numbering (off-by-one after index 11 due to diversificationPref insertion)
+var STEP_ID = {
+  GOAL: 0, CAPITAL: 1, READINESS: 2, SOURCE: 3,
+  CF_TARGET: 4, GROWTH_TARGET: 5, TAX_TARGET: 6,
+  CHECK_SIZE: 7, NET_WORTH: 8, RISK: 9, ASSETS: 10, STRATEGIES: 11,
+  DIVERSIFICATION: 12, OPERATOR_FOCUS: 13, LOCKUP: 14, DISTRIBUTIONS: 15,
+  ACCREDITATION: 16, LP_NETWORK: 17, PLAN_CF: 18, PLAN_GROWTH: 19, PLAN_TAX: 20,
+  COMPLETION: 21, INCOME_SRC: 22, RE_PRO: 23, BASELINE: 24,
+  MILESTONE_90D: 25, DELETED: 26, GROWTH_PRIORITY: 27, TAX_BASELINE: 28,
+  ROLE: 29, EXPERIENCE: 30
+};
+var S = STEP_ID;
+
+// Free tier: Role → Goal → Experience → RE Pro → Baseline → Assets → Strategies → Risk → Accreditation
 // Paid tier: [Branch targets] → Tax Baseline → Net Worth → Growth Priority → 12-mo Capital → Source → Readiness
 //   → Diversification → Operator Focus → Lockup → Distributions → Plan → LP Network → Completion
 const ONBOARDING_FLOW = {
-  free: [28, 0, 29, 22, 23, 10, 11, 9, 16],
-  paid_cashflow: [4, 8, 1, 3, 2, 12, 13, 14, 15, 18, 17, 21],
-  paid_growth: [5, 27, 8, 26, 1, 3, 2, 12, 13, 14, 15, 19, 17, 21],
-  paid_tax: [6, 27, 8, 1, 3, 2, 12, 13, 14, 15, 20, 17, 21]
+  free:           [S.ROLE, S.GOAL, S.EXPERIENCE, S.RE_PRO, S.BASELINE, S.ASSETS, S.STRATEGIES, S.RISK, S.ACCREDITATION],
+  paid_cashflow:  [S.CF_TARGET, S.NET_WORTH, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_CF, S.LP_NETWORK, S.COMPLETION],
+  paid_growth:    [S.GROWTH_TARGET, S.GROWTH_PRIORITY, S.NET_WORTH, S.TAX_BASELINE, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_GROWTH, S.LP_NETWORK, S.COMPLETION],
+  paid_tax:       [S.TAX_TARGET, S.TAX_BASELINE, S.NET_WORTH, S.CAPITAL, S.SOURCE, S.READINESS, S.DIVERSIFICATION, S.OPERATOR_FOCUS, S.LOCKUP, S.DISTRIBUTIONS, S.PLAN_TAX, S.LP_NETWORK, S.COMPLETION]
 };
 
 function getStepSequence() {
@@ -14410,13 +14195,13 @@ function getStepSequence() {
   }
   // Edit mode (full wizard): show goal + free prefs + paid flow so they can change anything
   if (wizardData._isEditing && !wizardData._editSingleStep) {
-    return [0, 22, 23, 10, 11, 9, 16, ...(ONBOARDING_FLOW[paidKey] || ONBOARDING_FLOW.paid_cashflow)];
+    return [S.GOAL, S.RE_PRO, S.BASELINE, S.ASSETS, S.STRATEGIES, S.RISK, S.ACCREDITATION, ...(ONBOARDING_FLOW[paidKey] || ONBOARDING_FLOW.paid_cashflow)];
   }
   // Paid flow only (free steps already done, first time through paid wizard)
   return ONBOARDING_FLOW[paidKey] || ONBOARDING_FLOW.paid_cashflow;
 }
 
-const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '', 'Growth Priority', 'Tax Baseline', 'Welcome', 'Experience'];
+const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Diversification', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '', 'Growth Priority', 'Tax Baseline', 'Welcome', 'Experience'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -14427,11 +14212,11 @@ function getPhaseLabel() {
 // Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
 // 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=My Plan
 const STEP_TO_PHASE = {
-  28: 0, 0: 0, 29: 0, 22: 0, 23: 0, 10: 0, 11: 0, 9: 0, 16: 0,  // Free tier screens → You
-  4: 1, 5: 1, 6: 1, 27: 1,  // cashflow target, growth target, tax target, tax baseline → Goal
-  8: 2, 26: 2, 1: 2, 3: 2, 2: 2,  // net worth, growth priority, 12-mo capital, source, readiness → Finances
-  12: 3, 13: 3, 14: 3, 15: 3,  // diversification, operator focus, lockup, distributions → Preferences
-  18: 4, 19: 4, 20: 4, 17: 4, 21: 4  // plan output (cashflow/growth/tax), LP network, completion → My Plan
+  [S.ROLE]: 0, [S.GOAL]: 0, [S.EXPERIENCE]: 0, [S.RE_PRO]: 0, [S.BASELINE]: 0, [S.ASSETS]: 0, [S.STRATEGIES]: 0, [S.RISK]: 0, [S.ACCREDITATION]: 0,  // Free tier → You
+  [S.CF_TARGET]: 1, [S.GROWTH_TARGET]: 1, [S.TAX_TARGET]: 1, [S.TAX_BASELINE]: 1,  // branch targets → Goal
+  [S.NET_WORTH]: 2, [S.GROWTH_PRIORITY]: 2, [S.CAPITAL]: 2, [S.SOURCE]: 2, [S.READINESS]: 2,  // financials → Finances
+  [S.DIVERSIFICATION]: 3, [S.OPERATOR_FOCUS]: 3, [S.LOCKUP]: 3, [S.DISTRIBUTIONS]: 3,  // preferences → Preferences
+  [S.PLAN_CF]: 4, [S.PLAN_GROWTH]: 4, [S.PLAN_TAX]: 4, [S.LP_NETWORK]: 4, [S.COMPLETION]: 4  // plan output → My Plan
 };
 const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'My Plan'];
 
@@ -14766,14 +14551,14 @@ var _wizSaveTimer = null;
 function debouncedWizardSave() {
   clearTimeout(_wizSaveTimer);
   _wizSaveTimer = setTimeout(function() {
-    syncBuyBoxToGHL();
+    saveBuyBox();
   }, 1500);
 }
 
 function openBuyBoxWizard(jumpToPlan) {
-  // Gate wizard for free users
+  // Gate wizard for free users (admin tier override via #buybox?tier=academy)
   var _wzUser = getUser();
-  var _wzTier = (_wzUser && _wzUser.tier) || 'free';
+  var _wzTier = window._tierOverride || (_wzUser && _wzUser.tier) || 'free';
   var _wzIsAdmin = typeof isAdmin === 'function' && isAdmin();
   if (_wzTier === 'free' && !_wzIsAdmin) {
     navigateTo('academy');
@@ -14851,11 +14636,9 @@ function closeWizard() {
   delete wizardData._editSingleStep;
   window._editMiniSeq = null;
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
-  // Re-render buy box editor if on settings page
-  if (document.getElementById('buyBoxEditor')) renderBuyBoxEditor();
   syncWizardToBuyBox();
   // Save progress to Supabase immediately on close so nothing is lost
-  syncBuyBoxToGHL();
+  saveBuyBox();
   if (localStorage.getItem('gycBuyBoxComplete')) {
     if (typeof renderReport === 'function') renderReport();
   }
@@ -16271,9 +16054,8 @@ function wizardNext() {
     delete wizardData._editSingleStep;
     localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
     syncWizardToBuyBox();
-    syncBuyBoxToGHL();
+    saveBuyBox();
     document.getElementById('wizardOverlay').classList.remove('active');
-    if (document.getElementById('buyBoxEditor')) renderBuyBoxEditor();
     if (typeof renderReport === 'function') renderReport();
     return;
   }
@@ -16284,7 +16066,7 @@ function wizardNext() {
     delete wizardData._isEditing;
     localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
     syncWizardToBuyBox();
-    syncBuyBoxToGHL();
+    saveBuyBox();
     if (typeof trackActivity === 'function') {
       trackActivity('free_onboarding_complete', { branch: wizardData._branch, dealExperience: wizardData.dealExperience });
     }
@@ -16322,7 +16104,7 @@ function wizardNext() {
       trackActivity('wizard_complete', { branch: wizardData._branch });
     }
     if (typeof checkActivationMilestones === 'function') checkActivationMilestones();
-    syncBuyBoxToGHL();
+    saveBuyBox();
     navigateTo('deals');
     return;
   }
@@ -16437,17 +16219,23 @@ function syncWizardToBuyBox() {
   }
 }
 
-async function syncBuyBoxToGHL() {
-  const user = getUser();
+async function saveBuyBox() {
+  var user = getUser();
   if (!user) return;
+  var payload = JSON.stringify({ email: user.email, wizardData: wizardData });
   try {
-    // Sync to our serverless API which writes to GHL custom fields
-    await fetch('/api/buybox', {
+    var resp = await fetch('/api/buybox', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email, wizardData })
-    }).catch(() => {});
-  } catch(e) {}
+      body: payload
+    });
+    if (!resp.ok) throw new Error(resp.status);
+  } catch(e) {
+    console.warn('Buy box save failed, retrying:', e.message);
+    setTimeout(function() {
+      fetch('/api/buybox', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload }).catch(function() {});
+    }, 3000);
+  }
 }
 
 // Fetch buy box from GHL on login and populate wizard data
@@ -16599,7 +16387,7 @@ function renderReport() {
     + '</div>'
     + '<div style="display:flex;gap:12px;align-items:center;">'
     + '<button class="bb-edit-link" onclick="printMyPlan()" style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>'
-    + '<button class="bb-edit-link" onclick="navigateTo(\'settings\');setTimeout(function(){var t=document.querySelector(\'[data-stab=investor]\');if(t)switchSettingsTab(t);},100);">Edit</button>'
+    + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
     + '</div>'
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Thesis</div>'
@@ -16692,14 +16480,6 @@ function renderReport() {
       + '</div>';
   }
 
-  // ===== SECTION 3: OFFICE HOURS CTA =====
-  const ctaHtml = '<div class="bb-office-cta">'
-    + '<div>'
-    + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>'
-    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Join live office hours with Pascal every Thursday 12-1pm ET.</div>'
-    + '</div>'
-    + '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;text-decoration:none;">Join Office Hours</a>'
-    + '</div>';
 
   // ===== PORTFOLIO BLUEPRINT =====
   var planData = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
@@ -16845,7 +16625,6 @@ function renderReport() {
     + snapshotHtml
     + allocationHtml
     + blueprintHtml
-    + ctaHtml
     + '</div>';
 }
 
@@ -24930,10 +24709,6 @@ function renderDashboard() {
         actionDesc = 'You\u2019ve viewed ' + vc + ' deal page' + (vc !== 1 ? 's' : '') + '. View ' + (5 - vc) + ' more to unlock this milestone.';
         actionBtnText = 'Explore Deals \u2192'; break;
       }
-      case 'booked_office_hours':
-        actionIcon = '\uD83D\uDCC5'; actionTitle = 'Book an Office Hours Session';
-        actionDesc = 'Get your questions answered live with a portfolio strategist.';
-        actionBtnText = 'Book Office Hours \u2192'; break;
       case 'first_investment':
         actionIcon = '\uD83D\uDCB0'; actionTitle = 'Track Your First Investment';
         actionDesc = 'Move a deal to your portfolio or add an existing investment to start tracking.';
@@ -28324,19 +28099,64 @@ if (window.location.hash === '#academy') {
   history.replaceState(null, '', window.location.pathname);
 }
 
-// Handle #buybox from email — navigate to buy box and open wizard at preferences step
+// Handle #buybox — deep link into wizard
+// Supports: #buybox, #buybox?flow=free|cashflow|growth|tax, #buybox?step=goal|assets|plan|3, #buybox?tier=free|academy
 if (window.location.hash.startsWith('#buybox')) {
-  const stepParam = new URLSearchParams(window.location.hash.split('?')[1] || '').get('step');
-  setTimeout(() => {
+  var _bbParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  var _bbStepParam = _bbParams.get('step');
+  var _bbFlowParam = _bbParams.get('flow');
+  var _bbTierParam = _bbParams.get('tier');
+  setTimeout(function() {
     navigateTo('buybox');
-    if (stepParam) {
-      setTimeout(() => {
-        openBuyBoxWizard();
-        // Jump to requested step (e.g. step=4 for Preferences)
-        const targetIdx = parseInt(stepParam) - 1;
-        if (targetIdx > 0) { wizardStepIndex = targetIdx; renderWizardStep(); }
-      }, 400);
+    // Tier override for admin testing
+    if (_bbTierParam && typeof isAdmin === 'function' && isAdmin()) {
+      window._tierOverride = _bbTierParam;
     }
+    // Flow override: set branch + freeComplete state
+    if (_bbFlowParam) {
+      wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+      if (_bbFlowParam === 'free') {
+        delete wizardData._freeComplete;
+      } else {
+        wizardData._freeComplete = true;
+        wizardData._branch = _bbFlowParam;
+      }
+      localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+    }
+    setTimeout(function() {
+      openBuyBoxWizard();
+      if (_bbStepParam) {
+        // Named step lookup
+        var _bbStepNames = {
+          role: S.ROLE, goal: S.GOAL, experience: S.EXPERIENCE, repro: S.RE_PRO, baseline: S.BASELINE,
+          assets: S.ASSETS, strategies: S.STRATEGIES, risk: S.RISK, accreditation: S.ACCREDITATION,
+          network: S.LP_NETWORK, cashflow: S.CF_TARGET, growth: S.GROWTH_TARGET, tax: S.TAX_TARGET,
+          networth: S.NET_WORTH, capital: S.CAPITAL, source: S.SOURCE, readiness: S.READINESS,
+          diversification: S.DIVERSIFICATION, lockup: S.LOCKUP, distributions: S.DISTRIBUTIONS
+        };
+        if (_bbStepParam === 'plan') {
+          var _bbSeq = getStepSequence();
+          for (var _bi = _bbSeq.length - 1; _bi >= 0; _bi--) {
+            if (WIZARD_STEPS[_bbSeq[_bi]] && WIZARD_STEPS[_bbSeq[_bi]].type === 'planOutput') {
+              wizardStepIndex = _bi; renderWizardStep(); break;
+            }
+          }
+        } else {
+          var _bbTargetStep = _bbStepNames[_bbStepParam] !== undefined ? _bbStepNames[_bbStepParam] : parseInt(_bbStepParam);
+          if (!isNaN(_bbTargetStep)) {
+            var _bbSeq2 = getStepSequence();
+            var _bbFound = false;
+            for (var _bj = 0; _bj < _bbSeq2.length; _bj++) {
+              if (_bbSeq2[_bj] === _bbTargetStep) { wizardStepIndex = _bj; renderWizardStep(); _bbFound = true; break; }
+            }
+            if (!_bbFound && _bbStepParam === String(_bbTargetStep)) {
+              var _bbLegacyIdx = _bbTargetStep - 1;
+              if (_bbLegacyIdx >= 0 && _bbLegacyIdx < _bbSeq2.length) { wizardStepIndex = _bbLegacyIdx; renderWizardStep(); }
+            }
+          }
+        }
+      }
+    }, 400);
   }, 300);
   history.replaceState(null, '', window.location.pathname);
 }
