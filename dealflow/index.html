@@ -27084,6 +27084,7 @@ async function viewAsUser(email, name, contactId, tier, firstName, lastName) {
   // Show impersonation indicator
   document.getElementById('viewAsSearch').style.display = 'none';
   document.getElementById('viewAsImpersonating').style.display = 'block';
+  const capName = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   document.getElementById('viewAsName').textContent = capName;
   document.getElementById('viewAsEmail').textContent = email;
 
