@@ -103,25 +103,33 @@ export default async function handler(req, res) {
 
     try {
       // Ensure user exists and is confirmed before generating link.
-      const { data: existingUser } = await adminSupabase.auth.admin.getUserByEmail(email);
-      if (!existingUser?.user) {
-        // Pre-create user as confirmed so magic link works on first click
+      // Use listUsers filter since getUserByEmail isn't available in this supabase-js version.
+      const { data: { users } } = await adminSupabase.auth.admin.listUsers({ perPage: 1, page: 1 });
+      // listUsers doesn't filter by email, so use a targeted approach:
+      // just try generateLink — if user doesn't exist, create them first then retry.
+      let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email
+      });
+
+      if (linkErr) {
+        // User likely doesn't exist — create and retry
         const { error: createErr } = await adminSupabase.auth.admin.createUser({
           email,
           email_confirm: true
         });
-        if (createErr) console.error('[AUTH] createUser error:', createErr.message);
-      } else if (existingUser.user.email_confirmed_at === null) {
-        // User exists but unconfirmed — confirm them now
-        await adminSupabase.auth.admin.updateUserById(existingUser.user.id, {
-          email_confirm: true
+        if (createErr && !createErr.message?.includes('already')) {
+          return res.status(500).json({ error: createErr.message });
+        }
+        // Retry generateLink
+        const retry = await adminSupabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email
         });
+        linkData = retry.data;
+        linkErr = retry.error;
+        if (linkErr) return res.status(500).json({ error: linkErr.message });
       }
-      const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email
-      });
-      if (linkErr) return res.status(500).json({ error: linkErr.message });
 
       // Use the action_link from Supabase but rewrite redirect_to
       let confirmUrl = linkData.properties?.action_link;
