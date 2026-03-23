@@ -6523,10 +6523,6 @@ const _supa = window.supabase.createClient(
       </div>
       <div class="topbar-spacer"></div>
       <span id="buyboxTopbarActions" style="display:inline-flex;gap:8px;">
-      <button class="btn-cta btn-cta-primary buybox-print-btn" style="width:auto;padding:8px 20px;font-size:11px" onclick="window.print()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;vertical-align:middle"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></polyline></svg>
-        Print / Save PDF
-      </button>
       </span>
     </div>
     <div class="report-page" id="reportContent">
@@ -16144,7 +16140,10 @@ function renderReport() {
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Target</div>'
     + '<div class="bb-goal-line">' + goalLine + '</div>'
     + '</div>'
+    + '<div style="display:flex;gap:12px;align-items:center;">'
+    + '<button class="bb-edit-link" onclick="printMyPlan()" style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>'
     + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
+    + '</div>'
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Thesis</div>'
     + '<div class="bb-thesis">' + thesisText + '</div>'
@@ -16452,6 +16451,269 @@ function renderReport() {
     + blueprintHtml
     + ctaHtml
     + '</div>';
+}
+
+function printMyPlan() {
+  var d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  if (!d.firstName && !d.goal) return;
+
+  var branch = d._branch || (d.goal && d.goal.includes('Cash') ? 'cashflow' : d.goal && d.goal.includes('Equity') ? 'growth' : d.goal && d.goal.includes('Tax') ? 'tax' : 'cashflow');
+  var branchConfig = { cashflow: { label: 'Cash Flow', color: '#51BE7B' }, growth: { label: 'Equity Growth', color: '#2563EB' }, tax: { label: 'Tax Optimization', color: '#CF7A30' } };
+  var bc = branchConfig[branch] || branchConfig.cashflow;
+  var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+  var planData = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+  var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
+  var activeDeals = allDeals.filter(function(dl) { return !dl.isStale; });
+
+  // Goal line
+  var goalLine = '';
+  if (branch === 'cashflow') {
+    var target = (goals && goals.targetIncome > 0) ? goals.targetIncome : (parseDollar(d.targetCashFlow) || 0);
+    goalLine = target > 0 ? 'Build $' + target.toLocaleString() + '/yr in passive income' : 'Build predictable passive income';
+  } else if (branch === 'growth') {
+    var capital = parseDollar(d.growthCapital) || 0;
+    goalLine = capital > 0 ? 'Deploy $' + capital.toLocaleString() + ' into high-growth real estate' : 'Grow wealth through real estate equity';
+  } else if (branch === 'tax') {
+    goalLine = d.taxableIncome ? 'Offset ' + (d.taxOffset || '') + ' of ' + d.taxableIncome + ' in taxable income' : 'Reduce tax burden through real estate depreciation';
+  }
+
+  // Thesis
+  var assetList = d.assetClasses || [];
+  var stratList = [...new Set([...(d.strategies || []), ...(d.instruments || [])].filter(Boolean))];
+  var thesisParts = [];
+  if (assetList.length > 0) {
+    var bold = assetList.map(function(a) { return '<strong>' + a + '</strong>'; });
+    thesisParts.push('I invest in ' + (bold.length > 2 ? bold.slice(0, -1).join(', ') + ', and ' + bold[bold.length - 1] : bold.join(' and ')));
+  } else { thesisParts.push('I invest across <strong>all asset classes</strong>'); }
+  if (stratList.length > 0) {
+    var strats = stratList.map(function(s) { return '<strong>' + s + '</strong>'; });
+    thesisParts.push('using ' + (strats.length > 2 ? strats.slice(0, -1).join(', ') + ', and ' + strats[strats.length - 1] : strats.join(' and ')) + ' strategies');
+  }
+  if (d.checkSize) { thesisParts.push('writing <strong>' + (String(d.checkSize).startsWith('$') ? d.checkSize : '$' + Number(d.checkSize).toLocaleString()) + '</strong> checks'); }
+  if (d.lockup) { var lk = String(d.lockup); thesisParts.push('with <strong>' + (/year/i.test(lk) ? lk : lk + ' year') + '</strong> lockups'); }
+  if (d.distributions) { thesisParts.push('targeting <strong>' + (typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions)).toLowerCase() + ' or better</strong> distributions'); }
+  var thesisText = thesisParts.length > 1 ? thesisParts[0] + ', ' + thesisParts.slice(1).join(', ') + '.' : thesisParts[0] + '.';
+
+  // Market snapshot data
+  var _stratAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
+  var assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
+  var userAssets = (d.assetClasses || []).filter(function(a) { return !_stratAliases.includes(a); }).map(function(a) { return assetMap[a] || a; });
+  var wantsLending = (d.assetClasses || []).some(function(a) { return _stratAliases.includes(a); });
+  var relevantAssets = userAssets.length > 0 ? [...userAssets] : [...new Set(activeDeals.map(function(dl) { return dl.assetClass; }).filter(Boolean))].slice(0, 6);
+  if (wantsLending) relevantAssets.push('Lending');
+  var userCheckSizeNum = parseDollar(d.checkSize) || 0;
+
+  var snapshotRows = '';
+  relevantAssets.forEach(function(ac) {
+    var isLending = ac === 'Lending';
+    var classDeals = activeDeals.filter(function(dl) { return isLending ? dl.strategy === 'Lending' : dl.assetClass === ac; });
+    if (classDeals.length === 0) return;
+    var irrs = classDeals.map(function(x) { return x.targetIRR; }).filter(function(v) { return v && v > 0; });
+    var cocs = classDeals.map(function(x) { return x.cashOnCash; }).filter(function(v) { return v && v > 0; });
+    var mins = classDeals.map(function(x) { return x.investmentMinimum; }).filter(function(v) { return v && v > 0; });
+    snapshotRows += '<tr><td style="font-weight:700;">' + ac + ' <span style="color:#8A9AA0;font-weight:400;">(' + classDeals.length + ')</span></td>'
+      + '<td>' + (irrs.length >= 2 ? fmt(Math.min(...irrs), 'pct') + ' – ' + fmt(Math.max(...irrs), 'pct') : irrs.length === 1 ? fmt(irrs[0], 'pct') : '—') + '</td>'
+      + '<td>' + (cocs.length > 0 ? fmt(cocs.reduce(function(a, b) { return a + b; }, 0) / cocs.length, 'pct') : '—') + '</td>'
+      + '<td>' + (mins.length > 0 ? '$' + Math.round(mins.reduce(function(a, b) { return a + b; }, 0) / mins.length).toLocaleString() : '—') + '</td></tr>';
+  });
+
+  // Path to goal
+  var pathHtml = '';
+  if (branch === 'cashflow') {
+    var g = goals || {};
+    var currentInc = g.currentIncome || parseDollar(d.currentCashFlow) || 0;
+    var targetInc = g.targetIncome || parseDollar(d.targetCashFlow) || 0;
+    var gap = Math.max(0, targetInc - currentInc);
+    if (gap > 0 && targetInc > 0) {
+      var cs = parseDollar(d.checkSize) || 100000;
+      var matchDeals = activeDeals.filter(function(dl) { return userAssets.length === 0 || userAssets.includes(dl.assetClass); });
+      var cocVals = matchDeals.map(function(dl) { return dl.cashOnCash || 0; }).filter(function(v) { return v > 0; });
+      var avgCoC = cocVals.length > 0 ? cocVals.reduce(function(a, b) { return a + b; }, 0) / cocVals.length : 0.08;
+      var annual = Math.round(cs * avgCoC);
+      var dealsN = annual > 0 ? Math.ceil(gap / annual) : 0;
+      pathHtml = '<div class="p-section"><h3>Your Path to Goal</h3>'
+        + '<p style="margin-bottom:16px;">To close your <strong>$' + gap.toLocaleString() + '/yr</strong> income gap:</p>'
+        + '<div style="display:flex;gap:24px;flex-wrap:wrap;justify-content:center;margin:20px 0;">'
+        + '<div class="p-metric"><div class="p-metric-val">' + dealsN + '</div><div class="p-metric-label">Deals</div></div>'
+        + '<div class="p-metric-op">&times;</div>'
+        + '<div class="p-metric"><div class="p-metric-val">$' + cs.toLocaleString() + '</div><div class="p-metric-label">Each</div></div>'
+        + '<div class="p-metric-op">@</div>'
+        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">~' + Math.round(avgCoC * 100) + '%</div><div class="p-metric-label">Cash-on-Cash</div></div>'
+        + '<div class="p-metric-op">=</div>'
+        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + (dealsN * annual).toLocaleString() + '</div><div class="p-metric-label">Per Year</div></div>'
+        + '</div></div>';
+    }
+  } else if (branch === 'growth') {
+    var capG = parseDollar(d.growthCapital) || 0;
+    var irrNum = parseFloat(d.minIRR) || 18;
+    if (capG > 0) {
+      pathHtml = '<div class="p-section"><h3>Growth Projection</h3>'
+        + '<p>At <strong>' + irrNum + '% IRR</strong>, your <strong>$' + capG.toLocaleString() + '</strong> could become:</p>'
+        + '<div style="display:flex;gap:32px;margin:16px 0;">'
+        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + Math.round(capG * Math.pow(1 + irrNum / 100, 5)).toLocaleString() + '</div><div class="p-metric-label">In 5 Years</div></div>'
+        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + Math.round(capG * Math.pow(1 + irrNum / 100, 10)).toLocaleString() + '</div><div class="p-metric-label">In 10 Years</div></div>'
+        + '</div></div>';
+    }
+  } else if (branch === 'tax') {
+    var taxable = parseDollar(d.taxableIncome) || 0;
+    var offset = parseDollar(d.taxOffset) || 0;
+    if (taxable > 0 && offset > 0) {
+      var depDeals = activeDeals.filter(function(x) { return x.firstYrDepreciation && x.firstYrDepreciation > 0; });
+      var avgDep = depDeals.length > 0 ? depDeals.reduce(function(s, x) { return s + x.firstYrDepreciation; }, 0) / depDeals.length : 0.6;
+      pathHtml = '<div class="p-section"><h3>Tax Shelter Path</h3>'
+        + '<p>To shelter <strong>$' + offset.toLocaleString() + '</strong> at ~' + Math.round(avgDep * 100) + '% first-year depreciation:</p>'
+        + '<div style="display:flex;gap:32px;margin:16px 0;">'
+        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">$' + Math.round(offset / avgDep).toLocaleString() + '</div><div class="p-metric-label">Capital Needed</div></div>'
+        + '<div class="p-metric"><div class="p-metric-val" style="color:' + bc.color + ';">' + depDeals.length + '</div><div class="p-metric-label">Matching Deals</div></div>'
+        + '</div></div>';
+    }
+  }
+
+  // Investment plan roster
+  var planHtml = '';
+  if (planData) {
+    var slots = planData.slots || planData.buckets || [];
+    var totalSlots = slots.length;
+    var filledSlots = slots.filter(function(s) { return s.filled_by; }).length;
+    var totalIncome = slots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+    var filledIncome = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+    var targetIncome = planData.target_income || totalIncome;
+
+    var currentYear = new Date().getFullYear();
+    var slotsByYear = {};
+    slots.forEach(function(s) { var yr = s.year || currentYear; if (!slotsByYear[yr]) slotsByYear[yr] = []; slotsByYear[yr].push(s); });
+    var years = Object.keys(slotsByYear).sort();
+    var cumInc = 0;
+
+    planHtml = '<div class="p-section" style="page-break-before:always;"><h3>Investment Plan</h3>'
+      + '<p style="margin-bottom:16px;"><strong>' + filledSlots + ' of ' + totalSlots + '</strong> investments · <strong style="color:' + bc.color + ';">$' + filledIncome.toLocaleString() + '</strong> of $' + targetIncome.toLocaleString() + '/yr</p>'
+      + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Check Size</th><th>Est. Income</th></tr></thead><tbody>';
+
+    years.forEach(function(yr, yi) {
+      var yearSlots = slotsByYear[yr];
+      var yearIncome = yearSlots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+      cumInc += yearIncome;
+      var pct = targetIncome > 0 ? Math.min(100, Math.round(cumInc / targetIncome * 100)) : 0;
+      planHtml += '<tr class="p-year-header"><td colspan="4">Year ' + (yi + 1) + ' (' + yr + ') <span style="float:right;color:' + bc.color + ';">$' + cumInc.toLocaleString() + '/yr · ' + pct + '%</span></td></tr>';
+      yearSlots.forEach(function(slot) {
+        var filled = !!slot.filled_by;
+        planHtml += '<tr' + (filled ? '' : ' style="color:#8A9AA0;"') + '>'
+          + '<td style="text-align:left;">' + (filled ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';margin-right:6px;vertical-align:middle;"></span>' + (slot.filled_name || 'Investment') : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;margin-right:6px;vertical-align:middle;box-sizing:border-box;"></span>Open slot') + '</td>'
+          + '<td>' + slot.asset_class + '</td>'
+          + '<td>$' + (slot.check_size || 0).toLocaleString() + '</td>'
+          + '<td>$' + (slot.est_income || 0).toLocaleString() + '/yr</td></tr>';
+      });
+    });
+    planHtml += '</tbody></table></div>';
+  }
+
+  // Portfolio holdings
+  var holdingsHtml = '';
+  if (portfolio.length > 0) {
+    var totalInvested = portfolio.reduce(function(s, p) { return s + (parseFloat(p.amountInvested) || 0); }, 0);
+    holdingsHtml = '<div class="p-section"><h3>Current Portfolio</h3>'
+      + '<p style="margin-bottom:12px;">' + portfolio.length + ' investments · $' + totalInvested.toLocaleString() + ' deployed</p>'
+      + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Invested</th><th>Status</th></tr></thead><tbody>';
+    portfolio.forEach(function(p) {
+      holdingsHtml += '<tr><td style="text-align:left;font-weight:600;">' + (p.dealName || p.name || 'Investment') + '</td>'
+        + '<td>' + (p.assetClass || '—') + '</td>'
+        + '<td>$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
+        + '<td>' + (p.status || 'Active') + '</td></tr>';
+    });
+    holdingsHtml += '</tbody></table></div>';
+  }
+
+  // Build the printable HTML page
+  var today = new Date();
+  var dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  var firstName = d.firstName || '';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>My Investment Plan – Grow Your Cashflow</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
+    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.6; background: #fff; padding: 0; }'
+    + '.p-page { max-width: 800px; margin: 0 auto; padding: 48px 40px; }'
+    // Header
+    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #0A1E21; }'
+    + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 22px; color: #0A1E21; }'
+    + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; }'
+    + '.p-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; text-align: right; }'
+    // Hero
+    + '.p-hero { margin-bottom: 36px; }'
+    + '.p-badge { display: inline-block; padding: 4px 14px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }'
+    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 32px; font-weight: 400; margin-bottom: 16px; color: #141413; }'
+    + '.p-hero .p-thesis { font-size: 16px; line-height: 1.8; color: #607179; }'
+    + '.p-hero .p-thesis strong { color: #141413; }'
+    // Sections
+    + '.p-section { margin-bottom: 32px; }'
+    + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #8A9AA0; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-section p { font-size: 15px; color: #607179; }'
+    + '.p-section p strong { color: #141413; }'
+    // Metrics
+    + '.p-metric { text-align: center; padding: 16px 20px; background: #FAF9F5; border-radius: 8px; min-width: 100px; }'
+    + '.p-metric-val { font-family: "DM Serif Display", Georgia, serif; font-size: 26px; color: #141413; }'
+    + '.p-metric-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-top: 4px; }'
+    + '.p-metric-op { font-size: 20px; color: #8A9AA0; display: flex; align-items: center; }'
+    // Snapshot table
+    + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 12px; }'
+    + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 10px 10px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-snap-table th:first-child { text-align: left; }'
+    + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 600; color: #141413; text-align: center; padding: 10px 10px 10px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-snap-table td:first-child { text-align: left; }'
+    + '.p-snap-table tr:last-child td { border-bottom: none; }'
+    // Plan table
+    + '.p-plan-table { width: 100%; border-collapse: collapse; font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; }'
+    + '.p-plan-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 10px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-plan-table th:first-child { text-align: left; }'
+    + '.p-plan-table td { padding: 7px 8px 7px 0; border-bottom: 1px solid #EDF1F2; text-align: center; color: #141413; }'
+    + '.p-plan-table td:first-child { text-align: left; }'
+    + '.p-plan-table tr:last-child td { border-bottom: none; }'
+    + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 12px; padding: 8px !important; }'
+    // Footer
+    + '.p-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; }'
+    // Print
+    + '@media print { body { padding: 0; } .p-page { padding: 24px 0; } .p-section { page-break-inside: avoid; } }'
+    + '</style></head><body><div class="p-page">';
+
+  // Header
+  html += '<div class="p-header"><div><div class="p-logo">Grow Your Cashflow</div><div class="p-logo-sub">Investment Plan</div></div><div class="p-date">' + dateStr + (firstName ? '<br>' + firstName : '') + '</div></div>';
+
+  // Hero
+  html += '<div class="p-hero">'
+    + '<div class="p-badge" style="background:' + bc.color + '15;color:' + bc.color + ';border:1px solid ' + bc.color + '30;">' + bc.label + '</div>'
+    + '<h1>' + goalLine + '</h1>'
+    + '<div class="p-thesis">' + thesisText + '</div>'
+    + '</div>';
+
+  // Market Snapshot
+  if (snapshotRows) {
+    html += '<div class="p-section"><h3>Market Snapshot</h3>'
+      + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th></tr></thead>'
+      + '<tbody>' + snapshotRows + '</tbody></table></div>';
+  }
+
+  // Path to goal
+  html += pathHtml;
+
+  // Portfolio holdings
+  html += holdingsHtml;
+
+  // Investment plan
+  html += planHtml;
+
+  // Footer
+  html += '<div class="p-footer"><div>growyourcashflow.com</div><div>Confidential – For personal use only</div></div>';
+
+  html += '</div></body></html>';
+
+  var win = window.open('', '_blank');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+    setTimeout(function() { win.print(); }, 600);
+  }
 }
 
 function safeJoin(val) {
