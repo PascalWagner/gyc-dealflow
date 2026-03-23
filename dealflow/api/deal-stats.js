@@ -36,35 +36,43 @@ export default async function handler(req, res) {
     };
 
     // 2. Check if requesting user has opted in (reciprocal visibility)
-    let callerOptedIn = false;
+    let callerProfile = null;
     const token = (req.headers.authorization || '').replace('Bearer ', '');
     if (token) {
       const { data: { user } } = await supabase.auth.getUser(token);
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('share_portfolio')
+          .select('share_saved, share_dd, share_invested')
           .eq('id', user.id)
           .single();
-        callerOptedIn = profile?.share_portfolio === true;
+        callerProfile = profile;
       }
     }
 
+    // Caller must have at least one sharing toggle on to see named investors
+    const callerOptedIn = callerProfile && (
+      callerProfile.share_saved || callerProfile.share_dd || callerProfile.share_invested
+    );
+
     // 3. Only fetch named investors if caller has also opted in
     if (callerOptedIn) {
+      // Fetch deal stages — use granular toggles to filter by stage
       const { data: publicInvestors } = await supabase
         .from('user_deal_stages')
-        .select('user_id, stage, user_profiles!inner(full_name, share_portfolio)')
-        .eq('deal_id', dealId)
-        .eq('user_profiles.share_portfolio', true);
+        .select('user_id, stage, user_profiles!inner(full_name, share_saved, share_dd, share_invested)')
+        .eq('deal_id', dealId);
 
       if (publicInvestors) {
         for (const row of publicInvestors) {
           const name = row.user_profiles?.full_name;
           if (!name) continue;
-          if (row.stage === 'invested' || row.stage === 'portfolio') {
+          const p = row.user_profiles;
+          if ((row.stage === 'invested' || row.stage === 'portfolio') && p.share_invested) {
             result.namedInvestors.push(name);
-          } else {
+          } else if ((row.stage === 'dd' || row.stage === 'duediligence') && p.share_dd) {
+            result.namedWatchers.push(name);
+          } else if ((row.stage === 'saved' || row.stage === 'interested') && p.share_saved) {
             result.namedWatchers.push(name);
           }
         }
@@ -73,9 +81,9 @@ export default async function handler(req, res) {
       // Also check user_portfolio for invested users who opted in
       const { data: portfolioInvestors } = await supabase
         .from('user_portfolio')
-        .select('user_id, user_profiles!inner(full_name, share_portfolio)')
+        .select('user_id, user_profiles!inner(full_name, share_invested)')
         .eq('deal_id', dealId)
-        .eq('user_profiles.share_portfolio', true);
+        .eq('user_profiles.share_invested', true);
 
       if (portfolioInvestors) {
         for (const row of portfolioInvestors) {

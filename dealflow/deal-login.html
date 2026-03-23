@@ -1096,6 +1096,10 @@ setInterval(() => {
       contactId: data.contactId || null,
       phone: data.phone || '',
       location: data.location || '',
+      share_saved: data.share_saved !== false,
+      share_dd: data.share_dd !== false,
+      share_invested: data.share_invested !== false,
+      allow_follows: data.allow_follows !== false,
       ...(data.gpType && {
         gpType: data.gpType,
         managementCompanyId: data.managementCompanyId,
@@ -1150,7 +1154,13 @@ function handleSubmit() {
         tier: data.tier,
         isAdmin: data.isAdmin,
         tags: data.tags,
-        contactId: data.contactId
+        contactId: data.contactId,
+        phone: data.phone || '',
+        location: data.location || '',
+        share_saved: data.share_saved !== false,
+        share_dd: data.share_dd !== false,
+        share_invested: data.share_invested !== false,
+        allow_follows: data.allow_follows !== false
       }));
       const params = new URLSearchParams(window.location.search);
       window.location.href = params.get('return') ? decodeURIComponent(params.get('return')) : '/';

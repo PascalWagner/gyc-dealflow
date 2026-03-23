@@ -16215,12 +16215,15 @@ function wizardNext() {
       var _plan = generatePortfolioPlan(wizardData, _goalsForPlan);
       savePortfolioPlan(_plan);
     } catch(e) { console.warn('Plan generation failed:', e.message); }
-    // Save LP Network opt-in
+    // Save LP Network opt-in → enable all granular sharing toggles
     if (wizardData.sharePortfolio) {
       var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-      u.sharePortfolio = true;
+      u.share_saved = true;
+      u.share_dd = true;
+      u.share_invested = true;
+      u.allow_follows = true;
       localStorage.setItem('gycUser', JSON.stringify(u));
-      if (typeof syncToBackend === 'function') syncToBackend('profile', { share_portfolio: true });
+      if (typeof syncToBackend === 'function') syncToBackend('profile', { share_saved: true, share_dd: true, share_invested: true, allow_follows: true });
     }
     document.getElementById('wizardOverlay').classList.remove('active');
     if (typeof trackActivity === 'function') {

@@ -290,7 +290,7 @@ export default async function handler(req, res) {
       // Fetch onboarding state from profile
       const { data: existingProfile } = await adminSupabase
         .from('user_profiles')
-        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location')
+        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows')
         .eq('id', user.id)
         .single();
 
@@ -305,6 +305,10 @@ export default async function handler(req, res) {
         token: user.id, // placeholder — real flow uses Supabase session tokens
         phone: existingProfile?.phone || null,
         location: existingProfile?.location || null,
+        share_saved: existingProfile?.share_saved !== false,
+        share_dd: existingProfile?.share_dd !== false,
+        share_invested: existingProfile?.share_invested !== false,
+        allow_follows: existingProfile?.allow_follows !== false,
         onboardingRole: existingProfile?.onboarding_role || null,
         gpOnboardingComplete: existingProfile?.gp_onboarding_complete || false,
         academyStart: existingProfile?.academy_start || null,
