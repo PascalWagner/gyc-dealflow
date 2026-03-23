@@ -11,6 +11,10 @@
   "crons": [
     { "path": "/api/ghl-sync", "schedule": "0 * * * *" }
   ],
+  "rewrites": [
+    { "source": "/", "destination": "/landing.html" },
+    { "source": "/cashflow-academy", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
