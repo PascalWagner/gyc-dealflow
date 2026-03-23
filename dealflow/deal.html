@@ -5606,7 +5606,7 @@ async function renderDeal() {
     bgReportDealHtml += '<div style="display:flex;align-items:center;gap:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Sponsor Background Report</span></div>';
     bgReportDealHtml += '<span id="dealBgStatus" style="display:none;"></span>';
     bgReportDealHtml += '</div>';
-    bgReportDealHtml += '<div class="section-body" id="dealBgBody">';
+    bgReportDealHtml += '<div class="section-body" id="dealBgBody" style="position:relative;min-height:120px;">';
 
     // Free users: unlock gate; Paid users: coming soon
     var _bgPreviewContent = '';
@@ -7198,7 +7198,7 @@ async function renderDeal() {
   var qaHtml = '';
   qaHtml += '<div class="section">';
   qaHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span></div>';
-  qaHtml += '<div class="section-body">';
+  qaHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
   if (!isPaidUser && !_compIsAdmin) {
     qaHtml += academyGateOverlay('Unlock Investor Q&A', 'Academy members can ask questions and get answers from Pascal on any deal.');
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">What is the redemption policy for this fund?</div>';
