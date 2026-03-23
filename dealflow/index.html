@@ -13283,7 +13283,7 @@ document.addEventListener('keydown', e => {
 // ========== PAGE NAVIGATION ==========
 function navigateTo(page) {
   // Gate pages that require login for guests
-  var _gatedPages = ['dashboard', 'buybox', 'portfolio', 'settings', 'goals', 'taxprep', 'admindash', 'casestudies', 'admin-manage'];
+  var _gatedPages = ['dashboard', 'buybox', 'portfolio', 'settings', 'goals', 'taxprep', 'admindash', 'casestudies', 'admin-manage', 'resources'];
   if (window._isGuest && _gatedPages.indexOf(page) !== -1) {
     var _pageLabels = { dashboard: 'view your dashboard', buybox: 'build your investment plan', portfolio: 'track your portfolio', settings: 'manage your settings', goals: 'set your goals', taxprep: 'access tax prep tools' };
     requireAuth(_pageLabels[page] || 'access this page');
@@ -13333,6 +13333,7 @@ function navigateTo(page) {
   if (page === 'incomefund') renderIncomeFund();
   if (page === 'portfolio') renderPortfolio();
   if (page === 'marketintel') renderMarketIntel();
+  if (page === 'resources') renderResources();
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'admindash') switchAdminDashTab(adminDashCurrentTab);
   if (page === 'casestudies') renderCaseStudies();
