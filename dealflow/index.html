@@ -26054,66 +26054,66 @@ function renderDealFlowContent(container) {
   const sourceValues = sourceLabels.map(k => knownSources[k]);
   const sourceColors = ['#2C6E49', '#4C956C', '#FEFEE3', '#D68C45', '#3D405B', '#8B5E3C'];
 
-  container.innerHTML = '<div class="sub-page" style="max-width:1100px;">' +
-    '<h2 style="font-size:22px;font-weight:800;margin-bottom:4px;">Deal Flow Stats</h2>' +
-    '<p style="color:var(--text-muted);font-size:13px;margin-bottom:24px;">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>' +
+  container.innerHTML = '<div class="sub-page" style="max-width:1200px;">' +
+    '<h2 style="font-family:var(--font-ui);font-size:22px;font-weight:800;margin-bottom:4px;color:var(--text-dark);">Deal Flow Stats</h2>' +
+    '<p style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:24px;">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>' +
 
     // Summary cards
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;">' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Total Deals</div>' +
-        '<div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + totalDeals + '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;">' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">' +
+        '<div style="font-family:var(--font-body);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Total Deals</div>' +
+        '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + totalDeals + '</div>' +
       '</div>' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Last 30 Days</div>' +
-        '<div style="font-size:28px;font-weight:800;color:#2C6E49;">' + recentCount + '</div>' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">' +
+        '<div style="font-family:var(--font-body);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Last 30 Days</div>' +
+        '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:#2C6E49;">' + recentCount + '</div>' +
       '</div>' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Avg / Month</div>' +
-        '<div style="font-size:28px;font-weight:800;color:var(--text-dark);">' + avgPerMonth + '</div>' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">' +
+        '<div style="font-family:var(--font-body);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Avg / Month</div>' +
+        '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + avgPerMonth + '</div>' +
       '</div>' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">' +
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Week Streak</div>' +
-        '<div style="font-size:28px;font-weight:800;color:#D68C45;">' + streak + '</div>' +
-        '<div style="font-size:10px;color:var(--text-muted);">consecutive weeks</div>' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">' +
+        '<div style="font-family:var(--font-body);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Week Streak</div>' +
+        '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:#D68C45;">' + streak + '</div>' +
+        '<div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);">consecutive weeks</div>' +
       '</div>' +
     '</div>' +
 
     // Monthly volume bar chart
-    '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px;">' +
-      '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">New Deals Added Per Month</h3>' +
-      '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Last 12 months of deal sourcing activity</p>' +
+    '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:24px;">' +
+      '<h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">New Deals Added Per Month</h3>' +
+      '<p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Last 12 months of deal sourcing activity</p>' +
       '<div style="height:280px;"><canvas id="dealFlowBarChart"></canvas></div>' +
     '</div>' +
 
     // Two-column: Source pie + Asset Class pie
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
-        '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Deal Sources</h3>' +
-        '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Where deals are found</p>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">' +
+        '<h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Deal Sources</h3>' +
+        '<p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Where deals are found</p>' +
         '<div style="height:240px;"><canvas id="dealSourcePieChart"></canvas></div>' +
       '</div>' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
-        '<h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Asset Classes</h3>' +
-        '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Investment categories in the database</p>' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">' +
+        '<h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 4px 0;">Asset Classes</h3>' +
+        '<p style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin:0 0 16px 0;">Investment categories in the database</p>' +
         '<div style="height:240px;"><canvas id="dealAssetPieChart"></canvas></div>' +
       '</div>' +
     '</div>' +
 
     // Deal type + Recent deals table
-    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px;">' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
-        '<h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Deal Types</h3>' +
+    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:24px;margin-bottom:24px;">' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">' +
+        '<h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 12px 0;">Deal Types</h3>' +
         Object.entries(dealTypes).map(function(e) {
           var pct = Math.round(e[1] / totalDeals * 100);
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
-            '<span style="font-size:13px;font-weight:600;">' + e[0] + '</span>' +
-            '<span style="font-size:13px;color:var(--text-muted);">' + e[1] + ' (' + pct + '%)</span>' +
+            '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;">' + e[0] + '</span>' +
+            '<span style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">' + e[1] + ' (' + pct + '%)</span>' +
           '</div>';
         }).join('') +
       '</div>' +
-      '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;">' +
-        '<h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Recently Added Deals</h3>' +
+      '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;">' +
+        '<h3 style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin:0 0 12px 0;">Recently Added Deals</h3>' +
         '<div style="max-height:300px;overflow-y:auto;">' +
           '<table style="width:100%;font-size:12px;border-collapse:collapse;">' +
             '<thead><tr style="border-bottom:2px solid var(--border);">' +
@@ -26141,9 +26141,9 @@ function renderDealFlowContent(container) {
     '<div id="adminEngagementSection" style="margin-bottom:20px;"></div>' +
 
     // Value prop footer
-    '<div style="background:linear-gradient(135deg,#2C3E2D,#3D5A3E);border-radius:10px;padding:24px;color:#fff;text-align:center;margin-bottom:20px;">' +
-      '<div style="font-size:18px;font-weight:800;margin-bottom:8px;">This database can\'t be rebuilt overnight.</div>' +
-      '<div style="font-size:13px;opacity:0.85;">With ' + totalDeals + ' deals tracked, ' + Object.keys(assetClasses).length + ' asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>' +
+    '<div style="background:linear-gradient(135deg,#2C3E2D,#3D5A3E);border-radius:var(--radius);padding:24px;color:#fff;text-align:center;margin-bottom:24px;">' +
+      '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;margin-bottom:8px;">This database can\'t be rebuilt overnight.</div>' +
+      '<div style="font-family:var(--font-body);font-size:13px;opacity:0.85;">With ' + totalDeals + ' deals tracked, ' + Object.keys(assetClasses).length + ' asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>' +
     '</div>' +
   '</div>';
 
