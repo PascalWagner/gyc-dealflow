@@ -16409,7 +16409,7 @@ function wizardNext() {
   const seq = getStepSequence();
   const curStep = WIZARD_STEPS[seq[wizardStepIndex]];
 
-  // Validate required fields before advancing
+  // Validate required fields before advancing — every onboarding step is required
   const requiredMap = {
     capitalAmount: 'capital12mo',
     capitalReadiness: 'capitalReadiness',
@@ -16427,7 +16427,9 @@ function wizardNext() {
     reProfessional: 'reProfessional',
     growthPriority: 'growthPriority',
     taxBaseline: 'taxableIncomeBaseline',
-    roleSelect: 'userRole'
+    roleSelect: 'userRole',
+    dealExperience: 'dealExperience',
+    diversificationPref: 'diversificationPref'
   };
   var reqField = curStep ? requiredMap[curStep.type] : null;
   // Asset classes and strategies are arrays — require at least 1
@@ -16440,7 +16442,10 @@ function wizardNext() {
   if (curStep && curStep.type === 'accreditationPrefs' && (!wizardData.accreditation || wizardData.accreditation.length === 0)) {
     reqField = '_forceShake';
   }
-  if (reqField && !wizardData[reqField]) {
+  // Check if field is empty (treat 0 as valid for numeric fields like dealExperience)
+  var _reqEmpty = reqField && (wizardData[reqField] === undefined || wizardData[reqField] === null || wizardData[reqField] === '');
+  if (reqField === '_forceShake') _reqEmpty = true;
+  if (_reqEmpty) {
     // Shake the Next button to indicate selection required
     var nextBtn = document.querySelector('.wizard-btn-next');
     if (nextBtn) {
