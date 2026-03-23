@@ -4919,6 +4919,11 @@ async function renderDeal() {
         + 'View PPM</a>';
     }
   }
+  // Request Introduction button (available to all users)
+  heroHtml += '<button class="hero-deck-btn" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);" onclick="requestIntroduction(\'' + escAttr(deal.managementCompany || '') + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName || '') + '\', this)">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>'
+    + 'Request Introduction</button>';
+
   // Share button with dropdown
   heroHtml += '<div style="position:relative;" id="shareWrapper">';
   heroHtml += '<button class="hero-share-btn" onclick="toggleShareDropdown(event)">';
@@ -7543,15 +7548,8 @@ async function renderDeal() {
   } else {
     primaryCTA = '<button class="btn-action btn-primary" onclick="requestIntroduction(\'' + escAttr(deal.managementCompany || '') + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName || '') + '\', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
   }
-  // Always include Request Introduction button (separate from stage-aware primary CTA)
-  var introCTA = '<button class="btn-action btn-secondary" onclick="requestIntroduction(\'' + escAttr(deal.managementCompany || '') + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName || '') + '\', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Request Introduction</button>';
-
   actionsHtml += '<div class="section"><div class="section-body"><div class="action-buttons">';
   actionsHtml += primaryCTA;
-  // Don't duplicate intro button if it's already the primary CTA (diligence/decision/invested stages)
-  if (currentStage === 'browse' || currentStage === 'saved' || currentStage === 'vetting' || !currentStage) {
-    actionsHtml += introCTA;
-  }
   if (deal.deckUrl) {
     actionsHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-secondary" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + deckSvg + 'View Deal Deck</a>';
   } else {
