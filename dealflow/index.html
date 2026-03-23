@@ -27513,18 +27513,18 @@ fetchBuyBoxFromGHL();
       mRow.className = 'ios-filter-row';
       mRow.style.cssText = 'display:flex!important;width:100%;gap:6px;padding:6px 0;align-items:center;flex-wrap:nowrap!important;';
       mRow.innerHTML = `
-        <input type="text" placeholder="Search operators..."
-          oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();"
-          style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
-        <button class="ios-filter-toggle" style="flex:0 0 auto;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <button class="ios-filter-toggle" style="flex:0 0 auto;min-width:0;display:flex;align-items:center;gap:5px;justify-content:center;height:38px;padding:0 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;color:var(--text-dark);background:var(--bg-card);cursor:pointer;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           Filters
         </button>
-        <select style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;" onchange="document.getElementById('managersSortBy').value=this.value;renderManagersPage();">
+        <select style="flex:0 0 auto;min-width:0;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;background:var(--bg-card);color:var(--text-dark);box-sizing:border-box;" onchange="document.getElementById('managersSortBy').value=this.value;renderManagersPage();">
           <option value="deals">Most Deals</option>
           <option value="name">A-Z</option>
           <option value="newest">Newest</option>
         </select>
+        <input type="text" placeholder="Search operators..."
+          oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();"
+          style="flex:1;min-width:0;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;background:var(--bg-card);">
       `;
       managersFilter.insertBefore(mRow, managersFilter.firstChild);
       // Add mobile reset button (shown only when filters expanded)
