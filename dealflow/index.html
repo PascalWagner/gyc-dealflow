@@ -23679,16 +23679,14 @@ function isImpersonating() {
 }
 
 function isAdmin() {
-  // Check if the real user (or impersonating admin) is an admin
-  const realUser = adminRealUser || JSON.parse(localStorage.getItem('_gycAdminRealUser') || 'null');
-  if (realUser && realUser.email && ADMIN_EMAILS.includes(realUser.email.toLowerCase())) return true;
+  // When impersonating another user, treat as non-admin so the view matches what that user sees
+  if (isImpersonating()) return false;
   const user = getUser();
   return user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
 }
 
 function showAdminNav() {
-  const impersonating = isImpersonating();
-  const admin = !impersonating && isAdmin();
+  const admin = isAdmin();
   const adminNav = document.getElementById('adminNav');
   if (adminNav) adminNav.style.display = admin ? 'block' : 'none';
   // Show admin section in More menu
@@ -23702,7 +23700,7 @@ function showAdminNav() {
     gpNav.style.display = isGP ? 'block' : 'none';
   }
   // Enable/disable Coming Soon nav items for admins
-  ['navAssets', 'navOfficeHours', 'navAcademy'].forEach(id => {
+  ['navAssets', 'navOfficeHours'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const label = el.querySelector('.nav-coming-soon') || document.getElementById(id.replace('nav', '').toLowerCase() + 'ComingSoon');
@@ -26895,13 +26893,8 @@ async function viewAsUser(email, name, contactId, tier, firstName, lastName) {
   // Close dropdown
   document.getElementById('viewAsDropdown').style.display = 'none';
 
-  // Update sidebar display — capitalize name
-  const capName = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-  const initials = capName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  document.getElementById('sidebarAvatar').textContent = initials;
-  document.getElementById('sidebarName').textContent = capName;
-  const sidebarEmailEl2 = document.getElementById('sidebarEmail');
-  if (sidebarEmailEl2) sidebarEmailEl2.textContent = email;
+  // Update sidebar display (avatar, name, tier badge) from the new gycUser
+  if (typeof sidebarInitAuth === 'function') sidebarInitAuth();
 
   // Hide admin/GP nav and gray out Coming Soon items for impersonated user
   showAdminNav();
@@ -26953,21 +26946,14 @@ function exitViewAs() {
       fetchUserDataFromSupabase(adminRealUser.email);
     }
 
-    // Restore sidebar
-    const name = adminRealUser.name || 'Admin';
-    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    document.getElementById('sidebarAvatar').textContent = initials;
-    document.getElementById('sidebarName').textContent = name;
-    const sidebarEmailEl3 = document.getElementById('sidebarEmail');
-    if (sidebarEmailEl3) sidebarEmailEl3.textContent = adminRealUser.email || '';
-
     // Hide impersonation indicator, show search
     document.getElementById('viewAsImpersonating').style.display = 'none';
     document.getElementById('viewAsSearch').style.display = 'block';
 
     adminRealUser = null;
 
-    // Restore admin nav (must be after clearing adminRealUser so isImpersonating() returns false)
+    // Restore sidebar (avatar, name, tier badge) + admin nav from restored gycUser
+    if (typeof sidebarInitAuth === 'function') sidebarInitAuth();
     showAdminNav();
 
     // Navigate to dashboard with restored data

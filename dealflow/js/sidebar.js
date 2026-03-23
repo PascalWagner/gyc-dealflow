@@ -30,8 +30,8 @@
   }
 
   function isAdmin() {
-    var realUser = getAdminRealUser();
-    if (realUser && realUser.email && ADMIN_EMAILS.indexOf(realUser.email.toLowerCase()) !== -1) return true;
+    // When impersonating, return false so sidebar matches the viewed user's permissions
+    if (getAdminRealUser()) return false;
     var user = getUser();
     return user && user.email && ADMIN_EMAILS.indexOf(user.email.toLowerCase()) !== -1;
   }
@@ -328,7 +328,7 @@
     if (viewAsEl) viewAsEl.style.display = isAdmin() ? 'block' : 'none';
 
     // Enable Coming Soon items for admins
-    ['navAssets', 'navAcademy'].forEach(function(id) {
+    ['navAssets'].forEach(function(id) {
       var el = document.getElementById(id);
       if (!el) return;
       var label = document.getElementById(id.replace('nav', '').toLowerCase() + 'ComingSoon');
