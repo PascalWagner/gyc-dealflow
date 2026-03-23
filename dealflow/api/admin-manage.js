@@ -739,19 +739,24 @@ async function tableCounts(supabase) {
 
 // --- List intro requests ---
 
-async function listIntros(supabase) {
-  const { data, error, count } = await supabase
+async function listIntros(supabase, params) {
+  const search = (params?.search || '').trim();
+  let query = supabase
     .from('intro_requests')
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .limit(100);
+  if (search) {
+    query = query.or(`user_email.ilike.%${search}%,deal_name.ilike.%${search}%,operator_name.ilike.%${search}%`);
+  }
+  const { data, error, count } = await query;
 
   if (error) {
     // Table may not exist yet
     console.warn('intro_requests query failed:', error.message);
     return { intros: [], total: 0 };
   }
-  return { intros: data || [], total: count || 0 };
+  return { data: data || [], total: count || 0 };
 }
 
 // --- Action router ---

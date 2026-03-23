@@ -8255,6 +8255,7 @@ const _supa = window.supabase.createClient(
           <button class="admin-seg" onclick="adminShowTab('deals',this)">Deals</button>
           <button class="admin-seg" onclick="adminShowTab('users',this)">Users</button>
           <button class="admin-seg" onclick="adminShowTab('submissions',this)">Uploads</button>
+          <button class="admin-seg" onclick="adminShowTab('intros',this)">Intros</button>
         </div>
       </div>
     </div>
@@ -21482,6 +21483,25 @@ async function adminLoadData() {
     } catch (e) { adminRenderEmptyState('Could not load submissions'); }
     return;
   }
+  // Intros tab — fetch directly from Supabase
+  if (_adminTab === 'intros') {
+    try {
+      var user = getUser();
+      if (!user || !user.token) { adminRenderEmptyState('Sign in to view intros'); return; }
+      var introResp = await fetch('/api/admin-manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+        body: JSON.stringify({ action: 'list-intros', search: search })
+      });
+      var introResult = await introResp.json();
+      if (introResult.success) {
+        adminRenderIntros(introResult.data || []);
+      } else {
+        adminRenderEmptyState('Failed to load intros: ' + (introResult.error || 'Unknown'));
+      }
+    } catch (e) { adminRenderEmptyState('Could not load intro requests'); }
+    return;
+  }
   try {
     const result = await adminFetch({ action: 'list-' + _adminTab, page: _adminPage, limit: 25, search });
     if (!result.success) { adminRenderEmptyState('Load failed: ' + (result.error || 'Unknown error')); return; }
@@ -21521,6 +21541,90 @@ function adminRenderSubmissions(submissions) {
   // Hide pagination for submissions
   var pagEl = document.getElementById('adminPagination');
   if (pagEl) pagEl.style.display = 'none';
+}
+
+function adminRenderIntros(intros) {
+  var head = document.querySelector('#adminTableHead tr');
+  var body = document.getElementById('adminTableBody');
+  var countEl = document.getElementById('adminResultCount');
+  if (countEl) countEl.textContent = intros.length + ' intro request' + (intros.length !== 1 ? 's' : '');
+  if (head) head.innerHTML = '<th>Date</th><th>LP</th><th>Deal</th><th>Operator</th><th>Email</th><th>GHL</th><th>Status</th><th>Log</th>';
+  if (!body) return;
+  if (intros.length === 0) {
+    body.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-muted);">No intro requests yet</td></tr>';
+    var pagEl = document.getElementById('adminPagination');
+    if (pagEl) pagEl.style.display = 'none';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < intros.length; i++) {
+    var r = intros[i];
+    var date = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+    var time = r.created_at ? new Date(r.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+    var emailBadge = r.email_sent
+      ? '<span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:var(--green-bg);color:var(--green);">Sent</span>'
+      : '<span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#FEF2F2;color:#DC2626;">Failed</span>';
+    if (r.status === 'pending') emailBadge = '<span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#FFF7ED;color:#D97706;">Pending</span>';
+    var ghlBadge = r.ghl_synced
+      ? '<span style="color:var(--green);">&#10003;</span>'
+      : '<span style="color:var(--text-muted);">—</span>';
+    var statusBadge = '';
+    if (r.status === 'email_sent') statusBadge = '<span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:var(--green-bg);color:var(--green);">Sent</span>';
+    else if (r.status === 'email_failed') statusBadge = '<span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#FEF2F2;color:#DC2626;">Failed</span>';
+    else statusBadge = '<span style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#FFF7ED;color:#D97706;">' + (r.status || 'pending') + '</span>';
+    var logBtn = r.log ? '<button onclick="adminShowIntroLog(' + i + ')" style="padding:3px 10px;border:1px solid var(--border);border-radius:6px;background:none;font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;">View</button>' : '—';
+    var errNote = r.resend_error ? '<div style="font-size:10px;color:#DC2626;margin-top:2px;" title="' + r.resend_error.replace(/"/g, '&quot;') + '">Error</div>' : '';
+    html += '<tr>';
+    html += '<td style="white-space:nowrap;"><div style="font-weight:600;">' + date + '</div><div style="font-size:11px;color:var(--text-muted);">' + time + '</div></td>';
+    html += '<td><div style="font-weight:600;">' + (r.user_email || '—') + '</div></td>';
+    html += '<td>' + (r.deal_id ? '<a href="deal.html?id=' + r.deal_id + '" style="color:var(--primary);text-decoration:none;font-weight:600;">' + (r.deal_name || '—') + '</a>' : (r.deal_name || '—')) + '</td>';
+    html += '<td><div style="font-weight:600;">' + (r.operator_name || '—') + '</div>' + (r.operator_ceo ? '<div style="font-size:11px;color:var(--text-muted);">' + r.operator_ceo + '</div>' : '') + '</td>';
+    html += '<td>' + emailBadge + errNote + '</td>';
+    html += '<td style="text-align:center;">' + ghlBadge + '</td>';
+    html += '<td>' + statusBadge + '</td>';
+    html += '<td>' + logBtn + '</td>';
+    html += '</tr>';
+  }
+  body.innerHTML = html;
+  window._adminIntroData = intros;
+  var pagEl = document.getElementById('adminPagination');
+  if (pagEl) pagEl.style.display = 'none';
+}
+
+function adminShowIntroLog(idx) {
+  var intro = (window._adminIntroData || [])[idx];
+  if (!intro || !intro.log) return;
+  var logHtml = '<div style="max-height:400px;overflow:auto;font-family:monospace;font-size:12px;line-height:1.8;">';
+  for (var i = 0; i < intro.log.length; i++) {
+    var entry = intro.log[i];
+    var color = entry.error ? '#DC2626' : entry.result === 'ok' || entry.ok ? 'var(--green)' : 'var(--text-secondary)';
+    var time = entry.at ? new Date(entry.at).toLocaleTimeString() : '';
+    logHtml += '<div style="padding:6px 0;border-bottom:1px solid var(--border-light);">';
+    logHtml += '<span style="color:var(--text-muted);">' + time + '</span> ';
+    logHtml += '<strong style="color:' + color + ';">' + entry.step + '</strong>';
+    if (entry.result) logHtml += ' → ' + entry.result;
+    if (entry.ok !== undefined) logHtml += ' → ' + (entry.ok ? '✓' : '✗');
+    if (entry.type) logHtml += ' <span style="color:var(--text-muted);">(' + entry.type + ')</span>';
+    if (entry.to) logHtml += ' → ' + entry.to;
+    if (entry.status) logHtml += ' [' + entry.status + ']';
+    if (entry.error) logHtml += ' <span style="color:#DC2626;">' + entry.error + '</span>';
+    if (entry.contactId) logHtml += ' <span style="color:var(--text-muted);">GHL:' + entry.contactId.slice(0, 8) + '…</span>';
+    logHtml += '</div>';
+  }
+  logHtml += '</div>';
+  // Show in a simple modal
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = '<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    + '<div style="font-family:var(--font-ui);font-weight:700;font-size:15px;color:var(--text-dark);">Intro Request Log</div>'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">&times;</button>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">' + (intro.deal_name || '') + ' → ' + (intro.operator_name || '') + ' (by ' + (intro.user_email || '') + ')</div>'
+    + logHtml
+    + '</div>';
+  document.body.appendChild(overlay);
 }
 
 function adminRenderEmptyState(msg) {
