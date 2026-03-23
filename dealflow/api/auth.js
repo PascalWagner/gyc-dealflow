@@ -290,7 +290,7 @@ export default async function handler(req, res) {
       // Fetch onboarding state from profile
       const { data: existingProfile } = await adminSupabase
         .from('user_profiles')
-        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end, auto_renew, card_last4, card_brand')
+        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location')
         .eq('id', user.id)
         .single();
 
@@ -303,6 +303,8 @@ export default async function handler(req, res) {
         isAdmin,
         tags: ghl.tags,
         token: user.id, // placeholder — real flow uses Supabase session tokens
+        phone: existingProfile?.phone || null,
+        location: existingProfile?.location || null,
         onboardingRole: existingProfile?.onboarding_role || null,
         gpOnboardingComplete: existingProfile?.gp_onboarding_complete || false,
         academyStart: existingProfile?.academy_start || null,
@@ -425,7 +427,7 @@ export default async function handler(req, res) {
     // Fetch academy dates
     const { data: loginProfileData } = await adminSupabase
       .from('user_profiles')
-      .select('academy_start, academy_end, auto_renew, card_last4, card_brand')
+      .select('academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location')
       .eq('id', data.user.id)
       .single();
 
@@ -438,6 +440,8 @@ export default async function handler(req, res) {
       isAdmin,
       token: data.session.access_token,        // real JWT for API calls
       refreshToken: data.session.refresh_token, // for token refresh
+      phone: loginProfileData?.phone || null,
+      location: loginProfileData?.location || null,
       academyStart: loginProfileData?.academy_start || null,
       academyEnd: loginProfileData?.academy_end || null,
       autoRenew: loginProfileData?.auto_renew !== false,
