@@ -7818,15 +7818,16 @@ async function renderDeal() {
     + detailsHtml
     + '<div>' + operatorHtml + chartHtml + materialsHtml + '</div>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="fee-econ-grid">'
     + feeCompareHtml
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="sec-econ-grid">'
+    + secFilingHtml
     + buildDealEconomicsHtml(deal)
     + '</div>'
     + (isPaidUser || _compIsAdmin
       // --- Paid users: original section order ---
-      ? (cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + secFilingHtml + thesisHtml)
+      ? (cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + thesisHtml)
       // --- Free users: free content first, locked sections pushed below ---
-      : (geoMapHtml + secFilingHtml + similarHtml + thesisHtml + cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml)
+      : (geoMapHtml + similarHtml + thesisHtml + cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml)
     )
     + dealFitHtml
     + bgReportDealHtml
