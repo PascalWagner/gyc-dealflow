@@ -12327,6 +12327,12 @@ function getFilteredDeals() {
     });
   }
 
+  // Skip re-sort tiers when user explicitly chose Best Match — respect their sort
+  if (sortBy === 'best_match') {
+    updateGoalSortIndicator(false);
+    return filtered;
+  }
+
   // Re-sort with priority: 0) almost full, 1) has deck, 2) buybox match, 3) primary sort preserved
   const _primaryOrder = new Map(filtered.map((d, i) => [d.id, i]));
   const _wd = wd || getCachedWizardData();
@@ -12721,6 +12727,10 @@ function applyFilters() {
     dealType: document.getElementById('filterDealType')?.value || '',
     strategy: document.getElementById('filterStrategy')?.value || '',
     status: document.getElementById('filterStatus')?.value || '',
+    maxInvest: document.getElementById('filterMaxInvest')?.value || '',
+    maxLockup: document.getElementById('filterMaxLockup')?.value || '',
+    distributions: document.getElementById('filterDistributions')?.value || '',
+    minIRR: document.getElementById('filterMinIRR')?.value || '',
     sort: document.getElementById('filterSort')?.value || ''
   });
   updateFilterBadge();
@@ -20061,7 +20071,6 @@ function toggleDealsBuyBox() {
   // Set asset class from first buy box asset class (dropdown is single-select)
   const acSelect = document.getElementById('filterAssetClass');
   if (acSelect && buyBox.assetClasses && buyBox.assetClasses.length) {
-    // Find first matching option
     const match = buyBox.assetClasses.find(ac => [...acSelect.options].some(o => o.value === ac));
     acSelect.value = match || '';
   }
@@ -20078,6 +20087,69 @@ function toggleDealsBuyBox() {
     stSelect.value = match || '';
   }
 
+  // Set max investment minimum from buy box check size
+  var _bbMinInv = buyBox.minInvest || '';
+  var _bbMinNum = parseInt(String(_bbMinInv).replace(/[^0-9]/g, ''), 10);
+  var maxInvEl = document.getElementById('filterMaxInvest');
+  if (maxInvEl && _bbMinNum > 0) {
+    // Find the closest option that's >= the user's check size
+    var opts = [25000, 50000, 100000, 250000];
+    var bestOpt = '';
+    for (var oi = 0; oi < opts.length; oi++) {
+      if (opts[oi] >= _bbMinNum) { bestOpt = String(opts[oi]); break; }
+    }
+    maxInvEl.value = bestOpt;
+  }
+
+  // Set max lockup from buy box hold preference
+  var _bbLockup = buyBox.holdMin || buyBox.holdMax || '';
+  var maxLockupEl = document.getElementById('filterMaxLockup');
+  if (maxLockupEl && _bbLockup) {
+    var lockupMap = { 'None': '1', '6 months': '1', '1 year': '1', '2–3 years': '3', '2-3 years': '3', '3 years': '3', '5 years': '5', '5+ years': '10', '7+ years': '10', '10 years': '10' };
+    var lockupNum = lockupMap[_bbLockup] || '';
+    if (!lockupNum) {
+      var parsed = parseFloat(_bbLockup);
+      if (parsed > 0) lockupNum = String(parsed <= 1 ? 1 : parsed <= 3 ? 3 : parsed <= 5 ? 5 : parsed <= 7 ? 7 : 10);
+    }
+    maxLockupEl.value = lockupNum;
+  }
+
+  // Set distributions preference
+  var distEl = document.getElementById('filterDistributions');
+  if (distEl && buyBox.distributions) {
+    var distMap = { 'Monthly': 'Monthly', 'Quarterly': 'Quarterly', 'Annual': 'Annual', 'Annually': 'Annual' };
+    distEl.value = distMap[buyBox.distributions] || '';
+  }
+
+  // Set min IRR from buy box
+  var _bbIrr = buyBox.irrMin || '';
+  var minIrrEl = document.getElementById('filterMinIRR');
+  if (minIrrEl && _bbIrr) {
+    var irrParsed = parseFloat(String(_bbIrr).replace(/[^0-9.]/g, ''));
+    if (irrParsed > 1) irrParsed = irrParsed / 100; // e.g. "8%" → 0.08
+    if (irrParsed > 0) {
+      var irrOpts = [0.06, 0.08, 0.10, 0.12, 0.15, 0.20];
+      var bestIrr = '';
+      for (var ii = irrOpts.length - 1; ii >= 0; ii--) {
+        if (irrOpts[ii] <= irrParsed) { bestIrr = String(irrOpts[ii]); break; }
+      }
+      minIrrEl.value = bestIrr;
+    }
+  }
+
+  // Sort by Best Match when user has a plan
+  var sortEl = document.getElementById('filterSort');
+  if (sortEl && buyBox._branch) {
+    sortEl.value = 'best_match';
+    _goalSortOverridden = true;
+  }
+
+  // Open filter panel so user can see what was applied
+  var panel = document.getElementById('filterPanel');
+  if (panel) panel.style.display = '';
+  var filterBtn = document.getElementById('filtersToggleBtn');
+  if (filterBtn) { filterBtn.style.background = 'var(--bg-card)'; filterBtn.style.borderColor = 'var(--primary)'; filterBtn.style.color = 'var(--text-dark)'; }
+
   applyFilters();
 }
 
@@ -20086,10 +20158,18 @@ function updateDealsBuyBox() {
   const ac = document.getElementById('filterAssetClass').value;
   const dt = document.getElementById('filterDealType').value;
   const st = document.getElementById('filterStrategy').value;
+  const maxInv = document.getElementById('filterMaxInvest').value;
+  const maxLock = document.getElementById('filterMaxLockup').value;
+  const dist = document.getElementById('filterDistributions').value;
+  const irrMin = document.getElementById('filterMinIRR').value;
 
   if (ac) buyBox.assetClasses = [ac];
   if (dt) buyBox.dealTypes = [dt];
   if (st) buyBox.strategies = [st];
+  if (maxInv) buyBox.minInvest = '$' + parseInt(maxInv, 10).toLocaleString();
+  if (maxLock) buyBox.holdMin = maxLock + ' years';
+  if (dist) buyBox.distributions = dist;
+  if (irrMin) buyBox.irrMin = (parseFloat(irrMin) * 100).toFixed(0) + '%';
 
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
   dealsBuyBoxApplied = true;
