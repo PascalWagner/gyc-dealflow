@@ -1049,11 +1049,41 @@ function handleSubmit() {
   const btn = document.getElementById('submitBtn');
   btn.classList.add('loading');
   btn.textContent = 'Sending...';
-  setTimeout(() => {
+
+  fetch('/api/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'magic-link', email })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.bypass && data.token) {
+      // Dev bypass — store session and redirect immediately
+      localStorage.setItem('gycUser', JSON.stringify({
+        email: data.email,
+        name: data.name,
+        token: data.token,
+        refreshToken: data.refreshToken,
+        tier: data.tier,
+        isAdmin: data.isAdmin,
+        tags: data.tags,
+        contactId: data.contactId
+      }));
+      const params = new URLSearchParams(window.location.search);
+      window.location.href = params.get('return') ? decodeURIComponent(params.get('return')) : '/';
+      return;
+    }
+    // Normal flow — show "check your email"
     document.getElementById('formSection').style.display = 'none';
     document.getElementById('sentEmail').textContent = email;
     document.getElementById('successState').classList.add('show');
-  }, 1200);
+  })
+  .catch(() => {
+    // Still show success state — magic link may have sent
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('sentEmail').textContent = email;
+    document.getElementById('successState').classList.add('show');
+  });
 }
 
 function resetForm() {

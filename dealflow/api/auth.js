@@ -56,6 +56,46 @@ export default async function handler(req, res) {
   if (action === 'magic-link') {
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
+    // Dev bypass: skip email for specific test accounts
+    const BYPASS_EMAILS = ['test@test.com', 'info@pascalwagner.com'];
+    if (BYPASS_EMAILS.includes(email.toLowerCase())) {
+      try {
+        // Generate magic link server-side (no email sent)
+        const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email
+        });
+        if (linkErr) throw linkErr;
+
+        // Verify the OTP to get a real session
+        const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
+          token_hash: linkData.properties.hashed_token,
+          type: 'magiclink'
+        });
+        if (verifyErr) throw verifyErr;
+
+        // Get tier & GP info via lookup path
+        const ghl = await getGhlTier(email);
+        const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+
+        return res.status(200).json({
+          success: true,
+          bypass: true,
+          email,
+          token: verifyData.session.access_token,
+          refreshToken: verifyData.session.refresh_token,
+          name: ghl.name || email.split('@')[0],
+          tier: isAdmin ? 'academy' : ghl.tier,
+          isAdmin,
+          tags: ghl.tags,
+          contactId: ghl.contactId
+        });
+      } catch (e) {
+        console.error('[AUTH BYPASS] Failed:', e.message);
+        return res.status(500).json({ error: 'Bypass login failed: ' + e.message });
+      }
+    }
+
     // Use site URL for redirect (Vercel sets this, fallback to prod)
     const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
     const { error } = await supabase.auth.signInWithOtp({
