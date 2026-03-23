@@ -15445,30 +15445,39 @@ function renderWizardStep() {
 
   // ===== SCREEN 22: RE PROFESSIONAL STATUS (all paths, before goal selection) =====
   if (step.type === 'reProfessional') {
-    html += '<div class="wizard-card-title">Are you (or your spouse) a Real Estate Professional?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This is an IRS designation (750+ hrs/yr in RE). It unlocks aggressive tax strategies most W-2 earners can\u2019t use.</div>';
+    html += '<div class="wizard-card-title">Do you have Real Estate Professional status?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:12px;">This IRS designation lets you use real estate losses to offset <strong>all</strong> income \u2014 not just passive income. It\u2019s one of the most powerful tax tools in real estate.</div>';
+
+    // Qualification summary
+    html += '<div style="background:var(--bg-cream,#FAF9F5);border:1px solid var(--border-light,#EDF1F2);border-radius:10px;padding:14px 16px;margin-bottom:24px;">';
+    html += '<div style="font-weight:700;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">To qualify, you or your spouse must:</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text-secondary);line-height:1.5;">';
+    html += '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--primary);flex-shrink:0;margin-top:1px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>Spend 750+ hours/year in real estate activities</div>';
+    html += '<div style="display:flex;gap:8px;align-items:flex-start;"><span style="color:var(--primary);flex-shrink:0;margin-top:1px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>RE hours must exceed hours at any other job</div>';
+    html += '</div></div>';
+
     var reProOptions = [
-      { val: 'yes', label: 'Yes, I qualify', desc: 'I or my spouse spend 750+ hours/yr in real estate', icon: '\u2705' },
-      { val: 'no', label: 'No', desc: 'I don\u2019t meet the hours requirement', icon: '\u274C' },
-      { val: 'unsure', label: 'Not sure', desc: 'I\u2019d like to learn more about this', icon: '\u2753' }
+      { val: 'yes', label: 'Yes, I qualify', desc: 'I or my spouse meet the hours requirement', color: 'var(--primary)', iconBg: 'rgba(81,190,123,0.1)', iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' },
+      { val: 'no', label: 'No, I don\u2019t qualify', desc: 'I have a full-time job outside of real estate', color: 'var(--text-muted)', iconBg: 'rgba(138,154,160,0.1)', iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' },
+      { val: 'unsure', label: 'I\u2019m not sure', desc: 'I\u2019d like to figure this out with my CPA', color: '#f59e0b', iconBg: 'rgba(245,158,11,0.1)', iconSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' }
     ];
     html += '<div style="display:flex;flex-direction:column;gap:10px;">';
     reProOptions.forEach(function(opt) {
       var isSel = wizardData.reProfessional === opt.val;
-      html += '<div onclick="wizardData.reProfessional=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
-      html += '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
-      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
-      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '<div onclick="wizardData.reProfessional=\'' + opt.val + '\';renderWizardStep();" style="padding:18px 20px;border:2px solid ' + (isSel ? opt.color : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? opt.iconBg : 'var(--bg-card)') + ';display:flex;align-items:center;gap:16px;transition:all 0.2s;">';
+      html += '<div style="width:40px;height:40px;border-radius:10px;background:' + opt.iconBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + opt.iconSvg + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--text-dark);">' + opt.label + '</div>';
+      html += '<div style="font-size:13px;color:var(--text-muted);margin-top:3px;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:' + opt.color + ';flex-shrink:0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
       html += '</div>';
     });
     html += '</div>';
-    // Educational note for W-2 earners
-    if (wizardData.incomeStructure === 'w2') {
-      html += '<div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:10px;padding:14px 16px;margin-top:16px;font-size:12px;color:var(--text-secondary);line-height:1.5;">';
-      html += '<strong style="color:#f59e0b;">Why this matters for W-2 earners:</strong> Without RE Pro status, passive losses from depreciation can only offset passive income \u2014 not your salary. RE Pro status removes that limitation.';
-      html += '</div>';
-    }
+
+    // Context note
+    html += '<div style="background:rgba(81,190,123,0.04);border:1px solid rgba(81,190,123,0.12);border-radius:10px;padding:14px 16px;margin-top:20px;font-size:12px;color:var(--text-secondary);line-height:1.6;">';
+    html += '<strong style="color:var(--text-dark);">Why we ask:</strong> RE Pro status changes which deals make sense for you. If you qualify, depreciation-heavy deals (like value-add multifamily) can shelter income from your W-2 or business \u2014 a massive tax advantage.';
+    html += '</div>';
+
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
     html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
