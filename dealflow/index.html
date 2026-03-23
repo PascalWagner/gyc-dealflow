@@ -16149,7 +16149,10 @@ function initSubscription() {
   // Renewal note for academy users
   if (activeTier === 'academy') {
     html += '<div class="settings-card" style="background:rgba(81,190,123,0.04);border:1px dashed rgba(81,190,123,0.3);">';
-    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">After your first year</div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
+    html += '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">After your first year</span>';
+    html += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#51be7b;background:rgba(81,190,123,0.12);padding:2px 8px;border-radius:10px;">Alumni</span>';
+    html += '</div>';
     html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$2,000/yr</strong> or <strong style="color:var(--text-dark);">$300/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
     html += '</div>';
   }
