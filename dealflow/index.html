@@ -2851,10 +2851,10 @@ html.cap-ios .debt-metric-select-mobile {
     flex: 1;
     text-align: center;
   }
-  /* Push topbar action buttons (e.g. + Add Investment) to their own row on mobile */
-  .topbar > button:not(.mobile-menu-btn) {
-    order: 2;
-    margin: 8px 0;
+  /* Hide topbar action buttons (e.g. + Add Investment, Print/Save) on mobile */
+  .topbar > button:not(.mobile-menu-btn),
+  #buyboxTopbarActions {
+    display: none;
   }
 
   /* ── Dashboard content area ── */
@@ -6411,11 +6411,10 @@ const _supa = window.supabase.createClient(
       </div>
       <div class="topbar-spacer"></div>
       <span id="buyboxTopbarActions" style="display:inline-flex;gap:8px;">
-      <button class="btn-cta btn-cta-primary" style="width:auto;padding:8px 20px;font-size:11px" onclick="window.print()">
+      <button class="btn-cta btn-cta-primary buybox-print-btn" style="width:auto;padding:8px 20px;font-size:11px" onclick="window.print()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:4px;vertical-align:middle"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></polyline></svg>
         Print / Save PDF
       </button>
-      <button class="btn-cta btn-cta-secondary" style="width:auto;padding:8px 20px;font-size:11px" onclick="openBuyBoxWizard()">Edit Preferences</button>
       </span>
     </div>
     <div class="report-page" id="reportContent">
@@ -19598,26 +19597,42 @@ function renderTaxPrepInline() {
   var received = docs.filter(function(d) { return d.uploadStatus === 'Received'; }).length;
   var pending = docs.filter(function(d) { return d.uploadStatus === 'Pending'; }).length;
 
-  // Table with better status badges
+  // Table with better status badges (cards on mobile)
   if (tableC) {
     var sorted = [...docs].sort(function(a, b) { return (b.taxYear || 0) - (a.taxYear || 0); });
-    var rows = sorted.map(function(doc) {
-      var statusColor = doc.uploadStatus === 'Received' ? '#22c55e' : doc.uploadStatus === 'Pending' ? '#f59e0b' : '#6b7280';
-      var statusLabel = doc.uploadStatus || 'Not Set';
-      return '<tr>'
-        + '<td style="font-weight:600;font-size:12px;">' + (doc.taxYear || '--') + '</td>'
-        + '<td style="font-size:12px;">' + (doc.investmentName || '--') + '</td>'
-        + '<td style="font-size:12px;color:var(--text-muted);">' + (doc.formType || '--') + '</td>'
-        + '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '18;color:' + statusColor + ';">' + statusLabel + '</span></td>'
-        + '<td style="font-size:12px;color:var(--text-muted);">' + (doc.dateReceived || '--') + '</td>'
-        + '<td>'
-        + '<button onclick="showAddTaxDocModal(\'' + doc.id + '\')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:11px;font-weight:600;margin-right:6px;">Edit</button>'
-        + '<button onclick="deleteTaxDoc(\'' + doc.id + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;font-weight:600;">Delete</button>'
-        + '</td></tr>';
-    }).join('');
-    tableC.innerHTML = '<table class="table-view" style="display:table;width:100%;font-size:12px;"><thead><tr>'
-      + '<th>Year</th><th>Investment</th><th>Form</th><th>Status</th><th>Received</th><th></th>'
-      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    var isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      var cards = sorted.map(function(doc) {
+        var statusColor = doc.uploadStatus === 'Received' ? '#22c55e' : doc.uploadStatus === 'Pending' ? '#f59e0b' : '#6b7280';
+        var statusLabel = doc.uploadStatus || 'Not Set';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (doc.investmentName || '--') + '</div>'
+          + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-top:2px;">' + (doc.taxYear || '--') + ' &middot; ' + (doc.formType || '--') + '</div>'
+          + '</div>'
+          + '<span style="flex-shrink:0;margin-left:12px;display:inline-block;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '18;color:' + statusColor + ';">' + statusLabel + '</span>'
+          + '</div>';
+      }).join('');
+      tableC.innerHTML = '<div>' + cards + '</div>';
+    } else {
+      var rows = sorted.map(function(doc) {
+        var statusColor = doc.uploadStatus === 'Received' ? '#22c55e' : doc.uploadStatus === 'Pending' ? '#f59e0b' : '#6b7280';
+        var statusLabel = doc.uploadStatus || 'Not Set';
+        return '<tr>'
+          + '<td style="font-weight:600;font-size:12px;">' + (doc.taxYear || '--') + '</td>'
+          + '<td style="font-size:12px;">' + (doc.investmentName || '--') + '</td>'
+          + '<td style="font-size:12px;color:var(--text-muted);">' + (doc.formType || '--') + '</td>'
+          + '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '18;color:' + statusColor + ';">' + statusLabel + '</span></td>'
+          + '<td style="font-size:12px;color:var(--text-muted);">' + (doc.dateReceived || '--') + '</td>'
+          + '<td>'
+          + '<button onclick="showAddTaxDocModal(\'' + doc.id + '\')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:11px;font-weight:600;margin-right:6px;">Edit</button>'
+          + '<button onclick="deleteTaxDoc(\'' + doc.id + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;font-weight:600;">Delete</button>'
+          + '</td></tr>';
+      }).join('');
+      tableC.innerHTML = '<table class="table-view" style="display:table;width:100%;font-size:12px;"><thead><tr>'
+        + '<th>Year</th><th>Investment</th><th>Form</th><th>Status</th><th>Received</th><th></th>'
+        + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    }
   }
 
   // Update subtitle: compact count in header
