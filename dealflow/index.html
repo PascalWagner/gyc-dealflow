@@ -6270,11 +6270,8 @@ const _supa = window.supabase.createClient(
         Filters <span id="filterCountBadge" style="display:none;background:var(--primary);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;min-width:16px;text-align:center;"></span>
       </button>
       <div style="position:relative;flex:1;min-width:160px;">
-        <input type="text" class="filter-input" id="filterSearch" placeholder="Search deals..." oninput="applyFilters()" style="width:100%;box-sizing:border-box;">
-        <div id="searchNoResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:14px;margin-top:4px;">
-          <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Can't find what you're looking for?</div>
-          <button onclick="showAddDealModal()" style="width:100%;padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add a Deal</button>
-        </div>
+        <input type="text" class="filter-input" id="filterSearch" placeholder="Search deals, operators, people..." oninput="applyFilters();buildSearchDropdown(this.value);" style="width:100%;box-sizing:border-box;" autocomplete="off">
+        <div id="searchDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:10;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.12);margin-top:4px;max-height:400px;overflow-y:auto;"></div>
       </div>
       <div class="filter-bar-stats" id="filterBarStats"></div>
       <button onclick="showAddDealModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Deal</button>
@@ -12459,6 +12456,139 @@ function isDealStale(d) {
   return false;
 }
 
+// --- Universal Search Dropdown ---
+function _escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildSearchDropdown(query) {
+  var dd = document.getElementById('searchDropdown');
+  if (!dd) return;
+  var q = (query || '').trim().toLowerCase();
+  if (q.length < 2) { dd.style.display = 'none'; return; }
+
+  // Search deals by name
+  var dealHits = [];
+  var operatorMap = {}; // name → { name, dealCount, type }
+  var personMap = {};   // name → { name, companies }
+
+  for (var i = 0; i < DEALS.length; i++) {
+    var d = DEALS[i];
+    // Deal name match
+    if ((d.investmentName || '').toLowerCase().includes(q)) {
+      if (dealHits.length < 5) dealHits.push(d);
+    }
+    // Sponsor / operator matches
+    var sponsors = d.sponsors || [];
+    // Also check top-level managementCompany
+    var allNames = sponsors.map(function(s) { return s; });
+    if (d.managementCompany && !sponsors.some(function(s) { return s.name === d.managementCompany; })) {
+      allNames.push({ name: d.managementCompany, ceo: d.ceo, type: 'Sponsor' });
+    }
+    for (var si = 0; si < allNames.length; si++) {
+      var sp = allNames[si];
+      if (sp.name && sp.name.toLowerCase().includes(q)) {
+        if (!operatorMap[sp.name]) {
+          var spType = sp.type || 'Sponsor';
+          operatorMap[sp.name] = { name: sp.name, type: spType === 'Broker-Dealer' ? 'Placing Agent' : spType, dealCount: 0 };
+        }
+        operatorMap[sp.name].dealCount++;
+      }
+      if (sp.ceo && sp.ceo.toLowerCase().includes(q)) {
+        if (!personMap[sp.ceo]) {
+          personMap[sp.ceo] = { name: sp.ceo, companies: [] };
+        }
+        if (sp.name && personMap[sp.ceo].companies.indexOf(sp.name) === -1) {
+          personMap[sp.ceo].companies.push(sp.name);
+        }
+      }
+    }
+  }
+
+  var operators = Object.values(operatorMap).slice(0, 5);
+  var people = Object.values(personMap).slice(0, 5);
+
+  if (dealHits.length === 0 && operators.length === 0 && people.length === 0) {
+    dd.innerHTML = '<div style="padding:14px;">' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Can\'t find what you\'re looking for?</div>' +
+      '<button onclick="showAddDealModal()" style="width:100%;padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add a Deal</button>' +
+      '</div>';
+    dd.style.display = 'block';
+    return;
+  }
+
+  var html = '';
+  var sectionStyle = 'padding:6px 14px;font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);background:var(--bg-main);';
+  var itemStyle = 'display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;text-decoration:none;color:inherit;';
+  var hoverClass = 'onmouseover="this.style.background=\'var(--bg-main)\'" onmouseout="this.style.background=\'transparent\'"';
+
+  // Deals section
+  if (dealHits.length > 0) {
+    html += '<div style="' + sectionStyle + '">Deals</div>';
+    for (var di = 0; di < dealHits.length; di++) {
+      var dh = dealHits[di];
+      html += '<a href="deal.html?id=' + _escHtml(dh.id) + '" style="' + itemStyle + '" ' + hoverClass + '>';
+      html += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + _escHtml(dh.investmentName) + '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">' + _escHtml(dh.assetClass || '') + (dh.managementCompany ? ' &middot; ' + _escHtml(dh.managementCompany) : '') + '</div>';
+      html += '</div></a>';
+    }
+  }
+
+  // Operators section
+  if (operators.length > 0) {
+    html += '<div style="' + sectionStyle + '">Operators &amp; Agents</div>';
+    for (var oi = 0; oi < operators.length; oi++) {
+      var op = operators[oi];
+      html += '<a href="sponsor.html?company=' + encodeURIComponent(op.name) + '" style="' + itemStyle + '" ' + hoverClass + '>';
+      html += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">' + _escHtml(op.name) + '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">' + _escHtml(op.type) + ' &middot; ' + op.dealCount + ' deal' + (op.dealCount !== 1 ? 's' : '') + '</div>';
+      html += '</div></a>';
+    }
+  }
+
+  // People section
+  if (people.length > 0) {
+    html += '<div style="' + sectionStyle + '">People</div>';
+    for (var pi = 0; pi < people.length; pi++) {
+      var pe = people[pi];
+      html += '<a href="person.html?name=' + encodeURIComponent(pe.name) + '" style="' + itemStyle + '" ' + hoverClass + '>';
+      html += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">' + _escHtml(pe.name) + '</div>';
+      html += '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">' + (pe.companies.length > 0 ? _escHtml(pe.companies[0]) : 'Key Person') + '</div>';
+      html += '</div></a>';
+    }
+  }
+
+  // Add a Deal footer
+  html += '<div style="padding:10px 14px;border-top:1px solid var(--border);">';
+  html += '<button onclick="showAddDealModal()" style="width:100%;padding:7px 14px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add a Deal</button>';
+  html += '</div>';
+
+  dd.innerHTML = html;
+  dd.style.display = 'block';
+}
+
+// Hide search dropdown on click outside
+document.addEventListener('click', function(e) {
+  var dd = document.getElementById('searchDropdown');
+  var si = document.getElementById('filterSearch');
+  if (dd && si && !dd.contains(e.target) && e.target !== si) {
+    dd.style.display = 'none';
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var dd = document.getElementById('searchDropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
 function getFilteredDeals() {
   const ac = document.getElementById('filterAssetClass').value;
   const dt = document.getElementById('filterDealType').value;
@@ -12743,12 +12873,7 @@ function renderAll() {
   updateStats(deals);
   updateTabCounts();
 
-  // Show/hide search no-results popup
-  const searchVal = document.getElementById('filterSearch').value.trim();
-  const noResultsEl = document.getElementById('searchNoResults');
-  if (noResultsEl) {
-    noResultsEl.style.display = (searchVal && deals.length === 0) ? 'block' : 'none';
-  }
+  // Search dropdown is managed by buildSearchDropdown() called from oninput
 
   const grid = document.getElementById('cardGrid');
   const table = document.getElementById('tableViewWrap');
@@ -28054,7 +28179,7 @@ fetchBuyBoxFromGHL();
       row.style.cssText = 'display:flex!important;width:100%;gap:6px;padding:6px 0;align-items:center;flex-wrap:nowrap!important;';
       row.innerHTML = `
         <input type="text" class="filter-input" placeholder="Search..."
-          oninput="document.getElementById('filterSearch').value=this.value;applyFilters();"
+          oninput="document.getElementById('filterSearch').value=this.value;applyFilters();buildSearchDropdown(this.value);"
           style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;">
         <button class="ios-filter-toggle" style="flex:1;min-width:0;justify-content:center;padding:12px 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
