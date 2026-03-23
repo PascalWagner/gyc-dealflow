@@ -81,6 +81,7 @@ export default async function handler(req, res) {
       '$250K–$500K': 0,
       '$500K+': 0
     };
+    let totalCapitalReady = 0;
     // Parse capital_ready which stores range strings like "$100k-$249k"
     for (const b of boxes) {
       const cap = (b.capital_ready || b.capital_90day || '').toLowerCase();
@@ -89,6 +90,7 @@ export default async function handler(req, res) {
       const match = cap.match(/(\d+)/);
       if (!match) continue;
       const val = parseInt(match[1], 10) * (cap.includes('k') ? 1000 : 1);
+      totalCapitalReady += val;
       if (val >= 500000) capitalRanges['$500K+']++;
       else if (val >= 250000) capitalRanges['$250K–$500K']++;
       else if (val >= 100000) capitalRanges['$100K–$250K']++;
@@ -125,7 +127,8 @@ export default async function handler(req, res) {
       capitalRanges,
       totalSaved: totalSaved || 0,
       totalVetting: totalVetting || 0,
-      completedBuyBoxes: boxes.length
+      completedBuyBoxes: boxes.length,
+      totalCapitalReady: totalCapitalReady || 0
     });
   } catch (err) {
     console.error('lp-network-stats error:', err);

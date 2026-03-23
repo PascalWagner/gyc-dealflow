@@ -692,18 +692,63 @@
   }
 
   function renderNetworkStats(stats) {
+    var useSample = (stats.totalLPs || 0) < 200 && (stats.completedBuyBoxes || 0) < 200;
+
     // Welcome page stats — use known GHL numbers as floor
     animateNumber('statTotalLPs', Math.max(stats.totalLPs || 0, 1100));
     animateNumber('statAccredited', Math.max(stats.accreditedCount || 0, 600));
-    animateNumber('statBuyBoxes', stats.completedBuyBoxes);
+
+    // Capital ready to deploy
+    var capitalEl = document.getElementById('statBuyBoxes');
+    if (capitalEl) {
+      var capitalValue = useSample ? 18500000 : (stats.totalCapitalReady || 0);
+      animateCurrency('statBuyBoxes', capitalValue);
+    }
 
     // Presentation page — hardcode 1,100+ minimum
     var presEl = document.getElementById('presLpCount');
     if (presEl) presEl.textContent = Math.max(stats.totalLPs || 0, 1100).toLocaleString() + '+';
 
-    renderAssetDemandChart(stats.topAssetClasses || []);
-    renderGoalDonut(stats.goalDistribution || { income: 0, tax: 0, growth: 0 });
+    // Use sample data for charts if real data is thin
+    var sampleAssetClasses = [
+      { name: 'Multifamily', count: 42 }, { name: 'Industrial', count: 31 },
+      { name: 'Private Debt / Credit', count: 28 }, { name: 'Self-Storage', count: 19 },
+      { name: 'Build-to-Rent', count: 14 }, { name: 'Mobile Home Parks', count: 11 }
+    ];
+    var sampleGoals = { income: 58, tax: 27, growth: 15 };
+
+    var assetClasses = stats.topAssetClasses || [];
+    var goals = stats.goalDistribution || { income: 0, tax: 0, growth: 0 };
+    if (useSample) {
+      assetClasses = assetClasses.length >= 3 ? assetClasses : sampleAssetClasses;
+      var goalTotal = goals.income + goals.tax + goals.growth;
+      goals = goalTotal >= 10 ? goals : sampleGoals;
+    }
+
+    renderAssetDemandChart(assetClasses);
+    renderGoalDonut(goals);
     renderCheckSizeChart(stats.capitalRanges || {});
+  }
+
+  function animateCurrency(elementId, target) {
+    var el = document.getElementById(elementId);
+    if (!el || !target) return;
+    var duration = 1200, startTime = null;
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var val = Math.round(eased * target);
+      if (val >= 1000000) {
+        el.textContent = '$' + (val / 1000000).toFixed(1) + 'M';
+      } else if (val >= 1000) {
+        el.textContent = '$' + Math.round(val / 1000) + 'K';
+      } else {
+        el.textContent = '$' + val.toLocaleString();
+      }
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
 
   function animateNumber(elementId, target) {
