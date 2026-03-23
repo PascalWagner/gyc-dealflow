@@ -16356,9 +16356,10 @@ function printMyPlan() {
     var years = Object.keys(slotsByYear).sort();
     var cumInc = 0;
 
-    planHtml = '<div class="p-section p-plan-section"><h3>Deployment Schedule</h3>'
-      + '<p style="margin-bottom:4px;">This plan deploys <strong>$' + totalCapitalDeployed.toLocaleString() + '</strong> across <strong>' + totalSlots + ' investments</strong> over <strong>' + years.length + ' year' + (years.length !== 1 ? 's' : '') + '</strong>, targeting <strong>$' + targetIncome.toLocaleString() + '/yr</strong> in passive income at a blended <strong>' + blendedYield + '% yield</strong>.</p>'
-      + '<p style="margin-bottom:16px;font-size:13px;">Filled slots (<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';vertical-align:middle;margin:0 2px;"></span>) represent completed investments. Open slots (<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;vertical-align:middle;margin:0 2px;box-sizing:border-box;"></span>) are planned positions still to be filled.</p>'
+    planHtml = '<div class="p-section"><h3>Deployment Schedule</h3>'
+      + '<p style="margin-bottom:8px;">Deploy <strong>$' + totalCapitalDeployed.toLocaleString() + '</strong> across <strong>' + totalSlots + ' investments</strong> over <strong>' + years.length + ' year' + (years.length !== 1 ? 's' : '') + '</strong> \u2192 <strong style="color:' + bc.color + ';">$' + targetIncome.toLocaleString() + '/yr</strong> at <strong>' + blendedYield + '% blended yield</strong>. '
+      + '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';vertical-align:middle;margin:0 2px;"></span> = filled, '
+      + '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;vertical-align:middle;margin:0 2px;box-sizing:border-box;"></span> = open.</p>'
       + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Check Size</th><th>Est. Income</th></tr></thead><tbody>';
 
     years.forEach(function(yr, yi) {
@@ -16385,8 +16386,12 @@ function printMyPlan() {
   var holdingsHtml = '';
   if (portfolio.length > 0) {
     var totalInvested = portfolio.reduce(function(s, p) { return s + (parseFloat(p.amountInvested) || 0); }, 0);
-    holdingsHtml = '<div class="p-section"><h3>Current Portfolio</h3>'
-      + '<p style="margin-bottom:12px;">You currently have <strong>' + portfolio.length + ' investment' + (portfolio.length !== 1 ? 's' : '') + '</strong> totaling <strong>$' + totalInvested.toLocaleString() + '</strong> deployed.</p>'
+    var activeCount = portfolio.filter(function(p) { return (p.status || 'Active') === 'Active'; }).length;
+    var exitedCount = portfolio.length - activeCount;
+    holdingsHtml = '<div class="p-section"><h3>Current Investments</h3>'
+      + '<p style="margin-bottom:8px;">Your portfolio includes <strong>' + portfolio.length + ' investment' + (portfolio.length !== 1 ? 's' : '') + '</strong> totaling <strong>$' + totalInvested.toLocaleString() + '</strong> deployed'
+      + (activeCount > 0 && exitedCount > 0 ? ' \u2014 <strong>' + activeCount + ' active</strong> and <strong>' + exitedCount + ' exited</strong>' : '')
+      + '. These existing positions inform the deployment schedule below.</p>'
       + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Invested</th><th>Status</th></tr></thead><tbody>';
     portfolio.forEach(function(p) {
       holdingsHtml += '<tr><td style="text-align:left;font-weight:600;">' + (p.dealName || p.name || 'Investment') + '</td>'
@@ -16410,41 +16415,41 @@ function printMyPlan() {
     + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
     + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.6; background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
     + '.p-page { max-width: 800px; margin: 0 auto; padding: 48px 40px; }'
-    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid #0A1E21; }'
+    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #0A1E21; }'
     + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 24px; color: #0A1E21; }'
     + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; letter-spacing: 0.5px; }'
     + '.p-header-right { text-align: right; }'
     + '.p-header-name { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 700; color: #141413; }'
     + '.p-header-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; }'
-    + '.p-hero { margin-bottom: 36px; padding-bottom: 32px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-badge { display: inline-block; padding: 4px 14px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }'
-    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 32px; font-weight: 400; margin-bottom: 16px; color: #141413; line-height: 1.2; }'
-    + '.p-hero .p-thesis { font-size: 16px; line-height: 1.8; color: #607179; }'
+    + '.p-hero { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-badge { display: inline-block; padding: 3px 12px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }'
+    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 28px; font-weight: 400; margin-bottom: 10px; color: #141413; line-height: 1.2; }'
+    + '.p-hero .p-thesis { font-size: 15px; line-height: 1.7; color: #607179; }'
     + '.p-hero .p-thesis strong { color: #141413; }'
-    + '.p-criteria { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px 24px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #EDF1F2; }'
-    + '.p-criteria-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-bottom: 2px; }'
-    + '.p-criteria-val { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 600; color: #141413; }'
-    + '.p-section { margin-bottom: 32px; }'
-    + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #8A9AA0; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-section p { font-size: 14px; color: #607179; line-height: 1.6; }'
+    + '.p-criteria { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #EDF1F2; }'
+    + '.p-criteria-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-bottom: 1px; }'
+    + '.p-criteria-val { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; }'
+    + '.p-section { margin-bottom: 24px; }'
+    + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #8A9AA0; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-section p { font-size: 13px; color: #607179; line-height: 1.5; }'
     + '.p-section p strong { color: #141413; }'
-    + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 12px; }'
-    + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 10px 10px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 8px; }'
+    + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 6px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-snap-table th:first-child { text-align: left; }'
-    + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 600; color: #141413; text-align: center; padding: 10px 10px 10px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; text-align: center; padding: 7px 8px 7px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-snap-table td:first-child { text-align: left; }'
     + '.p-snap-table tr:last-child td { border-bottom: none; }'
-    + '.p-plan-table { width: 100%; border-collapse: collapse; font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; }'
-    + '.p-plan-table th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 10px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-plan-table { width: 100%; border-collapse: collapse; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; }'
+    + '.p-plan-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 6px 6px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-plan-table th:first-child { text-align: left; }'
-    + '.p-plan-table td { padding: 7px 8px 7px 0; border-bottom: 1px solid #EDF1F2; text-align: center; color: #141413; }'
+    + '.p-plan-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid #EDF1F2; text-align: center; color: #141413; }'
     + '.p-plan-table td:first-child { text-align: left; }'
     + '.p-plan-table tr:last-child td { border-bottom: none; }'
-    + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 12px; padding: 8px !important; }'
-    + '.p-footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; align-items: center; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; }'
+    + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 11px; padding: 5px 6px !important; }'
+    + '.p-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; align-items: center; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; }'
     + '.p-footer-center { text-align: center; flex: 1; }'
-    + '.p-disclaimer { margin-top: 32px; padding: 16px 20px; background: #FAF9F5; border-radius: 8px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; line-height: 1.5; color: #8A9AA0; }'
-    + '@media print { body { padding: 0; } .p-page { padding: 20px 0; } .p-section { page-break-inside: avoid; } .p-plan-section { page-break-before: always; } .p-year-header { page-break-after: avoid; } .p-disclaimer { page-break-inside: avoid; } }'
+    + '.p-disclaimer { margin-top: 20px; padding: 12px 16px; background: #FAF9F5; border-radius: 6px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; line-height: 1.4; color: #8A9AA0; }'
+    + '@media print { body { padding: 0; } .p-page { padding: 16px 0; } .p-section { page-break-inside: avoid; } .p-year-header { page-break-after: avoid; } .p-disclaimer { page-break-inside: avoid; } }'
     + '</style></head><body><div class="p-page">';
 
   // Header
@@ -16470,7 +16475,7 @@ function printMyPlan() {
   // Market Snapshot
   if (snapshotRows) {
     html += '<div class="p-section"><h3>Market Snapshot</h3>'
-      + '<p style="margin-bottom:12px;">Based on <strong>' + totalMatchingDeals + ' active deals</strong> matching your investment criteria across the Grow Your Cashflow deal database.</p>'
+      + '<p style="margin-bottom:8px;">The table below summarizes <strong>' + totalMatchingDeals + ' active deals</strong> currently available on the Grow Your Cashflow platform that match your investment criteria. IRR and Cash-on-Cash figures reflect ranges and averages across live offerings as of ' + dateStr + '.</p>'
       + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
       + '<tbody>' + snapshotRows + '</tbody></table></div>';
   }
