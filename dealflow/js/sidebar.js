@@ -149,7 +149,15 @@
 
   // ACCOUNT
   html += '<div class="nav-section-label" style="margin-top:auto;">Account</div>';
-  html += navItem('subscription', icons.subscription, 'Subscription');
+  // Tier badge with upgrade link (replaces old Subscription nav item)
+  var _tierLabel = _sbTier === 'academy' ? 'Academy Member' : _sbTier === 'alumni' ? 'Alumni' : _sbTier === 'investor' ? 'Investor' : _sbTier === 'family_office' ? 'Family Office' : 'Free Plan';
+  var _tierColor = _sbTier !== 'free' && !_sbIsFree ? '#51BE7B' : 'var(--text-muted)';
+  var _tierUpgrade = _sbIsFree ? (' <a href="#" ' + (isSPA ? 'onclick="navigateTo(\'academy\'); return false"' : 'onclick="window.location.href=\'index.html#academy\'"') + ' style="font-size:10px;font-weight:700;color:var(--primary);margin-left:auto;text-decoration:none;opacity:0.9;" onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'0.9\'">Upgrade</a>') : '';
+  html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 16px;margin:0 0 2px;">'
+    + '<div style="width:6px;height:6px;border-radius:50%;background:' + _tierColor + ';flex-shrink:0;"></div>'
+    + '<span style="font-family:var(--font-ui);font-size:11px;font-weight:600;color:' + _tierColor + ';">' + _tierLabel + '</span>'
+    + _tierUpgrade
+    + '</div>';
   html += navItem('settings', icons.settings, 'Settings');
 
   // ADMIN NAV

@@ -5932,6 +5932,7 @@ const _supa = window.supabase.createClient(
     <div class="settings-page">
       <div class="settings-tabs">
         <button class="settings-tab active" data-stab="profile" onclick="switchSettingsTab(this)">Profile</button>
+        <button class="settings-tab" data-stab="plan" onclick="switchSettingsTab(this)">My Plan</button>
         <button class="settings-tab" data-stab="investor" onclick="switchSettingsTab(this)">Investor</button>
         <button class="settings-tab" data-stab="privacy" onclick="switchSettingsTab(this)">Privacy</button>
         <button class="settings-tab" data-stab="notifications" onclick="switchSettingsTab(this)">Notifications</button>
@@ -5988,6 +5989,20 @@ const _supa = window.supabase.createClient(
 
         <div class="settings-save-bar">
           <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Profile</button>
+        </div>
+      </div>
+
+      <!-- My Plan Tab -->
+      <div class="settings-panel" id="stab-plan" style="display:none">
+        <div class="settings-page-title">Your Membership</div>
+        <div class="settings-page-desc">See what's included in your current plan.</div>
+
+        <div class="settings-card" id="myPlanCard">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+            <div id="myPlanBadge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;"></div>
+          </div>
+          <div id="myPlanFeatures" style="display:grid;gap:8px;"></div>
+          <div id="myPlanUpgrade" style="margin-top:20px;"></div>
         </div>
       </div>
 
@@ -8272,9 +8287,9 @@ const _supa = window.supabase.createClient(
       </div>
       <div class="more-menu-section">
         <div class="more-menu-label">Account</div>
-        <a class="more-menu-item" href="#" onclick="navigateTo('subscription'); return false">
+        <a class="more-menu-item" href="#" onclick="navigateTo('settings'); setTimeout(function(){var t=document.querySelector('[data-stab=&quot;plan&quot;]');if(t)t.click();},100); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-          <span>Subscription</span>
+          <span>My Plan</span>
         </a>
         <a class="more-menu-item" href="#" onclick="navigateTo('settings'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -12617,13 +12632,14 @@ document.addEventListener('keydown', e => {
 // ========== PAGE NAVIGATION ==========
 function navigateTo(page) {
   // Gate pages that require login for guests
-  var _gatedPages = ['dashboard', 'buybox', 'portfolio', 'settings', 'subscription', 'goals', 'taxprep', 'admindash', 'casestudies', 'admin-manage'];
+  var _gatedPages = ['dashboard', 'buybox', 'portfolio', 'settings', 'goals', 'taxprep', 'admindash', 'casestudies', 'admin-manage'];
   if (window._isGuest && _gatedPages.indexOf(page) !== -1) {
-    var _pageLabels = { dashboard: 'view your dashboard', buybox: 'build your investment plan', portfolio: 'track your portfolio', settings: 'manage your settings', subscription: 'manage your subscription', goals: 'set your goals', taxprep: 'access tax prep tools' };
+    var _pageLabels = { dashboard: 'view your dashboard', buybox: 'build your investment plan', portfolio: 'track your portfolio', settings: 'manage your settings', goals: 'set your goals', taxprep: 'access tax prep tools' };
     requireAuth(_pageLabels[page] || 'access this page');
     return;
   }
-  // Redirect legacy page names to admin dashboard
+  // Redirect legacy page names
+  if (page === 'subscription') { navigateTo('settings'); setTimeout(function(){ var t = document.querySelector('[data-stab="plan"]'); if (t) t.click(); }, 100); return; }
   if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions' || page === 'growth') { navigateTo('admindash'); return; }
   if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
   if (page === 'compare') { navigateTo('deals'); setTimeout(function(){ var dt = document.querySelector('#page-deals .topbar-tab[data-tab="decision"]'); if (dt) switchTab(dt); }, 100); return; }
@@ -15754,47 +15770,67 @@ function getMatchingDealCount(d) {
   }).length;
 }
 
-// ========== SUBSCRIPTION FLOW ==========
+// ========== SUBSCRIPTION / MY PLAN ==========
 function initSubscription() {
-  const user = getUser();
-  const currentTier = user ? (user.tier || 'free') : 'free';
+  // Populate the "My Plan" tab inside Settings
+  var user = getUser();
+  var tier = user ? (user.tier || 'free') : 'free';
+  var badge = document.getElementById('myPlanBadge');
+  var features = document.getElementById('myPlanFeatures');
+  var upgrade = document.getElementById('myPlanUpgrade');
+  if (!badge || !features || !upgrade) return;
 
-  document.querySelectorAll('.plan-btn').forEach(btn => {
-    const card = btn.closest('.plan-card');
-    const planName = card.querySelector('.plan-name').textContent.toLowerCase().trim();
-
-    if (planName === currentTier || (planName === 'free' && currentTier === 'free') || (planName === 'family office' && currentTier === 'family_office')) {
-      btn.textContent = 'Current Plan';
-      btn.className = 'btn-cta btn-cta-secondary plan-btn';
-      btn.style.background = '';
-      btn.style.opacity = '0.5';
-      btn.style.cursor = 'default';
-      btn.disabled = true;
-      btn.onclick = null;
-    } else if (planName === 'free') {
-      btn.textContent = currentTier !== 'free' ? 'Included' : 'Current Plan';
-      btn.className = 'btn-cta btn-cta-secondary plan-btn';
-      btn.style.opacity = '0.5';
-      btn.style.cursor = 'default';
-      btn.disabled = true;
-      btn.onclick = null;
-    } else if (planName === 'academy') {
-      if (currentTier === 'family_office') {
-        btn.textContent = 'Included';
-        btn.className = 'btn-cta btn-cta-secondary plan-btn';
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'default';
-        btn.disabled = true;
-        btn.onclick = null;
-      } else {
-        btn.textContent = 'Join the Academy';
-        btn.onclick = () => handleSubscribe('academy', 5000);
-      }
-    } else if (planName === 'family office') {
-      // Family Office uses a calendar link, not a JS handler
-      // The button is already an <a> tag in the HTML
+  var plans = {
+    free: {
+      label: 'Free Plan',
+      color: 'var(--text-muted)',
+      bg: 'var(--bg-cream)',
+      features: ['Browse all live deals', 'View investment decks', 'Deal filtering & search', 'Weekly deal digest email', 'Basic deal overview & thesis']
+    },
+    academy: {
+      label: 'Academy Member',
+      color: '#51BE7B',
+      bg: 'rgba(81,190,123,0.08)',
+      features: ['Everything in Free', 'Full deal data: cash flow, terms, fees, peer comparisons', 'Risk analysis & stress test calculator', 'PPM, sub docs & data room access', 'GP introductions & deal reviews', 'Weekly live office hours with Pascal', 'Investment plan builder & market intel', 'Private investor community']
+    },
+    alumni: {
+      label: 'Alumni',
+      color: '#51BE7B',
+      bg: 'rgba(81,190,123,0.08)',
+      features: ['Everything in Free', 'Full deal data & risk analysis', 'PPM & data room access', 'GP introductions', 'Alumni community access']
+    },
+    investor: {
+      label: 'Investor',
+      color: '#51BE7B',
+      bg: 'rgba(81,190,123,0.08)',
+      features: ['Everything in Free', 'Buy box matching', 'GP introductions', 'Priority deal alerts']
+    },
+    family_office: {
+      label: 'Family Office',
+      color: 'var(--teal-deep)',
+      bg: 'rgba(31,81,89,0.06)',
+      features: ['Everything in Academy', 'Custom 12-month deployment plan', 'Dedicated 1:1 calls with Pascal', 'Co-underwriting on deals', 'Direct GP access & negotiation support', 'Tax & entity structuring guidance', 'Portfolio construction & rebalancing']
     }
-  });
+  };
+
+  var plan = plans[tier] || plans.free;
+  badge.style.background = plan.bg;
+  badge.style.color = plan.color;
+  badge.innerHTML = '<div style="width:8px;height:8px;border-radius:50%;background:' + plan.color + ';"></div>' + plan.label;
+
+  var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2.5" width="14" height="14" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>';
+  features.innerHTML = plan.features.map(function(f) {
+    return '<div style="display:flex;align-items:center;gap:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);">' + checkSvg + f + '</div>';
+  }).join('');
+
+  if (tier === 'free') {
+    upgrade.innerHTML = '<a href="#" onclick="navigateTo(\'academy\'); return false" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Upgrade to Academy</a>'
+      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:8px;">Unlock full deal data, GP introductions, and weekly office hours with Pascal.</div>';
+  } else if (tier !== 'family_office') {
+    upgrade.innerHTML = '<a href="https://growyourcashflow.io/introcall" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:transparent;border:1px solid var(--border);color:var(--text-dark);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;text-decoration:none;">Explore Family Office</a>';
+  } else {
+    upgrade.innerHTML = '';
+  }
 }
 
 async function handleSubscribe(tier, price) {
@@ -26236,7 +26272,7 @@ initSubscription();
 if (window._isGuest) {
   // Hide gated sidebar nav items for guests
   setTimeout(function() {
-    ['dashboard', 'subscription', 'settings'].forEach(function(pg) {
+    ['dashboard', 'settings'].forEach(function(pg) {
       var navEl = document.querySelector('.nav-item[data-page="' + pg + '"]');
       if (navEl) navEl.style.display = 'none';
     });
