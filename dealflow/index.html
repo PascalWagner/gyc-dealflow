@@ -11448,10 +11448,6 @@ function renderHeroStats(deal) {
   const stats = dealSocialStats[deal.id];
   const total = stats ? (stats.saved || 0) + (stats.vetting || 0) + (stats.ready || 0) + (stats.invested || 0) : 0;
   const parts = [];
-  // AUM range
-  if (mgr.range) {
-    parts.push('<span class="equity-hero-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M3 10l9-7 9 7M5 10v11M19 10v11M9 21v-4a3 3 0 016 0v4"/></svg>' + mgr.range + ' AUM</span>');
-  }
   // Full cycle deals
   if (deal.mcFullCycleDeals) {
     parts.push('<span class="equity-hero-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' + deal.mcFullCycleDeals + ' Full Cycle</span>');
