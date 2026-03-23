@@ -5446,10 +5446,22 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 .resource-modal-header h3 { font-family:var(--font-ui); font-size:15px; font-weight:700; color:var(--text-dark); }
 .resource-modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted); padding:4px; }
 @media (max-width: 600px) {
-  .resource-grid { grid-template-columns:1fr; }
-  .resource-filters { flex-direction:column; align-items:stretch; }
-  .resource-search { min-width:unset; }
-  .resource-modal { width:95%; }
+  .resource-grid { grid-template-columns:1fr; gap:16px; }
+  .resource-filters { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:4px; gap:6px; }
+  .resource-filters::-webkit-scrollbar { display:none; }
+  .resource-filter-btn { flex-shrink:0; padding:8px 16px; font-size:13px; -webkit-tap-highlight-color:transparent; }
+  .resource-search { min-width:unset; width:100%; order:10; flex:unset; font-size:16px; padding:10px 14px 10px 36px; }
+  .resource-card { -webkit-tap-highlight-color:transparent; }
+  .resource-card:hover { transform:none; box-shadow:none; }
+  .resource-card:active { transform:scale(0.98); transition:transform 0.1s; }
+  .resource-meta { padding:12px; }
+  .resource-meta h3 { font-size:15px; }
+  .resource-thumb .play-btn { width:48px; height:48px; }
+  .resource-modal-overlay { padding:0; align-items:flex-end; }
+  .resource-modal { width:100%; max-width:100%; border-radius:16px 16px 0 0; max-height:90vh; max-height:90dvh; padding-bottom:env(safe-area-inset-bottom, 0px); }
+  .resource-modal-header { padding:12px 16px; padding-top:max(12px, env(safe-area-inset-top, 0px)); }
+  .resource-modal-header h3 { font-size:14px; }
+  .resource-modal-close { font-size:28px; padding:8px; min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; }
 }
 
 /* ========== MOBILE SWIPE FEED ========== */
@@ -22516,13 +22528,14 @@ function renderResources() {
   }
   var categories = ['All', 'Office Hours', 'Deal Reviews', 'Education'];
   var searchSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
-  var html = '<div style="margin-bottom:32px;">';
-  html += '<div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Resources</div>';
+  var html = '<div style="margin-bottom:24px;">';
+  html += '<div style="font-family:var(--font-display);font-size:clamp(22px,5vw,28px);font-weight:800;color:var(--text-dark);margin-bottom:6px;">Resources</div>';
   html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);max-width:500px;">Office hours recordings, deal reviews, and educational content from the Cashflow Academy.</div>';
   html += '</div>';
+  html += '<div style="position:relative;margin-bottom:12px;">' + searchSvg + '<input type="text" class="resource-search" id="resourceSearchInput" placeholder="Search resources..." oninput="renderResourceGrid()" style="width:100%;box-sizing:border-box;"></div>';
   html += '<div class="resource-filters">';
   categories.forEach(function(cat) { html += '<button class="resource-filter-btn' + (_resourceFilter === cat ? ' active' : '') + '" onclick="_resourceFilter=\'' + cat + '\';renderResources();">' + cat + '</button>'; });
-  html += '<div style="position:relative;flex:1;min-width:180px;">' + searchSvg + '<input type="text" class="resource-search" id="resourceSearchInput" placeholder="Search resources..." oninput="renderResourceGrid()"></div></div>';
+  html += '</div>';
   html += '<div id="resourceGrid"></div>';
   container.innerHTML = html;
   renderResourceGrid();
@@ -22571,8 +22584,11 @@ function openResourceVideo(index) {
   if (v.youtubeId) {
     var overlay = document.createElement('div');
     overlay.className = 'resource-modal-overlay';
-    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
-    overlay.innerHTML = '<div class="resource-modal"><div class="resource-modal-header"><h3>' + (v.title || '') + '</h3><button class="resource-modal-close" onclick="this.closest(\'.resource-modal-overlay\').remove()">&times;</button></div><div style="position:relative;padding-bottom:56.25%;height:0;"><iframe src="https://www.youtube.com/embed/' + v.youtubeId + '?autoplay=1&rel=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen allow="autoplay"></iframe></div></div>';
+    var isMobile = window.innerWidth <= 600;
+    var dragHandle = isMobile ? '<div style="display:flex;justify-content:center;padding:8px 0 0;"><div style="width:36px;height:4px;border-radius:2px;background:var(--border);"></div></div>' : '';
+    overlay.onclick = function(e) { if (e.target === overlay) { overlay.remove(); document.body.style.overflow = ''; } };
+    overlay.innerHTML = '<div class="resource-modal">' + dragHandle + '<div class="resource-modal-header"><h3>' + (v.title || '') + '</h3><button class="resource-modal-close" onclick="this.closest(\'.resource-modal-overlay\').remove();document.body.style.overflow=\'\';">&times;</button></div><div style="position:relative;padding-bottom:56.25%;height:0;"><iframe src="https://www.youtube.com/embed/' + v.youtubeId + '?autoplay=1&rel=0&playsinline=1" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen allow="autoplay" playsinline></iframe></div></div>';
+    document.body.style.overflow = 'hidden';
     document.body.appendChild(overlay);
     return;
   }
