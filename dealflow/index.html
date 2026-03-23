@@ -13892,24 +13892,8 @@ function editBuyBoxField(stepType) {
 }
 
 function rebuildPlanFromEditor() {
-  var d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-  syncWizardToBuyBox();
-  try {
-    var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-    var plan = generatePortfolioPlan(d, goals);
-    savePortfolioPlan(plan);
-  } catch(e) { console.warn('Plan rebuild failed:', e); }
-  syncBuyBoxToGHL();
-  // Show confirmation
-  var btn = document.querySelector('#buyBoxEditor .btn-cta-primary');
-  if (btn) {
-    var orig = btn.textContent;
-    btn.textContent = '\u2713 Plan Updated';
-    btn.style.background = 'var(--green)';
-    setTimeout(function() { btn.textContent = orig; btn.style.background = ''; }, 2000);
-  }
-  // Re-render editor to reflect any changes
-  renderBuyBoxEditor();
+  // Open the full paid wizard so user walks through plan builder
+  openBuyBoxWizard();
   // Re-render report if on My Plan tab
   if (typeof renderReport === 'function') renderReport();
 }
