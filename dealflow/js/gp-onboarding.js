@@ -522,7 +522,7 @@
   };
 
   // ── Step 8: Operator Sponsorship Upsell ──
-  var GHL_PAYMENT_LINK = 'https://app.growyourcashflow.io/v2/preview/66e09581d780e54a43941ac8';
+  var GHL_PAYMENT_LINK = 'https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8';
 
   window.bookPresentation = function() {
     // Open GHL payment link — they'll complete checkout there
