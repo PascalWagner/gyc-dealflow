@@ -5484,12 +5484,12 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   display: none;
   position: relative;
   width: 100%;
-  height: calc(100vh - 150px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-  min-height: 420px;
+  /* Fill viewport minus: topbar(~50) + stage-desc(~70) + bottom-nav(64+safe) + content-padding(32) */
+  height: calc(100vh - 220px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 380px;
   overflow: hidden;
   touch-action: pan-y;
   padding: 0;
-  /* Stretch to fill: header(~50) + toggle(~44) + bottom-nav(~56) = ~150px */
 }
 .swipe-card-stack {
   position: relative;
@@ -12664,17 +12664,18 @@ function renderAll() {
   // Mobile swipe feed view
   var showSwipe = isMobileScreen() && mobileView === 'swipe' && currentTab === 'browse';
   if (swipeFeed) swipeFeed.style.display = showSwipe ? 'block' : 'none';
-  // Hide filter bar, stats bar, checklist, and goal indicator in swipe mode for max card space
+  // Hide filter bar, stats bar on swipe mode OR non-browse pipeline tabs on mobile
+  var hideFilters = showSwipe || (isMobileScreen() && currentTab !== 'browse');
   var filterBar = document.querySelector('.filter-bar');
-  if (filterBar) filterBar.style.display = showSwipe ? 'none' : '';
+  if (filterBar) filterBar.style.display = hideFilters ? 'none' : '';
   var statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = showSwipe ? 'none' : '';
+  if (statsBar) statsBar.style.display = hideFilters ? 'none' : '';
   var goalIndicator = document.getElementById('goalSortIndicator');
   if (goalIndicator && showSwipe) goalIndicator.style.display = 'none';
   var milestoneChecklist = document.getElementById('dealsMilestoneChecklist');
   if (milestoneChecklist) milestoneChecklist.style.display = showSwipe ? 'none' : '';
   var stageDesc = document.getElementById('stageDescription');
-  if (stageDesc) stageDesc.style.display = '';
+  if (stageDesc) stageDesc.style.display = 'block';
 
   if (showSwipe) {
     grid.style.display = 'none';
