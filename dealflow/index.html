@@ -2837,6 +2837,7 @@ html.cap-ios .debt-metric-select-mobile {
     min-width: 0;
     width: 100%;
     justify-content: stretch;
+    order: 1;
   }
   .dash-tabs::-webkit-scrollbar { display: none; }
   .dash-tab {
@@ -2844,6 +2845,11 @@ html.cap-ios .debt-metric-select-mobile {
     padding: 10px 0 !important;
     flex: 1;
     text-align: center;
+  }
+  /* Push topbar action buttons (e.g. + Add Investment) to their own row on mobile */
+  .topbar > button:not(.mobile-menu-btn) {
+    order: 2;
+    margin: 8px 0;
   }
 
   /* ── Dashboard content area ── */
@@ -6669,11 +6675,11 @@ const _supa = window.supabase.createClient(
       </div>
 
       <!-- Tab Toggle Bar -->
-      <div style="display:flex;gap:4px;margin-bottom:28px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;" id="miTabBar">
-        <button class="mi-tab-btn mi-tab-active" data-tab="sec" onclick="switchMiTab('sec')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;">Private Market Intelligence</button>
-        <button class="mi-tab-btn" data-tab="deals" onclick="switchMiTab('deals')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Deal-Level Insights</button>
-        <button class="mi-tab-btn" data-tab="dealflow" onclick="switchMiTab('dealflow')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Deal Flow Stats</button>
-        <button class="mi-tab-btn" data-tab="debtfunds" onclick="switchMiTab('debtfunds')" style="flex:1;padding:10px 16px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Debt Fund Explorer</button>
+      <div style="display:flex;gap:4px;margin-bottom:28px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;" id="miTabBar">
+        <button class="mi-tab-btn mi-tab-active" data-tab="sec" onclick="switchMiTab('sec')" style="flex:0 0 auto;padding:10px 14px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:var(--primary);color:#fff;white-space:nowrap;">Market Intel</button>
+        <button class="mi-tab-btn" data-tab="deals" onclick="switchMiTab('deals')" style="flex:0 0 auto;padding:10px 14px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);white-space:nowrap;">Deal Insights</button>
+        <button class="mi-tab-btn" data-tab="dealflow" onclick="switchMiTab('dealflow')" style="flex:0 0 auto;padding:10px 14px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);white-space:nowrap;">Deal Flow</button>
+        <button class="mi-tab-btn" data-tab="debtfunds" onclick="switchMiTab('debtfunds')" style="flex:0 0 auto;padding:10px 14px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);white-space:nowrap;">Debt Funds</button>
       </div>
 
       <!-- TAB: Private Market Intelligence (SEC Data) -->
