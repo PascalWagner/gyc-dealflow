@@ -140,26 +140,42 @@
     goToStep(2);
   };
 
-  // ── LP Step Navigation ──
-  window.goToLpStep = function(stepId) {
-    var steps = document.querySelectorAll('.step');
-    for (var i = 0; i < steps.length; i++) steps[i].classList.remove('active');
-    var target = document.getElementById(stepId);
-    if (target) target.classList.add('active');
+  // ── LP Step Navigation (with slide animations) ──
+  var _lpPrevStep = null;
+  window.goToLpStep = function(stepId, isBack) {
+    var current = document.querySelector('.step.active');
+    if (current) {
+      current.classList.remove('active');
+      current.classList.add(isBack ? 'slide-out-right' : 'slide-out-left');
+      setTimeout(function() { current.classList.remove('slide-out-left', 'slide-out-right'); }, 250);
+    }
 
-    // Show progress bar for LP steps
-    var progressWrap = document.getElementById('progressWrap');
-    var progressFill = document.getElementById('progressFill');
-    progressWrap.style.display = 'block';
-    var lpProgress = { stepLpGoal: 33, stepLpDeals: 66, stepLpBaseline: 100 };
-    progressFill.style.width = (lpProgress[stepId] || 0) + '%';
-    window.scrollTo(0, 0);
+    setTimeout(function() {
+      var target = document.getElementById(stepId);
+      if (target) {
+        if (isBack) target.classList.add('reverse');
+        target.classList.add('active');
+        setTimeout(function() { target.classList.remove('reverse'); }, 400);
+      }
+      // For non-LP steps (going back to role select)
+      if (stepId === 'step1') {
+        var progressWrap = document.getElementById('progressWrap');
+        if (progressWrap) progressWrap.style.display = 'none';
+      } else {
+        var progressWrap = document.getElementById('progressWrap');
+        if (progressWrap) progressWrap.style.display = 'block';
+        var progressFill = document.getElementById('progressFill');
+        var lpProgress = { stepLpGoal: 25, stepLpDeals: 50, stepLpBaseline: 75, stepLpComplete: 100 };
+        if (progressFill) progressFill.style.width = (lpProgress[stepId] || 0) + '%';
+      }
+      window.scrollTo(0, 0);
+    }, current ? 260 : 0);
   };
 
   // ── LP State ──
   var lpData = { goal: null, lpDealsCount: null, baselineIncome: null };
 
-  // ── LP Step: Goal Selection (U3) ──
+  // ── LP: Goal Selection (U3) ──
   window.selectGoal = function(goal) {
     lpData.goal = goal;
     document.getElementById('goalCashflow').classList.toggle('selected', goal === 'cashflow');
@@ -174,108 +190,87 @@
       else sub.textContent = "What's your current passive income? Rental checks, fund distributions, interest \u2014 anything that hits your account without you working for it.";
     }
 
-    // Update CTA text based on tier
-    var btnText = document.getElementById('baselineBtnText');
-    if (btnText) {
-      var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-      var tier = (u.tier || 'free').toLowerCase();
-      btnText.textContent = (tier !== 'free') ? 'Build My Investment Plan' : 'Start Browsing Deals';
-    }
-
-    // Auto-advance after brief delay (like the existing wizard goal cards)
+    // Auto-advance after brief delay
     setTimeout(function() { goToLpStep('stepLpDeals'); }, 350);
   };
 
-  // ── LP Step: Deal Count (U4) ──
-  window.adjustDealCount = function(delta) {
-    var input = document.getElementById('lpDealCountInput');
-    var current = parseInt(input.value) || 0;
-    var newVal = Math.max(0, Math.min(999, current + delta));
-    input.value = newVal;
-    onDealCountChange();
-  };
-
-  window.setDealCount = function(val) {
-    var input = document.getElementById('lpDealCountInput');
-    if (val >= 10) {
-      input.value = '';
-      input.placeholder = '10+';
-      input.focus();
-    } else {
-      input.value = val;
-    }
-    // Highlight selected pill
-    var pills = document.querySelectorAll('#stepLpDeals .pill-option');
+  // ── LP: Deal Count (U4) — pill-card selection ──
+  window.selectDealPill = function(val) {
+    // Deselect all
+    var pills = document.querySelectorAll('.deal-pill');
     for (var p = 0; p < pills.length; p++) pills[p].classList.remove('selected');
-    if (val === 0) pills[0].classList.add('selected');
-    else if (val === 2) pills[1].classList.add('selected');
-    else if (val === 7) pills[2].classList.add('selected');
-    else if (val >= 10) pills[3].classList.add('selected');
-    onDealCountChange();
+
+    if (val === -1) {
+      // Custom (10+)
+      document.getElementById('dpillCustom').classList.add('selected');
+      document.getElementById('customDealWrap').style.display = 'block';
+      var inp = document.getElementById('lpDealCountInput');
+      inp.focus();
+      inp.select();
+      lpData.lpDealsCount = parseInt(inp.value) || 10;
+    } else {
+      document.getElementById('dpill' + val).classList.add('selected');
+      document.getElementById('customDealWrap').style.display = 'none';
+      lpData.lpDealsCount = val;
+    }
+    document.getElementById('dealCountNextBtn').disabled = false;
+    showDealFeedback(val === -1 ? (parseInt(document.getElementById('lpDealCountInput').value) || 10) : val);
   };
 
   window.onDealCountChange = function() {
-    var input = document.getElementById('lpDealCountInput');
-    var val = parseInt(input.value);
-    var fb = document.getElementById('dealCountFeedback');
-    if (isNaN(val) || input.value === '') { fb.style.display = 'none'; return; }
-    lpData.lpDealsCount = val;
-
-    fb.style.display = 'block';
-    if (val === 0) {
-      fb.textContent = "Everyone starts somewhere. We'll walk you through everything \u2014 the database is designed to help first-time LP investors find and vet deals with confidence.";
-    } else if (val <= 3) {
-      fb.textContent = "Nice, you've got some skin in the game. The database will help you find your next deal and compare it against what you already know.";
-    } else if (val <= 10) {
-      fb.textContent = "Solid portfolio building. You know what you're looking for \u2014 we'll help you find it faster and vet it deeper.";
-    } else {
-      fb.textContent = "Seasoned investor. You'll appreciate the comparison tools, operator track records, and market intel.";
+    var val = parseInt(document.getElementById('lpDealCountInput').value);
+    if (!isNaN(val) && val > 0) {
+      lpData.lpDealsCount = val;
+      document.getElementById('dealCountNextBtn').disabled = false;
+      showDealFeedback(val);
     }
   };
 
+  function showDealFeedback(val) {
+    var fb = document.getElementById('dealCountFeedback');
+    fb.style.display = 'block';
+    if (val === 0) fb.textContent = "Everyone starts somewhere. We'll walk you through everything \u2014 the database is designed to help first-time LP investors find and vet deals with confidence.";
+    else if (val <= 3) fb.textContent = "Nice, you've got some skin in the game. The database will help you find your next deal and compare it against what you already know.";
+    else if (val <= 10) fb.textContent = "Solid portfolio building. You know what you're looking for \u2014 we'll help you find it faster and vet it deeper.";
+    else fb.textContent = "Seasoned investor. You'll appreciate the comparison tools, operator track records, and market intel.";
+  }
+
   window.saveDealCount = function() {
-    var input = document.getElementById('lpDealCountInput');
-    var val = parseInt(input.value);
-    if (isNaN(val)) val = 0;
-    lpData.lpDealsCount = val;
+    if (lpData.lpDealsCount === null) return;
     goToLpStep('stepLpBaseline');
   };
 
-  // ── LP Step: Baseline Income (U5) ──
-  var selectedBaselineValue = null;
-
+  // ── LP: Baseline Income (U5) — vertical card selection ──
   window.selectBaseline = function(val) {
-    selectedBaselineValue = val;
     lpData.baselineIncome = val;
 
-    // Highlight selected pill
-    var pills = document.querySelectorAll('#baselinePills .pill-option');
-    for (var p = 0; p < pills.length; p++) pills[p].classList.remove('selected');
-    // Find the pill that matches
-    var labels = [0, 6000, 12000, 24000, 60000, 120000];
-    var idx = labels.indexOf(val);
-    if (idx >= 0 && pills[idx]) pills[idx].classList.add('selected');
+    // Highlight selected card
+    var cards = document.querySelectorAll('.baseline-card');
+    for (var c = 0; c < cards.length; c++) cards[c].classList.remove('selected');
+    // Find matching card by value
+    var vals = [0, 6000, 12000, 24000, 60000, 120000];
+    var idx = vals.indexOf(val);
+    if (idx >= 0 && cards[idx]) cards[idx].classList.add('selected');
 
-    // Hide custom input if showing
     document.getElementById('customBaselineWrap').style.display = 'none';
-
-    // Show feedback
+    document.getElementById('baselineNextBtn').disabled = false;
     showBaselineFeedback(val);
   };
 
   window.showCustomBaseline = function() {
-    // Deselect all pills
-    var pills = document.querySelectorAll('#baselinePills .pill-option');
-    for (var p = 0; p < pills.length; p++) pills[p].classList.remove('selected');
-    pills[pills.length - 1].classList.add('selected'); // "Custom" pill
+    var cards = document.querySelectorAll('.baseline-card');
+    for (var c = 0; c < cards.length; c++) cards[c].classList.remove('selected');
+    document.getElementById('baselineCustomCard').classList.add('selected');
     document.getElementById('customBaselineWrap').style.display = 'block';
-    document.getElementById('customBaselineInput').focus();
+    var inp = document.getElementById('customBaselineInput');
+    inp.focus();
+    inp.select();
   };
 
   window.onCustomBaselineChange = function() {
     var val = parseInt(document.getElementById('customBaselineInput').value) || 0;
-    selectedBaselineValue = val;
     lpData.baselineIncome = val;
+    document.getElementById('baselineNextBtn').disabled = false;
     showBaselineFeedback(val);
   };
 
@@ -283,7 +278,6 @@
     var fb = document.getElementById('baselineFeedback');
     fb.style.display = 'block';
     var goal = lpData.goal || 'cashflow';
-
     if (goal === 'cashflow') {
       if (val === 0) fb.textContent = "Everyone starts somewhere. Let's build your first income stream.";
       else if (val <= 24000) fb.textContent = "Nice \u2014 you're already at $" + Math.round(val / 12).toLocaleString() + "/mo. Let's figure out how to get you to your target.";
@@ -295,8 +289,37 @@
     }
   }
 
+  // ── LP: Completion screen ──
+  window.showLpComplete = function() {
+    // Build summary
+    var goalLabels = { cashflow: 'Build Passive Income', tax: 'Reduce Tax Bill', growth: 'Grow Wealth' };
+    var dealLabel = lpData.lpDealsCount === 0 ? 'First-time investor' : lpData.lpDealsCount + ' deals';
+    var baselineLabel = lpData.baselineIncome === 0 ? '$0/mo' : '$' + Math.round(lpData.baselineIncome / 12).toLocaleString() + '/mo';
+
+    var html = '';
+    html += '<div class="completion-row"><span class="completion-label">Your goal</span><span class="completion-value">' + (goalLabels[lpData.goal] || 'Not set') + '</span></div>';
+    html += '<div class="completion-row"><span class="completion-label">Experience</span><span class="completion-value">' + dealLabel + '</span></div>';
+    html += '<div class="completion-row"><span class="completion-label">Current income</span><span class="completion-value">' + baselineLabel + '</span></div>';
+
+    var el = document.getElementById('completionSummary');
+    if (el) el.innerHTML = html;
+
+    // Update CTA text based on tier
+    var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    var tier = (u.tier || 'free').toLowerCase();
+    var btnText = document.getElementById('completionBtnText');
+    if (btnText) btnText.textContent = (tier !== 'free') ? 'Build My Investment Plan' : 'Start Browsing Deals';
+
+    var subEl = document.getElementById('completionSubtitle');
+    if (subEl) {
+      if (tier !== 'free') subEl.textContent = "Next up: we'll build your personalized investment plan.";
+      else subEl.textContent = "We've personalized your deal feed based on your answers.";
+    }
+
+    goToLpStep('stepLpComplete');
+  };
+
   window.completeLpOnboarding = function() {
-    // Save LP onboarding data to buy box API
     var wizardData = {
       goal: lpData.goal,
       _branch: lpData.goal,
@@ -309,18 +332,15 @@
       body: JSON.stringify({ email: user.email, wizardData: wizardData })
     }).catch(function(e) { console.warn('LP onboarding save error:', e); });
 
-    // Mark onboarding complete
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'complete', data: { role: 'lp' } })
     }).catch(function() {});
 
-    // Store in localStorage for immediate use
     var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
     u.onboardingComplete = true;
     localStorage.setItem('gycUser', JSON.stringify(u));
 
-    // Store buy box data for dashboard
     var existingBB = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
     existingBB.goal = lpData.goal;
     existingBB._branch = lpData.goal;
@@ -328,16 +348,24 @@
     existingBB.baselineIncome = lpData.baselineIncome;
     localStorage.setItem('gycBuyBoxWizard', JSON.stringify(existingBB));
 
-    // Route based on tier
     var tier = (u.tier || 'free').toLowerCase();
     if (tier !== 'free') {
-      // Paid users: go to wizard to build full plan
       window.location.href = 'index.html#buybox';
     } else {
-      // Free users: go to dashboard, walkthrough will trigger there
       window.location.href = 'index.html';
     }
   };
+
+  // ── Keyboard: Enter to continue on LP steps ──
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    var active = document.querySelector('.step.active');
+    if (!active) return;
+    var id = active.id;
+    if (id === 'stepLpDeals' && lpData.lpDealsCount !== null) saveDealCount();
+    else if (id === 'stepLpBaseline' && lpData.baselineIncome !== null) showLpComplete();
+    else if (id === 'stepLpComplete') completeLpOnboarding();
+  });
 
   // ── Step 3: Company Basics + Typeahead ──
   var searchTimer = null;

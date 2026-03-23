@@ -27567,7 +27567,23 @@ function showWalkthrough() {
 
     var tip = document.createElement('div'); tip.id = 'wtTip';
     tip.style.cssText = 'position:fixed;z-index:9999;max-width:360px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.2);font-family:var(--font-body);';
-    if (tgt) { var r2 = tgt.getBoundingClientRect(), tt = r2.bottom+16, tl = Math.max(16,Math.min(r2.left,window.innerWidth-376)); if (tt+200>window.innerHeight) tt=Math.max(16,r2.top-200); tip.style.top=tt+'px'; tip.style.left=tl+'px'; }
+    var _arrowAbove = false;
+    if (tgt) {
+      var r2 = tgt.getBoundingClientRect(), tt = r2.bottom+16, tl = Math.max(16,Math.min(r2.left,window.innerWidth-376));
+      if (tt+200>window.innerHeight) { tt=Math.max(16,r2.top-200); _arrowAbove = true; }
+      tip.style.top=tt+'px'; tip.style.left=tl+'px';
+      // Arrow pointing at target
+      var arrow = document.createElement('div');
+      arrow.style.cssText = 'position:absolute;width:12px;height:12px;background:var(--bg-card);border:1px solid var(--border);transform:rotate(45deg);';
+      if (_arrowAbove) {
+        arrow.style.bottom = '-7px'; arrow.style.borderTop = 'none'; arrow.style.borderLeft = 'none';
+      } else {
+        arrow.style.top = '-7px'; arrow.style.borderBottom = 'none'; arrow.style.borderRight = 'none';
+      }
+      var arrowLeft = Math.max(20, Math.min(r2.left + r2.width/2 - tl, 340));
+      arrow.style.left = arrowLeft + 'px';
+      tip.appendChild(arrow);
+    }
     else { tip.style.top='50%'; tip.style.left='50%'; tip.style.transform='translate(-50%,-50%)'; }
 
     var h='<div style="display:flex;gap:6px;margin-bottom:12px;">';

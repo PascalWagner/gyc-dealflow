@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Welcome - GYC Dealflow</title>
+<title>GP Onboarding - GYC Dealflow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1167,11 +1167,6 @@ select.form-input { cursor: pointer; appearance: auto; }
   .network-stats-grid { grid-template-columns: 1fr; }
   .role-card-icon { width: 44px; height: 44px; }
 }
-
-/* Hide number input spinner arrows */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; }
 </style>
 </head>
 <body>
@@ -1218,8 +1213,8 @@ input[type=number] { -moz-appearance: textfield; }
     <!-- ===== STEP 1: Role Selection ===== -->
     <div class="step" id="step1">
       <div class="step-header">
-        <div class="step-title">What brings you here?</div>
-        <div class="step-subtitle">Pick the one that fits best. You can always access both sides later.</div>
+        <div class="step-title">How will you use the platform?</div>
+        <div class="step-subtitle">This helps us tailor your experience. You can always access both sides later.</div>
       </div>
       <div class="step-body">
         <div class="role-cards">
@@ -1228,7 +1223,7 @@ input[type=number] { -moz-appearance: textfield; }
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             </div>
             <div class="role-card-title">I'm an Investor (LP)</div>
-            <div class="role-card-desc">Find and vet private deals matched to my goals</div>
+            <div class="role-card-desc">Find and evaluate deals that match my investment goals</div>
           </div>
           <div class="role-card" onclick="selectRole('gp')" id="roleGp">
             <div class="role-card-icon gp-icon">
