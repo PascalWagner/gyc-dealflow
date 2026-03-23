@@ -5512,11 +5512,12 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   position: absolute;
   width: calc(100% - 32px);
   max-width: 400px;
+  max-height: calc(100% - 8px);
   background: var(--bg-card);
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.12);
   overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
   will-change: transform;
