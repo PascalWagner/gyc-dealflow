@@ -16280,15 +16280,29 @@ function renderReport() {
     const irrs = classDeals.map(x => x.targetIRR).filter(v => v && v > 0);
     const cocs = classDeals.map(x => x.cashOnCash).filter(v => v && v > 0);
     const mins = classDeals.map(x => x.investmentMinimum).filter(v => v && v > 0);
-    const affordable = userCheckSizeNum > 0 ? classDeals.filter(x => x.investmentMinimum && x.investmentMinimum <= userCheckSizeNum).length : null;
+    const holds = classDeals.map(x => parseFloat(x.holdPeriod)).filter(v => v && v > 0);
+    const dates = classDeals.map(x => x.addedDate ? new Date(x.addedDate) : null).filter(v => v && !isNaN(v));
+    const newestDate = dates.length > 0 ? new Date(Math.max(...dates.map(d2 => d2.getTime()))) : null;
     const ph = typeof getAssetPlaceholder === 'function' ? getAssetPlaceholder(isLending ? 'Lending' : ac) : { bg: 'linear-gradient(135deg,#1F5159,#0A1E21)', icon: '&#128200;' };
+
+    // Format newest deal as relative time
+    var newestLabel = '\u2014';
+    if (newestDate) {
+      var diffMs = Date.now() - newestDate.getTime();
+      var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) newestLabel = 'Today';
+      else if (diffDays === 1) newestLabel = '1 day ago';
+      else if (diffDays < 30) newestLabel = diffDays + ' days ago';
+      else if (diffDays < 60) newestLabel = '1 month ago';
+      else newestLabel = Math.floor(diffDays / 30) + ' months ago';
+    }
 
     snapshotClasses.push({
       name: ac, count: classDeals.length, ph: ph,
       irrRange: irrs.length >= 2 ? fmt(Math.min(...irrs), 'pct') + ' \u2013 ' + fmt(Math.max(...irrs), 'pct') : irrs.length === 1 ? fmt(irrs[0], 'pct') : '\u2014',
       avgCoC: cocs.length > 0 ? fmt(cocs.reduce((a, b) => a + b, 0) / cocs.length, 'pct') : '\u2014',
-      typicalMin: mins.length > 0 ? '$' + Math.round(mins.reduce((a, b) => a + b, 0) / mins.length).toLocaleString() : '\u2014',
-      affordable: affordable
+      avgLockup: holds.length > 0 ? Math.round(holds.reduce((a, b) => a + b, 0) / holds.length * 10) / 10 + ' yrs' : '\u2014',
+      newestDeal: newestLabel
     });
   });
 
@@ -16308,8 +16322,8 @@ function renderReport() {
       + '<td><div class="bb-ac-name"><div class="bb-ac-icon" style="background:' + sc.ph.bg + ';">' + sc.ph.icon + '</div><div><div style="font-weight:700;">' + sc.name + '</div><div class="bb-ac-count">' + sc.count + ' deal' + (sc.count !== 1 ? 's' : '') + '</div></div></div></td>'
       + '<td>' + sc.irrRange + '</td>'
       + '<td>' + sc.avgCoC + '</td>'
-      + '<td>' + sc.typicalMin + '</td>'
-      + (userCheckSizeNum > 0 ? '<td>' + (sc.affordable !== null ? '<span style="font-weight:800;color:var(--primary);">' + sc.affordable + '</span>' : '\u2014') + '</td>' : '')
+      + '<td>' + sc.avgLockup + '</td>'
+      + '<td>' + sc.newestDeal + '</td>'
       + '</tr>';
   }).join('');
 
@@ -16317,6 +16331,7 @@ function renderReport() {
   if (snapshotClasses.length > 0) {
     snapshotHtml = '<div class="bb-card">'
       + '<div class="bb-label">Market Snapshot</div>'
+      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-bottom:16px;">Deals in the database right now that match your investment criteria.</div>'
       + (_bbGated
         ? '<div style="text-align:center;padding:24px 0;">'
           + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">' + totalMatching + ' deals match your criteria</div>'
@@ -16324,7 +16339,7 @@ function renderReport() {
           + '<button onclick="navigateTo(\'academy\')" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Unlock Market Data &rarr;</button>'
           + '</div>'
         : '<table class="bb-snapshot-table">'
-          + '<thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Min</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
+          + '<thead><tr><th>Asset Class</th><th>Target IRR</th><th>Cash Yield</th><th>Avg Lockup</th><th>Newest Deal</th></tr></thead>'
           + '<tbody>' + snapshotTableRows + '</tbody>'
           + '</table>'
           + '<div class="bb-snapshot-summary">'
