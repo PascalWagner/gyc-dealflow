@@ -26900,7 +26900,7 @@ function searchViewAsUsers(query) {
 }
 
 // Keys that are per-user and need to be scoped when impersonating
-const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed', 'gycDailyDeals', 'gycTaxDocs', 'gycNotifPrefs'];
+const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed', 'gycDailyDeals', 'gycTaxDocs', 'gycNotifPrefs', 'gycPortfolioPlan'];
 
 function saveUserScopedData(email) {
   // Save current localStorage data under the user's email prefix
@@ -27013,6 +27013,14 @@ async function fetchUserDataAsAdmin(targetEmail) {
       localStorage.setItem('gycTaxDocs', '[]');
       taxDocuments = [];
     }
+
+    // Restore portfolio plan (always overwrite — empty means user has no plan)
+    if (result.plan && result.plan.length > 0) {
+      localStorage.setItem('gycPortfolioPlan', JSON.stringify(result.plan[0]));
+    } else {
+      localStorage.removeItem('gycPortfolioPlan');
+    }
+    window._planSlots = null;
 
     // Re-render current page
     const activePage = document.querySelector('.page.active');

@@ -299,7 +299,7 @@ async function handleGet(req, res, supabase, user) {
 // Admin endpoint: fetch another user's data by email (for impersonation)
 async function handleAdminGet(req, res) {
   const { type, email } = req.query;
-  const types = type ? [type] : ['portfolio', 'stages', 'goals', 'taxdocs'];
+  const types = type ? [type] : ['portfolio', 'stages', 'goals', 'taxdocs', 'plan'];
   const adminClient = getAdminClient();
 
   // Look up user_id by email from auth.users
