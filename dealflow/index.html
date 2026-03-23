@@ -6084,7 +6084,6 @@ const _supa = window.supabase.createClient(
         <button class="dash-tab active" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
         <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
-        <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
     </div>
     <div class="content-area" style="padding:24px;max-width:1200px;" id="dashboardContent">
@@ -6123,7 +6122,6 @@ const _supa = window.supabase.createClient(
         <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
         <button class="dash-tab active" onclick="navigateTo('buybox')">My Plan</button>
-        <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
       <div class="topbar-spacer"></div>
       <span id="buyboxTopbarActions" style="display:inline-flex;gap:8px;">
@@ -7840,7 +7838,6 @@ const _supa = window.supabase.createClient(
         <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
         <button class="dash-tab active" onclick="navigateTo('portfolio')">Portfolio</button>
         <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
-        <button class="dash-tab" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
       <div class="topbar-spacer"></div>
       <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
@@ -7886,6 +7883,44 @@ const _supa = window.supabase.createClient(
         <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);margin-bottom:20px;">Track your LP investments, distributions, and portfolio allocation all in one place.</div>
         <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
       </div>
+
+      <!-- Tax Prep Section (collapsible, embedded in Portfolio) -->
+      <div id="portfolioTaxSection" style="margin-top:32px;display:none;">
+        <div id="taxSeasonBanner" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+          <div style="flex-shrink:0;width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:20px;">&#x1f4cb;</div>
+          <div style="flex:1;">
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Tax season is here</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">Track your K-1s and tax documents below. Most sponsors issue K-1s by March 15.</div>
+          </div>
+        </div>
+        <div onclick="toggleTaxPrepSection()" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-cream)'" onmouseout="this.style.background='var(--bg-card)'">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width:20px;height:20px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <div>
+              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Tax Documents</div>
+              <div id="taxSectionSubtitle" style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">Track K-1s, 1099s, and other tax forms</div>
+            </div>
+          </div>
+          <svg id="taxSectionChevron" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:18px;height:18px;transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="taxPrepInlineContent" style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);background:var(--bg-card);padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <select id="taxYearFilterInline" onchange="renderTaxPrepInline()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;background:var(--bg-card);color:var(--text-dark);cursor:pointer;">
+              <option value="">All Years</option>
+            </select>
+            <div style="display:flex;gap:10px;">
+              <button onclick="autoPopulateTaxDocs(document.getElementById('taxYearFilterInline').value || new Date().getFullYear()-1)" style="padding:8px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;">Auto-Populate</button>
+              <button onclick="showAddTaxDocModal()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Document</button>
+            </div>
+          </div>
+          <div id="taxSummaryCardsInline" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;"></div>
+          <div id="taxPrepTableInline"></div>
+          <div id="taxPrepEmptyInline" style="display:none;text-align:center;padding:40px 20px;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">No tax documents yet</div>
+            <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Auto-Populate from Portfolio</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -7898,9 +7933,8 @@ const _supa = window.supabase.createClient(
       <div class="topbar-title">Dashboard</div>
       <div class="dash-tabs" id="dashTabBar_taxprep">
         <button class="dash-tab" onclick="navigateTo('dashboard')">Overview</button>
-        <button class="dash-tab" onclick="navigateTo('portfolio')">Portfolio</button>
+        <button class="dash-tab active" onclick="navigateTo('portfolio')">Portfolio</button>
         <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
-        <button class="dash-tab active" onclick="navigateTo('taxprep')">Tax Prep</button>
       </div>
     </div>
     <div class="sub-page" style="max-width:1000px;">
@@ -10204,11 +10238,23 @@ function renderCardStageExtras(deal) {
       'Bring to Office Hours &rarr;</a></div>';
   } else if (stage === 'invested') {
     const inv = (typeof portfolioInvestments !== 'undefined' ? portfolioInvestments : []).find(i => i.dealId === deal.id);
-    const dateStr = inv && inv.investmentDate ? 'Invested ' + inv.investmentDate : '';
-    return '<div style="margin:8px 16px 0;display:flex;align-items:center;gap:6px;">' +
-      '<span style="display:inline-block;padding:3px 10px;background:rgba(81,190,123,0.1);border-radius:100px;font-size:10px;font-weight:700;color:var(--green);">Tracking</span>' +
-      (dateStr ? '<span style="font-size:10px;color:var(--text-muted);">' + dateStr + '</span>' : '') +
-      '</div>';
+    if (inv) {
+      var _invAmt = parseFloat(inv.amountInvested) || 0;
+      var _invDist = parseFloat(inv.distributionsReceived) || 0;
+      return '<div style="margin:8px 16px 0;padding:10px 14px;background:rgba(81,190,123,0.06);border:1px solid rgba(81,190,123,0.15);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+        '<span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);">Invested: $' + _invAmt.toLocaleString() + '</span>' +
+        (_invDist > 0 ? '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">&middot;</span><span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--green);">Received: $' + _invDist.toLocaleString() + '</span>' : '') +
+        '</div>' +
+        '<button onclick="event.stopPropagation();showLogDistributionForm(\'' + deal.id + '\',\'' + (inv.investmentName || '').replace(/'/g, "\\'") + '\')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px 10px;cursor:pointer;font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--primary);white-space:nowrap;">+ Distribution</button>' +
+        '</div>';
+    } else {
+      return '<div style="margin:8px 16px 0;display:flex;align-items:center;gap:6px;">' +
+        '<span style="display:inline-block;padding:3px 10px;background:rgba(245,158,11,0.1);border-radius:100px;font-size:10px;font-weight:700;color:#f59e0b;">Not yet logged</span>' +
+        '<button onclick="event.stopPropagation();showInvestmentPrompt(\'' + deal.id + '\')" style="background:none;border:none;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--primary);cursor:pointer;">Log Investment &rarr;</button>' +
+        '</div>';
+    }
   }
   return '';
 }
@@ -12313,6 +12359,7 @@ function navigateTo(page) {
   if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
   if (page === 'compare') { navigateTo('deals'); setTimeout(function(){ var dt = document.querySelector('#page-deals .topbar-tab[data-tab="decision"]'); if (dt) switchTab(dt); }, 100); return; }
   if (page === 'debtfunds') { navigateTo('marketintel'); setTimeout(function(){ switchMiTab('debtfunds'); }, 100); return; }
+  if (page === 'taxprep') { navigateTo('portfolio'); setTimeout(function() { var ts = document.getElementById('portfolioTaxSection'); if (ts) { ts.style.display = 'block'; openTaxPrepSection(); ts.scrollIntoView({behavior:'smooth'}); } }, 300); return; }
   // Assets page is a standalone page, don't redirect
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
@@ -12323,7 +12370,7 @@ function navigateTo(page) {
   const navEl = document.querySelector(`.nav-item[data-page="${page}"]`);
   if (navEl) navEl.classList.add('active');
   // Dashboard sub-pages: highlight Dashboard nav item
-  if (['buybox','portfolio','taxprep'].includes(page)) {
+  if (['buybox','portfolio'].includes(page)) {
     const dashNav = document.querySelector('.nav-item[data-page="dashboard"]');
     if (dashNav) dashNav.classList.add('active');
   }
@@ -12349,7 +12396,6 @@ function navigateTo(page) {
   if (page === 'goals') renderGoals();
   if (page === 'incomefund') renderIncomeFund();
   if (page === 'portfolio') renderPortfolio();
-  if (page === 'taxprep') renderTaxPrep();
   if (page === 'marketintel') renderMarketIntel();
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'admindash') switchAdminDashTab(adminDashCurrentTab);
@@ -12932,15 +12978,14 @@ let wizardStep = 0;
 let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Accreditation → Goal → Baseline → 90-day → 12-mo → Net worth
-// Flow: Accreditation → Income Source → RE Pro → Goal → [Branch targets] → Net Worth
-//   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan
+// Flow: Goal → Income Source → RE Pro → Baseline → [Branch targets] → Net Worth
+//   → 90-day capital → 12-mo capital → Source → Loss tolerance → Preferences → Plan → LP Network
 const ONBOARDING_FLOW = {
-  common_start: [22, 23, 0],
-  cashflow: [24, 4, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-  growth: [27, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19],
-  tax: [28, 6, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20],
-  common_end: [21]
+  common_start: [0, 22, 23, 24],
+  cashflow: [4, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17],
+  growth: [5, 27, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17],
+  tax: [28, 6, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 20, 17],
+  common_end: []
 };
 
 function getStepSequence() {
@@ -12948,7 +12993,7 @@ function getStepSequence() {
   return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
 }
 
-const PHASE_LABELS = ['Your Goal', 'Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital', 'Growth Priority', 'Tax Baseline'];
+const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital', 'Growth Priority', 'Tax Baseline'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -12957,15 +13002,13 @@ function getPhaseLabel() {
 }
 
 // Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
-// 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=Plan
+// 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=My Plan
 const STEP_TO_PHASE = {
-  15: 0, 21: 0, 22: 0,  // accreditation, income source, RE pro → You
-  0: 1,                  // goalSelect → Goal
-  23: 1, 24: 1, 4: 1, 5: 1, 6: 1, 26: 1, 27: 1,  // baseline, 90-day, targets, growth pref, tax baseline → Goal
-  8: 2, 25: 2, 1: 2, 3: 2,  // net worth, 90-day capital, 12-mo capital, source → Finances
-  9: 2,                  // loss tolerance → Finances
-  10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 16: 3, 20: 3,  // asset class, strategy, operator focus, lockup, dist, LP network, completion → Preferences
-  17: 4, 18: 4, 19: 4  // plan output → My Plan
+  0: 0, 22: 0, 23: 0, 24: 0,  // goalSelect, income source, RE pro, baseline → You
+  4: 1, 5: 1, 6: 1, 27: 1, 28: 1,  // cashflow target, growth target, tax target, growth priority, tax baseline → Goal
+  8: 2, 26: 2, 1: 2, 3: 2, 9: 2,  // net worth, 90-day capital, 12-mo capital, source, loss tolerance → Finances
+  10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 3,  // asset class, strategy, diversification, operator focus, lockup, distributions, accreditation → Preferences
+  18: 4, 19: 4, 20: 4, 17: 4  // plan output (cashflow/growth/tax), LP network → My Plan
 };
 const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'My Plan'];
 
@@ -13514,7 +13557,7 @@ function renderWizardStep() {
 
   // ===== SCREEN 1: CAPITAL AMOUNT =====
   if (step.type === 'capitalAmount') {
-    html += '<div class="wizard-card-title">How much can you deploy in the next 12 months?</div>';
+    html += '<div class="wizard-card-title">How much do you plan to deploy over the next 12 months?</div>';
     html += '<div class="wizard-card-desc" style="margin-bottom:28px;">No commitments \u2014 just helps us size recommendations to deals you can actually invest in.</div>';
     var nwVal = parseInt(wizardData.netWorth || '0', 10);
     function nwPct(midpoint) {
@@ -14408,7 +14451,7 @@ function renderWizardStep() {
     // Nav
     html += '<div class="wizard-inline-nav">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Show me my plan \u2192</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Finish & Browse Deals \u2192</button>';
     html += '</div>';
     document.getElementById('wizardContent').innerHTML = html;
     return;
@@ -14508,7 +14551,7 @@ function renderWizardStep() {
     // Nav
     html += '<div class="wizard-inline-nav" style="margin-top:24px;">';
     html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Start Browsing Deals \u2192</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next \u2192</button>';
     html += '</div>';
 
     document.getElementById('wizardContent').innerHTML = html;
@@ -17287,6 +17330,8 @@ function renderPortfolio() {
     renderPortfolioTimeline();
     renderPortfolioTable();
   }
+  // Always try to init the tax section
+  if (typeof initPortfolioTaxSection === 'function') initPortfolioTaxSection();
 }
 
 function renderPortfolioSummary() {
@@ -18207,6 +18252,7 @@ let taxSortAsc = false;
 function saveTaxDocs() {
   localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocuments));
   taxDocuments.forEach(doc => syncTaxDoc(doc));
+  if (typeof renderTaxPrepInline === 'function') renderTaxPrepInline();
 }
 
 function renderTaxPrep() {
@@ -18402,8 +18448,118 @@ function autoPopulateTaxDocs(year) {
   });
   saveTaxDocs();
   renderTaxPrep();
+  if (typeof renderTaxPrepInline === 'function') renderTaxPrepInline();
   if (added > 0) alert(`Added ${added} tax document${added > 1 ? 's' : ''} for tax year ${yr}.`);
   else alert(`All portfolio investments already have tax documents for ${yr}.`);
+}
+
+// ========== TAX PREP INLINE (IN PORTFOLIO) ==========
+function toggleTaxPrepSection() {
+  var content = document.getElementById('taxPrepInlineContent');
+  var chevron = document.getElementById('taxSectionChevron');
+  if (!content) return;
+  var isOpen = content.style.display !== 'none';
+  content.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  if (!isOpen) renderTaxPrepInline();
+}
+
+function openTaxPrepSection() {
+  var content = document.getElementById('taxPrepInlineContent');
+  var chevron = document.getElementById('taxSectionChevron');
+  if (content) content.style.display = 'block';
+  if (chevron) chevron.style.transform = 'rotate(180deg)';
+  renderTaxPrepInline();
+}
+
+function renderTaxPrepInline() {
+  taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+  var yearFilter = document.getElementById('taxYearFilterInline');
+  if (yearFilter) {
+    var years = [...new Set(taxDocuments.map(function(d) { return d.taxYear; }).filter(Boolean))].sort(function(a, b) { return b - a; });
+    var currentVal = yearFilter.value;
+    yearFilter.innerHTML = '<option value="">All Years</option>' + years.map(function(y) { return '<option value="' + y + '"' + (currentVal == y ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+  }
+  var filterYear = yearFilter ? yearFilter.value : '';
+  var docs = filterYear ? taxDocuments.filter(function(d) { return String(d.taxYear) === filterYear; }) : taxDocuments;
+
+  var summaryC = document.getElementById('taxSummaryCardsInline');
+  var tableC = document.getElementById('taxPrepTableInline');
+  var emptyC = document.getElementById('taxPrepEmptyInline');
+
+  if (taxDocuments.length === 0) {
+    if (summaryC) summaryC.style.display = 'none';
+    if (tableC) tableC.style.display = 'none';
+    if (emptyC) emptyC.style.display = 'block';
+    return;
+  }
+  if (emptyC) emptyC.style.display = 'none';
+  if (summaryC) summaryC.style.display = 'grid';
+  if (tableC) tableC.style.display = 'block';
+
+  // Summary
+  var total = docs.length;
+  var received = docs.filter(function(d) { return d.uploadStatus === 'Received'; }).length;
+  var pending = docs.filter(function(d) { return d.uploadStatus === 'Pending'; }).length;
+  var pctDone = total > 0 ? Math.round((received / total) * 100) : 0;
+  if (summaryC) {
+    summaryC.innerHTML = '<div class="portfolio-stat-card"><div class="stat-label">Documents</div><div class="stat-value">' + total + '</div></div>'
+      + '<div class="portfolio-stat-card"><div class="stat-label">Received</div><div class="stat-value" style="color:var(--green)">' + received + '</div></div>'
+      + '<div class="portfolio-stat-card"><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--orange)">' + pending + '</div></div>'
+      + '<div class="portfolio-stat-card"><div class="stat-label">Complete</div><div class="stat-value">' + pctDone + '%</div></div>';
+  }
+
+  // Table
+  if (tableC) {
+    var sorted = [...docs].sort(function(a, b) { return (b.taxYear || 0) - (a.taxYear || 0); });
+    var rows = sorted.map(function(doc) {
+      var statusClass = doc.uploadStatus === 'Received' ? 'tax-status-received' : doc.uploadStatus === 'Pending' ? 'tax-status-pending' : 'tax-status-na';
+      return '<tr>'
+        + '<td style="font-weight:600">' + (doc.taxYear || '--') + '</td>'
+        + '<td>' + (doc.investmentName || '--') + '</td>'
+        + '<td>' + (doc.formType || '--') + '</td>'
+        + '<td><span class="' + statusClass + '">' + (doc.uploadStatus || '--') + '</span></td>'
+        + '<td>' + (doc.dateReceived || '--') + '</td>'
+        + '<td>'
+        + '<button onclick="showAddTaxDocModal(\'' + doc.id + '\')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:12px;font-weight:600;margin-right:8px;">Edit</button>'
+        + '<button onclick="deleteTaxDoc(\'' + doc.id + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600;">Delete</button>'
+        + '</td></tr>';
+    }).join('');
+    tableC.innerHTML = '<table class="table-view" style="display:table;width:100%;"><thead><tr>'
+      + '<th>Year</th><th>Investment</th><th>Form</th><th>Status</th><th>Received</th><th>Actions</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // Update subtitle with counts
+  var subtitle = document.getElementById('taxSectionSubtitle');
+  if (subtitle && taxDocuments.length > 0) {
+    subtitle.textContent = total + ' document' + (total !== 1 ? 's' : '') + ' \u00b7 ' + received + ' received \u00b7 ' + pending + ' pending';
+  }
+}
+
+function initPortfolioTaxSection() {
+  var section = document.getElementById('portfolioTaxSection');
+  if (!section) return;
+
+  // Always show the section if there are portfolio investments or tax docs
+  var portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+  var taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+  if (portfolio.length > 0 || taxDocs.length > 0) {
+    section.style.display = 'block';
+  }
+
+  // Show seasonal banner Jan-April
+  var month = new Date().getMonth();
+  var banner = document.getElementById('taxSeasonBanner');
+  if (banner && month >= 0 && month <= 3) {
+    banner.style.display = 'flex';
+  }
+
+  // Auto-open if there are pending docs during tax season
+  if (month >= 0 && month <= 3 && taxDocs.length > 0) {
+    var pending = taxDocs.filter(function(d) { return d.uploadStatus === 'Pending'; });
+    if (pending.length > 0) openTaxPrepSection();
+  }
 }
 
 // ========== BUY BOX TOGGLE (LIVE DEALS) ==========
@@ -22271,17 +22427,27 @@ function renderDashboard() {
     const allocationEntries = Object.entries(allocationMap).sort((a, b) => b[1] - a[1]);
     const pieColors = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
-    // Build SVG pie chart
+    // Build SVG pie chart with plan comparison
     let pieHtml = '';
     if (allocationEntries.length > 0 && totalInvested > 0) {
       let cumAngle = 0;
       let slices = '';
+
+      // Get plan allocation for comparison
+      const _piePlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+      const _pieSlots = _piePlan && (_piePlan.slots || _piePlan.buckets);
+      const _planAllocMap = {};
+      const _hasPlan = _pieSlots && _pieSlots.length > 0 && _pieSlots[0] && _pieSlots[0].asset_class;
+      if (_hasPlan) {
+        _pieSlots.forEach(function(s) { _planAllocMap[s.asset_class] = (_planAllocMap[s.asset_class] || 0) + 1; });
+      }
+      const _planTotal = _hasPlan ? _pieSlots.length : 0;
+
       let legendItems = '';
       allocationEntries.forEach(([ac, amount], i) => {
         const pct = amount / totalInvested;
         const angle = pct * 360;
         const color = pieColors[i % pieColors.length];
-        // SVG arc
         const startAngle = cumAngle * Math.PI / 180;
         const endAngle = (cumAngle + angle) * Math.PI / 180;
         const largeArc = angle > 180 ? 1 : 0;
@@ -22295,10 +22461,32 @@ function renderDashboard() {
           slices += '<path d="M80,80 L' + x1 + ',' + y1 + ' A60,60 0 ' + largeArc + ',1 ' + x2 + ',' + y2 + ' Z" fill="' + color + '"/>';
         }
         cumAngle += angle;
-        legendItems += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:10px;height:10px;border-radius:3px;background:' + color + ';flex-shrink:0;"></div><div style="font-size:12px;color:var(--text-secondary);"><span style="font-weight:700;color:var(--text-dark);">' + Math.round(pct * 100) + '%</span> ' + ac + '</div></div>';
+        const actualPct = Math.round(pct * 100);
+        const planPct = _hasPlan && _planAllocMap[ac] ? Math.round(_planAllocMap[ac] / _planTotal * 100) : null;
+        const drift = planPct !== null ? actualPct - planPct : null;
+        const driftIndicator = drift !== null && Math.abs(drift) >= 10
+          ? ' <span style="font-size:10px;color:' + (drift > 0 ? '#f59e0b' : '#3b82f6') + ';">' + (drift > 0 ? '\u2191' : '\u2193') + Math.abs(drift) + '%</span>'
+          : '';
+        legendItems += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+          + '<div style="width:10px;height:10px;border-radius:3px;background:' + color + ';flex-shrink:0;"></div>'
+          + '<div style="font-size:12px;color:var(--text-secondary);"><span style="font-weight:700;color:var(--text-dark);">' + actualPct + '%</span> ' + ac
+          + (planPct !== null ? ' <span style="font-size:10px;color:var(--text-muted);">(plan: ' + planPct + '%)</span>' : '')
+          + driftIndicator + '</div></div>';
       });
-      pieHtml = '<div class="dash-portfolio-chart" style="flex-shrink:0;width:220px;">'
-        + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Asset Allocation</div>'
+
+      // Show plan-only asset classes not yet in portfolio
+      if (_hasPlan) {
+        Object.keys(_planAllocMap).forEach(function(ac) {
+          if (allocationMap[ac]) return;
+          var planPct = Math.round(_planAllocMap[ac] / _planTotal * 100);
+          legendItems += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+            + '<div style="width:10px;height:10px;border-radius:3px;border:2px dashed var(--border);flex-shrink:0;box-sizing:border-box;"></div>'
+            + '<div style="font-size:12px;color:var(--text-muted);">0% ' + ac + ' <span style="font-size:10px;">(plan: ' + planPct + '%)</span></div></div>';
+        });
+      }
+
+      pieHtml = '<div class="dash-portfolio-chart" style="flex-shrink:0;width:240px;">'
+        + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">Allocation' + (_hasPlan ? ' vs Plan' : '') + '</div>'
         + '<svg viewBox="0 0 160 160" width="140" height="140" style="display:block;margin:0 auto 12px;">' + slices + '<circle cx="80" cy="80" r="35" fill="var(--bg-card)"/></svg>'
         + '<div class="dash-portfolio-legend">' + legendItems + '</div>'
         + '</div>';
@@ -25524,11 +25712,11 @@ fetchBuyBoxFromGHL();
       tab.classList.toggle('active', tab.dataset.page === page);
     });
     // Dashboard sub-pages highlight Dashboard tab
-    if (['buybox','portfolio','taxprep'].includes(page)) {
+    if (['buybox','portfolio'].includes(page)) {
       document.querySelector('.mobile-tab-item[data-page="dashboard"]')?.classList.add('active');
     }
     // "More" tab is active for pages not in the tab bar
-    const tabPages = ['dashboard', 'buybox', 'portfolio', 'taxprep', 'deals', 'marketintel', 'managers'];
+    const tabPages = ['dashboard', 'buybox', 'portfolio', 'deals', 'marketintel', 'managers'];
     if (!tabPages.includes(page)) {
       document.querySelector('.mobile-tab-item[data-page="more"]')?.classList.add('active');
       tabPages.forEach(p => document.querySelector(`.mobile-tab-item[data-page="${p}"]`)?.classList.remove('active'));
