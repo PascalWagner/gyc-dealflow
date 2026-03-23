@@ -26890,6 +26890,14 @@ async function viewAsUser(email, name, contactId, tier, firstName, lastName) {
   // Load target user's scoped data (clears admin's portfolio, deal stages, etc.)
   loadUserScopedData(email);
 
+  // Clear in-memory plan/buybox globals so stale admin data doesn't leak
+  window._planSlots = null;
+  window._planSlotsStale = true;
+  window._planCheckSize = 0;
+  window._planDealsPerYear = 0;
+  window._planAssets = null;
+  if (typeof buyBox !== 'undefined') buyBox = {};
+
   // Close dropdown
   document.getElementById('viewAsDropdown').style.display = 'none';
 
