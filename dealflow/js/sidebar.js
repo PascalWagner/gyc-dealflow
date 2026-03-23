@@ -311,11 +311,10 @@
     var adminEl = document.getElementById(isSPA ? 'adminNav' : 'adminNavSidebar');
     if (adminEl) adminEl.style.display = isAdmin() ? 'block' : 'none';
 
-    // Show GP nav
+    // Show GP nav (visible to all users — non-GPs see "Apply as GP" on the dashboard)
     var gpEl = document.getElementById(isSPA ? 'gpNav' : 'gpNavSidebar');
     if (gpEl) {
-      var isGP = (user && (user.gpType || user.onboardingRole === 'gp')) || isAdmin();
-      gpEl.style.display = isGP ? 'block' : 'none';
+      gpEl.style.display = 'block';
 
       // Show GP onboarding link if onboarding not complete
       var gpObLink = document.getElementById(isSPA ? 'gpOnboardingLink' : 'gpOnboardingLinkSidebar');
