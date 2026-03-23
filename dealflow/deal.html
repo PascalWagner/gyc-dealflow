@@ -4763,7 +4763,9 @@ async function renderDeal() {
   }
 
   // === Shared variables needed by multiple sections ===
-  var userTier = (typeof getUser === 'function' && getUser() && getUser().tier) || 'free';
+  var _dealUser = null;
+  try { _dealUser = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
+  var userTier = (_dealUser && _dealUser.tier) || 'free';
   var isPaidUser = userTier !== 'free';
 
   // Reusable academy gate overlay for locked sections
@@ -5743,8 +5745,8 @@ async function renderDeal() {
     var opSponsor = window._dealOperatorSponsor;
     if (!opSponsor) return;
 
-    var _bgUser = typeof getUser === 'function' ? getUser() : null;
-    var _bgTier = (_bgUser && _bgUser.tier) || 'free';
+    var _bgUser = _dealUser;
+    var _bgTier = userTier;
     var _bgIsAdmin = _bgUser && (_bgUser.isAdmin || (_bgUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_bgUser.email.toLowerCase()) >= 0));
     var _bgIsPaid = _bgTier === 'academy' || _bgTier === 'investor' || _bgTier === 'alumni' || _bgIsAdmin;
 
@@ -7329,8 +7331,8 @@ async function renderDeal() {
 
   // --- 8b. Stress Test Calculator ---
   var stressHtml = '';
-  var _stUser = typeof getUser === 'function' ? getUser() : null;
-  var _stTier = (_stUser && _stUser.tier) || 'free';
+  var _stUser = _dealUser;
+  var _stTier = userTier;
   var _stIsAdmin = _stUser && (_stUser.isAdmin || (_stUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf(_stUser.email.toLowerCase()) >= 0));
   if (!isCreditFund(deal)) {
     var stBaseIRR = deal.targetIRR || 0.15;
