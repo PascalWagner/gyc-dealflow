@@ -203,11 +203,11 @@
     if (val === -1) {
       // Custom (10+)
       document.getElementById('dpillCustom').classList.add('selected');
-      document.getElementById('customDealWrap').style.display = 'block';
+      var cwrap = document.getElementById('customDealWrap');
+      if (cwrap) cwrap.style.display = 'block';
       var inp = document.getElementById('lpDealCountInput');
-      inp.focus();
-      inp.select();
-      lpData.lpDealsCount = parseInt(inp.value) || 10;
+      if (inp) { inp.focus(); inp.select(); }
+      lpData.lpDealsCount = parseInt((inp || {}).value) || 10;
     } else {
       document.getElementById('dpill' + val).classList.add('selected');
       document.getElementById('customDealWrap').style.display = 'none';
@@ -218,8 +218,9 @@
   };
 
   window.onDealCountChange = function() {
-    var val = parseInt(document.getElementById('lpDealCountInput').value);
-    if (!isNaN(val) && val > 0) {
+    var inp = document.getElementById('lpDealCountInput');
+    var val = parseInt(inp ? inp.value : '');
+    if (!isNaN(val) && val >= 0) {
       lpData.lpDealsCount = val;
       document.getElementById('dealCountNextBtn').disabled = false;
       showDealFeedback(val);
@@ -241,52 +242,54 @@
   };
 
   // ── LP: Baseline Income (U5) — vertical card selection ──
-  window.selectBaseline = function(val) {
+  // ── LP: Baseline Income (U5) — dollar input + chips (matches wizard) ──
+  function _fmtDollar(n) { return '$' + n.toLocaleString(); }
+  function _parseDollar(s) { return parseInt(String(s).replace(/[^0-9]/g, ''), 10) || 0; }
+
+  // Init baseline input behavior
+  (function initBaselineInput() {
+    setTimeout(function() {
+      var inp = document.getElementById('baselineInput');
+      if (!inp) return;
+      lpData.baselineIncome = 0; // Default to 0
+      inp.addEventListener('input', function() {
+        var n = _parseDollar(this.value);
+        lpData.baselineIncome = n;
+        showBaselineFeedback(n);
+        // Deselect chips
+        var chips = document.querySelectorAll('#stepLpBaseline .pill-option');
+        for (var c = 0; c < chips.length; c++) chips[c].classList.remove('selected');
+      });
+      inp.addEventListener('focus', function() {
+        var n = _parseDollar(this.value);
+        this.value = n > 0 ? String(n) : '';
+      });
+      inp.addEventListener('blur', function() {
+        var n = _parseDollar(this.value);
+        this.value = _fmtDollar(n);
+        lpData.baselineIncome = n;
+      });
+    }, 100);
+  })();
+
+  window.selectBaselinePreset = function(val) {
     lpData.baselineIncome = val;
-
-    // Highlight selected card
-    var cards = document.querySelectorAll('.baseline-card');
-    for (var c = 0; c < cards.length; c++) cards[c].classList.remove('selected');
-    // Find matching card by value
-    var vals = [0, 6000, 12000, 24000, 60000, 120000];
-    var idx = vals.indexOf(val);
-    if (idx >= 0 && cards[idx]) cards[idx].classList.add('selected');
-
-    document.getElementById('customBaselineWrap').style.display = 'none';
-    document.getElementById('baselineNextBtn').disabled = false;
-    showBaselineFeedback(val);
-  };
-
-  window.showCustomBaseline = function() {
-    var cards = document.querySelectorAll('.baseline-card');
-    for (var c = 0; c < cards.length; c++) cards[c].classList.remove('selected');
-    document.getElementById('baselineCustomCard').classList.add('selected');
-    document.getElementById('customBaselineWrap').style.display = 'block';
-    var inp = document.getElementById('customBaselineInput');
-    inp.focus();
-    inp.select();
-  };
-
-  window.onCustomBaselineChange = function() {
-    var val = parseInt(document.getElementById('customBaselineInput').value) || 0;
-    lpData.baselineIncome = val;
-    document.getElementById('baselineNextBtn').disabled = false;
+    var inp = document.getElementById('baselineInput');
+    if (inp) inp.value = _fmtDollar(val);
+    // Highlight selected chip
+    var chips = document.querySelectorAll('#stepLpBaseline .pill-option');
+    var presets = [0, 12000, 25000, 50000, 100000];
+    for (var c = 0; c < chips.length; c++) chips[c].classList.toggle('selected', presets[c] === val);
     showBaselineFeedback(val);
   };
 
   function showBaselineFeedback(val) {
     var fb = document.getElementById('baselineFeedback');
-    fb.style.display = 'block';
-    var goal = lpData.goal || 'cashflow';
-    if (goal === 'cashflow') {
-      if (val === 0) fb.textContent = "Everyone starts somewhere. Let's build your first income stream.";
-      else if (val <= 24000) fb.textContent = "Nice \u2014 you're already at $" + Math.round(val / 12).toLocaleString() + "/mo. Let's figure out how to get you to your target.";
-      else fb.textContent = "You're already generating serious income. Let's optimize and diversify.";
-    } else if (goal === 'tax') {
-      fb.textContent = "Got it. We'll factor your existing passive income into your tax offset calculations.";
-    } else {
-      fb.textContent = "Got it. We'll track your total portfolio value growth from here.";
-    }
+    if (!fb) return;
+    var mo = Math.round(val / 12).toLocaleString();
+    if (val === 0) fb.textContent = "Most of our members started at $0. That\u2019s the whole point.";
+    else if (val < 25000) fb.textContent = "That\u2019s $" + mo + "/mo. Good \u2014 you\u2019ve already started. Let\u2019s accelerate it.";
+    else fb.textContent = "That\u2019s $" + mo + "/mo. Nice foundation \u2014 let\u2019s build on it.";
   }
 
   // ── LP: Completion screen ──
