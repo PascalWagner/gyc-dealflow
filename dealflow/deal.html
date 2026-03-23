@@ -5689,7 +5689,6 @@ async function renderDeal() {
     portfolioSnapshotHtml += '<div class="section"' + (!hasPortfolio && !_trackRecordFreeGated ? ' style="opacity:0.5;"' : '') + '><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><h2 class="section-title">Operator Track Record</h2>' + (hasPortfolio ? '<span style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);margin-left:auto;">' + portfolio.length + ' properties</span>' : '') + '</div>';
     if (_trackRecordFreeGated) {
       portfolioSnapshotHtml += academyGateOverlay('Unlock Operator Track Record', 'See this operator\'s full portfolio, property details, and performance history.');
-      portfolioSnapshotHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:80px;">';
     }
     portfolioSnapshotHtml += '<div class="section-body">';
 
@@ -6766,7 +6765,6 @@ async function renderDeal() {
     feeBenchHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="section-title">How This Deal Compares</span><span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span></div>';
     if (!isPaidUser && !_compIsAdmin) {
       feeBenchHtml += academyGateOverlay('Unlock Peer Comparison', 'See how this deal stacks up against ' + peers.length + ' similar deals on returns, fees, minimums, and more.');
-      feeBenchHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:120px;">';
     }
     feeBenchHtml += '<div class="section-body">';
     feeBenchHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;">';
@@ -6980,7 +6978,6 @@ async function renderDeal() {
     feeCompareHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Fees &amp; Compensation</span>' + (hasPeerComparison ? '<span style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);margin-left:auto;">vs ' + peers.length + ' ' + esc(peerLabel) + ' peers</span>' : '') + '</div>';
     if (!isPaidUser && !_compIsAdmin) {
       feeCompareHtml += academyGateOverlay('Unlock Fee Analysis', 'See how this deal\'s fees compare to market benchmarks.');
-      feeCompareHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:100px;">';
     }
     feeCompareHtml += '<div class="section-body">';
 
@@ -7132,7 +7129,6 @@ async function renderDeal() {
   ddHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
   if (!isPaidUser && !_compIsAdmin) {
     ddHtml += academyGateOverlay('Unlock Due Diligence Checklist', 'Academy members get a ' + checklist.sections.length + '-section interactive DD checklist with auto-filled answers for every deal.');
-    ddHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:180px;">';
   } else {
     // Coming Soon overlay for paid users too (feature not yet live)
     ddHtml += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;text-align:center;padding:32px 48px;background:rgba(255,255,255,0.92);border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,0.08);">';
@@ -7205,7 +7201,6 @@ async function renderDeal() {
   qaHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
   if (!isPaidUser && !_compIsAdmin) {
     qaHtml += academyGateOverlay('Unlock Investor Q&A', 'Academy members can ask questions and get answers from Pascal on any deal.');
-    qaHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">';
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">What is the redemption policy for this fund?</div>';
     qaHtml += '<div style="padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);">How are distributions calculated and paid?</div>';
     qaHtml += '<div style="padding:12px 0;font-size:13px;color:var(--text-secondary);">What happens if the fund doesn\'t hit its raise target?</div>';
@@ -7239,7 +7234,6 @@ async function renderDeal() {
     stressHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="section-title">Stress Test Calculator</span></div>';
     if (!isPaidUser && !_compIsAdmin) {
       stressHtml += academyGateOverlay('Unlock Stress Test Calculator', 'Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.');
-      stressHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;min-height:200px;">';
     }
     stressHtml += '<div class="section-body stress-test-section">';
     stressHtml += '<div class="stress-test-content">';
@@ -7334,7 +7328,6 @@ async function renderDeal() {
     stressHtml += '<div class="section-body" style="position:relative;min-height:120px;">';
     if (!isPaidUser && !_compIsAdmin) {
       stressHtml += academyGateOverlay('Unlock Stress Test Calculator', 'Academy members can stress test any deal\'s assumptions and model different scenarios.');
-      stressHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">';
     } else {
       stressHtml += comingSoonOverlay('Stress test any deal\'s assumptions and returns');
       stressHtml += '<div style="opacity:0.15;pointer-events:none;user-select:none;">';
@@ -7782,7 +7775,6 @@ async function renderDeal() {
     dealFitHtml += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div>';
     if (!isPaidUser && !_compIsAdmin) {
       dealFitHtml += academyGateOverlay('Unlock Deal Fit Summary', 'See how this deal matches your investor profile — what works, what to watch out for, and how it compares.');
-      dealFitHtml += '<div style="filter:blur(2px);opacity:0.75;pointer-events:none;user-select:none;">';
     }
     dealFitHtml += '<div class="section-body">';
 
