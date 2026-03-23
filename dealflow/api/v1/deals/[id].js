@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         management_company:management_companies (
           id, operator_name, ceo, website, linkedin_ceo, invest_clearly_profile,
           founding_year, type, asset_classes, total_investors, headquarters,
-          aum, description, booking_url
+          aum, description, booking_url, full_cycle_deals
         )
       `)
       .eq('id', id)

@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         parent_deal_id, share_class_label,
         sec_cik, date_of_first_sale, total_amount_sold, total_investors,
         management_company:management_companies (
-          id, operator_name, ceo, website, founding_year, type, asset_classes, headquarters
+          id, operator_name, ceo, website, founding_year, type, asset_classes, headquarters, full_cycle_deals
         )
       `)
       .not('investment_name', 'eq', '')
