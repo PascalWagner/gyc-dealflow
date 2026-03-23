@@ -2876,6 +2876,11 @@ body {
     width: 80px;
     height: 80px;
   }
+  /* LP Network: community section mobile */
+  #dealCommunitySection {
+    padding: 16px !important;
+    margin: 4px 0 !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -5328,20 +5333,27 @@ async function renderDeal() {
         el.innerHTML = avatarHtml + textHtml;
         el.style.display = 'flex';
 
-        // --- Social Proof Bar (below pipeline stepper) ---
-        var views = stats.views || total;
-        var spBarTotal = views + saved + vetting + invested;
-        if (spBarTotal > 2) {
-          var spBarEl = document.getElementById('dealSocialProofBar');
-          if (spBarEl) {
-            var parts = [];
-            if (views > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + views + ' views</span>');
-            if (saved > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' + saved + ' in review</span>');
-            if (vetting > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' + vetting + ' connecting</span>');
-            if (invested > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>' + invested + ' invested</span>');
-            spBarEl.innerHTML = parts.join('<span style="opacity:0.3;margin:0 2px;">\u00b7</span>');
-            spBarEl.style.display = 'flex';
+        // --- Community Section (below pipeline stepper) ---
+        var reviewing = (saved || 0) + (vetting || 0);
+        var communityEl = document.getElementById('dealCommunitySection');
+        if (communityEl && (reviewing > 0 || invested > 0)) {
+          var peopleSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+          var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+          var lines = [];
+          if (reviewing > 0) {
+            lines.push('<div style="display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">'
+              + peopleSvg + reviewing + ' LP' + (reviewing === 1 ? '' : 's') + ' ' + (reviewing === 1 ? 'is' : 'are') + ' reviewing this deal</div>');
           }
+          if (invested > 0) {
+            lines.push('<div style="display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--primary);">'
+              + checkSvg + invested + ' LP' + (invested === 1 ? '' : 's') + ' from the network ' + (invested === 1 ? 'has' : 'have') + ' invested</div>');
+          }
+          communityEl.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
+            + peopleSvg
+            + '<span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">GYC Community</span></div>'
+            + '<div style="display:flex;flex-direction:column;gap:8px;">' + lines.join('') + '</div>'
+            + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);">Your financial details are never shared.</div>';
+          communityEl.style.display = 'block';
         }
       })
       .catch(function() {});
@@ -7888,7 +7900,7 @@ async function renderDeal() {
     + complianceBannerHtml
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
-    + '<div id="dealSocialProofBar" style="display:none;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);align-items:center;gap:16px;padding:8px 0;"></div>'
+    + '<div id="dealCommunitySection" style="display:none;background:var(--bg-cream);border:1px solid var(--border-light);border-radius:var(--radius);padding:20px 24px;margin:8px 0 4px;"></div>'
     // --- Job 3: Deal terms + operator (two-column) ---
     + buyBoxHtml
     + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start;">'

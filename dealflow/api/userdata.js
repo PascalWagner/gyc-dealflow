@@ -334,7 +334,8 @@ async function handlePost(req, res, supabase, user) {
   if (type === 'profile') {
     const allowed = [
       'share_portfolio', 'full_name', 'phone', 'location',
-      'share_saved', 'share_dd', 'share_invested', 'allow_follows'
+      'share_saved', 'share_dd', 'share_invested', 'allow_follows',
+      'share_activity', 'avatar_url'
     ];
     const fields = {};
     for (const key of allowed) {
