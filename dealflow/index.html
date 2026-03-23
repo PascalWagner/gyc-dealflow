@@ -13204,6 +13204,10 @@ function navigateTo(page) {
   if (page === 'debtfunds') { navigateTo('marketintel'); setTimeout(function(){ switchMiTab('debtfunds'); }, 100); return; }
   if (page === 'taxprep') { navigateTo('portfolio'); setTimeout(function() { var ts = document.getElementById('portfolioTaxSection'); if (ts) { ts.style.display = 'block'; openTaxPrepSection(); ts.scrollIntoView({behavior:'smooth'}); } }, 300); return; }
   // Assets page is a standalone page, don't redirect
+  // Update URL hash for bookmarking / back-button support
+  if (window.location.hash.replace('#','') !== page) {
+    history.pushState(null, '', '#' + page);
+  }
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -27466,8 +27470,30 @@ if (window._isGuest) {
 // Track first activity date for "Days Active" metric
 if (!localStorage.getItem('gycFirstActivity')) { localStorage.setItem('gycFirstActivity', new Date().toISOString()); }
 
-// Track initial page load
-analyticsPageEnter('deals');
+// ========== HASH-BASED ROUTING ==========
+// Respect URL hash on initial load (e.g. index.html#dashboard)
+(function initHashRouting() {
+  var hash = window.location.hash.replace('#', '').split('?')[0];
+  // Known page IDs that should be routed via hash
+  var knownPages = ['dashboard','deals','buybox','portfolio','settings','marketintel','managers',
+    'academy','incomefund','goals','taxprep','admindash','casestudies','admin-manage','assets'];
+  // Pages with special init-time handlers below (onboarding, buybox?step=, settings?unsub) — skip here
+  var specialHashes = ['onboarding'];
+  if (hash && knownPages.indexOf(hash) !== -1 && specialHashes.indexOf(hash) === -1) {
+    // Navigate to the hashed page instead of defaulting to deals
+    setTimeout(function() { navigateTo(hash); }, 50);
+  } else if (!hash || knownPages.indexOf(hash) === -1) {
+    // Default: show deals
+    analyticsPageEnter('deals');
+  }
+  // Listen for browser back/forward navigation
+  window.addEventListener('popstate', function() {
+    var h = window.location.hash.replace('#', '').split('?')[0];
+    if (h && knownPages.indexOf(h) !== -1) {
+      navigateTo(h);
+    }
+  });
+})();
 
 // Render cashflow gap bar on initial load
 if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
@@ -27507,12 +27533,6 @@ if (window.location.pathname === '/cashflow-academy') {
 // Handle #onboarding hash from signup — send to dashboard (onboarding card handles it)
 if (window.location.hash === '#onboarding') {
   setTimeout(() => navigateTo('dashboard'), 300);
-  history.replaceState(null, '', window.location.pathname);
-}
-
-// Handle #academy from deal page gate CTAs
-if (window.location.hash === '#academy') {
-  setTimeout(() => navigateTo('academy'), 300);
   history.replaceState(null, '', window.location.pathname);
 }
 
@@ -27591,8 +27611,9 @@ fetchBuyBoxFromGHL();
       tabPages.forEach(p => document.querySelector(`.mobile-tab-item[data-page="${p}"]`)?.classList.remove('active'));
     }
   }
-  // Set initial state
-  updateMobileTabBar('deals');
+  // Set initial state (respect hash if present)
+  var _initPage = window.location.hash.replace('#','').split('?')[0] || 'deals';
+  updateMobileTabBar(_initPage);
 
   // iOS / mobile: inject collapsible filter toggles
   const isMobileView = document.documentElement.classList.contains('cap-ios') || window.innerWidth <= 767;
