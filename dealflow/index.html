@@ -16913,6 +16913,23 @@ let portfolioChartInstance = null;
 function savePortfolio() {
   localStorage.setItem('gycPortfolio', JSON.stringify(portfolioInvestments));
   portfolioInvestments.forEach(item => syncPortfolioItem(item));
+  // Sync: ensure any portfolio entry with a dealId has that deal marked as invested
+  syncPortfolioDealStages();
+}
+
+function syncPortfolioDealStages() {
+  var stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+  var changed = false;
+  portfolioInvestments.forEach(function(inv) {
+    if (inv.dealId && stages[inv.dealId] !== 'invested') {
+      stages[inv.dealId] = 'invested';
+      changed = true;
+    }
+  });
+  if (changed) {
+    localStorage.setItem('gycDealStages', JSON.stringify(stages));
+    if (typeof syncDealStages === 'function') syncDealStages(stages);
+  }
 }
 
 // ========== ASSETS PAGE ==========
