@@ -15,13 +15,37 @@ export default async function handler(req, res) {
   try {
     const supabase = getAdminClient();
 
-    // 1. All user profiles with key fields
-    const { data: profiles, error: profErr } = await supabase
+    // 1. All user profiles — try full columns, fall back to basic if migration 031 not applied
+    let profiles;
+    const fullSelect = 'id, email, created_at, buy_box_complete, funnel_status, deals_viewed_count, deals_saved_count, sessions_count, last_activity_date, tier, is_admin';
+    const basicSelect = 'id, email, created_at, tier, is_admin';
+
+    const { data: fullData, error: fullErr } = await supabase
       .from('user_profiles')
-      .select('id, email, created_at, buy_box_complete, funnel_status, deals_viewed_count, deals_saved_count, sessions_count, last_activity_date, tier, is_admin')
+      .select(fullSelect)
       .limit(5000);
 
-    if (profErr) throw profErr;
+    if (fullErr && fullErr.message && fullErr.message.includes('does not exist')) {
+      // Activity columns not yet added — use basic query + derive from events
+      const { data: basicData, error: basicErr } = await supabase
+        .from('user_profiles')
+        .select(basicSelect)
+        .limit(5000);
+      if (basicErr) throw basicErr;
+      profiles = (basicData || []).map(p => ({
+        ...p,
+        buy_box_complete: false,
+        funnel_status: 'new',
+        deals_viewed_count: 0,
+        deals_saved_count: 0,
+        sessions_count: 0,
+        last_activity_date: null
+      }));
+    } else if (fullErr) {
+      throw fullErr;
+    } else {
+      profiles = fullData;
+    }
 
     // 2. Key events with timestamps for time-to-value calculations
     const { data: events, error: evtErr } = await supabase
@@ -39,6 +63,27 @@ export default async function handler(req, res) {
       if (!firstEvent[evt.user_id]) firstEvent[evt.user_id] = {};
       if (!firstEvent[evt.user_id][evt.event]) {
         firstEvent[evt.user_id][evt.event] = evt.created_at;
+      }
+    }
+
+    // Enrich profiles from events if activity columns are missing
+    if (fullErr) {
+      // Count events per user to derive activity metrics
+      const eventCounts = {}; // { userId: { deal_viewed: N, deal_saved: N, ... } }
+      for (const evt of (events || [])) {
+        if (!eventCounts[evt.user_id]) eventCounts[evt.user_id] = {};
+        eventCounts[evt.user_id][evt.event] = (eventCounts[evt.user_id][evt.event] || 0) + 1;
+      }
+      for (const p of profiles) {
+        const counts = eventCounts[p.id] || {};
+        p.buy_box_complete = (counts.wizard_complete || 0) > 0;
+        p.deals_viewed_count = counts.deal_viewed || 0;
+        p.deals_saved_count = counts.deal_saved || 0;
+        p.sessions_count = counts.session_start || 0;
+        if (counts.call_booked) p.funnel_status = 'call-booked';
+        else if ((counts.deal_saved || 0) >= 3) p.funnel_status = 'high-intent';
+        else if (counts.wizard_complete) p.funnel_status = 'qualified';
+        else p.funnel_status = 'new';
       }
     }
 
