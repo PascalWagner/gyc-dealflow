@@ -36,8 +36,10 @@ CREATE TABLE IF NOT EXISTS gp_agreements (
   signatory_email       TEXT NOT NULL,
   signatory_title       TEXT,              -- e.g. "Managing Partner"
 
-  -- Full text of the agreement at time of signing (snapshot)
-  agreement_text_hash   TEXT,              -- SHA-256 of the agreement text shown
+  -- Full text of the agreement at time of signing (snapshot for legal reproduction)
+  agreement_text_hash   TEXT,              -- hash of the agreement text shown
+  agreement_text        TEXT,              -- complete agreement text as shown to the signer
+  agreement_pdf_url     TEXT,              -- URL to signed PDF receipt in Supabase Storage
 
   created_at            TIMESTAMPTZ DEFAULT NOW()
 );

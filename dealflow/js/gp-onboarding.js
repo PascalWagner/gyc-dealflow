@@ -350,7 +350,7 @@
     var btn = document.getElementById('agreementNextBtn');
     btn.disabled = true; btn.textContent = 'Saving...';
 
-    // Hash the agreement text for the record
+    // Capture the full agreement text for the legal record
     var agreementText = document.getElementById('agreementText').innerText;
     var hash = simpleHash(agreementText);
 
@@ -366,6 +366,7 @@
         acceptedListing: state.consents.listing,
         acceptedDataAccuracy: state.consents.accuracy,
         acceptedRecording: state.consents.recording,
+        agreementText: agreementText,
         agreementTextHash: hash
       })
     })
