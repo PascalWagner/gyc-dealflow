@@ -437,12 +437,11 @@
       if (page === 'buybox') {
         const bbUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
         assertEqual(bbUser.tier, 'academy', 'buybox: gycUser tier is academy');
+        // The free gate contains "Join Academy" CTA text — this is the definitive marker
         const reportEl = document.getElementById('reportContent');
         if (reportEl) {
-          // The free gate has both backdrop-filter blur AND "Join Academy" link
-          const hasBlurGate = reportEl.querySelector('[style*="backdrop-filter"]');
-          const hasJoinCTA = reportEl.textContent.includes('Join Academy');
-          assert(!(hasBlurGate && hasJoinCTA), 'buybox: NO free gate for academy user');
+          assert(!reportEl.textContent.includes('Join Academy'),
+            'buybox: NO free gate for academy user');
         }
       }
 
