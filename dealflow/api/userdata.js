@@ -356,9 +356,15 @@ async function handlePost(req, res, supabase, user) {
       .from('user_profiles')
       .update({ auto_renew: !!data.autoRenew })
       .eq('id', user.id)
-      .select()
+      .select('auto_renew, email')
       .single();
     if (error) throw error;
+
+    // Sync to GHL as a tag
+    syncAutoRenewToGhl(updated.email || user.email, !!data.autoRenew).catch(e =>
+      console.warn('GHL auto-renew sync failed:', e.message)
+    );
+
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
   }
 
@@ -563,6 +569,42 @@ async function syncNotifFreqToGhl(email, freq) {
   }
 
   // Add the correct tag
+  if (!existingTags.includes(addTag)) {
+    await ghlFetch(
+      `https://services.leadconnectorhq.com/contacts/${contact.id}/tags`,
+      { method: 'POST', body: JSON.stringify({ tags: [addTag] }) }
+    );
+  }
+}
+
+// Sync auto-renew preference to GHL as tags
+async function syncAutoRenewToGhl(email, autoRenew) {
+  if (!email) return;
+
+  const TAG_ON = 'Auto-Renew - On';
+  const TAG_OFF = 'Auto-Renew - Off';
+
+  const searchResp = await ghlFetch(
+    `https://services.leadconnectorhq.com/contacts/search/duplicate?email=${encodeURIComponent(email)}&locationId=${process.env.GHL_LOCATION_ID || process.env.GHL_LOCATION}`,
+    { method: 'GET' }
+  );
+
+  if (!searchResp || !searchResp.ok) return;
+  const searchData = await searchResp.json();
+  const contact = searchData.contact;
+  if (!contact?.id) return;
+
+  const existingTags = contact.tags || [];
+  const addTag = autoRenew ? TAG_ON : TAG_OFF;
+  const removeTag = autoRenew ? TAG_OFF : TAG_ON;
+
+  if (existingTags.includes(removeTag)) {
+    await ghlFetch(
+      `https://services.leadconnectorhq.com/contacts/${contact.id}/tags`,
+      { method: 'DELETE', body: JSON.stringify({ tags: [removeTag] }) }
+    ).catch(() => {});
+  }
+
   if (!existingTags.includes(addTag)) {
     await ghlFetch(
       `https://services.leadconnectorhq.com/contacts/${contact.id}/tags`,

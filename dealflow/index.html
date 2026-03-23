@@ -16195,32 +16195,12 @@ function toggleAutoRenew(checked) {
 }
 
 function openBillingPortal() {
-  // Stripe Customer Portal integration — opens portal for card management
+  // Opens GHL payment/billing page for card management
+  var GHL_BILLING_URL = 'https://growyourcashflow.io/billing';
   var user = getUser();
-  if (!user || !user.token) return;
-  var btn = event.target;
-  btn.textContent = 'Loading...';
-  btn.disabled = true;
-  fetch('/api/billing', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
-    body: JSON.stringify({ action: 'portal' })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.url) {
-      window.open(data.url, '_blank');
-    } else {
-      alert('Billing portal is not yet configured. Please contact support.');
-    }
-    btn.textContent = user.cardLast4 ? 'Update' : 'Add Card';
-    btn.disabled = false;
-  })
-  .catch(function() {
-    alert('Billing portal is not yet configured. Please contact support.');
-    btn.textContent = user.cardLast4 ? 'Update' : 'Add Card';
-    btn.disabled = false;
-  });
+  if (!user) return;
+  var url = GHL_BILLING_URL + (GHL_BILLING_URL.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(user.email || '');
+  window.open(url, '_blank');
 }
 
 async function handleSubscribe(tier, price) {
