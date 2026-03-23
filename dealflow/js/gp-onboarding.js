@@ -194,38 +194,28 @@
     setTimeout(function() { goToLpStep('stepLpDeals'); }, 350);
   };
 
-  // ── LP: Deal Count (U4) — pill-card selection ──
-  window.selectDealPill = function(val) {
-    // Deselect all
-    var pills = document.querySelectorAll('.deal-pill');
-    for (var p = 0; p < pills.length; p++) pills[p].classList.remove('selected');
+  // ── LP: Deal Count (U4) — simple number input ──
+  lpData.lpDealsCount = 0; // Default to 0
 
-    if (val === -1) {
-      // Custom (10+)
-      document.getElementById('dpillCustom').classList.add('selected');
-      var cwrap = document.getElementById('customDealWrap');
-      if (cwrap) cwrap.style.display = 'block';
-      var inp = document.getElementById('lpDealCountInput');
-      if (inp) { inp.focus(); inp.select(); }
-      lpData.lpDealsCount = parseInt((inp || {}).value) || 10;
-    } else {
-      document.getElementById('dpill' + val).classList.add('selected');
-      document.getElementById('customDealWrap').style.display = 'none';
-      lpData.lpDealsCount = val;
-    }
-    document.getElementById('dealCountNextBtn').disabled = false;
-    showDealFeedback(val === -1 ? (parseInt(document.getElementById('lpDealCountInput').value) || 10) : val);
-  };
-
-  window.onDealCountChange = function() {
+  window.onDealCountInput = function() {
     var inp = document.getElementById('lpDealCountInput');
-    var val = parseInt(inp ? inp.value : '');
-    if (!isNaN(val) && val >= 0) {
-      lpData.lpDealsCount = val;
-      document.getElementById('dealCountNextBtn').disabled = false;
-      showDealFeedback(val);
-    }
+    if (!inp) return;
+    // Strip non-numeric
+    var clean = inp.value.replace(/[^0-9]/g, '');
+    if (clean !== inp.value) inp.value = clean;
+    var val = parseInt(clean) || 0;
+    lpData.lpDealsCount = val;
+    showDealFeedback(val);
   };
+
+  // Focus behavior: select all on focus, format on blur
+  (function initDealCountInput() {
+    setTimeout(function() {
+      var inp = document.getElementById('lpDealCountInput');
+      if (!inp) return;
+      inp.addEventListener('focus', function() { this.select(); });
+    }, 100);
+  })();
 
   function showDealFeedback(val) {
     var fb = document.getElementById('dealCountFeedback');

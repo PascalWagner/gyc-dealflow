@@ -1342,7 +1342,7 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== LP STEP: Deal Count (U4) — card grid ===== -->
+    <!-- ===== LP STEP: Deal Count (U4) — number input ===== -->
     <div class="step" id="stepLpDeals">
       <div class="step-header">
         <div class="lp-progress-dots"><div class="lp-dot done"></div><div class="lp-dot active"></div><div class="lp-dot"></div></div>
@@ -1350,37 +1350,20 @@ select.form-input { cursor: pointer; appearance: auto; }
         <div class="step-subtitle">Syndications, private funds, real estate deals &mdash; anything outside stocks, 401k, or your home.</div>
       </div>
       <div class="step-body">
-        <div class="deal-pill-grid">
-          <div class="deal-pill" onclick="selectDealPill(0)" id="dpill0">
-            <div class="deal-pill-num">0</div>
-            <div class="deal-pill-label">None yet</div>
-          </div>
-          <div class="deal-pill" onclick="selectDealPill(2)" id="dpill2">
-            <div class="deal-pill-num">1&ndash;3</div>
-            <div class="deal-pill-label">Getting started</div>
-          </div>
-          <div class="deal-pill" onclick="selectDealPill(7)" id="dpill7">
-            <div class="deal-pill-num">4&ndash;10</div>
-            <div class="deal-pill-label">Building a portfolio</div>
-          </div>
-          <div class="deal-pill" onclick="selectDealPill(-1)" id="dpillCustom">
-            <div class="deal-pill-num">10+</div>
-            <div class="deal-pill-label">Seasoned investor</div>
-          </div>
+        <div style="max-width:400px;margin:0 auto;text-align:center;">
+          <input type="text" id="lpDealCountInput" value="0" inputmode="numeric" autocomplete="off"
+            style="font-family:var(--font-headline);font-size:48px;color:var(--text-dark);border:none;background:transparent;text-align:center;width:100%;outline:none;letter-spacing:-1px;"
+            oninput="onDealCountInput()">
+          <div style="font-family:var(--font-ui);font-size:14px;color:var(--text-muted);margin-bottom:20px;">deals</div>
+          <div id="dealCountFeedback" style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);min-height:44px;">Everyone starts somewhere. We'll walk you through everything.</div>
         </div>
-        <div id="customDealWrap" style="display:none;text-align:center;margin-bottom:16px;">
-          <input type="number" id="lpDealCountInput" min="10" max="999" placeholder="How many?"
-            style="width:120px;text-align:center;font-family:var(--font-headline);font-size:28px;color:var(--text-dark);border:2px solid var(--primary);border-radius:var(--radius);padding:10px 8px;background:var(--bg-card);outline:none;"
-            oninput="onDealCountChange()">
-        </div>
-        <div id="dealCountFeedback" style="text-align:center;font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);display:none;"></div>
       </div>
       <div class="step-footer">
         <button class="btn-secondary" onclick="goToLpStep('stepLpGoal', true)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
-        <button class="btn-primary" id="dealCountNextBtn" onclick="saveDealCount()" disabled>
+        <button class="btn-primary" id="dealCountNextBtn" onclick="saveDealCount()">
           Next
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
