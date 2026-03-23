@@ -1477,12 +1477,14 @@ html.dark .credit-card-hero {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.15);
 }
-.credit-card-hero .credit-badge.audit-yes {
-  background: rgba(81,190,123,0.2);
+.credit-card-hero .credit-badge.audit-yes,
+.equity-card-hero .credit-badge.audit-yes {
+  background: rgba(81,190,123,0.25);
   color: #7DEFA5;
 }
-.credit-card-hero .credit-badge.audit-no {
-  background: rgba(207,122,48,0.2);
+.credit-card-hero .credit-badge.audit-no,
+.equity-card-hero .credit-badge.audit-no {
+  background: rgba(207,122,48,0.25);
   color: #F5B87A;
 }
 .credit-chart-container {
@@ -11699,8 +11701,10 @@ function renderCard(deal) {
         <div class="equity-hero-badges">
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
-          ${deal.strategy && deal.strategy !== 'Value-Add' ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
-                    ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
+          ${deal.strategy ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
+          ${deal.financials === 'Audited' ? '<span class="credit-badge audit-yes">Audited</span>' : deal.financials === 'Unaudited' ? '<span class="credit-badge audit-no">Unaudited</span>' : ''}
+          ${deal.pctFunded >= 70 && deal.pctFunded < 100 ? `<span class="credit-badge" style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;">Almost Full &mdash; ${deal.pctFunded}%</span>` : ''}
+          ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
           ${renderFreshnessBadge(deal)}
           ${renderSearchStageBadge(deal)}
         </div>
