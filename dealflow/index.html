@@ -23022,7 +23022,49 @@ function renderDashboard() {
       blueprintHtml = thesisHtml + pathHtml;
     }
 
-    var sections = heroHtml + coachingHtml + actionItemsHtml + incomeGapHtml + ddHistoryHtml;
+    // Compact portfolio snapshot (pie + stats, no table)
+    var portfolioSnapHtml = '';
+    if (portfolio.length > 0) {
+      // Build mini pie
+      var _snapAllocMap = {};
+      portfolio.forEach(function(p) { var ac = p.assetClass || 'Other'; _snapAllocMap[ac] = (_snapAllocMap[ac] || 0) + (parseFloat(p.amountInvested) || 0); });
+      var _snapEntries = Object.entries(_snapAllocMap).sort(function(a, b) { return b[1] - a[1]; });
+      var _snapColors = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+      var _snapSlices = '', _snapCum = 0, _snapLegend = '';
+      _snapEntries.forEach(function(e, i) {
+        var pct = e[1] / totalInvested;
+        var angle = pct * 360;
+        var color = _snapColors[i % _snapColors.length];
+        var s1 = _snapCum * Math.PI / 180, s2 = (_snapCum + angle) * Math.PI / 180;
+        var la = angle > 180 ? 1 : 0;
+        if (_snapEntries.length === 1) { _snapSlices += '<circle cx="50" cy="50" r="40" fill="' + color + '"/>'; }
+        else { _snapSlices += '<path d="M50,50 L' + (50 + 40 * Math.cos(s1)) + ',' + (50 + 40 * Math.sin(s1)) + ' A40,40 0 ' + la + ',1 ' + (50 + 40 * Math.cos(s2)) + ',' + (50 + 40 * Math.sin(s2)) + ' Z" fill="' + color + '"/>'; }
+        _snapCum += angle;
+        _snapLegend += '<div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:2px;background:' + color + ';"></div><span style="font-size:11px;color:var(--text-secondary);"><strong>' + Math.round(pct * 100) + '%</strong> ' + e[0] + '</span></div>';
+      });
+
+      portfolioSnapHtml = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        + '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Portfolio Snapshot</div>'
+        + '<button onclick="navigateTo(\'portfolio\')" style="background:none;border:none;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;">View Full Portfolio &rarr;</button>'
+        + '</div>'
+        + '<div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">'
+        // Stats
+        + '<div style="display:flex;gap:20px;flex:1;min-width:240px;">'
+        + '<div><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px;">Invested</div><div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);">$' + (totalInvested >= 1000000 ? (totalInvested / 1000000).toFixed(1) + 'M' : totalInvested.toLocaleString()) + '</div></div>'
+        + '<div><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px;">Active</div><div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);">' + activeInvestments + '</div></div>'
+        + '<div><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:2px;">Distributions</div><div style="font-family:var(--font-headline);font-size:20px;color:var(--primary);">$' + totalDistributions.toLocaleString() + '</div></div>'
+        + '</div>'
+        // Mini pie + legend
+        + '<div style="display:flex;align-items:center;gap:14px;flex-shrink:0;">'
+        + '<svg viewBox="0 0 100 100" width="72" height="72">' + _snapSlices + '<circle cx="50" cy="50" r="22" fill="var(--bg-card)"/></svg>'
+        + '<div style="display:flex;flex-direction:column;gap:3px;">' + _snapLegend + '</div>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+    }
+
+    var sections = heroHtml + coachingHtml + actionItemsHtml + portfolioSnapHtml + incomeGapHtml + momentumRow + ddHistoryHtml;
     container.innerHTML = sections;
   }
 }
