@@ -3986,7 +3986,7 @@ function loadStagesFromDb(dealId) {
 function updateJourneyUI(dealId, stage) {
   // Map legacy stage names to new names
   stage = mapStageName(stage);
-  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'diligence': 3, 'decision': 4, 'invested': 5 };
+  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 1, 'diligence': 2, 'decision': 3, 'invested': 4 };
   var idx = stageOrder[stage] || 0;
 
   // Update journey bar steps
@@ -4018,12 +4018,12 @@ function updateStickyBar(dealId, stage) {
   var stickyBar = document.querySelector('.sticky-action-bar');
   if (!stickyBar) return;
 
-  var passBtn = '<button class="btn-pass" onclick="setJourneyStage(\'' + dealId + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Not Interested</button>';
+  var passBtn = '<button class="btn-pass" onclick="setJourneyStage(\'' + dealId + '\', \'passed\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Skip</button>';
   var advHtml = '';
 
   if (stage === 'browse' || !stage) {
     advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'saved\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save Deal</button>';
-  } else if (stage === 'saved') {
+  } else if (stage === 'saved' || stage === 'vetting') {
     if (!hasDeckBeenViewed(dealId)) {
       // Deck not viewed — prompt to view deck
       var deckUrl = '';
@@ -4032,17 +4032,15 @@ function updateStickyBar(dealId, stage) {
       if (deckUrl) {
         advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="trackDeckView(\'' + dealId + '\');window.open(\'' + deckUrl.replace(/'/g, "\\'") + '\',\'_blank\')">View Investment Deck \u2192</button>';
       } else {
-        advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'vetting\')">Start Vetting \u2192</button>';
+        advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')">Ready to Connect \u2192</button>';
       }
     } else {
-      advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'vetting\')">Start Vetting \u2192</button>';
+      advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')">Ready to Connect \u2192</button>';
     }
-  } else if (stage === 'vetting') {
-    advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')">Start Due Diligence \u2192</button>';
   } else if (stage === 'diligence') {
-    advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'decision\')">Make Decision \u2192</button>';
+    advHtml = passBtn + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'decision\')">Decide \u2192</button>';
   } else if (stage === 'decision') {
-    advHtml = '<button class="btn-pass" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>Back to DD</button>'
+    advHtml = '<button class="btn-pass" onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>Back to Connect</button>'
       + passBtn
       + '<button class="btn-advance" id="stickyAdvanceBtn" onclick="setJourneyStage(\'' + dealId + '\', \'invested\')">I\'m Investing \u2192</button>';
   } else if (stage === 'invested') {
@@ -4068,7 +4066,7 @@ function renderDeckViewedPrompt(dealId, stage) {
     + '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">You\'ve reviewed the deck.</span>'
     + '<span style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-left:4px;">Interested in this deal?</span>'
     + '</div>'
-    + '<button onclick="setJourneyStage(\'' + dealId + '\', \'vetting\')" style="padding:8px 20px;border:none;background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;">Start Vetting \u2192</button>'
+    + '<button onclick="setJourneyStage(\'' + dealId + '\', \'diligence\')" style="padding:8px 20px;border:none;background:var(--primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;">Ready to Connect \u2192</button>'
     + '</div>';
 
   // Insert after the pipeline stepper
@@ -4745,14 +4743,13 @@ async function renderDeal() {
 
   var currentStage = getDealStage(deal.id);
   var stages = [
-    { key: 'browse', label: 'Browse', num: '1' },
-    { key: 'saved', label: 'Saved', num: '2' },
-    { key: 'vetting', label: 'Vetting', num: '3' },
-    { key: 'diligence', label: 'Due Diligence', num: '4' },
-    { key: 'decision', label: 'Decision', num: '5' },
-    { key: 'invested', label: 'Invested', num: '6' }
+    { key: 'browse', label: 'Filter', num: '1' },
+    { key: 'saved', label: 'Review', num: '2' },
+    { key: 'diligence', label: 'Connect', num: '3' },
+    { key: 'decision', label: 'Decide', num: '4' },
+    { key: 'invested', label: 'Invested', num: '5' }
   ];
-  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 2, 'diligence': 3, 'decision': 4, 'invested': 5 };
+  var stageOrder = { 'browse': 0, 'saved': 1, 'vetting': 1, 'diligence': 2, 'decision': 3, 'invested': 4 };
   var currentIdx = currentStage === 'passed' ? -1 : (stageOrder[currentStage] || 0);
 
   // === Build each section into its own variable ===
@@ -5323,7 +5320,7 @@ async function renderDeal() {
         var counterParts = [];
         if (total > 0) counterParts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + total + ' watching</span>');
         var ddCount = (vetting || 0) + (invested || 0);
-        if (ddCount > 0) counterParts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' + ddCount + ' in DD</span>');
+        if (ddCount > 0) counterParts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' + ddCount + ' connecting</span>');
         if (counterParts.length > 0) {
           textHtml += '<div style="display:flex;gap:12px;margin-top:4px;font-size:11px;color:rgba(255,255,255,0.45);">' + counterParts.join('<span style="opacity:0.4;">·</span>') + '</div>';
         }
@@ -5339,8 +5336,8 @@ async function renderDeal() {
           if (spBarEl) {
             var parts = [];
             if (views > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' + views + ' views</span>');
-            if (saved > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' + saved + ' saved</span>');
-            if (vetting > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' + vetting + ' vetting</span>');
+            if (saved > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' + saved + ' in review</span>');
+            if (vetting > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' + vetting + ' connecting</span>');
             if (invested > 0) parts.push('<span style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>' + invested + ' invested</span>');
             spBarEl.innerHTML = parts.join('<span style="opacity:0.3;margin:0 2px;">\u00b7</span>');
             spBarEl.style.display = 'flex';
@@ -7420,9 +7417,9 @@ async function renderDeal() {
     stressHtml += '</div></div>';
   }
 
-  // --- 9. Vetting Pipeline ---
+  // --- 9. Pipeline ---
   var pipelineHtml = '';
-  pipelineHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px;">Your Vetting Pipeline</div>';
+  pipelineHtml += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px;">Your Pipeline</div>';
   pipelineHtml += '<div class="journey-bar" id="journeyBar">';
   for (var si = 0; si < stages.length; si++) {
     if (si > 0) pipelineHtml += '<div class="journey-connector' + (si <= currentIdx ? ' done' : '') + '"></div>';
@@ -7438,7 +7435,7 @@ async function renderDeal() {
   pipelineHtml += '<div class="journey-connector' + (isPassed ? ' passed' : '') + '"></div>';
   pipelineHtml += '<div class="journey-step' + (isPassed ? ' passed' : '') + '" data-stage="passed" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'passed\')" style="cursor:pointer;">';
   pipelineHtml += '<div class="step-dot">' + (isPassed ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' : '\u2715') + '</div>';
-  pipelineHtml += 'Not Interested</div>';
+  pipelineHtml += 'Skipped</div>';
   pipelineHtml += '</div>';
 
   // --- GP Insights Panel (admin / sponsor only) ---
@@ -7482,12 +7479,8 @@ async function renderDeal() {
   var primaryCTA = '';
   if (currentStage === 'browse' || !currentStage) {
     primaryCTA = '<button class="btn-action btn-primary" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'saved\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save This Deal</button>';
-  } else if (currentStage === 'saved') {
-    primaryCTA = '<button class="btn-action btn-primary" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'vetting\');setTimeout(function(){var dd=document.querySelector(\'.dd-accordion\');if(dd)dd.scrollIntoView({behavior:\'smooth\'});},300)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Start Due Diligence</button>';
-  } else if (currentStage === 'vetting') {
-    primaryCTA = deal.deckUrl
-      ? '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="btn-action btn-primary" style="text-decoration:none;" onclick="trackDeckView(\'' + escAttr(deal.id) + '\')">' + deckSvg + 'View Deal Deck</a>'
-      : '<button class="btn-action btn-primary" style="opacity:0.4;cursor:default;" disabled>' + deckSvg + 'View Deal Deck</button>';
+  } else if (currentStage === 'saved' || currentStage === 'vetting') {
+    primaryCTA = '<button class="btn-action btn-primary" onclick="setJourneyStage(\'' + escAttr(deal.id) + '\', \'diligence\');setTimeout(function(){var dd=document.querySelector(\'.dd-accordion\');if(dd)dd.scrollIntoView({behavior:\'smooth\'});},300)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Ready to Connect \u2192</button>';
   } else {
     primaryCTA = '<button class="btn-action btn-primary" onclick="requestIntroduction(\'' + escAttr(deal.managementCompany || '') + '\', \'' + escAttr(deal.ceo || '') + '\', \'' + escAttr(deal.investmentName || '') + '\', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Get Introduced</button>';
   }
@@ -7587,8 +7580,8 @@ async function renderDeal() {
     function getStageLabel(d) {
       var stage = typeof getDealStage === 'function' ? getDealStage(d.id) : null;
       if (!stage || stage === 'browse') return '';
-      var labels = { saved: 'SAVED', vetting: 'VETTING', diligence: 'IN DD', decision: 'DECISION', invested: 'INVESTED', passed: 'PASSED' };
-      var colors = { saved: '#3b82f6', vetting: '#f59e0b', diligence: '#f59e0b', decision: '#22c55e', invested: '#22c55e', passed: '#6b7280' };
+      var labels = { saved: 'REVIEW', vetting: 'REVIEW', diligence: 'CONNECT', decision: 'DECIDE', invested: 'INVESTED', passed: 'SKIPPED' };
+      var colors = { saved: '#3b82f6', vetting: '#3b82f6', diligence: '#f59e0b', decision: '#22c55e', invested: '#22c55e', passed: '#6b7280' };
       return '<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:' + (colors[stage] || '#6b7280') + ';color:#fff;margin-top:2px;">' + (labels[stage] || '') + '</span>';
     }
 
