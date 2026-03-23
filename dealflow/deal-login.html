@@ -543,6 +543,20 @@ const _supa = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udHpxeXVmbXR5cGZqcHVzZmxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NzU2NzksImV4cCI6MjA4OTU1MTY3OX0.pm6TDqZT37942PrVP0NQxtMiuucPuEicE32qVDebCZ4'
 );
 
+// Return URL helper — redirects back to the page the user was browsing
+function getReturnUrl() {
+  var params = new URLSearchParams(window.location.search);
+  var ret = params.get('return');
+  if (ret) {
+    try {
+      var url = decodeURIComponent(ret);
+      // Only allow same-origin redirects
+      if (url.startsWith('/') || url.startsWith(window.location.origin)) return url;
+    } catch(e) {}
+  }
+  return 'index.html';
+}
+
 // Handle Supabase Auth callback (magic link redirect with #access_token=...)
 (async function handleAuthCallback() {
   const hash = window.location.hash;
@@ -564,13 +578,13 @@ const _supa = window.supabase.createClient(
           const d = await resp.json().catch(() => ({}));
           if (d.success) {
             saveUser(d, email);
-            window.location.href = 'index.html';
+            window.location.href = getReturnUrl();
             return;
           }
         }
         // Fallback
         saveUser({}, email);
-        window.location.href = 'index.html';
+        window.location.href = getReturnUrl();
         return;
       }
     }
@@ -616,7 +630,7 @@ const _supa = window.supabase.createClient(
       gpOnboardingComplete: d.gpOnboardingComplete || false,
       loggedInAt: new Date().toISOString()
     }));
-    window.location.href = 'index.html';
+    window.location.href = getReturnUrl();
   } catch (e) {
     console.error('[Auth] Callback exception:', e);
     document.getElementById('verifyingState').classList.remove('show');
@@ -655,7 +669,7 @@ async function handleSignIn() {
       id: null, token: Date.now().toString(36),
       tier: 'academy', loggedInAt: new Date().toISOString()
     }));
-    window.location.href = 'index.html';
+    window.location.href = getReturnUrl();
     return;
   }
 
@@ -682,7 +696,7 @@ async function handleSignIn() {
           onboardingRole: lookupResp.onboardingRole || null,
           loggedInAt: new Date().toISOString()
         }));
-        window.location.href = 'index.html';
+        window.location.href = getReturnUrl();
         return;
       }
       const session = data.session;
@@ -703,7 +717,7 @@ async function handleSignIn() {
         gpOnboardingComplete: lookupResp.gpOnboardingComplete || false,
         loggedInAt: new Date().toISOString()
       }));
-      window.location.href = 'index.html';
+      window.location.href = getReturnUrl();
     } catch (e) {
       console.error('Quick login error:', e);
       btn2.classList.remove('btn-loading'); btn2.textContent = 'Send Login Link';
@@ -884,12 +898,12 @@ if (autoLogin) {
     id: null, token: Date.now().toString(36),
     tier: 'academy', loggedInAt: new Date().toISOString()
   }));
-  window.location.href = 'index.html';
+  window.location.href = getReturnUrl();
 }
 
 const user = JSON.parse(localStorage.getItem('gycUser') || 'null');
 if (user && user.token && !window.location.hash.includes('access_token') && !new URLSearchParams(window.location.search).get('magic')) {
-  window.location.href = 'index.html';
+  window.location.href = getReturnUrl();
 }
 </script>
 </body>

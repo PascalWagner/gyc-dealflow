@@ -9900,6 +9900,7 @@ let dealStages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
 function saveDealStages() { localStorage.setItem('gycDealStages', JSON.stringify(dealStages)); syncDealStages(dealStages); }
 function getDealStage(id) { return _migrateStage(dealStages[id] || 'browse'); }
 function setDealStage(id, stage) {
+  if (window._isGuest) { requireAuth('save deals and track your pipeline'); return; }
   stage = _migrateStage(stage);
   if (stage === 'browse') { delete dealStages[id]; }
   else { dealStages[id] = stage; }
@@ -12354,6 +12355,13 @@ document.addEventListener('keydown', e => {
 
 // ========== PAGE NAVIGATION ==========
 function navigateTo(page) {
+  // Gate pages that require login for guests
+  var _gatedPages = ['dashboard', 'buybox', 'portfolio', 'settings', 'subscription', 'goals', 'taxprep', 'admindash', 'casestudies', 'admin-manage'];
+  if (window._isGuest && _gatedPages.indexOf(page) !== -1) {
+    var _pageLabels = { dashboard: 'view your dashboard', buybox: 'build your investment plan', portfolio: 'track your portfolio', settings: 'manage your settings', subscription: 'manage your subscription', goals: 'set your goals', taxprep: 'access tax prep tools' };
+    requireAuth(_pageLabels[page] || 'access this page');
+    return;
+  }
   // Redirect legacy page names to admin dashboard
   if (page === 'schema' || page === 'devnotes' || page === 'network-moat' || page === 'transactions' || page === 'growth') { navigateTo('admindash'); return; }
   if (page === 'outreach') { navigateTo('admin-manage'); setTimeout(function() { adminShowTab('operators', document.querySelector('.admin-seg:nth-child(2)')); _adminOperatorView = 'outreach'; adminSwitchOperatorView('outreach'); }, 100); return; }
@@ -12704,28 +12712,67 @@ function getUser() {
   return JSON.parse(localStorage.getItem('gycUser') || 'null');
 }
 
-// ========== AUTH GATE ==========
-// Try to refresh an expired token before redirecting to login
+// ========== AUTH GATE (soft — guests can browse deals, actions gated) ==========
+window._isGuest = true;
+
+function showLoginPrompt(actionLabel) {
+  var existing = document.getElementById('loginPromptModal');
+  if (existing) existing.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'loginPromptModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  var returnUrl = encodeURIComponent(window.location.href);
+  var msg = actionLabel
+    ? 'Create a free account to ' + actionLabel + ' and unlock your full deal research toolkit.'
+    : 'Create a free account to save deals, build your investment plan, and track your pipeline.';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;animation:slideUp 0.25s ease;">'
+    + '<div style="width:56px;height:56px;background:linear-gradient(135deg,#51be7b,#3da86a);border-radius:14px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>'
+    + '<div style="font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Sign Up Free</div>'
+    + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:24px;">' + msg + '</div>'
+    + '<a href="deal-login.html?return=' + returnUrl + '" style="display:block;padding:14px 24px;background:var(--primary);color:#fff;border-radius:10px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;margin-bottom:10px;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Create Free Account</a>'
+    + '<a href="deal-login.html?return=' + returnUrl + '" style="display:block;font-family:var(--font-ui);font-size:13px;color:var(--text-secondary);text-decoration:none;">Already have an account? <span style="color:var(--primary);font-weight:700;">Log in</span></a>'
+    + '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-light);display:flex;justify-content:center;gap:20px;font-family:var(--font-ui);font-size:11px;color:var(--text-muted);">'
+    + '<span style="display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>100% free</span>'
+    + '<span style="display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>No credit card</span>'
+    + '<span style="display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Magic link login</span>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+}
+
+function requireAuth(actionLabel) {
+  var user = getUser();
+  if (user && user.token && user.token !== 'local-session') return true;
+  showLoginPrompt(actionLabel);
+  return false;
+}
+
+function isLoggedIn() {
+  var user = getUser();
+  return !!(user && user.token && user.token !== 'local-session');
+}
+
 (async function enforceAuth() {
   const user = getUser();
   if (!user || user.token === 'local-session') {
+    // Guest mode — allow browsing, no redirect
     localStorage.removeItem('gycUser');
-    window.location.href = 'deal-login.html';
+    window._isGuest = true;
     return;
   }
+  window._isGuest = false;
   if (!user.token && user.refreshToken) {
-    // Token missing but refresh token exists — try to restore session
     try {
       const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
       if (data?.session) {
         user.token = data.session.access_token;
         user.refreshToken = data.session.refresh_token;
         localStorage.setItem('gycUser', JSON.stringify(user));
-        return; // Session restored
+        return;
       }
-    } catch (e) { /* fall through to redirect */ }
+    } catch (e) { /* fall through */ }
     localStorage.removeItem('gycUser');
-    window.location.href = 'deal-login.html';
+    window._isGuest = true;
     return;
   }
   // Token exists — check if it's expired and proactively refresh
@@ -25626,6 +25673,25 @@ initAuth();
 initViewAs();
 loadDeals(); // Fetches from Supabase API
 initSubscription();
+
+// ========== GUEST SIGNUP BANNER ==========
+if (window._isGuest) {
+  // Hide gated sidebar nav items for guests
+  setTimeout(function() {
+    ['dashboard', 'subscription', 'settings'].forEach(function(pg) {
+      var navEl = document.querySelector('.nav-item[data-page="' + pg + '"]');
+      if (navEl) navEl.style.display = 'none';
+    });
+  }, 100);
+  // Show sticky bottom banner
+  var _guestBanner = document.createElement('div');
+  _guestBanner.id = 'guestSignupBanner';
+  _guestBanner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:998;background:linear-gradient(135deg,#1a2e35,#0d1b1e);border-top:1px solid rgba(81,190,123,0.2);padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:16px;box-shadow:0 -4px 20px rgba(0,0,0,0.2);';
+  _guestBanner.innerHTML = '<div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4;"><strong style="color:#fff;">Browse 700+ deals free.</strong> Sign up to save deals, build your plan, and connect with co-investors.</div>'
+    + '<a href="deal-login.html" style="flex-shrink:0;padding:10px 24px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Sign Up Free</a>'
+    + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:4px;flex-shrink:0;font-size:18px;line-height:1;">&times;</button>';
+  document.body.appendChild(_guestBanner);
+}
 
 // Track first activity date for "Days Active" metric
 if (!localStorage.getItem('gycFirstActivity')) { localStorage.setItem('gycFirstActivity', new Date().toISOString()); }

@@ -4555,6 +4555,25 @@ async function renderDeal() {
     window.history.replaceState({}, '', cleanUrl.toString());
   }
 
+  // Capture invite code for co-investment referral tracking
+  const invCode = params.get('inv');
+  if (invCode) {
+    sessionStorage.setItem('gycInviteCode', invCode);
+    // Fetch inviter info to show attribution banner
+    fetch('/api/invite?code=' + encodeURIComponent(invCode)).then(function(r) { return r.json(); }).then(function(invData) {
+      if (invData.success && invData.inviterName) {
+        var banner = document.createElement('div');
+        banner.style.cssText = 'background:linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.04));border:1px solid rgba(81,190,123,0.2);border-radius:12px;padding:14px 20px;margin:0 auto 16px;max-width:900px;display:flex;align-items:center;gap:12px;';
+        banner.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="20" height="20"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>'
+          + '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">' + invData.inviterName + ' shared this deal with you.</span>'
+          + (!isLoggedIn() ? '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">Sign up free to save it and track your research.</span>' : '')
+          + '</div>';
+        var loadedEl = document.getElementById('loadedContent');
+        if (loadedEl && loadedEl.firstChild) loadedEl.insertBefore(banner, loadedEl.firstChild);
+      }
+    }).catch(function() { /* non-blocking */ });
+  }
+
   const container = document.getElementById('loadedContent');
 
 
@@ -4906,6 +4925,9 @@ async function renderDeal() {
   heroHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
   heroHtml += 'Share Deal</button>';
   heroHtml += '<div class="share-dropdown" id="shareDropdown">';
+  heroHtml += '<button class="share-dropdown-item" onclick="shareInviteLink(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\')" style="border-bottom:1px solid var(--border-light);padding-bottom:10px;margin-bottom:4px;">';
+  heroHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>';
+  heroHtml += '<span style="color:var(--primary);font-weight:700;">Invite a co-investor</span></button>';
   heroHtml += '<button class="share-dropdown-item" onclick="copyDealLink()">';
   heroHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   heroHtml += 'Copy link</button>';
@@ -4977,6 +4999,19 @@ async function renderDeal() {
     noPermissionHtml += '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
     noPermissionHtml += '<div><span style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#ef4444;">No Permission Record</span>';
     noPermissionHtml += '<span style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-left:8px;">No outreach has been logged for this operator.</span></div></div>';
+  }
+
+  // --- Claim This Deal banner (for GPs on unclaimed deals) ---
+  var claimBannerHtml = '';
+  if (!_isGPForDeal && !_compIsAdmin && deal.managementCompany) {
+    claimBannerHtml = '<div id="claimDealBanner" style="background:linear-gradient(135deg,rgba(37,99,235,0.06),rgba(37,99,235,0.02));border:1px solid rgba(37,99,235,0.2);border-radius:var(--radius-sm);padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+      + '<div style="width:44px;height:44px;border-radius:12px;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" width="22" height="22"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>'
+      + '<div style="flex:1;min-width:200px;">'
+      + '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:2px;">Are you the operator of this deal?</div>'
+      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">Claim this deal to update your profile, respond to investor questions, and see who\'s interested.</div>'
+      + '</div>'
+      + '<button onclick="claimThisDeal(\'' + escAttr(deal.id) + '\', \'' + escAttr(deal.investmentName) + '\', \'' + escAttr(deal.managementCompany) + '\')" style="flex-shrink:0;padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background=\'#1d4ed8\'" onmouseout="this.style.background=\'#2563eb\'">Claim This Deal</button>'
+      + '</div>';
   }
 
   // --- 2. Key Metrics Strip ---
@@ -7795,6 +7830,7 @@ async function renderDeal() {
     + heroHtml
     + archivedBannerHtml
     + complianceBannerHtml
+    + claimBannerHtml
     // --- Job 2: Where am I with this deal? ---
     + pipelineHtml
     + '<div id="dealSocialProofBar" style="display:none;font-family:var(--font-ui);font-size:12px;color:var(--text-muted);align-items:center;gap:16px;padding:8px 0;"></div>'
@@ -9267,6 +9303,155 @@ function shareDealText(dealName) {
   window.open('sms:?&body=' + text);
   var dd = document.getElementById('shareDropdown');
   if (dd) dd.classList.remove('active');
+}
+
+// ========== CO-INVESTMENT INVITE LINK ==========
+function shareInviteLink(dealId, dealName) {
+  if (!requireAuth('share this deal with a co-investor')) return;
+  var dd = document.getElementById('shareDropdown');
+  if (dd) dd.classList.remove('active');
+
+  // Generate invite link via API
+  var user = getUser();
+  fetch('/api/invite', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (user && user.token) },
+    body: JSON.stringify({ dealId: dealId })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.success || !data.code) {
+      // Fallback: use direct link with user ref
+      showInviteModal(dealId, dealName, null);
+      return;
+    }
+    showInviteModal(dealId, dealName, data.code);
+  }).catch(function() {
+    // Fallback: show modal with direct link
+    showInviteModal(dealId, dealName, null);
+  });
+}
+
+function showInviteModal(dealId, dealName, inviteCode) {
+  var existing = document.getElementById('inviteModal');
+  if (existing) existing.remove();
+
+  var user = getUser();
+  var userName = user ? (user.name || user.firstName || user.email.split('@')[0]) : 'Someone';
+  var baseUrl = window.location.origin + '/deal.html?id=' + dealId;
+  var inviteUrl = inviteCode ? baseUrl + '&inv=' + inviteCode : baseUrl;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'inviteModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  var emailSubject = encodeURIComponent(userName + ' shared a deal with you: ' + dealName);
+  var emailBody = encodeURIComponent(userName + ' thinks you might be interested in this deal:\n\n' + dealName + '\n\n' + inviteUrl + '\n\nView the full deal details, pitch deck, and due diligence on GYC Dealflow.');
+  var smsBody = encodeURIComponent(userName + ' shared a deal with you on GYC: ' + dealName + ' - ' + inviteUrl);
+
+  overlay.innerHTML = '<div style="background:var(--bg-card,#fff);border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.25s ease;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+    + '<div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text-dark);">Invite a Co-Investor</div>'
+    + '<button onclick="document.getElementById(\'inviteModal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:20px;line-height:1;">&times;</button>'
+    + '</div>'
+    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">Share a personal invite link for <strong style="color:var(--text-dark);">' + (dealName || 'this deal') + '</strong>. Your friend will see the deal and can sign up to save it.</div>'
+    + '<div style="display:flex;gap:8px;margin-bottom:16px;">'
+    + '<input id="inviteLinkInput" type="text" value="' + inviteUrl + '" readonly style="flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:12px;color:var(--text-dark);background:var(--bg-page,#f5f5f5);min-width:0;" onclick="this.select()" />'
+    + '<button onclick="copyInviteLink()" style="flex-shrink:0;padding:10px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">Copy Link</button>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<a href="mailto:?subject=' + emailSubject + '&body=' + emailBody + '" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-page)\'" onmouseout="this.style.background=\'transparent\'">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'
+    + 'Email</a>'
+    + '<a href="sms:?&body=' + smsBody + '" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-page)\'" onmouseout="this.style.background=\'transparent\'">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+    + 'Text</a>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+}
+
+function copyInviteLink() {
+  var input = document.getElementById('inviteLinkInput');
+  if (!input) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(input.value).then(function() { showShareToast('Invite link copied!'); });
+  } else {
+    input.select();
+    document.execCommand('copy');
+    showShareToast('Invite link copied!');
+  }
+}
+
+// ========== CLAIM THIS DEAL (GP) ==========
+function claimThisDeal(dealId, dealName, companyName) {
+  if (!requireAuth('claim this deal')) return;
+
+  var existing = document.getElementById('claimModal');
+  if (existing) existing.remove();
+
+  var user = getUser();
+  var overlay = document.createElement('div');
+  overlay.id = 'claimModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  overlay.innerHTML = '<div style="background:var(--bg-card,#fff);border-radius:16px;padding:32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:slideUp 0.25s ease;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+    + '<div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--text-dark);">Claim This Deal</div>'
+    + '<button onclick="document.getElementById(\'claimModal\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:20px;line-height:1;">&times;</button>'
+    + '</div>'
+    + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5;">Claim <strong style="color:var(--text-dark);">' + (dealName || 'this deal') + '</strong> to manage your deal listing, see investor interest, and respond to questions.</div>'
+    + '<form id="claimForm" onsubmit="submitClaim(event, \'' + dealId + '\')">'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Your Name</label>'
+    + '<input name="claimName" type="text" required value="' + (user && user.name ? user.name : '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-page,#f5f5f5);box-sizing:border-box;" /></div>'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Email</label>'
+    + '<input name="claimEmail" type="email" required value="' + (user && user.email ? user.email : '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-page,#f5f5f5);box-sizing:border-box;" /></div>'
+    + '<div style="margin-bottom:12px;"><label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Company</label>'
+    + '<input name="claimCompany" type="text" required value="' + (companyName || '') + '" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-page,#f5f5f5);box-sizing:border-box;" /></div>'
+    + '<div style="margin-bottom:20px;"><label style="display:block;font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Your Role</label>'
+    + '<select name="claimRole" required style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);background:var(--bg-page,#f5f5f5);box-sizing:border-box;">'
+    + '<option value="">Select your role...</option><option value="founder">Founder / CEO</option><option value="ir">IR / Investor Relations</option><option value="partner">Managing Partner</option><option value="authorized">Authorized Representative</option></select></div>'
+    + '<button type="submit" id="claimSubmitBtn" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'#1d4ed8\'" onmouseout="this.style.background=\'#2563eb\'">Submit Claim</button>'
+    + '</form></div>';
+  document.body.appendChild(overlay);
+}
+
+function submitClaim(e, dealId) {
+  e.preventDefault();
+  var form = document.getElementById('claimForm');
+  var btn = document.getElementById('claimSubmitBtn');
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
+  var user = getUser();
+  var data = {
+    dealId: dealId,
+    name: form.claimName.value,
+    email: form.claimEmail.value,
+    company: form.claimCompany.value,
+    role: form.claimRole.value
+  };
+
+  fetch('/api/deal-claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (user && user.token) },
+    body: JSON.stringify(data)
+  }).then(function(r) { return r.json(); }).then(function(res) {
+    document.getElementById('claimModal').remove();
+    // Replace claim banner with success message
+    var banner = document.getElementById('claimDealBanner');
+    if (banner) {
+      banner.style.background = 'linear-gradient(135deg,rgba(81,190,123,0.06),rgba(81,190,123,0.02))';
+      banner.style.borderColor = 'rgba(81,190,123,0.2)';
+      banner.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="20" height="20"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+        + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Claim submitted! We\'ll review and get back to you within 24 hours.</div>';
+    }
+    showShareToast('Claim submitted successfully');
+  }).catch(function() {
+    btn.textContent = 'Submit Claim';
+    btn.disabled = false;
+    showShareToast('Error submitting claim. Please try again.');
+  });
 }
 
 </script>
