@@ -5484,8 +5484,8 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   display: none;
   position: relative;
   width: 100%;
-  /* Fill viewport minus: topbar(~50) + stage-desc(~70) + bottom-nav(64+safe) + content-padding(32) */
-  height: calc(100vh - 220px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  /* Fill viewport minus: topbar(~50) + stage-desc(~44) + bottom-nav(~56) = ~150px */
+  height: calc(100dvh - 150px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   min-height: 380px;
   overflow: hidden;
   touch-action: pan-y;
@@ -12674,8 +12674,11 @@ function renderAll() {
   if (goalIndicator && showSwipe) goalIndicator.style.display = 'none';
   var milestoneChecklist = document.getElementById('dealsMilestoneChecklist');
   if (milestoneChecklist) milestoneChecklist.style.display = showSwipe ? 'none' : '';
-  var stageDesc = document.getElementById('stageDescription');
-  if (stageDesc) stageDesc.style.display = 'block';
+  updateStageDescription();
+
+  // Remove bottom padding gap when swipe feed fills the screen
+  var contentArea = document.querySelector('#page-deals .content-area');
+  if (contentArea) contentArea.style.paddingBottom = showSwipe ? '0' : '';
 
   if (showSwipe) {
     grid.style.display = 'none';
