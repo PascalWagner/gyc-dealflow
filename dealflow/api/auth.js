@@ -114,31 +114,42 @@ export default async function handler(req, res) {
     // Generate magic link server-side and send via Resend
     // (Supabase's built-in OTP email requires SMTP config we don't have)
     const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
-    const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-      options: { redirectTo: siteUrl + '/deal-login.html' }
-    });
-    if (linkErr) return res.status(500).json({ error: linkErr.message });
+    const redirectTo = siteUrl + '/deal-login.html';
 
-    // Build the confirmation URL with the hashed token
-    const confirmUrl = `${SUPABASE_URL}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(siteUrl + '/deal-login.html')}`;
+    try {
+      const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email
+      });
+      if (linkErr) return res.status(500).json({ error: linkErr.message });
 
-    // Send via Resend
-    const resendKey = process.env.RESEND_API_KEY;
-    if (!resendKey) {
-      console.error('[AUTH] RESEND_API_KEY not set — cannot send magic link');
-      return res.status(500).json({ error: 'Email service not configured' });
-    }
+      // Use the action_link from Supabase but rewrite redirect_to
+      let confirmUrl = linkData.properties?.action_link;
+      if (!confirmUrl) {
+        // Fallback: build URL from hashed token
+        confirmUrl = `${SUPABASE_URL}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(redirectTo)}`;
+      } else {
+        // Replace the redirect_to in the action_link
+        const u = new URL(confirmUrl);
+        u.searchParams.set('redirect_to', redirectTo);
+        confirmUrl = u.toString();
+      }
 
-    const sendResp = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'Grow Your Cashflow <deals@growyourcashflow.io>',
-        to: email,
-        subject: 'Your GYC Dealflow Login Link',
-        html: `<div style="max-width:520px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      // Send via Resend
+      const resendKey = process.env.RESEND_API_KEY;
+      if (!resendKey) {
+        console.error('[AUTH] RESEND_API_KEY not set — cannot send magic link');
+        return res.status(500).json({ error: 'Email service not configured' });
+      }
+
+      const sendResp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Grow Your Cashflow <deals@growyourcashflow.io>',
+          to: email,
+          subject: 'Your GYC Dealflow Login Link',
+          html: `<div style="max-width:520px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="background:#0A1E21;padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
     <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Grow Your Cashflow</div>
     <div style="font-size:12px;font-weight:600;color:#51BE7B;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Dealflow Portal</div>
@@ -159,16 +170,20 @@ export default async function handler(req, res) {
     <p style="font-size:11px;color:#9ca3af;margin:0;">Grow Your Cashflow &middot; growyourcashflow.io</p>
   </div>
 </div>`
-      })
-    });
+        })
+      });
 
-    if (!sendResp.ok) {
-      const errText = await sendResp.text().catch(() => 'unknown');
-      console.error('[AUTH] Resend magic link failed:', errText);
-      return res.status(500).json({ error: 'Failed to send login email' });
+      if (!sendResp.ok) {
+        const errText = await sendResp.text().catch(() => 'unknown');
+        console.error('[AUTH] Resend magic link failed:', errText);
+        return res.status(500).json({ error: 'Failed to send login email' });
+      }
+
+      return res.status(200).json({ success: true, message: 'Magic link sent' });
+    } catch (e) {
+      console.error('[AUTH] Magic link generation failed:', e.message);
+      return res.status(500).json({ error: 'Failed to generate login link: ' + e.message });
     }
-
-    return res.status(200).json({ success: true, message: 'Magic link sent' });
   }
 
   // ── Lookup (for existing magic link flow compatibility) ────────────
