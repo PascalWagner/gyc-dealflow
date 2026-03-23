@@ -128,6 +128,42 @@ export default async function handler(req, res) {
       }
       await adminSupabase.from('user_profiles').upsert(profileData, { onConflict: 'id' });
 
+      // Auto-retry GHL contact creation if missing
+      if (!ghl.contactId) {
+        const { data: profile } = await adminSupabase
+          .from('user_profiles')
+          .select('ghl_contact_id')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile?.ghl_contact_id || profile.ghl_contact_id === 'SYNC_FAILED') {
+          const userName = user.user_metadata?.full_name || email.split('@')[0];
+          const nameParts = userName.split(' ');
+          ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
+            method: 'POST',
+            body: JSON.stringify({
+              firstName: nameParts[0] || '',
+              lastName: nameParts.slice(1).join(' ') || '',
+              email,
+              tags: ['dealflow-free']
+            })
+          }).then(async (resp) => {
+            if (resp?.ok) {
+              try {
+                const ghlData = await resp.json();
+                const contactId = ghlData?.contact?.id;
+                if (contactId) {
+                  await adminSupabase.from('user_profiles').update({ ghl_contact_id: contactId }).eq('id', user.id);
+                  console.log(`[GHL SYNC RETRY] Created GHL contact for ${email}: ${contactId}`);
+                }
+              } catch {}
+            } else {
+              console.error(`[GHL SYNC RETRY] Failed for ${email}. Status: ${resp?.status}`);
+            }
+          }).catch(() => {});
+        }
+      }
+
       // Fetch onboarding state from profile
       const { data: existingProfile } = await adminSupabase
         .from('user_profiles')
@@ -226,6 +262,42 @@ export default async function handler(req, res) {
       loginProfile.gp_verified = true;
     }
     await adminSupabase.from('user_profiles').upsert(loginProfile, { onConflict: 'id' });
+
+    // Auto-retry GHL contact creation for users whose signup sync failed
+    if (!ghl.contactId) {
+      const { data: profile } = await adminSupabase
+        .from('user_profiles')
+        .select('ghl_contact_id')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!profile?.ghl_contact_id || profile.ghl_contact_id === 'SYNC_FAILED') {
+        const userName = data.user.user_metadata?.full_name || email.split('@')[0];
+        const nameParts = userName.split(' ');
+        ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
+          method: 'POST',
+          body: JSON.stringify({
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email,
+            tags: ['dealflow-free']
+          })
+        }).then(async (resp) => {
+          if (resp?.ok) {
+            try {
+              const ghlData = await resp.json();
+              const contactId = ghlData?.contact?.id;
+              if (contactId) {
+                await adminSupabase.from('user_profiles').update({ ghl_contact_id: contactId }).eq('id', data.user.id);
+                console.log(`[GHL SYNC RETRY] Created GHL contact for ${email}: ${contactId}`);
+              }
+            } catch {}
+          } else {
+            console.error(`[GHL SYNC RETRY] Failed again for ${email}. Status: ${resp?.status}`);
+          }
+        }).catch(() => {});
+      }
+    }
 
     // Fetch academy dates
     const { data: loginProfileData } = await adminSupabase
