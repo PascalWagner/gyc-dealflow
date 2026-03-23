@@ -16322,13 +16322,12 @@ function initSubscription() {
   var tiers = [
     { key: 'free', label: 'Free', color: 'var(--text-muted)', features: ['Browse all live deals', 'View investment decks', 'Deal filtering & search', 'Weekly deal digest email', 'Basic deal overview'] },
     { key: 'academy', label: 'Academy', color: '#51BE7B', features: ['Everything in Free', 'Full deal data & comparisons', 'Risk analysis & stress test', 'PPM & data room access', 'GP introductions & reviews', 'Weekly office hours', 'Investment plan builder', 'Private investor community'], price: '$5,000 first year' },
-    { key: 'alumni', label: 'Alumni', color: '#51BE7B', features: ['Everything in Academy', 'Continued deal data access', 'GP introductions & reviews', 'Weekly office hours', 'Private investor community', 'Priority deal alerts'], price: '$2,000/yr or $300/mo' },
     { key: 'concierge', label: 'Concierge', color: 'var(--teal-deep)', features: ['Everything in Academy', '24-hour text access to Pascal', '10 x 90-min 1:1 calls', '3hrs strategy sessions', 'Free live event ticket', 'Co-underwriting on deals'], price: '$25,000' },
     { key: 'vip', label: 'VIP Retreat', color: '#C5963A', features: ['Everything in Concierge', 'Fly-out retreat experience', 'Multi-day immersive program', 'Direct portfolio construction', 'Tax & entity structuring', 'Priority GP access'], price: '$50,000' }
   ];
 
-  // Map investor/family_office to their display equivalent
-  var tierMap = { investor: 'academy', family_office: 'concierge' };
+  // Map alumni/investor/family_office to their display equivalent
+  var tierMap = { alumni: 'academy', investor: 'academy', family_office: 'concierge' };
   var activeTier = tierMap[tier] || tier;
 
   var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2.5" width="14" height="14" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -16366,7 +16365,7 @@ function initSubscription() {
   html += '</div>';
 
   // Tier comparison grid
-  html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px;" id="tierGrid">';
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;" id="tierGrid">';
 
   tiers.forEach(function(t, i) {
     var isCurrent = (t.key === activeTier);
@@ -16413,7 +16412,23 @@ function initSubscription() {
 
   html += '</div>';
 
-  // Renewal note for academy users (Alumni is now its own tier card)
+  // Alumni banner — horizontal card below the grid
+  html += '<div style="border:1px solid var(--border);border-radius:12px;padding:20px 24px;background:#fff;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;' + (tier === 'alumni' ? 'border:2px solid #51BE7B;' : '') + '">';
+  html += '<div style="flex:1;min-width:240px;">';
+  html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">';
+  html += '<span style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:#51BE7B;">Alumni</span>';
+  html += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#51be7b;background:rgba(81,190,123,0.12);padding:2px 8px;border-radius:10px;">Academy Graduates</span>';
+  if (tier === 'alumni') html += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:0.5px;color:#fff;background:#51BE7B;padding:3px 10px;border-radius:10px;">CURRENT PLAN</span>';
+  html += '</div>';
+  html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">After your first year in the Academy, stay connected for <strong style="color:var(--text-dark);">$2,000/yr</strong> or <strong style="color:var(--text-dark);">$300/mo</strong>. Keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  var alumniFeatures = ['Deal data access', 'GP introductions', 'Office hours', 'Investor community', 'Priority alerts'];
+  alumniFeatures.forEach(function(f) {
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;font-family:var(--font-body);font-size:11px;color:var(--text-secondary);background:var(--bg-cream);padding:4px 10px;border-radius:16px;">' + checkSvg + f + '</span>';
+  });
+  html += '</div>';
+  html += '</div>';
 
   // Billing section (for paid tiers)
   if (activeTier !== 'free') {
@@ -16459,7 +16474,7 @@ function initSubscription() {
   if (!style) {
     style = document.createElement('style');
     style.id = 'tierGridStyle';
-    style.textContent = '@media(max-width:1100px){#tierGrid{grid-template-columns:repeat(3,1fr) !important;}}@media(max-width:768px){#tierGrid{grid-template-columns:1fr 1fr !important;}}@media(max-width:560px){#tierGrid{grid-template-columns:1fr !important;}}';
+    style.textContent = '@media(max-width:900px){#tierGrid{grid-template-columns:1fr 1fr !important;}}@media(max-width:560px){#tierGrid{grid-template-columns:1fr !important;}}';
     document.head.appendChild(style);
   }
 
