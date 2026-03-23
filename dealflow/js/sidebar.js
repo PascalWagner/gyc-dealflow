@@ -144,7 +144,7 @@
   html += '<div id="' + (isSPA ? 'gpNav' : 'gpNavSidebar') + '" style="display:none;">'
     + '<div class="nav-section-label">GP Portal</div>'
     + navItemExt('gp-dashboard.html', icons.gpdashboard, 'GP Dashboard', { page: 'gpdashboard' })
-    + '<a class="nav-item" id="' + (isSPA ? 'gpOnboardingLink' : 'gpOnboardingLinkSidebar') + '" href="gp-onboarding.html" style="display:none;">' + icons.buybox + ' GP Onboarding</a>'
+    + '<a class="nav-item" id="' + (isSPA ? 'gpOnboardingLink' : 'gpOnboardingLinkSidebar') + '" href="onboarding.html" style="display:none;">' + icons.buybox + ' Onboarding</a>'
     + '</div>';
 
   // ACCOUNT
