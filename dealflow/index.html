@@ -6398,7 +6398,7 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="content-area">
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
-      <div id="dailyViewsBadge" style="display:none;text-align:center;margin-bottom:16px;font-family:var(--font-ui);font-size:11px;font-weight:600;padding:6px 16px;border-radius:20px;background:rgba(245,158,11,0.1);"></div>
+      <div id="dailyViewsBadge" style="display:none;margin-bottom:16px;padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-ui);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;"><span id="dailyViewsText" style="font-size:12px;font-weight:600;color:var(--text-secondary);"></span><span id="dailyViewsTimer" style="font-size:11px;color:var(--text-muted);">Resets at midnight</span></div><div style="height:4px;background:var(--border-light);border-radius:2px;overflow:hidden;"><div id="dailyViewsBar" style="height:100%;border-radius:2px;transition:width 0.5s ease,background 0.3s;"></div></div></div>
       <div id="decisionCompareContainer" style="display:none;margin-bottom:24px;"></div>
       <div class="card-grid" id="cardGrid"><div id="dealsMilestoneChecklist" style="display:contents;"></div></div>
       <!-- Mobile Swipe Feed -->
@@ -13382,7 +13382,7 @@ function navigateTo(page) {
   if (page === 'deals') { updateDealsChecklist(); if (typeof renderAll === 'function') renderAll(); }
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
-  if (page === 'settings') { initBuyBox(); populateProfileFields(); }
+  if (page === 'settings') { initBuyBox(); populateProfileFields(); loadCalendarLink(); loadSharePortfolioSetting(); }
   if (page === 'managers') renderManagersPage();
   if (page === 'assets') renderAssetsPage();
   if (page === 'dashboard') { if (typeof checkActivationMilestones === 'function') checkActivationMilestones(); renderDashboard(); }
@@ -13573,13 +13573,20 @@ function loadSharePortfolioSetting() {
 }
 
 // Calendar link preview
+function loadCalendarLink() {
+  var inp = document.getElementById('calendarLinkInput');
+  var preview = document.getElementById('calendarLinkPreview');
+  if (!inp || !preview) return;
+  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+  inp.value = u.calendarLink || '';
+  if (u.calendarLink) { preview.href = u.calendarLink; preview.style.display = ''; }
+  else { preview.style.display = 'none'; }
+}
 (function() {
   var inp = document.getElementById('calendarLinkInput');
   var preview = document.getElementById('calendarLinkPreview');
   if (!inp || !preview) return;
-  // Load saved value
-  var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-  if (u.calendarLink) { inp.value = u.calendarLink; preview.href = u.calendarLink; preview.style.display = ''; }
+  loadCalendarLink();
   inp.addEventListener('input', function() {
     var v = inp.value.trim();
     if (v && /^https?:\/\/.+/.test(v)) { preview.href = v; preview.style.display = ''; }
@@ -13610,12 +13617,28 @@ async function loadNotifPrefs() {
   // Load from Supabase first, fall back to localStorage
   let freq = 'weekly';
   try {
-    const token = localStorage.getItem('sb_token') || localStorage.getItem('ghlToken');
-    if (token) {
-      const resp = await fetch('/api/userdata?type=notif_prefs', { headers: { 'Authorization': 'Bearer ' + token } });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.notif_frequency) freq = data.notif_frequency;
+    const isImpersonating = getUserToken() === 'impersonated';
+    if (isImpersonating) {
+      // When impersonating, use admin endpoint to fetch viewed user's prefs
+      const adminUser = JSON.parse(localStorage.getItem('_gycAdminRealUser') || 'null');
+      const viewedEmail = getUserEmail();
+      if (adminUser?.token && viewedEmail) {
+        const resp = await fetch(SYNC_API + '?admin=true&email=' + encodeURIComponent(viewedEmail) + '&type=notif_prefs', {
+          headers: { 'Authorization': 'Bearer ' + adminUser.token }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.notif_prefs?.[0]?.notif_frequency) freq = data.notif_prefs[0].notif_frequency;
+        }
+      }
+    } else {
+      const token = localStorage.getItem('sb_token') || localStorage.getItem('ghlToken');
+      if (token) {
+        const resp = await fetch('/api/userdata?type=notif_prefs', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.notif_frequency) freq = data.notif_frequency;
+        }
       }
     }
   } catch (e) { /* use default */ }
@@ -13785,14 +13808,21 @@ function isLoggedIn() {
     try {
       const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
       if (data?.session) {
-        user.token = data.session.access_token;
-        user.refreshToken = data.session.refresh_token;
-        localStorage.setItem('gycUser', JSON.stringify(user));
+        // Re-read fresh gycUser to avoid overwriting impersonation
+        const freshAuth = getUser();
+        if (freshAuth && freshAuth.token !== 'impersonated') {
+          freshAuth.token = data.session.access_token;
+          freshAuth.refreshToken = data.session.refresh_token;
+          localStorage.setItem('gycUser', JSON.stringify(freshAuth));
+        }
         return;
       }
     } catch (e) { /* fall through */ }
-    localStorage.removeItem('gycUser');
-    window._isGuest = true;
+    // Only clear if not impersonating
+    if (getUserToken() !== 'impersonated') {
+      localStorage.removeItem('gycUser');
+      window._isGuest = true;
+    }
     return;
   }
   // Token exists — check if it's expired and proactively refresh
@@ -13803,9 +13833,13 @@ function isLoggedIn() {
       if (expiresIn < 5 * 60 * 1000) { // less than 5 minutes left
         const { data } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
         if (data?.session) {
-          user.token = data.session.access_token;
-          user.refreshToken = data.session.refresh_token;
-          localStorage.setItem('gycUser', JSON.stringify(user));
+          // Re-read fresh gycUser to avoid overwriting impersonation
+          const freshAuth2 = getUser();
+          if (freshAuth2 && freshAuth2.token !== 'impersonated') {
+            freshAuth2.token = data.session.access_token;
+            freshAuth2.refreshToken = data.session.refresh_token;
+            localStorage.setItem('gycUser', JSON.stringify(freshAuth2));
+          }
         }
       }
     } catch (e) { /* token still present, let it proceed */ }
@@ -13894,10 +13928,13 @@ function initAuth() {
     fetchUserDataFromSupabase(user.email);
     loadSharePortfolioSetting();
   }
-  // Clear isNewUser flag if set
+  // Clear isNewUser flag if set — re-read fresh to avoid overwriting impersonation
   if (user && user.isNewUser) {
-    user.isNewUser = false;
-    localStorage.setItem('gycUser', JSON.stringify(user));
+    const freshNew = getUser();
+    if (freshNew && freshNew.token !== 'impersonated') {
+      freshNew.isNewUser = false;
+      localStorage.setItem('gycUser', JSON.stringify(freshNew));
+    }
   }
   // Ensure admin nav is shown after auth resolves
   showAdminNav();
@@ -13937,6 +13974,8 @@ async function fetchUserDataFromSupabase(email) {
       }
     } catch (e) { /* use existing token as fallback */ }
   }
+  // Re-check after async: if impersonation started during token refresh, bail out
+  if (getUserToken() === 'impersonated') return;
   const authHeaders = { 'Authorization': 'Bearer ' + token };
   try {
     const [stagesResp, goalsResp, portfolioResp, planResp] = await Promise.all([
@@ -13945,6 +13984,9 @@ async function fetchUserDataFromSupabase(email) {
       fetch(SYNC_API + '?type=portfolio', { headers: authHeaders }).catch(() => null),
       fetch(SYNC_API + '?type=plan', { headers: authHeaders }).catch(() => null)
     ]);
+
+    // Bail out if impersonation started while fetches were in-flight
+    if (getUserToken() === 'impersonated') return;
 
     // Replace deal stages from Supabase (server is source of truth per-user)
     if (stagesResp && stagesResp.ok) {
@@ -20665,10 +20707,13 @@ async function _refreshToken() {
   try {
     const { data } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
     if (data?.session) {
+      // Re-read fresh to avoid overwriting impersonation that started during await
       const u = getUser();
-      u.token = data.session.access_token;
-      u.refreshToken = data.session.refresh_token;
-      localStorage.setItem('gycUser', JSON.stringify(u));
+      if (u && u.token !== 'impersonated') {
+        u.token = data.session.access_token;
+        u.refreshToken = data.session.refresh_token;
+        localStorage.setItem('gycUser', JSON.stringify(u));
+      }
     }
   } catch (e) { console.warn('Token refresh failed:', e.message); }
 }
@@ -20812,11 +20857,14 @@ async function adminRefreshToken() {
   try {
     const { data, error } = await _supa.auth.refreshSession({ refresh_token: user.refreshToken });
     if (data?.session) {
-      user.token = data.session.access_token;
-      user.refreshToken = data.session.refresh_token;
-      localStorage.setItem('gycUser', JSON.stringify(user));
-      return user.token;
-    }
+      // Re-read fresh to avoid overwriting impersonation
+      const freshUser = getUser();
+      if (freshUser && freshUser.token !== 'impersonated') {
+        freshUser.token = data.session.access_token;
+        freshUser.refreshToken = data.session.refresh_token;
+        localStorage.setItem('gycUser', JSON.stringify(freshUser));
+      }
+      return data.session.access_token;
   } catch (e) { console.warn('Admin token refresh failed:', e.message); }
   return null;
 }
@@ -23447,8 +23495,10 @@ async function outreachLoadData() {
           const { data: refreshData, error: refreshErr } = await _supa.auth.refreshSession();
           if (!refreshErr && refreshData?.session?.access_token) {
             var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-            u.token = refreshData.session.access_token;
-            localStorage.setItem('gycUser', JSON.stringify(u));
+            if (u.token !== 'impersonated') {
+              u.token = refreshData.session.access_token;
+              localStorage.setItem('gycUser', JSON.stringify(u));
+            }
             // Retry with refreshed token
             const resp2 = await fetch('/api/operator-outreach', {
               method: 'POST',
