@@ -12674,7 +12674,7 @@ function renderAll() {
   var milestoneChecklist = document.getElementById('dealsMilestoneChecklist');
   if (milestoneChecklist) milestoneChecklist.style.display = showSwipe ? 'none' : '';
   var stageDesc = document.getElementById('stageDescription');
-  if (stageDesc && showSwipe) stageDesc.style.display = 'none';
+  if (stageDesc) stageDesc.style.display = '';
 
   if (showSwipe) {
     grid.style.display = 'none';
