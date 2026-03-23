@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         management_company:management_companies (
           id, operator_name, ceo, website, linkedin_ceo, invest_clearly_profile,
           founding_year, type, asset_classes, total_investors, headquarters,
-          aum, description, booking_url, full_cycle_deals
+          aum, description, booking_url
         )
       `)
       .eq('id', id)
@@ -125,7 +125,7 @@ export default async function handler(req, res) {
         aum: mc.aum,
         description: mc.description,
         booking_url: mc.booking_url,
-        full_cycle_deals: mc.full_cycle_deals
+        full_cycle_deals: mc.full_cycle_deals || null
       } : null,
 
       share_classes: shareClasses,
