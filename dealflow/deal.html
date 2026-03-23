@@ -9477,7 +9477,8 @@ function generateInvestmentReport() {
 
 // Guests cannot access deal pages — redirect to main app with signup prompt
 (function() {
-  var user = typeof getUser === 'function' ? getUser() : null;
+  var user = null;
+  try { user = JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) {}
   if (!user || !user.token || user.token === 'local-session') {
     window.location.href = 'index.html#deals';
     return;
