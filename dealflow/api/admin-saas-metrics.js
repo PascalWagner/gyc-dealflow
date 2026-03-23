@@ -185,6 +185,20 @@ export default async function handler(req, res) {
       });
     }
 
+    // --- User List (all signups with their journey) ---
+    const userList = users.map(u => ({
+      id: u.id,
+      email: u.email,
+      signedUp: u.created_at,
+      lastActive: u.last_activity_date || null,
+      onboarded: !!u.buy_box_complete,
+      dealsViewed: u.deals_viewed_count || 0,
+      dealsSaved: u.deals_saved_count || 0,
+      sessions: u.sessions_count || 0,
+      funnel: u.funnel_status || 'new',
+      tier: u.tier || 'free'
+    })).sort((a, b) => new Date(b.signedUp) - new Date(a.signedUp));
+
     // --- Wizard Step Funnel ---
     // Count how many users reached each wizard step
     const wizardStepCounts = {}; // { stepIndex: Set<userId> }
@@ -243,6 +257,7 @@ export default async function handler(req, res) {
       dropoffs,
       ttv,
       cohorts,
+      userList,
       wizardFunnel,
       wizardAbandonList,
       wizardStarters: wizardStarters.size,

@@ -7887,6 +7887,31 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
 
+        <!-- All Users Table -->
+        <div class="section-card" style="margin-bottom:20px;">
+          <div class="section-header"><span class="section-title">All Users</span><span id="saasUserCount" style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;"></span></div>
+          <div class="section-body">
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;" id="saasUserTable">
+                <thead>
+                  <tr style="border-bottom:2px solid var(--border);">
+                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Email</th>
+                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Signed Up</th>
+                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Funnel Stage</th>
+                    <th style="text-align:center;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Onboarded</th>
+                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Views</th>
+                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Saves</th>
+                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Sessions</th>
+                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Last Active</th>
+                    <th style="text-align:center;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="saasUserBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Activation Funnel + Drop-off (side by side) -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
           <div class="section-card">
@@ -22515,6 +22540,35 @@ async function loadSaasMetrics() {
     setText('saasSavedRate', s.totalSignups ? Math.round(s.savedDeal / s.totalSignups * 100) + '% of signups' : '--');
     setText('saasBookedCall', s.bookedCall || 0);
     setText('saasBookedRate', s.totalSignups ? Math.round(s.bookedCall / s.totalSignups * 100) + '% of signups' : '--');
+
+    // User list table
+    var userBody = document.getElementById('saasUserBody');
+    var userCount = document.getElementById('saasUserCount');
+    if (userBody && d.userList) {
+      if (userCount) userCount.textContent = d.userList.length + ' users (admin emails excluded)';
+      userBody.innerHTML = d.userList.map(function(u) {
+        var funnelColors = { 'new': '#94a3b8', 'onboarding': '#f59e0b', 'qualified': '#6366f1', 'high-intent': '#22c55e', 'call-booked': '#10b981', 'enrolled': '#059669' };
+        var fc = funnelColors[u.funnel] || '#94a3b8';
+        var funnelLabel = (u.funnel || 'new').replace('-', ' ');
+        var signedUp = u.signedUp ? new Date(u.signedUp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '--';
+        var lastActive = u.lastActive ? new Date(u.lastActive).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
+        var onbIcon = u.onboarded ? '<span style="color:#22c55e;font-weight:700;">Yes</span>' : '<span style="color:#ef4444;">No</span>';
+        return '<tr style="border-bottom:1px solid var(--border);">' +
+          '<td style="padding:10px 12px;"><a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/\'/g, "\\'") + '\');return false;" style="color:var(--primary);text-decoration:none;font-weight:600;">' + (u.email || '--') + '</a></td>' +
+          '<td style="padding:10px 12px;color:var(--text-secondary);">' + signedUp + '</td>' +
+          '<td style="padding:10px 12px;"><span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;background:' + fc + '22;color:' + fc + ';text-transform:uppercase;">' + funnelLabel + '</span></td>' +
+          '<td style="padding:10px 12px;text-align:center;">' + onbIcon + '</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.dealsViewed + '</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.dealsSaved + '</td>' +
+          '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.sessions + '</td>' +
+          '<td style="padding:10px 12px;color:var(--text-secondary);">' + lastActive + '</td>' +
+          '<td style="padding:10px 12px;text-align:center;"><a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/\'/g, "\\'") + '\');return false;" style="color:var(--text-muted);text-decoration:none;font-size:11px;">View</a></td>' +
+        '</tr>';
+      }).join('');
+      if (d.userList.length === 0) {
+        userBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted);">No non-admin users yet</td></tr>';
+      }
+    }
 
     // Funnel bars
     var funnelEl = document.getElementById('saasFunnelBars');
