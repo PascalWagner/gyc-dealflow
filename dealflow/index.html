@@ -13204,10 +13204,6 @@ function navigateTo(page) {
   if (page === 'debtfunds') { navigateTo('marketintel'); setTimeout(function(){ switchMiTab('debtfunds'); }, 100); return; }
   if (page === 'taxprep') { navigateTo('portfolio'); setTimeout(function() { var ts = document.getElementById('portfolioTaxSection'); if (ts) { ts.style.display = 'block'; openTaxPrepSection(); ts.scrollIntoView({behavior:'smooth'}); } }, 300); return; }
   // Assets page is a standalone page, don't redirect
-  // Update URL hash for bookmarking / back-button support
-  if (window.location.hash.replace('#','') !== page) {
-    history.pushState(null, '', '#' + page);
-  }
   // Track page leave for time-on-page analytics
   analyticsPageLeave();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -16274,14 +16270,31 @@ function printMyPlan() {
   var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
   var activeDeals = allDeals.filter(function(dl) { return !dl.isStale; });
 
-  // Goal line
+  // Title case helper
+  function titleCase(str) { return str.replace(/\b\w/g, function(c) { return c.toUpperCase(); }); }
+
+  // Goal line + progress data
   var goalLine = '';
+  var progressPct = 0;
+  var progressLabel = '';
   if (branch === 'cashflow') {
     var target = (goals && goals.targetIncome > 0) ? goals.targetIncome : (parseDollar(d.targetCashFlow) || 0);
     goalLine = target > 0 ? 'Build $' + target.toLocaleString() + '/yr in passive income' : 'Build predictable passive income';
+    if (planData && target > 0) {
+      var slots = planData.slots || planData.buckets || [];
+      var filledIncome = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+      progressPct = Math.min(100, Math.round(filledIncome / target * 100));
+      progressLabel = '$' + filledIncome.toLocaleString() + ' of $' + target.toLocaleString() + '/yr';
+    }
   } else if (branch === 'growth') {
     var capital = parseDollar(d.growthCapital) || 0;
     goalLine = capital > 0 ? 'Deploy $' + capital.toLocaleString() + ' into high-growth real estate' : 'Grow wealth through real estate equity';
+    if (planData && capital > 0) {
+      var slots = planData.slots || planData.buckets || [];
+      var filledCap = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
+      progressPct = Math.min(100, Math.round(filledCap / capital * 100));
+      progressLabel = '$' + filledCap.toLocaleString() + ' of $' + capital.toLocaleString() + ' deployed';
+    }
   } else if (branch === 'tax') {
     goalLine = d.taxableIncome ? 'Offset ' + (d.taxOffset || '') + ' of ' + d.taxableIncome + ' in taxable income' : 'Reduce tax burden through real estate depreciation';
   }
@@ -16303,7 +16316,7 @@ function printMyPlan() {
   if (d.distributions) { thesisParts.push('targeting <strong>' + (typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions)).toLowerCase() + ' or better</strong> distributions'); }
   var thesisText = thesisParts.length > 1 ? thesisParts[0] + ', ' + thesisParts.slice(1).join(', ') + '.' : thesisParts[0] + '.';
 
-  // Investment criteria summary items
+  // Criteria items
   var criteriaItems = [];
   if (assetList.length > 0) criteriaItems.push({ label: 'Asset Classes', value: assetList.join(', ') });
   if (stratList.length > 0) criteriaItems.push({ label: 'Strategies', value: stratList.join(', ') });
@@ -16312,7 +16325,7 @@ function printMyPlan() {
   if (d.distributions) criteriaItems.push({ label: 'Distribution Freq.', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
   if (d.accredited) criteriaItems.push({ label: 'Accreditation', value: 'Accredited Investor' });
 
-  // Market snapshot data
+  // Market snapshot
   var _stratAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
   var assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
   var userAssets = (d.assetClasses || []).filter(function(a) { return !_stratAliases.includes(a); }).map(function(a) { return assetMap[a] || a; });
@@ -16340,7 +16353,7 @@ function printMyPlan() {
       + '</tr>';
   });
 
-  // Investment plan roster
+  // Deployment schedule
   var planHtml = '';
   var totalCapitalDeployed = 0;
   var totalEstIncome = 0;
@@ -16395,7 +16408,7 @@ function printMyPlan() {
     holdingsHtml = '<div class="p-section"><h3>Current Investments</h3>'
       + '<p style="margin-bottom:8px;">Your portfolio includes <strong>' + portfolio.length + ' investment' + (portfolio.length !== 1 ? 's' : '') + '</strong> totaling <strong>$' + totalInvested.toLocaleString() + '</strong> deployed'
       + (activeCount > 0 && exitedCount > 0 ? ' \u2014 <strong>' + activeCount + ' active</strong> and <strong>' + exitedCount + ' exited</strong>' : '')
-      + '. These existing positions inform the deployment schedule below.</p>'
+      + '. These existing positions inform the deployment schedule on the following page.</p>'
       + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Invested</th><th>Status</th></tr></thead><tbody>';
     portfolio.forEach(function(p) {
       holdingsHtml += '<tr><td style="text-align:left;font-weight:600;">' + (p.dealName || p.name || 'Investment') + '</td>'
@@ -16411,59 +16424,91 @@ function printMyPlan() {
   var dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   var firstName = d.firstName || '';
   var lastName = d.lastName || '';
-  var fullName = (firstName + ' ' + lastName).trim();
+  var fullName = titleCase((firstName + ' ' + lastName).trim());
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Investment Plan' + (fullName ? ' \u2013 ' + fullName : '') + ' \u2013 Grow Your Cashflow</title>'
     + '<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
     + '<style>'
     + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
-    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.6; background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
-    + '.p-page { max-width: 800px; margin: 0 auto; padding: 48px 40px; }'
-    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #0A1E21; }'
-    + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 24px; color: #0A1E21; }'
-    + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; letter-spacing: 0.5px; }'
+    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.5; background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
+    + '.p-page { max-width: 800px; margin: 0 auto; padding: 40px 40px; }'
+    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 3px solid #0A1E21; }'
+    + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 22px; color: #0A1E21; }'
+    + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; margin-top: 2px; letter-spacing: 0.5px; }'
     + '.p-header-right { text-align: right; }'
-    + '.p-header-name { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 700; color: #141413; }'
-    + '.p-header-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: #8A9AA0; margin-top: 2px; }'
-    + '.p-hero { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-badge { display: inline-block; padding: 3px 12px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }'
-    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 28px; font-weight: 400; margin-bottom: 10px; color: #141413; line-height: 1.2; }'
-    + '.p-hero .p-thesis { font-size: 15px; line-height: 1.7; color: #607179; }'
-    + '.p-hero .p-thesis strong { color: #141413; }'
-    + '.p-criteria { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #EDF1F2; }'
+    + '.p-header-name { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 700; color: #141413; text-transform: capitalize; }'
+    + '.p-header-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; margin-top: 2px; }'
+    // Hero
+    + '.p-hero { margin-bottom: 20px; }'
+    + '.p-badge { display: inline-block; padding: 3px 12px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }'
+    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 26px; font-weight: 400; margin-bottom: 12px; color: #141413; line-height: 1.2; }'
+    // Progress bar
+    + '.p-progress { margin-bottom: 16px; }'
+    + '.p-progress-bar { height: 10px; background: #EDF1F2; border-radius: 5px; overflow: hidden; margin-bottom: 6px; }'
+    + '.p-progress-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }'
+    + '.p-progress-labels { display: flex; justify-content: space-between; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; }'
+    + '.p-progress-current { font-weight: 700; color: #141413; }'
+    + '.p-progress-pct { font-weight: 600; color: #8A9AA0; }'
+    // Thesis
+    + '.p-thesis-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-thesis-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8A9AA0; margin-bottom: 6px; }'
+    + '.p-thesis { font-size: 14px; line-height: 1.7; color: #607179; }'
+    + '.p-thesis strong { color: #141413; }'
+    // Criteria
+    + '.p-criteria { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid #EDF1F2; }'
     + '.p-criteria-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-bottom: 1px; }'
     + '.p-criteria-val { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; }'
-    + '.p-section { margin-bottom: 24px; }'
-    + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #8A9AA0; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-section p { font-size: 13px; color: #607179; line-height: 1.5; }'
+    // Sections
+    + '.p-section { margin-bottom: 20px; }'
+    + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8A9AA0; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-section p { font-size: 12px; color: #607179; line-height: 1.5; }'
     + '.p-section p strong { color: #141413; }'
-    + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 8px; }'
-    + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 6px 0; border-bottom: 1px solid #EDF1F2; }'
+    // Tables
+    + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 6px; }'
+    + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 5px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-snap-table th:first-child { text-align: left; }'
-    + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; text-align: center; padding: 7px 8px 7px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; text-align: center; padding: 6px 8px 6px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-snap-table td:first-child { text-align: left; }'
     + '.p-snap-table tr:last-child td { border-bottom: none; }'
     + '.p-plan-table { width: 100%; border-collapse: collapse; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; }'
-    + '.p-plan-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 6px 6px 0; border-bottom: 1px solid #EDF1F2; }'
+    + '.p-plan-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 6px 5px 0; border-bottom: 1px solid #EDF1F2; }'
     + '.p-plan-table th:first-child { text-align: left; }'
     + '.p-plan-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid #EDF1F2; text-align: center; color: #141413; }'
     + '.p-plan-table td:first-child { text-align: left; }'
     + '.p-plan-table tr:last-child td { border-bottom: none; }'
-    + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 11px; padding: 5px 6px !important; }'
-    + '.p-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; align-items: center; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; }'
+    + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 11px; padding: 4px 6px !important; }'
+    // Footer & disclaimer
+    + '.p-footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; align-items: center; font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; color: #8A9AA0; }'
     + '.p-footer-center { text-align: center; flex: 1; }'
-    + '.p-disclaimer { margin-top: 20px; padding: 12px 16px; background: #FAF9F5; border-radius: 6px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; line-height: 1.4; color: #8A9AA0; }'
-    + '@media print { body { padding: 0; } .p-page { padding: 16px 0; } .p-section { page-break-inside: avoid; } .p-year-header { page-break-after: avoid; } .p-disclaimer { page-break-inside: avoid; } }'
+    + '.p-disclaimer { margin-top: 16px; padding: 10px 14px; background: #FAF9F5; border-radius: 6px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 8px; line-height: 1.4; color: #8A9AA0; }'
+    // Page breaks
+    + '.p-page-break { page-break-before: always; padding-top: 8px; }'
+    + '@media print { body { padding: 0; } .p-page { padding: 12px 0; } .p-year-header { page-break-after: avoid; } .p-disclaimer { page-break-inside: avoid; } }'
     + '</style></head><body><div class="p-page">';
+
+  // ===== PAGE 1: The Plan =====
 
   // Header
   html += '<div class="p-header"><div><div class="p-logo">Grow Your Cashflow</div><div class="p-logo-sub">Personal Investment Plan</div></div><div class="p-header-right">' + (fullName ? '<div class="p-header-name">' + fullName + '</div>' : '') + '<div class="p-header-date">Prepared ' + dateStr + '</div></div></div>';
 
-  // Hero
+  // Goal
   html += '<div class="p-hero">'
     + '<div class="p-badge" style="background:' + bc.color + '15;color:' + bc.color + ';border:1px solid ' + bc.color + '30;">' + bc.label + '</div>'
     + '<h1>' + goalLine + '</h1>'
-    + '<div class="p-thesis">' + thesisText + '</div>';
+    + '</div>';
+
+  // Progress bar
+  if (progressLabel) {
+    html += '<div class="p-progress">'
+      + '<div class="p-progress-bar"><div class="p-progress-fill" style="width:' + progressPct + '%;background:' + bc.color + ';"></div></div>'
+      + '<div class="p-progress-labels"><div class="p-progress-current">' + progressLabel + '</div><div class="p-progress-pct">' + progressPct + '% complete</div></div>'
+      + '</div>';
+  }
+
+  // Thesis
+  html += '<div class="p-thesis-section"><h3>Investment Thesis</h3><div class="p-thesis">' + thesisText + '</div></div>';
+
+  // Criteria grid
   if (criteriaItems.length > 0) {
     html += '<div class="p-criteria">';
     criteriaItems.forEach(function(item) {
@@ -16471,28 +16516,30 @@ function printMyPlan() {
     });
     html += '</div>';
   }
-  html += '</div>';
 
-  // Portfolio holdings first (advisor sees current state)
-  html += holdingsHtml;
-
-  // Market Snapshot
+  // Market Snapshot (on page 1)
   if (snapshotRows) {
     html += '<div class="p-section"><h3>Market Snapshot</h3>'
-      + '<p style="margin-bottom:8px;">The table below summarizes <strong>' + totalMatchingDeals + ' active deals</strong> currently available on the Grow Your Cashflow platform that match your investment criteria. IRR and Cash-on-Cash figures reflect ranges and averages across live offerings as of ' + dateStr + '.</p>'
-      + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th>' + (userCheckSizeNum > 0 ? '<th>You Can Afford</th>' : '') + '</tr></thead>'
+      + '<p style="margin-bottom:6px;"><strong>' + totalMatchingDeals + ' active deals</strong> match your criteria on the Grow Your Cashflow platform. Data reflects live offerings as of ' + dateStr + '.</p>'
+      + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th>' + (userCheckSizeNum > 0 ? '<th>Affordable</th>' : '') + '</tr></thead>'
       + '<tbody>' + snapshotRows + '</tbody></table></div>';
   }
 
-  // Deployment schedule
-  html += planHtml;
+  // ===== PAGE 2: Current Investments =====
+  if (holdingsHtml) {
+    html += '<div class="p-page-break">' + holdingsHtml + '</div>';
+  }
 
-  // Disclaimer
+  // ===== PAGE 3: Deployment Schedule + Disclaimer =====
+  if (planHtml) {
+    html += '<div class="p-page-break">' + planHtml + '</div>';
+  }
+
+  // Disclaimer (flows after plan, no page break)
   html += '<div class="p-disclaimer">'
-    + '<strong>Disclaimer:</strong> This investment plan is for informational and planning purposes only. It does not constitute investment advice, a solicitation, or an offer to sell securities. '
-    + 'All projected returns, income estimates, and market data are based on current deal listings and historical performance, which may change. '
-    + 'Past performance does not guarantee future results. Consult with a qualified financial advisor, tax professional, and/or attorney before making any investment decisions. '
-    + 'All investments involve risk, including the potential loss of principal.'
+    + '<strong>Disclaimer:</strong> This plan is for informational purposes only and does not constitute investment advice or an offer to sell securities. '
+    + 'Projected returns and market data are based on current listings and may change. Past performance does not guarantee future results. '
+    + 'Consult a qualified financial advisor before making investment decisions. All investments involve risk, including loss of principal.'
     + '</div>';
 
   // Footer
@@ -27470,30 +27517,8 @@ if (window._isGuest) {
 // Track first activity date for "Days Active" metric
 if (!localStorage.getItem('gycFirstActivity')) { localStorage.setItem('gycFirstActivity', new Date().toISOString()); }
 
-// ========== HASH-BASED ROUTING ==========
-// Respect URL hash on initial load (e.g. index.html#dashboard)
-(function initHashRouting() {
-  var hash = window.location.hash.replace('#', '').split('?')[0];
-  // Known page IDs that should be routed via hash
-  var knownPages = ['dashboard','deals','buybox','portfolio','settings','marketintel','managers',
-    'academy','incomefund','goals','taxprep','admindash','casestudies','admin-manage','assets'];
-  // Pages with special init-time handlers below (onboarding, buybox?step=, settings?unsub) — skip here
-  var specialHashes = ['onboarding'];
-  if (hash && knownPages.indexOf(hash) !== -1 && specialHashes.indexOf(hash) === -1) {
-    // Navigate to the hashed page instead of defaulting to deals
-    setTimeout(function() { navigateTo(hash); }, 50);
-  } else if (!hash || knownPages.indexOf(hash) === -1) {
-    // Default: show deals
-    analyticsPageEnter('deals');
-  }
-  // Listen for browser back/forward navigation
-  window.addEventListener('popstate', function() {
-    var h = window.location.hash.replace('#', '').split('?')[0];
-    if (h && knownPages.indexOf(h) !== -1) {
-      navigateTo(h);
-    }
-  });
-})();
+// Track initial page load
+analyticsPageEnter('deals');
 
 // Render cashflow gap bar on initial load
 if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
@@ -27533,6 +27558,12 @@ if (window.location.pathname === '/cashflow-academy') {
 // Handle #onboarding hash from signup — send to dashboard (onboarding card handles it)
 if (window.location.hash === '#onboarding') {
   setTimeout(() => navigateTo('dashboard'), 300);
+  history.replaceState(null, '', window.location.pathname);
+}
+
+// Handle #academy from deal page gate CTAs
+if (window.location.hash === '#academy') {
+  setTimeout(() => navigateTo('academy'), 300);
   history.replaceState(null, '', window.location.pathname);
 }
 
@@ -27611,9 +27642,8 @@ fetchBuyBoxFromGHL();
       tabPages.forEach(p => document.querySelector(`.mobile-tab-item[data-page="${p}"]`)?.classList.remove('active'));
     }
   }
-  // Set initial state (respect hash if present)
-  var _initPage = window.location.hash.replace('#','').split('?')[0] || 'deals';
-  updateMobileTabBar(_initPage);
+  // Set initial state
+  updateMobileTabBar('deals');
 
   // iOS / mobile: inject collapsible filter toggles
   const isMobileView = document.documentElement.classList.contains('cap-ios') || window.innerWidth <= 767;
