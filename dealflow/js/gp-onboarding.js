@@ -296,7 +296,7 @@
   window.showLpComplete = function() {
     // Build summary
     var goalLabels = { cashflow: 'Build Passive Income', tax: 'Reduce Tax Bill', growth: 'Grow Wealth' };
-    var dealLabel = lpData.lpDealsCount === 0 ? 'First-time investor' : lpData.lpDealsCount + ' deals';
+    var dealLabel = lpData.lpDealsCount === 0 ? 'First-time investor' : lpData.lpDealsCount + (lpData.lpDealsCount === 1 ? ' deal' : ' deals');
     var baselineLabel = lpData.baselineIncome === 0 ? '$0/mo' : '$' + Math.round(lpData.baselineIncome / 12).toLocaleString() + '/mo';
 
     var html = '';
