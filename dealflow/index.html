@@ -8103,40 +8103,31 @@ const _supa = window.supabase.createClient(
         <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
       </div>
 
-      <!-- Tax Prep Section (collapsible, embedded in Portfolio) -->
+      <!-- Tax Documents (collapsible, embedded in Portfolio) -->
       <div id="portfolioTaxSection" style="margin-top:32px;display:none;">
-        <div id="taxSeasonBanner" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(245,158,11,0.02));border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
-          <div style="flex-shrink:0;width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:20px;">&#x1f4cb;</div>
-          <div style="flex:1;">
-            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Tax season is here</div>
-            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">Track your K-1s and tax documents below. Most sponsors issue K-1s by March 15.</div>
+        <div onclick="toggleTaxPrepSection()" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-cream)'" onmouseout="this.style.background='var(--bg-card)'">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Tax Documents</div>
+            <div id="taxSectionSubtitle" style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);"></div>
           </div>
+          <svg id="taxSectionChevron" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:16px;height:16px;transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
-        <div onclick="toggleTaxPrepSection()" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-cream)'" onmouseout="this.style.background='var(--bg-card)'">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width:20px;height:20px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            <div>
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Tax Documents</div>
-              <div id="taxSectionSubtitle" style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);">Track K-1s, 1099s, and other tax forms</div>
-            </div>
-          </div>
-          <svg id="taxSectionChevron" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:18px;height:18px;transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div id="taxPrepInlineContent" style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);background:var(--bg-card);padding:20px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
-            <select id="taxYearFilterInline" onchange="renderTaxPrepInline()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:13px;background:var(--bg-card);color:var(--text-dark);cursor:pointer;">
+        <div id="taxPrepInlineContent" style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);background:var(--bg-card);padding:16px 20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <select id="taxYearFilterInline" onchange="renderTaxPrepInline()" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;background:var(--bg-card);color:var(--text-dark);cursor:pointer;">
               <option value="">All Years</option>
             </select>
-            <div style="display:flex;gap:10px;">
-              <button onclick="autoPopulateTaxDocs(document.getElementById('taxYearFilterInline').value || new Date().getFullYear()-1)" style="padding:8px 16px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;">Auto-Populate</button>
-              <button onclick="showAddTaxDocModal()" style="padding:8px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">+ Add Document</button>
+            <div style="display:flex;gap:8px;">
+              <button onclick="autoPopulateTaxDocs(document.getElementById('taxYearFilterInline').value || new Date().getFullYear()-1)" style="padding:6px 12px;background:transparent;color:var(--primary);border:1px solid var(--primary);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;">Auto-Populate</button>
+              <button onclick="showAddTaxDocModal()" style="padding:6px 12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">+ Add</button>
             </div>
           </div>
-          <div id="taxSummaryCardsInline" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;"></div>
+          <div id="taxSummaryCardsInline" style="display:none;"></div>
           <div id="taxPrepTableInline"></div>
-          <div id="taxPrepEmptyInline" style="display:none;text-align:center;padding:40px 20px;">
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">No tax documents yet</div>
-            <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:12px;cursor:pointer;">Auto-Populate from Portfolio</button>
+          <div id="taxPrepEmptyInline" style="display:none;text-align:center;padding:24px 16px;">
+            <div style="font-family:var(--font-ui);font-size:13px;color:var(--text-muted);margin-bottom:10px;">No tax documents yet</div>
+            <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:6px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Auto-Populate from Portfolio</button>
           </div>
         </div>
       </div>
@@ -18836,43 +18827,41 @@ function renderTaxPrepInline() {
   if (summaryC) summaryC.style.display = 'grid';
   if (tableC) tableC.style.display = 'block';
 
-  // Summary
+  // Summary counts
   var total = docs.length;
   var received = docs.filter(function(d) { return d.uploadStatus === 'Received'; }).length;
   var pending = docs.filter(function(d) { return d.uploadStatus === 'Pending'; }).length;
-  var pctDone = total > 0 ? Math.round((received / total) * 100) : 0;
-  if (summaryC) {
-    summaryC.innerHTML = '<div class="portfolio-stat-card"><div class="stat-label">Documents</div><div class="stat-value">' + total + '</div></div>'
-      + '<div class="portfolio-stat-card"><div class="stat-label">Received</div><div class="stat-value" style="color:var(--green)">' + received + '</div></div>'
-      + '<div class="portfolio-stat-card"><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--orange)">' + pending + '</div></div>'
-      + '<div class="portfolio-stat-card"><div class="stat-label">Complete</div><div class="stat-value">' + pctDone + '%</div></div>';
-  }
 
-  // Table
+  // Table with better status badges
   if (tableC) {
     var sorted = [...docs].sort(function(a, b) { return (b.taxYear || 0) - (a.taxYear || 0); });
     var rows = sorted.map(function(doc) {
-      var statusClass = doc.uploadStatus === 'Received' ? 'tax-status-received' : doc.uploadStatus === 'Pending' ? 'tax-status-pending' : 'tax-status-na';
+      var statusColor = doc.uploadStatus === 'Received' ? '#22c55e' : doc.uploadStatus === 'Pending' ? '#f59e0b' : '#6b7280';
+      var statusLabel = doc.uploadStatus || 'Not Set';
       return '<tr>'
-        + '<td style="font-weight:600">' + (doc.taxYear || '--') + '</td>'
-        + '<td>' + (doc.investmentName || '--') + '</td>'
-        + '<td>' + (doc.formType || '--') + '</td>'
-        + '<td><span class="' + statusClass + '">' + (doc.uploadStatus || '--') + '</span></td>'
-        + '<td>' + (doc.dateReceived || '--') + '</td>'
+        + '<td style="font-weight:600;font-size:12px;">' + (doc.taxYear || '--') + '</td>'
+        + '<td style="font-size:12px;">' + (doc.investmentName || '--') + '</td>'
+        + '<td style="font-size:12px;color:var(--text-muted);">' + (doc.formType || '--') + '</td>'
+        + '<td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:' + statusColor + '18;color:' + statusColor + ';">' + statusLabel + '</span></td>'
+        + '<td style="font-size:12px;color:var(--text-muted);">' + (doc.dateReceived || '--') + '</td>'
         + '<td>'
-        + '<button onclick="showAddTaxDocModal(\'' + doc.id + '\')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:12px;font-weight:600;margin-right:8px;">Edit</button>'
-        + '<button onclick="deleteTaxDoc(\'' + doc.id + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:12px;font-weight:600;">Delete</button>'
+        + '<button onclick="showAddTaxDocModal(\'' + doc.id + '\')" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:11px;font-weight:600;margin-right:6px;">Edit</button>'
+        + '<button onclick="deleteTaxDoc(\'' + doc.id + '\')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;font-weight:600;">Delete</button>'
         + '</td></tr>';
     }).join('');
-    tableC.innerHTML = '<table class="table-view" style="display:table;width:100%;"><thead><tr>'
-      + '<th>Year</th><th>Investment</th><th>Form</th><th>Status</th><th>Received</th><th>Actions</th>'
+    tableC.innerHTML = '<table class="table-view" style="display:table;width:100%;font-size:12px;"><thead><tr>'
+      + '<th>Year</th><th>Investment</th><th>Form</th><th>Status</th><th>Received</th><th></th>'
       + '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  // Update subtitle with counts
+  // Update subtitle: compact count in header
   var subtitle = document.getElementById('taxSectionSubtitle');
-  if (subtitle && taxDocuments.length > 0) {
-    subtitle.textContent = total + ' document' + (total !== 1 ? 's' : '') + ' \u00b7 ' + received + ' received \u00b7 ' + pending + ' pending';
+  if (subtitle) {
+    if (taxDocuments.length > 0) {
+      subtitle.innerHTML = '<span style="color:var(--text-muted);">&middot;</span> <span style="color:' + (received === total ? '#22c55e' : '#f59e0b') + ';">' + received + ' of ' + total + ' received</span>';
+    } else {
+      subtitle.textContent = '';
+    }
   }
 }
 
@@ -18887,14 +18876,8 @@ function initPortfolioTaxSection() {
     section.style.display = 'block';
   }
 
-  // Show seasonal banner Jan-April
+  // Auto-open if there are pending docs during tax season (Jan-April)
   var month = new Date().getMonth();
-  var banner = document.getElementById('taxSeasonBanner');
-  if (banner && month >= 0 && month <= 3) {
-    banner.style.display = 'flex';
-  }
-
-  // Auto-open if there are pending docs during tax season
   if (month >= 0 && month <= 3 && taxDocs.length > 0) {
     var pending = taxDocs.filter(function(d) { return d.uploadStatus === 'Pending'; });
     if (pending.length > 0) openTaxPrepSection();
