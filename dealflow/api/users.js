@@ -1,7 +1,8 @@
 // Vercel Serverless Function: /api/users
-// Admin-only endpoint to search GHL contacts for user impersonation
+// Admin-only endpoint to search users for impersonation
+// Searches GHL first, then falls back to Supabase user_profiles
 
-import { ADMIN_EMAILS, setCors, deriveTier } from './_supabase.js';
+import { ADMIN_EMAILS, setCors, deriveTier, getAdminClient } from './_supabase.js';
 
 const GHL_API_KEY = process.env.GHL_API_KEY;
 const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
@@ -133,6 +134,36 @@ export default async function handler(req, res) {
     // Enrich top results with full contact data (LinkedIn URL, etc.)
     if (contacts.length > 0) {
       contacts = await enrichContacts(contacts);
+    }
+
+    // Method 4: Supabase fallback — catch users whose GHL contact creation failed
+    if (contacts.length === 0) {
+      const supabase = getAdminClient();
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, email, full_name, tier, ghl_contact_id')
+        .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
+        .limit(20);
+
+      if (profiles?.length) {
+        const supabaseContacts = profiles.map(p => {
+          const nameParts = (p.full_name || '').split(' ');
+          return {
+            id: p.ghl_contact_id || `supabase:${p.id}`,
+            name: p.full_name || p.email || 'Unknown',
+            firstName: nameParts[0] || '',
+            lastName: nameParts.slice(1).join(' ') || '',
+            email: p.email,
+            phone: '',
+            linkedin: '',
+            tags: [],
+            tier: p.tier || 'free',
+            source: 'supabase'
+          };
+        });
+        contacts = supabaseContacts;
+        debugInfo.method4_supabase_count = contacts.length;
+      }
     }
 
     return res.status(200).json({ success: true, contacts, debug: debugInfo });

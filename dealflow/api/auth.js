@@ -287,14 +287,32 @@ export default async function handler(req, res) {
         is_admin: false
       }, { onConflict: 'id' });
 
-      // Also create in GHL (with retry)
+      // Also create in GHL (with retry) — log failures so we can detect sync issues
       ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
         method: 'POST',
         body: JSON.stringify({
           firstName, lastName, email,
           tags: ['dealflow-free']
         })
-      }).catch(() => {}); // best effort, don't block response
+      }).then(async (resp) => {
+        if (!resp || !resp.ok) {
+          console.error(`[GHL SYNC FAIL] Could not create GHL contact for ${email}. Status: ${resp?.status}. Will flag in user_profiles.`);
+          // Flag this user so we can retry later
+          await adminSupabase.from('user_profiles').update({ ghl_contact_id: 'SYNC_FAILED' }).eq('id', data.user.id);
+        } else {
+          // Store GHL contact ID for future lookups
+          try {
+            const ghlData = await resp.json();
+            const contactId = ghlData?.contact?.id;
+            if (contactId) {
+              await adminSupabase.from('user_profiles').update({ ghl_contact_id: contactId }).eq('id', data.user.id);
+            }
+          } catch {}
+        }
+      }).catch(async (err) => {
+        console.error(`[GHL SYNC FAIL] GHL contact creation threw for ${email}:`, err.message);
+        await adminSupabase.from('user_profiles').update({ ghl_contact_id: 'SYNC_FAILED' }).eq('id', data.user.id).catch(() => {});
+      });
     }
 
     return res.status(200).json({
