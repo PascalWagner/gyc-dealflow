@@ -16033,7 +16033,7 @@ function initSubscription() {
 
   var tiers = [
     { key: 'free', label: 'Free', color: 'var(--text-muted)', features: ['Browse all live deals', 'View investment decks', 'Deal filtering & search', 'Weekly deal digest email', 'Basic deal overview'] },
-    { key: 'academy', label: 'Academy', color: '#51BE7B', features: ['Everything in Free', 'Full deal data & comparisons', 'Risk analysis & stress test', 'PPM & data room access', 'GP introductions & reviews', 'Weekly office hours', 'Investment plan builder', 'Private investor community'], price: '$297/mo or $1,997/yr' },
+    { key: 'academy', label: 'Academy', color: '#51BE7B', features: ['Everything in Free', 'Full deal data & comparisons', 'Risk analysis & stress test', 'PPM & data room access', 'GP introductions & reviews', 'Weekly office hours', 'Investment plan builder', 'Private investor community'], price: '$5,000 first year' },
     { key: 'concierge', label: 'Concierge', color: 'var(--teal-deep)', features: ['Everything in Academy', '24-hour text access to Pascal', '10 x 90-min 1:1 calls', '3hrs strategy sessions', 'Free live event ticket', 'Co-underwriting on deals'], price: '$25,000' },
     { key: 'vip', label: 'VIP Retreat', color: '#C5963A', features: ['Everything in Concierge', 'Fly-out retreat experience', 'Multi-day immersive program', 'Direct portfolio construction', 'Tax & entity structuring', 'Priority GP access'], price: '$50,000' }
   ];
@@ -16120,7 +16120,46 @@ function initSubscription() {
   if (activeTier === 'academy') {
     html += '<div class="settings-card" style="background:rgba(81,190,123,0.04);border:1px dashed rgba(81,190,123,0.3);">';
     html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">After your first year</div>';
-    html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$1,997/yr</strong> or <strong style="color:var(--text-dark);">$297/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
+    html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$2,000/yr</strong> or <strong style="color:var(--text-dark);">$300/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
+    html += '</div>';
+  }
+
+  // Billing section (for paid tiers)
+  if (activeTier !== 'free') {
+    var autoRenew = user && user.autoRenew !== false; // default to true
+    var cardLast4 = user && user.cardLast4;
+    var cardBrand = user && user.cardBrand;
+
+    html += '<div class="settings-card" style="margin-top:20px;">';
+    html += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Billing</div>';
+
+    // Payment method
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">';
+    html += '<div>';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">Payment Method</div>';
+    if (cardLast4) {
+      var brandIcon = (cardBrand || 'card').charAt(0).toUpperCase() + (cardBrand || 'card').slice(1);
+      html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">' + brandIcon + ' ending in ' + cardLast4 + '</div>';
+    } else {
+      html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:2px;">No card on file</div>';
+    }
+    html += '</div>';
+    html += '<button onclick="openBillingPortal()" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);cursor:pointer;">' + (cardLast4 ? 'Update' : 'Add Card') + '</button>';
+    html += '</div>';
+
+    // Auto-renew toggle
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">';
+    html += '<div>';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">Auto-Renew Membership</div>';
+    html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:2px;">Automatically renew at $2,000/yr or $300/mo when your membership ends</div>';
+    html += '</div>';
+    html += '<label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;margin-left:16px;cursor:pointer;">';
+    html += '<input type="checkbox" id="autoRenewToggle" ' + (autoRenew ? 'checked' : '') + ' onchange="toggleAutoRenew(this.checked)" style="opacity:0;width:0;height:0;">';
+    html += '<span style="position:absolute;inset:0;background:' + (autoRenew ? '#51BE7B' : '#ccc') + ';border-radius:24px;transition:background 0.2s;"></span>';
+    html += '<span style="position:absolute;top:2px;left:' + (autoRenew ? '22px' : '2px') + ';width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>';
+    html += '</label>';
+    html += '</div>';
+
     html += '</div>';
   }
 
@@ -16134,6 +16173,54 @@ function initSubscription() {
   }
 
   container.innerHTML = html;
+}
+
+function toggleAutoRenew(checked) {
+  // Update toggle visuals immediately
+  var toggle = document.getElementById('autoRenewToggle');
+  if (toggle) {
+    var track = toggle.nextElementSibling;
+    var knob = track.nextElementSibling;
+    track.style.background = checked ? '#51BE7B' : '#ccc';
+    knob.style.left = checked ? '22px' : '2px';
+  }
+  // Update localStorage
+  var user = getUser();
+  if (user) {
+    user.autoRenew = checked;
+    localStorage.setItem('gycUser', JSON.stringify(user));
+  }
+  // Sync to backend
+  syncToBackend('autoRenew', { autoRenew: checked });
+}
+
+function openBillingPortal() {
+  // Stripe Customer Portal integration — opens portal for card management
+  var user = getUser();
+  if (!user || !user.token) return;
+  var btn = event.target;
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  fetch('/api/billing', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify({ action: 'portal' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.url) {
+      window.open(data.url, '_blank');
+    } else {
+      alert('Billing portal is not yet configured. Please contact support.');
+    }
+    btn.textContent = user.cardLast4 ? 'Update' : 'Add Card';
+    btn.disabled = false;
+  })
+  .catch(function() {
+    alert('Billing portal is not yet configured. Please contact support.');
+    btn.textContent = user.cardLast4 ? 'Update' : 'Add Card';
+    btn.disabled = false;
+  });
 }
 
 async function handleSubscribe(tier, price) {
@@ -17940,11 +18027,14 @@ function renderPortfolioInDeals(container, portfolioDeals) {
         (() => {
           const untrackedDeals = portfolioDeals.filter(d => !portfolioInvestments.find(i => i.dealId === d.id));
           if (untrackedDeals.length === 0 && portfolioInvestments.length === 0) return `
-            <div style="text-align:center;padding:60px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
-              <div style="font-size:40px;opacity:0.25;margin-bottom:12px;">&#128188;</div>
-              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
-              <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Add your first investment to start tracking your portfolio.</div>
-              <button onclick="showDealSearchModal()" style="padding:12px 28px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Investment</button>
+            <div style="text-align:center;padding:48px 20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:40px;height:40px;margin-bottom:12px;opacity:0.35;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+              <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Track your investments</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;max-width:340px;margin-left:auto;margin-right:auto;">Upload a PPM to import automatically, or add investments manually.</div>
+              <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                <button onclick="navigateTo('portfolio')" style="padding:10px 22px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Import Portfolio</button>
+                <button onclick="showDealSearchModal()" style="padding:10px 22px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">+ Add Manually</button>
+              </div>
             </div>`;
           if (untrackedDeals.length === 0) return '';
           return `
@@ -18783,6 +18873,15 @@ function showAddInvestmentModal(editId, prefillDeal, linkDealId) {
         <div class="modal-field"><label>Investing Entity</label><input id="modalInvestingEntity" value="${v.investingEntity || ''}"></div>
         <div class="modal-field" style="grid-column:1/-1"><label>Entity Invested Into</label><input id="modalEntityInvestedInto" value="${v.entityInvestedInto || ''}"></div>
         <div class="modal-field" style="grid-column:1/-1"><label>Notes</label><textarea id="modalNotes">${v.notes || ''}</textarea></div>
+        <div class="modal-field" style="grid-column:1/-1">
+          <label>Subscription Document (for verification)</label>
+          <div style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:20px;text-align:center;cursor:pointer;transition:border-color var(--transition);" onclick="document.getElementById('subscriptionDocInput').click()" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="28" height="28" style="margin-bottom:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div id="subscriptionDocLabel" style="font-size:12px;color:var(--text-muted);">Click to upload PDF or image</div>
+            <input type="file" id="subscriptionDocInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="document.getElementById('subscriptionDocLabel').textContent=this.files[0]?this.files[0].name:'Click to upload PDF or image'">
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">Verified investors can leave reviews and access premium features.</div>
+        </div>
       </div>
       <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
         <button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>
