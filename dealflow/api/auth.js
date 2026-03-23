@@ -96,6 +96,23 @@ export default async function handler(req, res) {
       }
     }
 
+    // Ensure user exists and is confirmed before sending OTP.
+    // Without this, Supabase sends a confirmation email FIRST for new users,
+    // requiring two clicks to actually log in.
+    const { data: existingUser } = await adminSupabase.auth.admin.getUserByEmail(email);
+    if (!existingUser?.user) {
+      // Pre-create user as confirmed so OTP works on first click
+      await adminSupabase.auth.admin.createUser({
+        email,
+        email_confirm: true
+      });
+    } else if (existingUser.user.email_confirmed_at === null) {
+      // User exists but unconfirmed — confirm them now
+      await adminSupabase.auth.admin.updateUserById(existingUser.user.id, {
+        email_confirm: true
+      });
+    }
+
     // Use site URL for redirect (Vercel sets this, fallback to prod)
     const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
     const { error } = await supabase.auth.signInWithOtp({
