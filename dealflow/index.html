@@ -5402,6 +5402,40 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   .bb-snapshot-table .bb-ac-icon { width:26px; height:26px; font-size:13px; border-radius:6px; }
 }
 
+/* ====== RESOURCES PAGE ====== */
+.resource-filters { display:flex; align-items:center; gap:8px; margin-bottom:24px; flex-wrap:wrap; }
+.resource-filter-btn { padding:7px 16px; border:1px solid var(--border); border-radius:20px; background:var(--bg-card); font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--text-secondary); cursor:pointer; transition:all 0.15s; }
+.resource-filter-btn:hover { border-color:var(--primary); color:var(--primary); }
+.resource-filter-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.resource-search { flex:1; min-width:180px; padding:8px 14px 8px 36px; border:1px solid var(--border); border-radius:20px; font-family:var(--font-body); font-size:13px; color:var(--text-dark); background:var(--bg-card); outline:none; }
+.resource-search:focus { border-color:var(--primary); }
+.resource-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px; }
+.resource-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; cursor:pointer; transition:all 0.2s; }
+.resource-card:hover { border-color:var(--primary); box-shadow:0 4px 16px rgba(0,0,0,0.08); transform:translateY(-2px); }
+.resource-thumb { position:relative; padding-bottom:56.25%; background:var(--bg-sidebar); overflow:hidden; }
+.resource-thumb img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; }
+.resource-thumb .play-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.25); transition:background 0.2s; }
+.resource-card:hover .play-overlay { background:rgba(0,0,0,0.4); }
+.resource-thumb .play-btn { width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,0.95); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.2); }
+.resource-meta { padding:16px; }
+.resource-meta h3 { font-family:var(--font-ui); font-size:14px; font-weight:700; color:var(--text-dark); margin-bottom:6px; line-height:1.4; }
+.resource-meta .resource-info { display:flex; align-items:center; gap:8px; font-family:var(--font-ui); font-size:12px; color:var(--text-muted); }
+.resource-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-family:var(--font-ui); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.3px; }
+.resource-badge-office { background:rgba(81,190,123,0.1); color:var(--primary); }
+.resource-badge-education { background:rgba(59,130,246,0.1); color:#3b82f6; }
+.resource-badge-deal { background:rgba(245,158,11,0.1); color:#f59e0b; }
+.resource-modal-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.resource-modal { width:90%; max-width:900px; background:var(--bg-card); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+.resource-modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+.resource-modal-header h3 { font-family:var(--font-ui); font-size:15px; font-weight:700; color:var(--text-dark); }
+.resource-modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted); padding:4px; }
+@media (max-width: 600px) {
+  .resource-grid { grid-template-columns:1fr; }
+  .resource-filters { flex-direction:column; align-items:stretch; }
+  .resource-search { min-width:unset; }
+  .resource-modal { width:95%; }
+}
+
 /* ========== MOBILE SWIPE FEED ========== */
 .swipe-feed-container {
   display: none;
@@ -6412,32 +6446,18 @@ const _supa = window.supabase.createClient(
           <div class="profile-row">
             <div class="profile-field">
               <div class="profile-label">Phone</div>
-              <input type="tel" class="profile-input" placeholder="(555) 123-4567">
+              <input type="tel" class="profile-input" id="profilePhone" placeholder="(555) 123-4567">
             </div>
             <div class="profile-field">
               <div class="profile-label">Location</div>
-              <input type="text" class="profile-input" placeholder="City, State">
+              <input type="text" class="profile-input" id="profileLocation" placeholder="City, State">
             </div>
           </div>
         </div>
 
-        <div class="settings-card" style="margin-top:16px">
-          <div class="settings-card-title">Consultation Booking</div>
-          <div class="settings-card-desc">Add your calendar link so LPs can book time with you directly on the platform</div>
-          <div class="profile-field">
-            <div class="profile-label">Calendar Link</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <input type="url" class="profile-input" id="calendarLinkInput" placeholder="https://calendly.com/your-name" style="flex:1;">
-              <a id="calendarLinkPreview" href="#" target="_blank" rel="noopener" style="display:none;padding:8px 12px;background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;white-space:nowrap;" title="Test your link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Test
-              </a>
-            </div>
-            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;">Paste a link from Calendly, Cal.com, or any scheduling tool. This will appear as a "Book a Call" button on your profile and deal interactions.</div>
-          </div>
-        </div>
 
         <div class="settings-save-bar">
-          <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Profile</button>
+          <button class="btn-cta btn-cta-primary" onclick="saveProfile()">Save Profile</button>
         </div>
       </div>
 
@@ -6695,6 +6715,19 @@ const _supa = window.supabase.createClient(
 
       <div style="margin-top:24px;font-family:var(--font-ui);font-size:9px;color:var(--text-muted);line-height:1.6;text-align:center;opacity:0.5">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</div>
 
+    </div>
+  </div>
+
+  <!-- PAGE: Resources -->
+  <div class="page" id="page-resources">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Resources</div>
+    </div>
+    <div class="sub-page" style="max-width:1200px;" id="resourcesContent">
+      <!-- Rendered by renderResources() -->
     </div>
   </div>
 
@@ -13292,7 +13325,7 @@ function navigateTo(page) {
   if (page === 'deals') { updateDealsChecklist(); if (typeof renderAll === 'function') renderAll(); }
   if (page === 'findgp') renderGPs();
   if (page === 'follows') renderFollows();
-  if (page === 'settings') { initBuyBox(); populateProfileFields(); loadCalendarLink(); loadSharePortfolioSetting(); }
+  if (page === 'settings') { initBuyBox(); populateProfileFields(); loadPrivacySettings(); }
   if (page === 'managers') renderManagersPage();
   if (page === 'assets') renderAssetsPage();
   if (page === 'dashboard') { if (typeof checkActivationMilestones === 'function') checkActivationMilestones(); renderDashboard(); }
@@ -13430,14 +13463,14 @@ function saveBuyBox() {
   buyBox.holdMin = document.getElementById('bbHoldMin').value;
   buyBox.holdMax = document.getElementById('bbHoldMax').value;
   localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
-  showSaveStatus();
+  showToast('Saved');
 }
 
 function resetBuyBox() {
   localStorage.removeItem('gycBuyBox');
   buyBox = { assetClasses: ['Multi-Family','Self Storage','Industrial'], strategies: ['Value-Add','Lending'], dealTypes: ['Fund','Syndication'], irrMin: '8%', irrMax: '25%', minInvest: '$25,000', maxInvest: '$250,000', holdMin: '2 years', holdMax: '10 years' };
   initBuyBox();
-  showSaveStatus();
+  showToast('Buy box reset');
 }
 
 function populateProfileFields() {
@@ -13983,7 +14016,7 @@ function initAuth() {
 
     // Fetch all user data from Supabase on login
     fetchUserDataFromSupabase(user.email);
-    loadSharePortfolioSetting();
+    loadPrivacySettings();
   }
   // Clear isNewUser flag if set — re-read fresh to avoid overwriting impersonation
   if (user && user.isNewUser) {
@@ -14201,7 +14234,7 @@ function getStepSequence() {
   return ONBOARDING_FLOW[paidKey] || ONBOARDING_FLOW.paid_cashflow;
 }
 
-const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Diversification', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '', 'Growth Priority', 'Tax Baseline', 'Welcome', 'Experience'];
+const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Diversification', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '', 'Growth Priority', 'Tax Baseline', 'Welcome', 'Experience', 'Review'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -15829,7 +15862,63 @@ function renderWizardStep() {
     return;
   }
 
-  // ===== SCREEN 8: COMPLETION (simplified — plan was shown on previous screen) =====
+  // ===== PROFILE REVIEW (penultimate step — summary of all wizard answers) =====
+  if (step.type === 'profileReview') {
+    var d = wizardData;
+    var branchLabels = { cashflow: 'Cash Flow', growth: 'Equity Growth', tax: 'Tax Optimization' };
+    var lossLabels = { '10': 'Very conservative', '20': 'Moderate', '33': 'Concentrated', '50': 'High conviction', 'no_limit': 'No limit' };
+    var divLabels = { 'focused': 'Focused (1\u20132 types)', 'balanced': 'Balanced (3\u20134)', 'wide': 'Maximum' };
+    var lockLabels = { 'flexible': 'Flexible', '1': '1 year', '3': '3 years', '5': '5 years', '5+': '5+ years' };
+    var distLabels = { 'Monthly': 'Monthly', 'Quarterly': 'Quarterly', 'Annual': 'Annually', 'Any': 'Flexible' };
+    function fmtM(v) { var n=parseInt(v)||0; if(n>=1000000) return '$'+(n/1000000).toFixed(n%1000000===0?0:1)+'M'; if(n>=1000) return '$'+Math.round(n/1000).toLocaleString()+'K'; if(n>0) return '$'+n.toLocaleString(); return '\u2014'; }
+    function rv(label, value) { return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);"><span style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">' + label + '</span><span style="font-size:14px;font-weight:600;color:var(--text-dark);">' + (value || '\u2014') + '</span></div>'; }
+
+    html += '<div class="wizard-card-title" style="text-align:center;">Your Investment Profile</div>';
+    html += '<div class="wizard-card-desc" style="text-align:center;margin-bottom:20px;">Review your answers below. You can change any section after finishing.</div>';
+
+    // Goal & Experience
+    html += '<div style="margin-bottom:16px;padding:16px;background:var(--bg-cream);border-radius:10px;border:1px solid var(--border-light);">';
+    html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Goal & Experience</div>';
+    html += rv('Primary Goal', branchLabels[d._branch]);
+    html += rv('Passive Investments', d.dealExperience !== undefined ? d.dealExperience : '\u2014');
+    html += rv('Current Income', fmtM(d.baselineIncome) + '/yr');
+    html += '</div>';
+
+    // What I Invest In
+    html += '<div style="margin-bottom:16px;padding:16px;background:var(--bg-cream);border-radius:10px;border:1px solid var(--border-light);">';
+    html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">What I Invest In</div>';
+    html += rv('Asset Classes', Array.isArray(d.assetClasses) ? d.assetClasses.join(', ') : '\u2014');
+    html += rv('Strategies', Array.isArray(d.strategies) ? d.strategies.join(', ') : '\u2014');
+    html += '</div>';
+
+    // Financial Targets
+    html += '<div style="margin-bottom:16px;padding:16px;background:var(--bg-cream);border-radius:10px;border:1px solid var(--border-light);">';
+    html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Financials</div>';
+    if (d._branch === 'cashflow') html += rv('12-Month Target', fmtM(d.targetCashFlow) + '/yr');
+    if (d._branch === 'growth') html += rv('Growth Target', fmtM(d.growthCapital));
+    if (d._branch === 'tax') html += rv('Shelter Target', fmtM(d.taxableIncome));
+    html += rv('Net Worth', fmtM(d.netWorth));
+    html += rv('12-Month Capital', d.capital12mo || '\u2014');
+    html += rv('Risk Tolerance', lossLabels[d.maxOperatorPct] || '\u2014');
+    html += '</div>';
+
+    // Preferences
+    html += '<div style="margin-bottom:16px;padding:16px;background:var(--bg-cream);border-radius:10px;border:1px solid var(--border-light);">';
+    html += '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Preferences</div>';
+    if (d.diversificationPref) html += rv('Diversification', divLabels[d.diversificationPref] || d.diversificationPref);
+    if (d.lockup) html += rv('Lockup', lockLabels[d.lockup] || d.lockup);
+    if (d.distributions) html += rv('Distributions', distLabels[d.distributions] || d.distributions);
+    html += '</div>';
+
+    html += '<div style="display:flex;gap:10px;margin-top:8px;">';
+    html += '<button class="wizard-btn" style="flex:1;background:var(--bg-card);color:var(--text-dark);border:1px solid var(--border);" onclick="wizardStepIndex=0;renderWizardStep();">Start Over</button>';
+    html += '<button class="wizard-btn wizard-btn-next" style="flex:2;" onclick="wizardNext()">Looks Good \u2192</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+    // ===== SCREEN 8: COMPLETION (simplified — plan was shown on previous screen) =====
   if (step.type === 'completion') {
     html += '<div class="wizard-completion">';
     html += '<div class="wizard-completion-check"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>';
@@ -22370,6 +22459,92 @@ function renderMiDealflowTab() {
   if (!container) return;
   renderDealFlowContent(container);
   miTabRendered.dealflow = true;
+}
+
+// ========== RESOURCES PAGE ==========
+var RESOURCE_VIDEOS = [
+  // Replace with real data. For YouTube: set youtubeId. For GHL/Drive: set url + thumbnail.
+  { youtubeId: '', title: 'Welcome to the Cashflow Academy', date: '2026-01-15', duration: '3 min', category: 'Education', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'Office Hours: March 2026 Deal Review', date: '2026-03-13', duration: '47 min', category: 'Office Hours', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'How to Evaluate a Debt Fund', date: '2026-02-27', duration: '62 min', category: 'Education', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'GP Spotlight: RSN Property Group', date: '2026-02-13', duration: '55 min', category: 'Deal Reviews', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'Office Hours: February 2026', date: '2026-02-06', duration: '51 min', category: 'Office Hours', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'Understanding PPMs & Subscription Docs', date: '2026-01-30', duration: '38 min', category: 'Education', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'Deal Teardown: NNN Lease Portfolio', date: '2026-01-23', duration: '44 min', category: 'Deal Reviews', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'Office Hours: January 2026', date: '2026-01-09', duration: '49 min', category: 'Office Hours', url: '', thumbnail: '' },
+  { youtubeId: '', title: 'Tax Benefits of Passive Real Estate', date: '2025-12-19', duration: '35 min', category: 'Education', url: '', thumbnail: '' }
+];
+var _resourceFilter = 'All';
+function renderResources() {
+  var container = document.getElementById('resourcesContent');
+  if (!container) return;
+  if (isGated()) {
+    container.innerHTML = '<div style="padding:60px 20px;text-align:center;">' + renderAcademyGateCTA('resources', 'Unlock the Resource Library', 'Office hours recordings, deal reviews, and educational content — exclusively for Academy members.') + '</div>';
+    return;
+  }
+  var categories = ['All', 'Office Hours', 'Deal Reviews', 'Education'];
+  var searchSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  var html = '<div style="margin-bottom:32px;">';
+  html += '<div style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Resources</div>';
+  html += '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);max-width:500px;">Office hours recordings, deal reviews, and educational content from the Cashflow Academy.</div>';
+  html += '</div>';
+  html += '<div class="resource-filters">';
+  categories.forEach(function(cat) { html += '<button class="resource-filter-btn' + (_resourceFilter === cat ? ' active' : '') + '" onclick="_resourceFilter=\'' + cat + '\';renderResources();">' + cat + '</button>'; });
+  html += '<div style="position:relative;flex:1;min-width:180px;">' + searchSvg + '<input type="text" class="resource-search" id="resourceSearchInput" placeholder="Search resources..." oninput="renderResourceGrid()"></div></div>';
+  html += '<div id="resourceGrid"></div>';
+  container.innerHTML = html;
+  renderResourceGrid();
+}
+function renderResourceGrid() {
+  var grid = document.getElementById('resourceGrid');
+  if (!grid) return;
+  var searchVal = ((document.getElementById('resourceSearchInput') || {}).value || '').toLowerCase().trim();
+  var badgeClass = { 'Office Hours': 'resource-badge-office', 'Deal Reviews': 'resource-badge-deal', 'Education': 'resource-badge-education' };
+  var playSvg = '<svg viewBox="0 0 24 24" fill="none" width="24" height="24"><polygon points="5 3 19 12 5 21 5 3" fill="#1a2e35"/></svg>';
+  var filtered = RESOURCE_VIDEOS.filter(function(v) {
+    if (_resourceFilter !== 'All' && v.category !== _resourceFilter) return false;
+    if (searchVal && v.title.toLowerCase().indexOf(searchVal) < 0 && v.category.toLowerCase().indexOf(searchVal) < 0) return false;
+    return true;
+  });
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div style="text-align:center;padding:60px 20px;"><div style="font-size:48px;margin-bottom:12px;opacity:0.3;">&#127909;</div><div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:4px;">No resources found</div><div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">' + (searchVal ? 'Try a different search term.' : 'New recordings coming soon.') + '</div></div>';
+    return;
+  }
+  var html = '<div class="resource-grid">';
+  filtered.forEach(function(v, i) {
+    var thumb = v.thumbnail || (v.youtubeId ? 'https://img.youtube.com/vi/' + v.youtubeId + '/mqdefault.jpg' : '');
+    var dateStr = v.date ? new Date(v.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    html += '<div class="resource-card" onclick="openResourceVideo(' + i + ')">';
+    html += '<div class="resource-thumb">';
+    if (thumb) html += '<img src="' + thumb + '" alt="" loading="lazy">';
+    html += '<div class="play-overlay"><div class="play-btn">' + playSvg + '</div></div></div>';
+    html += '<div class="resource-meta"><h3>' + (v.title || 'Untitled') + '</h3>';
+    html += '<div class="resource-info"><span class="resource-badge ' + (badgeClass[v.category] || 'resource-badge-education') + '">' + (v.category || '') + '</span>';
+    if (dateStr) html += '<span>' + dateStr + '</span>';
+    if (v.duration) html += '<span>&middot; ' + v.duration + '</span>';
+    html += '</div></div></div>';
+  });
+  html += '</div>';
+  grid.innerHTML = html;
+}
+function openResourceVideo(index) {
+  var filtered = RESOURCE_VIDEOS.filter(function(v) {
+    if (_resourceFilter !== 'All' && v.category !== _resourceFilter) return false;
+    var sv = ((document.getElementById('resourceSearchInput') || {}).value || '').toLowerCase().trim();
+    if (sv && v.title.toLowerCase().indexOf(sv) < 0) return false;
+    return true;
+  });
+  var v = filtered[index];
+  if (!v) return;
+  if (v.youtubeId) {
+    var overlay = document.createElement('div');
+    overlay.className = 'resource-modal-overlay';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = '<div class="resource-modal"><div class="resource-modal-header"><h3>' + (v.title || '') + '</h3><button class="resource-modal-close" onclick="this.closest(\'.resource-modal-overlay\').remove()">&times;</button></div><div style="position:relative;padding-bottom:56.25%;height:0;"><iframe src="https://www.youtube.com/embed/' + v.youtubeId + '?autoplay=1&rel=0" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen allow="autoplay"></iframe></div></div>';
+    document.body.appendChild(overlay);
+    return;
+  }
+  if (v.url) window.open(v.url, '_blank');
 }
 
 function renderMarketIntel() {

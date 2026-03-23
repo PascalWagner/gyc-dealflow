@@ -332,7 +332,10 @@ async function handlePost(req, res, supabase, user) {
 
   // Special case: profile updates (user_profiles table)
   if (type === 'profile') {
-    const allowed = ['share_portfolio', 'full_name'];
+    const allowed = [
+      'share_portfolio', 'full_name', 'phone', 'location',
+      'share_saved', 'share_dd', 'share_invested', 'allow_follows'
+    ];
     const fields = {};
     for (const key of allowed) {
       if (data[key] !== undefined) fields[key] = data[key];
@@ -347,6 +350,14 @@ async function handlePost(req, res, supabase, user) {
       .select()
       .single();
     if (error) throw error;
+
+    // Sync phone + name to GHL contact (fire-and-forget)
+    if (fields.phone || fields.full_name) {
+      syncProfileToGhl(user.email, fields).catch(e =>
+        console.warn('GHL profile sync failed:', e.message)
+      );
+    }
+
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
   }
 
@@ -611,4 +622,33 @@ async function syncAutoRenewToGhl(email, autoRenew) {
       { method: 'POST', body: JSON.stringify({ tags: [addTag] }) }
     );
   }
+}
+
+async function syncProfileToGhl(email, fields) {
+  if (!email) return;
+
+  const searchResp = await ghlFetch(
+    `https://services.leadconnectorhq.com/contacts/search/duplicate?email=${encodeURIComponent(email)}&locationId=${process.env.GHL_LOCATION_ID || process.env.GHL_LOCATION}`,
+    { method: 'GET' }
+  );
+
+  if (!searchResp || !searchResp.ok) return;
+  const searchData = await searchResp.json();
+  const contact = searchData.contact;
+  if (!contact?.id) return;
+
+  const updates = {};
+  if (fields.phone) updates.phone = fields.phone;
+  if (fields.full_name) {
+    const parts = fields.full_name.trim().split(/\s+/);
+    updates.firstName = parts[0] || '';
+    updates.lastName = parts.slice(1).join(' ') || '';
+  }
+
+  if (Object.keys(updates).length === 0) return;
+
+  await ghlFetch(
+    `https://services.leadconnectorhq.com/contacts/${contact.id}`,
+    { method: 'PUT', body: JSON.stringify(updates) }
+  );
 }
