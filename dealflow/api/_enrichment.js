@@ -191,6 +191,15 @@ export async function runEnrichmentCascade(extracted, supabase) {
     });
   }
 
+  // Sponsor track record (all SEC filings for this sponsor)
+  const sponsorQuery = extracted.managementCompany || extracted.sponsor;
+  if (sponsorQuery) {
+    enrichmentPromises.sponsorTrackRecord = runSponsorTrackRecord(sponsorQuery).catch(e => {
+      console.warn('Sponsor track record failed:', e.message);
+      return null;
+    });
+  }
+
   // Deal matching
   if (supabase) {
     enrichmentPromises.matchedDeals = matchDeals(supabase, extracted.investmentName, extracted.managementCompany || extracted.sponsor).catch(e => {
@@ -209,13 +218,27 @@ export async function runEnrichmentCascade(extracted, supabase) {
   if (results.property) enrichmentSteps.push('property');
   if (results.market) enrichmentSteps.push('market');
   if (results.backgroundCheck) enrichmentSteps.push('background');
+  if (results.sponsorTrackRecord) enrichmentSteps.push('sponsor-track-record');
+
+  // Write extracted fields to the opportunities table (safe — only fills empty fields)
+  let dbWriteResult = null;
+  if (supabase && results.matchedDeals && results.matchedDeals.length > 0) {
+    const dealId = results.matchedDeals[0].id;
+    dbWriteResult = await persistToDatabase(supabase, dealId, extracted).catch(e => {
+      console.warn('DB write failed:', e.message);
+      return null;
+    });
+    if (dbWriteResult) enrichmentSteps.push('db-write');
+  }
 
   return {
     sec: results.sec || null,
     property: results.property || null,
     market: results.market || null,
     backgroundCheck: results.backgroundCheck || null,
+    sponsorTrackRecord: results.sponsorTrackRecord || null,
     matchedDeals: results.matchedDeals || [],
+    dbWrite: dbWriteResult,
     enrichmentSteps
   };
 }
@@ -427,6 +450,226 @@ async function matchDeals(supabase, investmentName, sponsor) {
     sponsor: m.management_companies?.operator_name || '',
     assetClass: m.asset_class || ''
   }));
+}
+
+// ── Sponsor Track Record ─────────────────────────────────────────────────────
+
+const EDGAR_USER_AGENT = 'GYC Research pascal@growyourcashflow.com';
+const EFTS_SEARCH_URL = 'https://efts.sec.gov/LATEST/search-index';
+
+async function runSponsorTrackRecord(sponsorName) {
+  // Search SEC EDGAR for ALL Form D filings by this sponsor
+  const cleaned = sponsorName.replace(/\b(LLC|LP|Inc|Capital|Partners|Group|Management|Fund)\b/gi, '').trim();
+  if (cleaned.length < 3) return null;
+
+  const url = `${EFTS_SEARCH_URL}?q=%22${encodeURIComponent(cleaned)}%22&forms=D&dateRange=custom&startdt=2000-01-01`;
+  const resp = await fetch(url, {
+    headers: { 'User-Agent': EDGAR_USER_AGENT }
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+
+  const hits = (data.hits && data.hits.hits) || [];
+  const totalFilings = (data.hits && data.hits.total && data.hits.total.value) || hits.length;
+
+  if (hits.length === 0) return null;
+
+  // Parse all filings
+  const filings = hits.map(h => {
+    const s = h._source || {};
+    return {
+      entityName: (s.display_names && s.display_names[0]) || '',
+      fileDate: s.file_date || '',
+      form: s.form || 'D',
+      location: (s.biz_locations && s.biz_locations[0]) || '',
+      cik: ((s.ciks && s.ciks[0]) || '').replace(/^0+/, '')
+    };
+  });
+
+  // Deduplicate by entity name (amendments create multiple entries)
+  const uniqueDeals = new Map();
+  for (const f of filings) {
+    const key = f.entityName.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!uniqueDeals.has(key) || f.fileDate > uniqueDeals.get(key).fileDate) {
+      uniqueDeals.set(key, f);
+    }
+  }
+
+  // Build track record summary
+  const deals = [...uniqueDeals.values()].sort((a, b) => (b.fileDate || '').localeCompare(a.fileDate || ''));
+  const years = deals.map(d => d.fileDate ? parseInt(d.fileDate.substring(0, 4)) : null).filter(Boolean);
+  const firstYear = years.length > 0 ? Math.min(...years) : null;
+  const latestYear = years.length > 0 ? Math.max(...years) : null;
+
+  // Geography breakdown
+  const geoCounts = {};
+  for (const d of deals) {
+    if (d.location) {
+      geoCounts[d.location] = (geoCounts[d.location] || 0) + 1;
+    }
+  }
+  const topLocations = Object.entries(geoCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([location, count]) => ({ location, count }));
+
+  return {
+    found: true,
+    sponsorName: cleaned,
+    totalFilings,
+    uniqueDeals: deals.length,
+    yearsActive: firstYear && latestYear ? latestYear - firstYear + 1 : null,
+    firstFiling: firstYear,
+    latestFiling: latestYear,
+    topLocations,
+    deals: deals.slice(0, 20).map(d => ({
+      name: d.entityName,
+      date: d.fileDate,
+      location: d.location
+    }))
+  };
+}
+
+// ── Database Persistence ─────────────────────────────────────────────────────
+
+// Field mapping: extracted JSON keys → Supabase column names
+const SUPABASE_FIELD_MAP = {
+  assetClass:             'asset_class',
+  dealType:               'deal_type',
+  strategy:               'strategy',
+  investmentStrategy:     'investment_strategy',
+  targetIRR:              'target_irr',
+  preferredReturn:        'preferred_return',
+  cashOnCash:             'cash_on_cash',
+  equityMultiple:         'equity_multiple',
+  investmentMinimum:      'investment_minimum',
+  holdPeriod:             'hold_period_years',
+  offeringSize:           'offering_size',
+  offeringType:           'offering_type',
+  availableTo:            'available_to',
+  distributions:          'distributions',
+  lpGpSplit:              'lp_gp_split',
+  fees:                   'fees',
+  financials:             'financials',
+  investingGeography:     'investing_geography',
+  instrument:             'instrument',
+  debtPosition:           'debt_position',
+  fundAUM:                'fund_aum',
+  sponsorCoinvest:        'sponsor_in_deal_pct',
+  purchasePrice:          'purchase_price',
+  propertyAddress:        'property_address',
+  unitCount:              'unit_count',
+  yearBuilt:              'year_built',
+  squareFootage:          'square_footage',
+  occupancyPct:           'occupancy_pct',
+  propertyType:           'property_type',
+  acquisitionLoan:        'acquisition_loan',
+  loanToValue:            'loan_to_value',
+  loanRate:               'loan_rate',
+  loanTermYears:          'loan_term_years',
+  loanIOYears:            'loan_io_years',
+  capexBudget:            'capex_budget',
+  closingCosts:           'closing_costs',
+  acquisitionFeePct:      'acquisition_fee_pct',
+  assetMgmtFeePct:        'asset_mgmt_fee_pct',
+  propertyMgmtFeePct:     'property_mgmt_fee_pct',
+  capitalEventFeePct:     'capital_event_fee_pct',
+  dispositionFeePct:      'disposition_fee_pct',
+  constructionMgmtFeePct: 'construction_mgmt_fee_pct',
+  waterfallDetails:       'waterfall_details',
+  secEntityName:          'sec_entity_name',
+};
+
+const NUMERIC_COLS = new Set([
+  'target_irr', 'preferred_return', 'cash_on_cash', 'equity_multiple',
+  'investment_minimum', 'hold_period_years', 'offering_size', 'purchase_price',
+  'sponsor_in_deal_pct', 'fund_aum', 'unit_count', 'year_built',
+  'square_footage', 'occupancy_pct', 'acquisition_loan', 'loan_to_value',
+  'loan_rate', 'loan_term_years', 'loan_io_years', 'capex_budget',
+  'closing_costs', 'acquisition_fee_pct', 'asset_mgmt_fee_pct',
+  'property_mgmt_fee_pct', 'capital_event_fee_pct', 'disposition_fee_pct',
+  'construction_mgmt_fee_pct'
+]);
+
+/**
+ * Persist extracted fields to the opportunities table.
+ * Safe update: only fills empty fields, never overwrites human edits.
+ * @param {object} supabase - Supabase admin client
+ * @param {string} dealId - UUID of the opportunity record
+ * @param {object} extracted - Fields extracted from AI
+ * @returns {{ updated: number, fields: string[] } | null}
+ */
+async function persistToDatabase(supabase, dealId, extracted) {
+  if (!dealId || !extracted) return null;
+
+  // Build update object from field map
+  const supabaseUpdate = {};
+  for (const [jsonKey, dbCol] of Object.entries(SUPABASE_FIELD_MAP)) {
+    const val = extracted[jsonKey];
+    if (val === null || val === undefined) continue;
+
+    // Sanitize numeric fields
+    let cleanVal = val;
+    if (NUMERIC_COLS.has(dbCol) && typeof val === 'string') {
+      const numStr = val.replace(/[$,%]/g, '').replace(/,/g, '');
+      const match = numStr.match(/-?[\d.]+/);
+      if (match) {
+        cleanVal = parseFloat(match[0]);
+        if (isNaN(cleanVal)) continue;
+      } else {
+        continue;
+      }
+    }
+
+    if (dbCol === 'fees' && typeof cleanVal === 'string') {
+      supabaseUpdate[dbCol] = [cleanVal];
+    } else {
+      supabaseUpdate[dbCol] = cleanVal;
+    }
+  }
+
+  if (Object.keys(supabaseUpdate).length === 0) return null;
+
+  // Fetch current record to avoid overwriting
+  const { data: currentDeal } = await supabase
+    .from('opportunities')
+    .select('*')
+    .eq('id', dealId)
+    .single();
+
+  if (!currentDeal) return null;
+
+  const safeUpdate = {};
+  const fieldsUpdated = [];
+  for (const [col, val] of Object.entries(supabaseUpdate)) {
+    const current = currentDeal[col];
+    const isEmpty = current === null
+      || current === undefined
+      || current === ''
+      || current === 0
+      || (Array.isArray(current) && current.length === 0);
+
+    if (isEmpty) {
+      safeUpdate[col] = val;
+      fieldsUpdated.push(col);
+    }
+  }
+
+  if (fieldsUpdated.length === 0) return { updated: 0, fields: [] };
+
+  safeUpdate.updated_at = new Date().toISOString();
+  const { error } = await supabase
+    .from('opportunities')
+    .update(safeUpdate)
+    .eq('id', dealId);
+
+  if (error) {
+    console.error('DB persist error:', error.message);
+    return null;
+  }
+
+  console.log(`Persisted ${fieldsUpdated.length} fields to opportunity ${dealId}: ${fieldsUpdated.join(', ')}`);
+  return { updated: fieldsUpdated.length, fields: fieldsUpdated };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

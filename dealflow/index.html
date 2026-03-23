@@ -18963,6 +18963,24 @@ function renderEnrichmentPanels(enrichment) {
       + '<div style="' + valStyle + '">' + (bgDetails.length > 0 ? bgDetails.join(' &middot; ') : 'No issues found') + '</div></div>');
   }
 
+  // Sponsor Track Record
+  if (enrichment.sponsorTrackRecord && enrichment.sponsorTrackRecord.found) {
+    var tr = enrichment.sponsorTrackRecord;
+    var trDetails = [];
+    if (tr.uniqueDeals) trDetails.push('<strong>' + tr.uniqueDeals + '</strong> deals filed with SEC');
+    if (tr.yearsActive) trDetails.push('<strong>' + tr.yearsActive + '</strong> years active (' + tr.firstFiling + '–' + tr.latestFiling + ')');
+    if (tr.topLocations && tr.topLocations.length > 0) trDetails.push('Markets: ' + tr.topLocations.map(function(l) { return l.location; }).join(', '));
+    if (tr.deals && tr.deals.length > 0) {
+      var recentDeals = tr.deals.slice(0, 5).map(function(d) { return d.name + (d.date ? ' (' + d.date.substring(0, 4) + ')' : ''); });
+      trDetails.push('<br><span style="font-size:11px;">Recent: ' + recentDeals.join(' &middot; ') + '</span>');
+    }
+    if (trDetails.length > 0) {
+      panels.push('<div style="' + panelStyle + '">'
+        + '<div style="' + labelStyle + '" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Sponsor Track Record</div>'
+        + '<div style="' + valStyle + '">' + trDetails.join(' &middot; ') + '</div></div>');
+    }
+  }
+
   if (panels.length === 0) return '';
   return '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">'
     + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:10px;">Enrichment Data</div>'

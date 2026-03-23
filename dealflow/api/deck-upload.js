@@ -179,7 +179,9 @@ export default async function handler(req, res) {
         property: enrichmentCascade.property,
         market: enrichmentCascade.market,
         backgroundCheck: enrichmentCascade.backgroundCheck,
+        sponsorTrackRecord: enrichmentCascade.sponsorTrackRecord,
         matchedDeals: enrichmentCascade.matchedDeals,
+        dbWrite: enrichmentCascade.dbWrite,
         enrichmentSteps: ['ppm', ...enrichmentCascade.enrichmentSteps]
       } : {}),
       ...(enrichmentError ? { enrichmentError } : {})
