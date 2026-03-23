@@ -1351,9 +1351,13 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
       <div class="step-body">
         <div style="max-width:400px;margin:0 auto;text-align:center;">
-          <input type="text" id="lpDealCountInput" value="0" inputmode="numeric" autocomplete="off"
-            style="font-family:var(--font-headline);font-size:48px;color:var(--text-dark);border:none;background:transparent;text-align:center;width:100%;outline:none;letter-spacing:-1px;"
-            oninput="onDealCountInput()">
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;">
+            <button onclick="adjustDealCount(-1)" style="width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--bg-card);font-size:20px;font-weight:700;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">&minus;</button>
+            <input type="text" id="lpDealCountInput" value="0" inputmode="numeric" autocomplete="off"
+              style="font-family:var(--font-headline);font-size:48px;color:var(--text-dark);border:none;background:transparent;text-align:center;width:80px;outline:none;letter-spacing:-1px;"
+              oninput="onDealCountInput()">
+            <button onclick="adjustDealCount(1)" style="width:44px;height:44px;border-radius:50%;border:1px solid var(--border);background:var(--bg-card);font-size:20px;font-weight:700;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">+</button>
+          </div>
           <div style="font-family:var(--font-ui);font-size:14px;color:var(--text-muted);margin-bottom:20px;">deals</div>
           <div id="dealCountFeedback" style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.6;padding:12px 16px;background:var(--green-bg);border-radius:var(--radius-sm);min-height:44px;">Everyone starts somewhere. We'll walk you through everything.</div>
         </div>

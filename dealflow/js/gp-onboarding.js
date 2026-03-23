@@ -194,8 +194,18 @@
     setTimeout(function() { goToLpStep('stepLpDeals'); }, 350);
   };
 
-  // ── LP: Deal Count (U4) — simple number input ──
+  // ── LP: Deal Count (U4) — number input with +/- ──
   lpData.lpDealsCount = 0; // Default to 0
+
+  window.adjustDealCount = function(delta) {
+    var inp = document.getElementById('lpDealCountInput');
+    if (!inp) return;
+    var current = parseInt(inp.value) || 0;
+    var newVal = Math.max(0, current + delta);
+    inp.value = newVal;
+    lpData.lpDealsCount = newVal;
+    showDealFeedback(newVal);
+  };
 
   window.onDealCountInput = function() {
     var inp = document.getElementById('lpDealCountInput');
