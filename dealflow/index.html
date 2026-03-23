@@ -5915,13 +5915,15 @@ const _supa = window.supabase.createClient(
     <div class="settings-page">
       <div class="settings-tabs">
         <button class="settings-tab active" data-stab="profile" onclick="switchSettingsTab(this)">Profile</button>
+        <button class="settings-tab" data-stab="investor" onclick="switchSettingsTab(this)">Investor</button>
+        <button class="settings-tab" data-stab="privacy" onclick="switchSettingsTab(this)">Privacy</button>
         <button class="settings-tab" data-stab="notifications" onclick="switchSettingsTab(this)">Notifications</button>
       </div>
 
       <!-- Profile Tab -->
       <div class="settings-panel" id="stab-profile">
         <div class="settings-page-title">Your Profile</div>
-        <div class="settings-page-desc">Manage your account information and investor profile.</div>
+        <div class="settings-page-desc">Manage your account information and how others reach you.</div>
 
         <div class="settings-card">
           <div class="settings-card-title">Personal Information</div>
@@ -5953,8 +5955,33 @@ const _supa = window.supabase.createClient(
         </div>
 
         <div class="settings-card" style="margin-top:16px">
-          <div class="settings-card-title">Investor Profile</div>
-          <div class="settings-card-desc">Help GPs understand your background</div>
+          <div class="settings-card-title">Consultation Booking</div>
+          <div class="settings-card-desc">Add your calendar link so LPs can book time with you directly on the platform</div>
+          <div class="profile-field">
+            <div class="profile-label">Calendar Link</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="url" class="profile-input" id="calendarLinkInput" placeholder="https://calendly.com/your-name" style="flex:1;">
+              <a id="calendarLinkPreview" href="#" target="_blank" rel="noopener" style="display:none;padding:8px 12px;background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;white-space:nowrap;" title="Test your link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Test
+              </a>
+            </div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;">Paste a link from Calendly, Cal.com, or any scheduling tool. This will appear as a "Book a Call" button on your profile and deal interactions.</div>
+          </div>
+        </div>
+
+        <div class="settings-save-bar">
+          <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Profile</button>
+        </div>
+      </div>
+
+      <!-- Investor Tab -->
+      <div class="settings-panel" id="stab-investor" style="display:none">
+        <div class="settings-page-title">Investor Profile</div>
+        <div class="settings-page-desc">Help GPs understand your background and investment capacity.</div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">Investment Background</div>
+          <div class="settings-card-desc">This information helps match you with relevant deal opportunities</div>
           <div class="profile-row">
             <div class="profile-field">
               <div class="profile-label">Accreditation Status</div>
@@ -5985,9 +6012,19 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
 
-        <div class="settings-card" style="margin-top:16px">
-          <div class="settings-card-title">Privacy & Sharing</div>
-          <div class="settings-card-desc">Control what other GYC members can see about your activity</div>
+        <div class="settings-save-bar">
+          <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Investor Profile</button>
+        </div>
+      </div>
+
+      <!-- Privacy Tab -->
+      <div class="settings-panel" id="stab-privacy" style="display:none">
+        <div class="settings-page-title">Privacy & Sharing</div>
+        <div class="settings-page-desc">Control what other GYC members can see about your activity.</div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">Portfolio Visibility</div>
+          <div class="settings-card-desc">Manage how your investment activity appears to other members</div>
           <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:12px 0;">
             <input type="checkbox" id="sharePortfolioToggle" onchange="toggleSharePortfolio(this.checked)" style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--green);">
             <div>
@@ -5995,25 +6032,6 @@ const _supa = window.supabase.createClient(
               <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;line-height:1.5;">When enabled, your name will appear on deal pages where you've invested or are vetting. This helps other members discover deals through people they trust.</div>
             </div>
           </label>
-        </div>
-
-        <div class="settings-card" style="margin-top:16px">
-          <div class="settings-card-title">Consultation Booking</div>
-          <div class="settings-card-desc">Add your calendar link so LPs can book time with you directly on the platform</div>
-          <div class="profile-field">
-            <div class="profile-label">Calendar Link</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <input type="url" class="profile-input" id="calendarLinkInput" placeholder="https://calendly.com/your-name" style="flex:1;">
-              <a id="calendarLinkPreview" href="#" target="_blank" rel="noopener" style="display:none;padding:8px 12px;background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;white-space:nowrap;" title="Test your link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Test
-              </a>
-            </div>
-            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;">Paste a link from Calendly, Cal.com, or any scheduling tool. This will appear as a "Book a Call" button on your profile and deal interactions.</div>
-          </div>
-        </div>
-
-        <div class="settings-save-bar">
-          <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Profile</button>
         </div>
       </div>
 
@@ -6497,16 +6515,6 @@ const _supa = window.supabase.createClient(
         </div>
       </div>
 
-      <!-- THREE PILLARS -->      <!-- THREE PILLARS -->
-      <div style="margin-top:32px;">
-        <div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);margin-bottom:16px;">The Three Pillars</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Pillar 1</div><div style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Education</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">The ACHIEVE System course: set income, growth, and tax targets. Learn to read decks, PPMs, and structures without getting lost in jargon.</div></div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Pillar 2</div><div style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Tools &amp; Deal Flow</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">Buy Box Builder, Deal Research Checklist, allocation worksheets, and the full deal database with cash flow projections, risk analysis, and peer comparisons.</div></div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 20px;"><div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);margin-bottom:8px;">Pillar 3</div><div style="font-family:var(--font-ui);font-size:14px;font-weight:800;color:var(--text-dark);margin-bottom:6px;">Live Support</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">A 60&#8209;minute 1:1 Gameplan Call, weekly office hours with deal hot seats, and a clear 90&#8209;day sprint with milestones.</div></div>
-        </div>
-      </div>
-
       <!-- 90-DAY MILESTONES -->
       <div style="margin-top:32px;">
         <div style="font-family:var(--font-headline);font-size:20px;color:var(--text-dark);margin-bottom:4px;">Your First 90 Days</div>
@@ -6531,11 +6539,6 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
 
-      </div>
-
-      <!-- VIDEO -->
-      <div style="margin-top:20px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card);">
-        <div style="position:relative;padding-bottom:56.25%;height:0;"><iframe src="https://www.youtube.com/embed/lvcFJcL-c6w" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen loading="lazy"></iframe></div>
       </div>
 
       <!-- WHO IT'S FOR -->
@@ -6580,29 +6583,6 @@ const _supa = window.supabase.createClient(
             <div style="font-family:var(--font-ui);font-size:15px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">90&#8209;Day Decision Confidence Guarantee</div>
             <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:8px;"><strong style="color:var(--text-dark);">30&#8209;Day Fit Guarantee:</strong> Attend your Gameplan Call and first two office hours. If it&#8217;s not the right fit, get a full refund &#8212; no questions asked.</div>
             <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.7;"><strong style="color:var(--text-dark);">90&#8209;Day Confidence Guarantee:</strong> Complete your Buy Box, evaluate 3 deals, and attend 6+ office hours sessions. If you don&#8217;t feel decisively more confident, Pascal will personally extend your membership.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PLATFORM FEATURES (detail) -->
-      <div style="margin-top:32px;">
-        <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:16px;">What You Unlock on the Platform</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
-            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Due Diligence Checklists</div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">70+ question interactive checklists tailored to each deal type, with auto-filled answers from deal data.</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
-            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Market Intelligence</div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">SEC filing trends, asset class benchmarks, deal flow analytics, and debt fund comparisons.</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
-            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Investment Plan Builder</div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Personalized deployment roadmap based on your goals, capital, and risk tolerance.</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;">
-            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Operator Background Reports</div>
-            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Automated checks across SEC EDGAR, FINRA BrokerCheck, OFAC, and federal court records.</div>
           </div>
         </div>
       </div>
