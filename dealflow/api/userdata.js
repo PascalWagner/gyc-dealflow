@@ -352,10 +352,12 @@ async function handlePost(req, res, supabase, user) {
       .single();
     if (error) throw error;
 
-    // Sync phone + name to GHL contact (awaited so Vercel doesn't kill the function)
+    // Sync phone + name to GHL contact
     if (fields.phone || fields.full_name) {
+      console.log('GHL profile sync: starting for', user.email, 'fields:', Object.keys(fields).join(','));
       try {
         await syncProfileToGhl(user.email, fields);
+        console.log('GHL profile sync: completed');
       } catch (e) {
         console.warn('GHL profile sync failed:', e.message);
       }
@@ -628,17 +630,19 @@ async function syncAutoRenewToGhl(email, autoRenew) {
 }
 
 async function syncProfileToGhl(email, fields) {
-  if (!email) return;
+  if (!email) { console.log('GHL sync: no email'); return; }
 
+  console.log('GHL sync: searching for', email);
   const searchResp = await ghlFetch(
     `https://services.leadconnectorhq.com/contacts/search/duplicate?email=${encodeURIComponent(email)}&locationId=${process.env.GHL_LOCATION_ID || process.env.GHL_LOCATION}`,
     { method: 'GET' }
   );
 
-  if (!searchResp || !searchResp.ok) return;
+  if (!searchResp) { console.log('GHL sync: ghlFetch returned null (no API key?)'); return; }
+  if (!searchResp.ok) { console.log('GHL sync: search failed', searchResp.status); return; }
   const searchData = await searchResp.json();
   const contact = searchData.contact;
-  if (!contact?.id) return;
+  if (!contact?.id) { console.log('GHL sync: no contact found, searchData:', JSON.stringify(searchData).substring(0, 200)); return; }
 
   const updates = {};
   if (fields.phone) updates.phone = fields.phone;
