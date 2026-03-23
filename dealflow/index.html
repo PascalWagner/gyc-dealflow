@@ -5481,17 +5481,14 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   display: none;
   position: relative;
   width: 100%;
-  /* Fill viewport minus: topbar(~50) + stage-desc(~44) + bottom-nav(~56) = ~150px */
-  height: calc(100dvh - 150px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   min-height: 380px;
-  overflow: hidden;
+  overflow: visible;
   touch-action: pan-y;
   padding: 0;
 }
 .swipe-card-stack {
   position: relative;
   width: 100%;
-  height: 100%;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -5501,7 +5498,6 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   position: absolute;
   width: calc(100% - 32px);
   max-width: 400px;
-  max-height: calc(100% - 8px);
   background: var(--bg-card);
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.12);
@@ -5515,18 +5511,21 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   flex-direction: column;
 }
 .swipe-card.active {
+  position: relative;
   z-index: 10;
   cursor: grab;
   box-shadow: 0 8px 32px rgba(0,0,0,0.16);
 }
 .swipe-card.active:active { cursor: grabbing; }
 .swipe-card.behind {
+  top: 0;
   z-index: 5;
   transform: scale(0.95) translateY(8px) !important;
   opacity: 0.7;
   pointer-events: none;
 }
 .swipe-card.behind-2 {
+  top: 0;
   z-index: 1;
   transform: scale(0.9) translateY(16px) !important;
   opacity: 0.4;
@@ -5620,7 +5619,7 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 .swipe-body {
   padding: 0;
   flex: 1;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 .swipe-title {
   font-family: var(--font-ui);
@@ -25143,9 +25142,8 @@ function renderDashboard() {
 
     // If still no blueprint (no wizard done), fall back to thesis + path
     if (!blueprintHtml) {
-      var thesisHtml = buildDashThesis(wd, branch);
-      var pathHtml = buildDashPathToGoal(wd, branch, deals);
-      blueprintHtml = thesisHtml + pathHtml;
+      blueprintHtml = buildDashThesis(wd, branch);
+
     }
 
     // Overview = Hero + Blueprint + Action Items (when non-empty) + Fund Nudge
@@ -25212,89 +25210,6 @@ function buildDashThesis(d, branch) {
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:15px;line-height:1.8;color:var(--text-secondary);">' + thesisText + '</div>'
     + '</div>';
-}
-
-// ===== Dashboard: Path to Goal / Growth Projection / Tax Shelter =====
-function buildDashPathToGoal(d, branch, deals) {
-  if (!d || !branch) return '';
-  var allDeals = deals || [];
-  var assetMap = { 'Multi Family': 'Multi-Family', 'Hotels / Hospitality': 'Hotels/Hospitality', 'RV / Mobile Home Parks': 'RV/Mobile Home Parks', 'Short-Term Rentals': 'Short Term Rental', 'Oil & Gas': 'Oil & Gas / Energy', 'SFH': 'Single Family', 'Single Family Homes': 'Single Family', 'NNN (Triple Net Lease)': 'NNN', 'Retail Shopping Centres': 'Retail' };
-  var _stratAliases = ['Private Debt / Credit', 'Lending', 'Debt'];
-  var userAssets = (d.assetClasses || []).filter(function(a) { return _stratAliases.indexOf(a) === -1; }).map(function(a) { return assetMap[a] || a; });
-  var activeDeals = allDeals.filter(function(x) { return !x.isStale; });
-
-  if (branch === 'cashflow') {
-    var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-    var hasGoals = goals && goals.targetIncome > 0;
-    var currentInc = hasGoals ? (goals.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
-    var targetInc = hasGoals ? goals.targetIncome : (parseDollar(d.targetCashFlow) || 0);
-    var gap = Math.max(0, targetInc - currentInc);
-    if (gap <= 0 || targetInc <= 0) return '';
-    var checkSizeRaw = d.checkSize || (hasGoals ? goals.checkSize : 0) || '$100,000';
-    var checkSizeNum = parseDollar(checkSizeRaw) || 100000;
-    var matchingForAvg = allDeals.filter(function(deal) { if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false; return true; });
-    var cocValues = matchingForAvg.map(function(deal) { return deal.cashOnCash || 0; }).filter(function(v) { return v > 0; });
-    var avgCoC = cocValues.length > 0 ? cocValues.reduce(function(a, b) { return a + b; }, 0) / cocValues.length : 0.08;
-    var cocPct = Math.round(avgCoC * 100);
-    var annualPerDeal = Math.round(checkSizeNum * avgCoC);
-    var dealsNeeded = Math.ceil(gap / annualPerDeal);
-    var totalAnnual = dealsNeeded * annualPerDeal;
-    window._ptgGap = gap; window._ptgCheckSize = checkSizeNum; window._ptgCoC = cocPct; window._ptgCoCValues = cocValues;
-
-    return '<div class="bb-card" style="margin-bottom:20px;">'
-      + '<div class="bb-label">Your Path to Goal</div>'
-      + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">'
-      + 'To close your <strong style="color:var(--text-dark);">$' + gap.toLocaleString() + '/yr</strong> income gap:'
-      + '</div>'
-      + '<div class="bb-ptg-row">'
-      + '<div class="bb-ptg-cell"><div id="ptgDeals" class="bb-ptg-big" style="color:var(--text-dark);">' + dealsNeeded + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
-      + '<div class="bb-ptg-op">&times;</div>'
-      + '<div class="bb-ptg-cell-adj"><div style="display:flex;align-items:center;justify-content:center;gap:6px;"><button onclick="ptgAdjust(\'check\',-25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button><div id="ptgCheckSize" class="bb-ptg-big" style="color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div><button onclick="ptgAdjust(\'check\',25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button></div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">EACH</div></div>'
-      + '<div class="bb-ptg-op">@</div>'
-      + '<div class="bb-ptg-cell-adj"><div style="display:flex;align-items:center;justify-content:center;gap:6px;"><button onclick="ptgAdjust(\'coc\',-1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button><div id="ptgCoC" class="bb-ptg-big" style="color:var(--primary);">~' + cocPct + '%</div><button onclick="ptgAdjust(\'coc\',1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button></div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CASH-ON-CASH</div></div>'
-      + '<div class="bb-ptg-op">=</div>'
-      + '<div class="bb-ptg-cell"><div id="ptgTotal" class="bb-ptg-big" style="color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
-      + '</div>'
-      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Adjust check size and target yield to model your plan.' + (cocValues.length > 0 ? ' Default CoC is based on your matching deals.' : '') + '</div>'
-      + '</div>';
-  } else if (branch === 'growth') {
-    var capital = parseDollar(d.growthCapital) || 0;
-    var minIRR = d.minIRR || '';
-    var irrNum = parseFloat(minIRR) || 18;
-    if (capital <= 0) return '';
-    var yr5 = Math.round(capital * Math.pow(1 + irrNum / 100, 5));
-    var yr10 = Math.round(capital * Math.pow(1 + irrNum / 100, 10));
-    return '<div class="bb-card" style="margin-bottom:20px;">'
-      + '<div class="bb-label">Growth Projection</div>'
-      + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">'
-      + 'At <strong style="color:var(--text-dark);">' + irrNum + '% IRR</strong>, your <strong style="color:var(--text-dark);">$' + capital.toLocaleString() + '</strong> could become:'
-      + '</div>'
-      + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
-      + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:#2563EB;">$' + yr5.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">IN 5 YEARS</div></div>'
-      + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:#2563EB;">$' + yr10.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">IN 10 YEARS</div></div>'
-      + '</div>'
-      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:12px;">Compound growth projection. Actual returns depend on deal selection and timing.</div>'
-      + '</div>';
-  } else if (branch === 'tax') {
-    var taxable = parseDollar(d.taxableIncome) || 0;
-    var offset = parseDollar(d.taxOffset) || 0;
-    if (taxable <= 0 || offset <= 0) return '';
-    var depDeals = activeDeals.filter(function(x) { return x.firstYrDepreciation && x.firstYrDepreciation > 0; });
-    var avgDep = depDeals.length > 0 ? depDeals.reduce(function(s, x) { return s + x.firstYrDepreciation; }, 0) / depDeals.length : 0.6;
-    var capitalNeeded = Math.round(offset / avgDep);
-    return '<div class="bb-card" style="margin-bottom:20px;">'
-      + '<div class="bb-label">Tax Shelter Path</div>'
-      + '<div style="font-family:var(--font-body);font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;">'
-      + 'To shelter <strong style="color:var(--text-dark);">$' + offset.toLocaleString() + '</strong> at ~' + Math.round(avgDep * 100) + '% first-year depreciation:'
-      + '</div>'
-      + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
-      + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:#CF7A30;">$' + capitalNeeded.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CAPITAL NEEDED</div></div>'
-      + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:#CF7A30;">' + depDeals.length + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">DEALS WITH BONUS DEPRECIATION</div></div>'
-      + '</div>'
-      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:12px;">Based on average first-year depreciation across matching deals. Consult your CPA for specific tax advice.</div>'
-      + '</div>';
-  }
-  return '';
 }
 
 // ========== INTERACTIVE PLAN BUILDER (wizard planOutput screen) ==========
