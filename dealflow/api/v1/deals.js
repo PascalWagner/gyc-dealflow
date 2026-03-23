@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         parent_deal_id, share_class_label,
         sec_cik, date_of_first_sale, total_amount_sold, total_investors,
         management_company:management_companies (
-          id, operator_name, ceo, website, founding_year, type, asset_classes, headquarters
+          id, operator_name, ceo, website, founding_year, type, asset_classes, headquarters, full_cycle_deals
         )
       `)
       .not('investment_name', 'eq', '')
@@ -189,7 +189,8 @@ function formatDeal(d, mc) {
       founding_year: mc.founding_year,
       type: mc.type,
       asset_classes: mc.asset_classes || [],
-      headquarters: mc.headquarters
+      headquarters: mc.headquarters,
+      full_cycle_deals: mc.full_cycle_deals
     } : null,
 
     // SEC

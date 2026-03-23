@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         .select(`*, management_company:management_companies (
           id, operator_name, ceo, website, linkedin_ceo, invest_clearly_profile,
           founding_year, type, asset_classes, total_investors, authorized_emails, booking_url,
-          ir_contact_name, ir_contact_email
+          ir_contact_name, ir_contact_email, full_cycle_deals
         )`)
         .eq('id', singleId)
         .single();
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         .from('deal_sponsors')
         .select(`deal_id, role, is_primary, display_order,
           company:management_companies (id, operator_name, ceo, website, linkedin_ceo,
-            invest_clearly_profile, founding_year, type, asset_classes, total_investors, booking_url)`)
+            invest_clearly_profile, founding_year, type, asset_classes, total_investors, booking_url, full_cycle_deals)`)
         .eq('deal_id', singleId)
         .order('display_order', { ascending: true });
       const sponsors = (spRows || []).filter(r => r.company).map(r => ({
@@ -82,6 +82,7 @@ export default async function handler(req, res) {
         mcTotalInvestors: mc.total_investors, mcBookingUrl: mc.booking_url || '',
         mcAuthorizedEmails: mc.authorized_emails || [],
         mcIrContactName: mc.ir_contact_name || '', mcIrContactEmail: mc.ir_contact_email || '',
+        mcFullCycleDeals: mc.full_cycle_deals,
         fees: row.fees || [], firstYrDepreciation: row.first_yr_depreciation,
         strategy: row.strategy, instrument: row.instrument, cashOnCash: row.cash_on_cash,
         debtPosition: row.debt_position, fundAUM: row.fund_aum, loanCount: row.loan_count,
@@ -130,7 +131,8 @@ export default async function handler(req, res) {
           authorized_emails,
           booking_url,
           ir_contact_name,
-          ir_contact_email
+          ir_contact_email,
+          full_cycle_deals
         )
       `)
       .not('investment_name', 'eq', '')
@@ -286,6 +288,7 @@ export default async function handler(req, res) {
           mcAuthorizedEmails: mc.authorized_emails || [],
           mcIrContactName: mc.ir_contact_name || '',
           mcIrContactEmail: mc.ir_contact_email || '',
+          mcFullCycleDeals: mc.full_cycle_deals,
           fees: d.fees || [],
           firstYrDepreciation: d.first_yr_depreciation,
           strategy: d.strategy,
