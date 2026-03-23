@@ -12733,6 +12733,9 @@ function renderAll() {
   // Mobile swipe feed view
   var showSwipe = isMobileScreen() && mobileView === 'swipe' && currentTab === 'browse';
   if (swipeFeed) swipeFeed.style.display = showSwipe ? 'block' : 'none';
+  // Show/hide swipe toolbar
+  var swipeToolbar = document.getElementById('swipeToolbar');
+  if (swipeToolbar) swipeToolbar.style.display = showSwipe ? 'flex' : 'none';
   // Hide filter bar, stats bar on swipe mode OR non-browse pipeline tabs on mobile
   var hideFilters = showSwipe || (isMobileScreen() && currentTab !== 'browse');
   var filterBar = document.querySelector('.filter-bar');
@@ -12743,7 +12746,10 @@ function renderAll() {
   if (goalIndicator && showSwipe) goalIndicator.style.display = 'none';
   var milestoneChecklist = document.getElementById('dealsMilestoneChecklist');
   if (milestoneChecklist) milestoneChecklist.style.display = showSwipe ? 'none' : '';
-  updateStageDescription();
+  // Hide stage description in swipe mode (toolbar replaces it)
+  var stageDesc = document.getElementById('stageDescription');
+  if (stageDesc && showSwipe) stageDesc.style.display = 'none';
+  if (!showSwipe) updateStageDescription();
 
   // Remove bottom padding gap when swipe feed fills the screen
   var contentArea = document.querySelector('#page-deals .content-area');
@@ -12754,6 +12760,7 @@ function renderAll() {
     table.style.display = 'none';
     mapContainer.style.display = 'none';
     initSwipeFeed();
+    updateSwipeToolbar();
     return;
   }
 
@@ -28583,6 +28590,103 @@ function undoLastSwipe() {
   if (toast) { toast.classList.remove('show'); setTimeout(function() { if (toast.parentElement) toast.remove(); }, 200); }
 }
 
+// ========== SWIPE TOOLBAR & FILTER SHEET ==========
+
+function openSwipeFilterSheet() {
+  var sheet = document.getElementById('swipeFilterSheet');
+  if (!sheet) return;
+  // Sync sheet selects from main filter selects
+  var map = {
+    sf_assetClass: 'filterAssetClass',
+    sf_dealType: 'filterDealType',
+    sf_strategy: 'filterStrategy',
+    sf_minIRR: 'filterMinIRR',
+    sf_maxInvest: 'filterMaxInvest',
+    sf_maxLockup: 'filterMaxLockup',
+    sf_distributions: 'filterDistributions',
+    sf_sort: 'filterSort'
+  };
+  for (var sf in map) {
+    var el = document.getElementById(sf);
+    var main = document.getElementById(map[sf]);
+    if (el && main) el.value = main.value;
+  }
+  sheet.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSwipeFilterSheet() {
+  var sheet = document.getElementById('swipeFilterSheet');
+  if (sheet) sheet.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function syncSwipeFilter() {
+  // Push sheet values to main filter selects
+  var map = {
+    sf_assetClass: 'filterAssetClass',
+    sf_dealType: 'filterDealType',
+    sf_strategy: 'filterStrategy',
+    sf_minIRR: 'filterMinIRR',
+    sf_maxInvest: 'filterMaxInvest',
+    sf_maxLockup: 'filterMaxLockup',
+    sf_distributions: 'filterDistributions',
+    sf_sort: 'filterSort'
+  };
+  for (var sf in map) {
+    var el = document.getElementById(sf);
+    var main = document.getElementById(map[sf]);
+    if (el && main) main.value = el.value;
+  }
+  if (document.getElementById('sf_sort').value !== 'newest') _goalSortOverridden = true;
+  applyFilters();
+  updateSwipeToolbar();
+}
+
+function clearSwipeFilters() {
+  ['sf_assetClass','sf_dealType','sf_strategy','sf_minIRR','sf_maxInvest','sf_maxLockup','sf_distributions'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  var sortEl = document.getElementById('sf_sort');
+  if (sortEl) sortEl.value = 'newest';
+  syncSwipeFilter();
+}
+
+function syncSwipeSearch(val) {
+  var main = document.getElementById('filterSearch');
+  if (main) main.value = val;
+  applyFilters();
+}
+
+function updateSwipeToolbar() {
+  // Update count
+  var countEl = document.getElementById('swipeToolbarCount');
+  if (countEl && swipeDeals) {
+    var remaining = swipeDeals.length - swipeIndex;
+    countEl.textContent = remaining > 0 ? remaining + ' deal' + (remaining !== 1 ? 's' : '') : '';
+  }
+  // Update filter badge
+  var badge = document.getElementById('swipeFilterBadge');
+  if (badge) {
+    var count = 0;
+    ['filterAssetClass','filterDealType','filterStrategy','filterMinIRR','filterMaxInvest','filterMaxLockup','filterDistributions'].forEach(function(id) {
+      if (document.getElementById(id) && document.getElementById(id).value) count++;
+    });
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    // Highlight filter button when active
+    var btn = document.getElementById('swipeFilterBtn');
+    if (btn) btn.classList.toggle('active', count > 0);
+  }
+  // Sync search input
+  var swipeSearch = document.getElementById('swipeSearchInput');
+  var mainSearch = document.getElementById('filterSearch');
+  if (swipeSearch && mainSearch && swipeSearch !== document.activeElement) {
+    swipeSearch.value = mainSearch.value;
+  }
+}
+
 // ========== END MOBILE SWIPE FEED ==========
 </script>
 
@@ -28608,6 +28712,112 @@ function undoLastSwipe() {
     <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     <span>More</span>
   </button>
+</div>
+<!-- Bottom sheet filter for mobile swipe mode -->
+<div class="swipe-filter-sheet" id="swipeFilterSheet">
+  <div class="swipe-filter-backdrop" onclick="closeSwipeFilterSheet()"></div>
+  <div class="swipe-filter-panel">
+    <div class="swipe-filter-handle"></div>
+    <div class="swipe-filter-header">
+      <span class="swipe-filter-title">Filter Deals</span>
+      <button class="swipe-filter-clear" onclick="clearSwipeFilters()">Clear All</button>
+    </div>
+    <div class="swipe-filter-row">
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Asset Class</div>
+        <select class="swipe-filter-select" id="sf_assetClass" onchange="syncSwipeFilter()">
+          <option value="">All</option>
+          <option value="Multi-Family">Multi-Family</option>
+          <option value="Industrial">Industrial</option>
+          <option value="Self Storage">Self Storage</option>
+          <option value="Hotels/Hospitality">Hotels / Hospitality</option>
+          <option value="Lending">Lending</option>
+          <option value="RV/Mobile Home Parks">RV / Mobile Home Parks</option>
+          <option value="Business / Other">Business / Other</option>
+          <option value="Mixed-Use">Mixed-Use</option>
+          <option value="Short Term Rental">Short Term Rental</option>
+        </select>
+      </div>
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Deal Type</div>
+        <select class="swipe-filter-select" id="sf_dealType" onchange="syncSwipeFilter()">
+          <option value="">All</option>
+          <option value="Fund">Fund</option>
+          <option value="Syndication">Syndication</option>
+        </select>
+      </div>
+    </div>
+    <div class="swipe-filter-row">
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Strategy</div>
+        <select class="swipe-filter-select" id="sf_strategy" onchange="syncSwipeFilter()">
+          <option value="">All</option>
+          <option value="Lending">Lending</option>
+          <option value="Buy & Hold">Buy &amp; Hold</option>
+          <option value="Value-Add">Value-Add</option>
+          <option value="Distressed">Distressed</option>
+          <option value="Development">Development</option>
+        </select>
+      </div>
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Min Target IRR</div>
+        <select class="swipe-filter-select" id="sf_minIRR" onchange="syncSwipeFilter()">
+          <option value="">Any</option>
+          <option value="0.06">6%+</option>
+          <option value="0.08">8%+</option>
+          <option value="0.10">10%+</option>
+          <option value="0.12">12%+</option>
+          <option value="0.15">15%+</option>
+          <option value="0.20">20%+</option>
+        </select>
+      </div>
+    </div>
+    <div class="swipe-filter-row">
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Max Investment Min.</div>
+        <select class="swipe-filter-select" id="sf_maxInvest" onchange="syncSwipeFilter()">
+          <option value="">Any</option>
+          <option value="25000">$25K or less</option>
+          <option value="50000">$50K or less</option>
+          <option value="100000">$100K or less</option>
+          <option value="250000">$250K or less</option>
+        </select>
+      </div>
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Max Lockup</div>
+        <select class="swipe-filter-select" id="sf_maxLockup" onchange="syncSwipeFilter()">
+          <option value="">Any</option>
+          <option value="1">1 year or less</option>
+          <option value="3">3 years or less</option>
+          <option value="5">5 years or less</option>
+          <option value="7">7 years or less</option>
+          <option value="10">10 years or less</option>
+        </select>
+      </div>
+    </div>
+    <div class="swipe-filter-row">
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Distributions</div>
+        <select class="swipe-filter-select" id="sf_distributions" onchange="syncSwipeFilter()">
+          <option value="">Any</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+          <option value="Annual">Annual</option>
+        </select>
+      </div>
+      <div class="swipe-filter-group">
+        <div class="swipe-filter-label">Sort By</div>
+        <select class="swipe-filter-select" id="sf_sort" onchange="syncSwipeFilter()">
+          <option value="newest">Newest</option>
+          <option value="best_match">Best Match</option>
+          <option value="irr">Highest IRR</option>
+          <option value="min_invest">Lowest Min</option>
+          <option value="az">A-Z Name</option>
+        </select>
+      </div>
+    </div>
+    <button class="swipe-filter-apply" onclick="closeSwipeFilterSheet()">Show Results</button>
+  </div>
 </div>
 </body>
 </html>
