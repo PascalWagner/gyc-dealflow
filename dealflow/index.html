@@ -4330,6 +4330,157 @@ html.cap-ios .debt-metric-select-mobile {
   background: var(--primary-hover);
 }
 
+/* Portfolio empty state — import card */
+.portfolio-empty-import {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+.portfolio-empty-import-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  text-align: center;
+}
+.portfolio-empty-import-card h3 {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0 0 6px;
+}
+.portfolio-empty-import-card p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+.portfolio-empty-upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 16px;
+  position: relative;
+}
+.portfolio-empty-upload-zone:hover,
+.portfolio-empty-upload-zone.dragover {
+  border-color: var(--primary);
+  background: rgba(74,124,89,0.04);
+}
+.portfolio-empty-upload-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.portfolio-empty-upload-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  color: var(--primary);
+}
+.portfolio-empty-upload-label {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+.portfolio-empty-upload-hint {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.portfolio-empty-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.portfolio-empty-divider::before,
+.portfolio-empty-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.portfolio-empty-manual-btn {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.portfolio-empty-manual-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.portfolio-empty-browse {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.portfolio-empty-browse a {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+.portfolio-empty-browse a:hover {
+  text-decoration: underline;
+}
+/* Placeholder chart area */
+.portfolio-empty-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.portfolio-empty-chart-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.portfolio-empty-chart-box .chart-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 16px;
+  align-self: flex-start;
+}
+@media (max-width: 640px) {
+  .portfolio-empty-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== Case Studies Page ===== */
 /* ===== Member Success Dashboard ===== */
 .ms-pub-banner { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
@@ -8180,12 +8331,7 @@ const _supa = window.supabase.createClient(
           <tbody id="portfolioTableBody"></tbody>
         </table>
       </div>
-      <div id="portfolioEmptyState" style="display:none;text-align:center;padding:60px 20px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No investments yet</div>
-        <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);margin-bottom:20px;">Track your LP investments, distributions, and portfolio allocation all in one place.</div>
-        <button onclick="showDealSearchModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">+ Add Your First Investment</button>
-      </div>
+      <div id="portfolioEmptyState" style="display:none;"></div>
 
       <!-- Tax Documents (collapsible, embedded in Portfolio) -->
       <div id="portfolioTaxSection" style="margin-top:32px;display:none;">
@@ -17776,39 +17922,64 @@ function renderPortfolio() {
     summaryC.style.display = 'none';
     if (chartArea) chartArea.style.display = 'none';
     const tlc2 = document.getElementById('portfolioTimelineContainer'); if (tlc2) tlc2.style.display = 'none';
-    // Goal-aware empty state
+    // Goal-aware browse link
     const wd = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
     const branch = wd._branch;
-    let emptyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;opacity:0.4;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
-    let emptyTitle, emptyDesc, emptyBtnText, emptyBtnAction;
+    let browseText = '', browseAction = '';
     if (branch === 'cashflow') {
       const target = parseDollar(wd.targetCashFlow) || 100000;
-      emptyTitle = "You haven't logged any investments yet";
-      emptyDesc = 'Add your first income deal to start tracking toward $' + target.toLocaleString() + '/yr in passive income.';
-      emptyBtnText = 'Browse Income Deals &rarr;';
-      emptyBtnAction = "navigateTo('deals')";
+      browseText = 'Or browse income deals to start tracking toward $' + target.toLocaleString() + '/yr &rarr;';
+      browseAction = "navigateTo('deals')";
     } else if (branch === 'tax') {
-      emptyTitle = "You haven't logged any investments yet";
-      emptyDesc = 'Find deals with depreciation to start offsetting your tax bill.';
-      emptyBtnText = 'Browse Tax-Advantaged Deals &rarr;';
-      emptyBtnAction = "navigateTo('deals')";
+      browseText = 'Or browse tax-advantaged deals &rarr;';
+      browseAction = "navigateTo('deals')";
     } else if (branch === 'growth') {
-      emptyTitle = "You haven't logged any investments yet";
-      emptyDesc = 'Find high-return deals to start growing toward your 2x goal.';
-      emptyBtnText = 'Browse Growth Deals &rarr;';
-      emptyBtnAction = "navigateTo('deals')";
+      browseText = 'Or browse growth deals &rarr;';
+      browseAction = "navigateTo('deals')";
     } else {
-      emptyTitle = 'Track your investments here';
-      emptyDesc = 'Set up your plan first to get personalized recommendations.';
-      emptyBtnText = 'Set Up My Plan &rarr;';
-      emptyBtnAction = 'openBuyBoxWizard()';
+      browseText = 'Or browse deals in the marketplace &rarr;';
+      browseAction = "navigateTo('deals')";
     }
-    empty.innerHTML = '<div class="portfolio-empty-goal">'
-      + '<div class="portfolio-empty-goal-icon">' + emptyIcon + '</div>'
-      + '<div class="portfolio-empty-goal-title">' + emptyTitle + '</div>'
-      + '<div class="portfolio-empty-goal-desc">' + emptyDesc + '</div>'
-      + '<button class="portfolio-empty-goal-btn" onclick="' + emptyBtnAction + '">' + emptyBtnText + '</button>'
+    empty.innerHTML = ''
+      // Muted placeholder charts
+      + '<div class="portfolio-empty-charts">'
+      +   '<div class="portfolio-empty-chart-box">'
+      +     '<div class="chart-title">Asset Class Allocation</div>'
+      +     '<svg viewBox="0 0 120 120" style="width:100px;height:100px;"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="18" stroke-dasharray="80 235" stroke-dashoffset="0"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--text-muted)" stroke-width="18" stroke-dasharray="120 195" stroke-dashoffset="-80"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--primary)" stroke-width="18" stroke-dasharray="115 200" stroke-dashoffset="-200"/></svg>'
+      +   '</div>'
+      +   '<div class="portfolio-empty-chart-box">'
+      +     '<div class="chart-title">Risk Analysis</div>'
+      +     '<div style="width:100%;space-y:8px;">'
+      +       '<div style="background:var(--border);height:10px;border-radius:4px;width:75%;margin-bottom:10px;"></div>'
+      +       '<div style="background:var(--border);height:10px;border-radius:4px;width:55%;margin-bottom:10px;"></div>'
+      +       '<div style="background:var(--border);height:10px;border-radius:4px;width:90%;margin-bottom:10px;"></div>'
+      +       '<div style="background:var(--border);height:10px;border-radius:4px;width:40%;"></div>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+      // Import card
+      + '<div class="portfolio-empty-import">'
+      +   '<div class="portfolio-empty-import-card">'
+      +     '<h3>Track your investments in one place</h3>'
+      +     '<p>Import your existing portfolio to see allocation, performance, and progress toward your goals.</p>'
+      +     '<div class="portfolio-empty-upload-zone" id="portfolioEmptyDropZone">'
+      +       '<input type="file" accept=".pdf" onchange="handlePortfolioImportPPM(this.files[0])">'
+      +       '<div class="portfolio-empty-upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg></div>'
+      +       '<div class="portfolio-empty-upload-label">Upload a PPM or Subscription Document</div>'
+      +       '<div class="portfolio-empty-upload-hint">We\'ll extract your investment details automatically — name, amount, date, and more.<br>PDF up to 25 MB</div>'
+      +     '</div>'
+      +     '<div class="portfolio-empty-divider">or</div>'
+      +     '<button class="portfolio-empty-manual-btn" onclick="showDealSearchModal()">+ Add Investment Manually</button>'
+      +     '<div class="portfolio-empty-browse"><a onclick="' + browseAction + '">' + browseText + '</a></div>'
+      +   '</div>'
       + '</div>';
+    // Drag-and-drop support
+    var dz = document.getElementById('portfolioEmptyDropZone');
+    if (dz) {
+      dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('dragover'); });
+      dz.addEventListener('dragleave', function() { dz.classList.remove('dragover'); });
+      dz.addEventListener('drop', function(e) { e.preventDefault(); dz.classList.remove('dragover'); if (e.dataTransfer.files[0]) handlePortfolioImportPPM(e.dataTransfer.files[0]); });
+    }
   } else {
     empty.style.display = 'none';
     tableC.style.display = 'block';
@@ -18228,6 +18399,26 @@ function processAddDealFile(file) {
     if (area) area.style.borderColor = 'var(--primary)';
   };
   reader.readAsDataURL(file);
+}
+
+function handlePortfolioImportPPM(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.pdf')) { alert('Please upload a PDF file.'); return; }
+  if (file.size > 25 * 1024 * 1024) { alert('File too large. Max 25MB.'); return; }
+  // Open the add-investment modal with subscription doc pre-attached
+  showAddInvestmentModal();
+  // Pre-populate the subscription document field after modal renders
+  setTimeout(function() {
+    var input = document.getElementById('subscriptionDocInput');
+    if (input) {
+      // Create a DataTransfer to set the file on the input
+      var dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      var label = document.getElementById('subscriptionDocLabel');
+      if (label) label.textContent = file.name;
+    }
+  }, 100);
 }
 
 function handleAddDealPPMSelect(input) {
