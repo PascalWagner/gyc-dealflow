@@ -12939,6 +12939,10 @@ function renderAll() {
     grid.innerHTML = deals.map(cardRenderer).join('');
     grid.querySelectorAll('.deal-card').forEach(card => {
       card.addEventListener('click', () => {
+        if (window._isGuest) {
+          showLoginPrompt('view full deal details, save deals, and build your investment plan');
+          return;
+        }
         if (tryOpenDeal(card.dataset.id)) {
           window.location.href = 'deal.html?id=' + card.dataset.id;
         }
@@ -18158,30 +18162,7 @@ function isGated() {
   return true;
 }
 
-// ========== PHASE 3B: GATE PASCAL'S ANALYSIS IN PANEL ==========
-// Wrap renderPanel to blur scorecard/analysis for free-tier users
-const _origRenderPanel = renderPanel;
-renderPanel = function(deal) {
-  let html = _origRenderPanel(deal);
-
-  if (isGated()) {
-    // Blur Pascal's scorecard section if present
-    html = html.replace(
-      /(Pascal['']s\s*(?:Score|Analysis|Take|Review)[\s\S]*?)(<\/div>\s*<\/div>)/i,
-      function(match) {
-        return '<div style="position:relative;"><div style="filter:blur(6px);pointer-events:none;opacity:0.5;">' + match + '</div>' +
-          '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;">' +
-          '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 28px;box-shadow:0 4px 20px rgba(0,0,0,0.15);">' +
-          '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="margin-bottom:8px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
-          '<div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Academy Members Only</div>' +
-          '<div style="font-size:11px;color:var(--text-secondary);">Full risk analysis and deal comparison</div>' +
-          '</div></div></div>';
-      }
-    );
-  }
-
-  return html;
-};
+// Pascal's Analysis panel gate removed — no per-deal personal analysis feature
 
 // ========== PHASE 4: BEHAVIORAL CTAs ==========
 
@@ -20354,11 +20335,6 @@ function saveInvestmentFromModal(editId, linkDealId) {
     const idx = portfolioInvestments.findIndex(i => i.id === editId);
     if (idx >= 0) portfolioInvestments[idx] = data;
   } else {
-    // Gate: free users limited to 3 portfolio items
-    if (isGated() && portfolioInvestments.length >= 3) {
-      alert('Free accounts can track up to 3 investments. Upgrade to Academy for unlimited portfolio tracking.');
-      return;
-    }
     portfolioInvestments.push(data);
   }
   // If linked to a deal, set its stage to invested
@@ -28244,20 +28220,64 @@ loadDeals(); // Fetches from Supabase API
 initSubscription();
 showWalkthrough(); // Interactive walkthrough for new users (after onboarding)
 
-// ========== GUEST SIGNUP BANNER ==========
+// ========== GUEST EXPERIENCE ==========
 if (window._isGuest) {
-  // Hide gated sidebar nav items for guests
+  // Hide sidebar nav items guests shouldn't see — only show Deal Flow, Operators, Academy, Income Fund
   setTimeout(function() {
-    ['dashboard', 'settings'].forEach(function(pg) {
+    ['dashboard', 'settings', 'buybox', 'portfolio', 'follows', 'marketintel'].forEach(function(pg) {
       var navEl = document.querySelector('.nav-item[data-page="' + pg + '"]');
       if (navEl) navEl.style.display = 'none';
     });
+    // Hide section headers that no longer have visible children
+    document.querySelectorAll('.nav-section-label').forEach(function(label) {
+      var section = label.parentElement;
+      if (!section) return;
+      var visibleItems = section.querySelectorAll('.nav-item:not([style*="display: none"])');
+      // Re-check: the section label for "Account" should be hidden if all items hidden
+      if (visibleItems.length === 0) label.style.display = 'none';
+    });
   }, 100);
+
+  // Intercept deal.html navigation for guests — show signup modal instead
+  // Use a MutationObserver + delegation to catch dynamically rendered cards
+  function _guestifyCards() {
+    // Remove inline onclick handlers on deal card elements and replace with guest gate
+    document.querySelectorAll('[onclick*="deal.html?id="]').forEach(function(el) {
+      if (el.dataset.guestified) return;
+      el.dataset.guestified = '1';
+      el.removeAttribute('onclick');
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showLoginPrompt('view full deal details, save deals, and build your investment plan');
+      });
+    });
+    // Also handle <a> links to deal.html
+    document.querySelectorAll('a[href*="deal.html?id="]').forEach(function(el) {
+      if (el.dataset.guestified) return;
+      el.dataset.guestified = '1';
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showLoginPrompt('view full deal details, save deals, and build your investment plan');
+      });
+    });
+  }
+  // Run after initial render and on any DOM changes (new cards loaded)
+  var _guestObserver = new MutationObserver(function() { _guestifyCards(); });
+  _guestObserver.observe(document.body, { childList: true, subtree: true });
+  setTimeout(_guestifyCards, 500);
+
+  // Hide action buttons (Save/Skip) on deal cards for guests — they can't use them
+  var _guestStyle = document.createElement('style');
+  _guestStyle.textContent = '.feed-card > div:last-child, .deal-card > .credit-card-actions { display: none !important; } .feed-card, .deal-card { cursor: pointer; }';
+  document.head.appendChild(_guestStyle);
+
   // Show sticky bottom banner
   var _guestBanner = document.createElement('div');
   _guestBanner.id = 'guestSignupBanner';
   _guestBanner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:998;background:linear-gradient(135deg,#1a2e35,#0d1b1e);border-top:1px solid rgba(81,190,123,0.2);padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:16px;box-shadow:0 -4px 20px rgba(0,0,0,0.2);';
-  _guestBanner.innerHTML = '<div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4;"><strong style="color:#fff;">Browse 700+ deals free.</strong> Sign up to save deals, build your plan, and connect with co-investors.</div>'
+  _guestBanner.innerHTML = '<div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.85);line-height:1.4;"><strong style="color:#fff;">Browse 700+ deals free.</strong> Sign up to research deals, build your plan, and connect with co-investors.</div>'
     + '<a href="deal-login.html" style="flex-shrink:0;padding:10px 24px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Sign Up Free</a>'
     + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;padding:4px;flex-shrink:0;font-size:18px;line-height:1;">&times;</button>';
   document.body.appendChild(_guestBanner);
