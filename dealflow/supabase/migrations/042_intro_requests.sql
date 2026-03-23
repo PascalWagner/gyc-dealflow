@@ -11,6 +11,13 @@ CREATE TABLE IF NOT EXISTS intro_requests (
   operator_ceo text,
   message text,
   status text NOT NULL DEFAULT 'pending',
+  email_to text,
+  email_type text,
+  email_sent boolean DEFAULT false,
+  resend_error text,
+  ghl_synced boolean DEFAULT false,
+  ghl_contact_id text,
+  log jsonb,
   created_at timestamptz DEFAULT now()
 );
 

@@ -38,20 +38,25 @@ export default async function handler(req, res) {
     .single();
   const userName = profile?.full_name || user.email.split('@')[0];
 
+  // Diagnostic log — tracks every step so we can debug failures
+  const log = [];
+  const ts = () => new Date().toISOString();
+
   try {
     // 1. Find the best operator contact (IR > operator_permissions > none)
     // TODO: Re-enable auto-intro once flow is validated
     // For now, all intros route to Pascal for manual handling
     let contactEmail = '';
     let contactName = '';
+    log.push({ step: 'resolve_contact', at: ts(), result: contactEmail ? 'found' : 'none', contact: contactEmail || null });
 
-    // 2. Store in Supabase (non-blocking — don't fail the request if DB insert fails)
+    // 2. Store in Supabase
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const safeDealId = dealId && uuidRegex.test(dealId) ? dealId : null;
+    let introRowId = null;
+
     try {
-      // Validate deal_id is a proper UUID before inserting, otherwise set null
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const safeDealId = dealId && uuidRegex.test(dealId) ? dealId : null;
-
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('intro_requests')
         .insert({
           user_id: user.id,
@@ -61,33 +66,52 @@ export default async function handler(req, res) {
           operator_name: operatorName,
           operator_ceo: operatorCeo || null,
           message: message || null,
-          status: 'pending'
-        });
+          status: 'pending',
+          email_type: contactEmail ? 'warm_intro' : 'alert_pascal',
+          email_to: contactEmail || PASCAL_EMAIL
+        })
+        .select('id')
+        .single();
       if (insertError) {
-        console.warn('intro_requests insert failed:', insertError.message);
+        log.push({ step: 'db_insert', at: ts(), error: insertError.message });
+      } else {
+        introRowId = insertData?.id;
+        log.push({ step: 'db_insert', at: ts(), result: 'ok', id: introRowId });
       }
     } catch (dbErr) {
-      console.warn('intro_requests insert threw:', dbErr.message);
+      log.push({ step: 'db_insert', at: ts(), error: dbErr.message });
+    }
+
+    // Helper to update the row with latest status
+    async function updateRow(fields) {
+      if (!introRowId) return;
+      try {
+        await supabase.from('intro_requests').update(fields).eq('id', introRowId);
+      } catch (_) { /* best-effort */ }
     }
 
     // 3. Send email via Resend
     const resendKey = process.env.RESEND_API_KEY;
     let emailSent = false;
+    let resendError = null;
 
-    if (resendKey) {
-      if (contactEmail) {
-        // WARM INTRO: email operator contact, CC the LP
-        const greeting = contactName ? contactName.split(' ')[0] : 'there';
-        const introHtml = `
+    if (!resendKey) {
+      resendError = 'RESEND_API_KEY not set';
+      log.push({ step: 'email', at: ts(), error: resendError });
+    } else if (contactEmail) {
+      // WARM INTRO: email operator contact, CC the LP
+      const greeting = contactName ? contactName.split(' ')[0] : 'there';
+      const introHtml = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.6;max-width:560px;">
   <p>Hi ${greeting},</p>
   <p><strong>${userName}</strong> is a member of the <a href="https://growyourcashflow.com" style="color:#51BE7B;text-decoration:none;font-weight:600;">Grow Your Cashflow</a> investor community and is interested in learning more about <strong>${dealName}</strong>.</p>
   <p>I'm connecting you two so you can schedule a call and answer any questions.</p>
   ${message ? `<p style="padding:12px 16px;background:#f7fafc;border-left:3px solid #51BE7B;border-radius:4px;margin:16px 0;font-size:14px;color:#4a5568;"><em>${message}</em></p>` : ''}
   <p>${userName} is CC'd on this email — feel free to reply all to coordinate.</p>
-  <p style="margin-top:24px;">Best,<br><strong>Pascal Wagner</strong><br>Founder, Grow Your Cashflow<br><a href="mailto:pascal@growyourcashflow.com" style="color:#51BE7B;text-decoration:none;">pascal@growyourcashflow.com</a></p>
+  <p style="margin-top:24px;">Best,<br><strong>Pascal Wagner</strong><br>Founder, Grow Your Cashflow<br><a href="mailto:pascal@growyourcashflow.io" style="color:#51BE7B;text-decoration:none;">pascal@growyourcashflow.io</a></p>
 </div>`;
 
+      try {
         const sendResp = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -105,11 +129,16 @@ export default async function handler(req, res) {
         });
         emailSent = sendResp.ok;
         if (!sendResp.ok) {
-          console.error('Resend intro email failed:', await sendResp.text().catch(() => 'unknown'));
+          resendError = await sendResp.text().catch(() => 'unknown');
         }
-      } else {
-        // NO CONTACT: email Pascal to find one
-        const alertHtml = `
+        log.push({ step: 'email', at: ts(), type: 'warm_intro', to: contactEmail, status: sendResp.status, ok: emailSent, error: resendError });
+      } catch (emailErr) {
+        resendError = emailErr.message;
+        log.push({ step: 'email', at: ts(), type: 'warm_intro', error: resendError });
+      }
+    } else {
+      // NO CONTACT: email Pascal to find one
+      const alertHtml = `
 <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.6;max-width:560px;">
   <p style="font-size:16px;font-weight:700;color:#e53e3e;">⚠️ Intro Requested — No IR Contact on File</p>
   <table style="width:100%;border-collapse:collapse;margin:12px 0;">
@@ -123,6 +152,7 @@ export default async function handler(req, res) {
   ${managementCompanyId ? `<p><a href="${BASE}/sponsor.html?id=${managementCompanyId}" style="color:#51BE7B;font-weight:600;">View Operator Page →</a></p>` : ''}
 </div>`;
 
+      try {
         const sendResp = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -138,10 +168,21 @@ export default async function handler(req, res) {
         });
         emailSent = sendResp.ok;
         if (!sendResp.ok) {
-          console.error('Resend alert email failed:', await sendResp.text().catch(() => 'unknown'));
+          resendError = await sendResp.text().catch(() => 'unknown');
         }
+        log.push({ step: 'email', at: ts(), type: 'alert_pascal', to: PASCAL_EMAIL, status: sendResp.status, ok: emailSent, error: resendError });
+      } catch (emailErr) {
+        resendError = emailErr.message;
+        log.push({ step: 'email', at: ts(), type: 'alert_pascal', error: resendError });
       }
     }
+
+    // Update row with email results
+    await updateRow({
+      email_sent: emailSent,
+      resend_error: resendError,
+      status: emailSent ? 'email_sent' : 'email_failed'
+    });
 
     // 4. GHL sync — add note + tag (non-blocking)
     let ghlContactId = null;
@@ -158,7 +199,7 @@ export default async function handler(req, res) {
             `🤝 Introduction Requested`,
             `Deal: ${dealName}`,
             `Operator: ${operatorName}`,
-            'No IR contact — Pascal notified',
+            contactEmail ? `Warm intro sent to ${contactEmail}` : 'No IR contact — Pascal notified',
             `Date: ${new Date().toISOString().split('T')[0]}`,
             `Source: Deal Database`
           ].join('\n');
@@ -177,11 +218,23 @@ export default async function handler(req, res) {
               });
             }
           }
+          log.push({ step: 'ghl', at: ts(), result: 'ok', contactId: ghlContactId });
+        } else {
+          log.push({ step: 'ghl', at: ts(), result: 'no_contact_found' });
         }
+      } else {
+        log.push({ step: 'ghl', at: ts(), result: 'lookup_failed', status: ghlResp?.status });
       }
     } catch (ghlErr) {
-      console.warn('GHL sync failed (non-blocking):', ghlErr.message);
+      log.push({ step: 'ghl', at: ts(), error: ghlErr.message });
     }
+
+    // Update row with GHL results and final log
+    await updateRow({
+      ghl_synced: !!ghlContactId,
+      ghl_contact_id: ghlContactId,
+      log: log
+    });
 
     // 5. Slack notification (non-blocking)
     try {
@@ -191,12 +244,12 @@ export default async function handler(req, res) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: `🤝 *New Intro Request*\n• *Deal:* ${dealName}\n• *Operator:* ${operatorName}\n• *LP:* ${userName} (${user.email})\n• *Contact:* ⚠️ No IR contact — Pascal notified\n• *Date:* ${new Date().toISOString().split('T')[0]}`
+            text: `🤝 *New Intro Request*\n• *Deal:* ${dealName}\n• *Operator:* ${operatorName}\n• *LP:* ${userName} (${user.email})\n• *Contact:* ${contactEmail ? contactEmail : '⚠️ No IR contact — Pascal notified'}\n• *Email:* ${emailSent ? '✅ Sent' : '❌ Failed'}\n• *Date:* ${new Date().toISOString().split('T')[0]}`
           })
         });
       }
     } catch (slackErr) {
-      console.warn('Slack notification failed:', slackErr.message);
+      // non-blocking
     }
 
     return res.status(200).json({
