@@ -12331,13 +12331,15 @@ function getFilteredDeals() {
     });
   }
 
-  // Skip re-sort tiers when user explicitly chose Best Match — respect their sort
-  if (sortBy === 'best_match') {
+  // Only apply smart re-sort tiers on default sort (newest + goal sort, or no explicit override)
+  // When user explicitly picks a sort (IRR, A-Z, min invest, best match), respect it fully
+  if (sortBy !== 'newest' || _goalSortOverridden) {
     updateGoalSortIndicator(false);
     return filtered;
   }
 
   // Re-sort with priority: 0) almost full, 1) has deck, 2) buybox match, 3) primary sort preserved
+  // This only runs on the default "Newest" sort to surface the most relevant deals
   const _primaryOrder = new Map(filtered.map((d, i) => [d.id, i]));
   const _wd = wd || getCachedWizardData();
   filtered.sort((a, b) => {
@@ -17944,6 +17946,7 @@ function renderManagersPage() {
     const assetClasses = new Set([...(c.assetClasses || []), ...dealInfo.assetClasses]);
     const stats = computeDealStats(dealInfo.deals);
     companyMap[name] = {
+      id: c.id || null,
       name: name,
       ceo: c.ceo || '',
       assetClasses: assetClasses,
@@ -18048,7 +18051,7 @@ function renderManagersPage() {
       if (c.minInvestment > 0) metrics.push(`<span style="color:var(--text-secondary);">Min <strong style="color:var(--text-dark);">$${c.minInvestment >= 1000 ? (c.minInvestment / 1000).toFixed(0) + 'K' : c.minInvestment.toLocaleString()}</strong></span>`);
       if (c.foundingYear) metrics.push(`<span style="color:var(--text-secondary);">Est. <strong style="color:var(--text-dark);">${c.foundingYear}</strong></span>`);
 
-      return `<div class="manager-card" onclick="navigateTo('deals');setTimeout(function(){var s=document.getElementById('filterSearch');if(s){s.value='${c.name.replace(/'/g, "\\'")}';s.dispatchEvent(new Event('input'));}},100)" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
+      return `<div class="manager-card" onclick="window.location.href='sponsor.html?${c.id ? 'id=' + encodeURIComponent(c.id) : 'company=' + encodeURIComponent(c.name)}'" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
         <div class="manager-card-header">
           <div class="manager-card-avatar">${initials}</div>
           <div style="flex:1;min-width:0;">
