@@ -11335,7 +11335,6 @@ function renderCreditCard(deal) {
           ${auditBadge}
                     ${renderFreshnessBadge(deal)}
           ${renderSearchStageBadge(deal)}
-          ${deal.pctFunded >= 70 && deal.pctFunded < 100 ? `<span class="credit-badge" style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;">Almost Full &mdash; ${deal.pctFunded}%</span>` : ''}
           ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
         </div>
         ${heroContent}
@@ -11830,7 +11829,6 @@ function renderCard(deal) {
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${deal.strategy ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
           ${deal.financials === 'Audited' ? '<span class="credit-badge audit-yes">Audited</span>' : ''}
-          ${deal.pctFunded >= 70 && deal.pctFunded < 100 ? `<span class="credit-badge" style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;">Almost Full &mdash; ${deal.pctFunded}%</span>` : ''}
           ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
           ${renderFreshnessBadge(deal)}
           ${renderSearchStageBadge(deal)}
