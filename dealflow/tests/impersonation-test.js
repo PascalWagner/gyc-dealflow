@@ -307,8 +307,8 @@
       assertPageActive(page, page + ': page active');
       assertSidebarQuick('Free Plan', FREE_USER.firstName, false, page);
 
-      // Admin data leak check (skip admin-only pages that won't render)
-      if (!['admindash', 'casestudies', 'admin-manage'].includes(page)) {
+      // Admin data leak check (skip admin-only pages and pages with static contact info)
+      if (!['admindash', 'casestudies', 'admin-manage', 'incomefund'].includes(page)) {
         assertNoAdminLeak(page, page + ': no admin email leak');
       }
 
@@ -437,8 +437,9 @@
       if (page === 'buybox') {
         const reportEl = document.getElementById('reportContent');
         if (reportEl) {
-          const hasGate = reportEl.textContent.includes('Investment Plan Builder') &&
-            reportEl.innerHTML.includes('backdrop-filter');
+          // The gate overlay has backdrop-filter AND "Join Academy" CTA
+          const hasGate = reportEl.innerHTML.includes('backdrop-filter') &&
+            reportEl.textContent.includes('Join Academy');
           assert(!hasGate, 'buybox: NO free gate for academy user');
         }
       }
