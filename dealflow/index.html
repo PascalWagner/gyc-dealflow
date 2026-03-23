@@ -6413,8 +6413,8 @@ const _supa = window.supabase.createClient(
     <div class="report-page" id="reportContent">
       <div style="text-align:center;padding:80px 32px;color:var(--text-muted)">
         <div style="font-size:48px;margin-bottom:16px;opacity:0.3">&#x1f4cb;</div>
-        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text-dark)">No Investment Plan Yet</div>
-        <div style="font-size:14px;margin-bottom:24px">Answer a few questions to generate your personalized portfolio plan.</div>
+        <div style="font-size:18px;font-weight:600;margin-bottom:8px;color:var(--text-dark)">You don't have a plan yet.</div>
+        <div style="font-size:14px;margin-bottom:24px">Members with a plan deploy an average of $150K in their first 90 days. Takes 3 minutes.</div>
         <button class="btn-cta btn-cta-primary" style="width:auto;display:inline-block;padding:14px 32px" onclick="openBuyBoxWizard()">Build My Plan</button>
       </div>
     </div>
@@ -8759,13 +8759,13 @@ function renderAcademyGateCTA(source, title, subtitle) {
   var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
   return '<div class="academy-gate-cta">' +
     '<div class="gate-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>' +
-    '<div class="gate-title">' + (title || 'Unlock with Cashflow Academy') + '</div>' +
-    '<div class="gate-sub">' + (subtitle || 'Get full DD checklists, deal comparisons, stress tests, and Pascal\'s personal analysis.') + '</div>' +
-    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});navigateTo(\'academy\')">Join Academy &rarr;</button>' +
+    '<div class="gate-title">' + (title || 'See the full picture') + '</div>' +
+    '<div class="gate-sub">' + (subtitle || 'The risk analysis, peer comparisons, and deal terms that serious investors need before wiring money.') + '</div>' +
+    '<button class="gate-btn" onclick="trackActivity(\'academy_cta_clicked\',{source:\'' + source + '\'});navigateTo(\'academy\')">See What\'s Included &rarr;</button>' +
     '<div class="gate-features">' +
       '<span>' + checkSvg + 'Full DD Checklist</span>' +
       '<span>' + checkSvg + 'Deal Comparison</span>' +
-      '<span>' + checkSvg + 'Pascal\'s Analysis</span>' +
+      '<span>' + checkSvg + 'Risk Analysis</span>' +
     '</div>' +
   '</div>';
 }
@@ -9260,9 +9260,9 @@ function openComparisonView() {
   var user = getUser();
   if (user && user.tier === 'free') {
     h += '<div style="margin-top:24px;padding:24px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2px solid #3b82f6;border-radius:12px;text-align:center;">';
-    h += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--text-dark);margin-bottom:8px;">Want Pascal to review your picks?</div>';
-    h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Academy members get personalized deal analysis and deployment guidance.</div>';
-    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});navigateTo(\'academy\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Get Pascal\'s Analysis &rarr;</button>';
+    h += '<div style="font-family:var(--font-headline);font-size:18px;color:var(--text-dark);margin-bottom:8px;">Ready to go deeper?</div>';
+    h += '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Academy members get full deal analysis, risk stress tests, and direct GP introductions.</div>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'comparison\'});navigateTo(\'academy\')" style="padding:12px 28px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">See What\'s Included &rarr;</button>';
     h += '</div>';
   }
 
@@ -11833,7 +11833,7 @@ function renderPanelNextSteps(deal) {
     if (isExplorer) {
       h += '<div style="margin-top:8px;padding:12px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;text-align:center;">';
       h += '<div style="font-size:12px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">Unlock all ' + checklist.sections.length + ' DD sections</div>';
-      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});navigateTo(\'academy\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Join Academy &rarr;</button>';
+      h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'dd_checklist\'});navigateTo(\'academy\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">See What\'s Included &rarr;</button>';
       h += '</div>';
     }
 
@@ -11868,7 +11868,7 @@ function renderPanelNextSteps(deal) {
   h += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">';
   h += '<button onclick="trackActivity(\'call_booked\',{dealId:\'' + deal.id + '\',source:\'deal_panel\'});window.open(\'https://growyourcashflow.io/call\',\'_blank\')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:var(--text-secondary);text-align:center;">Book a call about this deal</button>';
   if (isExplorer) {
-    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});navigateTo(\'academy\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Get Pascal\'s analysis &rarr; Join Academy</button>';
+    h += '<button onclick="trackActivity(\'academy_cta_clicked\',{source:\'deal_panel_action\',dealId:\'' + deal.id + '\'});navigateTo(\'academy\')" style="padding:8px 16px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:8px;font-family:var(--font-ui);font-weight:600;font-size:11px;cursor:pointer;color:#3b82f6;text-align:center;">Full risk analysis &rarr; See What\'s Included</button>';
   }
   h += '</div></div>';
 
@@ -12303,8 +12303,8 @@ function renderAll() {
     if (deals.length === 0) {
       const emptyStates = {
         browse: { icon: '&#x1f50d;', title: 'No deals found', sub: 'Try adjusting your filters or clearing your buy box criteria.' },
-        saved: { icon: '&#x1f516;', title: 'No saved deals yet', sub: 'Browse deals and click Save on ones that catch your eye. This is your shortlist.', cta: 'Browse Deals', action: 'switchTab(document.querySelector(\'[data-tab=browse]\'))' },
-        vetting: { icon: '&#x1f4cb;', title: 'No deals in vetting', sub: 'Move a saved deal here when you\'re ready to dig deeper. You\'ll get a DD checklist to work through.', cta: 'Review Saved Deals', action: 'switchTab(document.querySelector(\'[data-tab=saved]\'))' },
+        saved: { icon: '&#x1f516;', title: 'Your shortlist is empty', sub: 'Save deals that catch your eye \u2014 most members save 5\u201310 before investing in their first one.', cta: 'Browse Deals', action: 'switchTab(document.querySelector(\'[data-tab=browse]\'))' },
+        vetting: { icon: '&#x1f4cb;', title: 'Nothing in the pipeline yet', sub: 'When you\u2019re ready to dig deeper on a deal, move it here. You\u2019ll get a DD checklist to work through.', cta: 'Review Saved Deals', action: 'switchTab(document.querySelector(\'[data-tab=saved]\'))' },
         diligence: { icon: '&#x1f50e;', title: 'No deals in due diligence', sub: 'Move a vetted deal here to do deep research. Review financials, talk to the sponsor, and verify the numbers.', cta: 'Check Vetting Pipeline', action: 'switchTab(document.querySelector(\'[data-tab=vetting]\'))' },
         decision: { icon: '&#x2705;', title: 'No deals awaiting decision', sub: 'Complete due diligence on a deal to move it here. This is your final review before wiring money.', cta: 'Check Due Diligence', action: 'switchTab(document.querySelector(\'[data-tab=diligence]\'))' },
         invested: { icon: '&#x1f4b0;', title: 'No investments yet', sub: 'Once you commit capital to a deal, track it here. You\'ll see distributions, K-1 status, and more.' },
@@ -12351,7 +12351,7 @@ function renderAll() {
     mapContainer.style.display = 'none';
     renderTableHead();
     if (deals.length === 0) {
-      const tEmptyStates = { browse: 'No deals found. Try adjusting your filters.', saved: 'No saved deals yet. Browse and save deals that interest you.', vetting: 'No deals in vetting. Move a saved deal here to start your due diligence.', diligence: 'No deals in due diligence. Move a vetted deal here for deep research.', decision: 'No deals awaiting decision. Complete due diligence first.', invested: 'No investments tracked yet.', passed: 'No passed deals.' };
+      const tEmptyStates = { browse: 'No deals match your filters. Try adjusting them.', saved: 'Your shortlist is empty. Save deals that catch your eye.', vetting: 'Nothing in the pipeline yet. Move a saved deal here to start your DD.', diligence: 'No deals in due diligence. Move a vetted deal here for deep research.', decision: 'No deals awaiting decision. Complete due diligence first.', invested: 'No investments tracked yet.', passed: 'No passed deals.' };
       document.getElementById('tableBody').innerHTML = '<tr><td colspan="' + TABLE_COLS.length + '" style="text-align:center;padding:60px;color:var(--text-muted);font-size:15px;">' + (tEmptyStates[currentTab] || tEmptyStates.browse) + '</td></tr>';
       return;
     }
@@ -16963,7 +16963,7 @@ renderPanel = function(deal) {
           '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 28px;box-shadow:0 4px 20px rgba(0,0,0,0.15);">' +
           '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="margin-bottom:8px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
           '<div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Academy Members Only</div>' +
-          '<div style="font-size:11px;color:var(--text-secondary);">Get Pascal\'s personal deal analysis</div>' +
+          '<div style="font-size:11px;color:var(--text-secondary);">Full risk analysis and deal comparison</div>' +
           '</div></div></div>';
       }
     );
