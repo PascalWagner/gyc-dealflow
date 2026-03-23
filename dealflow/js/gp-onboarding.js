@@ -62,18 +62,18 @@
     if (target) target.classList.add('active');
     state.currentStep = step;
 
-    // Progress bar (steps 1-9, map to 0-100%)
+    // Progress bar (steps 1-10, map to 0-100%)
     var progressWrap = document.getElementById('progressWrap');
     var progressFill = document.getElementById('progressFill');
     if (step === 0) {
       progressWrap.style.display = 'none';
     } else {
       progressWrap.style.display = 'block';
-      var pct = Math.min(100, Math.round(((step - 1) / 8) * 100));
+      var pct = Math.min(100, Math.round(((step - 1) / 9) * 100));
       progressFill.style.width = pct + '%';
     }
 
-    if (step === 8) buildChecklist();
+    if (step === 9) buildChecklist();
     window.scrollTo(0, 0);
   };
 
@@ -514,10 +514,28 @@
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'presentation', data: { interested: interested } })
-    }).then(function() { goToStep(8); }).catch(function() { goToStep(8); });
+    }).then(function() {
+      goToStep(interested ? 8 : 9); // Yes → upsell, Maybe later → checklist
+    }).catch(function() {
+      goToStep(interested ? 8 : 9);
+    });
   };
 
-  // ── Step 8: Completion Checklist ──
+  // ── Step 8: Operator Sponsorship Upsell ──
+  var GHL_PAYMENT_LINK = 'https://app.growyourcashflow.io/v2/preview/66e09581d780e54a43941ac8';
+
+  window.bookPresentation = function() {
+    // Open GHL payment link — they'll complete checkout there
+    window.open(GHL_PAYMENT_LINK, '_blank');
+    // After a moment, advance to checklist (they can come back)
+    setTimeout(function() { goToStep(9); }, 1500);
+  };
+
+  window.skipPayment = function() {
+    goToStep(9);
+  };
+
+  // ── Step 9: Completion Checklist ──
   function buildChecklist() {
     var items = [
       { label: 'Company profile', done: !!state.companyId, action: state.companyId ? 'Edit' : 'Set up', onclick: 'goToStep(2)' },
@@ -525,7 +543,7 @@
       { label: 'IR contact', done: !!(document.getElementById('irContactName') && document.getElementById('irContactName').value.trim()), action: 'Edit', onclick: 'goToStep(4)' },
       { label: 'Listing agreement', done: state.agreementSigned, action: state.agreementSigned ? 'Signed' : 'Review', onclick: state.agreementSigned ? '' : 'goToStep(5)' },
       { label: 'Deal uploaded', done: state.dealUploaded, skipped: state.dealSkipped, action: state.dealUploaded ? 'View' : 'Add deal', onclick: state.dealUploaded ? '' : 'goToStep(6)' },
-      { label: 'Presentation interest', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(7)' }
+      { label: 'Presentation', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(7)' }
     ];
 
     var html = '';
@@ -547,7 +565,7 @@
     document.getElementById('completionChecklist').innerHTML = html;
   }
 
-  // ── Step 9: LP Buy Box Prompt ──
+  // ── Step 10: LP Buy Box Prompt ──
   window.finishOnboarding = function(wantsBuyBox) {
     var step = wantsBuyBox ? 'buybox-interest' : 'complete';
     fetch('/api/gp-onboarding', {
@@ -590,8 +608,8 @@
 
       // DB steps → UI steps
       // DB: 0=not started, 1=role done, 2=company done, 3=IR done, 4=agreement done, 5=deal done, 6=pres done, 7=complete
-      // UI: 0=role, 1=welcome, 2=company, 3=assets, 4=IR, 5=agreement, 6=upload, 7=pres, 8=checklist, 9=LP
-      var stepMap = { 0: 0, 1: 1, 2: 4, 3: 5, 4: 6, 5: 7, 6: 8 };
+      // UI: 0=role, 1=welcome, 2=company, 3=assets, 4=IR, 5=agreement, 6=upload, 7=pres, 8=upsell, 9=checklist, 10=LP
+      var stepMap = { 0: 0, 1: 1, 2: 4, 3: 5, 4: 6, 5: 7, 6: 9 };
       var uiStep = stepMap[step] !== undefined ? stepMap[step] : 0;
       if (uiStep > 0) goToStep(uiStep);
     })
@@ -725,7 +743,7 @@
   var params = new URLSearchParams(window.location.search);
   if (params.get('fromDealCreate') === 'true') {
     state.dealUploaded = true;
-    setTimeout(function() { goToStep(7); }, 100);
+    setTimeout(function() { goToStep(8); }, 100);
   }
 
 })();
