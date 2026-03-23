@@ -23143,12 +23143,71 @@ async function viewUserProfile(email) {
     });
     html += '</div>';
 
+    // Activity timeline placeholder
+    html += '<div style="padding:20px 28px;">';
+    html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:12px;">First 30 Interactions</div>';
+    html += '<div id="userProfileTimeline" style="font-size:12px;color:var(--text-secondary);">Loading...</div>';
+    html += '</div>';
+
     html += '</div></div>';
 
     // Remove existing modal if any
     var existing = document.getElementById('userProfileModal');
     if (existing) existing.remove();
     document.body.insertAdjacentHTML('beforeend', html);
+
+    // Fetch activity timeline async
+    try {
+      var evResult = await adminFetch({ action: 'user-events', email: email, limit: 30 });
+      var events = evResult.data || [];
+      var tlEl = document.getElementById('userProfileTimeline');
+      if (!tlEl) return;
+      if (!events.length) { tlEl.textContent = 'No activity recorded'; return; }
+
+      var eventLabels = {
+        page_view: 'Viewed page', deal_viewed: 'Viewed deal', deal_saved: 'Saved deal',
+        session_start: 'Session started', wizard_complete: 'Completed buy box',
+        goals_complete: 'Set goals', call_booked: 'Booked a call',
+        academy_cta_clicked: 'Clicked Academy CTA', fund_cta_clicked: 'Clicked Fund CTA',
+        page_leave: 'Left page'
+      };
+      var eventColors = {
+        page_view: '#2563EB', deal_viewed: '#51BE7B', deal_saved: '#F59E0B',
+        session_start: '#8B5CF6', wizard_complete: '#10B981', goals_complete: '#06B6D4',
+        call_booked: '#EC4899', academy_cta_clicked: '#6366F1', fund_cta_clicked: '#14B8A6',
+        page_leave: '#94A3B8'
+      };
+
+      var tlHtml = '<div style="display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto;">';
+      events.forEach(function(ev, idx) {
+        var label = eventLabels[ev.event] || ev.event.replace(/_/g, ' ');
+        var color = eventColors[ev.event] || '#6B7280';
+        var detail = '';
+        if (ev.data) {
+          if (ev.data.page) detail = ev.data.page;
+          else if (ev.data.dealName) detail = ev.data.dealName;
+          else if (ev.data.deal_name) detail = ev.data.deal_name;
+          else if (ev.data.investmentName) detail = ev.data.investmentName;
+        }
+        var time = ev.created_at ? new Date(ev.created_at) : null;
+        var timeStr = time ? time.toLocaleDateString() + ' ' + time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+
+        tlHtml += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;' + (idx < events.length - 1 ? 'border-bottom:1px solid var(--border);' : '') + '">';
+        tlHtml += '<div style="min-width:20px;text-align:center;color:var(--text-muted);font-size:10px;font-weight:600;padding-top:2px;">' + (idx + 1) + '</div>';
+        tlHtml += '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';margin-top:4px;flex-shrink:0;"></div>';
+        tlHtml += '<div style="flex:1;min-width:0;">';
+        tlHtml += '<span style="font-weight:600;color:var(--text-dark);">' + label + '</span>';
+        if (detail) tlHtml += ' <span style="color:var(--text-muted);">' + detail + '</span>';
+        tlHtml += '<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">' + timeStr + '</div>';
+        tlHtml += '</div></div>';
+      });
+      tlHtml += '</div>';
+      tlEl.innerHTML = tlHtml;
+    } catch(evErr) {
+      console.error('Failed to load user events:', evErr);
+      var tlEl2 = document.getElementById('userProfileTimeline');
+      if (tlEl2) tlEl2.textContent = 'Failed to load activity';
+    }
   } catch(e) {
     console.error('viewUserProfile error:', e);
     alert('Failed to load user profile');

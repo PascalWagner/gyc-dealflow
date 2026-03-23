@@ -206,6 +206,30 @@ async function listUsers(supabase, body) {
   return { data, total: count, page, limit };
 }
 
+async function getUserEvents(supabase, body) {
+  const { email, limit = 30 } = body;
+  if (!email) throw new Error('Missing email');
+
+  // Look up user_id from email
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('email', email.toLowerCase())
+    .single();
+
+  if (!profile) throw new Error('User not found');
+
+  const { data, error } = await supabase
+    .from('user_events')
+    .select('event, data, created_at')
+    .eq('user_id', profile.id)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return { data: data || [] };
+}
+
 async function updateUserTier(supabase, body) {
   const { id, updates } = body;
   if (!id) throw new Error('Missing user id');
@@ -626,6 +650,7 @@ const ACTION_MAP = {
   'create-operator': createOperator,
   'update-operator': updateOperator,
   'list-users': listUsers,
+  'user-events': getUserEvents,
   'update-user-tier': updateUserTier,
   'list-deals-quality': listDealsQuality,
   'list-operators-quality': listOperatorsQuality,
