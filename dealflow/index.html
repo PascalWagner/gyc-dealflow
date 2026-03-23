@@ -5856,6 +5856,186 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   #page-deals .content-area { padding-top: 4px; }
 }
 
+/* Mobile swipe toolbar (replaces stage description in swipe mode) */
+.swipe-toolbar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-cream);
+}
+.swipe-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.swipe-toolbar-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.swipe-toolbar-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.swipe-toolbar-count {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.swipe-toolbar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 10px;
+  min-width: 16px;
+  height: 16px;
+  margin-left: 4px;
+}
+.swipe-toolbar-search {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.swipe-toolbar-search:focus { border-color: var(--primary); }
+.swipe-toolbar-search::placeholder { color: var(--text-muted); }
+
+/* Bottom sheet filter */
+.swipe-filter-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 0.3s, opacity 0.3s;
+}
+.swipe-filter-sheet.open {
+  visibility: visible;
+  opacity: 1;
+  transition: visibility 0s, opacity 0.3s;
+}
+.swipe-filter-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+}
+.swipe-filter-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  max-height: 80vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.swipe-filter-sheet.open .swipe-filter-panel {
+  transform: translateY(0);
+}
+.swipe-filter-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 10px auto 16px;
+}
+.swipe-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.swipe-filter-title {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+.swipe-filter-clear {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.swipe-filter-group {
+  margin-bottom: 16px;
+}
+.swipe-filter-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.swipe-filter-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-dark);
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23607179' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.swipe-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.swipe-filter-apply {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
 /* Undo toast */
 .swipe-undo-toast {
   position: fixed;
@@ -6229,20 +6409,22 @@ const _supa = window.supabase.createClient(
       <div id="decisionCompareContainer" style="display:none;margin-bottom:24px;"></div>
       <div class="card-grid" id="cardGrid"><div id="dealsMilestoneChecklist" style="display:contents;"></div></div>
       <!-- Mobile Swipe Feed -->
+      <!-- Mobile swipe toolbar: view toggle + filters + search -->
+      <div class="swipe-toolbar" id="swipeToolbar">
+        <button class="swipe-toolbar-btn" id="swipeViewToggleBtn" onclick="toggleMobileViewIcon()" title="Switch to feed view">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="swipe-toolbar-btn" id="swipeFilterBtn" onclick="openSwipeFilterSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters<span id="swipeFilterBadge" class="swipe-toolbar-badge" style="display:none;"></span>
+        </button>
+        <input type="text" class="swipe-toolbar-search" id="swipeSearchInput" placeholder="Search deals..." oninput="syncSwipeSearch(this.value)">
+        <span class="swipe-toolbar-count" id="swipeToolbarCount"></span>
+      </div>
       <div class="swipe-feed-container" id="swipeFeedContainer">
         <div class="swipe-counter" id="swipeCounter"></div>
         <div class="swipe-card-stack" id="swipeCardStack"></div>
-        <div class="swipe-actions" id="swipeActions" style="display:none !important;">
-          <button class="swipe-btn swipe-btn-skip" onclick="swipeAction('skip')" title="Skip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-          <button class="swipe-btn swipe-btn-info" onclick="swipeAction('info')" title="View details">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          </button>
-          <button class="swipe-btn swipe-btn-save" onclick="swipeAction('save')" title="Save">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          </button>
-        </div>
+        <!-- Circle action buttons removed; skip/save are on the card itself -->
       </div>
       <div id="tableViewWrap" style="display:none;overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow-card);">
         <table class="table-view" id="tableView" style="display:table;">
@@ -8536,6 +8718,14 @@ const _supa = window.supabase.createClient(
         <a class="more-menu-item" href="mailto:pascal@growyourcashflow.com?subject=Deal%20Flow%20Feedback" style="color:var(--text-muted);">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Send Feedback</span>
+        </a>
+      </div>
+      <!-- GP Portal section: shown by JS for GPs/admins -->
+      <div class="more-menu-section" id="moreGPSection" style="display:none;">
+        <div class="more-menu-label">GP Portal</div>
+        <a class="more-menu-item" href="gp-dashboard.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>GP Dashboard</span>
         </a>
       </div>
       <!-- Admin section: shown by JS if isAdmin() -->
@@ -23843,6 +24033,13 @@ function showAdminNav() {
     const isGP = user.gpType || (admin); // Admin also sees GP nav
     gpNav.style.display = isGP ? 'block' : 'none';
   }
+  // Show GP section in More menu
+  const moreGP = document.getElementById('moreGPSection');
+  if (moreGP) {
+    const user = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    const isGP = user.gpType || (admin);
+    moreGP.style.display = isGP ? 'block' : 'none';
+  }
   // Enable/disable Coming Soon nav items for admins
   ['navAssets', 'navOfficeHours'].forEach(id => {
     const el = document.getElementById(id);
@@ -28103,7 +28300,6 @@ function initSwipeFeed() {
 function renderSwipeStack() {
   var stack = document.getElementById('swipeCardStack');
   var counter = document.getElementById('swipeCounter');
-  var actions = document.getElementById('swipeActions');
   if (!stack) return;
 
   if (swipeDeals.length === 0 || swipeIndex >= swipeDeals.length) {
@@ -28113,11 +28309,9 @@ function renderSwipeStack() {
       + '<div class="swipe-empty-sub">' + (swipeDeals.length === 0 ? 'Try adjusting your filters or switching tabs.' : 'You\'ve reviewed all available deals. Check back later for new ones!') + '</div>'
       + '</div>';
     if (counter) counter.textContent = '';
-    if (actions) actions.style.display = 'none';
     return;
   }
 
-  if (actions) actions.style.display = 'flex';
   if (counter) counter.textContent = (swipeIndex + 1) + ' of ' + swipeDeals.length;
 
   var html = '';
@@ -28172,8 +28366,10 @@ function onSwipeTouchMove(e) {
     return;
   }
 
-  if (Math.abs(dx) > 10) {
+  if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
     _swipeMoved = true;
+  }
+  if (Math.abs(dx) > 10) {
     e.preventDefault();
   }
 
@@ -28208,6 +28404,15 @@ function onSwipeTouchEnd(e) {
   var card = this;
   var dx = _swipeCurrentX;
   var swipeThreshold = 100;
+
+  // Tap (no drag) = open the deal page
+  if (!_swipeMoved) {
+    var dealId = card.getAttribute('data-deal-id');
+    if (dealId && !e.target.closest('button')) {
+      window.location.href = 'deal.html?id=' + dealId;
+    }
+    return;
+  }
 
   if (dx < -swipeThreshold) {
     animateSwipeOut(card, 'left');
@@ -28263,10 +28468,18 @@ function onSwipeMouseDown(e) {
     }
   }
 
-  function onMouseUp() {
+  function onMouseUp(ev) {
     _swipeDragging = false;
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
+    // Tap (no drag) = open the deal page
+    if (!_swipeMoved) {
+      var dealId = card.getAttribute('data-deal-id');
+      if (dealId && !ev.target.closest('button')) {
+        window.location.href = 'deal.html?id=' + dealId;
+      }
+      return;
+    }
     var dx = _swipeCurrentX;
     if (dx < -100) {
       animateSwipeOut(card, 'left');
