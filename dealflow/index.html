@@ -7130,6 +7130,7 @@ const _supa = window.supabase.createClient(
       </button>
       <div class="topbar-title">Admin Dashboard</div>
       <div style="margin-left:auto;display:flex;gap:8px;">
+        <a href="https://analytics.google.com/analytics/web/#/p/G-F8B5NMB9J9" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;text-decoration:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12s4.48 10 10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 12V8M12 12V6M16 12v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 22l4-4m0 0l-4-4m4 4H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Google Analytics</a>
         <button onclick="switchAdminDashTab(adminDashCurrentTab)" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
         <button id="admindashClearBtn" onclick="clearAnalyticsData()" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--red);cursor:pointer;">Clear Data</button>
       </div>
@@ -7144,6 +7145,7 @@ const _supa = window.supabase.createClient(
         <button class="growth-tab-btn" data-tab="network" onclick="switchAdminDashTab('network')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Network &amp; Moat</button>
         <button class="growth-tab-btn" data-tab="transactions" onclick="switchAdminDashTab('transactions')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Transactions</button>
         <button class="growth-tab-btn" data-tab="feedback" onclick="switchAdminDashTab('feedback')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">Feedback</button>
+        <button class="growth-tab-btn" data-tab="saas" onclick="switchAdminDashTab('saas')" style="flex:1;min-width:120px;padding:10px 12px;border:none;border-radius:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text-secondary);">SaaS Metrics</button>
       </div>
 
       <!-- TAB: Growth Dashboard -->
@@ -7784,6 +7786,87 @@ const _supa = window.supabase.createClient(
           </div>
         </div>
       </div>
+
+      <!-- TAB: SaaS Metrics -->
+      <div id="admindash-tab-saas" style="display:none;">
+        <div class="settings-page-desc" style="margin-top:0;">SaaS health metrics: signups, activation, drop-off points, and time-to-value. Understand where users get stuck and what makes them stay.</div>
+
+        <!-- Signup & Activation Funnel -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px;" id="saasTopCards">
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Total Signups</div>
+            <div style="font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="saasTotalSignups">--</div>
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">Last 7d: <span id="saasSignups7d">--</span></div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Completed Onboarding</div>
+            <div style="font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="saasOnboarded">--</div>
+            <div style="font-size:11px;color:var(--primary);font-weight:700;margin-top:2px;" id="saasOnboardRate">--</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Activated (3+ deals)</div>
+            <div style="font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="saasActivated">--</div>
+            <div style="font-size:11px;color:var(--primary);font-weight:700;margin-top:2px;" id="saasActivateRate">--</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Saved a Deal</div>
+            <div style="font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="saasSavedDeal">--</div>
+            <div style="font-size:11px;color:var(--primary);font-weight:700;margin-top:2px;" id="saasSavedRate">--</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Booked a Call</div>
+            <div style="font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;" id="saasBookedCall">--</div>
+            <div style="font-size:11px;color:var(--primary);font-weight:700;margin-top:2px;" id="saasBookedRate">--</div>
+          </div>
+        </div>
+
+        <!-- Activation Funnel Visual -->
+        <div class="section" style="margin-top:0;">
+          <div class="section-header"><span class="section-title">Activation Funnel</span><span style="font-size:11px;color:var(--text-muted);font-weight:400;">signup &rarr; onboard &rarr; explore &rarr; save &rarr; DD &rarr; call</span></div>
+          <div class="section-body" id="saasFunnelBars" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+
+        <!-- Drop-off Analysis -->
+        <div class="section">
+          <div class="section-header"><span class="section-title">Where Users Get Stuck</span></div>
+          <div class="section-body" id="saasDropoff" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+        <!-- Aha Moment / Time to Value -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Time to Value (Aha Moments)</span>
+          </div>
+          <div class="section-body">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">How long it takes users to reach key milestones after signup. Shorter = better onboarding.</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;" id="saasTTVCards"></div>
+          </div>
+        </div>
+
+        <!-- Cohort Retention (Signup Week) -->
+        <div class="section">
+          <div class="section-header"><span class="section-title">Weekly Signup Cohorts</span></div>
+          <div class="section-body">
+            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">What % of each signup week returned and hit key milestones.</div>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;" id="saasCohortTable">
+                <thead>
+                  <tr style="border-bottom:2px solid var(--border);">
+                    <th style="text-align:left;padding:8px 10px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Signup Week</th>
+                    <th style="text-align:right;padding:8px 10px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Signups</th>
+                    <th style="text-align:right;padding:8px 10px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Onboarded</th>
+                    <th style="text-align:right;padding:8px 10px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Activated</th>
+                    <th style="text-align:right;padding:8px 10px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Saved Deal</th>
+                    <th style="text-align:right;padding:8px 10px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);">Booked Call</th>
+                  </tr>
+                </thead>
+                <tbody id="saasCohortBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /admindash-tab-saas -->
 
     </div>
   </div>
@@ -22222,6 +22305,128 @@ function analyticsPageLeave() {
 // Track page unload
 window.addEventListener('beforeunload', analyticsPageLeave);
 
+// --- SaaS Metrics Dashboard ---
+async function loadSaasMetrics() {
+  if (!isAdmin()) return;
+  var user = getUser();
+  try {
+    var resp = await fetch('/api/admin-saas-metrics', {
+      headers: { 'Authorization': 'Bearer ' + (user && user.token) }
+    });
+    if (!resp.ok) throw new Error('API error');
+    var d = await resp.json();
+
+    // Top cards
+    var s = d.summary || {};
+    setText('saasTotalSignups', s.totalSignups || 0);
+    setText('saasSignups7d', s.signups7d || 0);
+    setText('saasOnboarded', s.onboarded || 0);
+    setText('saasOnboardRate', s.totalSignups ? Math.round(s.onboarded / s.totalSignups * 100) + '% of signups' : '--');
+    setText('saasActivated', s.activated || 0);
+    setText('saasActivateRate', s.totalSignups ? Math.round(s.activated / s.totalSignups * 100) + '% of signups' : '--');
+    setText('saasSavedDeal', s.savedDeal || 0);
+    setText('saasSavedRate', s.totalSignups ? Math.round(s.savedDeal / s.totalSignups * 100) + '% of signups' : '--');
+    setText('saasBookedCall', s.bookedCall || 0);
+    setText('saasBookedRate', s.totalSignups ? Math.round(s.bookedCall / s.totalSignups * 100) + '% of signups' : '--');
+
+    // Funnel bars
+    var funnelEl = document.getElementById('saasFunnelBars');
+    if (funnelEl && d.funnelSteps) {
+      var maxCount = Math.max(...d.funnelSteps.map(function(f) { return f.count; }), 1);
+      funnelEl.innerHTML = d.funnelSteps.map(function(step, i) {
+        var barW = Math.max(step.count / maxCount * 100, 2);
+        var color = i === 0 ? 'var(--primary)' : step.pct >= 50 ? 'var(--primary)' : step.pct >= 25 ? '#f59e0b' : '#ef4444';
+        return '<div style="display:flex;align-items:center;gap:12px;">' +
+          '<div style="width:160px;flex-shrink:0;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);text-align:right;">' + step.label + '</div>' +
+          '<div style="flex:1;background:var(--bg-page);border-radius:6px;height:28px;overflow:hidden;position:relative;">' +
+            '<div style="height:100%;width:' + barW + '%;background:' + color + ';border-radius:6px;transition:width 0.5s;"></div>' +
+          '</div>' +
+          '<div style="width:80px;flex-shrink:0;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + step.count + ' <span style="font-weight:400;color:var(--text-muted);">(' + step.pct + '%)</span></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Drop-off analysis
+    var dropEl = document.getElementById('saasDropoff');
+    if (dropEl && d.dropoffs) {
+      dropEl.innerHTML = d.dropoffs.map(function(drop) {
+        var icon = drop.severity === 'critical' ? '<span style="color:#ef4444;font-weight:800;">!!!</span>' : drop.severity === 'warning' ? '<span style="color:#f59e0b;font-weight:700;">!!</span>' : '<span style="color:var(--primary);">OK</span>';
+        var bgColor = drop.severity === 'critical' ? 'rgba(239,68,68,0.06)' : drop.severity === 'warning' ? 'rgba(245,158,11,0.06)' : 'rgba(81,190,123,0.04)';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:' + bgColor + ';border-radius:8px;">' +
+          '<div style="width:30px;text-align:center;">' + icon + '</div>' +
+          '<div style="flex:1;font-family:var(--font-body);font-size:13px;color:var(--text-dark);">' +
+            '<strong>' + drop.from + '</strong> &rarr; <strong>' + drop.to + '</strong>' +
+          '</div>' +
+          '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + (drop.severity === 'critical' ? '#ef4444' : drop.severity === 'warning' ? '#f59e0b' : 'var(--text-secondary)') + ';">' +
+            drop.dropped + ' dropped (' + drop.dropPct + '%)' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Time to Value cards
+    var ttvEl = document.getElementById('saasTTVCards');
+    if (ttvEl && d.ttv) {
+      var ttvItems = [
+        { key: 'firstOnboard', label: 'First Onboarding', icon: '1', desc: 'Time from signup to completing buy box wizard' },
+        { key: 'firstDealView', label: 'First Deal View', icon: '2', desc: 'Time from signup to viewing their first deal' },
+        { key: 'firstSave', label: 'First Deal Save', icon: '3', desc: 'Aha moment: user cared enough to save a deal' },
+        { key: 'firstCallBook', label: 'First Call Booked', icon: '4', desc: 'Time from signup to booking a strategy call' }
+      ];
+      ttvEl.innerHTML = ttvItems.map(function(item) {
+        var val = d.ttv[item.key];
+        var display = '--';
+        if (val && val.median !== null) {
+          if (val.median < 1) display = Math.round(val.median * 60) + ' min';
+          else if (val.median < 24) display = Math.round(val.median * 10) / 10 + ' hrs';
+          else display = Math.round(val.median / 24 * 10) / 10 + ' days';
+        }
+        var samples = val ? val.samples : 0;
+        var isAha = item.key === 'firstSave';
+        return '<div style="background:' + (isAha ? 'linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02))' : 'var(--bg-card)') + ';border:1px solid ' + (isAha ? 'rgba(81,190,123,0.3)' : 'var(--border)') + ';border-radius:var(--radius);padding:18px;">' +
+          (isAha ? '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:6px;">AHA MOMENT</div>' : '') +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+            '<div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">' + item.icon + '</div>' +
+            '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">' + item.label + '</div>' +
+          '</div>' +
+          '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + display + '</div>' +
+          '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-top:4px;">' + item.desc + '</div>' +
+          '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:6px;">' + samples + ' users measured</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Cohort table
+    var cohortBody = document.getElementById('saasCohortBody');
+    if (cohortBody && d.cohorts) {
+      cohortBody.innerHTML = d.cohorts.map(function(c) {
+        function pctCell(val) {
+          var color = val >= 50 ? 'var(--primary)' : val >= 25 ? '#f59e0b' : val > 0 ? '#ef4444' : 'var(--text-muted)';
+          return '<td style="text-align:right;padding:8px 10px;color:' + color + ';font-weight:600;">' + val + '%</td>';
+        }
+        return '<tr style="border-bottom:1px solid var(--border);">' +
+          '<td style="text-align:left;padding:8px 10px;font-weight:600;color:var(--text-dark);">' + c.week + '</td>' +
+          '<td style="text-align:right;padding:8px 10px;color:var(--text-dark);">' + c.signups + '</td>' +
+          pctCell(c.onboarded) + pctCell(c.activated) + pctCell(c.savedDeal) + pctCell(c.bookedCall) +
+        '</tr>';
+      }).join('');
+      if (d.cohorts.length === 0) {
+        cohortBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No cohort data yet</td></tr>';
+      }
+    }
+
+  } catch(e) {
+    console.warn('SaaS metrics load error:', e);
+    var funnelEl = document.getElementById('saasFunnelBars');
+    if (funnelEl) funnelEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Failed to load SaaS metrics. Check console.</div>';
+  }
+}
+
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
 // --- Analytics Dashboard Rendering ---
 let analyticsPageChart = null;
 
@@ -24483,7 +24688,7 @@ function switchAdminDashTab(tab) {
       btn.style.color = 'var(--text-secondary)';
     }
   });
-  ['growth', 'analytics', 'schema', 'devnotes', 'network', 'transactions', 'feedback'].forEach(function(t) {
+  ['growth', 'analytics', 'schema', 'devnotes', 'network', 'transactions', 'feedback', 'saas'].forEach(function(t) {
     var el = document.getElementById('admindash-tab-' + t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
@@ -24492,6 +24697,7 @@ function switchAdminDashTab(tab) {
   if (tab === 'schema') renderSchemaPage();
   if (tab === 'network') renderNetworkMoat();
   if (tab === 'feedback') fetchAndRenderAdminFeedback();
+  if (tab === 'saas') loadSaasMetrics();
   // Show Clear Data button only on analytics tab
   var clearBtn = document.getElementById('admindashClearBtn');
   if (clearBtn) clearBtn.style.display = (tab === 'analytics') ? 'inline-block' : 'none';
