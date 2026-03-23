@@ -6610,97 +6610,151 @@ const _supa = window.supabase.createClient(
       <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar-title">Office Hours</div>
+      <div class="topbar-title">Thursdays Live</div>
     </div>
     <div class="sub-page" style="max-width:1000px;">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="64" height="64" style="margin-bottom:20px;opacity:0.4;"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="12" cy="10" r="2"/></svg>
-        <div style="font-family:var(--font-ui);font-size:26px;font-weight:800;color:var(--text-dark);margin-bottom:8px;">Coming Soon</div>
-        <div style="font-size:15px;color:var(--text-secondary);max-width:420px;line-height:1.6;margin-bottom:24px;">Live office hours, deal reviews, and GP spotlight sessions with Pascal are launching soon. Join the community to get notified.</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Weekly</div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Review & Q&A</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Monthly</div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Debt Fund Deep Dive</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 28px;text-align:center;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Bi-weekly</div>
-            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">GP Spotlight Interviews</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:none;">
-      <div class="settings-page-desc" style="margin-top:0;">Join Pascal and the GYC community for live Q&A, deal reviews, and market analysis sessions.</div>
 
-      <!-- Upcoming Sessions -->
-      <div style="margin-bottom:32px;">
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Upcoming Sessions</h3>
-        <div style="display:grid;gap:16px;" id="officeHoursUpcoming">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Weekly Deal Review &amp; Q&A</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Live walkthrough of this week's new deals, market updates, and open Q&A</div>
-              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Every Thursday @ 12:00 PM ET</div>
-            </div>
-            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Join Next Session</a>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Debt Fund Deep Dive</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Understanding private credit, yield analysis, and due diligence for lending funds</div>
-              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Monthly — Next: Mar 27, 2026 @ 1:00 PM ET</div>
-            </div>
-            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Register</a>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-            <div>
-              <div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">GP Spotlight: Live Sponsor Interview</div>
-              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);margin-top:4px;">Meet the operators behind the deals. Ask questions directly to fund managers.</div>
-              <div style="font-family:var(--font-ui);font-size:12px;color:var(--primary);margin-top:8px;font-weight:600;">Bi-weekly — Next: Apr 3, 2026 @ 12:00 PM ET</div>
-            </div>
-            <a href="https://growyourcashflow.com/office-hours" target="_blank" class="btn-cta btn-cta-secondary" style="text-decoration:none;padding:10px 24px;white-space:nowrap;">Register</a>
-          </div>
-        </div>
+      <!-- Hero / Intro -->
+      <div style="text-align:center;padding:32px 20px 8px;">
+        <div style="font-family:var(--font-headline);font-size:30px;color:var(--text-dark);margin-bottom:8px;">Thursdays Live</div>
+        <div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);max-width:540px;margin:0 auto;line-height:1.6;">Every Thursday, join Pascal and the GYC community for a full afternoon of live sessions &mdash; from open Q&A to operator pitches to our flagship webinar.</div>
       </div>
 
-      <!-- Past Recordings -->
-      <div>
-        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Past Recordings</h3>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;" id="officeHoursRecordings">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <!-- Next Thursday banner -->
+      <div id="nextThursdayBanner" style="margin:24px 0;background:linear-gradient(135deg, var(--secondary) 0%, #132e32 100%);border-radius:var(--radius);padding:20px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:4px;">Next Live Day</div>
+          <div id="nextThursdayDate" style="font-family:var(--font-headline);font-size:22px;color:#fff;"></div>
+          <div style="font-family:var(--font-body);font-size:13px;color:rgba(255,255,255,0.65);margin-top:2px;">12:00 PM &ndash; 6:00 PM ET</div>
+        </div>
+        <a href="https://growyourcashflow.com/webinar" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:12px 28px;white-space:nowrap;font-size:14px;">Register for Webinar</a>
+      </div>
+
+      <!-- Schedule Timeline -->
+      <div style="margin-bottom:40px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:20px;">Schedule</h3>
+        <div style="display:grid;gap:0;position:relative;">
+
+          <!-- Office Hours -->
+          <div style="display:flex;gap:20px;align-items:stretch;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:48px;flex-shrink:0;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div style="flex:1;width:2px;background:var(--border);"></div>
             </div>
-            <div style="padding:16px;">
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Deal Review: March 2026</div>
-              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Mar 13, 2026 — 47 min</div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;flex:1;margin-bottom:16px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--primary);background:rgba(81,190,123,0.1);padding:3px 10px;border-radius:20px;">12:00 &ndash; 1:00 PM ET</span>
+              </div>
+              <div style="font-family:var(--font-ui);font-size:17px;font-weight:700;color:var(--text-dark);margin-top:10px;">Office Hours</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:6px;">Open Q&A with Pascal. Bring your deal questions, due diligence concerns, or market analysis requests. No agenda &mdash; just real conversations about real estate investing.</div>
+              <a href="https://growyourcashflow.com/office-hours" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);text-decoration:none;margin-top:12px;">Join Live <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
             </div>
           </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+
+          <!-- Pitch Session -->
+          <div style="display:flex;gap:20px;align-items:stretch;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:48px;flex-shrink:0;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" width="18" height="18"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div style="flex:1;width:2px;background:var(--border);"></div>
             </div>
-            <div style="padding:16px;">
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">How to Evaluate a Debt Fund</div>
-              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Feb 27, 2026 — 62 min</div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;flex:1;margin-bottom:16px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#2563EB;background:rgba(37,99,235,0.1);padding:3px 10px;border-radius:20px;">1:00 &ndash; 2:30 PM ET</span>
+              </div>
+              <div style="font-family:var(--font-ui);font-size:17px;font-weight:700;color:var(--text-dark);margin-top:10px;">GP Pitch Session</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:6px;">Fund managers and operators present their latest offerings live. 45 minutes of presentation followed by 45 minutes of investor Q&A. See the deal behind the deck.</div>
+              <a href="https://growyourcashflow.com/office-hours" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:#2563EB;text-decoration:none;margin-top:12px;">Watch Live <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
             </div>
           </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-            <div style="background:var(--bg-sidebar);height:160px;display:flex;align-items:center;justify-content:center;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" width="48" height="48"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+
+          <!-- Webinar (Featured) -->
+          <div style="display:flex;gap:20px;align-items:stretch;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:48px;flex-shrink:0;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <div style="flex:1;width:2px;background:var(--border);"></div>
             </div>
-            <div style="padding:16px;">
-              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">GP Spotlight: RSN Property Group</div>
-              <div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:4px;">Feb 13, 2026 — 55 min</div>
+            <div style="background:linear-gradient(135deg, rgba(81,190,123,0.08) 0%, rgba(50,197,131,0.04) 100%);border:2px solid var(--primary);border-radius:var(--radius);padding:20px 24px;flex:1;margin-bottom:16px;position:relative;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#fff;background:var(--primary);padding:3px 10px;border-radius:20px;">3:00 &ndash; 4:30 PM ET</span>
+                <span style="font-family:var(--font-ui);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);">Featured Event</span>
+              </div>
+              <div style="font-family:var(--font-ui);font-size:17px;font-weight:700;color:var(--text-dark);margin-top:10px;">GYC Weekly Webinar</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:6px;">The main event. Deep-dive market analysis, deal breakdowns, portfolio strategy, and a live walkthrough of the GYC platform. This is where serious investors learn how to grow their cashflow through passive real estate.</div>
+              <a href="https://growyourcashflow.com/webinar" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:10px 24px;display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;">Register Now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
             </div>
+          </div>
+
+          <!-- Podcast -->
+          <div style="display:flex;gap:20px;align-items:stretch;">
+            <div style="display:flex;flex-direction:column;align-items:center;width:48px;flex-shrink:0;">
+              <div style="width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#CF7A30" stroke-width="2" width="18" height="18"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </div>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;flex:1;margin-bottom:16px;">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:#CF7A30;background:rgba(207,122,48,0.1);padding:3px 10px;border-radius:20px;">4:30 &ndash; 6:00 PM ET</span>
+              </div>
+              <div style="font-family:var(--font-ui);font-size:17px;font-weight:700;color:var(--text-dark);margin-top:10px;">GYC Podcast: Live Recording</div>
+              <div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.5;margin-top:6px;">Catch the live recording of the Grow Your Cashflow podcast. Interviews with operators, market deep-dives, and behind-the-scenes conversations about building wealth through real estate.</div>
+              <a href="https://growyourcashflow.com/office-hours" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:#CF7A30;text-decoration:none;margin-top:12px;">Listen Live <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Why Attend -->
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:32px;">
+        <h3 style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:16px;">Why join Thursdays Live?</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;">
+          <div>
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Ask anything</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">Get direct answers from Pascal on deals, markets, and strategy during Office Hours.</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">See deals first</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">Operators pitch live before deals hit the platform. Early access for attendees.</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Learn the system</div>
+            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">The weekly webinar walks through exactly how to evaluate and invest in passive real estate.</div>
           </div>
         </div>
       </div>
-      </div><!-- end display:none -->
+
+      <!-- CTA -->
+      <div style="text-align:center;padding:20px 20px 40px;">
+        <div style="font-family:var(--font-ui);font-size:14px;color:var(--text-secondary);margin-bottom:16px;">The webinar is the best place to start. Reserve your seat.</div>
+        <a href="https://growyourcashflow.com/webinar" target="_blank" class="btn-cta btn-cta-primary" style="text-decoration:none;padding:14px 36px;font-size:15px;">Register for This Week's Webinar</a>
+      </div>
+
     </div>
+
+    <script>
+    (function() {
+      // Calculate next Thursday
+      function getNextThursday() {
+        var now = new Date();
+        var day = now.getDay();
+        var diff = (4 - day + 7) % 7;
+        if (diff === 0 && now.getHours() >= 18) diff = 7; // past 6pm Thursday, show next week
+        var next = new Date(now);
+        next.setDate(now.getDate() + diff);
+        return next;
+      }
+      var next = getNextThursday();
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var el = document.getElementById('nextThursdayDate');
+      if (el) el.textContent = 'Thursday, ' + months[next.getMonth()] + ' ' + next.getDate() + ', ' + next.getFullYear();
+    })();
+    </script>
   </div>
 
   <!-- PAGE: Cash Flow Academy -->
