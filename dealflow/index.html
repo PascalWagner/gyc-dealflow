@@ -8949,9 +8949,27 @@ function updateDailyLimitBadge() {
   var tier = (user && user.tier) || 'free';
   if (tier !== 'free') { badge.style.display = 'none'; return; }
   var remaining = getDailyDealsRemaining();
-  badge.textContent = remaining + ' of ' + FREE_DAILY_DEAL_LIMIT + ' views left';
+  var used = FREE_DAILY_DEAL_LIMIT - remaining;
+  var pct = Math.round((remaining / FREE_DAILY_DEAL_LIMIT) * 100);
+
+  var textEl = document.getElementById('dailyViewsText');
+  var barEl = document.getElementById('dailyViewsBar');
+  var timerEl = document.getElementById('dailyViewsTimer');
+
+  if (textEl) textEl.textContent = remaining + '/' + FREE_DAILY_DEAL_LIMIT + ' deal views left today';
+  if (barEl) {
+    barEl.style.width = pct + '%';
+    barEl.style.background = remaining <= 5 ? '#e74c3c' : remaining <= 10 ? '#f59e0b' : 'var(--primary)';
+  }
+  if (timerEl) {
+    var now = new Date();
+    var midnight = new Date(now); midnight.setHours(24,0,0,0);
+    var hrs = Math.floor((midnight - now) / 3600000);
+    var mins = Math.floor(((midnight - now) % 3600000) / 60000);
+    timerEl.textContent = 'Resets in ' + hrs + 'h ' + mins + 'm';
+  }
+
   badge.style.display = 'block';
-  badge.style.color = remaining <= 5 ? '#e74c3c' : remaining <= 10 ? '#f59e0b' : 'var(--text-muted)';
 }
 
 // ========== SOCIAL PROOF: BULK DEAL STATS ==========
