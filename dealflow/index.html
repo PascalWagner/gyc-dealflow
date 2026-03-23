@@ -1080,87 +1080,6 @@ html.dark .academy-gate-cta {
   width: 12px; height: 12px;
   stroke: var(--primary);
 }
-/* Daily deal limit — locked cards for free tier */
-.deal-card-locked {
-  position: relative;
-  pointer-events: none;
-  user-select: none;
-}
-.deal-card-locked > * {
-  filter: blur(6px);
-}
-.deal-card-locked::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(var(--bg-cream-rgb, 255,252,247), 0.5);
-  border-radius: var(--radius);
-  z-index: 1;
-}
-html.dark .deal-card-locked::after {
-  background: rgba(30,30,30,0.5);
-}
-.daily-limit-banner {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 32px 24px;
-  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
-  border: 2px solid rgba(59,130,246,0.25);
-  border-radius: var(--radius);
-  margin: 8px 0;
-}
-html.dark .daily-limit-banner {
-  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(74,222,128,0.06));
-  border-color: rgba(59,130,246,0.25);
-}
-.daily-limit-banner .limit-icon {
-  width: 52px; height: 52px;
-  background: linear-gradient(135deg, #f59e0b, #f97316);
-  border-radius: 14px;
-  margin: 0 auto 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #fff;
-}
-.daily-limit-banner .limit-title {
-  font-family: var(--font-display);
-  font-size: 20px;
-  color: var(--text-dark);
-  margin-bottom: 6px;
-}
-.daily-limit-banner .limit-sub {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 16px;
-  line-height: 1.5;
-  max-width: 420px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.daily-limit-banner .limit-btn {
-  padding: 12px 28px;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all var(--transition);
-}
-.daily-limit-banner .limit-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(81,190,123,0.3);
-}
-.daily-limit-banner .limit-or {
-  display: block;
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
 .deal-freshness-badge {
   display: inline-flex;
   align-items: center;
@@ -26803,7 +26722,7 @@ function searchViewAsUsers(query) {
 }
 
 // Keys that are per-user and need to be scoped when impersonating
-const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed'];
+const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed', 'gycDailyDeals'];
 
 function saveUserScopedData(email) {
   // Save current localStorage data under the user's email prefix
