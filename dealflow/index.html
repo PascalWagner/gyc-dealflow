@@ -3835,6 +3835,65 @@ html.cap-ios .debt-metric-select-mobile {
   font-weight: 600;
 }
 
+/* ====== WIZARD MOBILE ====== */
+@media (max-width: 600px) {
+  .wizard-body { padding: 24px 12px 60px; }
+  .wizard-card { max-width: 100%; }
+  .wizard-card-title { font-size: 26px; margin-bottom: 8px; }
+  .wizard-card-desc { font-size: 15px; line-height: 1.5; margin-bottom: 24px; }
+  .wizard-btn { padding: 14px 24px; font-size: 14px; border-radius: 10px; }
+  .wizard-btn-next { min-width: 0; width: 100%; }
+  .wizard-inline-nav { flex-direction: column; gap: 8px; margin-top: 28px; padding-top: 20px; }
+  .wizard-exit { top: 8px; right: 10px; padding: 4px 10px; font-size: 11px; }
+
+  /* Goal cards */
+  .wizard-goal-card { padding: 20px 16px; gap: 14px; }
+  .wizard-goal-icon { width: 44px; height: 44px; font-size: 22px; border-radius: 12px; }
+  .wizard-goal-title { font-size: 16px; }
+  .wizard-goal-desc { font-size: 13px; }
+
+  /* Target input */
+  .wizard-target-input input { font-size: 32px; max-width: 280px; }
+  .wizard-chip { height: 40px; padding: 0 16px; font-size: 13px; }
+  .wizard-live-calc { font-size: 14px; }
+
+  /* Sentence builder */
+  .wizard-sentence { font-size: 16px; line-height: 2.0; margin: 16px 0 24px; }
+  .wizard-sentence-chip { height: 36px; padding: 0 12px; font-size: 13px; }
+
+  /* Plan output */
+  .wizard-plan-chart { padding: 20px 16px; border-radius: 12px; }
+  .wizard-plan-deal { padding: 12px 14px; gap: 10px; }
+  .wizard-plan-deal-icon { width: 36px; height: 36px; font-size: 16px; border-radius: 8px; }
+  .wizard-plan-deal-name { font-size: 13px; }
+  .wizard-plan-deal-metric { font-size: 16px; }
+  .wizard-plan-deal-save { padding: 5px 10px; font-size: 10px; }
+  .wizard-plan-paths-label { font-size: 16px !important; }
+  .wizard-plan-path-btn { padding: 10px 16px; font-size: 12px; }
+  .wizard-plan-path-btn-wrap { min-width: 0; }
+  .wizard-plan-breakdown { padding: 12px 16px; font-size: 13px; }
+  .wizard-plan-summary { padding: 16px; }
+
+  /* Completion */
+  .wizard-completion { padding: 24px 12px; }
+  .wizard-completion-check { width: 56px; height: 56px; }
+  .wizard-video-slot { padding: 20px; margin: 20px 0; }
+  .wizard-video-play { width: 44px; height: 44px; }
+  .wizard-welcome-cta { padding: 14px 32px; font-size: 14px; width: 100%; text-align: center; }
+}
+
+@media (max-width: 380px) {
+  .wizard-card-title { font-size: 22px; }
+  .wizard-card-desc { font-size: 14px; }
+  .wizard-goal-card { padding: 16px 12px; gap: 10px; }
+  .wizard-goal-icon { width: 38px; height: 38px; font-size: 18px; }
+  .wizard-target-input input { font-size: 28px; }
+  .wizard-phases { padding: 10px 8px 8px; gap: 0; }
+  .wizard-phase-node { width: 22px; height: 22px; font-size: 9px; }
+  .wizard-phase-connector { width: 14px; }
+  .wizard-phase-label { font-size: 8px; }
+}
+
 /* ====== BUY BOX REPORT (Magazine Style) ====== */
 .report-page { padding: 32px; }
 .report-container {
@@ -5100,21 +5159,41 @@ html.dark .ms-tier-card.tier-3 .ms-tier-badge-lg { background: rgba(59,130,246,0
 @keyframes obStepIn {
   to { opacity: 1; transform: translateY(0); }
 }
-@media (max-width: 480px) {
-  .onboarding-modal {
-    padding: 32px 20px 28px;
-  }
-  .onboarding-title {
-    font-size: 22px;
-  }
-  .ob-preset-btn {
-    padding: 8px 14px;
-    font-size: 13px;
-  }
-  .ob-chip {
-    padding: 8px 14px;
-    font-size: 12px;
-  }
+@media (max-width: 600px) {
+  /* LP Tour Overlay */
+  .onboarding-overlay { padding: 12px; align-items: flex-start; padding-top: 40px; }
+  .onboarding-modal { padding: 28px 20px 24px; border-radius: 16px; }
+  .onboarding-title { font-size: 22px; margin-bottom: 6px; }
+  .onboarding-subtitle { font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
+  .onboarding-step-dots { margin-bottom: 24px; }
+  .onboarding-value-props { gap: 10px; margin-bottom: 24px; }
+  .onboarding-value-prop { padding: 10px 12px; gap: 12px; border-radius: 10px; }
+  .onboarding-value-prop-icon { width: 36px; height: 36px; border-radius: 8px; }
+  .onboarding-value-prop-icon svg { width: 18px; height: 18px; }
+  .onboarding-value-prop-text { font-size: 13px; }
+  .onboarding-cta { padding: 14px 28px; font-size: 15px; max-width: 100%; }
+  .onboarding-skip { margin-top: 12px; }
+
+  /* Preset buttons */
+  .ob-preset-btn { padding: 8px 14px; font-size: 13px; }
+  .ob-preset-grid { gap: 6px; }
+
+  /* Asset class chips */
+  .ob-chip { padding: 8px 14px; font-size: 12px; }
+  .ob-chip-grid { gap: 6px; margin-bottom: 20px; }
+
+  /* Summary card */
+  .ob-summary { padding: 16px; }
+  .ob-summary-row { font-size: 13px; gap: 8px; }
+  .ob-match-count { font-size: 32px; }
+  .ob-match-label { font-size: 13px; }
+}
+
+@media (max-width: 380px) {
+  .onboarding-modal { padding: 24px 16px 20px; }
+  .onboarding-title { font-size: 20px; }
+  .onboarding-value-prop { padding: 8px 10px; }
+  .onboarding-value-prop-text { font-size: 12px; }
 }
 
 /* ── Income Fund Page ── */
