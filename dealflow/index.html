@@ -22614,22 +22614,26 @@ function renderDashboard() {
     });
   }
 
-  if (matchingCount > 0) {
-    actionItems.push({
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:20px;height:20px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
-      text: '<strong>' + matchingCount + ' deal' + (matchingCount !== 1 ? 's' : '') + '</strong> match your criteria',
-      action: 'navigateTo(\'deals\')',
-      link: 'View Matches'
-    });
-  }
-
-  if (stageCounts.interested === 0 && stageCounts.duediligence === 0 && portfolio.length === 0) {
-    actionItems.push({
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:20px;height:20px;"><path d="M12 5v14M5 12h14"/></svg>',
-      text: 'Browse deals and save ones that match your criteria',
-      action: 'navigateTo(\'deals\')',
-      link: 'Explore Deals'
-    });
+  // Only show generic "browse deals" prompts if there's no investment plan
+  // (the plan card already has a contextual "Next Investment → Browse Deals" CTA)
+  var _hasInvestmentPlan = !!JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+  if (!_hasInvestmentPlan) {
+    if (matchingCount > 0) {
+      actionItems.push({
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="width:20px;height:20px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+        text: '<strong>' + matchingCount + ' deal' + (matchingCount !== 1 ? 's' : '') + '</strong> match your criteria',
+        action: 'navigateTo(\'deals\')',
+        link: 'View Matches'
+      });
+    }
+    if (stageCounts.interested === 0 && stageCounts.duediligence === 0 && portfolio.length === 0) {
+      actionItems.push({
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:20px;height:20px;"><path d="M12 5v14M5 12h14"/></svg>',
+        text: 'Browse deals and save ones that match your criteria',
+        action: 'navigateTo(\'deals\')',
+        link: 'Explore Deals'
+      });
+    }
   }
 
   // ===== Plan-aware action items =====
@@ -22730,8 +22734,8 @@ function renderDashboard() {
     coachMsg = 'Let\'s start by setting up your investor profile \u2014 it takes 2 minutes and helps us find deals that match your goals.';
     coachCta = 'Get Started'; coachCtaAction = 'openBuyBoxWizard()';
   } else if (buyBoxComplete && stageCounts.interested === 0 && stageCounts.duediligence === 0 && stageCounts.portfolio === 0) {
-    coachMsg = 'You have ' + matchingCount + ' deal' + (matchingCount !== 1 ? 's' : '') + ' matching your criteria but haven\'t saved any yet. Start by reviewing your top 3 matches.';
-    coachCta = 'Browse Matching Deals'; coachCtaAction = 'navigateTo(\'deals\')';
+    coachMsg = 'Your plan is set. Start reviewing deals that match your next investment slot.';
+    coachCta = ''; coachCtaAction = ''; // Plan card already has the CTA
   } else if (stageCounts.interested > 0 && stageCounts.duediligence === 0) {
     coachMsg = 'You\'ve saved ' + stageCounts.interested + ' deal' + (stageCounts.interested !== 1 ? 's' : '') + ' \u2014 great start! Pick your strongest one and move it to Due Diligence.';
     coachCta = 'Review Saved Deals'; coachCtaAction = 'navigateTo(\'deals\')';
