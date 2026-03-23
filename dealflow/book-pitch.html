@@ -552,6 +552,16 @@ body {
   margin-top: 12px;
 }
 
+/* ====== PAYMENT EMBED ====== */
+.payment-embed {
+  width: 100%;
+  min-height: 400px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  margin-bottom: 4px;
+}
+
 /* ====== GUARANTEE ====== */
 .guarantee-banner {
   background: var(--mint-bg);
@@ -807,15 +817,15 @@ body {
       <!-- Book CTA -->
       <div class="cta-card">
         <div class="cta-card-icon">&#127919;</div>
-        <h3>Ready to Pitch?</h3>
+        <h3>Reserve Your Slot</h3>
         <p class="cta-card-desc">Secure your pitch slot and start connecting with LPs who are ready to deploy capital into deals like yours.</p>
-        <a href="https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8" target="_blank" class="cta-btn" id="ctaBtn">Book Your Pitch &mdash; $1,000 &rarr;</a>
-        <p class="cta-fine">One-time payment &bull; No recurring fees &bull; Includes everything above</p>
+        <iframe src="https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8" class="payment-embed" title="Payment"></iframe>
+        <p class="cta-fine">One-time $1,000 payment &bull; No recurring fees &bull; Includes everything above</p>
         <div class="guarantee-banner">
           <div class="guarantee-banner-icon">&#128170;</div>
           <div>
             <h4>Our Guarantee</h4>
-            <p>If fewer than 15 accredited investors attend your live pitch, we'll rebook you for a second webinar slot at no additional charge.</p>
+            <p>Your presentation is recorded and published to our full investor database and YouTube channel — your pitch keeps reaching new investors for months, not just the live audience.</p>
           </div>
         </div>
       </div>
