@@ -5996,14 +5996,7 @@ const _supa = window.supabase.createClient(
       <div class="settings-panel" id="stab-plan" style="display:none">
         <div class="settings-page-title">Your Membership</div>
         <div class="settings-page-desc">See what's included in your current plan.</div>
-
-        <div class="settings-card" id="myPlanCard">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <div id="myPlanBadge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;"></div>
-          </div>
-          <div id="myPlanFeatures" style="display:grid;gap:8px;"></div>
-          <div id="myPlanUpgrade" style="margin-top:20px;"></div>
-        </div>
+        <div id="myPlanContent"></div>
       </div>
 
       <!-- Investor Tab -->
@@ -15797,65 +15790,120 @@ function getMatchingDealCount(d) {
 
 // ========== SUBSCRIPTION / MY PLAN ==========
 function initSubscription() {
-  // Populate the "My Plan" tab inside Settings
+  var container = document.getElementById('myPlanContent');
+  if (!container) return;
   var user = getUser();
   var tier = user ? (user.tier || 'free') : 'free';
-  var badge = document.getElementById('myPlanBadge');
-  var features = document.getElementById('myPlanFeatures');
-  var upgrade = document.getElementById('myPlanUpgrade');
-  if (!badge || !features || !upgrade) return;
 
-  var plans = {
-    free: {
-      label: 'Free Plan',
-      color: 'var(--text-muted)',
-      bg: 'var(--bg-cream)',
-      features: ['Browse all live deals', 'View investment decks', 'Deal filtering & search', 'Weekly deal digest email', 'Basic deal overview & thesis']
-    },
-    academy: {
-      label: 'Academy Member',
-      color: '#51BE7B',
-      bg: 'rgba(81,190,123,0.08)',
-      features: ['Everything in Free', 'Full deal data: cash flow, terms, fees, peer comparisons', 'Risk analysis & stress test calculator', 'PPM, sub docs & data room access', 'GP introductions & deal reviews', 'Weekly live office hours with Pascal', 'Investment plan builder & market intel', 'Private investor community']
-    },
-    alumni: {
-      label: 'Alumni',
-      color: '#51BE7B',
-      bg: 'rgba(81,190,123,0.08)',
-      features: ['Everything in Free', 'Full deal data & risk analysis', 'PPM & data room access', 'GP introductions', 'Alumni community access']
-    },
-    investor: {
-      label: 'Investor',
-      color: '#51BE7B',
-      bg: 'rgba(81,190,123,0.08)',
-      features: ['Everything in Free', 'Buy box matching', 'GP introductions', 'Priority deal alerts']
-    },
-    family_office: {
-      label: 'Family Office',
-      color: 'var(--teal-deep)',
-      bg: 'rgba(31,81,89,0.06)',
-      features: ['Everything in Academy', 'Custom 12-month deployment plan', 'Dedicated 1:1 calls with Pascal', 'Co-underwriting on deals', 'Direct GP access & negotiation support', 'Tax & entity structuring guidance', 'Portfolio construction & rebalancing']
-    }
-  };
-
-  var plan = plans[tier] || plans.free;
-  badge.style.background = plan.bg;
-  badge.style.color = plan.color;
-  badge.innerHTML = '<div style="width:8px;height:8px;border-radius:50%;background:' + plan.color + ';"></div>' + plan.label;
-
-  var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2.5" width="14" height="14" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>';
-  features.innerHTML = plan.features.map(function(f) {
-    return '<div style="display:flex;align-items:center;gap:8px;font-family:var(--font-body);font-size:13px;color:var(--text-dark);">' + checkSvg + f + '</div>';
-  }).join('');
-
-  if (tier === 'free') {
-    upgrade.innerHTML = '<a href="#" onclick="navigateTo(\'academy\'); return false" style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:14px;font-weight:700;text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background=\'#3da86a\'" onmouseout="this.style.background=\'var(--primary)\'">Upgrade to Academy</a>'
-      + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-top:8px;">Unlock full deal data, GP introductions, and weekly office hours with Pascal.</div>';
-  } else if (tier !== 'family_office') {
-    upgrade.innerHTML = '<a href="https://growyourcashflow.io/introcall" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:transparent;border:1px solid var(--border);color:var(--text-dark);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;text-decoration:none;">Explore Family Office</a>';
-  } else {
-    upgrade.innerHTML = '';
+  // Format date helper
+  function fmtDate(iso) {
+    if (!iso) return null;
+    try { var d = new Date(iso); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch(e) { return null; }
   }
+
+  var tiers = [
+    { key: 'free', label: 'Free', color: 'var(--text-muted)', features: ['Browse all live deals', 'View investment decks', 'Deal filtering & search', 'Weekly deal digest email', 'Basic deal overview'] },
+    { key: 'academy', label: 'Academy', color: '#51BE7B', features: ['Everything in Free', 'Full deal data & comparisons', 'Risk analysis & stress test', 'PPM & data room access', 'GP introductions & reviews', 'Weekly office hours', 'Investment plan builder', 'Private investor community'], price: '$297/mo or $1,997/yr' },
+    { key: 'concierge', label: 'Concierge', color: 'var(--teal-deep)', features: ['Everything in Academy', '24-hour text access to Pascal', '10 x 90-min 1:1 calls', '3hrs strategy sessions', 'Free live event ticket', 'Co-underwriting on deals'], price: '$25,000' },
+    { key: 'vip', label: 'VIP Retreat', color: '#C5963A', features: ['Everything in Concierge', 'Fly-out retreat experience', 'Multi-day immersive program', 'Direct portfolio construction', 'Tax & entity structuring', 'Priority GP access'], price: '$50,000' }
+  ];
+
+  // Map alumni/investor/family_office to their display equivalent
+  var tierMap = { alumni: 'academy', investor: 'academy', family_office: 'concierge' };
+  var activeTier = tierMap[tier] || tier;
+
+  var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2.5" width="14" height="14" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>';
+  var lockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="13" height="13" style="flex-shrink:0;opacity:0.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
+  // Membership status header
+  var startStr = fmtDate(user && user.academyStart);
+  var endStr = fmtDate(user && user.academyEnd);
+  var datesHtml = '';
+  if (activeTier !== 'free' && (startStr || endStr)) {
+    datesHtml = '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;">';
+    if (startStr) datesHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Started <strong style="color:var(--text-dark)">' + startStr + '</strong></div>';
+    if (endStr) datesHtml += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);">Renews <strong style="color:var(--text-dark)">' + endStr + '</strong></div>';
+    datesHtml += '</div>';
+  }
+
+  var tierIdx = tiers.findIndex(function(t) { return t.key === activeTier; });
+  var currentLabel = tiers[tierIdx] ? tiers[tierIdx].label : 'Free';
+  var currentColor = tiers[tierIdx] ? tiers[tierIdx].color : 'var(--text-muted)';
+
+  var html = '<div class="settings-card" style="margin-bottom:20px;">';
+  html += '<div style="display:flex;align-items:center;gap:12px;">';
+  html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;background:' + (activeTier === 'free' ? 'var(--bg-cream)' : 'rgba(81,190,123,0.08)') + ';color:' + currentColor + ';">';
+  html += '<div style="width:8px;height:8px;border-radius:50%;background:' + currentColor + ';"></div>' + currentLabel + '</div>';
+  html += '</div>';
+  html += datesHtml;
+  html += '</div>';
+
+  // Tier comparison grid
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;" id="tierGrid">';
+
+  tiers.forEach(function(t, i) {
+    var isCurrent = (t.key === activeTier);
+    var isBelow = (i < tierIdx);
+    var borderStyle = isCurrent ? '2px solid #51BE7B' : '1px solid var(--border)';
+    var opacity = isBelow ? '0.55' : '1';
+
+    html += '<div style="border:' + borderStyle + ';border-radius:12px;padding:20px 16px;background:var(--bg-white);opacity:' + opacity + ';display:flex;flex-direction:column;position:relative;">';
+
+    // Current plan label
+    if (isCurrent) {
+      html += '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#51BE7B;color:#fff;font-family:var(--font-ui);font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap;letter-spacing:0.5px;">CURRENT PLAN</div>';
+    }
+
+    // Tier name
+    html += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:' + t.color + ';margin-bottom:4px;">' + t.label + '</div>';
+
+    // Price
+    if (t.price) {
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:14px;">' + t.price + '</div>';
+    } else {
+      html += '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);margin-bottom:14px;">Free forever</div>';
+    }
+
+    // Features
+    html += '<div style="display:grid;gap:6px;flex:1;">';
+    t.features.forEach(function(f) {
+      var icon = (i <= tierIdx) ? checkSvg : lockSvg;
+      html += '<div style="display:flex;align-items:flex-start;gap:6px;font-family:var(--font-body);font-size:12px;color:var(--text-dark);line-height:1.4;">' + icon + f + '</div>';
+    });
+    html += '</div>';
+
+    // CTA
+    if (!isCurrent && i > tierIdx) {
+      if (t.key === 'academy') {
+        html += '<a href="#" onclick="navigateTo(\'academy\'); return false" style="display:block;text-align:center;margin-top:14px;padding:10px 16px;background:var(--primary);color:#fff;border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:700;text-decoration:none;">Upgrade</a>';
+      } else {
+        html += '<a href="https://growyourcashflow.io/introcall" target="_blank" style="display:block;text-align:center;margin-top:14px;padding:10px 16px;background:transparent;border:1px solid var(--border);color:var(--text-dark);border-radius:8px;font-family:var(--font-ui);font-size:13px;font-weight:600;text-decoration:none;">Book a Call</a>';
+      }
+    }
+
+    html += '</div>';
+  });
+
+  html += '</div>';
+
+  // Renewal note for academy users
+  if (activeTier === 'academy') {
+    html += '<div class="settings-card" style="background:rgba(81,190,123,0.04);border:1px dashed rgba(81,190,123,0.3);">';
+    html += '<div style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);margin-bottom:4px;">After your first year</div>';
+    html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$1,997/yr</strong> or <strong style="color:var(--text-dark);">$297/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
+    html += '</div>';
+  }
+
+  // Responsive: stack on mobile
+  var style = document.getElementById('tierGridStyle');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'tierGridStyle';
+    style.textContent = '@media(max-width:900px){#tierGrid{grid-template-columns:1fr 1fr !important;}}@media(max-width:560px){#tierGrid{grid-template-columns:1fr !important;}}';
+    document.head.appendChild(style);
+  }
+
+  container.innerHTML = html;
 }
 
 async function handleSubscribe(tier, price) {

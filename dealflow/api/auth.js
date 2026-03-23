@@ -131,7 +131,7 @@ export default async function handler(req, res) {
       // Fetch onboarding state from profile
       const { data: existingProfile } = await adminSupabase
         .from('user_profiles')
-        .select('onboarding_role, gp_onboarding_complete, gp_type')
+        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end')
         .eq('id', user.id)
         .single();
 
@@ -146,6 +146,8 @@ export default async function handler(req, res) {
         token: user.id, // placeholder — real flow uses Supabase session tokens
         onboardingRole: existingProfile?.onboarding_role || null,
         gpOnboardingComplete: existingProfile?.gp_onboarding_complete || false,
+        academyStart: existingProfile?.academy_start || null,
+        academyEnd: existingProfile?.academy_end || null,
         ...(gpInfo && {
           gpType: gpInfo.gp_type,
           managementCompanyId: gpInfo.management_company_id,
@@ -222,6 +224,13 @@ export default async function handler(req, res) {
     }
     await adminSupabase.from('user_profiles').upsert(loginProfile, { onConflict: 'id' });
 
+    // Fetch academy dates
+    const { data: loginProfileData } = await adminSupabase
+      .from('user_profiles')
+      .select('academy_start, academy_end')
+      .eq('id', data.user.id)
+      .single();
+
     return res.status(200).json({
       success: true,
       email: data.user.email,
@@ -231,6 +240,8 @@ export default async function handler(req, res) {
       isAdmin,
       token: data.session.access_token,        // real JWT for API calls
       refreshToken: data.session.refresh_token, // for token refresh
+      academyStart: loginProfileData?.academy_start || null,
+      academyEnd: loginProfileData?.academy_end || null,
       ...(gpInfo && {
         gpType: gpInfo.gp_type,
         managementCompanyId: gpInfo.management_company_id,

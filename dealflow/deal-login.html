@@ -628,6 +628,8 @@ function getReturnUrl() {
       gpType: d.gpType || null,
       onboardingRole: d.onboardingRole || null,
       gpOnboardingComplete: d.gpOnboardingComplete || false,
+      academyStart: d.academyStart || null,
+      academyEnd: d.academyEnd || null,
       loggedInAt: new Date().toISOString()
     }));
     window.location.href = getReturnUrl();
@@ -694,6 +696,8 @@ async function handleSignIn() {
           isAdmin: true, tags: lookupResp.tags || [],
           gpType: lookupResp.gpType || null,
           onboardingRole: lookupResp.onboardingRole || null,
+          academyStart: lookupResp.academyStart || null,
+          academyEnd: lookupResp.academyEnd || null,
           loggedInAt: new Date().toISOString()
         }));
         window.location.href = getReturnUrl();
@@ -715,6 +719,8 @@ async function handleSignIn() {
         gpType: lookupResp.gpType || null,
         onboardingRole: lookupResp.onboardingRole || null,
         gpOnboardingComplete: lookupResp.gpOnboardingComplete || false,
+        academyStart: lookupResp.academyStart || null,
+        academyEnd: lookupResp.academyEnd || null,
         loggedInAt: new Date().toISOString()
       }));
       window.location.href = getReturnUrl();
