@@ -5454,13 +5454,6 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 .bb-snapshot-total { font-family:var(--font-ui); font-size:15px; font-weight:700; color:var(--text-dark); }
 .bb-snapshot-new { font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--primary); }
 
-/* Path to Goal */
-.bb-ptg-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
-.bb-ptg-cell { background:var(--bg-cream); border-radius:var(--radius-sm); padding:14px 18px; text-align:center; flex:1; min-width:100px; }
-.bb-ptg-cell-adj { background:var(--bg-cream); border-radius:var(--radius-sm); padding:10px 14px; text-align:center; flex:1; min-width:120px; }
-.bb-ptg-op { font-family:var(--font-body); font-size:18px; color:var(--text-muted); }
-.bb-ptg-big { font-family:var(--font-headline); font-size:24px; }
-
 /* Drift detection */
 .bb-drift-row { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border-light); }
 .bb-drift-row:last-child { border-bottom:none; }
@@ -5479,10 +5472,6 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
   .bb-thesis { font-size:15px; }
   .bb-snapshot-table th, .bb-snapshot-table td { padding:10px 6px 10px 0; font-size:12px; }
   .bb-snapshot-table .bb-ac-icon { width:26px; height:26px; font-size:13px; border-radius:6px; }
-  .bb-ptg-row { gap:8px; }
-  .bb-ptg-cell, .bb-ptg-cell-adj { min-width:0; flex-basis:calc(50% - 20px); padding:10px 8px; }
-  .bb-ptg-big { font-size:18px; }
-  .bb-ptg-op { font-size:14px; }
   .bb-office-cta { flex-direction:column; align-items:stretch; text-align:center; padding:20px; }
   .bb-office-cta .btn-cta { width:100% !important; }
 }
@@ -16221,84 +16210,7 @@ function renderReport() {
       + '</div>';
   }
 
-  // ===== SECTION 3: PATH TO GOAL =====
-  let pathHtml = '';
-  if (branch === 'cashflow') {
-    const goals2b = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-    const hasGoals2b = goals2b && goals2b.targetIncome > 0;
-    const currentIncB = hasGoals2b ? (goals2b.currentIncome || 0) : (parseDollar(d.currentCashFlow) || 0);
-    const targetIncB = hasGoals2b ? goals2b.targetIncome : (parseDollar(d.targetCashFlow) || 0);
-    const gapB = Math.max(0, targetIncB - currentIncB);
-    if (gapB > 0 && targetIncB > 0) {
-      const checkSizeRaw = d.checkSize || (hasGoals2b ? goals2b.checkSize : 0) || '$100,000';
-      const checkSizeNum = parseDollar(checkSizeRaw) || 100000;
-      const matchingForAvg = allDeals.filter(deal => { if (userAssets.length > 0 && !userAssets.includes(deal.assetClass)) return false; return true; });
-      const cocValues = matchingForAvg.map(deal => deal.cashOnCash || 0).filter(v => v > 0);
-      const avgCoC = cocValues.length > 0 ? cocValues.reduce((a, b) => a + b, 0) / cocValues.length : 0.08;
-      const cocPct = Math.round(avgCoC * 100);
-      const annualPerDeal = Math.round(checkSizeNum * avgCoC);
-      const dealsNeededB = Math.ceil(gapB / annualPerDeal);
-      const totalAnnual = dealsNeededB * annualPerDeal;
-      window._ptgGap = gapB; window._ptgCheckSize = checkSizeNum; window._ptgCoC = cocPct; window._ptgCoCValues = cocValues;
-
-      pathHtml = '<div class="bb-card">'
-        + '<div class="bb-label">Your Path to Goal</div>'
-        + '<div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">'
-        + 'To close your <strong style="color:var(--text-dark);">$' + gapB.toLocaleString() + '/yr</strong> income gap:'
-        + '</div>'
-        + '<div class="bb-ptg-row">'
-        + '<div class="bb-ptg-cell"><div id="ptgDeals" class="bb-ptg-big" style="color:var(--text-dark);">' + dealsNeededB + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">DEALS</div></div>'
-        + '<div class="bb-ptg-op">&times;</div>'
-        + '<div class="bb-ptg-cell-adj"><div style="display:flex;align-items:center;justify-content:center;gap:6px;"><button onclick="ptgAdjust(\'check\',-25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button><div id="ptgCheckSize" class="bb-ptg-big" style="color:var(--text-dark);">$' + checkSizeNum.toLocaleString() + '</div><button onclick="ptgAdjust(\'check\',25000)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button></div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">EACH</div></div>'
-        + '<div class="bb-ptg-op">@</div>'
-        + '<div class="bb-ptg-cell-adj"><div style="display:flex;align-items:center;justify-content:center;gap:6px;"><button onclick="ptgAdjust(\'coc\',-1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">-</button><div id="ptgCoC" class="bb-ptg-big" style="color:var(--primary);">~' + cocPct + '%</div><button onclick="ptgAdjust(\'coc\',1)" style="border:none;background:var(--border);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;justify-content:center;">+</button></div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CASH-ON-CASH</div></div>'
-        + '<div class="bb-ptg-op">=</div>'
-        + '<div class="bb-ptg-cell"><div id="ptgTotal" class="bb-ptg-big" style="color:var(--primary);">$' + totalAnnual.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:2px;">PER YEAR</div></div>'
-        + '</div>'
-        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;">Adjust check size and target yield to model your plan.' + (cocValues.length > 0 ? ' Default CoC is based on your matching deals.' : '') + '</div>'
-        + '</div>';
-    }
-  } else if (branch === 'growth') {
-    const capital = parseDollar(d.growthCapital) || 0;
-    const minIRR = d.minIRR || '';
-    const irrNum = parseFloat(minIRR) || 18;
-    if (capital > 0) {
-      const yr5 = Math.round(capital * Math.pow(1 + irrNum / 100, 5));
-      const yr10 = Math.round(capital * Math.pow(1 + irrNum / 100, 10));
-      pathHtml = '<div class="bb-card">'
-        + '<div class="bb-label">Growth Projection</div>'
-        + '<div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">'
-        + 'At <strong style="color:var(--text-dark);">' + irrNum + '% IRR</strong>, your <strong style="color:var(--text-dark);">$' + capital.toLocaleString() + '</strong> could become:'
-        + '</div>'
-        + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
-        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">$' + yr5.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">IN 5 YEARS</div></div>'
-        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">$' + yr10.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">IN 10 YEARS</div></div>'
-        + '</div>'
-        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:12px;">Compound growth projection. Actual returns depend on deal selection and timing.</div>'
-        + '</div>';
-    }
-  } else if (branch === 'tax') {
-    const taxable = parseDollar(d.taxableIncome) || 0;
-    const offset = parseDollar(d.taxOffset) || 0;
-    if (taxable > 0 && offset > 0) {
-      const depDeals = activeDeals.filter(x => x.firstYrDepreciation && x.firstYrDepreciation > 0);
-      const avgDep = depDeals.length > 0 ? depDeals.reduce((s, x) => s + x.firstYrDepreciation, 0) / depDeals.length : 0.6;
-      const capitalNeeded = Math.round(offset / avgDep);
-      pathHtml = '<div class="bb-card">'
-        + '<div class="bb-label">Tax Shelter Path</div>'
-        + '<div style="font-family:var(--font-body);font-size:15px;color:var(--text-secondary);line-height:1.7;margin-bottom:20px;">'
-        + 'To shelter <strong style="color:var(--text-dark);">$' + offset.toLocaleString() + '</strong> at ~' + Math.round(avgDep * 100) + '% first-year depreciation:'
-        + '</div>'
-        + '<div style="display:flex;gap:16px;flex-wrap:wrap;">'
-        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">$' + capitalNeeded.toLocaleString() + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">CAPITAL NEEDED</div></div>'
-        + '<div class="bb-ptg-cell" style="flex:1;min-width:140px;"><div class="bb-ptg-big" style="color:' + bc.color + ';">' + depDeals.length + '</div><div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:4px;">DEALS WITH BONUS DEPRECIATION</div></div>'
-        + '</div>'
-        + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:12px;">Based on average first-year depreciation across matching deals. Consult your CPA for specific tax advice.</div>'
-        + '</div>';
-    }
-  }
-
-  // ===== SECTION 4: OFFICE HOURS CTA =====
+  // ===== SECTION 3: OFFICE HOURS CTA =====
   const ctaHtml = '<div class="bb-office-cta">'
     + '<div>'
     + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>'
@@ -16450,6 +16362,7 @@ function renderReport() {
     + thesisHtml
     + allocationHtml
     + blueprintHtml
+    + snapshotHtml
     + ctaHtml
     + '</div>';
 }
@@ -16723,24 +16636,6 @@ function safeJoin(val) {
   return '';
 }
 
-// Interactive Path to Goal calculator
-function ptgAdjust(type, delta) {
-  if (type === 'check') {
-    window._ptgCheckSize = Math.max(25000, (window._ptgCheckSize || 100000) + delta);
-  } else if (type === 'coc') {
-    window._ptgCoC = Math.max(1, Math.min(30, (window._ptgCoC || 8) + delta));
-  }
-  const cs = window._ptgCheckSize || 100000;
-  const coc = (window._ptgCoC || 8) / 100;
-  const gap = window._ptgGap || 0;
-  const annual = Math.round(cs * coc);
-  const deals = annual > 0 ? Math.ceil(gap / annual) : 0;
-  const total = deals * annual;
-  document.getElementById('ptgDeals').textContent = deals;
-  document.getElementById('ptgCheckSize').textContent = '$' + cs.toLocaleString();
-  document.getElementById('ptgCoC').textContent = '~' + window._ptgCoC + '%';
-  document.getElementById('ptgTotal').textContent = '$' + total.toLocaleString();
-}
 
 function reportItem(label, value) {
   return `<div>
@@ -23111,6 +23006,9 @@ async function viewUserProfile(email) {
     html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">' + (user.email || '') + '</div>';
     html += '</div>';
     html += '<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;background:' + tierColor + '22;color:' + tierColor + ';text-transform:uppercase;">' + tier + '</span>';
+    var hjUrl = 'https://insights.hotjar.com/sites/3634159/playbacks/list?filters=' + encodeURIComponent(JSON.stringify([{"type":"string","name":"user_attributes.email","operator":"is","value":[email]}]));
+    html += '<a href="' + hjUrl + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;background:#FF3C00;color:#fff;text-decoration:none;white-space:nowrap;" title="View Hotjar sessions">';
+    html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Hotjar</a>';
     html += '<button onclick="document.getElementById(\'userProfileModal\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);padding:4px 8px;">&times;</button>';
     html += '</div>';
 
@@ -23183,11 +23081,15 @@ async function viewUserProfile(email) {
         var label = eventLabels[ev.event] || ev.event.replace(/_/g, ' ');
         var color = eventColors[ev.event] || '#6B7280';
         var detail = '';
+        var detailLink = '';
         if (ev.data) {
-          if (ev.data.page) detail = ev.data.page;
-          else if (ev.data.dealName) detail = ev.data.dealName;
-          else if (ev.data.deal_name) detail = ev.data.deal_name;
-          else if (ev.data.investmentName) detail = ev.data.investmentName;
+          if (ev.data.page) {
+            detail = ev.data.page;
+            detailLink = 'navigateTo(\'' + ev.data.page.replace(/'/g, "\\'") + '\')';
+          } else if (ev.data.dealName || ev.data.deal_name || ev.data.investmentName) {
+            detail = ev.data.dealName || ev.data.deal_name || ev.data.investmentName;
+            if (ev.data.dealId || ev.data.deal_id) detailLink = 'openDeal(\'' + (ev.data.dealId || ev.data.deal_id) + '\')';
+          }
         }
         var time = ev.created_at ? new Date(ev.created_at) : null;
         var timeStr = time ? time.toLocaleDateString() + ' ' + time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
@@ -23197,7 +23099,11 @@ async function viewUserProfile(email) {
         tlHtml += '<div style="width:8px;height:8px;border-radius:50%;background:' + color + ';margin-top:4px;flex-shrink:0;"></div>';
         tlHtml += '<div style="flex:1;min-width:0;">';
         tlHtml += '<span style="font-weight:600;color:var(--text-dark);">' + label + '</span>';
-        if (detail) tlHtml += ' <span style="color:var(--text-muted);">' + detail + '</span>';
+        if (detail && detailLink) {
+          tlHtml += ' <a href="#" onclick="document.getElementById(\'userProfileModal\').remove();' + detailLink + ';return false;" style="color:var(--primary);text-decoration:none;font-weight:600;">' + detail + '</a>';
+        } else if (detail) {
+          tlHtml += ' <span style="color:var(--text-muted);">' + detail + '</span>';
+        }
         tlHtml += '<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">' + timeStr + '</div>';
         tlHtml += '</div></div>';
       });
@@ -27994,6 +27900,16 @@ analyticsPageEnter('deals');
 
 // Render cashflow gap bar on initial load
 if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
+
+// ========== HOTJAR USER IDENTIFY ==========
+(function initHotjarIdentify() {
+  try {
+    var u = typeof getUser === 'function' ? getUser() : null;
+    if (u && u.email && typeof window.hj === 'function') {
+      window.hj('identify', u.email, { email: u.email, name: u.full_name || '', tier: u.tier || 'free' });
+    }
+  } catch(e) { /* silent */ }
+})();
 
 // ========== SESSION TRACKING ==========
 (function initSessionTracking() {
