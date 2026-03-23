@@ -1548,6 +1548,8 @@ html.dark .credit-chart-legend-divider {
 }
 .credit-card-body {
   padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 .credit-card-body .credit-card-title,
 .credit-card-body .credit-card-manager,
@@ -1564,6 +1566,11 @@ html.dark .credit-chart-legend-divider {
   line-height: 1.3;
   letter-spacing: -0.2px;
   padding-top: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(2 * 1.3em);
 }
 .credit-card-manager {
   font-family: var(--font-body);
@@ -1571,6 +1578,9 @@ html.dark .credit-chart-legend-divider {
   color: var(--text-muted);
   font-weight: 500;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .credit-card-strategy {
   font-family: var(--font-body);
@@ -1582,6 +1592,7 @@ html.dark .credit-chart-legend-divider {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: calc(2 * 1.4em);
 }
 .credit-card-metrics {
   display: grid;
@@ -1606,6 +1617,7 @@ html.dark .credit-chart-legend-divider {
 }
 .card-funding-bar {
   padding: 8px 14px 10px;
+  margin-top: auto;
 }
 .card-funding-labels {
   display: flex;
@@ -6205,9 +6217,52 @@ const _supa = window.supabase.createClient(
           </select>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Max Investment Min.</label>
+          <select class="filter-select" id="filterMaxInvest" onchange="applyFilters()" style="min-width:130px;">
+            <option value="">Any</option>
+            <option value="25000">$25K or less</option>
+            <option value="50000">$50K or less</option>
+            <option value="100000">$100K or less</option>
+            <option value="250000">$250K or less</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Max Lockup</label>
+          <select class="filter-select" id="filterMaxLockup" onchange="applyFilters()" style="min-width:120px;">
+            <option value="">Any</option>
+            <option value="1">1 year or less</option>
+            <option value="3">3 years or less</option>
+            <option value="5">5 years or less</option>
+            <option value="7">7 years or less</option>
+            <option value="10">10 years or less</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Distributions</label>
+          <select class="filter-select" id="filterDistributions" onchange="applyFilters()" style="min-width:120px;">
+            <option value="">Any</option>
+            <option value="Monthly">Monthly</option>
+            <option value="Quarterly">Quarterly</option>
+            <option value="Annual">Annual</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Min Target IRR</label>
+          <select class="filter-select" id="filterMinIRR" onchange="applyFilters()" style="min-width:120px;">
+            <option value="">Any</option>
+            <option value="0.06">6%+</option>
+            <option value="0.08">8%+</option>
+            <option value="0.10">10%+</option>
+            <option value="0.12">12%+</option>
+            <option value="0.15">15%+</option>
+            <option value="0.20">20%+</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
           <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Sort By</label>
           <select class="filter-select" id="filterSort" onchange="_goalSortOverridden=true;applyFilters()" style="min-width:140px;">
             <option value="newest">Newest</option>
+            <option value="best_match">Best Match</option>
             <option value="irr">Highest IRR</option>
             <option value="min_invest">Lowest Min Investment</option>
             <option value="az">A-Z Name</option>
@@ -12185,6 +12240,10 @@ function getFilteredDeals() {
   const sortBy = document.getElementById('filterSort').value;
   const q = document.getElementById('filterSearch').value.toLowerCase();
   const showArchived = document.getElementById('showArchivedCheck')?.checked || false;
+  const maxInvest = parseInt(document.getElementById('filterMaxInvest')?.value || '0', 10);
+  const maxLockup = parseFloat(document.getElementById('filterMaxLockup')?.value || '0');
+  const distPref = document.getElementById('filterDistributions')?.value || '';
+  const minIRR = parseFloat(document.getElementById('filterMinIRR')?.value || '0');
 
   // Count archived deals and show/hide toggle (only on Browse tab)
   var archivedCount = DEALS.filter(d => isDealStale(d)).length;
@@ -12201,6 +12260,11 @@ function getFilteredDeals() {
     if (dt && d.dealType !== dt) return false;
     if (st && d.strategy !== st) return false;
     if (status && d.status !== status) return false;
+    // New filters: investment minimum, lockup, distributions, IRR
+    if (maxInvest && d.investmentMinimum && d.investmentMinimum > maxInvest) return false;
+    if (maxLockup && d.holdPeriod && d.holdPeriod > maxLockup) return false;
+    if (distPref && d.distributions && d.distributions !== distPref) return false;
+    if (minIRR && (!d.targetIRR || d.targetIRR < minIRR)) return false;
     if (q) {
       var _spNames = (d.sponsors || []).map(function(s) { return [s.name, s.ceo].join(' '); }).join(' ');
       const haystack = [d.investmentName, d.managementCompany, d.assetClass, d.ceo, d.location || '', d.investmentStrategy || '', d.strategy || '', d.dealType || '', d.offeringType || '', d.address || '', _spNames].join(' ').toLowerCase();
@@ -12249,6 +12313,13 @@ function getFilteredDeals() {
     // Standard sort
     filtered.sort((a, b) => {
       if (sortBy === 'newest') return new Date(b.addedDate) - new Date(a.addedDate);
+      if (sortBy === 'best_match') {
+        const aM = computeMatchScore(a); const bM = computeMatchScore(b);
+        const aS = typeof aM === 'object' ? aM.score : aM;
+        const bS = typeof bM === 'object' ? bM.score : bM;
+        if (bS !== aS) return bS - aS;
+        return (b.targetIRR || 0) - (a.targetIRR || 0);
+      }
       if (sortBy === 'irr') return (b.targetIRR || 0) - (a.targetIRR || 0);
       if (sortBy === 'min_invest') return (a.investmentMinimum || 0) - (b.investmentMinimum || 0);
       if (sortBy === 'az') return (a.investmentName || '').localeCompare(b.investmentName || '');
@@ -12621,6 +12692,10 @@ function updateFilterBadge() {
   if (document.getElementById('filterAssetClass')?.value) count++;
   if (document.getElementById('filterDealType')?.value) count++;
   if (document.getElementById('filterStrategy')?.value) count++;
+  if (document.getElementById('filterMaxInvest')?.value) count++;
+  if (document.getElementById('filterMaxLockup')?.value) count++;
+  if (document.getElementById('filterDistributions')?.value) count++;
+  if (document.getElementById('filterMinIRR')?.value) count++;
   if (document.getElementById('filterSort')?.value !== 'newest') count++;
   if (document.getElementById('showArchivedCheck')?.checked) count++;
   var badge = document.getElementById('filterCountBadge');
@@ -12657,6 +12732,10 @@ function clearFilters() {
   document.getElementById('filterDealType').value = '';
   document.getElementById('filterStrategy').value = '';
   document.getElementById('filterStatus').value = '';
+  document.getElementById('filterMaxInvest').value = '';
+  document.getElementById('filterMaxLockup').value = '';
+  document.getElementById('filterDistributions').value = '';
+  document.getElementById('filterMinIRR').value = '';
   document.getElementById('filterSort').value = 'newest';
   document.getElementById('filterSearch').value = '';
   var archCheck = document.getElementById('showArchivedCheck');
