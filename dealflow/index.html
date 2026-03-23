@@ -12732,35 +12732,37 @@ function renderAll() {
 
   // Mobile swipe feed view
   var showSwipe = isMobileScreen() && mobileView === 'swipe' && currentTab === 'browse';
+  var isMobileBrowse = isMobileScreen() && currentTab === 'browse';
   if (swipeFeed) swipeFeed.style.display = showSwipe ? 'block' : 'none';
-  // Show/hide swipe toolbar
+  // Show/hide swipe toolbar — visible on mobile browse (both swipe AND feed modes)
   var swipeToolbar = document.getElementById('swipeToolbar');
-  if (swipeToolbar) swipeToolbar.style.display = showSwipe ? 'flex' : 'none';
-  // Hide filter bar, stats bar on swipe mode OR non-browse pipeline tabs on mobile
-  var hideFilters = showSwipe || (isMobileScreen() && currentTab !== 'browse');
+  if (swipeToolbar) swipeToolbar.style.display = isMobileBrowse ? 'flex' : 'none';
+  // Hide filter bar, stats bar on mobile browse (toolbar replaces them) OR non-browse pipeline tabs on mobile
+  var hideFilters = isMobileBrowse || (isMobileScreen() && currentTab !== 'browse');
   var filterBar = document.querySelector('.filter-bar');
   if (filterBar) filterBar.style.display = hideFilters ? 'none' : '';
   var statsBar = document.getElementById('statsBar');
   if (statsBar) statsBar.style.display = hideFilters ? 'none' : '';
   var goalIndicator = document.getElementById('goalSortIndicator');
-  if (goalIndicator && showSwipe) goalIndicator.style.display = 'none';
+  if (goalIndicator && isMobileBrowse) goalIndicator.style.display = 'none';
   var milestoneChecklist = document.getElementById('dealsMilestoneChecklist');
   if (milestoneChecklist) milestoneChecklist.style.display = showSwipe ? 'none' : '';
-  // Hide stage description in swipe mode (toolbar replaces it)
+  // Hide stage description on mobile browse (toolbar replaces it)
   var stageDesc = document.getElementById('stageDescription');
-  if (stageDesc && showSwipe) stageDesc.style.display = 'none';
-  if (!showSwipe) updateStageDescription();
+  if (stageDesc && isMobileBrowse) stageDesc.style.display = 'none';
+  if (!isMobileBrowse) updateStageDescription();
 
   // Remove bottom padding gap when swipe feed fills the screen
   var contentArea = document.querySelector('#page-deals .content-area');
   if (contentArea) contentArea.style.paddingBottom = showSwipe ? '0' : '';
+
+  if (isMobileBrowse) updateSwipeToolbar();
 
   if (showSwipe) {
     grid.style.display = 'none';
     table.style.display = 'none';
     mapContainer.style.display = 'none';
     initSwipeFeed();
-    updateSwipeToolbar();
     return;
   }
 
@@ -28676,11 +28678,24 @@ function syncSwipeSearch(val) {
 }
 
 function updateSwipeToolbar() {
-  // Update count
+  // Update count — in swipe mode show remaining, in feed mode show total filtered
   var countEl = document.getElementById('swipeToolbarCount');
-  if (countEl && swipeDeals) {
-    var remaining = swipeDeals.length - swipeIndex;
-    countEl.textContent = remaining > 0 ? remaining + ' deal' + (remaining !== 1 ? 's' : '') : '';
+  if (countEl) {
+    var filtered = getFilteredDeals();
+    var n = (mobileView === 'swipe' && swipeDeals) ? (swipeDeals.length - swipeIndex) : filtered.length;
+    countEl.textContent = n > 0 ? n + ' deal' + (n !== 1 ? 's' : '') : '0 deals';
+  }
+  // Update view toggle button icon
+  var viewBtn = document.getElementById('swipeViewToggleBtn');
+  if (viewBtn) {
+    var svg = viewBtn.querySelector('svg');
+    if (svg) {
+      if (mobileView === 'swipe') {
+        svg.innerHTML = '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>';
+      } else {
+        svg.innerHTML = '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>';
+      }
+    }
   }
   // Update filter badge
   var badge = document.getElementById('swipeFilterBadge');
