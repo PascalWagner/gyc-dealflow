@@ -26996,6 +26996,21 @@ async function fetchBuyBoxForUser(email) {
     if (data.success && data.buyBox) {
       buyBox = data.buyBox;
       localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
+      // Also update wizard data so My Plan page renders correctly
+      wizardData = data.buyBox;
+      localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+      if (wizardData._branch) {
+        localStorage.setItem('gycBuyBoxComplete', 'true');
+      } else {
+        localStorage.removeItem('gycBuyBoxComplete');
+      }
+    } else {
+      // No buy box — clear wizard data to avoid showing admin's plan
+      buyBox = { assetClasses: [], strategies: [], dealTypes: [], irrMin: '', irrMax: '', minInvest: '', maxInvest: '', holdMin: '', holdMax: '' };
+      wizardData = {};
+      localStorage.setItem('gycBuyBox', JSON.stringify(buyBox));
+      localStorage.setItem('gycBuyBoxWizard', '{}');
+      localStorage.removeItem('gycBuyBoxComplete');
     }
   } catch (e) {
     console.log('Could not fetch buy box for', email);
