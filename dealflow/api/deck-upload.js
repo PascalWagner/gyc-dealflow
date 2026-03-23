@@ -9,46 +9,7 @@
 //   - Auto-enrichment: PDFs are sent to Claude for field extraction after upload
 
 import { getAdminClient, setCors } from './_supabase.js';
-
-// ── Extraction prompt (shared with deal-enrich.js) ──────────────────────────
-const EXTRACTION_PROMPT = `You are a real estate private placement analyst. Extract the following fields from this PPM/offering document text. Return ONLY valid JSON with these exact keys. Use null for any field you cannot find.
-
-{
-  "investmentName": "Full name of the fund or investment",
-  "managementCompany": "Name of the sponsor / management company",
-  "ceo": "CEO or Managing Partner name",
-  "assetClass": "One of: Lending, Multi Family, Self Storage, Industrial, Hotels/Hospitality, RV/Mobile Home Parks, Short Term Rental, Mixed Use, Office, Retail, Oil & Gas, Other",
-  "dealType": "One of: Fund, Syndication, Direct, REIT",
-  "strategy": "One of: Core, Core-Plus, Value-Add, Opportunistic, Development, Lending, Distressed",
-  "investmentStrategy": "2-3 sentence LP-facing summary of the investment strategy",
-  "targetIRR": "Target IRR as decimal (e.g. 0.15 for 15%)",
-  "preferredReturn": "Preferred return as decimal (e.g. 0.08 for 8%)",
-  "cashOnCash": "Cash on cash return as decimal if mentioned",
-  "equityMultiple": "Target equity multiple (e.g. 2.0)",
-  "investmentMinimum": "Minimum investment in dollars (number only)",
-  "holdPeriod": "Hold period / lockup in years (number only)",
-  "offeringSize": "Total offering size / equity raise in dollars (number only)",
-  "purchasePrice": "Actual property purchase price from Sources & Uses table (number only). This is the total acquisition cost of the property, NOT the equity raise",
-  "offeringType": "506(b) or 506(c)",
-  "availableTo": "Accredited Investors, Qualified Purchasers, etc.",
-  "distributions": "Monthly, Quarterly, Annual, or None",
-  "lpGpSplit": "e.g. 80/20",
-  "fees": "Full fee structure description",
-  "financials": "Audited or Unaudited",
-  "investingGeography": "Geographic focus",
-  "instrument": "Debt, Equity, Preferred Equity, or Hybrid",
-  "debtPosition": "Senior, Mezzanine, Bridge, etc. (if lending/debt)",
-  "fundAUM": "Current AUM in dollars if mentioned",
-  "redemption": "Redemption terms if mentioned",
-  "sponsorCoinvest": "GP co-investment percentage or amount if mentioned",
-  "taxForm": "K-1, 1099, etc."
-}
-
-IMPORTANT:
-- For percentages, convert to decimals (15% → 0.15)
-- For dollar amounts, return raw numbers (no $ or commas)
-- If a field clearly doesn't apply to this deal type, use null
-- Be precise — only extract what's explicitly stated, don't infer`;
+import { extractFromPdf, runEnrichmentCascade } from './_enrichment.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -168,21 +129,38 @@ export default async function handler(req, res) {
       }
     }
 
-    // 5. Auto-enrich: if PDF and dealId present, extract fields via Claude (best-effort)
+    // 5. Auto-enrich: if PDF, extract fields via AI + run full enrichment cascade
+    // PPM is always the source of truth — enrichment runs regardless of upload context
     const isPdf = (filename || '').toLowerCase().endsWith('.pdf');
     let enriched = false;
     let enrichedFields = [];
     let extractedData = null;
+    let enrichmentCascade = null;
     let enrichmentError = null;
 
-    if (isPdf && dealId && process.env.ANTHROPIC_API_KEY) {
+    if (isPdf) {
       try {
-        const enrichResult = await enrichFromPdfBuffer(fileBuffer);
-        enriched = enrichResult.enriched;
-        enrichedFields = enrichResult.enrichedFields;
-        extractedData = enrichResult.extractedData || null;
+        // AI extraction with fallback chain (Claude → OpenAI → Grok)
+        const { extracted, method } = await extractFromPdf(fileBuffer);
+
+        if (extracted) {
+          const fieldsFound = Object.keys(extracted).filter(k => extracted[k] !== null && extracted[k] !== undefined);
+          enriched = fieldsFound.length > 0;
+          enrichedFields = fieldsFound;
+          extractedData = extracted;
+
+          console.log(`Deck upload enrichment (${method}): ${fieldsFound.length} fields extracted`);
+
+          // Run full enrichment cascade (SEC, RentCast, Census/BLS, background check)
+          try {
+            const supabase = getAdminClient();
+            enrichmentCascade = await runEnrichmentCascade(extracted, supabase);
+          } catch (cascadeErr) {
+            console.warn('Enrichment cascade failed (extraction still succeeded):', cascadeErr.message);
+          }
+        }
       } catch (e) {
-        console.error('Auto-enrichment failed (upload still succeeded):', e.message, e.stack);
+        console.error('Auto-enrichment failed (upload still succeeded):', e.message);
         enrichmentError = e.message;
       }
     }
@@ -196,6 +174,14 @@ export default async function handler(req, res) {
       enriched,
       enrichedFields,
       extractedData,
+      ...(enrichmentCascade ? {
+        sec: enrichmentCascade.sec,
+        property: enrichmentCascade.property,
+        market: enrichmentCascade.market,
+        backgroundCheck: enrichmentCascade.backgroundCheck,
+        matchedDeals: enrichmentCascade.matchedDeals,
+        enrichmentSteps: ['ppm', ...enrichmentCascade.enrichmentSteps]
+      } : {}),
       ...(enrichmentError ? { enrichmentError } : {})
     });
 
@@ -205,73 +191,6 @@ export default async function handler(req, res) {
   }
 }
 
-// ── Claude enrichment logic ─────────────────────────────────────────────────
-// Sends PDF directly to Claude as base64 — no pdf-parse dependency needed.
-// Claude can natively read PDF documents via its document understanding API.
-async function enrichFromPdfBuffer(fileBuffer) {
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const pdfBase64 = fileBuffer.toString('base64');
-
-  // Claude's PDF support: send as a document content block
-  const claudeResp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'pdfs-2024-09-25',
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'document',
-            source: {
-              type: 'base64',
-              media_type: 'application/pdf',
-              data: pdfBase64
-            }
-          },
-          {
-            type: 'text',
-            text: EXTRACTION_PROMPT
-          }
-        ]
-      }]
-    })
-  });
-
-  if (!claudeResp.ok) {
-    const errText = await claudeResp.text();
-    console.error('Claude API error:', claudeResp.status, errText.substring(0, 500));
-    throw new Error('Claude API error: ' + claudeResp.status);
-  }
-
-  const claudeData = await claudeResp.json();
-  const responseText = claudeData.content?.[0]?.text || '';
-
-  // Parse JSON from response
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('No JSON found in Claude response');
-  const extracted = JSON.parse(jsonMatch[0]);
-
-  // Count fields with values
-  const fieldsFound = Object.keys(extracted).filter(k => extracted[k] !== null && extracted[k] !== undefined);
-
-  if (fieldsFound.length === 0) {
-    return { enriched: false, enrichedFields: [], reason: 'No fields extracted' };
-  }
-
-  return {
-    enriched: true,
-    enrichedFields: fieldsFound,
-    extractedData: extracted,
-    extractedTotal: fieldsFound.length
-  };
-}
 
 function guessContentType(filename) {
   const ext = (filename || '').split('.').pop()?.toLowerCase();
