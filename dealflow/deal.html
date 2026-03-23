@@ -5143,8 +5143,18 @@ async function renderDeal() {
         } else if (_bbDealAvail.indexOf('qualified client') >= 0) {
           _bbAccMatch = bb.accreditation === 'qualified_purchaser' || bb.accreditation === 'qualified_client';
         }
+        // bb.accreditation may be a string key or an array of methods — normalize to label
         var _bbAccLabels = { accredited: 'Accredited Investor', qualified_client: 'Qualified Client', qualified_purchaser: 'Qualified Purchaser' };
-        checks.push({ label: 'Accreditation', match: _bbAccMatch, want: _bbAccLabels[bb.accreditation] || bb.accreditation, got: deal.availableTo });
+        var _bbAccRaw = bb.accreditation;
+        var _bbAccWant = '';
+        if (typeof _bbAccRaw === 'string' && _bbAccLabels[_bbAccRaw]) {
+          _bbAccWant = _bbAccLabels[_bbAccRaw];
+        } else if (typeof _bbAccRaw === 'string') {
+          _bbAccWant = 'Accredited Investor';
+        } else {
+          _bbAccWant = 'Accredited Investor';
+        }
+        checks.push({ label: 'Accreditation', match: _bbAccMatch, want: _bbAccWant, got: deal.availableTo });
       }
 
       if (checks.length > 0) {
@@ -5171,7 +5181,9 @@ async function renderDeal() {
         buyBoxHtml += '<a href="index.html#buybox" style="margin-left:auto;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--primary);text-decoration:none;opacity:0.8;">Edit Buy Box \u2192</a>';
         buyBoxHtml += '</div>';
         // Criteria grid — horizontal on desktop, wraps on mobile
-        buyBoxHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:10px;" class="buybox-criteria-grid">';
+        // Calculate even columns: for <=3 items use count, for 4+ use best fit (2, 3, or 4 cols) so rows are full
+        var bbCols = checks.length <= 3 ? checks.length : (checks.length % 4 === 0 || checks.length >= 8 ? 4 : checks.length % 3 === 0 ? 3 : checks.length <= 4 ? 2 : checks.length <= 6 ? 3 : 4);
+        buyBoxHtml += '<div style="display:grid;grid-template-columns:repeat(' + bbCols + ', 1fr);gap:10px;" class="buybox-criteria-grid">';
         for (var ci = 0; ci < checks.length; ci++) {
           var c = checks[ci];
           var icon = c.match
