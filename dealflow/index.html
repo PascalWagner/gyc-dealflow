@@ -6767,6 +6767,20 @@ const _supa = window.supabase.createClient(
       <div class="topbar-title">Operators</div>
     </div>
     <div class="filter-bar" style="padding:12px 24px;">
+      <!-- Mobile filter row (visible on mobile, hidden on desktop) -->
+      <div class="ios-filter-row" style="display:none;width:100%;gap:6px;padding:6px 0;align-items:center;flex-wrap:nowrap;">
+        <input type="text" placeholder="Search operators..." oninput="document.getElementById('managersNameSearch').value=this.value;renderManagersPage();" style="flex:1;min-width:0;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-body);box-sizing:border-box;background:var(--bg-card);">
+        <button class="ios-filter-toggle" style="flex:0 0 auto;min-width:0;display:flex;align-items:center;gap:5px;justify-content:center;height:38px;padding:0 14px;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;color:var(--text-dark);background:var(--bg-card);cursor:pointer;" onclick="this.classList.toggle('open');this.closest('.filter-bar').classList.toggle('ios-filters-open');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </button>
+        <select style="flex:0 0 auto;min-width:0;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;background:var(--bg-card);color:var(--text-dark);box-sizing:border-box;" onchange="document.getElementById('managersSortBy').value=this.value;renderManagersPage();">
+          <option value="deals">Most Deals</option>
+          <option value="fullcycle">Most Full Cycle</option>
+          <option value="name">A-Z</option>
+          <option value="newest">Newest</option>
+        </select>
+      </div>
       <input type="text" id="managersNameSearch" oninput="renderManagersPage()" placeholder="Search operators..." style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);min-width:180px;box-sizing:border-box;">
       <select id="managersAssetFilter" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="">All Asset Classes</option>
