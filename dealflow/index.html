@@ -20903,6 +20903,7 @@ async function adminRefreshToken() {
         localStorage.setItem('gycUser', JSON.stringify(freshUser));
       }
       return data.session.access_token;
+    }
   } catch (e) { console.warn('Admin token refresh failed:', e.message); }
   return null;
 }
