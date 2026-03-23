@@ -1,0 +1,51 @@
+name: Impersonation Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'js/sidebar.js'
+      - 'tests/**'
+      - '.github/workflows/impersonation-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        working-directory: tests
+        run: |
+          npm init -y --silent 2>/dev/null
+          npm install --save-dev @playwright/test
+          npx playwright install chromium
+
+      - name: Wait for Vercel deployment
+        run: |
+          URL="${DEALFLOW_URL:-https://deals.growyourcashflow.io}/index.html"
+          echo "Waiting for $URL to be reachable..."
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null "$URL"; then
+              echo "Site is up after ${i}0 seconds"
+              break
+            fi
+            sleep 10
+          done
+          # Extra buffer for Vercel edge propagation
+          sleep 15
+        env:
+          DEALFLOW_URL: ${{ secrets.DEALFLOW_URL }}
+
+      - name: Run impersonation tests
+        working-directory: tests
+        run: npx playwright test impersonation.spec.js --reporter=list
+        env:
+          TEST_URL: ${{ secrets.DEALFLOW_URL }}
+          TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}

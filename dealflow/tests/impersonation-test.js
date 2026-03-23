@@ -223,15 +223,17 @@
   const preUser = typeof getUser === 'function' ? getUser() : null;
   if (!preUser || !preUser.email || !ADMIN_EMAILS.includes(preUser.email.toLowerCase())) {
     console.error('%c[ABORT] You must be logged in as an admin to run this test.', 'color:red;font-weight:bold');
-    return;
+    return { passed: 0, failed: 1, total: 1, results: [{ pass: false, label: 'Not logged in as admin', phase: 'Pre-flight' }] };
   }
 
   if (typeof isImpersonating === 'function' && isImpersonating()) {
     console.error('%c[ABORT] You are currently impersonating. Exit impersonation first.', 'color:red;font-weight:bold');
-    return;
+    return { passed: 0, failed: 1, total: 1, results: [{ pass: false, label: 'Currently impersonating', phase: 'Pre-flight' }] };
   }
 
   const adminEmail = preUser.email;
+  const adminName = preUser.name || preUser.firstName || preUser.email.split('@')[0];
+  const adminNamePart = adminName.split(' ')[0]; // first word of name for sidebar match
   const adminTier = preUser.tier || 'free';
   const adminTierLabel = adminTier === 'academy' ? 'Academy Member' : adminTier === 'alumni' ? 'Alumni'
     : adminTier === 'investor' ? 'Investor' : adminTier === 'family_office' ? 'Family Office' : 'Free Plan';
@@ -254,7 +256,7 @@
     assertEqual(isAdmin(), true, 'isAdmin() === true');
     assertEqual(isImpersonating(), false, 'isImpersonating() === false');
     assertEqual(isRealUserAdmin(), true, 'isRealUserAdmin() === true');
-    assertSidebar(adminTierLabel, 'Pascal', true);
+    assertSidebar(adminTierLabel, adminNamePart, true);
     assertVisible('gpNav', '#gpNav visible');
 
     console.groupEnd();
@@ -485,7 +487,7 @@
     const restoredUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
     assert(ADMIN_EMAILS.includes(restoredUser.email?.toLowerCase()), 'gycUser.email = admin');
 
-    assertSidebar(adminTierLabel, 'Pascal', true);
+    assertSidebar(adminTierLabel, adminNamePart, true);
     assertVisible('gpNav', '#gpNav visible');
     assertHidden('viewAsImpersonating', '#viewAsImpersonating hidden');
     assertVisible('viewAsSearch', '#viewAsSearch visible');
@@ -495,7 +497,7 @@
       navigateTo(page);
       await wait(WAIT_MS);
       assertPageActive(page, page + ': page active');
-      assertSidebarQuick(adminTierLabel, 'Pascal', true, page);
+      assertSidebarQuick(adminTierLabel, adminNamePart, true, page);
 
       if (page === 'settings') {
         clickSettingsTab('profile');
@@ -572,7 +574,7 @@
     await wait(WAIT_MS);
 
     assertEqual(isAdmin(), true, 'F2: exit — isAdmin restored');
-    assertSidebarQuick(adminTierLabel, 'Pascal', true, 'F2: exit');
+    assertSidebarQuick(adminTierLabel, adminNamePart, true, 'F2: exit');
 
     console.groupEnd();
 
