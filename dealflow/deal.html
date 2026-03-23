@@ -6789,20 +6789,23 @@ async function renderDeal() {
   var feeCompareHtml = '';
   (function buildFeeComparison() {
     // Known fee categories and their regex patterns
+    // GP fees only — excludes transaction costs (closing costs, lender fees, appraisal, legal, etc.)
     var feeCategories = [
       { key: 'mgmt', label: 'Management Fee', patterns: [/management\s*fee/i, /asset\s*management/i, /annual\s*(?:fund\s*)?management/i, /mgmt\s*fee/i], lowerBetter: true },
-      { key: 'acq', label: 'Acquisition Fee', patterns: [/acquisition\s*fee/i, /acq(?:uisition)?\s*fee/i, /origination\s*fee/i], lowerBetter: true },
+      { key: 'acq', label: 'Acquisition Fee', patterns: [/acquisition\s*fee/i, /acq(?:uisition)?\s*fee/i], lowerBetter: true },
       { key: 'disp', label: 'Disposition Fee', patterns: [/disposition\s*fee/i, /exit\s*fee/i, /disp(?:osition)?\s*fee/i], lowerBetter: true },
-      { key: 'const', label: 'Construction Mgmt', patterns: [/construction\s*(?:management|mgmt|oversight)\s*fee/i], lowerBetter: true },
-      { key: 'prop', label: 'Property Mgmt', patterns: [/property\s*(?:management|mgmt)\s*fee/i], lowerBetter: true },
+      { key: 'prop', label: 'Property Mgmt Fee', patterns: [/property\s*(?:management|mgmt)\s*fee/i], lowerBetter: true },
+      { key: 'const', label: 'Construction Mgmt Fee', patterns: [/construction\s*(?:management|mgmt|oversight)\s*fee/i], lowerBetter: true },
+      { key: 'dev', label: 'Development Fee', patterns: [/development\s*fee/i, /dev(?:elopment)?\s*fee/i], lowerBetter: true },
       { key: 'perf', label: 'Performance Fee', patterns: [/performance\s*fee/i, /incentive\s*fee/i], lowerBetter: true },
+      { key: 'carry', label: 'Carried Interest', patterns: [/carri(?:ed|y)\s*interest/i, /carry/i, /promote/i], lowerBetter: true },
       { key: 'setup', label: 'Setup / Org Fee', patterns: [/setup\s*fee/i, /org(?:anization(?:al)?)?\s*fee/i, /formation\s*fee/i], lowerBetter: true },
       { key: 'serv', label: 'Servicing Fee', patterns: [/servic(?:e|ing)\s*fee/i, /loan\s*servicing/i], lowerBetter: true },
-      { key: 'carry', label: 'Carried Interest', patterns: [/carri(?:ed|y)\s*interest/i, /carry/i, /promote/i], lowerBetter: true },
-      { key: 'dev', label: 'Development Fee', patterns: [/development\s*fee/i, /dev(?:elopment)?\s*fee/i], lowerBetter: true },
       { key: 'captx', label: 'Capital Transaction Fee', patterns: [/capital\s*transaction\s*fee/i, /capital\s*event\s*fee/i], lowerBetter: true },
       { key: 'refi', label: 'Refinance Fee', patterns: [/refin(?:ance|ancing)\s*fee/i, /refi\s*fee/i], lowerBetter: true },
-      { key: 'guarantee', label: 'Guarantee Fee', patterns: [/guarantee\s*fee/i, /guaranty\s*fee/i, /loan\s*guarantee/i], lowerBetter: true }
+      { key: 'guarantee', label: 'Guarantee Fee', patterns: [/guarantee\s*fee/i, /guaranty\s*fee/i, /loan\s*guarantee/i], lowerBetter: true },
+      { key: 'dd', label: 'Due Diligence Fee', patterns: [/due\s*diligence\s*fee/i, /dd\s*fee/i], lowerBetter: true },
+      { key: 'finance', label: 'Financing Fee', patterns: [/financ(?:e|ing)\s*fee/i, /debt\s*(?:placement|arrangement)\s*fee/i], lowerBetter: true }
     ];
 
     // Extract percentage from a fee string
@@ -6842,10 +6845,7 @@ async function renderDeal() {
 
     var dealFees = parseFees(deal.fees);
     var dealSplitLP = parseSplit(deal.lpGpSplit);
-    var hasRawFees = deal.fees && deal.fees.length > 0;
-    var hasParsedFees = Object.keys(dealFees).length > 0;
-    var hasFeeData = hasRawFees || hasParsedFees || dealSplitLP !== null;
-    if (!hasFeeData) return;
+    // Always show — comprehensive fee check displays all categories even if Not Charged
 
     // Get peers (same logic as benchmark section)
     var allDeals = (typeof DEALS !== 'undefined' ? DEALS : window.DEALS) || [];
@@ -6884,7 +6884,7 @@ async function renderDeal() {
 
     var rows = [];
 
-    // Build rows for each fee category
+    // Build rows for EVERY fee category — show comprehensive check even if not charged
     for (var c = 0; c < feeCategories.length; c++) {
       var cat = feeCategories[c];
       var dealFee = dealFees[cat.key];
@@ -6924,16 +6924,26 @@ async function renderDeal() {
           verdictBg: verdictBg,
           raw: dealFee.raw
         });
-      } else if (chargeRate && chargeRate.pct >= 30) {
-        // This deal does NOT charge a common fee — that's a positive
+      } else {
+        // Not charged — always show so LPs see comprehensive fee check
+        var ncVerdict, ncColor, ncBg;
+        if (chargeRate && chargeRate.pct >= 30) {
+          ncVerdict = chargeRate.pct + '% of peers charge this';
+          ncColor = '#10b981';
+          ncBg = 'rgba(16,185,129,0.08)';
+        } else {
+          ncVerdict = 'Not Charged';
+          ncColor = '#10b981';
+          ncBg = 'rgba(16,185,129,0.08)';
+        }
         rows.push({
           label: cat.label,
           dealVal: 'Not Charged',
           marketVal: peerMed !== null ? peerMed.toFixed(1) + '%' : '—',
           peerCount: peerVals.length,
-          verdict: chargeRate.pct + '% of peers charge this',
-          verdictColor: '#10b981',
-          verdictBg: 'rgba(16,185,129,0.08)',
+          verdict: ncVerdict,
+          verdictColor: ncColor,
+          verdictBg: ncBg,
           notCharged: true,
           chargeRate: chargeRate
         });
@@ -7010,10 +7020,11 @@ async function renderDeal() {
       feeCompareHtml += '</tbody></table></div>';
 
       feeCompareHtml += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg-cream);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);line-height:1.5;">'
-        + '<strong style="color:var(--text-secondary);">How to read this:</strong> Fees are compared against '
+        + '<strong style="color:var(--text-secondary);">How to read this:</strong> We check every deal for '
+        + feeCategories.length + ' GP fee types. Fees are compared against '
         + peers.length + ' ' + esc(peerLabel) + ' deals in the database. '
-        + '"Not Charged" means this deal doesn\'t have a fee that\'s common in the market — that\'s usually a positive for LPs. '
-        + 'Market medians are based on deals with disclosed fee data.'
+        + '"Not Charged" means the sponsor does not collect this fee — that\'s a positive for LPs. '
+        + 'Only sponsor compensation is shown here; transaction costs (closing costs, lender fees, legal, etc.) are excluded.'
         + '</div>';
     }
 
