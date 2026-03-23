@@ -367,6 +367,7 @@ export default async function handler(req, res) {
       type: mc.type,
       investClearlyProfile: mc.invest_clearly_profile,
       totalInvestors: mc.total_investors,
+      fullCycleDeals: mc.full_cycle_deals || 0,
       authorizedEmails: mc.authorized_emails || []
     }));
 

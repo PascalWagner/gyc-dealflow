@@ -6606,25 +6606,25 @@ const _supa = window.supabase.createClient(
       <select id="managersAssetFilter" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="">All Asset Classes</option>
       </select>
-      <select id="managersTypeFilter" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
-        <option value="">All Types</option>
-        <option value="Operator">Operator</option>
-        <option value="Fund Manager">Fund Manager</option>
-        <option value="Capital Allocator">Capital Allocator</option>
-        <option value="Syndicator">Syndicator</option>
+      <select id="managersMaxInvest" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+        <option value="">Max Investment Min.</option>
+        <option value="25000">$25K or less</option>
+        <option value="50000">$50K or less</option>
+        <option value="100000">$100K or less</option>
       </select>
-      <select id="managersMinDeals" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
-        <option value="0">Any # Deals</option>
-        <option value="3">3+ deals</option>
-        <option value="5">5+ deals</option>
-        <option value="10">10+ deals</option>
+      <select id="managersFullCycle" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
+        <option value="0">Full Cycle Deals</option>
+        <option value="1">1+ full cycle</option>
+        <option value="5">5+ full cycle</option>
+        <option value="10">10+ full cycle</option>
       </select>
       <select id="managersSortBy" class="filter-select" onchange="renderManagersPage()" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font-body);color:var(--text-dark);background:var(--bg-card);">
         <option value="deals">Most Deals</option>
+        <option value="fullcycle">Most Full Cycle</option>
         <option value="name">Name (A-Z)</option>
         <option value="newest">Newest First</option>
       </select>
-      <button onclick="document.getElementById('managersNameSearch').value='';document.getElementById('managersAssetFilter').value='';document.getElementById('managersTypeFilter').value='';document.getElementById('managersMinDeals').value='0';document.getElementById('managersSortBy').value='deals';renderManagersPage();" style="padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;">Reset</button>
+      <button onclick="document.getElementById('managersNameSearch').value='';document.getElementById('managersAssetFilter').value='';document.getElementById('managersMaxInvest').value='';document.getElementById('managersFullCycle').value='0';document.getElementById('managersSortBy').value='deals';renderManagersPage();" style="padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;color:var(--text-secondary);white-space:nowrap;">Reset</button>
       <div id="managersStats" style="margin-left:auto;display:flex;gap:16px;align-items:center;font-size:12px;color:var(--text-muted);white-space:nowrap;"></div>
     </div>
     <div class="content-area" style="padding:24px;">
@@ -18051,6 +18051,7 @@ function renderManagersPage() {
       type: c.type || '',
       foundingYear: c.foundingYear || null,
       totalInvestors: c.totalInvestors || null,
+      fullCycleDeals: c.fullCycleDeals || 0,
       ...stats
     };
   });
@@ -18092,16 +18093,16 @@ function renderManagersPage() {
   // Get filter values
   const assetFilter = filterSelect.value;
   const nameSearch = (document.getElementById('managersNameSearch')?.value || '').toLowerCase().trim();
-  const typeFilter = document.getElementById('managersTypeFilter')?.value || '';
-  const minDeals = parseInt(document.getElementById('managersMinDeals')?.value || '0');
+  const maxInvest = parseInt(document.getElementById('managersMaxInvest')?.value || '0');
+  const minFullCycle = parseInt(document.getElementById('managersFullCycle')?.value || '0');
   const sortBy = document.getElementById('managersSortBy')?.value || 'deals';
 
   // Filter
   const filtered = companies.filter(c => {
     if (assetFilter && !c.assetClasses.has(assetFilter)) return false;
     if (nameSearch && !c.name.toLowerCase().includes(nameSearch) && !(c.ceo && c.ceo.toLowerCase().includes(nameSearch))) return false;
-    if (typeFilter && c.type !== typeFilter) return false;
-    if (minDeals > 0 && c.dealCount < minDeals) return false;
+    if (maxInvest && c.minInvestment && c.minInvestment > maxInvest) return false;
+    if (minFullCycle > 0 && (c.fullCycleDeals || 0) < minFullCycle) return false;
     return true;
   });
 
@@ -18110,13 +18111,15 @@ function renderManagersPage() {
     filtered.sort((a, b) => a.name.localeCompare(b.name));
   } else if (sortBy === 'newest') {
     filtered.sort((a, b) => (b.foundingYear || 0) - (a.foundingYear || 0) || b.dealCount - a.dealCount);
+  } else if (sortBy === 'fullcycle') {
+    filtered.sort((a, b) => (b.fullCycleDeals || 0) - (a.fullCycleDeals || 0) || b.dealCount - a.dealCount);
   } else {
     filtered.sort((a, b) => b.dealCount - a.dealCount || a.name.localeCompare(b.name));
   }
 
   // Stats bar
   const statsEl = document.getElementById('managersStats');
-  const activeFilterCount = (assetFilter ? 1 : 0) + (nameSearch ? 1 : 0) + (typeFilter ? 1 : 0) + (minDeals > 0 ? 1 : 0);
+  const activeFilterCount = (assetFilter ? 1 : 0) + (nameSearch ? 1 : 0) + (maxInvest ? 1 : 0) + (minFullCycle > 0 ? 1 : 0);
   if (statsEl) {
     statsEl.innerHTML = `
       <span><strong style="color:var(--text-dark);">${filtered.length}</strong> Operators</span>
@@ -18144,6 +18147,7 @@ function renderManagersPage() {
       if (c.avgIRR > 0) metrics.push(`<span style="color:var(--text-secondary);">IRR <strong style="color:var(--text-dark);">${c.avgIRR.toFixed(1)}%</strong></span>`);
       else if (c.avgPref > 0) metrics.push(`<span style="color:var(--text-secondary);">Pref <strong style="color:var(--text-dark);">${c.avgPref.toFixed(1)}%</strong></span>`);
       if (c.minInvestment > 0) metrics.push(`<span style="color:var(--text-secondary);">Min <strong style="color:var(--text-dark);">$${c.minInvestment >= 1000 ? (c.minInvestment / 1000).toFixed(0) + 'K' : c.minInvestment.toLocaleString()}</strong></span>`);
+      if (c.fullCycleDeals > 0) metrics.push(`<span style="color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11" style="vertical-align:-1px;margin-right:1px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><strong style="color:var(--text-dark);">${c.fullCycleDeals}</strong> Full Cycle</span>`);
       if (c.foundingYear) metrics.push(`<span style="color:var(--text-secondary);">Est. <strong style="color:var(--text-dark);">${c.foundingYear}</strong></span>`);
 
       return `<div class="manager-card" onclick="window.location.href='sponsor.html?${c.id ? 'id=' + encodeURIComponent(c.id) : 'company=' + encodeURIComponent(c.name)}'" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';this.style.borderColor='var(--primary)'" onmouseout="this.style.boxShadow='none';this.style.borderColor='var(--border)'">
@@ -26723,7 +26727,7 @@ function searchViewAsUsers(query) {
 }
 
 // Keys that are per-user and need to be scoped when impersonating
-const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed', 'gycDailyDeals'];
+const USER_SCOPED_KEYS = ['gycPortfolio', 'gycDealStages', 'gycBuyBox', 'gycBuyBoxWizard', 'gycBuyBoxComplete', 'gycUserDeals', 'gycGoals', 'gycDistributions', 'gycMilestones', 'gycViewCount', 'gycFirstActivity', 'gycOnboardingComplete', 'gycFundNudgeDismissed', 'gycDailyDeals', 'gycTaxDocs', 'gycNotifPrefs'];
 
 function saveUserScopedData(email) {
   // Save current localStorage data under the user's email prefix
@@ -26817,6 +26821,24 @@ async function fetchUserDataAsAdmin(targetEmail) {
     } else {
       localStorage.removeItem('gycGoals');
       investorGoals = null;
+    }
+
+    // Restore tax documents (always overwrite)
+    if (result.taxdocs && result.taxdocs.length > 0) {
+      var restoredTax = result.taxdocs.map(function(r) { return {
+        id: r.id, taxYear: r.tax_year || new Date().getFullYear(),
+        investmentName: r.investment_name || '', investingEntity: r.investing_entity || '',
+        entityInvestedInto: r.entity_invested_into || '', formType: r.form_type || 'K-1',
+        status: r.upload_status || 'Not Set', dateReceived: r.date_received || '',
+        fileUrl: r.file_url || '', portalUrl: r.portal_url || '',
+        contact: r.contact_name || '', contactEmail: r.contact_email || '',
+        contactPhone: r.contact_phone || '', notes: r.notes || ''
+      }; });
+      localStorage.setItem('gycTaxDocs', JSON.stringify(restoredTax));
+      taxDocuments = restoredTax;
+    } else {
+      localStorage.setItem('gycTaxDocs', '[]');
+      taxDocuments = [];
     }
 
     // Re-render current page
@@ -27802,6 +27824,7 @@ fetchBuyBoxFromGHL();
         </button>
         <select style="flex:0 0 auto;min-width:0;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font-ui);font-weight:600;background:var(--bg-card);color:var(--text-dark);box-sizing:border-box;" onchange="document.getElementById('managersSortBy').value=this.value;renderManagersPage();">
           <option value="deals">Most Deals</option>
+          <option value="fullcycle">Most Full Cycle</option>
           <option value="name">A-Z</option>
           <option value="newest">Newest</option>
         </select>
@@ -27818,8 +27841,8 @@ fetchBuyBoxFromGHL();
       resetBtn.onclick = function() {
         document.getElementById('managersNameSearch').value='';
         document.getElementById('managersAssetFilter').value='';
-        document.getElementById('managersTypeFilter').value='';
-        document.getElementById('managersMinDeals').value='0';
+        document.getElementById('managersMaxInvest').value='';
+        document.getElementById('managersFullCycle').value='0';
         document.getElementById('managersSortBy').value='deals';
         mRow.querySelector('input').value='';
         mRow.querySelector('select').value='deals';
