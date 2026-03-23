@@ -3570,6 +3570,18 @@ function isCreditFund(deal) {
   return false;
 }
 
+// Deal completeness score (0-100) — mirrors index.html + admin-manage.js
+var _completenessKeys = ['investmentName','assetClass','dealType','strategy','investmentStrategy','targetIRR','preferredReturn','cashOnCash','investmentMinimum','holdPeriod','offeringType','offeringSize','distributions','lpGpSplit','fees','financials','investingGeography','instrument','deckUrl','ppmUrl','secCik','managementCompanyId','purchasePrice','status'];
+function getDealCompleteness(d) {
+  var filled = 0;
+  for (var i = 0; i < _completenessKeys.length; i++) {
+    var v = d[_completenessKeys[i]];
+    if (v !== null && v !== undefined && v !== '' && v !== 0 && !(Array.isArray(v) && v.length === 0)) filled++;
+  }
+  return Math.round((filled / _completenessKeys.length) * 100);
+}
+function isDealLowQuality(d) { return getDealCompleteness(d) < 50; }
+
 function creditBadgeLabel(deal) {
   var ac = (deal.assetClass || '').toLowerCase();
   if (ac === 'lending') return 'LENDING';
@@ -6753,6 +6765,7 @@ async function renderDeal() {
     var peerLabel = _isCredit ? 'Lending' : (deal.assetClass || 'Similar');
     var peers = allDeals.filter(function(d) {
       if (d.id === deal.id) return false;
+      if (isDealLowQuality(d)) return false;
       if (_isCredit) return isCreditFund(d);
       return d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
     });
@@ -6947,6 +6960,7 @@ async function renderDeal() {
     var peerLabel = _isCredit ? 'Lending' : (deal.assetClass || 'Similar');
     var peers = allDeals.filter(function(d) {
       if (d.id === deal.id) return false;
+      if (isDealLowQuality(d)) return false;
       if (_isCredit) return isCreditFund(d);
       return d.assetClass && deal.assetClass && d.assetClass === deal.assetClass;
     });
@@ -7537,7 +7551,7 @@ async function renderDeal() {
 
     // Score each deal by similarity to current deal
     var scored = allDeals
-      .filter(function(d) { return d.id !== deal.id && d.investmentName; })
+      .filter(function(d) { return d.id !== deal.id && d.investmentName && !isDealLowQuality(d); })
       .map(function(d) {
         var score = 0;
         var _simIsCredit = isCreditFund(deal);
