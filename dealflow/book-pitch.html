@@ -348,7 +348,7 @@ body {
 /* ====== INCLUDED GRID ====== */
 .included-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
 .included-item {
@@ -416,136 +416,54 @@ body {
   background: var(--border);
 }
 
-/* ====== SCHEDULE + CTA GRID ====== */
-.pitch-two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+/* ====== YOUTUBE SOCIAL PROOF ====== */
+.youtube-proof {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid #FF0000;
+  border-radius: var(--radius-sm);
+  padding: 20px 24px;
   margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
 }
-
-/* Schedule preview card */
-.schedule-card {
-  background: linear-gradient(135deg, var(--teal-midnight) 0%, var(--teal-deep) 100%);
-  border-radius: var(--radius);
-  padding: 28px;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-.schedule-card-title {
-  font-family: var(--font-ui);
-  font-size: 11px; font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--accent-green);
-  margin-bottom: 20px;
-}
-.schedule-slot {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.schedule-slot:last-child { border-bottom: none; }
-.schedule-slot-day {
-  font-family: var(--font-ui);
-  font-size: 12px; font-weight: 700;
-  color: rgba(255,255,255,0.45);
-  width: 44px;
+.youtube-proof-icon {
   flex-shrink: 0;
+  color: #FF0000;
 }
-.schedule-slot-bar {
-  flex: 1;
-  height: 32px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  font-family: var(--font-ui);
-  font-size: 12px; font-weight: 600;
+.youtube-proof-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
-.schedule-slot-bar.filled {
-  background: rgba(81,190,123,0.2);
-  border: 1px solid rgba(81,190,123,0.3);
-  color: var(--accent-green);
-}
-.schedule-slot-bar.open {
-  background: rgba(255,255,255,0.05);
-  border: 1px dashed rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.4);
-}
-.schedule-slot-bar.yours {
-  background: rgba(64,228,127,0.15);
-  border: 1px solid var(--accent-green);
-  color: #fff;
-  animation: pulse-border 2s ease-in-out infinite;
-}
-@keyframes pulse-border {
-  0%, 100% { border-color: var(--accent-green); }
-  50% { border-color: rgba(64,228,127,0.4); }
-}
-.schedule-details {
-  list-style: none;
-  margin-top: 20px;
-}
-.schedule-details li {
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: rgba(255,255,255,0.7);
-  padding: 5px 0 5px 22px;
-  position: relative;
-}
-.schedule-details li::before {
-  content: '';
-  position: absolute; left: 0; top: 11px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--accent-green);
+.youtube-proof-text strong {
+  color: var(--text-dark);
 }
 
-/* CTA card */
-.cta-card {
+/* ====== PAYMENT SECTION ====== */
+.payment-section {
   background: var(--bg-card);
   border: 2px solid var(--primary);
   border-radius: var(--radius);
   padding: 32px 28px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   text-align: center;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-lg);
 }
-.cta-card-icon {
-  font-size: 40px;
-  margin-bottom: 16px;
-}
-.cta-card h3 {
+.payment-section-header h2 {
   font-family: var(--font-headline);
-  font-size: 24px;
+  font-size: 28px;
   color: var(--teal-deep);
   margin-bottom: 8px;
 }
-.cta-card-desc {
-  font-size: 15px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+.payment-section-header p {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-muted);
   margin-bottom: 24px;
 }
-.cta-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-family: var(--font-ui);
-  font-size: 16px; font-weight: 700;
-  background: var(--primary); color: #fff;
-  border: none; border-radius: var(--radius-sm);
-  padding: 16px 32px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.2s, transform 0.15s;
-  width: 100%;
-}
-.cta-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
 .cta-fine {
   font-size: 12px;
   color: var(--text-muted);
@@ -626,7 +544,6 @@ body {
 
 /* ====== RESPONSIVE ====== */
 @media (max-width: 1024px) {
-  .included-grid { grid-template-columns: repeat(2, 1fr); }
   .pitch-stats { grid-template-columns: repeat(2, 1fr); }
   .steps-row { grid-template-columns: repeat(2, 1fr); }
   .step-item::after { display: none; }
@@ -645,7 +562,8 @@ body {
   .included-grid { grid-template-columns: 1fr; }
   .steps-row { grid-template-columns: 1fr; }
   .step-item::after { display: none; }
-  .pitch-two-col { grid-template-columns: 1fr; }
+  .payment-section { padding: 24px 16px; }
+  .youtube-proof { flex-direction: column; text-align: center; }
 }
 </style>
 </head>
@@ -738,16 +656,6 @@ body {
             <h3>Post-Event Analytics</h3>
             <p>See exactly who attended, engagement data, and which investors requested a direct introduction to your IR team.</p>
           </div>
-          <div class="included-item">
-            <div class="included-item-icon">&#128231;</div>
-            <h3>Featured in Weekly Digest</h3>
-            <p>Your deal gets highlighted in our weekly email digest sent to all active investors on the platform.</p>
-          </div>
-          <div class="included-item">
-            <div class="included-item-icon">&#128640;</div>
-            <h3>Deal Page Boost</h3>
-            <p>Your listing gets a "Featured" badge and priority placement in the deal flow for 30 days after your pitch.</p>
-          </div>
         </div>
       </div>
     </div>
@@ -783,53 +691,33 @@ body {
       </div>
     </div>
 
-    <!-- Schedule + CTA -->
-    <div class="pitch-two-col">
-      <!-- Schedule preview -->
-      <div class="schedule-card">
-        <div class="schedule-card-title">April 2026 Schedule</div>
-        <div class="schedule-slot">
-          <div class="schedule-slot-day">Apr 2</div>
-          <div class="schedule-slot-bar filled">DLP Lending &bull; Booked</div>
-        </div>
-        <div class="schedule-slot">
-          <div class="schedule-slot-day">Apr 2</div>
-          <div class="schedule-slot-bar filled">Rise Bluestone &bull; Booked</div>
-        </div>
-        <div class="schedule-slot">
-          <div class="schedule-slot-day">Apr 16</div>
-          <div class="schedule-slot-bar filled">Redwood Housing &bull; Booked</div>
-        </div>
-        <div class="schedule-slot">
-          <div class="schedule-slot-day">Apr 16</div>
-          <div class="schedule-slot-bar yours">Your Slot &bull; Available</div>
-        </div>
-        <div class="schedule-slot">
-          <div class="schedule-slot-day">Apr 30</div>
-          <div class="schedule-slot-bar open">Open &bull; 2 slots available</div>
-        </div>
-        <ul class="schedule-details">
-          <li>Every Thursday at 1:00 PM ET</li>
-          <li>One operator per week</li>
-          <li>Replay available within 24 hours</li>
-        </ul>
+    <!-- YouTube Social Proof -->
+    <div class="youtube-proof">
+      <div class="youtube-proof-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       </div>
+      <div class="youtube-proof-text">
+        <strong>Presentations also go on YouTube.</strong> Our top operator presentation has <strong>1,500+ views</strong>. The average hits 500+ views within 90 days. Your pitch keeps reaching new investors for months.
+      </div>
+    </div>
 
-      <!-- Book CTA -->
-      <div class="cta-card">
-        <div class="cta-card-icon">&#127919;</div>
-        <h3>Reserve Your Slot</h3>
-        <p class="cta-card-desc">Secure your pitch slot and start connecting with LPs who are ready to deploy capital into deals like yours.</p>
-        <iframe src="https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8" class="payment-embed" title="Payment" scrolling="no"></iframe>
-        <p class="cta-fine">One-time $1,000 payment &bull; No recurring fees &bull; Includes everything above</p>
-        <div class="guarantee-banner">
-          <div class="guarantee-banner-icon">&#128170;</div>
-          <div>
-            <h4>Our Guarantee</h4>
-            <p>Your presentation is recorded and published to our full investor database and YouTube channel — your pitch keeps reaching new investors for months, not just the live audience.</p>
-          </div>
-        </div>
+    <!-- Guarantee -->
+    <div class="guarantee-banner" style="margin-bottom:24px;">
+      <div class="guarantee-banner-icon">&#128170;</div>
+      <div>
+        <h4>Our Guarantee</h4>
+        <p>Your presentation is recorded and published to our full investor database and YouTube channel — your pitch keeps reaching new investors for months, not just the live audience.</p>
       </div>
+    </div>
+
+    <!-- Payment Section -->
+    <div class="payment-section">
+      <div class="payment-section-header">
+        <h2>Reserve Your Slot</h2>
+        <p>Every Thursday at 1:00 PM ET &bull; One operator per week &bull; Pick your date after checkout</p>
+      </div>
+      <iframe src="https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8" class="payment-embed" title="Payment" scrolling="no"></iframe>
+      <p class="cta-fine">One-time $1,000 payment &bull; No recurring fees &bull; Includes everything above</p>
     </div>
 
     <!-- FAQ -->
