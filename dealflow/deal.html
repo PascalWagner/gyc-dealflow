@@ -6342,7 +6342,7 @@ async function renderDeal() {
 
     if (!hasPP && !hasLoan) return '';
 
-    var h = '<div class="section" style="margin-top:20px;">';
+    var h = '<div class="section">';
     h += '<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span class="section-title">Deal Economics</span></div>';
     if (!isPaidUser && !_compIsAdmin) {
       h += academyGateOverlay('Unlock Deal Economics', 'See sources & uses, LTV analysis, loan terms, and the full capital structure.');
@@ -7863,12 +7863,15 @@ async function renderDeal() {
     + detailsHtml
     + '<div>' + operatorHtml + chartHtml + materialsHtml + '</div>'
     + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" class="fee-econ-grid">'
+    + feeCompareHtml
     + buildDealEconomicsHtml(deal)
+    + '</div>'
     + (isPaidUser || _compIsAdmin
       // --- Paid users: original section order ---
-      ? (cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + secFilingHtml + thesisHtml)
+      ? (cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml + similarHtml + geoMapHtml + secFilingHtml + thesisHtml)
       // --- Free users: free content first, locked sections pushed below ---
-      : (geoMapHtml + secFilingHtml + similarHtml + thesisHtml + cashFlowHtml + feeBenchHtml + feeCompareHtml + portfolioSnapshotHtml)
+      : (geoMapHtml + secFilingHtml + similarHtml + thesisHtml + cashFlowHtml + feeBenchHtml + portfolioSnapshotHtml)
     )
     + dealFitHtml
     + bgReportDealHtml
