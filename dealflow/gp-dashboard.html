@@ -2852,84 +2852,69 @@ function saveAuthorizedEmails(successMsg) {
 }
 
 // ========== UPLOAD DECK ==========
-function uploadDeck(dealId) {
+function uploadDealDoc(dealId, docType) {
+  var accept = docType === 'ppm' ? '.pdf' : '.pdf,.pptx,.ppt,.key';
+  var label = docType === 'ppm' ? 'PPM' : 'Deck';
   var input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.pdf,.pptx,.ppt,.key';
+  input.accept = accept;
   input.onchange = function() {
     if (!input.files || !input.files[0]) return;
     var file = input.files[0];
-    var formData = new FormData();
-    formData.append('file', file);
-    formData.append('deal_id', dealId);
-
     var user = getUser();
-    var headers = {};
-    if (user && user.token) {
-      headers['Authorization'] = 'Bearer ' + user.token;
+
+    // Find deal name from gpState
+    var dealName = '';
+    if (gpState.deals) {
+      var match = gpState.deals.find(function(d) { return d.id === dealId; });
+      if (match) dealName = match.investmentName || match.investment_name || '';
     }
 
     showToast('Uploading ' + file.name + '...');
 
-    fetch('/api/deals/' + encodeURIComponent(dealId) + '/deck', {
-      method: 'POST',
-      headers: headers,
-      body: formData
-    })
-    .then(function(resp) {
-      if (!resp.ok) throw new Error('Upload failed');
-      return resp.json();
-    })
-    .then(function() {
-      showToast('Deck uploaded successfully!');
-    })
-    .catch(function(e) {
-      console.warn('Deck upload failed:', e.message);
-      showToast('Upload failed. Please try again later.');
-    });
+    var reader = new FileReader();
+    reader.onload = function() {
+      var base64 = reader.result.split(',')[1];
+
+      var headers = { 'Content-Type': 'application/json' };
+      if (user && user.token) {
+        headers['Authorization'] = 'Bearer ' + user.token;
+      }
+
+      fetch('/api/deck-upload', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          dealId: dealId,
+          dealName: dealName,
+          filedata: base64,
+          filename: file.name,
+          docType: docType,
+          companyId: gpState.companyId || '',
+          userEmail: (user && user.email) || '',
+          userName: (user && user.name) || ''
+        })
+      })
+      .then(function(resp) {
+        if (!resp.ok) return resp.json().then(function(b) { throw new Error(b.error || 'Upload failed'); });
+        return resp.json();
+      })
+      .then(function() {
+        showToast(label + ' uploaded successfully!');
+        loadGPDeals();
+      })
+      .catch(function(e) {
+        console.warn(label + ' upload failed:', e.message);
+        showToast('Upload failed. Please try again later.');
+      });
+    };
+    reader.readAsDataURL(file);
   };
   input.click();
 }
 
-// ========== UPLOAD PPM ==========
-function uploadPPM(dealId) {
-  var input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.pdf';
-  input.onchange = function() {
-    if (!input.files || !input.files[0]) return;
-    var file = input.files[0];
-    var formData = new FormData();
-    formData.append('file', file);
-    formData.append('deal_id', dealId);
-
-    var user = getUser();
-    var headers = {};
-    if (user && user.token) {
-      headers['Authorization'] = 'Bearer ' + user.token;
-    }
-
-    showToast('Uploading ' + file.name + '...');
-
-    fetch('/api/deals/' + encodeURIComponent(dealId) + '/ppm', {
-      method: 'POST',
-      headers: headers,
-      body: formData
-    })
-    .then(function(resp) {
-      if (!resp.ok) throw new Error('Upload failed');
-      return resp.json();
-    })
-    .then(function() {
-      showToast('PPM uploaded successfully!');
-    })
-    .catch(function(e) {
-      console.warn('PPM upload failed:', e.message);
-      showToast('Upload failed. Please try again later.');
-    });
-  };
-  input.click();
-}
+function uploadDeck(dealId) { uploadDealDoc(dealId, 'deck'); }
+function uploadPPM(dealId) { uploadDealDoc(dealId, 'ppm'); }
 
 // ========== GP ANALYTICS ==========
 function fetchGPAnalytics() {
