@@ -352,11 +352,13 @@ async function handlePost(req, res, supabase, user) {
       .single();
     if (error) throw error;
 
-    // Sync phone + name to GHL contact (fire-and-forget)
+    // Sync phone + name to GHL contact (awaited so Vercel doesn't kill the function)
     if (fields.phone || fields.full_name) {
-      syncProfileToGhl(user.email, fields).catch(e =>
-        console.warn('GHL profile sync failed:', e.message)
-      );
+      try {
+        await syncProfileToGhl(user.email, fields);
+      } catch (e) {
+        console.warn('GHL profile sync failed:', e.message);
+      }
     }
 
     return res.status(200).json({ record: updated, type, updatedAt: new Date().toISOString() });
