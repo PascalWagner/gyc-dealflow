@@ -36,6 +36,14 @@
     return user && user.email && ADMIN_EMAILS.indexOf(user.email.toLowerCase()) !== -1;
   }
 
+  // Check if the real user (even when impersonating) is an admin — used for View As UI
+  function isRealUserAdmin() {
+    var realUser = getAdminRealUser();
+    if (realUser && realUser.email && ADMIN_EMAILS.indexOf(realUser.email.toLowerCase()) !== -1) return true;
+    var user = getUser();
+    return user && user.email && ADMIN_EMAILS.indexOf(user.email.toLowerCase()) !== -1;
+  }
+
   // Navigation helper: SPA uses navigateTo(), sub-pages link to index.html#hash
   function navHref(page) {
     if (isSPA) return '#';
@@ -323,9 +331,9 @@
       }
     }
 
-    // Show admin view-as
+    // Show admin view-as (always visible for real admins, even when impersonating)
     var viewAsEl = document.getElementById('adminViewAs');
-    if (viewAsEl) viewAsEl.style.display = isAdmin() ? 'block' : 'none';
+    if (viewAsEl) viewAsEl.style.display = isRealUserAdmin() ? 'block' : 'none';
 
     // Enable Coming Soon items for admins
     ['navAssets'].forEach(function(id) {

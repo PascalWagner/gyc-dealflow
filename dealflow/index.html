@@ -23697,6 +23697,14 @@ function isAdmin() {
   return user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
 }
 
+// Check if the real user (even when impersonating) is an admin — used for View As UI
+function isRealUserAdmin() {
+  const realUser = adminRealUser || JSON.parse(localStorage.getItem('_gycAdminRealUser') || 'null');
+  if (realUser && realUser.email && ADMIN_EMAILS.includes(realUser.email.toLowerCase())) return true;
+  const user = getUser();
+  return user && user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
 function showAdminNav() {
   const admin = isAdmin();
   const adminNav = document.getElementById('adminNav');
@@ -26670,7 +26678,7 @@ let viewAsSearchTimer = null;
 function initViewAs() {
   const el = document.getElementById('adminViewAs');
   if (!el) return;
-  el.style.display = isAdmin() ? 'block' : 'none';
+  el.style.display = isRealUserAdmin() ? 'block' : 'none';
 
   // Check if we're already impersonating (survives page refresh via localStorage)
   const stored = localStorage.getItem('_gycAdminRealUser');
