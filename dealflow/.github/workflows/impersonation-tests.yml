@@ -5,9 +5,10 @@ on:
     branches: [main]
     paths:
       - 'index.html'
-      - 'js/sidebar.js'
+      - 'js/**'
       - 'tests/**'
       - '.github/workflows/impersonation-tests.yml'
+  workflow_dispatch:
 
 jobs:
   test:
