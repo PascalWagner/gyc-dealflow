@@ -1536,6 +1536,80 @@ body {
 .comp-insight-good { color: var(--green); }
 .comp-insight-bad { color: var(--orange); }
 
+/* Add Field row */
+.comp-add-field-row td {
+  border-bottom: none !important;
+  padding: 0 !important;
+}
+.comp-add-field-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: var(--font-ui);
+  transition: color 0.15s;
+  border-top: 1px dashed var(--border);
+}
+.comp-add-field-trigger:hover {
+  color: var(--primary);
+}
+.comp-add-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px dashed var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+.comp-add-field-trigger:hover .comp-add-icon {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.comp-add-dropdown {
+  padding: 4px 0;
+  margin: 0 14px 8px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.comp-add-option {
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--text-dark);
+  transition: background 0.1s;
+}
+.comp-add-option:hover {
+  background: var(--bg-lighter, #f0f0f0);
+  color: var(--primary);
+}
+.comp-remove-field-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+.comp-extra-row:hover .comp-remove-field-btn {
+  opacity: 1;
+}
+.comp-remove-field-btn:hover {
+  color: var(--red, #e74c3c);
+}
+
 /* ====== DASHBOARD GRID ====== */
 .dashboard-grid {
   display: grid;
@@ -1768,6 +1842,13 @@ html.dark .comp-table th.col-gp {
 html.dark .comp-table td.col-gp {
   background: rgba(13, 46, 26, 0.3);
   color: var(--primary);
+}
+html.dark .comp-add-dropdown {
+  background: var(--card-bg);
+  border-color: var(--border);
+}
+html.dark .comp-add-option:hover {
+  background: rgba(255,255,255,0.05);
 }
 html.dark .intent-badge.intent-high {
   background: var(--red-bg);
@@ -3568,6 +3649,8 @@ function renderInvestorInsights(insights) {
 
 // ========== COMPETITIVE ANALYSIS ==========
 function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
+  // Store re-render function so add/remove field buttons can refresh
+  window._compRerenderFn = function() { renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions); };
   var container = document.getElementById('competitiveAnalysis');
 
   // Filter to active deals only
@@ -3639,10 +3722,39 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
     var myDist = getDist(deal);
     var myIRR = getIRR(deal);
 
+    // Unique table id for this deal
+    var tableId = 'comp-table-' + (getDealId(deal) || '').replace(/[^a-zA-Z0-9]/g, '');
+
+    // Available extra fields the GP can add
+    var extraFieldDefs = [
+      { key: 'equityMultiple', label: 'Equity Multiple', format: 'x', get: function(d) { var v = d.equityMultiple || d.equity_multiple; return v != null ? v : null; } },
+      { key: 'cashOnCash', label: 'Cash on Cash', format: 'pct', get: function(d) { var v = d.cashOnCash || d.cash_on_cash; return v != null ? v : null; } },
+      { key: 'holdPeriod', label: 'Hold Period', format: 'yr', get: function(d) { var v = d.holdPeriod || d.hold_period_years || d.hold_period; return v != null ? v : null; } },
+      { key: 'offeringType', label: 'Offering Type', format: 'text', get: function(d) { return d.offeringType || d.offering_type || null; } },
+      { key: 'occupancyPct', label: 'Occupancy', format: 'pct', get: function(d) { var v = d.occupancyPct || d.occupancy_pct; return v != null ? v : null; } },
+      { key: 'loanToValue', label: 'Loan to Value', format: 'pct', get: function(d) { var v = d.loanToValue || d.loan_to_value; return v != null ? v : null; } },
+      { key: 'purchasePrice', label: 'Purchase Price', format: 'dollar', get: function(d) { var v = d.purchasePrice || d.purchase_price; return v != null ? v : null; } },
+      { key: 'location', label: 'Location', format: 'text', get: function(d) { return d.location || d.investing_geography || null; } },
+      { key: 'assetClass', label: 'Asset Class', format: 'text', get: function(d) { return d.assetClass || d.asset_class || null; } }
+    ];
+
+    function formatFieldValue(val, fmt) {
+      if (val == null) return '--';
+      if (fmt === 'pct') return formatPctDisplay(val);
+      if (fmt === 'x') return Number(val).toFixed(1) + 'x';
+      if (fmt === 'yr') return Number(val).toFixed(0) + ' yrs';
+      if (fmt === 'dollar') return '$' + Number(val).toLocaleString();
+      return escHtml(String(val));
+    }
+
+    // Load saved extra fields from localStorage
+    var savedExtraFields = [];
+    try { savedExtraFields = JSON.parse(localStorage.getItem('compExtraFields_' + tableId) || '[]'); } catch(e) {}
+
     // Build comparison table
-    html += '<div class="comp-deal-section">';
+    html += '<div class="comp-deal-section" id="' + tableId + '-section">';
     html += '<div class="comp-deal-title">' + escHtml(name) + ' vs Top ' + top3.length + ' ' + escHtml(ac) + ' Deals</div>';
-    html += '<div class="comp-table-wrap"><table class="comp-table">';
+    html += '<div class="comp-table-wrap"><table class="comp-table" id="' + tableId + '">';
 
     // Header row — show real deal names linked to deal pages
     html += '<thead><tr>' +
@@ -3654,6 +3766,15 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
       html += '<th><a href="deal.html?id=' + escAttr(compId) + '" style="color:var(--primary);text-decoration:none;font-weight:700;">' + escHtml(compName) + '</a></th>';
     }
     html += '</tr></thead><tbody>';
+
+    // Target IRR row (first)
+    html += '<tr><td class="comp-metric-label">Target IRR</td>';
+    html += '<td class="col-gp">' + (myIRR != null ? formatPctDisplay(myIRR) : '--') + '</td>';
+    for (var ci = 0; ci < top3.length; ci++) {
+      var cIRR = getIRR(top3[ci]);
+      html += '<td>' + (cIRR != null ? formatPctDisplay(cIRR) : '--') + '</td>';
+    }
+    html += '</tr>';
 
     // Preferred Return row
     html += '<tr><td class="comp-metric-label">Pref Return</td>';
@@ -3688,16 +3809,41 @@ function renderCompetitiveAnalysis(gpDeals, allDeals, preferredDistributions) {
     }
     html += '</tr>';
 
-    // Target IRR row
-    html += '<tr><td class="comp-metric-label">Target IRR</td>';
-    html += '<td class="col-gp">' + (myIRR != null ? formatPctDisplay(myIRR) : '--') + '</td>';
-    for (var ci = 0; ci < top3.length; ci++) {
-      var cIRR = getIRR(top3[ci]);
-      html += '<td>' + (cIRR != null ? formatPctDisplay(cIRR) : '--') + '</td>';
+    // Render any saved extra field rows
+    (function(deal, top3, savedExtraFields, extraFieldDefs, tableId) {
+      savedExtraFields.forEach(function(fieldKey) {
+        var def = extraFieldDefs.find(function(f) { return f.key === fieldKey; });
+        if (!def) return;
+        html += '<tr class="comp-extra-row" data-field="' + fieldKey + '"><td class="comp-metric-label">' + escHtml(def.label) + ' <button class="comp-remove-field-btn" onclick="removeCompField(\'' + tableId + '\',\'' + fieldKey + '\')" title="Remove field">&times;</button></td>';
+        html += '<td class="col-gp">' + formatFieldValue(def.get(deal), def.format) + '</td>';
+        for (var ci = 0; ci < top3.length; ci++) {
+          html += '<td>' + formatFieldValue(def.get(top3[ci]), def.format) + '</td>';
+        }
+        html += '</tr>';
+      });
+    })(deal, top3, savedExtraFields, extraFieldDefs, tableId);
+
+    // "Add Field" row
+    var usedKeys = ['targetIRR', 'preferredReturn', 'investmentMinimum', 'distributions'].concat(savedExtraFields);
+    var availableFields = extraFieldDefs.filter(function(f) { return usedKeys.indexOf(f.key) === -1; });
+    if (availableFields.length > 0) {
+      html += '<tr class="comp-add-field-row"><td colspan="' + (2 + top3.length) + '">';
+      html += '<div class="comp-add-field-trigger" onclick="toggleCompFieldDropdown(\'' + tableId + '\')">';
+      html += '<span class="comp-add-icon">+</span> Add Field to Compare';
+      html += '</div>';
+      html += '<div class="comp-add-dropdown" id="' + tableId + '-dropdown" style="display:none;">';
+      availableFields.forEach(function(f) {
+        html += '<div class="comp-add-option" onclick="addCompField(\'' + tableId + '\',\'' + f.key + '\')">' + escHtml(f.label) + '</div>';
+      });
+      html += '</div>';
+      html += '</td></tr>';
     }
-    html += '</tr>';
 
     html += '</tbody></table></div>';
+
+    // Stash deal/top3 data on window for dynamic add/remove
+    if (!window._compTableData) window._compTableData = {};
+    window._compTableData[tableId] = { deal: deal, top3: top3, extraFieldDefs: extraFieldDefs };
 
     // Generate actionable insights
     var insightsItems = [];
@@ -3777,6 +3923,32 @@ function formatPctDisplay(val) {
     return (val * 100).toFixed(1) + '%';
   }
   return val.toFixed(1) + '%';
+}
+
+// ========== COMP TABLE: ADD/REMOVE FIELDS ==========
+function toggleCompFieldDropdown(tableId) {
+  var dd = document.getElementById(tableId + '-dropdown');
+  if (!dd) return;
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+function addCompField(tableId, fieldKey) {
+  var storageKey = 'compExtraFields_' + tableId;
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(e) {}
+  if (saved.indexOf(fieldKey) === -1) saved.push(fieldKey);
+  localStorage.setItem(storageKey, JSON.stringify(saved));
+  // Re-render the whole competitive analysis
+  if (window._compRerenderFn) window._compRerenderFn();
+}
+
+function removeCompField(tableId, fieldKey) {
+  var storageKey = 'compExtraFields_' + tableId;
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(e) {}
+  saved = saved.filter(function(k) { return k !== fieldKey; });
+  localStorage.setItem(storageKey, JSON.stringify(saved));
+  if (window._compRerenderFn) window._compRerenderFn();
 }
 
 // ========== LOAD LOCAL SETTINGS ==========
