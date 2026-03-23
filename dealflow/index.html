@@ -1080,6 +1080,87 @@ html.dark .academy-gate-cta {
   width: 12px; height: 12px;
   stroke: var(--primary);
 }
+/* Daily deal limit — locked cards for free tier */
+.deal-card-locked {
+  position: relative;
+  pointer-events: none;
+  user-select: none;
+}
+.deal-card-locked > * {
+  filter: blur(6px);
+}
+.deal-card-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--bg-cream-rgb, 255,252,247), 0.5);
+  border-radius: var(--radius);
+  z-index: 1;
+}
+html.dark .deal-card-locked::after {
+  background: rgba(30,30,30,0.5);
+}
+.daily-limit-banner {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 2px solid rgba(59,130,246,0.25);
+  border-radius: var(--radius);
+  margin: 8px 0;
+}
+html.dark .daily-limit-banner {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(74,222,128,0.06));
+  border-color: rgba(59,130,246,0.25);
+}
+.daily-limit-banner .limit-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  border-radius: 14px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+}
+.daily-limit-banner .limit-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.daily-limit-banner .limit-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.daily-limit-banner .limit-btn {
+  padding: 12px 28px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.daily-limit-banner .limit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(81,190,123,0.3);
+}
+.daily-limit-banner .limit-or {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
 .deal-freshness-badge {
   display: inline-flex;
   align-items: center;
@@ -6272,7 +6353,7 @@ const _supa = window.supabase.createClient(
       <!-- My Plan Tab -->
       <div class="settings-panel" id="stab-plan" style="display:none">
         <div class="settings-page-title">Your Membership</div>
-        <div class="settings-page-desc">See what's included in your current plan.</div>
+        <div class="settings-page-desc">Manage your plan and see what's included at each tier. Upgrade anytime to unlock deeper deal intelligence, GP access, and hands-on portfolio support.</div>
         <div id="myPlanContent"></div>
       </div>
 
@@ -8741,6 +8822,48 @@ function mergeUserDeals() {
 function updateDealCount() {
   const badge = document.querySelector('.nav-badge');
   if (badge) badge.textContent = DEALS.length;
+}
+
+// ========== DAILY DEAL LIMIT (Free tier: 20 deals/day) ==========
+var FREE_DAILY_DEAL_LIMIT = 20;
+
+function getDailyDealData() {
+  try {
+    var data = JSON.parse(localStorage.getItem('gycDailyDeals') || '{}');
+    var today = new Date().toISOString().slice(0, 10);
+    if (data.date !== today) {
+      // New day — reset counter
+      data = { date: today, count: 0 };
+      localStorage.setItem('gycDailyDeals', JSON.stringify(data));
+    }
+    return data;
+  } catch(e) { return { date: new Date().toISOString().slice(0, 10), count: 0 }; }
+}
+
+function getDailyDealsRemaining() {
+  var user = getUser();
+  var tier = (user && user.tier) || 'free';
+  // Paid tiers + admins get unlimited
+  if (tier !== 'free') return Infinity;
+  var data = getDailyDealData();
+  return Math.max(0, FREE_DAILY_DEAL_LIMIT - data.count);
+}
+
+function recordDailyDealView(count) {
+  var data = getDailyDealData();
+  data.count = Math.max(data.count, count);
+  localStorage.setItem('gycDailyDeals', JSON.stringify(data));
+}
+
+function renderDailyLimitBanner(remaining, total) {
+  var locked = total - remaining;
+  return '<div class="daily-limit-banner">'
+    + '<div class="limit-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>'
+    + '<div class="limit-title">You\'ve seen today\'s 20 free deals</div>'
+    + '<div class="limit-sub">Come back tomorrow for 20 more, or unlock unlimited access with the Academy. You can still open any deal link shared with you.</div>'
+    + '<button class="limit-btn" onclick="trackActivity(\'daily_limit_cta\',{locked:' + locked + '});navigateTo(\'academy\')">Unlock Unlimited Deals &rarr;</button>'
+    + '<span class="limit-or">Resets at midnight &mdash; ' + locked + ' more deal' + (locked !== 1 ? 's' : '') + ' waiting</span>'
+    + '</div>';
 }
 
 // ========== SOCIAL PROOF: BULK DEAL STATS ==========
@@ -12353,6 +12476,13 @@ function renderAll() {
     return;
   }
 
+  // Daily deal limit for free tier on browse tab
+  var _dlUser = getUser();
+  var _dlTier = (_dlUser && _dlUser.tier) || 'free';
+  var _dlApply = (_dlTier === 'free' && currentTab === 'browse' && !document.getElementById('filterSearch').value.trim());
+  var _dlRemaining = _dlApply ? getDailyDealsRemaining() : Infinity;
+  var _dlLimit = Math.min(deals.length, _dlRemaining === Infinity ? deals.length : FREE_DAILY_DEAL_LIMIT);
+
   if (currentView === 'grid' || currentView === 'feed') {
     grid.style.display = '';
     table.style.display = 'none';
@@ -12384,8 +12514,32 @@ function renderAll() {
       return;
     }
     const cardRenderer = renderCard;
-    grid.innerHTML = deals.map(cardRenderer).join('');
-    grid.querySelectorAll('.deal-card').forEach(card => {
+
+    if (_dlApply && deals.length > 0) {
+      // Record how many deals the user is seeing today (high-water mark)
+      recordDailyDealView(Math.min(deals.length, FREE_DAILY_DEAL_LIMIT));
+    }
+
+    var cardHtml = '';
+    for (var _ci = 0; _ci < deals.length; _ci++) {
+      if (_dlApply && _ci === _dlLimit && _dlLimit < deals.length) {
+        // Insert daily limit banner between free and locked cards
+        cardHtml += renderDailyLimitBanner(_dlLimit, deals.length);
+      }
+      cardHtml += cardRenderer(deals[_ci]);
+    }
+    grid.innerHTML = cardHtml;
+
+    // Apply locked state to cards beyond daily limit
+    if (_dlApply && _dlLimit < deals.length) {
+      var _allCards = grid.querySelectorAll('.deal-card');
+      // Cards after the banner — account for banner element offset
+      _allCards.forEach(function(card, idx) {
+        if (idx >= _dlLimit) card.classList.add('deal-card-locked');
+      });
+    }
+
+    grid.querySelectorAll('.deal-card:not(.deal-card-locked)').forEach(card => {
       card.addEventListener('click', () => window.location.href = 'deal.html?id=' + card.dataset.id);
     });
     // Initialize Chart.js charts for credit fund cards
@@ -12423,6 +12577,18 @@ function renderAll() {
       return;
     }
     renderTable(deals);
+    // Daily limit in table view for free users
+    if (_dlApply && _dlLimit < deals.length) {
+      var _tRows = document.getElementById('tableBody').querySelectorAll('tr');
+      _tRows.forEach(function(row, idx) {
+        if (idx >= _dlLimit) { row.style.filter = 'blur(5px)'; row.style.pointerEvents = 'none'; row.style.userSelect = 'none'; }
+      });
+      var _bannerRow = document.createElement('tr');
+      _bannerRow.innerHTML = '<td colspan="' + TABLE_COLS.length + '" style="padding:0;">' + renderDailyLimitBanner(_dlLimit, deals.length) + '</td>';
+      var _tbody = document.getElementById('tableBody');
+      var _limitRow = _tbody.querySelectorAll('tr')[_dlLimit];
+      if (_limitRow) _tbody.insertBefore(_bannerRow, _limitRow); else _tbody.appendChild(_bannerRow);
+    }
   }
   // Decision tab: hide card grid when comparison table is active
   if (currentTab === 'decision') {
@@ -16156,12 +16322,13 @@ function initSubscription() {
   var tiers = [
     { key: 'free', label: 'Free', color: 'var(--text-muted)', features: ['Browse all live deals', 'View investment decks', 'Deal filtering & search', 'Weekly deal digest email', 'Basic deal overview'] },
     { key: 'academy', label: 'Academy', color: '#51BE7B', features: ['Everything in Free', 'Full deal data & comparisons', 'Risk analysis & stress test', 'PPM & data room access', 'GP introductions & reviews', 'Weekly office hours', 'Investment plan builder', 'Private investor community'], price: '$5,000 first year' },
+    { key: 'alumni', label: 'Alumni', color: '#51BE7B', features: ['Everything in Academy', 'Continued deal data access', 'GP introductions & reviews', 'Weekly office hours', 'Private investor community', 'Priority deal alerts'], price: '$2,000/yr or $300/mo' },
     { key: 'concierge', label: 'Concierge', color: 'var(--teal-deep)', features: ['Everything in Academy', '24-hour text access to Pascal', '10 x 90-min 1:1 calls', '3hrs strategy sessions', 'Free live event ticket', 'Co-underwriting on deals'], price: '$25,000' },
     { key: 'vip', label: 'VIP Retreat', color: '#C5963A', features: ['Everything in Concierge', 'Fly-out retreat experience', 'Multi-day immersive program', 'Direct portfolio construction', 'Tax & entity structuring', 'Priority GP access'], price: '$50,000' }
   ];
 
-  // Map alumni/investor/family_office to their display equivalent
-  var tierMap = { alumni: 'academy', investor: 'academy', family_office: 'concierge' };
+  // Map investor/family_office to their display equivalent
+  var tierMap = { investor: 'academy', family_office: 'concierge' };
   var activeTier = tierMap[tier] || tier;
 
   var checkSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2.5" width="14" height="14" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -16182,16 +16349,24 @@ function initSubscription() {
   var currentLabel = tiers[tierIdx] ? tiers[tierIdx].label : 'Free';
   var currentColor = tiers[tierIdx] ? tiers[tierIdx].color : 'var(--text-muted)';
 
-  var html = '<div class="settings-card" style="margin-bottom:20px;">';
-  html += '<div style="display:flex;align-items:center;gap:12px;">';
+  var statusMsg = activeTier === 'free'
+    ? 'You\u2019re on the Free plan. Upgrade to unlock full deal data, risk tools, and GP introductions.'
+    : 'You have full access to your ' + currentLabel + ' membership benefits.';
+
+  var html = '<div class="settings-card" style="margin-bottom:20px;background:#fff;">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">';
+  html += '<div>';
+  html += '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Current Plan</div>';
   html += '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;background:' + (activeTier === 'free' ? 'var(--bg-cream)' : 'rgba(81,190,123,0.08)') + ';color:' + currentColor + ';">';
   html += '<div style="width:8px;height:8px;border-radius:50%;background:' + currentColor + ';"></div>' + currentLabel + '</div>';
   html += '</div>';
+  html += '</div>';
+  html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);margin-top:10px;line-height:1.5;">' + statusMsg + '</div>';
   html += datesHtml;
   html += '</div>';
 
   // Tier comparison grid
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;" id="tierGrid">';
+  html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px;" id="tierGrid">';
 
   tiers.forEach(function(t, i) {
     var isCurrent = (t.key === activeTier);
@@ -16199,7 +16374,7 @@ function initSubscription() {
     var borderStyle = isCurrent ? '2px solid #51BE7B' : '1px solid var(--border)';
     var opacity = isBelow ? '0.55' : '1';
 
-    html += '<div style="border:' + borderStyle + ';border-radius:12px;padding:20px 16px;background:var(--bg-white);opacity:' + opacity + ';display:flex;flex-direction:column;position:relative;">';
+    html += '<div style="border:' + borderStyle + ';border-radius:12px;padding:20px 16px;background:#fff;opacity:' + opacity + ';display:flex;flex-direction:column;position:relative;">';
 
     // Current plan label
     if (isCurrent) {
@@ -16238,16 +16413,7 @@ function initSubscription() {
 
   html += '</div>';
 
-  // Renewal note for academy users
-  if (activeTier === 'academy') {
-    html += '<div class="settings-card" style="background:rgba(81,190,123,0.04);border:1px dashed rgba(81,190,123,0.3);">';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">';
-    html += '<span style="font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--text-dark);">After your first year</span>';
-    html += '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#51be7b;background:rgba(81,190,123,0.12);padding:2px 8px;border-radius:10px;">Alumni</span>';
-    html += '</div>';
-    html += '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-muted);line-height:1.5;">Stay connected for <strong style="color:var(--text-dark);">$2,000/yr</strong> or <strong style="color:var(--text-dark);">$300/mo</strong>. You keep full access to deal data, GP introductions, office hours, and the investor community.</div>';
-    html += '</div>';
-  }
+  // Renewal note for academy users (Alumni is now its own tier card)
 
   // Billing section (for paid tiers)
   if (activeTier !== 'free') {
@@ -16293,7 +16459,7 @@ function initSubscription() {
   if (!style) {
     style = document.createElement('style');
     style.id = 'tierGridStyle';
-    style.textContent = '@media(max-width:900px){#tierGrid{grid-template-columns:1fr 1fr !important;}}@media(max-width:560px){#tierGrid{grid-template-columns:1fr !important;}}';
+    style.textContent = '@media(max-width:1100px){#tierGrid{grid-template-columns:repeat(3,1fr) !important;}}@media(max-width:768px){#tierGrid{grid-template-columns:1fr 1fr !important;}}@media(max-width:560px){#tierGrid{grid-template-columns:1fr !important;}}';
     document.head.appendChild(style);
   }
 
