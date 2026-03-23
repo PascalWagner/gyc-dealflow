@@ -21668,9 +21668,13 @@ function applyMiBlurOverlay() {
   var activeTab = document.getElementById('mi-tab-' + miCurrentTab);
   if (!activeTab) return;
 
-  // Find first chart/grid row after summary cards — skip the first grid (summary cards)
-  var grids = activeTab.querySelectorAll('div[style*="grid-template-columns"]');
-  var targetEl = grids.length >= 2 ? grids[1] : (grids.length === 1 ? grids[0] : null);
+  // Find first chart container after summary cards — target the bar chart or first canvas section
+  var canvasContainer = activeTab.querySelector('canvas');
+  var targetEl = canvasContainer ? canvasContainer.closest('div[style*="border-radius"]') : null;
+  if (!targetEl) {
+    var grids = activeTab.querySelectorAll('div[style*="grid-template-columns"]');
+    targetEl = grids.length >= 2 ? grids[1] : (grids.length === 1 ? grids[0] : null);
+  }
   if (!targetEl) return;
 
   var offsetTop = targetEl.getBoundingClientRect().top - miContent.getBoundingClientRect().top;
