@@ -96,12 +96,10 @@ export default async function handler(req, res) {
       }
     }
 
-    // Ensure user exists and is confirmed before sending OTP.
-    // Without this, Supabase sends a confirmation email FIRST for new users,
-    // requiring two clicks to actually log in.
+    // Ensure user exists and is confirmed before generating link.
     const { data: existingUser } = await adminSupabase.auth.admin.getUserByEmail(email);
     if (!existingUser?.user) {
-      // Pre-create user as confirmed so OTP works on first click
+      // Pre-create user as confirmed so magic link works on first click
       await adminSupabase.auth.admin.createUser({
         email,
         email_confirm: true
@@ -113,13 +111,62 @@ export default async function handler(req, res) {
       });
     }
 
-    // Use site URL for redirect (Vercel sets this, fallback to prod)
+    // Generate magic link server-side and send via Resend
+    // (Supabase's built-in OTP email requires SMTP config we don't have)
     const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
-    const { error } = await supabase.auth.signInWithOtp({
+    const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
+      type: 'magiclink',
       email,
-      options: { emailRedirectTo: siteUrl + '/deal-login.html' }
+      options: { redirectTo: siteUrl + '/deal-login.html' }
     });
-    if (error) return res.status(500).json({ error: error.message });
+    if (linkErr) return res.status(500).json({ error: linkErr.message });
+
+    // Build the confirmation URL with the hashed token
+    const confirmUrl = `${SUPABASE_URL}/auth/v1/verify?token=${linkData.properties.hashed_token}&type=magiclink&redirect_to=${encodeURIComponent(siteUrl + '/deal-login.html')}`;
+
+    // Send via Resend
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) {
+      console.error('[AUTH] RESEND_API_KEY not set — cannot send magic link');
+      return res.status(500).json({ error: 'Email service not configured' });
+    }
+
+    const sendResp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Grow Your Cashflow <deals@growyourcashflow.io>',
+        to: email,
+        subject: 'Your GYC Dealflow Login Link',
+        html: `<div style="max-width:520px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="background:#0A1E21;padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
+    <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Grow Your Cashflow</div>
+    <div style="font-size:12px;font-weight:600;color:#51BE7B;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Dealflow Portal</div>
+  </div>
+  <div style="background:#ffffff;padding:36px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+    <p style="font-size:16px;color:#1a1a1a;margin:0 0 16px;line-height:1.6;">Hi,</p>
+    <p style="font-size:16px;color:#1a1a1a;margin:0 0 8px;line-height:1.6;">Your secure login link is ready. Click below to access your deal database.</p>
+    <p style="font-size:13px;color:#6b7280;margin:0 0 28px;line-height:1.5;">838 deals across 19 asset classes from 455 sponsors &mdash; updated daily.</p>
+    <div style="text-align:center;margin:0 0 28px;">
+      <a href="${confirmUrl}" style="display:inline-block;background:#1F5159;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">Log In to Dealflow</a>
+    </div>
+    <p style="font-size:13px;color:#6b7280;margin:0;text-align:center;line-height:1.5;">
+      <em>This link expires in 15 minutes.</em><br>
+      If you didn't request this, you can safely ignore this email.
+    </p>
+  </div>
+  <div style="background:#f9fafb;padding:16px 24px;text-align:center;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:none;">
+    <p style="font-size:11px;color:#9ca3af;margin:0;">Grow Your Cashflow &middot; growyourcashflow.io</p>
+  </div>
+</div>`
+      })
+    });
+
+    if (!sendResp.ok) {
+      const errText = await sendResp.text().catch(() => 'unknown');
+      console.error('[AUTH] Resend magic link failed:', errText);
+      return res.status(500).json({ error: 'Failed to send login email' });
+    }
 
     return res.status(200).json({ success: true, message: 'Magic link sent' });
   }
