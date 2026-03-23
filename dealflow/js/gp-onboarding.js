@@ -62,22 +62,55 @@
     if (target) target.classList.add('active');
     state.currentStep = step;
 
-    // Progress bar (steps 1-10, map to 0-100%)
+    // Progress bar (steps 0-11, hide on 0 and 1)
     var progressWrap = document.getElementById('progressWrap');
     var progressFill = document.getElementById('progressFill');
-    if (step === 0) {
+    if (step <= 1) {
       progressWrap.style.display = 'none';
     } else {
       progressWrap.style.display = 'block';
-      var pct = Math.min(100, Math.round(((step - 1) / 9) * 100));
+      var pct = Math.min(100, Math.round(((step - 2) / 9) * 100));
       progressFill.style.width = pct + '%';
     }
 
-    if (step === 9) buildChecklist();
+    if (step === 10) buildChecklist();
     window.scrollTo(0, 0);
   };
 
-  // ── Step 0: Role Selection ──
+  // ── Step 0: Name Collection ──
+  window.saveName = function() {
+    var firstName = document.getElementById('onboardFirstName').value.trim();
+    var lastName = document.getElementById('onboardLastName').value.trim();
+    if (!firstName) { document.getElementById('onboardFirstName').focus(); return; }
+    if (!lastName) { document.getElementById('onboardLastName').focus(); return; }
+
+    // Update localStorage user name
+    var u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+    u.name = firstName + ' ' + lastName;
+    u.firstName = firstName;
+    u.lastName = lastName;
+    localStorage.setItem('gycUser', JSON.stringify(u));
+
+    // Update the module-scoped user reference
+    user.name = u.name;
+    user.firstName = firstName;
+    user.lastName = lastName;
+
+    goToStep(1);
+  };
+
+  // Pre-fill name from existing user data
+  (function prefillName() {
+    if (user.name && user.name !== user.email.split('@')[0]) {
+      var parts = user.name.split(' ');
+      var fnEl = document.getElementById('onboardFirstName');
+      var lnEl = document.getElementById('onboardLastName');
+      if (fnEl && parts[0]) fnEl.value = parts[0];
+      if (lnEl && parts.length > 1) lnEl.value = parts.slice(1).join(' ');
+    }
+  })();
+
+  // ── Step 1: Role Selection ──
   window.selectRole = function(role) {
     state.selectedRole = role;
     document.getElementById('roleLp').classList.toggle('selected', role === 'lp');
@@ -98,10 +131,10 @@
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'role-select', data: { role: 'gp' } })
-    }).then(function() { goToStep(1); }).catch(function() { goToStep(1); });
+    }).then(function() { goToStep(2); }).catch(function() { goToStep(2); });
   };
 
-  // ── Step 2: Company Basics + Typeahead ──
+  // ── Step 3: Company Basics + Typeahead ──
   var searchTimer = null;
   var selectedCompany = null; // Set when user picks an existing company
 
@@ -227,12 +260,12 @@
       if (result.companyId) state.companyId = result.companyId;
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      goToStep(3);
+      goToStep(4);
     })
     .catch(function() {
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      goToStep(3);
+      goToStep(4);
     });
   };
 
@@ -267,10 +300,10 @@
         }})
       }).catch(function() {});
     }
-    goToStep(4);
+    goToStep(5);
   };
 
-  // ── Step 4: IR Contact ──
+  // ── Step 5: IR Contact ──
   window.toggleIrSelf = function() {
     state.irSelf = !state.irSelf;
     document.getElementById('irSelfCheck').classList.toggle('checked', state.irSelf);
@@ -302,16 +335,16 @@
     .then(function() {
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      goToStep(5);
+      goToStep(6);
     })
     .catch(function() {
       btn.disabled = false;
       btn.innerHTML = 'Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      goToStep(5);
+      goToStep(6);
     });
   };
 
-  // ── Step 5: Operator Listing Agreement ──
+  // ── Step 6: Operator Listing Agreement ──
   window.selectOfferingType = function(type) {
     state.offeringType = type;
     document.getElementById('ot506c').classList.toggle('selected', type === '506c');
@@ -375,7 +408,7 @@
       state.agreementSigned = true;
       btn.disabled = false;
       btn.innerHTML = 'I Agree — Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-      goToStep(6);
+      goToStep(7);
     })
     .catch(function(err) {
       console.error('Agreement save error:', err);
@@ -383,7 +416,7 @@
       btn.innerHTML = 'I Agree — Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
       // Still advance — we'll re-prompt if not saved
       state.agreementSigned = true;
-      goToStep(6);
+      goToStep(7);
     });
   };
 
@@ -488,7 +521,7 @@
         body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
       });
     })
-    .then(function() { goToStep(7); })
+    .then(function() { goToStep(8); })
     .catch(function(err) {
       console.error('Upload error:', err);
       state.dealUploaded = false;
@@ -505,19 +538,19 @@
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'deal-skipped', data: {} })
-    }).then(function() { goToStep(7); }).catch(function() { goToStep(7); });
+    }).then(function() { goToStep(8); }).catch(function() { goToStep(8); });
   };
 
-  // ── Step 7: Presentation Interest ──
+  // ── Step 8: Presentation Interest ──
   window.savePresentation = function(interested) {
     state.presentationInterest = interested;
     fetch('/api/gp-onboarding', {
       method: 'POST', headers: headers,
       body: JSON.stringify({ email: user.email, step: 'presentation', data: { interested: interested } })
     }).then(function() {
-      goToStep(interested ? 8 : 9); // Yes → upsell, Maybe later → checklist
+      goToStep(interested ? 9 : 10); // Yes → upsell, Maybe later → checklist
     }).catch(function() {
-      goToStep(interested ? 8 : 9);
+      goToStep(interested ? 9 : 10);
     });
   };
 
@@ -528,22 +561,22 @@
     // Open GHL payment link — they'll complete checkout there
     window.open(GHL_PAYMENT_LINK, '_blank');
     // After a moment, advance to checklist (they can come back)
-    setTimeout(function() { goToStep(9); }, 1500);
+    setTimeout(function() { goToStep(10); }, 1500);
   };
 
   window.skipPayment = function() {
-    goToStep(9);
+    goToStep(10);
   };
 
-  // ── Step 9: Completion Checklist ──
+  // ── Step 10: Completion Checklist ──
   function buildChecklist() {
     var items = [
-      { label: 'Company profile', done: !!state.companyId, action: state.companyId ? 'Edit' : 'Set up', onclick: 'goToStep(2)' },
-      { label: 'Asset classes', done: selectedAssetClasses.length > 0, action: 'Edit', onclick: 'goToStep(3)' },
-      { label: 'IR contact', done: !!(document.getElementById('irContactName') && document.getElementById('irContactName').value.trim()), action: 'Edit', onclick: 'goToStep(4)' },
-      { label: 'Listing agreement', done: state.agreementSigned, action: state.agreementSigned ? 'Signed' : 'Review', onclick: state.agreementSigned ? '' : 'goToStep(5)' },
-      { label: 'Deal uploaded', done: state.dealUploaded, skipped: state.dealSkipped, action: state.dealUploaded ? 'View' : 'Add deal', onclick: state.dealUploaded ? '' : 'goToStep(6)' },
-      { label: 'Presentation', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(7)' }
+      { label: 'Company profile', done: !!state.companyId, action: state.companyId ? 'Edit' : 'Set up', onclick: 'goToStep(3)' },
+      { label: 'Asset classes', done: selectedAssetClasses.length > 0, action: 'Edit', onclick: 'goToStep(4)' },
+      { label: 'IR contact', done: !!(document.getElementById('irContactName') && document.getElementById('irContactName').value.trim()), action: 'Edit', onclick: 'goToStep(5)' },
+      { label: 'Listing agreement', done: state.agreementSigned, action: state.agreementSigned ? 'Signed' : 'Review', onclick: state.agreementSigned ? '' : 'goToStep(6)' },
+      { label: 'Deal uploaded', done: state.dealUploaded, skipped: state.dealSkipped, action: state.dealUploaded ? 'View' : 'Add deal', onclick: state.dealUploaded ? '' : 'goToStep(7)' },
+      { label: 'Presentation', done: state.presentationInterest === true, skipped: state.presentationInterest === false, action: state.presentationInterest === true ? 'Booked' : 'Learn more', onclick: 'goToStep(8)' }
     ];
 
     var html = '';
@@ -603,13 +636,13 @@
         window.location.href = 'index.html#buybox'; return;
       }
       if (data.company && step === 0) {
-        state.selectedRole = 'gp'; goToStep(1); return;
+        state.selectedRole = 'gp'; goToStep(2); return;
       }
 
       // DB steps → UI steps
       // DB: 0=not started, 1=role done, 2=company done, 3=IR done, 4=agreement done, 5=deal done, 6=pres done, 7=complete
-      // UI: 0=role, 1=welcome, 2=company, 3=assets, 4=IR, 5=agreement, 6=upload, 7=pres, 8=upsell, 9=checklist, 10=LP
-      var stepMap = { 0: 0, 1: 1, 2: 4, 3: 5, 4: 6, 5: 7, 6: 9 };
+      // UI: 0=name, 1=role, 2=welcome, 3=company, 4=assets, 5=IR, 6=agreement, 7=upload, 8=pres, 9=upsell, 10=checklist, 11=LP
+      var stepMap = { 0: 0, 1: 2, 2: 5, 3: 6, 4: 7, 5: 8, 6: 10 };
       var uiStep = stepMap[step] !== undefined ? stepMap[step] : 0;
       if (uiStep > 0) goToStep(uiStep);
     })
@@ -743,7 +776,7 @@
   var params = new URLSearchParams(window.location.search);
   if (params.get('fromDealCreate') === 'true') {
     state.dealUploaded = true;
-    setTimeout(function() { goToStep(8); }, 100);
+    setTimeout(function() { goToStep(9); }, 100);
   }
 
 })();

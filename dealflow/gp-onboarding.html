@@ -1110,14 +1110,41 @@ select.form-input { cursor: pointer; appearance: auto; }
       <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
     </div>
 
-    <!-- ===== PHASE 0: Role Selection ===== -->
+    <!-- ===== STEP 0: What's your name? ===== -->
     <div class="step active" id="step0">
       <div class="gyc-logo">
         <div class="gyc-logo-text">Grow Your Cashflow</div>
         <div class="gyc-logo-sub">Dealflow Platform</div>
       </div>
       <div class="step-header">
-        <div class="step-title">Welcome! How will you use the platform?</div>
+        <div class="step-title">Welcome! What's your name?</div>
+        <div class="step-subtitle">Let's get to know each other.</div>
+      </div>
+      <div class="step-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input class="form-input" type="text" id="onboardFirstName" placeholder="First name" autocomplete="given-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            <input class="form-input" type="text" id="onboardLastName" placeholder="Last name" autocomplete="family-name">
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <span></span>
+        <button class="btn-primary" id="nameNextBtn" onclick="saveName()">
+          Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 1: Role Selection ===== -->
+    <div class="step" id="step1">
+      <div class="step-header">
+        <div class="step-title">How will you use the platform?</div>
         <div class="step-subtitle">This helps us tailor your experience. You can always access both sides later.</div>
       </div>
       <div class="step-body">
@@ -1139,7 +1166,10 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <span></span>
+        <button class="btn-secondary" onclick="goToStep(0)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
         <button class="btn-primary" id="roleNextBtn" onclick="confirmRole()" disabled>
           Continue
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1147,8 +1177,8 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== PHASE 1: Welcome & Value Prop (Hormozi-style) ===== -->
-    <div class="step" id="step1">
+    <!-- ===== STEP 2: Welcome & Value Prop (Hormozi-style) ===== -->
+    <div class="step" id="step2">
       <div class="step-header">
         <div class="step-counter">Here's what you get</div>
         <div class="step-title">We fill your deal with qualified investors. You close.</div>
@@ -1207,17 +1237,17 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
       <div class="step-footer">
         <span></span>
-        <button class="btn-primary" onclick="goToStep(2)">
+        <button class="btn-primary" onclick="goToStep(3)">
           Let's Set Up Your Profile
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- ===== STEP 2: Company Basics (3 fields) ===== -->
-    <div class="step" id="step2">
+    <!-- ===== STEP 3: Company Basics (2 fields) ===== -->
+    <div class="step" id="step3">
       <div class="step-header">
-        <div class="step-counter">Step 1 of 7</div>
+        <div class="step-counter">Step 1 of 8</div>
         <div class="step-title">What's your firm?</div>
         <div class="step-subtitle">We'll create your operator profile from this</div>
       </div>
@@ -1242,7 +1272,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         <input type="hidden" id="ceo"><input type="hidden" id="linkedinCeo"><input type="hidden" id="website"><input type="hidden" id="foundingYear">
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(1)">
+        <button class="btn-secondary" onclick="goToStep(2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1253,10 +1283,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 3: Asset Classes ===== -->
-    <div class="step" id="step3">
+    <!-- ===== STEP 4: Asset Classes ===== -->
+    <div class="step" id="step4">
       <div class="step-header">
-        <div class="step-counter">Step 2 of 7</div>
+        <div class="step-counter">Step 2 of 8</div>
         <div class="step-title">What asset classes do you operate in?</div>
         <div class="step-subtitle">This helps us match your deals to the right investors</div>
       </div>
@@ -1266,7 +1296,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(2)">
+        <button class="btn-secondary" onclick="goToStep(3)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1277,10 +1307,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 4: IR Contact ===== -->
-    <div class="step" id="step4">
+    <!-- ===== STEP 5: IR Contact ===== -->
+    <div class="step" id="step5">
       <div class="step-header">
-        <div class="step-counter">Step 3 of 7</div>
+        <div class="step-counter">Step 3 of 8</div>
         <div class="step-title">Who should we introduce investors to?</div>
         <div class="step-subtitle">When an LP is interested in your deal, we connect them directly to this person</div>
       </div>
@@ -1311,7 +1341,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(3)">
+        <button class="btn-secondary" onclick="goToStep(4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1322,10 +1352,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 5: Operator Listing Agreement ===== -->
-    <div class="step" id="step5">
+    <!-- ===== STEP 6: Operator Listing Agreement ===== -->
+    <div class="step" id="step6">
       <div class="step-header">
-        <div class="step-counter">Step 4 of 7</div>
+        <div class="step-counter">Step 4 of 8</div>
         <div class="step-title">Operator Listing Agreement</div>
         <div class="step-subtitle">Review and accept the terms for listing your deals on the platform</div>
       </div>
@@ -1450,7 +1480,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(4)">
+        <button class="btn-secondary" onclick="goToStep(5)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1461,10 +1491,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 6: Upload Deal (deck + PPM) ===== -->
-    <div class="step" id="step6">
+    <!-- ===== STEP 7: Upload Deal (deck + PPM) ===== -->
+    <div class="step" id="step7">
       <div class="step-header">
-        <div class="step-counter">Step 5 of 7</div>
+        <div class="step-counter">Step 5 of 8</div>
         <div class="step-title">Upload your deal</div>
         <div class="step-subtitle">We'll use AI to extract the key terms from your documents</div>
       </div>
@@ -1497,7 +1527,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(5)">
+        <button class="btn-secondary" onclick="goToStep(6)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1511,10 +1541,10 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 7: Presentation Interest ===== -->
-    <div class="step" id="step7">
+    <!-- ===== STEP 8: Presentation Interest ===== -->
+    <div class="step" id="step8">
       <div class="step-header">
-        <div class="step-counter">Step 6 of 7</div>
+        <div class="step-counter">Step 6 of 8</div>
         <div class="step-title">Present your deal live to qualified investors</div>
         <div class="step-subtitle">This is the fastest way to get in front of investors who are actively deploying capital</div>
       </div>
@@ -1574,7 +1604,7 @@ select.form-input { cursor: pointer; appearance: auto; }
         </div>
       </div>
       <div class="step-footer">
-        <button class="btn-secondary" onclick="goToStep(6)">
+        <button class="btn-secondary" onclick="goToStep(7)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
           Back
         </button>
@@ -1588,8 +1618,8 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 8: Operator Sponsorship Upsell ===== -->
-    <div class="step" id="step8">
+    <!-- ===== STEP 9: Operator Sponsorship Upsell ===== -->
+    <div class="step" id="step9">
       <div class="step-header">
         <div class="step-counter">Reserve Your Slot</div>
         <div class="step-title">Book your Thursday presentation</div>
@@ -1662,8 +1692,8 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
     </div>
 
-    <!-- ===== STEP 9: Completion Checklist ===== -->
-    <div class="step" id="step9">
+    <!-- ===== STEP 10: Completion Checklist ===== -->
+    <div class="step" id="step10">
       <div class="step-header">
         <div class="step-counter">You're In</div>
         <div class="step-title">Welcome to the GP network!</div>
@@ -1676,15 +1706,15 @@ select.form-input { cursor: pointer; appearance: auto; }
       </div>
       <div class="step-footer">
         <span></span>
-        <button class="btn-primary" onclick="goToStep(10)">
+        <button class="btn-primary" onclick="goToStep(11)">
           Continue
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>
 
-    <!-- ===== STEP 10: Also an LP? ===== -->
-    <div class="step" id="step10">
+    <!-- ===== STEP 11: Also an LP? ===== -->
+    <div class="step" id="step11">
       <div class="step-header">
         <div class="step-counter">One More Thing</div>
         <div class="step-title">Are you also an LP?</div>
