@@ -11184,8 +11184,8 @@ function renderCreditCard(deal) {
             <div class="metric-value">${deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—'}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Manager Size</div>
-            <div class="metric-value">${getManagerTier(deal).label !== '—' ? getManagerTier(deal).label : '—'}</div>
+            <div class="metric-label">Manager AUM</div>
+            <div class="metric-value">${getManagerTier(deal).range || '—'}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Founded</div>
@@ -11486,8 +11486,8 @@ function renderCard(deal) {
             <div class="metric-value">${deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—'}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Manager Size</div>
-            <div class="metric-value">${mgr.label !== '—' ? mgr.label : '—'}</div>
+            <div class="metric-label">Manager AUM</div>
+            <div class="metric-value">${mgr.range || '—'}</div>
           </div>
           <div class="metric">
             <div class="metric-label">Founded</div>
@@ -12497,7 +12497,7 @@ function updateStageDescription() {
     saved: { title: 'Saved', text: 'Deals you\'re interested in. Review the investment deck and decide if you want to dig deeper. If it looks promising, move it to Vetting.', color: 'var(--primary)' },
     vetting: { title: 'Vetting', text: 'Read through everything on the deal page \u2014 understand this deal intimately. If you like what you see, move it to Due Diligence.', color: '#2563EB' },
     diligence: { title: 'Due Diligence', text: 'Time to talk to the operator. Request an intro and we\'ll connect you via email. Ask clarifying questions and fill in any gaps. Once you\'ve spoken with them, move it to Decision.', color: '#f97316' },
-    decision: { title: 'Decision Time', text: 'Compare deals side by side. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7', cta: { label: 'Join Office Hours', action: "navigateTo('officehours')" } },
+    decision: { title: 'Decision Time', text: 'Compare deals side by side. Ready to commit? Wire the money and move it to Invested.', color: '#a855f7', cta: { label: 'Join Office Hours', action: "window.open('https://growyourcashflow.com/office-hours','_blank')" } },
     invested: { title: 'Your Portfolio', text: 'Deals you\'ve committed capital to. Track distributions, K-1s, and hold periods.', color: '#059669' },
     passed: { title: 'Not Interested', text: 'Deals you decided weren\'t right for you. You can always click Reconsider to move one back.', color: 'var(--text-muted)' }
   };
@@ -15842,7 +15842,7 @@ function renderReport() {
     + '<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Need help picking your next deal?</div>'
     + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);">Join live office hours with Pascal every Thursday 12-1pm ET.</div>'
     + '</div>'
-    + '<button onclick="navigateTo(\'officehours\')" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;">Join Office Hours</button>'
+    + '<a href="https://growyourcashflow.com/office-hours" target="_blank" rel="noopener" class="btn-cta btn-cta-secondary" style="width:auto;padding:10px 24px;font-size:12px;white-space:nowrap;text-decoration:none;">Join Office Hours</a>'
     + '</div>';
 
   // ===== PORTFOLIO BLUEPRINT =====
@@ -27496,7 +27496,7 @@ function renderSwipeCard(deal) {
     + '<div><div class="swipe-metric-label">Distribution</div><div class="swipe-metric-value">' + formatDistribution(deal) + '</div></div>'
     + '<div><div class="swipe-metric-label">LP/GP Split</div><div class="swipe-metric-value">' + (deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit) ? deal.lpGpSplit : '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Equity Mult.</div><div class="swipe-metric-value">' + (deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '—') + '</div></div>'
-    + '<div><div class="swipe-metric-label">Manager Size</div><div class="swipe-metric-value">' + (mgr.label !== '—' ? mgr.label : '—') + '</div></div>'
+    + '<div><div class="swipe-metric-label">Manager AUM</div><div class="swipe-metric-value">' + (mgr.range || '—') + '</div></div>'
     + '<div><div class="swipe-metric-label">Founded</div><div class="swipe-metric-value">' + (deal.mcFoundingYear || '—') + '</div></div>'
     + '</div>'
     + (function() {
