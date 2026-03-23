@@ -12329,6 +12329,18 @@ function isDealStale(d) {
   return false;
 }
 
+// Deal completeness score (0-100) — mirrors admin-manage.js QUALITY_FIELDS
+var _completenessKeys = ['investmentName','assetClass','dealType','strategy','investmentStrategy','targetIRR','preferredReturn','cashOnCash','investmentMinimum','holdPeriod','offeringType','offeringSize','distributions','lpGpSplit','fees','financials','investingGeography','instrument','deckUrl','ppmUrl','secCik','managementCompanyId','purchasePrice','status'];
+function getDealCompleteness(d) {
+  var filled = 0;
+  for (var i = 0; i < _completenessKeys.length; i++) {
+    var v = d[_completenessKeys[i]];
+    if (v !== null && v !== undefined && v !== '' && v !== 0 && !(Array.isArray(v) && v.length === 0)) filled++;
+  }
+  return Math.round((filled / _completenessKeys.length) * 100);
+}
+function isDealLowQuality(d) { return getDealCompleteness(d) < 50; }
+
 // --- Universal Search Dropdown ---
 function _escHtml(s) {
   if (!s) return '';
@@ -12486,6 +12498,8 @@ function getFilteredDeals() {
   let filtered = DEALS.filter(d => {
     // Hide stale deals unless "Show archived" is checked or user is searching (only on Browse tab)
     if (currentTab === 'browse' && !showArchived && !q && isDealStale(d)) return false;
+    // Hide low-quality deals (<50% completeness) unless searching or viewing saved/pipeline tabs
+    if (currentTab === 'browse' && !q && isDealLowQuality(d)) return false;
     if (ac && d.assetClass !== ac) return false;
     if (dt && d.dealType !== dt) return false;
     if (st && d.strategy !== st) return false;
@@ -14882,6 +14896,7 @@ function openBuyBoxWizard(jumpToPlan) {
   // If user already completed onboarding, set edit mode so they get the full sequence
   if (wizardData._freeComplete || localStorage.getItem('gycBuyBoxComplete')) {
     wizardData._isEditing = true;
+    wizardData._freeComplete = true; // ensure edit mode path is used in getStepSequence
   }
   const user = getUser();
   if (user && !wizardData.firstName) {
