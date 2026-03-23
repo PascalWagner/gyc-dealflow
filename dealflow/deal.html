@@ -6832,6 +6832,24 @@ async function renderDeal() {
     }
 
     var dealFees = parseFees(deal.fees);
+
+    // Overlay structured fields from deal object (more reliable than text parsing)
+    var structuredMap = {
+      mgmt: deal.assetMgmtFeePct,
+      acq: deal.acquisitionFeePct,
+      prop: deal.propertyMgmtFeePct,
+      const: deal.constructionMgmtFeePct,
+      disp: deal.dispositionFeePct || deal.capitalEventFeePct
+    };
+    for (var sKey in structuredMap) {
+      var sVal = structuredMap[sKey];
+      if (sVal && parseFloat(sVal) > 0) {
+        var pctVal = parseFloat(sVal);
+        // Stored as decimal (0.02) — convert to display percentage
+        if (pctVal < 1) pctVal = pctVal * 100;
+        dealFees[sKey] = { pct: pctVal, raw: pctVal.toFixed(1) + '%' };
+      }
+    }
     // Always show — comprehensive fee check displays all categories even if Not Charged
 
     // Get peers (same logic as benchmark section)
@@ -6903,7 +6921,7 @@ async function renderDeal() {
         }
         rows.push({
           label: cat.label,
-          dealVal: dealFee.pct !== null ? dealFee.pct.toFixed(1) + '%' : dealFee.raw,
+          dealVal: dealFee.pct !== null ? dealFee.pct.toFixed(1) + '%' : 'Charged (see PPM)',
           marketVal: peerMed !== null ? peerMed.toFixed(1) + '%' : '—',
           peerCount: peerVals.length,
           verdict: verdict,
@@ -6959,12 +6977,14 @@ async function renderDeal() {
         + '<th style="text-align:center;padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Verdict</th>'
         + '</tr></thead><tbody>';
 
+      var FEE_VISIBLE_COUNT = 5;
       for (var r = 0; r < rows.length; r++) {
         var row = rows[r];
         var dealCellStyle = row.notCharged
           ? 'color:#10b981;font-weight:700;'
           : 'color:var(--text-dark);font-weight:700;';
-        feeCompareHtml += '<tr style="border-bottom:1px solid var(--border-light);">'
+        var hiddenStyle = r >= FEE_VISIBLE_COUNT ? ' class="fee-extra-row" style="display:none;"' : '';
+        feeCompareHtml += '<tr' + hiddenStyle + (r < FEE_VISIBLE_COUNT ? ' style="border-bottom:1px solid var(--border-light);"' : '') + '>'
           + '<td style="padding:10px 12px;font-weight:600;color:var(--text-dark);">' + row.label + '</td>'
           + '<td style="padding:10px 12px;text-align:center;' + dealCellStyle + '">' + esc(String(row.dealVal)) + '</td>'
           + '<td style="padding:10px 12px;text-align:center;color:var(--text-muted);">' + row.marketVal + (row.peerCount > 0 ? '<div style="font-size:9px;">' + row.peerCount + ' peers</div>' : '') + '</td>'
@@ -6972,7 +6992,14 @@ async function renderDeal() {
           + '</tr>';
       }
 
-      feeCompareHtml += '</tbody></table></div>';
+      feeCompareHtml += '</tbody></table>';
+      if (rows.length > FEE_VISIBLE_COUNT) {
+        feeCompareHtml += '<div style="text-align:center;padding:10px 0 4px;">'
+          + '<button onclick="var extras=document.querySelectorAll(\'.fee-extra-row\');var show=extras[0]&&extras[0].style.display===\'none\';extras.forEach(function(r){r.style.display=show?\'table-row\':\'none\';r.style.borderBottom=\'1px solid var(--border-light)\';});this.textContent=show?\'Show less\':\'Show ' + (rows.length - FEE_VISIBLE_COUNT) + ' more fee checks\';" '
+          + 'style="background:none;border:none;color:var(--brand);font-family:var(--font-ui);font-size:13px;font-weight:600;cursor:pointer;padding:6px 16px;">'
+          + 'Show ' + (rows.length - FEE_VISIBLE_COUNT) + ' more fee checks</button></div>';
+      }
+      feeCompareHtml += '</div>';
 
       feeCompareHtml += '<div style="margin-top:12px;padding:10px 14px;background:var(--bg-cream);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);line-height:1.5;">'
         + '<strong style="color:var(--text-secondary);">How to read this:</strong> We check every deal for '
