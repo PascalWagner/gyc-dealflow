@@ -7832,6 +7832,14 @@ const _supa = window.supabase.createClient(
           <div class="section-body" id="saasDropoff" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
 
+        <!-- Onboarding Wizard Funnel -->
+        <div class="section">
+          <div class="section-header"><span class="section-title">Onboarding Wizard Drop-off</span><span style="font-size:11px;color:var(--text-muted);font-weight:400;">Which wizard step loses people?</span></div>
+          <div class="section-body" id="saasWizardFunnel" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="color:var(--text-muted);font-size:12px;">Collecting data... wizard step events will populate as users go through onboarding.</div>
+          </div>
+        </div>
+
         <!-- Aha Moment / Time to Value -->
         <div class="section">
           <div class="section-header">
@@ -13649,6 +13657,11 @@ function openBuyBoxWizard(jumpToPlan) {
   }
   document.getElementById('wizardOverlay').classList.add('active');
   renderWizardStep();
+  // Track wizard open for funnel analysis
+  if (typeof storeAnalyticsEvent === 'function') {
+    storeAnalyticsEvent('wizard_started', { step: wizardStepIndex, branch: wizardData._branch || 'none' });
+    if (typeof gtag === 'function') gtag('event', 'wizard_started', { step: wizardStepIndex });
+  }
 }
 
 function openPlanBuilder() {
@@ -13659,6 +13672,13 @@ function closeWizard() {
   collectWizardInputs();
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
   invalidateWizardCache();
+  // Track wizard abandonment if not completed
+  if (!localStorage.getItem('gycBuyBoxComplete') && typeof storeAnalyticsEvent === 'function') {
+    var seq = getStepSequence();
+    var curStep = WIZARD_STEPS[seq[wizardStepIndex]];
+    storeAnalyticsEvent('wizard_abandoned', { step: wizardStepIndex, stepType: curStep ? curStep.type : 'unknown', totalSteps: seq.length, branch: wizardData._branch || 'none' });
+    if (typeof gtag === 'function') gtag('event', 'wizard_abandoned', { step: wizardStepIndex, step_type: curStep ? curStep.type : 'unknown' });
+  }
   document.getElementById('wizardOverlay').classList.remove('active');
   syncWizardToBuyBox();
   // Save progress to Supabase immediately on close so nothing is lost
@@ -15014,6 +15034,13 @@ function wizardNext() {
       nextBtn.style.animation = 'wizShake 0.4s ease';
     }
     return;
+  }
+
+  // Track wizard step completion for drop-off analysis
+  if (typeof storeAnalyticsEvent === 'function' && curStep) {
+    var stepLabel = curStep.type + (curStep.key ? ':' + curStep.key : '');
+    storeAnalyticsEvent('wizard_step', { step: wizardStepIndex, stepType: stepLabel, totalSteps: seq.length, branch: wizardData._branch || 'none' });
+    if (typeof gtag === 'function') gtag('event', 'wizard_step', { step: wizardStepIndex, step_type: stepLabel, branch: wizardData._branch || 'none' });
   }
 
   if (wizardStepIndex >= seq.length - 1) {
@@ -22308,11 +22335,8 @@ window.addEventListener('beforeunload', analyticsPageLeave);
 // --- SaaS Metrics Dashboard ---
 async function loadSaasMetrics() {
   if (!isAdmin()) return;
-  var user = getUser();
   try {
-    var resp = await fetch('/api/admin-saas-metrics', {
-      headers: { 'Authorization': 'Bearer ' + (user && user.token) }
-    });
+    var resp = await fetch('/api/admin-saas-metrics');
     if (!resp.ok) throw new Error('API error');
     var d = await resp.json();
 
@@ -22413,6 +22437,44 @@ async function loadSaasMetrics() {
       if (d.cohorts.length === 0) {
         cohortBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No cohort data yet</td></tr>';
       }
+    }
+
+    // Wizard funnel
+    var wizEl = document.getElementById('saasWizardFunnel');
+    if (wizEl && d.wizardFunnel && d.wizardFunnel.length > 0) {
+      var maxWiz = Math.max(...d.wizardFunnel.map(function(w) { return w.usersReached; }), 1);
+      var html = '';
+      // Show wizard starters count
+      if (d.wizardStarters) {
+        html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;"><strong>' + d.wizardStarters + '</strong> users started the wizard</div>';
+      }
+      html += d.wizardFunnel.map(function(step) {
+        var barW = Math.max(step.usersReached / maxWiz * 100, 2);
+        var label = step.label.replace('targetInput:', '').replace('Select', ' Prefs');
+        return '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div style="width:24px;flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-align:right;">' + step.step + '</div>' +
+          '<div style="width:140px;flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-secondary);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + label + '</div>' +
+          '<div style="flex:1;background:var(--bg-page);border-radius:4px;height:20px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + barW + '%;background:var(--primary);border-radius:4px;"></div>' +
+          '</div>' +
+          '<div style="width:40px;flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);">' + step.usersReached + '</div>' +
+        '</div>';
+      }).join('');
+      // Show abandonment hotspots
+      if (d.wizardAbandonList && d.wizardAbandonList.length > 0) {
+        html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
+        html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Abandonment Hotspots</div>';
+        d.wizardAbandonList.forEach(function(a) {
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">' +
+            '<span style="color:#ef4444;font-weight:700;font-size:12px;">' + a.abandonCount + 'x</span>' +
+            '<span style="font-size:12px;color:var(--text-dark);">abandoned at <strong>' + a.stepType + '</strong></span>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+      wizEl.innerHTML = html;
+    } else if (wizEl) {
+      wizEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No wizard step data yet. Events will populate as users go through onboarding.</div>';
     }
 
   } catch(e) {

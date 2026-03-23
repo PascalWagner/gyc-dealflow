@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const { data: profiles, error: profErr } = await supabase
       .from('user_profiles')
       .select('id, email, created_at, buy_box_complete, funnel_status, deals_viewed_count, deals_saved_count, sessions_count, last_activity_date, tier, is_admin')
-      .eq('is_admin', false);
+      .or('is_admin.eq.false,is_admin.is.null');
 
     if (profErr) throw profErr;
 
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const { data: events, error: evtErr } = await supabase
       .from('user_events')
       .select('user_id, event, created_at')
-      .in('event', ['wizard_complete', 'goals_complete', 'deal_viewed', 'deal_saved', 'call_booked', 'session_start'])
+      .in('event', ['wizard_complete', 'goals_complete', 'deal_viewed', 'deal_saved', 'call_booked', 'session_start', 'wizard_step', 'wizard_abandoned', 'wizard_started'])
       .order('created_at', { ascending: true });
 
     if (evtErr) throw evtErr;
@@ -137,12 +137,67 @@ export default async function handler(req, res) {
       });
     }
 
+    // --- Wizard Step Funnel ---
+    // Count how many users reached each wizard step
+    const wizardStepCounts = {}; // { stepIndex: Set<userId> }
+    const wizardAbandons = {};   // { stepType: count }
+    let wizardStarters = new Set();
+
+    for (const evt of (events || [])) {
+      if (evt.event === 'wizard_started') {
+        wizardStarters.add(evt.user_id);
+      }
+      if (evt.event === 'wizard_step') {
+        // evt was stored with data but we only have created_at in our select
+        // We need data for step info — re-query if needed
+      }
+      if (evt.event === 'wizard_abandoned') {
+        wizardStarters.add(evt.user_id);
+      }
+    }
+
+    // Re-query wizard events with data payload for step details
+    const { data: wizEvents } = await supabase
+      .from('user_events')
+      .select('user_id, event, data, created_at')
+      .in('event', ['wizard_step', 'wizard_abandoned'])
+      .order('created_at', { ascending: true });
+
+    const userMaxStep = {}; // track highest step each user reached
+    for (const evt of (wizEvents || [])) {
+      const step = evt.data?.step;
+      const stepType = evt.data?.stepType || 'unknown';
+      if (evt.event === 'wizard_step' && step !== undefined) {
+        if (!userMaxStep[evt.user_id] || step > userMaxStep[evt.user_id]) {
+          userMaxStep[evt.user_id] = step;
+        }
+        if (!wizardStepCounts[step]) wizardStepCounts[step] = { count: 0, label: stepType };
+        wizardStepCounts[step].count++;
+      }
+      if (evt.event === 'wizard_abandoned') {
+        const label = stepType || 'step_' + (step || '?');
+        wizardAbandons[label] = (wizardAbandons[label] || 0) + 1;
+      }
+    }
+
+    // Build wizard funnel array sorted by step index
+    const wizardFunnel = Object.entries(wizardStepCounts)
+      .map(([step, info]) => ({ step: parseInt(step), label: info.label, usersReached: info.count }))
+      .sort((a, b) => a.step - b.step);
+
+    const wizardAbandonList = Object.entries(wizardAbandons)
+      .map(([label, count]) => ({ stepType: label, abandonCount: count }))
+      .sort((a, b) => b.abandonCount - a.abandonCount);
+
     return res.status(200).json({
       summary: { totalSignups, signups7d, onboarded, activated, savedDeal, bookedCall },
       funnelSteps,
       dropoffs,
       ttv,
       cohorts,
+      wizardFunnel,
+      wizardAbandonList,
+      wizardStarters: wizardStarters.size,
       fetchedAt: new Date().toISOString()
     });
 
