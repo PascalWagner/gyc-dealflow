@@ -5166,9 +5166,9 @@ html.dark .ms-tier-card.tier-3 .ms-tier-badge-lg { background: rgba(59,130,246,0
 }
 @media (max-width: 600px) {
   /* LP Tour Overlay */
-  .onboarding-overlay { padding: 12px; align-items: flex-start; padding-top: 40px; }
-  .onboarding-modal { padding: 28px 20px 24px; border-radius: 16px; }
-  .onboarding-title { font-size: 22px; margin-bottom: 6px; }
+  .onboarding-overlay { padding: 12px; align-items: flex-start; padding-top: 40px; box-sizing: border-box; overflow-x: hidden; }
+  .onboarding-modal { padding: 28px 20px 24px; border-radius: 16px; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+  .onboarding-title { font-size: 20px; margin-bottom: 6px; overflow-wrap: break-word; }
   .onboarding-subtitle { font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
   .onboarding-step-dots { margin-bottom: 24px; }
   .onboarding-value-props { gap: 10px; margin-bottom: 24px; }
@@ -16876,11 +16876,10 @@ openPanel = function(id) {
   const deal = DEALS.find(d => d.id === id);
   if (deal && !(typeof isImpersonating === 'function' && isImpersonating())) {
     const viewCount = incrementCounter('viewCount');
-    // Only sync to GHL every 5th view to avoid hammering API
-    if (viewCount % 5 === 0) {
+    // Send first view + every 5th to server (GHL + Supabase), rest just GA4 + local
+    if (viewCount === 1 || viewCount % 5 === 0) {
       trackActivity('deal_viewed', { dealId: id, dealName: deal.investmentName, sponsor: deal.managementCompany, viewCount: viewCount });
     } else {
-      // Still track locally + GA4 without GHL call
       storeAnalyticsEvent('view_deal', { dealId: id, dealName: deal.investmentName, sponsor: deal.managementCompany });
       if (typeof gtag === 'function') gtag('event', 'view_deal', { dealId: id, dealName: deal.investmentName });
     }
@@ -22915,12 +22914,18 @@ function incrementPageView(page) {
 let _analyticsCurrentPage = 'deals';
 let _analyticsPageEnterTime = Date.now();
 
+var _serverTrackedPages = {};
 function analyticsPageEnter(page) {
   _analyticsCurrentPage = page;
   _analyticsPageEnterTime = Date.now();
   if (typeof isImpersonating === 'function' && isImpersonating()) return;
   incrementPageView(page);
   storeAnalyticsEvent('page_view', { page: page });
+  // Send first visit to each unique page to server (max 5 per session to limit API calls)
+  if (!_serverTrackedPages[page] && Object.keys(_serverTrackedPages).length < 5) {
+    _serverTrackedPages[page] = true;
+    trackActivity('page_view', { page: page });
+  }
 }
 
 function analyticsPageLeave() {
@@ -26778,8 +26783,8 @@ if (typeof renderCashflowGapBar === 'function') renderCashflowGapBar();
   if (typeof isImpersonating === 'function' && isImpersonating()) return; // Don't track admin impersonation sessions
   sessionStorage.setItem('gycSessionTracked', '1');
   const sessionCount = incrementCounter('sessionCount');
-  // Fire event to GHL on 3rd+ session
-  if (sessionCount >= 3) {
+  // Always track first session + every session from 3rd on to server
+  if (sessionCount === 1 || sessionCount >= 3) {
     trackActivity('session_start', { sessionCount: sessionCount });
   }
   // Show returning user CTA on 3rd+ session (Phase 4)

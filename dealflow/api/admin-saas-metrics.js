@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     const { data: events, error: evtErr } = await supabase
       .from('user_events')
       .select('user_id, event, created_at')
-      .in('event', ['wizard_complete', 'goals_complete', 'deal_viewed', 'deal_saved', 'call_booked', 'session_start', 'wizard_step', 'wizard_abandoned', 'wizard_started'])
+      .in('event', ['wizard_complete', 'goals_complete', 'deal_viewed', 'deal_saved', 'call_booked', 'session_start', 'page_view', 'wizard_step', 'wizard_abandoned', 'wizard_started'])
       .order('created_at', { ascending: true })
       .limit(10000);
 
@@ -70,9 +70,13 @@ export default async function handler(req, res) {
     if (fullErr) {
       // Count events per user to derive activity metrics
       const eventCounts = {}; // { userId: { deal_viewed: N, deal_saved: N, ... } }
+      const lastEventDate = {}; // { userId: latestTimestamp }
       for (const evt of (events || [])) {
         if (!eventCounts[evt.user_id]) eventCounts[evt.user_id] = {};
         eventCounts[evt.user_id][evt.event] = (eventCounts[evt.user_id][evt.event] || 0) + 1;
+        if (!lastEventDate[evt.user_id] || evt.created_at > lastEventDate[evt.user_id]) {
+          lastEventDate[evt.user_id] = evt.created_at;
+        }
       }
       for (const p of profiles) {
         const counts = eventCounts[p.id] || {};
@@ -80,10 +84,14 @@ export default async function handler(req, res) {
         p.deals_viewed_count = counts.deal_viewed || 0;
         p.deals_saved_count = counts.deal_saved || 0;
         p.sessions_count = counts.session_start || 0;
+        p.page_views = counts.page_view || 0;
         if (counts.call_booked) p.funnel_status = 'call-booked';
         else if ((counts.deal_saved || 0) >= 3) p.funnel_status = 'high-intent';
         else if (counts.wizard_complete) p.funnel_status = 'qualified';
+        else if (counts.page_view || counts.deal_viewed) p.funnel_status = 'exploring';
         else p.funnel_status = 'new';
+        // Derive last activity from events
+        if (lastEventDate[p.id]) p.last_activity_date = lastEventDate[p.id];
       }
     }
 
