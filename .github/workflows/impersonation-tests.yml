@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'index.html'
-      - 'js/**'
-      - 'tests/**'
+      - 'dealflow/index.html'
+      - 'dealflow/js/**'
+      - 'dealflow/tests/**'
       - '.github/workflows/impersonation-tests.yml'
   workflow_dispatch:
 
@@ -22,7 +22,7 @@ jobs:
           node-version: 20
 
       - name: Install Playwright
-        working-directory: tests
+        working-directory: dealflow/tests
         run: |
           npm init -y --silent 2>/dev/null
           npm install --save-dev @playwright/test
@@ -45,7 +45,7 @@ jobs:
           DEALFLOW_URL: ${{ secrets.DEALFLOW_URL }}
 
       - name: Run impersonation tests
-        working-directory: tests
+        working-directory: dealflow/tests
         run: npx playwright test impersonation.spec.js --reporter=list
         env:
           TEST_URL: ${{ secrets.DEALFLOW_URL }}
