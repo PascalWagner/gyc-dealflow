@@ -5897,6 +5897,165 @@ html.dark .if-section-nav{background:rgba(10,30,33,0.95)}
 .feedback-screenshot-thumb { display:inline-block; margin-top:10px; width:80px; height:60px; object-fit:cover; border-radius:6px; border:1px solid var(--border); cursor:pointer; transition:opacity var(--transition); }
 .feedback-screenshot-thumb:hover { opacity:0.8; }
 .feedback-empty { text-align:center; padding:40px 20px; color:var(--text-muted); font-size:14px; }
+
+/* ── LP Risk Disclosure Banner ── */
+.lp-disclosure-banner {
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 100%);
+  border: 1px solid #FFB74D;
+  border-left: 4px solid #F57C00;
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-family: var(--font-body);
+  position: relative;
+}
+html.dark .lp-disclosure-banner {
+  background: linear-gradient(135deg, #2E1F0D 0%, #1F1708 100%);
+  border-color: #8B5E2F;
+}
+.lp-disclosure-banner .lp-disc-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: #F57C00;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.lp-disclosure-banner .lp-disc-body { flex: 1; }
+.lp-disclosure-banner .lp-disc-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 800;
+  color: #E65100;
+  margin-bottom: 4px;
+}
+html.dark .lp-disclosure-banner .lp-disc-title { color: #FFB74D; }
+.lp-disclosure-banner .lp-disc-text {
+  font-size: 13px;
+  color: var(--text-dark);
+  line-height: 1.55;
+}
+.lp-disclosure-banner .lp-disc-text strong { font-weight: 700; }
+.lp-disclosure-banner .lp-disc-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px;
+}
+.lp-disclosure-banner .lp-disc-dismiss:hover { color: var(--text-dark); }
+.lp-disclosure-banner .lp-disc-expand {
+  background: none;
+  border: none;
+  color: #E65100;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 6px;
+}
+html.dark .lp-disclosure-banner .lp-disc-expand { color: #FFB74D; }
+
+/* ── Secondaries Page ── */
+.stake-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition);
+}
+.stake-card:hover { box-shadow: var(--shadow-card-hover); }
+.stake-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.stake-card-name {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.stake-card-meta {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.stake-card-price {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--green);
+}
+.stake-card-price-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.stake-card-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.stake-card-stat-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.stake-card-stat-val {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.stake-card-reason {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+.stake-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.stake-contact-btn {
+  padding: 8px 20px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.stake-contact-btn:hover { background: var(--primary-hover); }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -6156,6 +6315,24 @@ const _supa = window.supabase.createClient(
       </button>
     </div>
     <div class="content-area">
+      <!-- LP Risk Disclosure Banner -->
+      <div class="lp-disclosure-banner" id="lpDisclosureBanner">
+        <div class="lp-disc-icon">!</div>
+        <div class="lp-disc-body">
+          <div class="lp-disc-title">Important: GYC Does Not Vet or Screen Deals</div>
+          <div class="lp-disc-text">
+            <strong>Expect losses.</strong> Deals listed here are not endorsed, vetted, or screened by GYC.
+            Some investments will lose money. Some may turn out to be fraudulent.
+            <span id="lpDisclosureExtra" style="display:none;">
+              <br><br>We are not a broker-dealer, investment adviser, or fiduciary. We provide tools so <em>you</em> can do your own due diligence.
+              We want as many transactions to happen as possible so we can eventually provide liquidity &mdash; but that means you will see every deal, good and bad.
+              <strong>Use the DD checklist, background checks, and investment memos to protect yourself.</strong>
+            </span>
+          </div>
+          <button class="lp-disc-expand" id="lpDisclosureToggle" onclick="toggleLpDisclosure()">Read more</button>
+        </div>
+        <button class="lp-disc-dismiss" onclick="dismissLpDisclosure()" title="Dismiss">&times;</button>
+      </div>
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
       <div id="decisionCompareContainer" style="display:none;margin-bottom:24px;"></div>
       <div class="card-grid" id="cardGrid"><div id="dealsMilestoneChecklist" style="display:contents;"></div></div>
@@ -8419,7 +8596,10 @@ const _supa = window.supabase.createClient(
         <button class="dash-tab" onclick="navigateTo('buybox')">My Plan</button>
       </div>
       <div class="topbar-spacer"></div>
-      <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="showSellStakeModal()" style="padding:8px 18px;background:transparent;color:var(--orange);border:1px solid var(--orange);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">Sell a Stake</button>
+        <button onclick="showDealSearchModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ Add Investment</button>
+      </div>
     </div>
     <div class="content-area" style="padding:24px;max-width:1200px;">
       <div id="portfolioSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
@@ -8485,6 +8665,38 @@ const _supa = window.supabase.createClient(
             <button onclick="autoPopulateTaxDocs(new Date().getFullYear()-1)" style="padding:6px 16px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:11px;cursor:pointer;">Auto-Populate from Portfolio</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Secondaries Marketplace -->
+  <div class="page" id="page-secondaries">
+    <div class="topbar">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Secondaries</div>
+      <div class="topbar-spacer"></div>
+      <button onclick="showSellStakeModal()" style="padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">+ List Your Stake</button>
+    </div>
+    <div class="content-area" style="padding:24px;max-width:1000px;">
+      <!-- LP Disclosure for secondaries -->
+      <div class="lp-disclosure-banner" style="margin-bottom:20px;">
+        <div class="lp-disc-icon">!</div>
+        <div class="lp-disc-body">
+          <div class="lp-disc-title">Peer-to-Peer Marketplace &mdash; No Vetting</div>
+          <div class="lp-disc-text">
+            Stake listings are posted by community members. GYC does not verify ownership, valuations, or legitimacy of any listing.
+            <strong>Do your own due diligence before any transaction.</strong>
+          </div>
+        </div>
+      </div>
+      <div id="secondariesGrid" style="display:flex;flex-direction:column;gap:16px;"></div>
+      <div id="secondariesEmpty" style="display:none;text-align:center;padding:60px 20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:48px;height:48px;margin-bottom:16px;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <div style="font-family:var(--font-ui);font-size:16px;font-weight:700;color:var(--text-dark);margin-bottom:8px;">No stakes listed yet</div>
+        <div style="font-family:var(--font-body);font-size:14px;color:var(--text-muted);margin-bottom:20px;">Be the first to list a stake for sale. Help build liquidity for the community.</div>
+        <button onclick="showSellStakeModal()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:14px;cursor:pointer;">List Your Stake</button>
       </div>
     </div>
   </div>
@@ -8561,6 +8773,10 @@ const _supa = window.supabase.createClient(
         <a class="more-menu-item" href="#" onclick="navigateTo('taxprep'); return false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>Tax Prep</span>
+        </a>
+        <a class="more-menu-item" href="#" onclick="navigateTo('secondaries'); return false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Secondaries</span>
         </a>
       </div>
       <div class="more-menu-section">
@@ -13000,6 +13216,7 @@ function navigateTo(page) {
   if (page === 'goals') renderGoals();
   if (page === 'incomefund') renderIncomeFund();
   if (page === 'portfolio') renderPortfolio();
+  if (page === 'secondaries') loadSecondaries();
   if (page === 'marketintel') renderMarketIntel();
   if (page === 'dealflow') renderDealFlowPage();
   if (page === 'admindash') switchAdminDashTab(adminDashCurrentTab);
@@ -18545,6 +18762,7 @@ function renderPortfolioTable() {
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px;">
               <span style="padding:4px 12px;border-radius:100px;background:${sb};font-family:var(--font-ui);font-size:11px;font-weight:700;color:${sc};">${inv.status || 'Unknown'}</span>
+              <button onclick="showSellStakeModal({investmentName:'${(inv.investmentName || '').replace(/'/g, "\\'")}',sponsor:'${(inv.sponsor || '').replace(/'/g, "\\'")}',assetClass:'${(inv.assetClass || '').replace(/'/g, "\\'")}',amountInvested:'${inv.amountInvested || ''}'})" style="background:none;border:1px solid var(--orange);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--orange);transition:all 0.15s;" onmouseover="this.style.background='rgba(207,122,48,0.06)'" onmouseout="this.style.background='none'">Sell</button>
               <button onclick="showAddInvestmentModal('${inv.id}')" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);transition:all 0.15s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Edit</button>
             </div>
           </div>
@@ -18574,6 +18792,216 @@ function sortPortfolioTable(col) {
   if (portfolioSortCol === col) { portfolioSortAsc = !portfolioSortAsc; }
   else { portfolioSortCol = col; portfolioSortAsc = true; }
   renderPortfolioTable();
+}
+
+// ── LP Disclosure Banner ──
+function toggleLpDisclosure() {
+  const extra = document.getElementById('lpDisclosureExtra');
+  const btn = document.getElementById('lpDisclosureToggle');
+  if (extra.style.display === 'none') {
+    extra.style.display = 'inline';
+    btn.textContent = 'Show less';
+  } else {
+    extra.style.display = 'none';
+    btn.textContent = 'Read more';
+  }
+}
+
+function dismissLpDisclosure() {
+  const banner = document.getElementById('lpDisclosureBanner');
+  if (banner) banner.style.display = 'none';
+  try { localStorage.setItem('gyc_lp_disclosure_dismissed', Date.now()); } catch(e) {}
+}
+
+function initLpDisclosure() {
+  try {
+    const dismissed = localStorage.getItem('gyc_lp_disclosure_dismissed');
+    if (dismissed) {
+      // Re-show every 30 days
+      const daysSince = (Date.now() - parseInt(dismissed)) / (1000 * 60 * 60 * 24);
+      if (daysSince < 30) {
+        const banner = document.getElementById('lpDisclosureBanner');
+        if (banner) banner.style.display = 'none';
+      }
+    }
+  } catch(e) {}
+}
+
+// ── Sell Stake Modal ──
+function showSellStakeModal(prefill) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'sellStakeModal';
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+
+  const pf = prefill || {};
+  // Build portfolio options for dropdown
+  let portfolioOptions = '<option value="">-- Select from portfolio (optional) --</option>';
+  if (typeof portfolioInvestments !== 'undefined' && portfolioInvestments.length > 0) {
+    portfolioInvestments.forEach(inv => {
+      const sel = pf.investmentName === inv.investmentName ? ' selected' : '';
+      portfolioOptions += '<option value="' + (inv.id || '') + '" data-name="' + (inv.investmentName || '').replace(/"/g, '&quot;') + '" data-sponsor="' + (inv.sponsor || '').replace(/"/g, '&quot;') + '" data-ac="' + (inv.assetClass || '').replace(/"/g, '&quot;') + '" data-amt="' + (inv.amountInvested || 0) + '" data-deal="' + (inv.dealId || '') + '"' + sel + '>' + (inv.investmentName || 'Unnamed') + ' ($' + ((parseFloat(inv.amountInvested) || 0).toLocaleString()) + ')</option>';
+    });
+  }
+
+  overlay.innerHTML = '<div class="modal-card" style="max-width:560px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+    + '<div style="font-family:var(--font-ui);font-size:18px;font-weight:800;color:var(--text-dark);">List Your Stake for Sale</div>'
+    + '<button onclick="closeModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1;">&times;</button>'
+    + '</div>'
+    + '<p style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;">List a position from your portfolio for other community members to potentially acquire. This is the first step toward building liquidity.</p>'
+    + '<div class="modal-field"><label>From Portfolio</label><select id="stakePortfolioSelect" onchange="prefillStakeFromPortfolio(this)">' + portfolioOptions + '</select></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">'
+    + '<div class="modal-field" style="grid-column:1/-1;"><label>Investment Name *</label><input id="stakeInvestmentName" value="' + (pf.investmentName || '').replace(/"/g, '&quot;') + '" placeholder="e.g. ABC Fund III"></div>'
+    + '<div class="modal-field"><label>Sponsor</label><input id="stakeSponsor" value="' + (pf.sponsor || '').replace(/"/g, '&quot;') + '" placeholder="Operator name"></div>'
+    + '<div class="modal-field"><label>Asset Class</label><input id="stakeAssetClass" value="' + (pf.assetClass || '').replace(/"/g, '&quot;') + '" placeholder="e.g. Multi-Family"></div>'
+    + '<div class="modal-field"><label>Amount Invested ($)</label><input id="stakeAmountInvested" type="number" value="' + (pf.amountInvested || '') + '" placeholder="50000"></div>'
+    + '<div class="modal-field"><label>Asking Price ($)</label><input id="stakeAskingPrice" type="number" placeholder="Leave blank for &quot;open to offers&quot;"></div>'
+    + '</div>'
+    + '<div class="modal-field"><label>Reason for selling (optional)</label><textarea id="stakeReason" rows="2" placeholder="e.g. Need liquidity, rebalancing portfolio..." style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;"></textarea></div>'
+    + '<div class="modal-field"><label>Additional notes (optional)</label><textarea id="stakeNotes" rows="2" placeholder="e.g. Current distributions, hold period remaining..." style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-body);font-size:13px;resize:vertical;"></textarea></div>'
+    + '<div class="modal-field"><label>Contact Email</label><input id="stakeContactEmail" type="email" value="' + ((typeof getUser === 'function' && getUser() && getUser().email) || '') + '" placeholder="your@email.com"></div>'
+    + '<label style="display:flex;align-items:center;gap:8px;margin:8px 0 16px;font-family:var(--font-ui);font-size:12px;color:var(--text-secondary);cursor:pointer;"><input type="checkbox" id="stakeAnonymous" style="accent-color:var(--primary);width:16px;height:16px;"> List anonymously (hide my identity from browsers)</label>'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+    + '<button onclick="closeModal()" style="padding:10px 20px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:13px;cursor:pointer;color:var(--text-secondary);">Cancel</button>'
+    + '<button onclick="submitStakeListing()" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:700;font-size:13px;cursor:pointer;">List for Sale</button>'
+    + '</div>'
+    + '<input type="hidden" id="stakePortfolioId" value="">'
+    + '<input type="hidden" id="stakeDealId" value="">'
+    + '</div>';
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('active'));
+}
+
+function prefillStakeFromPortfolio(select) {
+  const opt = select.options[select.selectedIndex];
+  if (!opt || !opt.value) return;
+  document.getElementById('stakeInvestmentName').value = opt.dataset.name || '';
+  document.getElementById('stakeSponsor').value = opt.dataset.sponsor || '';
+  document.getElementById('stakeAssetClass').value = opt.dataset.ac || '';
+  document.getElementById('stakeAmountInvested').value = opt.dataset.amt || '';
+  document.getElementById('stakePortfolioId').value = opt.value;
+  document.getElementById('stakeDealId').value = opt.dataset.deal || '';
+}
+
+async function submitStakeListing() {
+  const name = document.getElementById('stakeInvestmentName').value.trim();
+  if (!name) { alert('Investment name is required.'); return; }
+
+  const body = {
+    portfolio_id: document.getElementById('stakePortfolioId').value || null,
+    deal_id: document.getElementById('stakeDealId').value || null,
+    investment_name: name,
+    sponsor: document.getElementById('stakeSponsor').value.trim(),
+    asset_class: document.getElementById('stakeAssetClass').value.trim(),
+    amount_invested: document.getElementById('stakeAmountInvested').value || 0,
+    asking_price: document.getElementById('stakeAskingPrice').value || null,
+    reason: document.getElementById('stakeReason').value.trim(),
+    notes: document.getElementById('stakeNotes').value.trim(),
+    contact_email: document.getElementById('stakeContactEmail').value.trim(),
+    anonymous: document.getElementById('stakeAnonymous').checked
+  };
+
+  try {
+    const token = (typeof getAccessToken === 'function') ? getAccessToken() : null;
+    const resp = await fetch('/api/stake-listings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Failed to create listing');
+
+    closeModal();
+    if (typeof showToast === 'function') showToast('Stake listed successfully! View it in the Secondaries marketplace.');
+    else alert('Stake listed successfully!');
+
+    // Refresh secondaries if on that page
+    if (document.getElementById('page-secondaries')?.classList.contains('active')) {
+      loadSecondaries();
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+}
+
+// ── Secondaries Marketplace ──
+async function loadSecondaries() {
+  const grid = document.getElementById('secondariesGrid');
+  const empty = document.getElementById('secondariesEmpty');
+  if (!grid) return;
+
+  grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">Loading listings...</div>';
+
+  try {
+    const resp = await fetch('/api/stake-listings');
+    const data = await resp.json();
+    const listings = data.listings || [];
+
+    if (listings.length === 0) {
+      grid.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+
+    if (empty) empty.style.display = 'none';
+
+    grid.innerHTML = listings.map(l => {
+      const price = l.asking_price ? '$' + parseFloat(l.asking_price).toLocaleString() : 'Open to offers';
+      const invested = l.amount_invested ? '$' + parseFloat(l.amount_invested).toLocaleString() : 'N/A';
+      const timeAgo = getTimeAgo(l.created_at);
+      const contactAction = l.anonymous
+        ? 'onclick="alert(\'This listing is anonymous. Contact the platform admin to express interest.\')"'
+        : 'onclick="window.location.href=\'mailto:' + (l.contact_email || '').replace(/'/g, "\\'") + '?subject=Interest in your stake: ' + encodeURIComponent(l.investment_name || '') + '\'"';
+
+      return '<div class="stake-card">'
+        + '<div class="stake-card-header">'
+        + '<div>'
+        + '<div class="stake-card-name">' + escapeHtml(l.investment_name || 'Unnamed') + '</div>'
+        + '<div class="stake-card-meta">' + escapeHtml(l.sponsor || '') + (l.asset_class ? ' &middot; ' + escapeHtml(l.asset_class) : '') + ' &middot; Listed ' + timeAgo + '</div>'
+        + '</div>'
+        + '<div style="text-align:right;">'
+        + '<div class="stake-card-price-label">Asking Price</div>'
+        + '<div class="stake-card-price">' + price + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<div class="stake-card-stats">'
+        + '<div><div class="stake-card-stat-label">Amount Invested</div><div class="stake-card-stat-val">' + invested + '</div></div>'
+        + (l.asset_class ? '<div><div class="stake-card-stat-label">Asset Class</div><div class="stake-card-stat-val">' + escapeHtml(l.asset_class) + '</div></div>' : '')
+        + '</div>'
+        + (l.reason ? '<div class="stake-card-reason"><strong>Reason:</strong> ' + escapeHtml(l.reason) + '</div>' : '')
+        + (l.notes ? '<div class="stake-card-reason">' + escapeHtml(l.notes) + '</div>' : '')
+        + '<div class="stake-card-actions">'
+        + (l.deal_id ? '<button onclick="window.open(\'deal.html?id=' + l.deal_id + '\',\'_blank\')" style="padding:8px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font-ui);font-weight:600;font-size:12px;cursor:pointer;color:var(--text-secondary);">View Deal</button>' : '')
+        + '<button class="stake-contact-btn" ' + contactAction + '>Express Interest</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  } catch (err) {
+    grid.innerHTML = '<div style="text-align:center;padding:40px;color:var(--red);font-size:14px;">Failed to load listings. Please try again.</div>';
+  }
+}
+
+function getTimeAgo(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return days + 'd ago';
+  return Math.floor(days / 30) + 'mo ago';
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 function showAddDealModal() {
@@ -27158,6 +27586,7 @@ initAuth();
 initViewAs();
 loadDeals(); // Fetches from Supabase API
 initSubscription();
+initLpDisclosure();
 
 // ========== GUEST SIGNUP BANNER ==========
 if (window._isGuest) {

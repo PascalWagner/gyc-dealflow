@@ -130,6 +130,7 @@
   html += navItem('marketintel', icons.marketIntel, 'Market Intel', { paidOnly: true });
   html += navItem('deals', icons.deals, 'Deal Flow', { badge: 'dealCountBadge' });
   html += navItem('managers', icons.operators, 'Operators');
+  html += navItem('secondaries', icons.transactions, 'Secondaries');
 
   // SUPPORT
   html += '<div class="nav-section-label">Support</div>';
