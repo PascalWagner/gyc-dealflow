@@ -6519,40 +6519,9 @@ const _supa = window.supabase.createClient(
 
       <!-- Investor Tab -->
       <div class="settings-panel" id="stab-investor" style="display:none">
-        <div class="settings-page-title">Investor Profile</div>
-        <div class="settings-page-desc">Help GPs understand your background and investment capacity.</div>
-
-        <div class="settings-card">
-          <div class="settings-card-title">Investment Background</div>
-          <div class="settings-card-desc">This information helps match you with relevant deal opportunities</div>
-          <div class="profile-row">
-            <div class="profile-field">
-              <div class="profile-label">Accreditation Status</div>
-              <select class="filter-select" style="width:100%;min-width:0">
-                <option value="accredited" selected>Accredited Investor</option>
-                <option value="qualified">Qualified Purchaser</option>
-                <option value="non-accredited">Non-Accredited</option>
-              </select>
-            </div>
-            <div class="profile-field">
-              <div class="profile-label">Investable Capital</div>
-              <select class="filter-select" style="width:100%;min-width:0">
-                <option>$50K - $250K</option>
-                <option selected>$250K - $1M</option>
-                <option>$1M - $5M</option>
-                <option>$5M+</option>
-              </select>
-            </div>
-          </div>
-          <div class="profile-field">
-            <div class="profile-label">LP Deals Invested In</div>
-            <input type="number" id="settingsLpDealCount" class="filter-select" style="width:100%;min-width:0;-moz-appearance:textfield;" min="0" max="999" placeholder="0">
-          </div>
-        </div>
-
-        <div class="settings-save-bar">
-          <button class="btn-cta btn-cta-primary" onclick="showSaveStatus()">Save Investor Profile</button>
-        </div>
+        <div class="settings-page-title">Investment Profile</div>
+        <div class="settings-page-desc">Your investment criteria and preferences. Changes update your deal matches and plan immediately.</div>
+        <div id="buyBoxEditor"></div>
       </div>
 
       <!-- Privacy Tab -->
@@ -13767,6 +13736,178 @@ function switchSettingsTab(el) {
   document.querySelectorAll('.settings-panel').forEach(p => p.style.display = 'none');
   const panel = document.getElementById('stab-' + el.dataset.stab);
   if (panel) panel.style.display = '';
+  // Render buy box editor when Investor tab is opened
+  if (el.dataset.stab === 'investor') renderBuyBoxEditor();
+}
+
+// ========== BUY BOX SETTINGS EDITOR ==========
+function renderBuyBoxEditor() {
+  var container = document.getElementById('buyBoxEditor');
+  if (!container) return;
+  var d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+
+  function fmtMoney(v) { var n = parseInt(v) || 0; if (n >= 1000000) return '$' + (n/1000000).toFixed(n%1000000===0?0:1) + 'M'; if (n >= 1000) return '$' + Math.round(n/1000).toLocaleString() + 'K'; if (n > 0) return '$' + n.toLocaleString(); return '\u2014'; }
+  function val(v) { return (v !== undefined && v !== null && v !== '') ? v : '\u2014'; }
+  function arrVal(v) { return Array.isArray(v) && v.length > 0 ? v.join(', ') : '\u2014'; }
+
+  var branchLabels = { cashflow: 'Cash Flow \u2014 Replace my income', growth: 'Equity Growth \u2014 Build generational wealth', tax: 'Tax Optimization \u2014 Keep more of what I make' };
+  var lossLabels = { '10': '1\u20132% of net worth (very conservative)', '20': '3\u20135% of net worth (moderate)', '33': '5\u201310% of net worth (concentrated)', '50': '10%+ of net worth (high conviction)', 'no_limit': 'No limit \u2014 deal by deal' };
+  var reProLabels = { 'yes': 'Yes, I qualify', 'no': 'No', 'unsure': 'Not sure' };
+  var accLabels = { 'net_worth': 'Net worth over $1M', 'income': 'Income over $200K', 'licensed': 'Licensed professional', 'entity': 'Through an entity', 'not_accredited': 'Not yet accredited' };
+  var divLabels = { 'focused': 'Focused (1\u20132 asset classes)', 'balanced': 'Balanced (3\u20134 types)', 'wide': 'Maximum Diversification' };
+  var opLabels = { 'specialist': 'Specialists Only', 'diversified': 'Prefer Diversified', 'both': 'Open to Both' };
+  var lockLabels = { 'flexible': 'Flexible', '1': '1 year', '3': '3 years', '5': '5 years', '5+': '5+ years' };
+  var distLabels = { 'Monthly': 'Monthly or more often', 'Quarterly': 'Quarterly or more often', 'Annual': 'Annually or more often', 'Any': 'Flexible \u2014 no minimum' };
+  var prioLabels = { 'max_return': 'Highest projected returns', 'balanced': 'Balanced \u2014 some cash now, some growth', 'preservation': 'Capital preservation first' };
+  var readyLabels = { 'now': 'Ready now', '30days': 'Within 30 days', '90days': '1\u20133 months', 'exploring': 'Just exploring' };
+  var accDisplay = Array.isArray(d.accreditation) ? d.accreditation.map(function(a) { return accLabels[a] || a; }).join(', ') : '\u2014';
+
+  function row(label, value) {
+    return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--border-light);">'
+      + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;flex-shrink:0;width:140px;">' + label + '</div>'
+      + '<div style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--text-dark);text-align:right;flex:1;min-width:0;">' + value + '</div></div>';
+  }
+
+  function section(title, rows, editStepType) {
+    var editBtn = editStepType ? '<button onclick="editBuyBoxField(\'' + editStepType + '\')" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);cursor:pointer;background:none;border:none;padding:0;">Change</button>' : '';
+    return '<div class="settings-card">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+      + '<div class="settings-card-title">' + title + '</div>'
+      + editBtn + '</div>'
+      + rows + '</div>';
+  }
+
+  var html = '';
+
+  // Goal & Experience
+  html += section('Goal & Experience',
+    row('Primary Goal', branchLabels[d._branch] || '\u2014')
+    + row('Passive Investments', d.dealExperience !== undefined ? d.dealExperience : '\u2014')
+    + row('Current Passive Income', fmtMoney(d.baselineIncome) + '/yr')
+    + row('RE Professional', reProLabels[d.reProfessional] || '\u2014'),
+    'goalSelect'
+  );
+
+  // What I Invest In
+  html += section('What I Invest In',
+    row('Asset Classes', arrVal(d.assetClasses))
+    + row('Strategies', arrVal(d.strategies)),
+    'assetClassSelect'
+  );
+
+  // Risk & Accreditation
+  html += section('Risk & Accreditation',
+    row('Loss Tolerance', lossLabels[d.maxOperatorPct] || '\u2014')
+    + row('Accreditation', accDisplay),
+    'lossTolerance'
+  );
+
+  // Goal-Specific Targets (only if paid wizard completed)
+  if (localStorage.getItem('gycBuyBoxComplete')) {
+    var targetRows = '';
+    if (d._branch === 'cashflow') {
+      targetRows += row('12-Month Target', fmtMoney(d.targetCashFlow) + '/yr');
+    } else if (d._branch === 'growth') {
+      targetRows += row('Growth Target', fmtMoney(d.growthCapital));
+      if (d.growthPriority) targetRows += row('Priority', prioLabels[d.growthPriority] || d.growthPriority);
+    } else if (d._branch === 'tax') {
+      targetRows += row('Shelter Target', fmtMoney(d.taxableIncome));
+      if (d.taxableIncomeBaseline) targetRows += row('Taxable Income', fmtMoney(d.taxableIncomeBaseline) + '/yr');
+    }
+    targetRows += row('Net Worth', fmtMoney(d.netWorth));
+    html += section('Financial Targets', targetRows, 'targetInput');
+
+    // Capital & Readiness
+    var capRows = '';
+    if (d.capital12mo) capRows += row('12-Month Capital', d.capital12mo);
+    if (d.triggerEvent) {
+      var srcLabels = { business_exit: 'Sold a business', property_sale: 'Sold / refinanced property', inheritance: 'Inheritance / windfall', savings: 'Savings over time', '1031': '1031 exchange', w2_income: 'W-2 / professional income', other: 'Something else' };
+      capRows += row('Capital Source', srcLabels[d.triggerEvent] || d.triggerEvent);
+    }
+    if (d.capitalReadiness) capRows += row('Readiness', readyLabels[d.capitalReadiness] || d.capitalReadiness);
+    if (capRows) html += section('Capital & Readiness', capRows, 'capitalAmount');
+
+    // Preferences
+    var prefRows = '';
+    if (d.diversificationPref) prefRows += row('Diversification', divLabels[d.diversificationPref] || d.diversificationPref);
+    if (d.operatorFocus) prefRows += row('Operator Focus', opLabels[d.operatorFocus] || d.operatorFocus);
+    if (d.lockup) prefRows += row('Lockup', lockLabels[d.lockup] || d.lockup);
+    if (d.distributions) prefRows += row('Distributions', distLabels[d.distributions] || d.distributions);
+    if (prefRows) html += section('Investment Preferences', prefRows, 'diversificationPref');
+  }
+
+  // Rebuild Plan button
+  if (localStorage.getItem('gycBuyBoxComplete')) {
+    html += '<div style="text-align:center;margin-top:8px;">'
+      + '<button class="btn-cta btn-cta-primary" style="width:auto;padding:12px 32px;" onclick="rebuildPlanFromEditor()">Rebuild My Plan</button>'
+      + '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function editBuyBoxField(stepType) {
+  // Find the step index for this type
+  var idx = -1;
+  for (var i = 0; i < WIZARD_STEPS.length; i++) {
+    if (WIZARD_STEPS[i].type === stepType) { idx = i; break; }
+  }
+  if (idx < 0) return;
+
+  // Open wizard at just this one step
+  wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  wizardData._isEditing = true;
+  wizardData._editSingleStep = idx;
+  localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+
+  // Build a mini sequence: just the requested step + any closely related steps
+  var miniSeq = [idx];
+  // If editing goal, also show experience and RE pro
+  if (stepType === 'goalSelect') miniSeq = [0, 29, 22, 23];
+  // If editing asset classes, also show strategies
+  if (stepType === 'assetClassSelect') miniSeq = [10, 11];
+  // If editing loss tolerance, also show accreditation
+  if (stepType === 'lossTolerance') miniSeq = [9, 16];
+  // If editing financial targets, show branch-specific target + net worth
+  if (stepType === 'targetInput') {
+    var branch = wizardData._branch || 'cashflow';
+    if (branch === 'cashflow') miniSeq = [4, 8];
+    else if (branch === 'growth') miniSeq = [5, 27, 8, 26];
+    else if (branch === 'tax') miniSeq = [6, 27, 8];
+  }
+  // If editing capital, show capital + source + readiness
+  if (stepType === 'capitalAmount') miniSeq = [1, 3, 2];
+  // If editing preferences, show all preference screens
+  if (stepType === 'diversificationPref') miniSeq = [12, 13, 14, 15];
+
+  // Override getStepSequence temporarily
+  window._editMiniSeq = miniSeq;
+  wizardStepIndex = 0;
+  document.getElementById('wizardOverlay').classList.add('active');
+  renderWizardStep();
+}
+
+function rebuildPlanFromEditor() {
+  var d = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+  syncWizardToBuyBox();
+  try {
+    var goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+    var plan = generatePortfolioPlan(d, goals);
+    savePortfolioPlan(plan);
+  } catch(e) { console.warn('Plan rebuild failed:', e); }
+  syncBuyBoxToGHL();
+  // Show confirmation
+  var btn = document.querySelector('#buyBoxEditor .btn-cta-primary');
+  if (btn) {
+    var orig = btn.textContent;
+    btn.textContent = '\u2713 Plan Updated';
+    btn.style.background = 'var(--green)';
+    setTimeout(function() { btn.textContent = orig; btn.style.background = ''; }, 2000);
+  }
+  // Re-render editor to reflect any changes
+  renderBuyBoxEditor();
+  // Re-render report if on My Plan tab
+  if (typeof renderReport === 'function') renderReport();
 }
 
 // ========== NOTIFICATION PREFERENCES ==========
@@ -14271,15 +14412,16 @@ const ONBOARDING_FLOW = {
 };
 
 function getStepSequence() {
+  // Mini sequence for inline editing from settings page
+  if (window._editMiniSeq) return window._editMiniSeq;
   const branch = wizardData._branch || 'cashflow';
   const paidKey = 'paid_' + branch;
   // If user hasn't completed free tier yet, show free flow
   if (!wizardData._freeComplete) {
     return ONBOARDING_FLOW.free;
   }
-  // Edit mode: show goal + free prefs + paid flow so they can change anything
-  if (wizardData._isEditing) {
-    // Goal (0) + RE Pro (22) + Baseline (23) + Asset Classes (10) + Strategies (11) + Loss Tolerance (9) + Accreditation (16) + paid flow
+  // Edit mode (full wizard): show goal + free prefs + paid flow so they can change anything
+  if (wizardData._isEditing && !wizardData._editSingleStep) {
     return [0, 22, 23, 10, 11, 9, 16, ...(ONBOARDING_FLOW[paidKey] || ONBOARDING_FLOW.paid_cashflow)];
   }
   // Paid flow only (free steps already done, first time through paid wizard)
@@ -14716,9 +14858,13 @@ function closeWizard() {
     if (typeof gtag === 'function') gtag('event', 'wizard_abandoned', { step: wizardStepIndex, step_type: curStep ? curStep.type : 'unknown' });
   }
   document.getElementById('wizardOverlay').classList.remove('active');
-  // Clear edit mode flag
+  // Clear edit mode flags
   delete wizardData._isEditing;
+  delete wizardData._editSingleStep;
+  window._editMiniSeq = null;
   localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+  // Re-render buy box editor if on settings page
+  if (document.getElementById('buyBoxEditor')) renderBuyBoxEditor();
   syncWizardToBuyBox();
   // Save progress to Supabase immediately on close so nothing is lost
   syncBuyBoxToGHL();
@@ -16130,6 +16276,20 @@ function wizardNext() {
     if (typeof gtag === 'function') gtag('event', 'wizard_step', { step: wizardStepIndex, step_type: stepLabel, branch: wizardData._branch || 'none' });
   }
 
+  // Mini-sequence edit: close wizard and return to settings when done
+  if (window._editMiniSeq && wizardStepIndex >= seq.length - 1) {
+    window._editMiniSeq = null;
+    delete wizardData._isEditing;
+    delete wizardData._editSingleStep;
+    localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+    syncWizardToBuyBox();
+    syncBuyBoxToGHL();
+    document.getElementById('wizardOverlay').classList.remove('active');
+    if (document.getElementById('buyBoxEditor')) renderBuyBoxEditor();
+    if (typeof renderReport === 'function') renderReport();
+    return;
+  }
+
   // Free tier completion: if on free flow and at last step, save and redirect to deals
   if (!wizardData._freeComplete && !wizardData._isEditing && wizardStepIndex >= seq.length - 1) {
     wizardData._freeComplete = true;
@@ -16451,7 +16611,7 @@ function renderReport() {
     + '</div>'
     + '<div style="display:flex;gap:12px;align-items:center;">'
     + '<button class="bb-edit-link" onclick="printMyPlan()" style="display:inline-flex;align-items:center;gap:4px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>'
-    + '<button class="bb-edit-link" onclick="openBuyBoxWizard()">Edit</button>'
+    + '<button class="bb-edit-link" onclick="navigateTo(\'settings\');setTimeout(function(){var t=document.querySelector(\'[data-stab=investor]\');if(t)switchSettingsTab(t);},100);">Edit</button>'
     + '</div>'
     + '</div>'
     + '<div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Thesis</div>'
