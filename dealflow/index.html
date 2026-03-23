@@ -14260,22 +14260,28 @@ let wizardStep = 0;
 let wizardStepIndex = 0;
 let wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
-// Flow: Goal → RE Pro → Baseline → 90-Day Goal → [Branch targets] → Net Worth
-//   → Growth Priority → 12-mo Capital → Source → Loss Tolerance → Preferences → Accreditation → LP Network → Plan
+// Free tier: Role → Goal → Experience → RE Pro → Baseline → Asset Classes → Strategies → Loss Tolerance → Accreditation
+// Paid tier: [Branch targets] → Tax Baseline → Net Worth → Growth Priority → 12-mo Capital → Source → Readiness
+//   → Diversification → Operator Focus → Lockup → Distributions → Plan → LP Network → Completion
 const ONBOARDING_FLOW = {
-  common_start: [0, 22, 23, 24],
-  cashflow: [4, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 18, 17],
-  growth: [5, 27, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 19, 17],
-  tax: [6, 8, 26, 1, 3, 9, 10, 11, 12, 13, 14, 15, 16, 20, 17],
-  common_end: []
+  free: [28, 0, 29, 22, 23, 10, 11, 9, 16],
+  paid_cashflow: [4, 8, 1, 3, 2, 12, 13, 14, 15, 18, 17, 21],
+  paid_growth: [5, 27, 8, 26, 1, 3, 2, 12, 13, 14, 15, 19, 17, 21],
+  paid_tax: [6, 27, 8, 1, 3, 2, 12, 13, 14, 15, 20, 17, 21]
 };
 
 function getStepSequence() {
   const branch = wizardData._branch || 'cashflow';
-  return [...ONBOARDING_FLOW.common_start, ...ONBOARDING_FLOW[branch], ...ONBOARDING_FLOW.common_end];
+  const paidKey = 'paid_' + branch;
+  // If user hasn't completed free tier yet, show free flow
+  if (!wizardData._freeComplete) {
+    return ONBOARDING_FLOW.free;
+  }
+  // Paid flow only (free steps already done)
+  return ONBOARDING_FLOW[paidKey] || ONBOARDING_FLOW.paid_cashflow;
 }
 
-const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '90-Day Capital', 'Growth Priority', 'Tax Baseline'];
+const PHASE_LABELS = ['Your Goal', '12-Mo Capital', 'Readiness', 'Capital Source', '12-Mo Income', 'Growth Target', 'Tax Target', 'Check Size', 'Net Worth', 'Risk Tolerance', 'Asset Classes', 'Strategy', 'Operator Focus', 'Lockup', 'Distributions', 'Accreditation', 'LP Network', 'Your Plan', 'Your Plan', 'Your Plan', 'All Set', 'Income Source', 'RE Professional', 'Starting Point', '90-Day Goal', '', 'Growth Priority', 'Tax Baseline', 'Welcome', 'Experience'];
 
 function getPhaseLabel() {
   const seq = getStepSequence();
@@ -14286,11 +14292,11 @@ function getPhaseLabel() {
 // Phase groupings: map each WIZARD_STEPS index to a phase (0-4)
 // 0=You, 1=Goal, 2=Finances, 3=Preferences, 4=My Plan
 const STEP_TO_PHASE = {
-  0: 0, 22: 0, 23: 0, 24: 0,  // goalSelect, RE pro, baseline income, 90-day goal → You
+  28: 0, 0: 0, 29: 0, 22: 0, 23: 0, 10: 0, 11: 0, 9: 0, 16: 0,  // Free tier screens → You
   4: 1, 5: 1, 6: 1, 27: 1,  // cashflow target, growth target, tax target, tax baseline → Goal
-  8: 2, 26: 2, 1: 2, 3: 2, 9: 2,  // net worth, growth priority, 12-mo capital, source, loss tolerance → Finances
-  10: 3, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 3,  // asset class, strategy, diversification, operator focus, lockup, accreditation, LP network → Preferences
-  18: 4, 19: 4, 20: 4, 17: 4  // plan output (cashflow/growth/tax), completion → My Plan
+  8: 2, 26: 2, 1: 2, 3: 2, 2: 2,  // net worth, growth priority, 12-mo capital, source, readiness → Finances
+  12: 3, 13: 3, 14: 3, 15: 3,  // diversification, operator focus, lockup, distributions → Preferences
+  18: 4, 19: 4, 20: 4, 17: 4, 21: 4  // plan output (cashflow/growth/tax), LP network, completion → My Plan
 };
 const PHASE_NAMES = ['You', 'Goal', 'Finances', 'Preferences', 'My Plan'];
 
@@ -14484,12 +14490,16 @@ const WIZARD_STEPS = [
     },
     timerSec: 30
   },
-  // 25: 90-day deployable capital (unused — not in any sequence)
-  { type: 'capital90Day' },
+  // 25: DELETED (was capital90Day)
+  { type: '_deleted' },
   // 26: Growth investment priority (growth branch)
   { type: 'growthPriority' },
   // 27: Tax baseline — annual taxable income (tax branch)
-  { type: 'taxBaseline' }
+  { type: 'taxBaseline' },
+  // 28: LP/GP role selector (first screen for all new users)
+  { type: 'roleSelect' },
+  // 29: Deal experience count (free tier)
+  { type: 'dealExperience' }
 ];
 
 // Asset class definitions with goal-specific context
@@ -14827,6 +14837,72 @@ function renderWizardStep() {
 
   let html = '';
 
+  // ===== SCREEN 28: LP/GP ROLE SELECTOR =====
+  if (step.type === 'roleSelect') {
+    html += '<div class="wizard-card-title">How will you use Grow Your Cashflow?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">This personalizes your experience on the platform.</div>';
+    var roleOptions = [
+      { val: 'lp', title: 'I\u2019m an investor', desc: 'I want to find, vet, and invest in private real estate deals.', icon: '\uD83D\uDCBC' },
+      { val: 'gp', title: 'I\u2019m an operator', desc: 'I raise capital for my deals and want to connect with investors.', icon: '\uD83C\uDFD7\uFE0F' }
+    ];
+    html += '<div style="display:flex;flex-direction:column;gap:12px;">';
+    roleOptions.forEach(function(opt) {
+      var isSel = wizardData.userRole === opt.val;
+      html += '<div onclick="wizardData.userRole=\'' + opt.val + '\';' + (opt.val === 'gp' ? 'window.location.href=\'gp-onboarding.html\';return;' : 'renderWizardStep();') + '" style="padding:24px 20px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:16px;transition:all 0.2s;">';
+      html += '<div style="font-size:32px;width:48px;text-align:center;flex-shrink:0;">' + opt.icon + '</div>';
+      html += '<div style="flex:1;"><div style="font-weight:700;font-size:16px;color:var(--text-dark);margin-bottom:4px;">' + opt.title + '</div>';
+      html += '<div style="font-size:13px;color:var(--text-muted);line-height:1.4;">' + opt.desc + '</div></div>';
+      if (isSel) html += '<div style="color:var(--primary);flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="if(wizardData.userRole===\'lp\'){wizardNext();}">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    return;
+  }
+
+  // ===== SCREEN 29: DEAL EXPERIENCE =====
+  if (step.type === 'dealExperience') {
+    html += '<div class="wizard-card-title">How many passive investments have you made?</div>';
+    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Syndications, funds, private placements \u2014 anything where you wrote a check and someone else operates the deal.</div>';
+    var expVal = wizardData.dealExperience || '';
+    html += '<div class="wizard-target-input" style="max-width:200px;margin:0 auto;">';
+    html += '<input type="number" id="wizExpInput" value="' + expVal + '" min="0" max="999" inputmode="numeric" autocomplete="off" placeholder="0" style="text-align:center;font-size:32px;font-family:var(--font-headline);font-weight:400;width:100%;border:none;border-bottom:2px solid var(--border);padding:12px 0;background:transparent;color:var(--text-dark);outline:none;">';
+    html += '</div>';
+    // Contextual message based on count
+    var expMsg = '';
+    var expNum = parseInt(expVal) || 0;
+    if (expNum === 0) expMsg = 'No worries \u2014 everyone starts somewhere. We\u2019ll walk you through it.';
+    else if (expNum <= 3) expMsg = 'You\u2019ve gotten started. Let\u2019s help you build a system around it.';
+    else if (expNum <= 10) expMsg = 'Solid experience. We\u2019ll help you scale and optimize.';
+    else expMsg = 'You\u2019re a veteran. We\u2019ll focus on portfolio-level insights.';
+    html += '<div class="wizard-live-calc" id="wizExpCalc" style="margin-top:16px;text-align:center;">' + expMsg + '</div>';
+    html += '<div class="wizard-inline-nav">';
+    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
+    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
+    html += '</div>';
+    document.getElementById('wizardContent').innerHTML = html;
+    // Wire up live input
+    var expInp = document.getElementById('wizExpInput');
+    if (expInp) {
+      expInp.addEventListener('input', function() {
+        var n = parseInt(this.value) || 0;
+        wizardData.dealExperience = n;
+        var calcEl = document.getElementById('wizExpCalc');
+        if (calcEl) {
+          if (n === 0) calcEl.textContent = 'No worries \u2014 everyone starts somewhere. We\u2019ll walk you through it.';
+          else if (n <= 3) calcEl.textContent = 'You\u2019ve gotten started. Let\u2019s help you build a system around it.';
+          else if (n <= 10) calcEl.textContent = 'Solid experience. We\u2019ll help you scale and optimize.';
+          else calcEl.textContent = 'You\u2019re a veteran. We\u2019ll focus on portfolio-level insights.';
+        }
+      });
+      expInp.focus();
+    }
+    return;
+  }
+
   // ===== SCREEN 0: GOAL SELECTION =====
   if (step.type === 'goalSelect') {
     html += '<div class="wizard-card-title">What do you want your money to do for you?</div>';
@@ -14875,44 +14951,6 @@ function renderWizardStep() {
     capOptions.forEach(function(opt) {
       var isSel = wizardData.capital12mo === opt.val;
       html += '<div onclick="wizardData.capital12mo=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
-      html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
-      html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
-      html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
-      if (opt.nwCtx) html += '<div style="font-size:12px;font-weight:600;color:var(--primary);white-space:nowrap;">' + opt.nwCtx + '</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-    html += '<div class="wizard-inline-nav">';
-    html += '<button class="wizard-btn wizard-btn-back" onclick="wizardPrev()">Back</button>';
-    html += '<button class="wizard-btn wizard-btn-next" onclick="wizardNext()">Next</button>';
-    html += '</div>';
-    document.getElementById('wizardContent').innerHTML = html;
-    return;
-  }
-
-  // ===== SCREEN 24: 90-DAY CAPITAL =====
-  if (step.type === 'capital90Day') {
-    html += '<div class="wizard-card-title">How much can you deploy in the next 90 days?</div>';
-    html += '<div class="wizard-card-desc" style="margin-bottom:28px;">Cash you could wire to a deal this quarter \u2014 not pledged, not locked up.</div>';
-    var nwVal90 = parseInt(wizardData.netWorth || '0', 10);
-    function nwPct90(midpoint) {
-      if (!nwVal90 || nwVal90 <= 0) return '';
-      var pct = Math.round(midpoint / nwVal90 * 100);
-      return pct + '% of net worth';
-    }
-    var cap90Options = [
-      { val: '$0', label: '$0 \u2014 just researching', desc: 'Build your watchlist first', nwCtx: '' },
-      { val: '$1-$49k', label: '$1 \u2013 $49K', desc: '1 deal at a lower minimum', nwCtx: nwPct90(25000) },
-      { val: '$50k-$99k', label: '$50K \u2013 $99K', desc: '1\u20132 deals at typical minimums', nwCtx: nwPct90(75000) },
-      { val: '$100k-$249k', label: '$100K \u2013 $249K', desc: '2\u20134 deals', nwCtx: nwPct90(175000) },
-      { val: '$250k-$499k', label: '$250K \u2013 $499K', desc: 'Well-diversified portfolio', nwCtx: nwPct90(375000) },
-      { val: '$500k-$999k', label: '$500K \u2013 $999K', desc: 'Significant deployment', nwCtx: nwPct90(750000) },
-      { val: '$1m+', label: '$1M+', desc: 'Institutional-level capital', nwCtx: nwPct90(1000000) }
-    ];
-    html += '<div style="display:flex;flex-direction:column;gap:10px;">';
-    cap90Options.forEach(function(opt) {
-      var isSel = wizardData.capital90Day === opt.val;
-      html += '<div onclick="wizardData.capital90Day=\'' + opt.val + '\';renderWizardStep();" style="padding:16px 18px;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';border-radius:12px;cursor:pointer;background:' + (isSel ? 'rgba(74,222,128,0.06)' : 'var(--bg-card)') + ';display:flex;align-items:center;gap:14px;transition:all 0.2s;">';
       html += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (isSel ? 'var(--primary)' : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (isSel ? 'var(--primary)' : 'transparent') + ';">' + (isSel ? '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</div>';
       html += '<div style="flex:1;"><div style="font-weight:700;font-size:14px;color:var(--text-dark);">' + opt.label + '</div>';
       html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + opt.desc + '</div></div>';
@@ -16048,7 +16086,8 @@ function wizardNext() {
     incomeSource: 'incomeStructure',
     reProfessional: 'reProfessional',
     growthPriority: 'growthPriority',
-    taxBaseline: 'taxableIncomeBaseline'
+    taxBaseline: 'taxableIncomeBaseline',
+    roleSelect: 'userRole'
   };
   var reqField = curStep ? requiredMap[curStep.type] : null;
   // Asset classes and strategies are arrays — require at least 1
@@ -16079,8 +16118,22 @@ function wizardNext() {
     if (typeof gtag === 'function') gtag('event', 'wizard_step', { step: wizardStepIndex, step_type: stepLabel, branch: wizardData._branch || 'none' });
   }
 
+  // Free tier completion: if on free flow and at last step, save and redirect to deals
+  if (!wizardData._freeComplete && wizardStepIndex >= seq.length - 1) {
+    wizardData._freeComplete = true;
+    localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wizardData));
+    syncWizardToBuyBox();
+    syncBuyBoxToGHL();
+    if (typeof trackActivity === 'function') {
+      trackActivity('free_onboarding_complete', { branch: wizardData._branch, dealExperience: wizardData.dealExperience });
+    }
+    document.getElementById('wizardOverlay').classList.remove('active');
+    navigateTo('deals');
+    return;
+  }
+
   if (wizardStepIndex >= seq.length - 1) {
-    // Finish
+    // Finish (paid wizard completion)
     localStorage.setItem('gycBuyBoxComplete', 'true');
     // Save baseline income with timestamp for progress tracking
     if (wizardData.baselineIncome !== undefined) {
