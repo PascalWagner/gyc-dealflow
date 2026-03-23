@@ -498,7 +498,7 @@ async function intakeCreate(supabase, body) {
   return { data: newDeal, operatorId: mcId };
 }
 
-// --- Growth metrics ---
+// --- Growth metrics (Overview + Users dashboard) ---
 
 async function growthMetrics(supabase) {
   const now = new Date();
@@ -511,11 +511,14 @@ async function growthMetrics(supabase) {
     weeks.push({ start: start.toISOString(), end: end.toISOString(), label: i === 0 ? 'This Week' : i === 1 ? 'Last Week' : `${i}w ago` });
   }
 
+  // Select all quality fields for completeness calculation
+  const qualityKeys = QUALITY_FIELDS.map(f => f.key).join(', ');
+
   // Fetch all raw data in parallel
   const [usersRes, opsRes, dealsRes, stagesRes] = await Promise.all([
     supabase.from('user_profiles').select('id, created_at', { count: 'exact' }),
     supabase.from('management_companies').select('id, created_at', { count: 'exact' }),
-    supabase.from('opportunities').select('id, added_date, status', { count: 'exact' }),
+    supabase.from('opportunities').select(`id, added_date, status, ${qualityKeys}`, { count: 'exact' }),
     supabase.from('user_deal_stages').select('id, stage, updated_at', { count: 'exact' }),
   ]);
 
@@ -524,25 +527,68 @@ async function growthMetrics(supabase) {
   const deals = dealsRes.data || [];
   const stages = stagesRes.data || [];
 
-  // Build week-over-week counts
+  // --- Deal completeness ---
+  const activeDeals = deals.filter(d => d.status !== 'Archived');
+  const completenessScores = activeDeals.map(d => computeQuality(d).pct);
+  const complete100 = completenessScores.filter(p => p === 100).length;
+  const complete75 = completenessScores.filter(p => p >= 75 && p < 100).length;
+  const complete50 = completenessScores.filter(p => p >= 50 && p < 75).length;
+  const complete25 = completenessScores.filter(p => p >= 25 && p < 50).length;
+  const completeBelow25 = completenessScores.filter(p => p < 25).length;
+  const avgCompleteness = completenessScores.length > 0 ? Math.round(completenessScores.reduce((a, b) => a + b, 0) / completenessScores.length) : 0;
+
+  // Top missing fields across all active deals
+  const missingCounts = {};
+  activeDeals.forEach(d => {
+    const q = computeQuality(d);
+    q.missing.forEach(f => { missingCounts[f] = (missingCounts[f] || 0) + 1; });
+  });
+  const topMissing = Object.entries(missingCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([field, count]) => ({ field, count, pct: activeDeals.length > 0 ? Math.round(count / activeDeals.length * 100) : 0 }));
+
+  // Completeness trend: compute avg completeness per week based on deals that existed by that week's end
+  const completenessByWeek = weeks.map(w => {
+    const dealsExisting = activeDeals.filter(d => d.added_date && d.added_date < w.end);
+    if (dealsExisting.length === 0) return 0;
+    const scores = dealsExisting.map(d => computeQuality(d).pct);
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  });
+
+  // Count deals at 100% completeness per week (cumulative snapshot)
+  const complete100ByWeek = weeks.map(w => {
+    return activeDeals.filter(d => d.added_date && d.added_date < w.end && computeQuality(d).pct === 100).length;
+  });
+
+  // --- Week-over-week counts ---
   function countByWeek(items, dateField) {
     return weeks.map(w => {
-      const count = items.filter(item => {
+      return items.filter(item => {
         const d = item[dateField];
         return d && d >= w.start && d < w.end;
       }).length;
-      return count;
     });
+  }
+
+  // Cumulative totals per week
+  function cumulativeByWeek(items, dateField) {
+    return weeks.map(w => items.filter(item => {
+      const d = item[dateField];
+      return d && d < w.end;
+    }).length);
   }
 
   const lpsByWeek = countByWeek(users, 'created_at');
   const gpsByWeek = countByWeek(ops, 'created_at');
-  const dealsByWeek = countByWeek(deals, 'added_date');
-  const pipelineByWeek = countByWeek(stages, 'updated_at');
+  const dealsByWeek = countByWeek(activeDeals, 'added_date');
+
+  const lpsCumulative = cumulativeByWeek(users, 'created_at');
+  const gpsCumulative = cumulativeByWeek(ops, 'created_at');
+  const dealsCumulative = cumulativeByWeek(activeDeals, 'added_date');
 
   // Portfolio = funded
   const portfolioStages = stages.filter(s => s.stage === 'portfolio');
-  const fundedByWeek = countByWeek(portfolioStages, 'updated_at');
 
   // Growth rates (this week vs last week)
   function growthRate(arr) {
@@ -552,30 +598,100 @@ async function growthMetrics(supabase) {
     return Math.round(((curr - prev) / prev) * 100);
   }
 
+  // --- Supply/demand balance ---
+  const lpDealRatio = activeDeals.length > 0 ? Math.round(users.length / activeDeals.length * 10) / 10 : 0;
+  const constraint = users.length < 10 && activeDeals.length > 20 ? 'demand' :
+    activeDeals.length < 10 && users.length > 5 ? 'supply' : 'balanced';
+
+  // --- Data-driven recommendations ---
+  const recommendations = [];
+
+  // Completeness recommendations
+  if (complete100 === 0) {
+    recommendations.push({ priority: 'high', title: 'Zero deals at 100% completeness', body: 'No deals have all fields filled including deck, PPM, and SEC filing. Focus on completing your top 10 deals by daily views first.' });
+  } else if (avgCompleteness < 50) {
+    recommendations.push({ priority: 'high', title: 'Average deal completeness is only ' + avgCompleteness + '%', body: 'Most deals are missing critical data. Top gaps: ' + topMissing.slice(0, 3).map(m => m.field + ' (' + m.pct + '% missing)').join(', ') + '. Run batch enrichment on these fields.' });
+  }
+
+  // Supply/demand
+  if (constraint === 'demand') {
+    recommendations.push({ priority: 'high', title: 'You need more LPs — ' + users.length + ' LPs for ' + activeDeals.length + ' deals', body: 'You have plenty of deal supply but not enough eyeballs. Focus on LP acquisition: email your network, post deal breakdowns on LinkedIn, run a free webinar.' });
+  } else if (constraint === 'supply') {
+    recommendations.push({ priority: 'medium', title: 'Add more deals — ' + activeDeals.length + ' active deals for ' + users.length + ' LPs', body: 'LPs need variety to find deals that match their buy box. Batch-import operators from SEC filings and prioritize high-demand asset classes.' });
+  }
+
+  // LP growth
+  if (growthRate(lpsByWeek) <= 0 && users.length > 0) {
+    recommendations.push({ priority: 'medium', title: 'LP growth stalled this week', body: 'No new LPs signed up. Try: personal outreach, social media deal highlights, or a referral incentive for existing members.' });
+  }
+
+  // GP growth
+  if (growthRate(gpsByWeek) <= 0 && ops.length > 0) {
+    recommendations.push({ priority: 'medium', title: 'No new GPs this week', body: 'Supply drives the marketplace. Scrape SEC EDGAR for new Reg D filings, attend meetups, or offer free deal pages to operators.' });
+  }
+
+  // Pre-100 LP tactics
+  if (users.length < 100) {
+    recommendations.push({ priority: 'low', title: 'Pre-100 LP growth tactics', body: 'Personal outreach, "deal of the week" content, free workshops, and referral incentives. Every LP matters at this stage.' });
+  }
+
+  // Healthy state
+  if (recommendations.length === 0) {
+    recommendations.push({ priority: 'low', title: 'Growth is healthy!', body: 'All metrics trending up. Document your current growth channels and set WoW growth rate targets.' });
+  }
+
+  recommendations.sort((a, b) => ({ high: 0, medium: 1, low: 2 }[a.priority] - { high: 0, medium: 1, low: 2 }[b.priority]));
+
   return {
-    totals: {
-      lps: users.length,
-      gps: ops.length,
-      deals: deals.length,
-      activeDeals: deals.filter(d => d.status !== 'Archived').length,
-      pipelineAdds: stages.length,
-      funded: portfolioStages.length,
+    // North Star
+    northStar: {
+      complete100,
+      totalActive: activeDeals.length,
+      pct: activeDeals.length > 0 ? Math.round(complete100 / activeDeals.length * 100 * 10) / 10 : 0,
+      avgCompleteness,
+      prevWeekComplete100: complete100ByWeek.length >= 2 ? complete100ByWeek[complete100ByWeek.length - 2] : 0,
     },
+    // Completeness distribution
+    completeness: {
+      histogram: [
+        { label: '0-24%', count: completeBelow25 },
+        { label: '25-49%', count: complete25 },
+        { label: '50-74%', count: complete50 },
+        { label: '75-99%', count: complete75 },
+        { label: '100%', count: complete100 },
+      ],
+      topMissing,
+    },
+    // Marketplace health
+    marketplace: {
+      lps: users.length,
+      lps7d: users.filter(u => u.created_at >= new Date(now - 7 * 86400000).toISOString()).length,
+      gps: ops.length,
+      gps7d: ops.filter(o => o.created_at >= new Date(now - 7 * 86400000).toISOString()).length,
+      deals: activeDeals.length,
+      deals7d: activeDeals.filter(d => d.added_date >= new Date(now - 7 * 86400000).toISOString()).length,
+      funded: portfolioStages.length,
+      lpDealRatio,
+      constraint,
+    },
+    // Trends
     weekLabels: weeks.map(w => w.label),
     series: {
       lps: lpsByWeek,
       gps: gpsByWeek,
       deals: dealsByWeek,
-      pipeline: pipelineByWeek,
-      funded: fundedByWeek,
+      lpsCumulative,
+      gpsCumulative,
+      dealsCumulative,
+      avgCompleteness: completenessByWeek,
+      complete100: complete100ByWeek,
     },
     growthRates: {
       lps: growthRate(lpsByWeek),
       gps: growthRate(gpsByWeek),
       deals: growthRate(dealsByWeek),
-      pipeline: growthRate(pipelineByWeek),
-      funded: growthRate(fundedByWeek),
     },
+    recommendations,
   };
 }
 

@@ -7524,7 +7524,7 @@ const _supa = window.supabase.createClient(
         <a href="https://analytics.google.com/analytics/web/#/p/G-F8B5NMB9J9" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;text-decoration:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12s4.48 10 10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 12V8M12 12V6M16 12v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 22l4-4m0 0l-4-4m4 4H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Google Analytics</a>
         <button id="ghlSyncBtn" onclick="triggerGhlSync()" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Sync GHL</button>
         <button onclick="switchAdminDashTab(adminDashCurrentTab)" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
-        <button id="admindashClearBtn" onclick="clearAnalyticsData()" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--red);cursor:pointer;">Clear Data</button>
+        <!-- Clear Data button removed (analytics tab removed) -->
       </div>
     </div>
     <div class="sub-page" style="max-width:1100px">
@@ -8186,123 +8186,7 @@ const _supa = window.supabase.createClient(
         </div>
       </div>
 
-      <!-- TAB: SaaS Metrics -->
-      <div id="admindash-tab-saas" style="display:none;">
-        <div class="settings-page-desc" style="margin-top:0;">SaaS health metrics: signups, activation, drop-off points, and time-to-value. Understand where users get stuck and what makes them stay.</div>
-
-        <!-- Loading state -->
-        <div id="saasLoading" style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading SaaS metrics...</div>
-
-        <div id="saasContent" style="display:none;">
-
-        <!-- Signup & Activation KPIs -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:28px;" id="saasTopCards">
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Total Signups</div>
-            <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);margin-top:6px;" id="saasTotalSignups">--</div>
-            <div style="font-family:var(--font-body);font-size:11px;color:var(--text-secondary);margin-top:4px;">Last 7d: <span id="saasSignups7d" style="font-weight:700;color:var(--primary);">--</span></div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Onboarded</div>
-            <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);margin-top:6px;" id="saasOnboarded">--</div>
-            <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);margin-top:4px;" id="saasOnboardRate">--</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Activated (3+ deals)</div>
-            <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);margin-top:6px;" id="saasActivated">--</div>
-            <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);margin-top:4px;" id="saasActivateRate">--</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Saved a Deal</div>
-            <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);margin-top:6px;" id="saasSavedDeal">--</div>
-            <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);margin-top:4px;" id="saasSavedRate">--</div>
-          </div>
-          <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;">
-            <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Booked a Call</div>
-            <div style="font-family:var(--font-ui);font-size:32px;font-weight:800;color:var(--text-dark);margin-top:6px;" id="saasBookedCall">--</div>
-            <div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--primary);margin-top:4px;" id="saasBookedRate">--</div>
-          </div>
-        </div>
-
-        <!-- All Users Table -->
-        <div class="section-card" style="margin-bottom:20px;">
-          <div class="section-header"><span class="section-title">All Users</span><span id="saasUserCount" style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;"></span></div>
-          <div class="section-body">
-            <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;" id="saasUserTable">
-                <thead>
-                  <tr style="border-bottom:2px solid var(--border);">
-                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Email</th>
-                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Signed Up</th>
-                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Funnel Stage</th>
-                    <th style="text-align:center;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Onboarded</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Views</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Saves</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Sessions</th>
-                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Last Active</th>
-                    <th style="text-align:center;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;"></th>
-                  </tr>
-                </thead>
-                <tbody id="saasUserBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activation Funnel + Drop-off (side by side) -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-          <div class="section-card">
-            <div class="section-header"><span class="section-title">Activation Funnel</span></div>
-            <div class="section-body" id="saasFunnelBars" style="display:flex;flex-direction:column;gap:10px;"></div>
-          </div>
-          <div class="section-card">
-            <div class="section-header"><span class="section-title">Where Users Get Stuck</span></div>
-            <div class="section-body" id="saasDropoff" style="display:flex;flex-direction:column;gap:8px;"></div>
-          </div>
-        </div>
-
-        <!-- Onboarding Wizard Funnel -->
-        <div class="section-card" style="margin-bottom:20px;">
-          <div class="section-header"><span class="section-title">Onboarding Wizard Drop-off</span><span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px;">Which wizard step loses people?</span></div>
-          <div class="section-body" id="saasWizardFunnel" style="display:flex;flex-direction:column;gap:8px;">
-            <div style="color:var(--text-muted);font-family:var(--font-body);font-size:12px;">Collecting data... wizard step events will populate as users go through onboarding.</div>
-          </div>
-        </div>
-
-        <!-- Aha Moment / Time to Value -->
-        <div class="section-card" style="margin-bottom:20px;">
-          <div class="section-header"><span class="section-title">Time to Value (Aha Moments)</span></div>
-          <div class="section-body">
-            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-bottom:16px;">How long it takes users to reach key milestones after signup. Shorter = better onboarding.</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;" id="saasTTVCards"></div>
-          </div>
-        </div>
-
-        <!-- Cohort Retention (Signup Week) -->
-        <div class="section-card">
-          <div class="section-header"><span class="section-title">Weekly Signup Cohorts</span></div>
-          <div class="section-body">
-            <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-bottom:12px;">What % of each signup week returned and hit key milestones.</div>
-            <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:12px;" id="saasCohortTable">
-                <thead>
-                  <tr style="border-bottom:2px solid var(--border);">
-                    <th style="text-align:left;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Signup Week</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Signups</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Onboarded</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Activated</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Saved Deal</th>
-                    <th style="text-align:right;padding:10px 12px;font-family:var(--font-ui);font-weight:600;color:var(--text-secondary);font-size:11px;">Booked Call</th>
-                  </tr>
-                </thead>
-                <tbody id="saasCohortBody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        </div><!-- /saasContent -->
-      </div><!-- /admindash-tab-saas -->
+      <!-- SaaS Metrics tab removed - merged into Users tab -->
 
     </div>
   </div>
@@ -23106,164 +22990,153 @@ async function viewUserProfile(email) {
 }
 
 // --- Growth Dashboard ---
-var growthCurrentTab = 'growth';
+// Legacy growth sub-tabs removed — merged into admin dashboard Overview + Users
 
-function switchGrowthTab(tab) {
-  growthCurrentTab = tab;
-  var btns = document.querySelectorAll('#growthTabBar .growth-tab-btn');
-  btns.forEach(function(btn) {
-    if (btn.getAttribute('data-tab') === tab) {
-      btn.style.background = 'var(--primary)';
-      btn.style.color = '#fff';
-    } else {
-      btn.style.background = 'transparent';
-      btn.style.color = 'var(--text-secondary)';
-    }
-  });
-  ['growth', 'analytics'].forEach(function(t) {
-    var el = document.getElementById('growth-tab-' + t);
-    if (el) el.style.display = (t === tab) ? 'block' : 'none';
-  });
-  // Show/hide Clear Data button (only for analytics tab)
-  var clearBtn = document.getElementById('growthClearBtn');
-  if (clearBtn) clearBtn.style.display = (tab === 'analytics') ? 'inline-block' : 'none';
-  // Render the selected tab
-  if (tab === 'growth') renderGrowthPage();
-  if (tab === 'analytics') refreshAnalyticsDashboard();
-}
+// ========== OVERVIEW TAB (replaces Growth + Analytics) ==========
 
-async function renderGrowthPage() {
+async function renderOverviewPage() {
   if (!isAdmin()) return;
-  var grid = document.getElementById('growthMetricsGrid');
-  var northVal = document.getElementById('growthNorthStarValue');
-  var northDelta = document.getElementById('growthNorthStarDelta');
-  if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-family:var(--font-body);font-size:13px;">Loading growth metrics...</div>';
+  var loadEl = document.getElementById('overviewLoading');
+  var contentEl = document.getElementById('overviewContent');
+  if (loadEl) loadEl.style.display = 'block';
+  if (contentEl) contentEl.style.display = 'none';
 
   try {
     var result = await adminFetch({ action: 'growth-metrics' });
-    if (!result.success) { if (grid) grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);">Failed to load metrics</div>'; return; }
+    if (!result.success) { if (loadEl) loadEl.innerHTML = '<div style="color:var(--text-muted);">Failed to load metrics</div>'; return; }
+    if (loadEl) loadEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = 'block';
 
-    var t = result.totals;
-    var gr = result.growthRates;
+    var ns = result.northStar;
+    var mkt = result.marketplace;
+    var comp = result.completeness;
     var series = result.series;
     var labels = result.weekLabels;
+    var gr = result.growthRates;
+    var recs = result.recommendations;
 
-    // North star
-    if (northVal) northVal.textContent = t.pipelineAdds.toLocaleString();
-    if (northDelta) {
-      var pGr = gr.pipeline;
-      northDelta.textContent = (pGr >= 0 ? '+' : '') + pGr + '% this week';
-      northDelta.style.background = pGr >= 0 ? 'rgba(81,190,123,0.12)' : 'rgba(239,68,68,0.12)';
-      northDelta.style.color = pGr >= 0 ? '#10b981' : '#ef4444';
+    // --- North Star ---
+    setText('nsComplete100', ns.complete100.toLocaleString());
+    setText('nsCompletePct', '(' + ns.pct + '% of ' + ns.totalActive + ' active deals)');
+    setText('nsAvgCompleteness', ns.avgCompleteness);
+    var deltaEl = document.getElementById('nsCompleteDelta');
+    if (deltaEl) {
+      var diff = ns.complete100 - ns.prevWeekComplete100;
+      deltaEl.textContent = (diff >= 0 ? '+' : '') + diff + ' vs last week';
+      deltaEl.style.background = diff >= 0 ? 'rgba(81,190,123,0.12)' : 'rgba(239,68,68,0.12)';
+      deltaEl.style.color = diff >= 0 ? '#10b981' : '#ef4444';
     }
 
-    // Metrics grid
-    function growthBadge(rate) {
-      var color = rate >= 0 ? '#10b981' : '#ef4444';
-      var bg = rate >= 0 ? 'rgba(81,190,123,0.1)' : 'rgba(239,68,68,0.1)';
-      return '<span style="font-size:11px;font-weight:700;color:' + color + ';background:' + bg + ';padding:2px 8px;border-radius:12px;">' + (rate >= 0 ? '+' : '') + rate + '%</span>';
-    }
-    var cards = [
-      { label: 'Total LPs', value: t.lps, growth: gr.lps },
-      { label: 'Total GPs', value: t.gps, growth: gr.gps },
-      { label: 'Total Deals', value: t.deals, growth: gr.deals },
-      { label: 'Active Deals', value: t.activeDeals, growth: null },
-      { label: 'Pipeline Adds', value: t.pipelineAdds, growth: gr.pipeline },
-      { label: 'Deals Funded', value: t.funded, growth: gr.funded },
-    ];
-    if (grid) {
-      grid.innerHTML = cards.map(function(c) {
-        return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;">'
-          + '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + c.value.toLocaleString() + '</div>'
-          + '<div style="font-family:var(--font-ui);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;">' + c.label + '</div>'
-          + (c.growth !== null ? '<div style="margin-top:6px;">' + growthBadge(c.growth) + ' <span style="font-size:10px;color:var(--text-muted);">WoW</span></div>' : '')
+    // Histogram
+    var histEl = document.getElementById('nsHistogram');
+    if (histEl && comp.histogram) {
+      var maxH = Math.max.apply(null, comp.histogram.map(function(b) { return b.count; }).concat([1]));
+      var histColors = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'];
+      histEl.innerHTML = comp.histogram.map(function(b, i) {
+        var pct = Math.max(Math.round(b.count / maxH * 100), 4);
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">'
+          + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + b.count + '</div>'
+          + '<div style="width:100%;height:40px;background:var(--bg-page);border-radius:4px;overflow:hidden;display:flex;align-items:flex-end;">'
+          + '<div style="width:100%;height:' + pct + '%;background:' + histColors[i] + ';border-radius:4px;"></div></div>'
+          + '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);white-space:nowrap;">' + b.label + '</div>'
           + '</div>';
       }).join('');
     }
 
-    // Bar charts (simple CSS bars)
-    function renderMiniChart(elId, data, color) {
+    // --- Marketplace Health Cards ---
+    var mktGrid = document.getElementById('overviewMarketCards');
+    if (mktGrid) {
+      function badge7d(count) {
+        if (count === 0) return '';
+        return '<span style="font-size:10px;font-weight:600;color:var(--primary);">+' + count + ' this week</span>';
+      }
+      function growthBadge(rate) {
+        var color = rate >= 0 ? '#10b981' : '#ef4444';
+        var bg = rate >= 0 ? 'rgba(81,190,123,0.1)' : 'rgba(239,68,68,0.1)';
+        return '<span style="font-size:11px;font-weight:700;color:' + color + ';background:' + bg + ';padding:2px 8px;border-radius:12px;">' + (rate >= 0 ? '+' : '') + rate + '% WoW</span>';
+      }
+      var constraintLabel = mkt.constraint === 'demand' ? '<span style="color:#ef4444;font-weight:700;">Need more LPs</span>'
+        : mkt.constraint === 'supply' ? '<span style="color:#f59e0b;font-weight:700;">Need more deals</span>'
+        : '<span style="color:#10b981;font-weight:700;">Balanced</span>';
+      var cards = [
+        { label: 'LPs', value: mkt.lps, sub: badge7d(mkt.lps7d), growth: gr.lps },
+        { label: 'GPs (Operators)', value: mkt.gps, sub: badge7d(mkt.gps7d), growth: gr.gps },
+        { label: 'Active Deals', value: mkt.deals, sub: badge7d(mkt.deals7d), growth: gr.deals },
+        { label: 'LP:Deal Ratio', value: mkt.lpDealRatio + ':1', sub: constraintLabel, growth: null },
+      ];
+      mktGrid.innerHTML = cards.map(function(c) {
+        return '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;">'
+          + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">' + c.label + '</div>'
+          + '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);margin-top:4px;">' + (typeof c.value === 'number' ? c.value.toLocaleString() : c.value) + '</div>'
+          + '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+          + (c.growth !== null ? growthBadge(c.growth) : '') + (c.sub || '') + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    // --- Trend Charts ---
+    function renderDualChart(elId, barData, barColor, barLabel, lineData, lineColor, lineLabel) {
       var el = document.getElementById(elId);
       if (!el) return;
-      var max = Math.max.apply(null, data.concat([1]));
-      el.innerHTML = '<div style="display:flex;align-items:flex-end;gap:4px;height:100%;">'
-        + data.map(function(v, i) {
-          var pct = Math.round((v / max) * 100);
-          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">'
-            + '<div style="font-family:var(--font-ui);font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:3px;">' + v + '</div>'
-            + '<div style="width:100%;max-width:40px;height:' + Math.max(pct, 4) + '%;background:' + color + ';border-radius:4px 4px 0 0;transition:height 0.3s;"></div>'
+      var maxBar = Math.max.apply(null, barData.concat([1]));
+      var maxLine = Math.max.apply(null, lineData.concat([1]));
+      el.innerHTML = '<div style="display:flex;align-items:flex-end;gap:3px;height:100%;position:relative;">'
+        + barData.map(function(v, i) {
+          var barPct = Math.max(Math.round((v / maxBar) * 80), 3);
+          var linePct = Math.round((lineData[i] / maxLine) * 80);
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;">'
+            + '<div style="font-family:var(--font-ui);font-size:9px;font-weight:600;color:' + lineColor + ';margin-bottom:2px;">' + lineData[i] + (lineLabel.includes('Completeness') ? '%' : '') + '</div>'
+            + '<div style="position:relative;width:100%;height:80%;display:flex;align-items:flex-end;justify-content:center;">'
+            + '<div style="width:70%;max-width:36px;height:' + barPct + '%;background:' + barColor + ';border-radius:3px 3px 0 0;opacity:0.7;"></div>'
+            + '<div style="position:absolute;bottom:' + linePct + '%;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:' + lineColor + ';border:2px solid var(--bg-card);z-index:1;"></div>'
+            + '</div>'
             + '<div style="font-family:var(--font-ui);font-size:9px;color:var(--text-muted);margin-top:3px;white-space:nowrap;">' + labels[i] + '</div>'
             + '</div>';
         }).join('')
+        + '</div>'
+        + '<div style="display:flex;gap:16px;margin-top:8px;justify-content:center;">'
+        + '<div style="display:flex;align-items:center;gap:4px;font-family:var(--font-ui);font-size:10px;color:var(--text-muted);"><div style="width:10px;height:10px;background:' + barColor + ';border-radius:2px;opacity:0.7;"></div>' + barLabel + '</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;font-family:var(--font-ui);font-size:10px;color:var(--text-muted);"><div style="width:8px;height:8px;background:' + lineColor + ';border-radius:50%;"></div>' + lineLabel + '</div>'
         + '</div>';
     }
-    renderMiniChart('growthChartLPs', series.lps, '#3b82f6');
-    renderMiniChart('growthChartGPs', series.gps, '#8b5cf6');
-    renderMiniChart('growthChartDeals', series.deals, '#10b981');
-    renderMiniChart('growthChartPipeline', series.pipeline, '#f59e0b');
 
-    // Dynamic suggestions
-    growthRenderSuggestions(t, gr);
+    renderDualChart('overviewChartDeals', series.dealsCumulative, '#10b981', 'Total Deals', series.avgCompleteness, '#8b5cf6', 'Avg Completeness %');
+    renderDualChart('overviewChartUsers', series.lpsCumulative, '#3b82f6', 'Total LPs', series.gpsCumulative, '#f59e0b', 'Total GPs');
+
+    // --- Top Missing Fields ---
+    var missingEl = document.getElementById('overviewMissingFields');
+    if (missingEl && comp.topMissing) {
+      missingEl.innerHTML = comp.topMissing.map(function(m) {
+        var severity = m.pct >= 70 ? '#ef4444' : m.pct >= 40 ? '#f59e0b' : 'var(--text-secondary)';
+        return '<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg-page);border:1px solid var(--border);border-radius:6px;">'
+          + '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">' + m.field + '</span>'
+          + '<span style="font-family:var(--font-ui);font-size:11px;font-weight:700;color:' + severity + ';">' + m.pct + '% missing</span>'
+          + '</div>';
+      }).join('');
+      if (comp.topMissing.length === 0) {
+        missingEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">All fields well-covered across deals.</div>';
+      }
+    }
+
+    // --- Recommendations ---
+    var recsEl = document.getElementById('overviewRecommendations');
+    if (recsEl && recs) {
+      var recColors = { high: { bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.15)', dot: '#ef4444' }, medium: { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.15)', dot: '#f59e0b' }, low: { bg: 'rgba(81,190,123,0.06)', border: 'rgba(81,190,123,0.15)', dot: 'var(--primary)' } };
+      recsEl.innerHTML = recs.map(function(r) {
+        var c = recColors[r.priority] || recColors.low;
+        return '<div style="padding:14px 16px;background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:8px;display:flex;gap:10px;align-items:flex-start;">'
+          + '<div style="width:8px;height:8px;border-radius:50%;background:' + c.dot + ';margin-top:5px;flex-shrink:0;"></div>'
+          + '<div><div style="font-family:var(--font-ui);font-weight:700;font-size:13px;color:var(--text-dark);margin-bottom:4px;">' + r.title + '</div>'
+          + '<div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);line-height:1.5;">' + r.body + '</div></div>'
+          + '</div>';
+      }).join('');
+    }
+
   } catch (e) {
-    console.error('Growth page error:', e);
-    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);">Could not load growth data</div>';
+    console.error('Overview page error:', e);
+    var loadEl2 = document.getElementById('overviewLoading');
+    if (loadEl2) loadEl2.innerHTML = '<div style="color:#ef4444;">Failed to load dashboard: ' + (e.message || 'Unknown error') + '</div>';
   }
-}
-
-function growthRenderSuggestions(totals, rates) {
-  var el = document.getElementById('growthSuggestions');
-  if (!el) return;
-  var suggestions = [];
-
-  // LP growth suggestions
-  if (rates.lps <= 0) {
-    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'LP growth is stalling', body: 'LP signups declined or stayed flat this week. Consider: (1) Run a free webinar or market intel email to drive traffic, (2) Post deal highlights on social media with a CTA to sign up, (3) Activate Academy members to refer friends, (4) Create a lead magnet like a "Top 10 Deals This Month" PDF.' });
-  } else if (rates.lps < 20) {
-    suggestions.push({ priority: 'medium', icon: '&#8593;', title: 'LP growth is positive but slow', body: 'You&rsquo;re adding LPs but the rate is under 20% WoW. To accelerate: (1) Partner with CPA or wealth advisors who serve accredited investors, (2) Run targeted Facebook/LinkedIn ads to accredited investor lookalikes, (3) Guest on real estate podcasts and pitch the free deal database.' });
-  }
-
-  // GP growth suggestions
-  if (rates.gps <= 0) {
-    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'GP pipeline is flat', body: 'No new operators added this week. Supply drives the marketplace. Try: (1) Scrape SEC EDGAR for new Reg D filings and cold outreach, (2) Attend multifamily/self-storage meetups and onboard operators, (3) Offer free deal page + LP exposure in exchange for listing, (4) Use LP intro data to pitch GPs: "We have X LPs looking for your asset class."' });
-  } else if (totals.gps < 50) {
-    suggestions.push({ priority: 'medium', icon: '&#8593;', title: 'Build GP supply to critical mass', body: 'Target is 50 GPs for marketplace credibility. Currently at ' + totals.gps + '. Focus on: (1) Batch-import operators from SEC filings, (2) Prioritize asset classes with highest LP demand, (3) Create GP success stories showing LP intros received.' });
-  }
-
-  // Deal quality suggestions
-  if (rates.deals > 0 && rates.pipeline <= 0) {
-    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'Deals growing but pipeline adds are not', body: 'You&rsquo;re adding deals but LPs aren&rsquo;t moving them into their pipeline. This means deal quality or presentation may be off. Try: (1) Improve deal page completeness (deck, PPM, photos), (2) Add operator track record data, (3) Send weekly digest email highlighting top deals, (4) Add "Featured Deal" badges to high-quality opportunities.' });
-  }
-
-  // Pipeline to funded conversion
-  if (totals.pipelineAdds > 10 && totals.funded === 0) {
-    suggestions.push({ priority: 'medium', icon: '&#128176;', title: 'Pipeline activity but zero funded deals', body: 'LPs are exploring deals but none have moved to "portfolio" stage. This could mean: (1) Deal sizes or minimums are too high, (2) LPs need more DD support to gain confidence, (3) Consider adding 1-on-1 deal consultation calls, (4) Create a DD checklist template that walks LPs through evaluation.' });
-  }
-
-  // General growth levers
-  if (totals.lps < 100) {
-    suggestions.push({ priority: 'low', icon: '&#128640;', title: 'Pre-100 LP growth tactics', body: '(1) Personal outreach: email your network with a compelling deal example, (2) Post "deal of the week" breakdowns on LinkedIn/Twitter, (3) Run a free "Passive Income 101" workshop, (4) Create a referral incentive (e.g., free month of premium for each referral).' });
-  }
-  if (totals.gps > 0 && totals.lps > 0 && totals.pipelineAdds === 0) {
-    suggestions.push({ priority: 'high', icon: '&#9888;', title: 'Zero pipeline activity despite having GPs and LPs', body: 'The platform has both supply (GPs) and demand (LPs) but no engagement. This is a UX or awareness issue. Try: (1) Send a "new deals this week" email blast, (2) Add push notifications or in-app alerts for new deals, (3) Simplify the "Add to Pipeline" action, (4) Feature deals on the dashboard immediately after login.' });
-  }
-
-  // Always show at least one suggestion
-  if (suggestions.length === 0) {
-    suggestions.push({ priority: 'low', icon: '&#127775;', title: 'Growth is healthy!', body: 'All metrics are trending up. Keep doing what&rsquo;s working. Consider: (1) Document your current growth channels so you can double down, (2) Start tracking acquisition channel (organic vs paid vs referral), (3) Set WoW growth rate targets for each metric.' });
-  }
-
-  // Sort by priority
-  var order = { high: 0, medium: 1, low: 2 };
-  suggestions.sort(function(a, b) { return order[a.priority] - order[b.priority]; });
-
-  var colors = { high: { bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.15)', title: '#ef4444' }, medium: { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.15)', title: '#f59e0b' }, low: { bg: 'rgba(81,190,123,0.06)', border: 'rgba(81,190,123,0.15)', title: 'var(--primary)' } };
-  el.innerHTML = '<div style="display:grid;gap:14px;">' + suggestions.map(function(s) {
-    var c = colors[s.priority];
-    return '<div style="padding:16px;background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:8px;">'
-      + '<div style="font-family:var(--font-ui);font-weight:700;color:' + c.title + ';margin-bottom:6px;">' + s.icon + ' ' + s.title + '</div>'
-      + '<div style="font-family:var(--font-body);font-size:13px;color:var(--text-secondary);line-height:1.6;">' + s.body + '</div>'
-      + '</div>';
-  }).join('') + '</div>';
 }
 
 async function outreachInit() {
@@ -24029,107 +23902,130 @@ async function triggerGhlSync() {
   if (btn) { btn.textContent = 'Sync GHL'; btn.disabled = false; }
 }
 
-async function loadSaasMetrics() {
+// ========== USERS TAB (replaces SaaS Metrics + Analytics) ==========
+
+async function renderUsersPage() {
   if (!isAdmin()) return;
-  var loadingEl = document.getElementById('saasLoading');
-  var contentEl = document.getElementById('saasContent');
-  if (loadingEl) loadingEl.style.display = 'block';
+  var loadEl = document.getElementById('usersTabLoading');
+  var contentEl = document.getElementById('usersTabContent');
+  if (loadEl) loadEl.style.display = 'block';
   if (contentEl) contentEl.style.display = 'none';
+
   try {
-    var resp = await fetch('/api/admin-saas-metrics');
-    if (!resp.ok) {
-      var errBody = await resp.json().catch(function() { return {}; });
-      throw new Error(errBody.detail || errBody.error || 'API error ' + resp.status);
-    }
+    var user = getUser();
+    var resp = await fetch('/api/admin-saas-metrics', {
+      headers: { 'Authorization': 'Bearer ' + (user && user.token) }
+    });
+    if (!resp.ok) throw new Error('API error ' + resp.status);
     var d = await resp.json();
-    if (loadingEl) loadingEl.style.display = 'none';
+    if (loadEl) loadEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';
 
-    // Top cards
-    var s = d.summary || {};
-    setText('saasTotalSignups', s.totalSignups || 0);
-    setText('saasSignups7d', s.signups7d || 0);
-    setText('saasOnboarded', s.onboarded || 0);
-    setText('saasOnboardRate', s.totalSignups ? Math.round(s.onboarded / s.totalSignups * 100) + '% of signups' : '--');
-    setText('saasActivated', s.activated || 0);
-    setText('saasActivateRate', s.totalSignups ? Math.round(s.activated / s.totalSignups * 100) + '% of signups' : '--');
-    setText('saasSavedDeal', s.savedDeal || 0);
-    setText('saasSavedRate', s.totalSignups ? Math.round(s.savedDeal / s.totalSignups * 100) + '% of signups' : '--');
-    setText('saasBookedCall', s.bookedCall || 0);
-    setText('saasBookedRate', s.totalSignups ? Math.round(s.bookedCall / s.totalSignups * 100) + '% of signups' : '--');
+    // --- Funnel Bars ---
+    var funnelEl = document.getElementById('usersFunnelBars');
+    if (funnelEl && d.funnelSteps) {
+      var maxCount = Math.max.apply(null, d.funnelSteps.map(function(f) { return f.count; }).concat([1]));
+      funnelEl.innerHTML = d.funnelSteps.map(function(step, i) {
+        var barW = Math.max(step.count / maxCount * 100, 2);
+        var color = i === 0 ? 'var(--primary)' : step.pct >= 50 ? 'var(--primary)' : step.pct >= 25 ? '#f59e0b' : '#ef4444';
+        return '<div style="display:flex;align-items:center;gap:12px;">'
+          + '<div style="width:150px;flex-shrink:0;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);text-align:right;">' + step.label + '</div>'
+          + '<div style="flex:1;background:var(--bg-page);border-radius:6px;height:24px;overflow:hidden;">'
+          + '<div style="height:100%;width:' + barW + '%;background:' + color + ';border-radius:6px;transition:width 0.5s;"></div></div>'
+          + '<div style="width:80px;flex-shrink:0;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + step.count + ' <span style="font-weight:400;color:var(--text-muted);">(' + step.pct + '%)</span></div>'
+          + '</div>';
+      }).join('');
+    }
 
-    // User list table
-    var userBody = document.getElementById('saasUserBody');
-    var userCount = document.getElementById('saasUserCount');
+    // Funnel callout: biggest drop
+    var calloutEl = document.getElementById('usersFunnelCallout');
+    if (calloutEl && d.dropoffs) {
+      var worst = d.dropoffs.reduce(function(a, b) { return b.dropPct > a.dropPct ? b : a; }, d.dropoffs[0]);
+      if (worst && worst.dropPct > 0) {
+        calloutEl.innerHTML = '<span style="color:' + (worst.severity === 'critical' ? '#ef4444' : '#f59e0b') + ';font-weight:700;">Biggest drop:</span> '
+          + worst.from + ' &rarr; ' + worst.to + ' (' + worst.dropPct + '% drop, ' + worst.dropped + ' users)';
+      }
+      // Median time to first save
+      if (d.ttv && d.ttv.firstSave && d.ttv.firstSave.median !== null) {
+        var m = d.ttv.firstSave.median;
+        var display = m < 1 ? Math.round(m * 60) + ' min' : m < 24 ? Math.round(m * 10) / 10 + ' hrs' : Math.round(m / 24 * 10) / 10 + ' days';
+        calloutEl.innerHTML += '<span style="margin-left:16px;">Median time to first save: <strong>' + display + '</strong></span>';
+      }
+    }
+
+    // --- Action Lists ---
+    var actionEl = document.getElementById('usersActionLists');
+    if (actionEl && d.userList) {
+      var now = Date.now();
+      var threeDaysAgo = new Date(now - 3 * 86400000).toISOString();
+      var sevenDaysAgo = new Date(now - 7 * 86400000).toISOString();
+
+      // Hot leads: saved 1+ deals but haven't booked a call
+      var hotLeads = d.userList.filter(function(u) { return u.dealsSaved >= 1 && u.funnel !== 'call-booked' && u.funnel !== 'enrolled'; }).slice(0, 8);
+      // Needs nudge: signed up >3 days ago, not onboarded
+      var needsNudge = d.userList.filter(function(u) { return !u.onboarded && u.signedUp < threeDaysAgo; }).slice(0, 8);
+      // Active this week: last active within 7 days
+      var activeThisWeek = d.userList.filter(function(u) { return u.lastActive && u.lastActive >= sevenDaysAgo; }).slice(0, 8);
+
+      function renderActionList(title, subtitle, color, users, emptyMsg) {
+        var html = '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;">'
+          + '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + color + ';margin-bottom:4px;">' + title + '</div>'
+          + '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-bottom:12px;">' + subtitle + '</div>';
+        if (users.length === 0) {
+          html += '<div style="font-size:12px;color:var(--text-muted);font-style:italic;">' + emptyMsg + '</div>';
+        } else {
+          html += users.map(function(u) {
+            return '<div style="padding:4px 0;border-bottom:1px solid var(--border-light);font-family:var(--font-body);font-size:12px;">'
+              + '<a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/'/g, "\\'") + '\');return false;" style="color:var(--primary);text-decoration:none;">' + (u.email || '--') + '</a>'
+              + '</div>';
+          }).join('');
+        }
+        html += '</div>';
+        return html;
+      }
+
+      actionEl.innerHTML = renderActionList('Hot Leads', 'Saved deals but no call booked', '#ef4444', hotLeads, 'No hot leads yet')
+        + renderActionList('Needs Nudge', 'Signed up 3+ days ago, not onboarded', '#f59e0b', needsNudge, 'Everyone is onboarded!')
+        + renderActionList('Active This Week', 'Active in last 7 days', '#10b981', activeThisWeek, 'No activity this week');
+    }
+
+    // --- User Table ---
+    var userBody = document.getElementById('usersTableBody');
+    var userCountEl = document.getElementById('usersTableCount');
     if (userBody && d.userList) {
-      if (userCount) userCount.textContent = d.userList.length + ' users (admin emails excluded)';
+      if (userCountEl) userCountEl.textContent = d.userList.length + ' users';
       userBody.innerHTML = d.userList.map(function(u) {
-        var funnelColors = { 'new': '#94a3b8', 'onboarding': '#f59e0b', 'qualified': '#6366f1', 'high-intent': '#22c55e', 'call-booked': '#10b981', 'enrolled': '#059669' };
+        var funnelColors = { 'new': '#94a3b8', 'exploring': '#3b82f6', 'onboarding': '#f59e0b', 'qualified': '#6366f1', 'high-intent': '#22c55e', 'call-booked': '#10b981', 'enrolled': '#059669' };
         var fc = funnelColors[u.funnel] || '#94a3b8';
         var funnelLabel = (u.funnel || 'new').replace('-', ' ');
         var signedUp = u.signedUp ? new Date(u.signedUp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '--';
         var lastActive = u.lastActive ? new Date(u.lastActive).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
         var onbIcon = u.onboarded ? '<span style="color:#22c55e;font-weight:700;">Yes</span>' : '<span style="color:#ef4444;">No</span>';
-        return '<tr style="border-bottom:1px solid var(--border);">' +
-          '<td style="padding:10px 12px;"><a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/\'/g, "\\'") + '\');return false;" style="color:var(--primary);text-decoration:none;font-weight:600;">' + (u.email || '--') + '</a></td>' +
-          '<td style="padding:10px 12px;color:var(--text-secondary);">' + signedUp + '</td>' +
-          '<td style="padding:10px 12px;"><span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;background:' + fc + '22;color:' + fc + ';text-transform:uppercase;">' + funnelLabel + '</span></td>' +
-          '<td style="padding:10px 12px;text-align:center;">' + onbIcon + '</td>' +
-          '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.dealsViewed + '</td>' +
-          '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.dealsSaved + '</td>' +
-          '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.sessions + '</td>' +
-          '<td style="padding:10px 12px;color:var(--text-secondary);">' + lastActive + '</td>' +
-          '<td style="padding:10px 12px;text-align:center;"><a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/\'/g, "\\'") + '\');return false;" style="color:var(--text-muted);text-decoration:none;font-size:11px;">View</a></td>' +
-        '</tr>';
+        return '<tr style="border-bottom:1px solid var(--border);">'
+          + '<td style="padding:10px 12px;"><a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/'/g, "\\'") + '\');return false;" style="color:var(--primary);text-decoration:none;font-weight:600;">' + (u.email || '--') + '</a></td>'
+          + '<td style="padding:10px 12px;color:var(--text-secondary);">' + signedUp + '</td>'
+          + '<td style="padding:10px 12px;"><span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;background:' + fc + '22;color:' + fc + ';text-transform:uppercase;">' + funnelLabel + '</span></td>'
+          + '<td style="padding:10px 12px;text-align:center;">' + onbIcon + '</td>'
+          + '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.dealsViewed + '</td>'
+          + '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.dealsSaved + '</td>'
+          + '<td style="padding:10px 12px;text-align:right;font-weight:600;">' + u.sessions + '</td>'
+          + '<td style="padding:10px 12px;color:var(--text-secondary);">' + lastActive + '</td>'
+          + '<td style="padding:10px 12px;text-align:center;"><a href="#" onclick="viewUserProfile(\'' + (u.email || '').replace(/'/g, "\\'") + '\');return false;" style="color:var(--text-muted);text-decoration:none;font-size:11px;">View</a></td>'
+          + '</tr>';
       }).join('');
       if (d.userList.length === 0) {
         userBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted);">No non-admin users yet</td></tr>';
       }
     }
 
-    // Funnel bars
-    var funnelEl = document.getElementById('saasFunnelBars');
-    if (funnelEl && d.funnelSteps) {
-      var maxCount = Math.max(...d.funnelSteps.map(function(f) { return f.count; }), 1);
-      funnelEl.innerHTML = d.funnelSteps.map(function(step, i) {
-        var barW = Math.max(step.count / maxCount * 100, 2);
-        var color = i === 0 ? 'var(--primary)' : step.pct >= 50 ? 'var(--primary)' : step.pct >= 25 ? '#f59e0b' : '#ef4444';
-        return '<div style="display:flex;align-items:center;gap:12px;">' +
-          '<div style="width:160px;flex-shrink:0;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);text-align:right;">' + step.label + '</div>' +
-          '<div style="flex:1;background:var(--bg-page);border-radius:6px;height:28px;overflow:hidden;position:relative;">' +
-            '<div style="height:100%;width:' + barW + '%;background:' + color + ';border-radius:6px;transition:width 0.5s;"></div>' +
-          '</div>' +
-          '<div style="width:80px;flex-shrink:0;font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + step.count + ' <span style="font-weight:400;color:var(--text-muted);">(' + step.pct + '%)</span></div>' +
-        '</div>';
-      }).join('');
-    }
-
-    // Drop-off analysis
-    var dropEl = document.getElementById('saasDropoff');
-    if (dropEl && d.dropoffs) {
-      dropEl.innerHTML = d.dropoffs.map(function(drop) {
-        var icon = drop.severity === 'critical' ? '<span style="color:#ef4444;font-weight:800;">!!!</span>' : drop.severity === 'warning' ? '<span style="color:#f59e0b;font-weight:700;">!!</span>' : '<span style="color:var(--primary);">OK</span>';
-        var bgColor = drop.severity === 'critical' ? 'rgba(239,68,68,0.06)' : drop.severity === 'warning' ? 'rgba(245,158,11,0.06)' : 'rgba(81,190,123,0.04)';
-        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:' + bgColor + ';border-radius:8px;">' +
-          '<div style="width:30px;text-align:center;">' + icon + '</div>' +
-          '<div style="flex:1;font-family:var(--font-body);font-size:13px;color:var(--text-dark);">' +
-            '<strong>' + drop.from + '</strong> &rarr; <strong>' + drop.to + '</strong>' +
-          '</div>' +
-          '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:' + (drop.severity === 'critical' ? '#ef4444' : drop.severity === 'warning' ? '#f59e0b' : 'var(--text-secondary)') + ';">' +
-            drop.dropped + ' dropped (' + drop.dropPct + '%)' +
-          '</div>' +
-        '</div>';
-      }).join('');
-    }
-
-    // Time to Value cards
-    var ttvEl = document.getElementById('saasTTVCards');
+    // --- Time to Value ---
+    var ttvEl = document.getElementById('usersTTV');
     if (ttvEl && d.ttv) {
       var ttvItems = [
-        { key: 'firstOnboard', label: 'First Onboarding', icon: '1', desc: 'Time from signup to completing buy box wizard' },
-        { key: 'firstDealView', label: 'First Deal View', icon: '2', desc: 'Time from signup to viewing their first deal' },
-        { key: 'firstSave', label: 'First Deal Save', icon: '3', desc: 'Aha moment: user cared enough to save a deal' },
-        { key: 'firstCallBook', label: 'First Call Booked', icon: '4', desc: 'Time from signup to booking a strategy call' }
+        { key: 'firstOnboard', label: 'Onboarding', desc: 'Signup to wizard complete' },
+        { key: 'firstDealView', label: 'First Deal View', desc: 'Signup to first deal viewed' },
+        { key: 'firstSave', label: 'First Save', desc: 'Signup to first deal saved', aha: true },
+        { key: 'firstCallBook', label: 'Call Booked', desc: 'Signup to call booked' }
       ];
       ttvEl.innerHTML = ttvItems.map(function(item) {
         var val = d.ttv[item.key];
@@ -24140,271 +24036,44 @@ async function loadSaasMetrics() {
           else display = Math.round(val.median / 24 * 10) / 10 + ' days';
         }
         var samples = val ? val.samples : 0;
-        var isAha = item.key === 'firstSave';
-        return '<div style="background:' + (isAha ? 'linear-gradient(135deg,rgba(81,190,123,0.08),rgba(81,190,123,0.02))' : 'var(--bg-card)') + ';border:1px solid ' + (isAha ? 'rgba(81,190,123,0.3)' : 'var(--border)') + ';border-radius:var(--radius);padding:18px;">' +
-          (isAha ? '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:6px;">AHA MOMENT</div>' : '') +
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-            '<div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">' + item.icon + '</div>' +
-            '<div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">' + item.label + '</div>' +
-          '</div>' +
-          '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;color:var(--text-dark);">' + display + '</div>' +
-          '<div style="font-family:var(--font-body);font-size:11px;color:var(--text-muted);margin-top:4px;">' + item.desc + '</div>' +
-          '<div style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-top:6px;">' + samples + ' users measured</div>' +
-        '</div>';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;' + (item.aha ? 'background:rgba(81,190,123,0.06);border-radius:6px;padding:8px 10px;' : '') + '">'
+          + '<div style="font-family:var(--font-ui);font-size:20px;font-weight:800;color:var(--text-dark);min-width:70px;">' + display + '</div>'
+          + '<div>'
+          + '<div style="font-family:var(--font-ui);font-size:12px;font-weight:700;color:var(--text-dark);">' + item.label + (item.aha ? ' <span style="font-size:9px;color:var(--primary);">AHA</span>' : '') + '</div>'
+          + '<div style="font-family:var(--font-body);font-size:10px;color:var(--text-muted);">' + item.desc + ' (' + samples + ' users)</div>'
+          + '</div></div>';
       }).join('');
     }
 
-    // Cohort table
-    var cohortBody = document.getElementById('saasCohortBody');
+    // --- Cohort Table ---
+    var cohortBody = document.getElementById('usersCohortBody');
     if (cohortBody && d.cohorts) {
       cohortBody.innerHTML = d.cohorts.map(function(c) {
         function pctCell(val) {
           var color = val >= 50 ? 'var(--primary)' : val >= 25 ? '#f59e0b' : val > 0 ? '#ef4444' : 'var(--text-muted)';
-          return '<td style="text-align:right;padding:8px 10px;color:' + color + ';font-weight:600;">' + val + '%</td>';
+          return '<td style="text-align:right;padding:6px 8px;color:' + color + ';font-weight:600;">' + val + '%</td>';
         }
-        return '<tr style="border-bottom:1px solid var(--border);">' +
-          '<td style="text-align:left;padding:8px 10px;font-weight:600;color:var(--text-dark);">' + c.week + '</td>' +
-          '<td style="text-align:right;padding:8px 10px;color:var(--text-dark);">' + c.signups + '</td>' +
-          pctCell(c.onboarded) + pctCell(c.activated) + pctCell(c.savedDeal) + pctCell(c.bookedCall) +
-        '</tr>';
+        return '<tr style="border-bottom:1px solid var(--border);">'
+          + '<td style="text-align:left;padding:6px 8px;font-weight:600;color:var(--text-dark);font-size:11px;">' + c.week + '</td>'
+          + '<td style="text-align:right;padding:6px 8px;color:var(--text-dark);">' + c.signups + '</td>'
+          + pctCell(c.onboarded) + pctCell(c.activated) + pctCell(c.savedDeal) + pctCell(c.bookedCall)
+          + '</tr>';
       }).join('');
       if (d.cohorts.length === 0) {
-        cohortBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No cohort data yet</td></tr>';
+        cohortBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--text-muted);">No cohort data yet</td></tr>';
       }
-    }
-
-    // Wizard funnel
-    var wizEl = document.getElementById('saasWizardFunnel');
-    if (wizEl && d.wizardFunnel && d.wizardFunnel.length > 0) {
-      var maxWiz = Math.max(...d.wizardFunnel.map(function(w) { return w.usersReached; }), 1);
-      var html = '';
-      // Show wizard starters count
-      if (d.wizardStarters) {
-        html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;"><strong>' + d.wizardStarters + '</strong> users started the wizard</div>';
-      }
-      html += d.wizardFunnel.map(function(step) {
-        var barW = Math.max(step.usersReached / maxWiz * 100, 2);
-        var label = step.label.replace('targetInput:', '').replace('Select', ' Prefs');
-        return '<div style="display:flex;align-items:center;gap:10px;">' +
-          '<div style="width:24px;flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-align:right;">' + step.step + '</div>' +
-          '<div style="width:140px;flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-secondary);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + label + '</div>' +
-          '<div style="flex:1;background:var(--bg-page);border-radius:4px;height:20px;overflow:hidden;">' +
-            '<div style="height:100%;width:' + barW + '%;background:var(--primary);border-radius:4px;"></div>' +
-          '</div>' +
-          '<div style="width:40px;flex-shrink:0;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-dark);">' + step.usersReached + '</div>' +
-        '</div>';
-      }).join('');
-      // Show abandonment hotspots
-      if (d.wizardAbandonList && d.wizardAbandonList.length > 0) {
-        html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
-        html += '<div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Abandonment Hotspots</div>';
-        d.wizardAbandonList.forEach(function(a) {
-          html += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">' +
-            '<span style="color:#ef4444;font-weight:700;font-size:12px;">' + a.abandonCount + 'x</span>' +
-            '<span style="font-size:12px;color:var(--text-dark);">abandoned at <strong>' + a.stepType + '</strong></span>' +
-          '</div>';
-        });
-        html += '</div>';
-      }
-      wizEl.innerHTML = html;
-    } else if (wizEl) {
-      wizEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No wizard step data yet. Events will populate as users go through onboarding.</div>';
     }
 
   } catch(e) {
-    console.warn('SaaS metrics load error:', e);
-    var loadEl = document.getElementById('saasLoading');
-    if (loadEl) loadEl.innerHTML = '<div style="color:#ef4444;font-family:var(--font-body);font-size:13px;">Failed to load SaaS metrics: ' + (e.message || 'Unknown error') + '</div>';
+    console.warn('Users tab error:', e);
+    var loadEl2 = document.getElementById('usersTabLoading');
+    if (loadEl2) loadEl2.innerHTML = '<div style="color:#ef4444;font-family:var(--font-body);font-size:13px;">Failed to load user metrics: ' + (e.message || 'Unknown error') + '</div>';
   }
 }
 
 function setText(id, val) {
   var el = document.getElementById(id);
   if (el) el.textContent = val;
-}
-
-// --- Analytics Dashboard Rendering ---
-let analyticsPageChart = null;
-
-function refreshAnalyticsDashboard() {
-  const allEvents = getAnalyticsEvents();
-  // Filter out admin activity so it doesn't skew analytics
-  const adminEmails = (typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : []).map(e => e.toLowerCase());
-  const events = allEvents.filter(e => !e.userId || !adminEmails.includes(e.userId.toLowerCase()));
-  const today = new Date().toISOString().slice(0, 10);
-
-  // Summary cards
-  const pageViews = events.filter(e => e.action === 'page_view');
-  const pageViewsToday = pageViews.filter(e => e.timestamp.slice(0, 10) === today);
-  document.getElementById('analyticsPageviews').textContent = pageViews.length;
-  document.getElementById('analyticsPageviewsToday').textContent = pageViewsToday.length;
-
-  const allUsers = [...new Set(events.map(e => e.userId).filter(u => u !== 'anonymous'))];
-  const todayUsers = [...new Set(events.filter(e => e.timestamp.slice(0, 10) === today).map(e => e.userId).filter(u => u !== 'anonymous'))];
-  document.getElementById('analyticsUsers').textContent = allUsers.length;
-  document.getElementById('analyticsUsersToday').textContent = todayUsers.length;
-
-  // Avg session time from page_leave events
-  const leaveEvents = events.filter(e => e.action === 'page_leave' && e.data && e.data.durationSeconds);
-  if (leaveEvents.length > 0) {
-    const totalSec = leaveEvents.reduce((s, e) => s + e.data.durationSeconds, 0);
-    const avgSec = Math.round(totalSec / leaveEvents.length);
-    const mins = Math.floor(avgSec / 60);
-    const secs = avgSec % 60;
-    document.getElementById('analyticsAvgSession').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-  } else {
-    document.getElementById('analyticsAvgSession').textContent = '--';
-  }
-
-  // Most viewed page
-  const pageCounts = {};
-  pageViews.forEach(e => {
-    const pg = (e.data && e.data.page) || 'unknown';
-    pageCounts[pg] = (pageCounts[pg] || 0) + 1;
-  });
-  const sortedPages = Object.entries(pageCounts).sort((a, b) => b[1] - a[1]);
-  if (sortedPages.length > 0) {
-    document.getElementById('analyticsMostViewed').textContent = sortedPages[0][0];
-    document.getElementById('analyticsMostViewedCount').textContent = sortedPages[0][1] + ' views';
-  } else {
-    document.getElementById('analyticsMostViewed').textContent = '--';
-    document.getElementById('analyticsMostViewedCount').textContent = '';
-  }
-
-  // Page popularity chart
-  renderAnalyticsPageChart(sortedPages);
-
-  // Deal engagement
-  renderDealEngagement(events);
-
-  // User sessions
-  renderUserSessions(events);
-
-  // Activity feed
-  renderActivityFeed(events);
-}
-
-function renderAnalyticsPageChart(sortedPages) {
-  const ctx = document.getElementById('analyticsPageChart');
-  if (!ctx) return;
-  if (analyticsPageChart) analyticsPageChart.destroy();
-
-  const labels = sortedPages.map(p => p[0]);
-  const data = sortedPages.map(p => p[1]);
-
-  analyticsPageChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Page Views',
-        data: data,
-        backgroundColor: '#51BE7B',
-        borderRadius: 6,
-        maxBarThickness: 40
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 } },
-        x: { ticks: { font: { size: 11 } } }
-      }
-    }
-  });
-}
-
-function renderDealEngagement(events) {
-  // Top viewed deals
-  const viewEvents = events.filter(e => e.action === 'view_deal' && e.data && e.data.dealName);
-  const viewCounts = {};
-  viewEvents.forEach(e => { viewCounts[e.data.dealName] = (viewCounts[e.data.dealName] || 0) + 1; });
-  const topViewed = Object.entries(viewCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-  const viewEl = document.getElementById('analyticsTopViewedDeals');
-  if (viewEl) {
-    viewEl.innerHTML = topViewed.length === 0 ? '<div style="color:var(--text-muted);">No data yet</div>' :
-      topViewed.map((d, i) => `<div style="padding:4px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;">
-        <span>${i + 1}. ${d[0].substring(0, 30)}</span><span style="color:var(--text-muted);">${d[1]}</span></div>`).join('');
-  }
-
-  // Top saved deals
-  const saveEvents = events.filter(e => e.action === 'save_deal' && e.data && e.data.dealName);
-  const saveCounts = {};
-  saveEvents.forEach(e => { saveCounts[e.data.dealName] = (saveCounts[e.data.dealName] || 0) + 1; });
-  const topSaved = Object.entries(saveCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-  const saveEl = document.getElementById('analyticsTopSavedDeals');
-  if (saveEl) {
-    saveEl.innerHTML = topSaved.length === 0 ? '<div style="color:var(--text-muted);">No data yet</div>' :
-      topSaved.map((d, i) => `<div style="padding:4px 0;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;">
-        <span>${i + 1}. ${d[0].substring(0, 30)}</span><span style="color:var(--text-muted);">${d[1]}</span></div>`).join('');
-  }
-}
-
-function renderUserSessions(events) {
-  const userMap = {};
-  events.forEach(e => {
-    if (e.userId === 'anonymous') return;
-    if (!userMap[e.userId]) userMap[e.userId] = { lastActive: e.timestamp, count: 0 };
-    userMap[e.userId].count++;
-    if (e.timestamp > userMap[e.userId].lastActive) userMap[e.userId].lastActive = e.timestamp;
-  });
-
-  const sorted = Object.entries(userMap).sort((a, b) => b[1].lastActive.localeCompare(a[1].lastActive));
-  const tbody = document.getElementById('analyticsUserSessions');
-  if (!tbody) return;
-
-  tbody.innerHTML = sorted.length === 0 ? '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;">No user data yet</td></tr>' :
-    sorted.map(([email, info]) => {
-      const d = new Date(info.lastActive);
-      const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-      return `<tr style="border-bottom:1px solid var(--border-light);">
-        <td style="padding:8px 12px;">${email}</td>
-        <td style="padding:8px 12px;color:var(--text-secondary);">${timeStr}</td>
-        <td style="padding:8px 12px;text-align:right;font-weight:600;">${info.count}</td>
-      </tr>`;
-    }).join('');
-}
-
-function renderActivityFeed(events) {
-  const recent = events.slice(-100).reverse();
-  const feedEl = document.getElementById('analyticsActivityFeed');
-  if (!feedEl) return;
-
-  if (recent.length === 0) {
-    feedEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-body);">No events recorded yet</div>';
-    return;
-  }
-
-  feedEl.innerHTML = recent.map(e => {
-    const d = new Date(e.timestamp);
-    const timeStr = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    const dateStr = d.toLocaleDateString();
-    const details = e.data ? Object.entries(e.data).map(([k,v]) => `${k}: ${v}`).join(', ') : '';
-    const actionColors = {
-      page_view: '#2563EB', page_leave: '#8A9AA0', view_deal: '#51BE7B',
-      save_deal: '#CF7A30', unsave_deal: '#D04040', filter_change: '#7C3AED',
-      buybox_complete: '#EC4899'
-    };
-    const color = actionColors[e.action] || '#607179';
-    return `<div style="padding:8px 0;border-bottom:1px solid var(--border-light);display:flex;gap:12px;align-items:flex-start;font-family:var(--font-body);font-size:13px;">
-      <div style="min-width:130px;color:var(--text-muted);font-size:11px;">${dateStr} ${timeStr}</div>
-      <div style="min-width:140px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.userId || 'anonymous'}</div>
-      <div style="min-width:100px;"><span style="background:${color}15;color:${color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${e.action}</span></div>
-      <div style="color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${details}</div>
-    </div>`;
-  }).join('');
-}
-
-function clearAnalyticsData() {
-  if (confirm('Clear all local analytics data? This cannot be undone.')) {
-    localStorage.removeItem(ANALYTICS_KEY);
-    sessionStorage.removeItem(ANALYTICS_PAGEVIEWS_KEY);
-    refreshAnalyticsDashboard();
-  }
 }
 
 // ========== DASHBOARD ==========
@@ -26388,7 +26057,7 @@ function loadAdminEngagement() {
 }
 
 // ========== ADMIN DASHBOARD TABS ==========
-var adminDashCurrentTab = 'growth';
+var adminDashCurrentTab = 'overview';
 
 function switchAdminDashTab(tab) {
   adminDashCurrentTab = tab;
@@ -26402,19 +26071,15 @@ function switchAdminDashTab(tab) {
       btn.style.color = 'var(--text-secondary)';
     }
   });
-  ['growth', 'analytics', 'schema', 'devnotes', 'network', 'transactions', 'feedback', 'saas'].forEach(function(t) {
+  ['overview', 'users', 'schema', 'devnotes', 'network', 'transactions', 'feedback'].forEach(function(t) {
     var el = document.getElementById('admindash-tab-' + t);
     if (el) el.style.display = (t === tab) ? 'block' : 'none';
   });
-  if (tab === 'growth') renderGrowthPage();
-  if (tab === 'analytics') refreshAnalyticsDashboard();
+  if (tab === 'overview') renderOverviewPage();
+  if (tab === 'users') renderUsersPage();
   if (tab === 'schema') renderSchemaPage();
   if (tab === 'network') renderNetworkMoat();
   if (tab === 'feedback') fetchAndRenderAdminFeedback();
-  if (tab === 'saas') loadSaasMetrics();
-  // Show Clear Data button only on analytics tab
-  var clearBtn = document.getElementById('admindashClearBtn');
-  if (clearBtn) clearBtn.style.display = (tab === 'analytics') ? 'inline-block' : 'none';
 }
 
 // ========== USER FEEDBACK (Admin Dashboard) ==========
