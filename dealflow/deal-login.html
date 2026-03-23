@@ -1047,6 +1047,73 @@ setInterval(() => {
   document.querySelectorAll('.testimonial-slide').forEach((t, i) => t.classList.toggle('active', i === currentTestimonial));
 }, 4000);
 
+// ── Magic link callback handler ──────────────────────────────────
+// When user clicks the magic link in their email, Supabase redirects back
+// to this page with #access_token=...&type=magiclink&...
+(function handleMagicLinkCallback() {
+  const hash = window.location.hash.substring(1);
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  const type = params.get('type');
+  if (!accessToken || type !== 'magiclink') return;
+
+  // Show loading state
+  const formSection = document.getElementById('formSection');
+  if (formSection) {
+    formSection.innerHTML = '<p style="text-align:center;color:var(--slate);font-size:16px;padding:40px 0;">Signing you in...</p>';
+  }
+
+  // Decode the JWT to get the email
+  let email = '';
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    email = payload.email || '';
+  } catch {}
+
+  if (!email) {
+    if (formSection) formSection.innerHTML = '<p style="text-align:center;color:#dc2626;padding:40px 0;">Sign-in failed. Please try again.</p>';
+    return;
+  }
+
+  // Look up user profile (tier, GP info, etc.)
+  fetch('/api/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'lookup', email })
+  })
+  .then(r => r.json())
+  .then(data => {
+    localStorage.setItem('gycUser', JSON.stringify({
+      email,
+      name: data.name || email.split('@')[0],
+      token: accessToken,
+      refreshToken: refreshToken || '',
+      tier: data.tier || 'free',
+      isAdmin: data.isAdmin || false,
+      tags: data.tags || [],
+      contactId: data.contactId || null,
+      ...(data.gpType && {
+        gpType: data.gpType,
+        managementCompanyId: data.managementCompanyId,
+        managementCompanyName: data.managementCompanyName
+      })
+    }));
+    // Clean hash from URL and redirect
+    const returnUrl = new URLSearchParams(window.location.search).get('return');
+    window.location.replace(returnUrl ? decodeURIComponent(returnUrl) : '/');
+  })
+  .catch(() => {
+    // Fallback: store minimal session and still let them in
+    localStorage.setItem('gycUser', JSON.stringify({
+      email, name: email.split('@')[0], token: accessToken,
+      refreshToken: refreshToken || '', tier: 'free', isAdmin: false, tags: []
+    }));
+    window.location.replace('/');
+  });
+})();
+
 // Form handling
 const emailInput = document.getElementById('emailInput');
 emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSubmit(); });
