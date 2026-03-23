@@ -14018,11 +14018,14 @@ async function fetchUserDataFromSupabase(email) {
     ]);
 
     // Bail out if impersonation started while fetches were in-flight
-    if (getUserToken() === 'impersonated') return;
+    // Check before each await boundary since impersonation can happen at any point
+    const _impCheck = () => getUserToken() === 'impersonated';
+    if (_impCheck()) return;
 
     // Replace deal stages from Supabase (server is source of truth per-user)
     if (stagesResp && stagesResp.ok) {
       const stagesData = await stagesResp.json().catch(() => ({}));
+      if (_impCheck()) return;
       if (stagesData.records) {
         const serverStages = {};
         stagesData.records.forEach(r => {
@@ -14039,6 +14042,7 @@ async function fetchUserDataFromSupabase(email) {
     // Merge goals from Supabase into localStorage
     if (goalsResp && goalsResp.ok) {
       const goalsData = await goalsResp.json().catch(() => ({}));
+      if (_impCheck()) return;
       if (goalsData.records && goalsData.records.length > 0) {
         const serverGoals = goalsData.records[0];
         if (!localStorage.getItem('gycGoals') || localStorage.getItem('gycGoals') === 'null') {
@@ -14061,6 +14065,7 @@ async function fetchUserDataFromSupabase(email) {
     let portfolioRestored = false;
     if (portfolioResp && portfolioResp.ok) {
       const portfolioData = await portfolioResp.json().catch(() => ({}));
+      if (_impCheck()) return;
       if (portfolioData.records && portfolioData.records.length > 0) {
         const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
         if (localPortfolio.length === 0) {
@@ -14095,6 +14100,7 @@ async function fetchUserDataFromSupabase(email) {
     // Restore portfolio plan from Supabase
     if (planResp && planResp.ok) {
       var planData = await planResp.json().catch(function() { return {}; });
+      if (_impCheck()) return;
       if (planData.records && planData.records.length > 0) {
         var serverPlan = planData.records[0];
         if (!localStorage.getItem('gycPortfolioPlan') || localStorage.getItem('gycPortfolioPlan') === 'null') {
@@ -14103,8 +14109,8 @@ async function fetchUserDataFromSupabase(email) {
       }
     }
 
-    // Also fetch buy box from GHL
-    if (typeof fetchBuyBoxFromGHL === 'function') fetchBuyBoxFromGHL();
+    // Also fetch buy box from GHL — skip if impersonating
+    if (!_impCheck() && typeof fetchBuyBoxFromGHL === 'function') fetchBuyBoxFromGHL();
   } catch(e) {
     console.warn('Failed to fetch user data:', e.message);
   }
