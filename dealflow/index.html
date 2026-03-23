@@ -1465,11 +1465,17 @@ html.dark .credit-card-hero {
   color: #fff;
   backdrop-filter: blur(8px);
 }
-.credit-card-hero .credit-badge,
-.equity-card-hero .credit-badge {
+.credit-card-hero .credit-badge {
   background: rgba(255,255,255,0.12);
   color: rgba(255,255,255,0.85);
   backdrop-filter: none;
+}
+.equity-card-hero .credit-badge {
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
 }
 .credit-card-hero .credit-badge.audit-yes {
   background: rgba(81,190,123,0.2);
@@ -1690,15 +1696,17 @@ html.dark .credit-chart-legend-divider {
   color: #fff;
   letter-spacing: -0.5px;
   line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
 }
 .equity-hero-irr-label {
   font-family: var(--font-ui);
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255,255,255,0.55);
+  color: rgba(255,255,255,0.75);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-top: 2px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 
 /* Hero bottom-right stats overlay (AUM, full cycle, social proof) */
@@ -11361,8 +11369,7 @@ function renderCreditCard(deal) {
           <span class="credit-badge">${typeLabel}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${auditBadge}
-          ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
-          ${renderFreshnessBadge(deal)}
+                    ${renderFreshnessBadge(deal)}
           ${renderSearchStageBadge(deal)}
           ${deal.pctFunded >= 70 && deal.pctFunded < 100 ? `<span class="credit-badge" style="background:rgba(239,68,68,0.9);color:#fff;font-weight:700;">Almost Full &mdash; ${deal.pctFunded}%</span>` : ''}
           ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
@@ -11693,8 +11700,7 @@ function renderCard(deal) {
           <span class="credit-badge">${deal.assetClass || 'Real Estate'}</span>
           <span class="credit-badge">${deal.dealType || 'Fund'}</span>
           ${deal.strategy && deal.strategy !== 'Value-Add' ? `<span class="credit-badge">${deal.strategy}</span>` : ''}
-          ${deal.shareClasses && deal.shareClasses.length > 0 ? `<span class="credit-badge">${deal.shareClasses.length} Share Classes</span>` : ''}
-          ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
+                    ${!hasDocs ? '<span class="no-deck-bubble">No Deck</span>' : ''}
           ${renderFreshnessBadge(deal)}
           ${renderSearchStageBadge(deal)}
         </div>
