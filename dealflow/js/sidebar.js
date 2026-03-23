@@ -20,8 +20,17 @@
     try { return JSON.parse(localStorage.getItem('gycUser') || 'null'); } catch(e) { return null; }
   }
 
+  // Admin real user key — must match index.html's key
+  var ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
+
+  function getAdminRealUser() {
+    try {
+      return JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || 'null');
+    } catch(e) { return null; }
+  }
+
   function isAdmin() {
-    var realUser = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser') ? JSON.parse(sessionStorage.getItem('gycAdminRealUser')) : null;
+    var realUser = getAdminRealUser();
     if (realUser && realUser.email && ADMIN_EMAILS.indexOf(realUser.email.toLowerCase()) !== -1) return true;
     var user = getUser();
     return user && user.email && ADMIN_EMAILS.indexOf(user.email.toLowerCase()) !== -1;
@@ -331,7 +340,7 @@
     });
 
     // Check if impersonating
-    var stored = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser');
+    var stored = localStorage.getItem(ADMIN_REAL_USER_KEY);
     if (stored) {
       var searchEl = document.getElementById('viewAsSearch');
       var impEl = document.getElementById('viewAsImpersonating');
@@ -373,8 +382,8 @@
       results.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text-muted);">Searching...</div>';
       viewAsTimer = setTimeout(function() {
         var adminEmail = getUser() ? getUser().email : '';
-        var realAdmin = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('gycAdminRealUser');
-        if (realAdmin) { try { adminEmail = JSON.parse(realAdmin).email; } catch(e) {} }
+        var realAdmin = getAdminRealUser();
+        if (realAdmin && realAdmin.email) { adminEmail = realAdmin.email; }
         fetch('/api/users?q=' + encodeURIComponent(query) + '&admin=' + encodeURIComponent(adminEmail))
           .then(function(r) { return r.json(); })
           .then(function(data) {
@@ -405,7 +414,7 @@
     window.viewAsUser = window.viewAsUser || function(email, name, contactId, tier, firstName, lastName) {
       // Save admin session
       var adminUser = JSON.parse(localStorage.getItem('gycUser'));
-      sessionStorage.setItem('gycAdminRealUser', JSON.stringify(adminUser));
+      localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(adminUser));
       // Parse firstName/lastName from name if not provided
       if (!firstName && name) {
         var parts = name.trim().split(/\s+/);
@@ -418,10 +427,10 @@
     };
 
     window.exitViewAs = window.exitViewAs || function() {
-      var stored = sessionStorage.getItem('gycAdminRealUser');
+      var stored = localStorage.getItem(ADMIN_REAL_USER_KEY);
       if (stored) {
         localStorage.setItem('gycUser', stored);
-        sessionStorage.removeItem('gycAdminRealUser');
+        localStorage.removeItem(ADMIN_REAL_USER_KEY);
         window.location.reload();
       }
     };
