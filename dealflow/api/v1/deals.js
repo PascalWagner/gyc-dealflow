@@ -64,7 +64,8 @@ export default async function handler(req, res) {
       `)
       .not('investment_name', 'eq', '')
       .is('parent_deal_id', null)       // Only parent deals, not share classes
-      .eq('is_506b', false);            // Never expose 506(b) deals via public API
+      .eq('is_506b', false)             // Never expose 506(b) deals via public API
+      .not('status', 'eq', 'Draft');    // Hide Draft deals from public API (GP must confirm first)
 
     // Filters
     if (q.asset_class) query = query.eq('asset_class', q.asset_class);

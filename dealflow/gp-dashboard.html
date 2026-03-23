@@ -2013,6 +2013,7 @@ html.dark .gp-header {
                   <th data-sort="completeness" class="sorted">Completeness <span class="sort-arrow">&#9650;</span></th>
                   <th data-sort="ppm">PPM <span class="sort-arrow">&#9650;</span></th>
                   <th data-sort="deck">Deck <span class="sort-arrow">&#9650;</span></th>
+                  <th style="text-align:center;width:70px;"></th>
                 </tr>
               </thead>
               <tbody id="healthTableBody"></tbody>
@@ -2466,6 +2467,11 @@ function renderHealthTable(deals) {
     var sc = statusClass(e.status);
     var pctClass = e.completeness < 40 ? 'pct-low' : e.completeness < 70 ? 'pct-mid' : 'pct-high';
 
+    var reviewed = e.raw.gp_reviewed_at;
+    var reviewBtn = reviewed
+      ? '<a href="deal-review.html?id=' + escAttr(e.id) + '" style="font-size:13px;color:var(--text-muted);text-decoration:none;">Edit</a>'
+      : '<a href="deal-review.html?id=' + escAttr(e.id) + '" style="font-size:13px;color:var(--orange);font-weight:600;text-decoration:none;">Review</a>';
+
     return '<tr>' +
       '<td><a href="deal.html?id=' + escAttr(e.id) + '" class="health-table-name">' + escHtml(e.name) + '</a></td>' +
       '<td>' + (e.status ? '<span class="deal-badge ' + sc + '">' + escHtml(e.status) + '</span>' : '<span style="color:var(--text-muted)">--</span>') + '</td>' +
@@ -2478,6 +2484,7 @@ function renderHealthTable(deals) {
       '</td>' +
       '<td style="text-align:center;">' + (e.ppm ? SVG_CHECK : SVG_X) + '</td>' +
       '<td style="text-align:center;">' + (e.deck ? SVG_CHECK : SVG_X) + '</td>' +
+      '<td style="text-align:center;">' + reviewBtn + '</td>' +
     '</tr>';
   }).join('');
 }

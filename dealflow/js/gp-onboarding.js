@@ -523,14 +523,23 @@
     // For now, PPM is noted but uploaded through the same flow
 
     deckPromise
-    .then(function() {
+    .then(function(uploadResult) {
       state.dealUploaded = true;
+      // Capture the deal ID for review page redirect
+      var uploadedDealId = (uploadResult && uploadResult.newDealId) || null;
       return fetch('/api/gp-onboarding', {
         method: 'POST', headers: headers,
         body: JSON.stringify({ email: user.email, step: 'deal-uploaded', data: {} })
-      });
+      }).then(function() { return uploadedDealId; });
     })
-    .then(function() { goToStep(8); })
+    .then(function(uploadedDealId) {
+      // Redirect to deal review page if we have a deal ID
+      if (uploadedDealId) {
+        window.location.href = 'deal-review.html?id=' + uploadedDealId + '&from=onboarding';
+      } else {
+        goToStep(8);
+      }
+    })
     .catch(function(err) {
       console.error('Upload error:', err);
       state.dealUploaded = false;
@@ -653,6 +662,16 @@
       // UI: 0=name, 1=role, 2=welcome, 3=company, 4=assets, 5=IR, 6=agreement, 7=upload, 8=pres, 9=upsell, 10=checklist, 11=LP
       var stepMap = { 0: 0, 1: 2, 2: 5, 3: 6, 4: 7, 5: 8, 6: 10 };
       var uiStep = stepMap[step] !== undefined ? stepMap[step] : 0;
+
+      // Support ?resumeStep=N for returning from deal-review.html
+      var resumeStep = new URLSearchParams(window.location.search).get('resumeStep');
+      if (resumeStep) {
+        goToStep(parseInt(resumeStep, 10));
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
+
       if (uiStep > 0) goToStep(uiStep);
     })
     .catch(function(err) { console.error('Load onboarding state error:', err); });

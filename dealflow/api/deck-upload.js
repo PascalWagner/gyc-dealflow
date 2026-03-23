@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { dealId, dealName, filedata, filename, notes, userEmail, userName, docType } = req.body;
+    const { dealId, dealName, filedata, filename, notes, userEmail, userName, docType, companyId } = req.body;
 
     if (!filedata || !filename) {
       return res.status(400).json({ error: 'File data and filename are required' });
@@ -96,14 +96,19 @@ export default async function handler(req, res) {
       if (!isUUID) {
         // Deal was created locally (Add Deal) — create it in Supabase first
         const baseName = (dealName || '').replace(/ - PPM$/, '');
-        const { data: newDeal, error: insertErr } = await supabase
-          .from('opportunities')
-          .insert({
+        const insertRow = {
             investment_name: baseName,
             [urlField]: deckUrl,
-            status: 'Open to Invest',
+            status: 'Draft',
             added_date: new Date().toISOString().split('T')[0]
-          })
+          };
+        // Link to GP's management company if provided
+        if (companyId && /^[0-9a-f-]{36}$/i.test(companyId)) {
+          insertRow.management_company_id = companyId;
+        }
+        const { data: newDeal, error: insertErr } = await supabase
+          .from('opportunities')
+          .insert(insertRow)
           .select('id')
           .single();
         if (insertErr) {
