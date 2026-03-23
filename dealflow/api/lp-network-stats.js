@@ -111,7 +111,7 @@ export default async function handler(req, res) {
     const { count: totalSaved } = await supabase
       .from('user_deal_stages')
       .select('id', { count: 'exact', head: true })
-      .eq('stage', 'interested');
+      .in('stage', ['interested', 'saved']);
 
     const { count: totalVetting } = await supabase
       .from('user_deal_stages')

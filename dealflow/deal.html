@@ -3956,7 +3956,7 @@ function syncStageToDb(dealId, stage) {
   if (!user || !user.token) return;
 
   // Map new stage names back to DB format
-  var dbStageMap = { 'browse': 'new', 'saved': 'interested', 'vetting': 'duediligence', 'diligence': 'diligence', 'decision': 'decision', 'ready': 'decision', 'invested': 'portfolio', 'passed': 'passed' };
+  var dbStageMap = { 'browse': 'new', 'saved': 'saved', 'vetting': 'duediligence', 'diligence': 'diligence', 'decision': 'decision', 'ready': 'decision', 'invested': 'portfolio', 'passed': 'passed' };
   var dbStage = dbStageMap[stage] || stage;
 
   fetch('/api/userdata', {

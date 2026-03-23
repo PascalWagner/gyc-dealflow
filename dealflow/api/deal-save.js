@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
   const { id, email, token, action } = req.query;
   // Map to DB stage names (same as deal.html's dbStageMap)
-  const stage = action === 'skip' ? 'passed' : 'interested';
+  const stage = action === 'skip' ? 'passed' : 'saved';
 
   if (!id || !email || !token) {
     return res.redirect(302, `https://dealflow.growyourcashflow.io/deal.html?id=${id || ''}`);

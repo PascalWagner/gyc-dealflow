@@ -80,7 +80,7 @@ export default async function handler(req, res) {
       // Count total interactions per deal
       dealViews[s.deal_id] = (dealViews[s.deal_id] || 0) + 1;
 
-      if (s.stage === 'interested') totalSaves++;
+      if (s.stage === 'interested' || s.stage === 'saved') totalSaves++;
       else if (s.stage === 'duediligence') totalVetting++;
       else if (s.stage === 'portfolio') totalInvested++;
     }
@@ -113,7 +113,7 @@ export default async function handler(req, res) {
       let intentTier = 'browsing';
       if ((s.stage === 'duediligence' || s.stage === 'portfolio') && capital > 50000) {
         intentTier = 'high';
-      } else if (s.stage === 'interested' || s.stage === 'duediligence') {
+      } else if (s.stage === 'interested' || s.stage === 'saved' || s.stage === 'duediligence') {
         intentTier = 'engaged';
       }
 
@@ -174,7 +174,7 @@ export default async function handler(req, res) {
       monday.setDate(monday.getDate() - ((day + 6) % 7));
       const key = monday.toISOString().slice(0, 10);
       if (weeklyMap[key]) {
-        if (s.stage === 'interested') weeklyMap[key].interested++;
+        if (s.stage === 'interested' || s.stage === 'saved') weeklyMap[key].interested++;
         else if (s.stage === 'duediligence') weeklyMap[key].duediligence++;
         else if (s.stage === 'portfolio') weeklyMap[key].portfolio++;
       }
