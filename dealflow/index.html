@@ -6220,7 +6220,6 @@ const _supa = window.supabase.createClient(
       </div>
     </div>
     <div class="stats-bar" id="statsBar"></div>
-    <span id="dailyViewsBadge" style="display:none;font-family:var(--font-ui);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;background:rgba(245,158,11,0.1);margin-left:8px;"></span>
     <div class="goal-sort-indicator" id="goalSortIndicator" style="display:none;"></div>
     <!-- Mobile View Toggle: Swipe vs Feed -->
     <div class="mobile-view-toggle" id="mobileViewToggle">
@@ -6235,6 +6234,7 @@ const _supa = window.supabase.createClient(
     </div>
     <div class="content-area">
       <div id="stageDescription" style="display:none;padding:16px 20px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);border-left:3px solid var(--primary);"></div>
+      <div id="dailyViewsBadge" style="display:none;text-align:center;margin-bottom:16px;font-family:var(--font-ui);font-size:11px;font-weight:600;padding:6px 16px;border-radius:20px;background:rgba(245,158,11,0.1);"></div>
       <div id="decisionCompareContainer" style="display:none;margin-bottom:24px;"></div>
       <div class="card-grid" id="cardGrid"><div id="dealsMilestoneChecklist" style="display:contents;"></div></div>
       <!-- Mobile Swipe Feed -->
@@ -8894,7 +8894,7 @@ function updateDailyLimitBadge() {
   if (tier !== 'free') { badge.style.display = 'none'; return; }
   var remaining = getDailyDealsRemaining();
   badge.textContent = remaining + ' of ' + FREE_DAILY_DEAL_LIMIT + ' views left';
-  badge.style.display = 'inline-block';
+  badge.style.display = 'block';
   badge.style.color = remaining <= 5 ? '#e74c3c' : remaining <= 10 ? '#f59e0b' : 'var(--text-muted)';
 }
 
