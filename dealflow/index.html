@@ -2191,7 +2191,8 @@ html.dark .credit-chart-legend-divider {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     gap: 6px;
-    padding: 8px 0;
+    padding: 8px 0 4px;
+    margin-bottom: 0;
     align-items: center;
   }
   .mobile-pill-tabs::-webkit-scrollbar { display: none; }
@@ -16215,30 +16216,33 @@ function printMyPlan() {
   var allDeals = typeof DEALS !== 'undefined' ? DEALS : [];
   var activeDeals = allDeals.filter(function(dl) { return !dl.isStale; });
 
-  // Title case helper
-  function titleCase(str) { return str.replace(/\b\w/g, function(c) { return c.toUpperCase(); }); }
+  function titleCase(str) { return str.replace(/\b\w+/g, function(w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }); }
+  function fmtShortDate(iso) { if (!iso) return '\u2014'; try { var d2 = new Date(iso); return d2.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }); } catch(e) { return '\u2014'; } }
 
-  // Goal line + progress data
+  // Goal + progress
   var goalLine = '';
   var progressPct = 0;
-  var progressLabel = '';
+  var progressCurrent = '';
+  var progressTarget = '';
   if (branch === 'cashflow') {
     var target = (goals && goals.targetIncome > 0) ? goals.targetIncome : (parseDollar(d.targetCashFlow) || 0);
     goalLine = target > 0 ? 'Build $' + target.toLocaleString() + '/yr in passive income' : 'Build predictable passive income';
     if (planData && target > 0) {
-      var slots = planData.slots || planData.buckets || [];
-      var filledIncome = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
-      progressPct = Math.min(100, Math.round(filledIncome / target * 100));
-      progressLabel = '$' + filledIncome.toLocaleString() + ' of $' + target.toLocaleString() + '/yr';
+      var _s = planData.slots || planData.buckets || [];
+      var filledInc = _s.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
+      progressPct = Math.min(100, Math.round(filledInc / target * 100));
+      progressCurrent = '$' + filledInc.toLocaleString() + '/yr';
+      progressTarget = '$' + target.toLocaleString() + '/yr';
     }
   } else if (branch === 'growth') {
     var capital = parseDollar(d.growthCapital) || 0;
     goalLine = capital > 0 ? 'Deploy $' + capital.toLocaleString() + ' into high-growth real estate' : 'Grow wealth through real estate equity';
     if (planData && capital > 0) {
-      var slots = planData.slots || planData.buckets || [];
-      var filledCap = slots.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
+      var _s = planData.slots || planData.buckets || [];
+      var filledCap = _s.filter(function(s) { return s.filled_by; }).reduce(function(s, sl) { return s + (sl.check_size || 0); }, 0);
       progressPct = Math.min(100, Math.round(filledCap / capital * 100));
-      progressLabel = '$' + filledCap.toLocaleString() + ' of $' + capital.toLocaleString() + ' deployed';
+      progressCurrent = '$' + filledCap.toLocaleString();
+      progressTarget = '$' + capital.toLocaleString();
     }
   } else if (branch === 'tax') {
     goalLine = d.taxableIncome ? 'Offset ' + (d.taxOffset || '') + ' of ' + d.taxableIncome + ' in taxable income' : 'Reduce tax burden through real estate depreciation';
@@ -16261,13 +16265,13 @@ function printMyPlan() {
   if (d.distributions) { thesisParts.push('targeting <strong>' + (typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions)).toLowerCase() + ' or better</strong> distributions'); }
   var thesisText = thesisParts.length > 1 ? thesisParts[0] + ', ' + thesisParts.slice(1).join(', ') + '.' : thesisParts[0] + '.';
 
-  // Criteria items
+  // Criteria
   var criteriaItems = [];
   if (assetList.length > 0) criteriaItems.push({ label: 'Asset Classes', value: assetList.join(', ') });
   if (stratList.length > 0) criteriaItems.push({ label: 'Strategies', value: stratList.join(', ') });
   if (d.checkSize) criteriaItems.push({ label: 'Check Size', value: String(d.checkSize).startsWith('$') ? d.checkSize : '$' + Number(d.checkSize).toLocaleString() });
-  if (d.lockup) criteriaItems.push({ label: 'Lockup Tolerance', value: (/year/i.test(String(d.lockup)) ? d.lockup : d.lockup + ' years') });
-  if (d.distributions) criteriaItems.push({ label: 'Distribution Freq.', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
+  if (d.lockup) criteriaItems.push({ label: 'Lockup', value: (/year/i.test(String(d.lockup)) ? d.lockup : d.lockup + ' years') });
+  if (d.distributions) criteriaItems.push({ label: 'Distributions', value: typeof d.distributions === 'string' ? d.distributions : safeJoin(d.distributions) });
   if (d.accredited) criteriaItems.push({ label: 'Accreditation', value: 'Accredited Investor' });
 
   // Market snapshot
@@ -16290,11 +16294,11 @@ function printMyPlan() {
     var cocs = classDeals.map(function(x) { return x.cashOnCash; }).filter(function(v) { return v && v > 0; });
     var mins = classDeals.map(function(x) { return x.investmentMinimum; }).filter(function(v) { return v && v > 0; });
     var affordable = userCheckSizeNum > 0 ? classDeals.filter(function(x) { return x.investmentMinimum && x.investmentMinimum <= userCheckSizeNum; }).length : null;
-    snapshotRows += '<tr><td style="font-weight:700;">' + ac + ' <span style="color:#8A9AA0;font-weight:400;">(' + classDeals.length + ')</span></td>'
+    snapshotRows += '<tr><td>' + ac + ' <span style="color:#8A9AA0;font-weight:400;">(' + classDeals.length + ')</span></td>'
       + '<td>' + (irrs.length >= 2 ? fmt(Math.min(...irrs), 'pct') + ' \u2013 ' + fmt(Math.max(...irrs), 'pct') : irrs.length === 1 ? fmt(irrs[0], 'pct') : '\u2014') + '</td>'
       + '<td>' + (cocs.length > 0 ? fmt(cocs.reduce(function(a, b) { return a + b; }, 0) / cocs.length, 'pct') : '\u2014') + '</td>'
       + '<td>' + (mins.length > 0 ? '$' + Math.round(mins.reduce(function(a, b) { return a + b; }, 0) / mins.length).toLocaleString() : '\u2014') + '</td>'
-      + (userCheckSizeNum > 0 ? '<td style="color:' + bc.color + ';font-weight:700;">' + (affordable !== null ? affordable : '\u2014') + '</td>' : '')
+      + (userCheckSizeNum > 0 ? '<td style="color:' + bc.color + ';">' + (affordable !== null ? affordable : '\u2014') + '</td>' : '')
       + '</tr>';
   });
 
@@ -16319,52 +16323,74 @@ function printMyPlan() {
     var cumInc = 0;
 
     planHtml = '<div class="p-section"><h3>Deployment Schedule</h3>'
-      + '<p style="margin-bottom:8px;">Deploy <strong>$' + totalCapitalDeployed.toLocaleString() + '</strong> across <strong>' + totalSlots + ' investments</strong> over <strong>' + years.length + ' year' + (years.length !== 1 ? 's' : '') + '</strong> \u2192 <strong style="color:' + bc.color + ';">$' + targetIncome.toLocaleString() + '/yr</strong> at <strong>' + blendedYield + '% blended yield</strong>. '
-      + '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';vertical-align:middle;margin:0 2px;"></span> = filled, '
-      + '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;vertical-align:middle;margin:0 2px;box-sizing:border-box;"></span> = open.</p>'
-      + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Check Size</th><th>Est. Income</th></tr></thead><tbody>';
+      + '<p>Deploy <strong>$' + totalCapitalDeployed.toLocaleString() + '</strong> across <strong>' + totalSlots + ' investments</strong> over <strong>' + years.length + ' year' + (years.length !== 1 ? 's' : '') + '</strong> \u2192 <strong style="color:' + bc.color + ';">$' + targetIncome.toLocaleString() + '/yr</strong> at <strong>' + blendedYield + '% blended yield</strong>.</p>'
+      + '<table class="p-table"><thead><tr><th class="left">Investment</th><th>Asset Class</th><th>Check Size</th><th>Est. Income</th></tr></thead><tbody>';
 
     years.forEach(function(yr, yi) {
       var yearSlots = slotsByYear[yr];
       var yearIncome = yearSlots.reduce(function(s, sl) { return s + (sl.est_income || 0); }, 0);
       cumInc += yearIncome;
       var pct = targetIncome > 0 ? Math.min(100, Math.round(cumInc / targetIncome * 100)) : 0;
-      planHtml += '<tr class="p-year-header"><td colspan="4">Year ' + (yi + 1) + ' (' + yr + ') <span style="float:right;color:' + bc.color + ';">$' + cumInc.toLocaleString() + '/yr \u00b7 ' + pct + '%</span></td></tr>';
+      planHtml += '<tr class="year-row"><td colspan="4">Year ' + (yi + 1) + ' (' + yr + ') <span style="float:right;color:' + bc.color + ';">$' + cumInc.toLocaleString() + '/yr \u00b7 ' + pct + '%</span></td></tr>';
       yearSlots.forEach(function(slot) {
         var filled = !!slot.filled_by;
         var cocPct = Math.round((slot.target_coc || 0) * 100);
-        planHtml += '<tr' + (filled ? '' : ' style="color:#8A9AA0;"') + '>'
-          + '<td style="text-align:left;">' + (filled ? '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + bc.color + ';margin-right:6px;vertical-align:middle;"></span>' + (slot.filled_name || 'Investment') : '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid #DDE5E8;margin-right:6px;vertical-align:middle;box-sizing:border-box;"></span>Open slot') + '</td>'
+        planHtml += '<tr' + (filled ? '' : ' class="muted"') + '>'
+          + '<td class="left"><span class="dot' + (filled ? ' filled' : '') + '"></span>' + (filled ? (slot.filled_name || 'Investment') : 'Open slot') + '</td>'
           + '<td>' + slot.asset_class + '</td>'
           + '<td>$' + (slot.check_size || 0).toLocaleString() + '</td>'
-          + '<td>$' + (slot.est_income || 0).toLocaleString() + '/yr' + (cocPct > 0 ? ' <span style="color:#8A9AA0;font-size:10px;">(' + cocPct + '%)</span>' : '') + '</td></tr>';
+          + '<td>$' + (slot.est_income || 0).toLocaleString() + '/yr' + (cocPct > 0 ? ' <span class="muted-text">(' + cocPct + '%)</span>' : '') + '</td></tr>';
       });
     });
-    planHtml += '<tr style="font-weight:700;border-top:2px solid #141413;"><td style="text-align:left;">Total</td><td>' + totalSlots + ' investments</td><td>$' + totalCapitalDeployed.toLocaleString() + '</td><td style="color:' + bc.color + ';">$' + totalEstIncome.toLocaleString() + '/yr</td></tr>';
+    planHtml += '<tr class="total-row"><td class="left">Total</td><td>' + totalSlots + ' investments</td><td>$' + totalCapitalDeployed.toLocaleString() + '</td><td style="color:' + bc.color + ';">$' + totalEstIncome.toLocaleString() + '/yr</td></tr>';
     planHtml += '</tbody></table></div>';
   }
 
-  // Portfolio holdings
+  // Current investments — rich table with names, operators, dates
   var holdingsHtml = '';
   if (portfolio.length > 0) {
     var totalInvested = portfolio.reduce(function(s, p) { return s + (parseFloat(p.amountInvested) || 0); }, 0);
-    var activeCount = portfolio.filter(function(p) { return (p.status || 'Active') === 'Active'; }).length;
-    var exitedCount = portfolio.length - activeCount;
+    var activeItems = portfolio.filter(function(p) { return (p.status || 'Active') !== 'Exited'; });
+    var exitedItems = portfolio.filter(function(p) { return (p.status || 'Active') === 'Exited'; });
+    var activeTotal = activeItems.reduce(function(s, p) { return s + (parseFloat(p.amountInvested) || 0); }, 0);
+
     holdingsHtml = '<div class="p-section"><h3>Current Investments</h3>'
-      + '<p style="margin-bottom:8px;">Your portfolio includes <strong>' + portfolio.length + ' investment' + (portfolio.length !== 1 ? 's' : '') + '</strong> totaling <strong>$' + totalInvested.toLocaleString() + '</strong> deployed'
-      + (activeCount > 0 && exitedCount > 0 ? ' \u2014 <strong>' + activeCount + ' active</strong> and <strong>' + exitedCount + ' exited</strong>' : '')
-      + '. These existing positions inform the deployment schedule on the following page.</p>'
-      + '<table class="p-plan-table"><thead><tr><th style="text-align:left;">Investment</th><th>Asset Class</th><th>Invested</th><th>Status</th></tr></thead><tbody>';
-    portfolio.forEach(function(p) {
-      holdingsHtml += '<tr><td style="text-align:left;font-weight:600;">' + (p.dealName || p.name || 'Investment') + '</td>'
-        + '<td>' + (p.assetClass || '\u2014') + '</td>'
-        + '<td>$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
-        + '<td>' + (p.status || 'Active') + '</td></tr>';
-    });
-    holdingsHtml += '</tbody></table></div>';
+      + '<p>' + portfolio.length + ' total positions \u00b7 <strong>$' + totalInvested.toLocaleString() + '</strong> deployed \u00b7 <strong>' + activeItems.length + '</strong> active \u00b7 <strong>' + exitedItems.length + '</strong> exited</p>';
+
+    // Active investments
+    if (activeItems.length > 0) {
+      holdingsHtml += '<div style="margin-top:10px;margin-bottom:6px;font-family:\'Plus Jakarta Sans\',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#51BE7B;">Active Investments</div>'
+        + '<table class="p-table"><thead><tr><th class="left">Deal</th><th class="left">Operator</th><th>Asset Class</th><th>Invested</th><th>Date</th></tr></thead><tbody>';
+      activeItems.forEach(function(p) {
+        holdingsHtml += '<tr>'
+          + '<td class="left" style="font-weight:600;">' + (p.investmentName || p.dealName || p.name || 'Investment') + '</td>'
+          + '<td class="left">' + (p.sponsor || '\u2014') + '</td>'
+          + '<td>' + (p.assetClass || '\u2014') + '</td>'
+          + '<td>$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
+          + '<td>' + fmtShortDate(p.dateInvested) + '</td></tr>';
+      });
+      holdingsHtml += '</tbody></table>';
+    }
+
+    // Exited investments
+    if (exitedItems.length > 0) {
+      holdingsHtml += '<div style="margin-top:14px;margin-bottom:6px;font-family:\'Plus Jakarta Sans\',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#8A9AA0;">Exited Investments</div>'
+        + '<table class="p-table"><thead><tr><th class="left">Deal</th><th class="left">Operator</th><th>Asset Class</th><th>Invested</th><th>Date</th></tr></thead><tbody>';
+      exitedItems.forEach(function(p) {
+        holdingsHtml += '<tr class="muted">'
+          + '<td class="left">' + (p.investmentName || p.dealName || p.name || 'Investment') + '</td>'
+          + '<td class="left">' + (p.sponsor || '\u2014') + '</td>'
+          + '<td>' + (p.assetClass || '\u2014') + '</td>'
+          + '<td>$' + (parseFloat(p.amountInvested) || 0).toLocaleString() + '</td>'
+          + '<td>' + fmtShortDate(p.dateInvested) + '</td></tr>';
+      });
+      holdingsHtml += '</tbody></table>';
+    }
+
+    holdingsHtml += '</div>';
   }
 
-  // Build the printable HTML page
+  // Build page
   var today = new Date();
   var dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   var firstName = d.firstName || '';
@@ -16375,120 +16401,132 @@ function printMyPlan() {
     + '<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">'
     + '<style>'
     + '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }'
-    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.5; background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
-    + '.p-page { max-width: 800px; margin: 0 auto; padding: 40px 40px; }'
-    + '.p-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 3px solid #0A1E21; }'
-    + '.p-logo { font-family: "DM Serif Display", Georgia, serif; font-size: 22px; color: #0A1E21; }'
-    + '.p-logo-sub { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; margin-top: 2px; letter-spacing: 0.5px; }'
-    + '.p-header-right { text-align: right; }'
-    + '.p-header-name { font-family: "Plus Jakarta Sans", sans-serif; font-size: 13px; font-weight: 700; color: #141413; text-transform: capitalize; }'
-    + '.p-header-date { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; color: #8A9AA0; margin-top: 2px; }'
-    // Hero
-    + '.p-hero { margin-bottom: 20px; }'
-    + '.p-badge { display: inline-block; padding: 3px 12px; border-radius: 100px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }'
-    + '.p-hero h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 26px; font-weight: 400; margin-bottom: 12px; color: #141413; line-height: 1.2; }'
-    // Progress bar
-    + '.p-progress { margin-bottom: 16px; }'
-    + '.p-progress-bar { height: 10px; background: #EDF1F2; border-radius: 5px; overflow: hidden; margin-bottom: 6px; }'
-    + '.p-progress-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }'
-    + '.p-progress-labels { display: flex; justify-content: space-between; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; }'
-    + '.p-progress-current { font-weight: 700; color: #141413; }'
-    + '.p-progress-pct { font-weight: 600; color: #8A9AA0; }'
-    // Thesis
-    + '.p-thesis-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-thesis-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8A9AA0; margin-bottom: 6px; }'
-    + '.p-thesis { font-size: 14px; line-height: 1.7; color: #607179; }'
-    + '.p-thesis strong { color: #141413; }'
-    // Criteria
-    + '.p-criteria { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-criteria-label { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; margin-bottom: 1px; }'
-    + '.p-criteria-val { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; }'
-    // Sections
-    + '.p-section { margin-bottom: 20px; }'
-    + '.p-section h3 { font-family: "Plus Jakarta Sans", sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8A9AA0; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-section p { font-size: 12px; color: #607179; line-height: 1.5; }'
-    + '.p-section p strong { color: #141413; }'
-    // Tables
-    + '.p-snap-table { width: 100%; border-collapse: collapse; margin-top: 6px; }'
-    + '.p-snap-table th { font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 8px 5px 0; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-snap-table th:first-child { text-align: left; }'
-    + '.p-snap-table td { font-family: "Plus Jakarta Sans", sans-serif; font-size: 12px; font-weight: 600; color: #141413; text-align: center; padding: 6px 8px 6px 0; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-snap-table td:first-child { text-align: left; }'
-    + '.p-snap-table tr:last-child td { border-bottom: none; }'
-    + '.p-plan-table { width: 100%; border-collapse: collapse; font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; }'
-    + '.p-plan-table th { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #8A9AA0; text-align: center; padding: 0 6px 5px 0; border-bottom: 1px solid #EDF1F2; }'
-    + '.p-plan-table th:first-child { text-align: left; }'
-    + '.p-plan-table td { padding: 4px 6px 4px 0; border-bottom: 1px solid #EDF1F2; text-align: center; color: #141413; }'
-    + '.p-plan-table td:first-child { text-align: left; }'
-    + '.p-plan-table tr:last-child td { border-bottom: none; }'
-    + '.p-year-header td { font-weight: 700 !important; background: #FAF9F5; font-size: 11px; padding: 4px 6px !important; }'
-    // Footer & disclaimer
-    + '.p-footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #EDF1F2; display: flex; justify-content: space-between; align-items: center; font-family: "Plus Jakarta Sans", sans-serif; font-size: 9px; color: #8A9AA0; }'
-    + '.p-footer-center { text-align: center; flex: 1; }'
-    + '.p-disclaimer { margin-top: 16px; padding: 10px 14px; background: #FAF9F5; border-radius: 6px; font-family: "Plus Jakarta Sans", sans-serif; font-size: 8px; line-height: 1.4; color: #8A9AA0; }'
-    // Page breaks
-    + '.p-page-break { page-break-before: always; padding-top: 8px; }'
-    + '@media print { body { padding: 0; } .p-page { padding: 12px 0; } .p-year-header { page-break-after: avoid; } .p-disclaimer { page-break-inside: avoid; } }'
-    + '</style></head><body><div class="p-page">';
+    + 'body { font-family: "Source Sans 3", "Source Sans Pro", sans-serif; color: #141413; line-height: 1.45; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }'
+    + '.page { max-width: 760px; margin: 0 auto; padding: 36px 40px; }'
 
-  // ===== PAGE 1: The Plan =====
+    // Header
+    + '.hdr { display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:12px; border-bottom:2px solid #0A1E21; margin-bottom:24px; }'
+    + '.hdr-logo { font-family:"DM Serif Display",Georgia,serif; font-size:20px; color:#0A1E21; }'
+    + '.hdr-sub { font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; color:#8A9AA0; letter-spacing:0.5px; margin-top:1px; }'
+    + '.hdr-right { text-align:right; font-family:"Plus Jakarta Sans",sans-serif; }'
+    + '.hdr-name { font-size:12px; font-weight:700; color:#141413; }'
+    + '.hdr-date { font-size:9px; color:#8A9AA0; margin-top:1px; }'
+
+    // Goal hero
+    + '.goal { margin-bottom:16px; }'
+    + '.goal-badge { display:inline-block; padding:3px 10px; border-radius:100px; font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }'
+    + '.goal h1 { font-family:"DM Serif Display",Georgia,serif; font-size:24px; font-weight:400; color:#141413; line-height:1.15; margin-bottom:0; }'
+
+    // Progress
+    + '.prog { margin-bottom:18px; }'
+    + '.prog-track { height:8px; background:#EDF1F2; border-radius:4px; overflow:hidden; margin-bottom:5px; }'
+    + '.prog-fill { height:100%; border-radius:4px; }'
+    + '.prog-labels { display:flex; justify-content:space-between; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; }'
+    + '.prog-left { font-weight:700; color:#141413; }'
+    + '.prog-right { font-weight:600; color:#8A9AA0; }'
+
+    // Thesis
+    + '.thesis-box { background:#FAF9F5; border-radius:8px; padding:14px 18px; margin-bottom:16px; }'
+    + '.thesis-label { font-family:"Plus Jakarta Sans",sans-serif; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#8A9AA0; margin-bottom:5px; }'
+    + '.thesis-text { font-size:13px; line-height:1.65; color:#607179; }'
+    + '.thesis-text strong { color:#141413; }'
+
+    // Criteria pills
+    + '.criteria { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }'
+    + '.crit-pill { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:100px; border:1px solid #EDF1F2; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; }'
+    + '.crit-pill-label { color:#8A9AA0; font-weight:600; }'
+    + '.crit-pill-val { color:#141413; font-weight:700; }'
+
+    // Section
+    + '.p-section { margin-bottom:18px; }'
+    + '.p-section h3 { font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#8A9AA0; margin-bottom:8px; padding-bottom:5px; border-bottom:1px solid #EDF1F2; }'
+    + '.p-section p { font-size:11px; color:#607179; line-height:1.45; margin-bottom:8px; }'
+    + '.p-section p strong { color:#141413; }'
+
+    // Tables
+    + '.p-table { width:100%; border-collapse:collapse; font-family:"Plus Jakarta Sans",sans-serif; font-size:10px; }'
+    + '.p-table th { font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#8A9AA0; text-align:center; padding:0 5px 5px 0; border-bottom:1px solid #EDF1F2; }'
+    + '.p-table th.left { text-align:left; }'
+    + '.p-table td { padding:4px 5px 4px 0; border-bottom:1px solid #EDF1F2; text-align:center; color:#141413; font-weight:600; }'
+    + '.p-table td.left { text-align:left; }'
+    + '.p-table tr:last-child td { border-bottom:none; }'
+    + '.p-table .muted td, .p-table tr.muted td { color:#8A9AA0; font-weight:400; }'
+    + '.year-row td { font-weight:700 !important; background:#FAF9F5; font-size:10px; padding:4px 5px !important; }'
+    + '.total-row td { font-weight:700 !important; border-top:2px solid #141413; padding-top:6px !important; }'
+    + '.dot { display:inline-block; width:5px; height:5px; border-radius:50%; border:1.5px solid #DDE5E8; margin-right:5px; vertical-align:middle; box-sizing:border-box; }'
+    + '.dot.filled { border:none; }'
+    + '.muted-text { color:#8A9AA0; font-size:9px; }'
+
+    // Footer
+    + '.ftr { margin-top:20px; padding-top:8px; border-top:1px solid #EDF1F2; display:flex; justify-content:space-between; font-family:"Plus Jakarta Sans",sans-serif; font-size:8px; color:#8A9AA0; }'
+    + '.ftr-center { text-align:center; flex:1; }'
+    + '.disclaimer { margin-top:14px; padding:8px 12px; background:#FAF9F5; border-radius:4px; font-family:"Plus Jakarta Sans",sans-serif; font-size:7.5px; line-height:1.35; color:#8A9AA0; }'
+
+    // Print
+    + '.page-break { page-break-before:always; padding-top:6px; }'
+    + '@media print { body { padding:0; } .page { padding:10px 0; } .year-row { page-break-after:avoid; } .disclaimer { page-break-inside:avoid; } }'
+    + '</style></head><body><div class="page">';
+
+  // =============================================
+  // PAGE 1: Your Plan at a Glance
+  // =============================================
 
   // Header
-  html += '<div class="p-header"><div><div class="p-logo">Grow Your Cashflow</div><div class="p-logo-sub">Personal Investment Plan</div></div><div class="p-header-right">' + (fullName ? '<div class="p-header-name">' + fullName + '</div>' : '') + '<div class="p-header-date">Prepared ' + dateStr + '</div></div></div>';
+  html += '<div class="hdr"><div><div class="hdr-logo">Grow Your Cashflow</div><div class="hdr-sub">Personal Investment Plan</div></div><div class="hdr-right">' + (fullName ? '<div class="hdr-name">' + fullName + '</div>' : '') + '<div class="hdr-date">Prepared ' + dateStr + '</div></div></div>';
 
   // Goal
-  html += '<div class="p-hero">'
-    + '<div class="p-badge" style="background:' + bc.color + '15;color:' + bc.color + ';border:1px solid ' + bc.color + '30;">' + bc.label + '</div>'
-    + '<h1>' + goalLine + '</h1>'
-    + '</div>';
+  html += '<div class="goal">'
+    + '<div class="goal-badge" style="background:' + bc.color + '15;color:' + bc.color + ';border:1px solid ' + bc.color + '30;">' + bc.label + '</div>'
+    + '<h1>' + goalLine + '</h1></div>';
 
   // Progress bar
-  if (progressLabel) {
-    html += '<div class="p-progress">'
-      + '<div class="p-progress-bar"><div class="p-progress-fill" style="width:' + progressPct + '%;background:' + bc.color + ';"></div></div>'
-      + '<div class="p-progress-labels"><div class="p-progress-current">' + progressLabel + '</div><div class="p-progress-pct">' + progressPct + '% complete</div></div>'
-      + '</div>';
+  if (progressCurrent) {
+    html += '<div class="prog">'
+      + '<div class="prog-track"><div class="prog-fill" style="width:' + Math.max(progressPct, 2) + '%;background:' + bc.color + ';"></div></div>'
+      + '<div class="prog-labels"><div class="prog-left">' + progressCurrent + ' earned</div><div class="prog-right">' + progressPct + '% of ' + progressTarget + '</div></div></div>';
   }
 
-  // Thesis
-  html += '<div class="p-thesis-section"><h3>Investment Thesis</h3><div class="p-thesis">' + thesisText + '</div></div>';
+  // Thesis in a box
+  html += '<div class="thesis-box"><div class="thesis-label">Investment Thesis</div><div class="thesis-text">' + thesisText + '</div></div>';
 
-  // Criteria grid
+  // Criteria as pills
   if (criteriaItems.length > 0) {
-    html += '<div class="p-criteria">';
+    html += '<div class="criteria">';
     criteriaItems.forEach(function(item) {
-      html += '<div><div class="p-criteria-label">' + item.label + '</div><div class="p-criteria-val">' + item.value + '</div></div>';
+      html += '<div class="crit-pill"><span class="crit-pill-label">' + item.label + ':</span><span class="crit-pill-val">' + item.value + '</span></div>';
     });
     html += '</div>';
   }
 
-  // Market Snapshot (on page 1)
+  // Market Snapshot
   if (snapshotRows) {
-    html += '<div class="p-section"><h3>Market Snapshot</h3>'
-      + '<p style="margin-bottom:6px;"><strong>' + totalMatchingDeals + ' active deals</strong> match your criteria on the Grow Your Cashflow platform. Data reflects live offerings as of ' + dateStr + '.</p>'
-      + '<table class="p-snap-table"><thead><tr><th>Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Minimum</th>' + (userCheckSizeNum > 0 ? '<th>Affordable</th>' : '') + '</tr></thead>'
+    html += '<div class="p-section"><h3>Market Snapshot \u2014 ' + totalMatchingDeals + ' Matching Deals</h3>'
+      + '<p>' + totalMatchingDeals + ' active offerings match your criteria on the Grow Your Cashflow platform as of ' + dateStr + '.</p>'
+      + '<table class="p-table"><thead><tr><th class="left">Asset Class</th><th>IRR Range</th><th>Avg CoC</th><th>Avg Min</th>' + (userCheckSizeNum > 0 ? '<th>Affordable</th>' : '') + '</tr></thead>'
       + '<tbody>' + snapshotRows + '</tbody></table></div>';
   }
 
-  // ===== PAGE 2: Current Investments =====
+  // =============================================
+  // PAGE 2: Current Investments
+  // =============================================
   if (holdingsHtml) {
-    html += '<div class="p-page-break">' + holdingsHtml + '</div>';
+    html += '<div class="page-break">' + holdingsHtml + '</div>';
   }
 
-  // ===== PAGE 3: Deployment Schedule + Disclaimer =====
+  // =============================================
+  // PAGE 3: Deployment Schedule
+  // =============================================
   if (planHtml) {
-    html += '<div class="p-page-break">' + planHtml + '</div>';
+    html += '<div class="page-break">' + planHtml + '</div>';
   }
 
-  // Disclaimer (flows after plan, no page break)
-  html += '<div class="p-disclaimer">'
+  // Disclaimer + Footer (on last page, inline)
+  html += '<div class="disclaimer">'
     + '<strong>Disclaimer:</strong> This plan is for informational purposes only and does not constitute investment advice or an offer to sell securities. '
-    + 'Projected returns and market data are based on current listings and may change. Past performance does not guarantee future results. '
-    + 'Consult a qualified financial advisor before making investment decisions. All investments involve risk, including loss of principal.'
-    + '</div>';
+    + 'Projected returns are based on current listings and may change. Past performance does not guarantee future results. '
+    + 'Consult a qualified financial advisor before making investment decisions. All investments involve risk, including loss of principal.</div>';
 
-  // Footer
-  html += '<div class="p-footer"><div>growyourcashflow.com</div><div class="p-footer-center">Confidential \u2013 Prepared for ' + (fullName || 'personal use') + '</div><div>' + dateStr + '</div></div>';
+  html += '<div class="ftr"><div>growyourcashflow.com</div><div class="ftr-center">Confidential \u2013 Prepared for ' + (fullName || 'personal use') + '</div><div>' + dateStr + '</div></div>';
 
   html += '</div></body></html>';
 
