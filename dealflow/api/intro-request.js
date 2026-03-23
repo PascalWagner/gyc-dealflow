@@ -100,7 +100,7 @@ export default async function handler(req, res) {
             cc: [user.email],
             subject: `Introduction: ${userName} ↔ ${operatorName} — ${dealName}`,
             html: introHtml,
-            reply_to: PASCAL_EMAIL
+            reply_to: 'pascal@growyourcashflow.io'
           })
         });
         emailSent = sendResp.ok;
@@ -201,7 +201,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      introSent: !!contactEmail && emailSent,
+      emailSent: emailSent,
       ghlSynced: !!ghlContactId
     });
   } catch (err) {
