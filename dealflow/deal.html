@@ -5123,16 +5123,26 @@ async function renderDeal() {
         var goalMatch = false;
         var goalGot = '';
         if (branch === 'cashflow') {
-          var hasCashflow = (deal.distributions && deal.distributions !== 'Unknown' && deal.distributions !== 'None') || (deal.cashOnCash && deal.cashOnCash > 0);
-          goalMatch = !!hasCashflow;
-          goalGot = hasCashflow ? (deal.distributions || '') + (deal.cashOnCash ? ' / ' + fmt(deal.cashOnCash, 'pct') + ' CoC' : '') : 'No regular income';
+          var hasDist = deal.distributions && deal.distributions !== 'Unknown' && deal.distributions !== 'None';
+          var hasCoC = deal.cashOnCash && deal.cashOnCash > 0;
+          var hasPref = deal.preferredReturn && deal.preferredReturn > 0;
+          goalMatch = !!(hasDist || hasCoC || hasPref);
+          // Build a readable description of how this deal produces income
+          var gotParts = [];
+          if (hasPref) gotParts.push(fmt(deal.preferredReturn, 'pct') + ' pref return');
+          if (hasCoC) gotParts.push(fmt(deal.cashOnCash, 'pct') + ' CoC');
+          if (hasDist) gotParts.push(deal.distributions.toLowerCase() + ' distributions');
+          goalGot = goalMatch ? ('Pays ' + gotParts.join(', ')) : 'No regular income';
         } else if (branch === 'tax') {
           goalMatch = !!(deal.firstYrDepreciation);
           goalGot = deal.firstYrDepreciation ? deal.firstYrDepreciation + ' yr-1 depreciation' : 'No depreciation data';
         } else if (branch === 'growth') {
           var hasGrowth = (deal.equityMultiple && deal.equityMultiple >= 1.5) || (deal.targetIRR && (deal.targetIRR > 1 ? deal.targetIRR : deal.targetIRR * 100) >= 15);
           goalMatch = !!hasGrowth;
-          goalGot = (deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') + ' multiple' : '') + (deal.targetIRR ? (deal.equityMultiple ? ' / ' : '') + fmt(deal.targetIRR, 'pct') + ' IRR' : '') || 'No growth metrics';
+          var growthParts = [];
+          if (deal.equityMultiple) growthParts.push(fmt(deal.equityMultiple, 'multiple') + ' multiple');
+          if (deal.targetIRR) growthParts.push(fmt(deal.targetIRR, 'pct') + ' IRR');
+          goalGot = growthParts.length > 0 ? growthParts.join(' / ') : 'No growth metrics';
         }
         var goalLabels = { cashflow: 'Income / Cash Flow', tax: 'Tax Benefits', growth: 'Growth / Appreciation' };
         checks.push({ label: 'Goal Alignment', match: goalMatch, want: goalLabels[branch] || branch, got: goalGot || '---' });
