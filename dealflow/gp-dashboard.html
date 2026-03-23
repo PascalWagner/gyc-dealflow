@@ -1972,7 +1972,78 @@ html.dark .gp-header {
         <span id="statOperators">--</span>
       </div>
 
-      <!-- Row 1: LP Activity + Webinar CTA -->
+      <!-- 1. Action Items (top priority for new GPs) -->
+      <div class="section-card" id="actionItemsCard">
+        <div class="section-header">
+          <div class="section-title">Action Items</div>
+          <span class="section-badge" id="actionItemsCount">0</span>
+        </div>
+        <div class="section-body">
+          <div id="actionItemsList"></div>
+          <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
+            <p>All deals look good! No action items at this time.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Deal Health Table -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Deal Health</div>
+          <span class="section-badge" id="dealsCount">0</span>
+        </div>
+        <div class="section-body" style="padding-bottom:16px;">
+          <div class="health-table-wrap">
+            <table class="health-table" id="healthTable">
+              <thead>
+                <tr>
+                  <th data-sort="name">Deal Name <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="status">Status <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="assetClass">Asset Class <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="completeness" class="sorted">Completeness <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="ppm">PPM <span class="sort-arrow">&#9650;</span></th>
+                  <th data-sort="deck">Deck <span class="sort-arrow">&#9650;</span></th>
+                  <th style="text-align:center;width:70px;"></th>
+                </tr>
+              </thead>
+              <tbody id="healthTableBody"></tbody>
+            </table>
+          </div>
+          <div class="empty-inline" id="dealsEmpty" style="display:none;">
+            <p>No deals found. Your deals will appear here once they are added to the platform.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Competitive Analysis -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Competitive Analysis</div>
+        </div>
+        <div class="section-body">
+          <div id="competitiveAnalysis">
+            <div class="empty-inline" style="padding:20px;">
+              <p>Loading competitive data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Market Intelligence -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Market Intelligence</div>
+        </div>
+        <div class="section-body">
+          <div id="marketIntelligence">
+            <div class="empty-inline" style="padding:20px;">
+              <p>Loading market intelligence...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Investor Activity + Pitch CTA (shown after profile work is done) -->
       <div class="dashboard-grid-3-2" id="analyticsCard">
         <!-- LEFT: Investor Activity -->
         <div class="section-card">
@@ -1993,6 +2064,10 @@ html.dark .gp-header {
                 <div class="analytics-metric-value" id="metricInvested">--</div>
                 <div class="analytics-metric-label">Invested</div>
               </div>
+            </div>
+            <!-- Empty state nudge -->
+            <div id="activityEmptyNudge" style="display:none;text-align:center;padding:16px 20px;background:var(--bg-cream);border-radius:8px;margin-top:8px;">
+              <p style="color:var(--text-secondary);font-size:13px;font-family:var(--font-ui);margin:0;">Investor activity will appear here as LPs discover your deals. Complete your action items above to increase visibility.</p>
             </div>
             <!-- Weekly Activity Chart -->
             <div class="weekly-chart-wrap" id="weeklyChartWrap">
@@ -2022,7 +2097,7 @@ html.dark .gp-header {
             <div class="webinar-cta-card">
               <div class="webinar-cta-title">&#127919; Pitch to Our Investor Network</div>
               <div class="webinar-cta-stat" id="webinarCtaStat"></div>
-              <div class="webinar-cta-desc">Your deals are getting attention. Take it further &mdash; pitch directly to our investor network in a live webinar.</div>
+              <div class="webinar-cta-desc" id="webinarCtaDesc">Your deals are getting attention. Take it further &mdash; pitch directly to our investor network in a live webinar.</div>
               <ul class="webinar-cta-features">
                 <li>30-minute dedicated pitch slot</li>
                 <li>Qualified accredited investor audience</li>
@@ -2031,77 +2106,6 @@ html.dark .gp-header {
               </ul>
               <a href="book-pitch.html" class="webinar-cta-btn">Book Your Pitch &mdash; $1,000 &rarr;</a>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row 2: Competitive Analysis (full width) -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Competitive Analysis</div>
-        </div>
-        <div class="section-body">
-          <div id="competitiveAnalysis">
-            <div class="empty-inline" style="padding:20px;">
-              <p>Loading competitive data...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Market Intelligence (consolidated: positioning + demand + investor prefs) -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Market Intelligence</div>
-        </div>
-        <div class="section-body">
-          <div id="marketIntelligence">
-            <div class="empty-inline" style="padding:20px;">
-              <p>Loading market intelligence...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Row 5: Action Items (full width) -->
-      <div class="section-card" id="actionItemsCard">
-        <div class="section-header">
-          <div class="section-title">Action Items</div>
-          <span class="section-badge" id="actionItemsCount">0</span>
-        </div>
-        <div class="section-body">
-          <div id="actionItemsList"></div>
-          <div class="empty-inline" id="actionItemsEmpty" style="display:none;">
-            <p>All deals look good! No action items at this time.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Deal Health Table -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title">Deal Health</div>
-          <span class="section-badge" id="dealsCount">0</span>
-        </div>
-        <div class="section-body" style="padding-bottom:16px;">
-          <div class="health-table-wrap">
-            <table class="health-table" id="healthTable">
-              <thead>
-                <tr>
-                  <th data-sort="name">Deal Name <span class="sort-arrow">&#9650;</span></th>
-                  <th data-sort="status">Status <span class="sort-arrow">&#9650;</span></th>
-                  <th data-sort="assetClass">Asset Class <span class="sort-arrow">&#9650;</span></th>
-                  <th data-sort="completeness" class="sorted">Completeness <span class="sort-arrow">&#9650;</span></th>
-                  <th data-sort="ppm">PPM <span class="sort-arrow">&#9650;</span></th>
-                  <th data-sort="deck">Deck <span class="sort-arrow">&#9650;</span></th>
-                  <th style="text-align:center;width:70px;"></th>
-                </tr>
-              </thead>
-              <tbody id="healthTableBody"></tbody>
-            </table>
-          </div>
-          <div class="empty-inline" id="dealsEmpty" style="display:none;">
-            <p>No deals found. Your deals will appear here once they are added to the platform.</p>
           </div>
         </div>
       </div>
@@ -3018,9 +3022,21 @@ function fetchGPAnalytics() {
 }
 
 function renderLPActivity(analytics) {
-  document.getElementById('metricSaves').textContent = analytics.totalSaves || 0;
-  document.getElementById('metricVetting').textContent = analytics.totalVetting || 0;
-  document.getElementById('metricInvested').textContent = analytics.totalInvested || 0;
+  var totalSaves = analytics.totalSaves || 0;
+  var totalVetting = analytics.totalVetting || 0;
+  var totalInvested = analytics.totalInvested || 0;
+  document.getElementById('metricSaves').textContent = totalSaves;
+  document.getElementById('metricVetting').textContent = totalVetting;
+  document.getElementById('metricInvested').textContent = totalInvested;
+
+  // Show empty-state nudge when there's no activity
+  var nudgeEl = document.getElementById('activityEmptyNudge');
+  var chartWrap = document.getElementById('weeklyChartWrap');
+  if (nudgeEl) {
+    var hasActivity = totalSaves > 0 || totalVetting > 0 || totalInvested > 0;
+    nudgeEl.style.display = hasActivity ? 'none' : 'block';
+    if (chartWrap && !hasActivity) chartWrap.style.display = 'none';
+  }
 
   var listEl = document.getElementById('recentActivityList');
   var recent = analytics.recentActivity || [];
@@ -3177,7 +3193,16 @@ function renderWeeklyChart(weeklyActivity) {
 // ========== WEBINAR CTA ==========
 function renderWebinarCta(gpDeals, allDeals, analytics) {
   var statEl = document.getElementById('webinarCtaStat');
+  var descEl = document.getElementById('webinarCtaDesc');
   if (!statEl) return;
+
+  // Check profile completeness — adjust CTA messaging
+  var actionItems = buildActionItems(gpDeals);
+  var isProfileIncomplete = actionItems.length > 0;
+
+  if (isProfileIncomplete && descEl) {
+    descEl.textContent = 'Complete your deal profile first, then amplify your reach by pitching directly to our investor network.';
+  }
 
   // Try to find the GP's primary asset class and show browsing stat
   var gpAssetClasses = {};
