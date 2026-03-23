@@ -15436,8 +15436,6 @@ function renderReport() {
     + thesisHtml
     + allocationHtml
     + blueprintHtml
-    + pathHtml
-    + snapshotHtml
     + ctaHtml
     + '</div>';
 }
@@ -23024,7 +23022,7 @@ function renderDashboard() {
       blueprintHtml = thesisHtml + pathHtml;
     }
 
-    var sections = heroHtml + blueprintHtml + actionItemsHtml + portfolioHtml + incomeGapHtml + coachingHtml + ddHistoryHtml + fundNudgeHtml;
+    var sections = heroHtml + coachingHtml + actionItemsHtml + incomeGapHtml + ddHistoryHtml;
     container.innerHTML = sections;
   }
 }
