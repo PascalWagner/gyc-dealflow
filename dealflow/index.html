@@ -2087,7 +2087,7 @@ html.dark .credit-chart-legend-divider {
   .manager-card-meta { font-size: 11px !important; }
   .manager-card-badges { gap: 3px !important; margin-bottom: 6px !important; }
   .manager-card-link { font-size: 11px !important; }
-  #managersGrid { gap: 8px !important; }
+  #managersGrid { gap: 8px !important; grid-template-columns: 1fr !important; }
   #page-managers .content-area { padding: 8px 12px !important; padding-bottom: 80px !important; }
   #managersStats { display:none !important; }
   #page-managers .filter-bar { padding: 8px 12px !important; }
@@ -6433,7 +6433,7 @@ const _supa = window.supabase.createClient(
       <div id="managersStats" style="margin-left:auto;display:flex;gap:16px;align-items:center;font-size:12px;color:var(--text-muted);white-space:nowrap;"></div>
     </div>
     <div class="content-area" style="padding:24px;">
-      <div id="managersGrid" style="display:grid;grid-template-columns:1fr;gap:12px;"></div>
+      <div id="managersGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
       <!-- Hidden table for legacy compat -->
       <table style="display:none;"><tbody id="managersTableBody"></tbody></table>
     </div>
