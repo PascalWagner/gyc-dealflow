@@ -6544,20 +6544,25 @@ async function renderDeal() {
     detailsHtml += '</div></div>';
   }
   detailsHtml += '<div class="section-body"><div class="details-grid">';
-  detailsHtml += detailItem('Distributions', deal.distributions);
-  detailsHtml += detailItem('Available To', deal.availableTo);
-  detailsHtml += detailItem('Offering Type', deal.offeringType);
+  detailsHtml += detailItem('Target IRR', fmt(deal.targetIRR, 'pct'));
   if (isCreditFund(deal)) {
     detailsHtml += detailItem('Pref Return', fmt(deal.preferredReturn, 'pct'));
   } else {
     detailsHtml += detailItem('Cash-on-Cash', fmt(deal.cashOnCash, 'pct'));
   }
-  if (!isCreditFund(deal)) {
-    detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
-    detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
-  }
+  detailsHtml += detailItem('Min Investment', fmt(deal.investmentMinimum, 'money'));
+  detailsHtml += detailItem('Lockup', formatHoldPeriod(deal.holdPeriod));
+  detailsHtml += detailItem('Distributions', deal.distributions);
+  detailsHtml += detailItem('Offering Type', deal.offeringType);
+  if (deal.equityMultiple) detailsHtml += detailItem('Equity Multiple', fmt(deal.equityMultiple, 'multiple'));
+  if (deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit)) detailsHtml += detailItem('LP/GP Split', deal.lpGpSplit);
+  detailsHtml += detailItem('Available To', deal.availableTo);
   detailsHtml += detailItem('Offering Size', fmt(deal.offeringSize, 'money'));
   detailsHtml += detailItem('Strategy', deal.strategy);
+  if (!isCreditFund(deal)) {
+    if (deal.sponsorInDeal) detailsHtml += detailItem('Sponsor Co-Invest', fmt(deal.sponsorInDeal, 'pct'));
+    if (deal.firstYrDepreciation) detailsHtml += detailItem('1st Year Depreciation', deal.firstYrDepreciation);
+  }
   if (deal.debtPosition) detailsHtml += detailItem('Debt Position', deal.debtPosition);
   if (deal.fundAUM) detailsHtml += detailItem('Fund AUM', fmt(deal.fundAUM, 'money'));
   if (deal.loanCount) detailsHtml += detailItem('Loan Count', deal.loanCount);
