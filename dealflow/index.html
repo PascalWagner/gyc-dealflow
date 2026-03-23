@@ -19042,7 +19042,7 @@ function showAddDealModal() {
       <div class="modal-field" style="grid-column:1/-1;position:relative;"><label>Investment Name *</label><input id="addDealName" placeholder="Search existing deals or enter a new name..." oninput="searchExistingDeals(this.value)" onblur="setTimeout(function(){var r=document.getElementById('addDealSearchResults');if(r)r.style.display='none';},200)" onfocus="if(this.value.length>=2)searchExistingDeals(this.value)"><div id="addDealSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:10;max-height:200px;overflow-y:auto;margin-top:-2px;"></div></div>
       <div class="modal-field" style="grid-column:1/-1"><label>Sponsor / Management Company *</label><input id="addDealSponsor" placeholder="e.g. Acme Capital"></div>
       <div class="modal-field" style="grid-column:1/-1"><label>Website / Link</label><input id="addDealURL" placeholder="https://..."></div>
-      <div class="modal-field" style="grid-column:1/-1"><label>Investment Deck</label>
+      <div class="modal-field" style="grid-column:1/-1"><label>Investment Deck <span style="font-weight:400;color:var(--text-muted);font-size:11px;">(deck or PPM required)</span></label>
         <div id="addDealUploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('addDealFileInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='rgba(81,190,123,0.04)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='transparent';handleAddDealFileDrop(event)">
           <div id="addDealUploadText" style="font-size:13px;color:var(--text-muted);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -19051,7 +19051,7 @@ function showAddDealModal() {
         </div>
         <input type="file" id="addDealFileInput" accept=".pdf,.doc,.docx,.pptx,.ppt,.xlsx" style="display:none" onchange="handleAddDealFileSelect(this)" />
       </div>
-      <div class="modal-field" style="grid-column:1/-1"><label>PPM (Private Placement Memorandum)</label>
+      <div class="modal-field" style="grid-column:1/-1"><label>PPM (Private Placement Memorandum) <span style="font-weight:400;color:var(--text-muted);font-size:11px;">(deck or PPM required)</span></label>
         <div id="addDealPPMArea" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s;" onclick="document.getElementById('addDealPPMInput').click()" ondragover="event.preventDefault();this.style.borderColor='var(--primary)';this.style.background='rgba(81,190,123,0.04)'" ondragleave="this.style.borderColor='var(--border)';this.style.background='transparent'" ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='transparent';handleAddDealPPMDrop(event)">
           <div id="addDealPPMText" style="font-size:13px;color:var(--text-muted);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" style="vertical-align:middle;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -19285,6 +19285,7 @@ async function submitNewDeal() {
   const sponsor = document.getElementById('addDealSponsor').value.trim();
   const website = document.getElementById('addDealURL').value.trim();
   if (!name || !sponsor) { alert('Please enter at least the investment name and sponsor.'); return; }
+  if (!_addDealFile && !_addDealFileBase64 && !_addDealPPMFile && !_addDealPPMFileBase64) { alert('Please upload at least an investment deck or PPM.'); return; }
 
   const userData = JSON.parse(localStorage.getItem('gycUser') || '{}');
 
