@@ -40,36 +40,10 @@ export default async function handler(req, res) {
 
   try {
     // 1. Find the best operator contact (IR > operator_permissions > none)
+    // TODO: Re-enable auto-intro once flow is validated
+    // For now, all intros route to Pascal for manual handling
     let contactEmail = '';
     let contactName = '';
-
-    // Try IR contact from management_companies
-    if (managementCompanyId) {
-      const { data: mc } = await supabase
-        .from('management_companies')
-        .select('ir_contact_name, ir_contact_email')
-        .eq('id', managementCompanyId)
-        .single();
-      if (mc?.ir_contact_email) {
-        contactEmail = mc.ir_contact_email;
-        contactName = mc.ir_contact_name || '';
-      }
-    }
-
-    // Fallback: operator_permissions contact
-    if (!contactEmail && managementCompanyId) {
-      const { data: perm } = await supabase
-        .from('operator_permissions')
-        .select('contact_email, contact_name')
-        .eq('management_company_id', managementCompanyId)
-        .not('contact_email', 'is', null)
-        .limit(1)
-        .single();
-      if (perm?.contact_email) {
-        contactEmail = perm.contact_email;
-        contactName = perm.contact_name || '';
-      }
-    }
 
     // 2. Store in Supabase
     const { error: insertError } = await supabase
