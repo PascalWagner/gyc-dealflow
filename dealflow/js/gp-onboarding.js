@@ -39,7 +39,7 @@
     'Multi-Family', 'Self Storage', 'Industrial', 'Mobile Home Parks',
     'Hotels/Hospitality', 'Retail', 'Office', 'Senior Living',
     'Student Housing', 'Medical Office', 'Data Centers', 'Lending',
-    'Short Term Rental', 'Land', 'Mixed Use', 'Build-to-Rent'
+    'Short Term Rental', 'Land', 'Mixed Use', 'Build-to-Rent', 'Other'
   ];
   var selectedAssetClasses = [];
 
