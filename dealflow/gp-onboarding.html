@@ -1231,9 +1231,9 @@ select.form-input { cursor: pointer; appearance: auto; }
           <div class="form-group">
             <label class="form-label">Your Role</label>
             <select class="form-input" id="gpType">
-              <option value="founder">Founder / Principal</option>
-              <option value="sponsor">Sponsor</option>
-              <option value="operator">Operator / Manager</option>
+              <option value="ceo">CEO / Principal</option>
+              <option value="management">Management Team</option>
+              <option value="ir">Investor Relations</option>
             </select>
           </div>
           <input type="hidden" id="firmType" value="">
@@ -1625,6 +1625,31 @@ select.form-input { cursor: pointer; appearance: auto; }
                 <div><strong>Every Thursday at 1:00 PM ET</strong> — one operator per week, first come first served. Pick your date after checkout.</div>
               </li>
             </ul>
+            <!-- Social proof stats -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px;padding-top:4px;">
+              <div style="background:var(--off-white);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;">
+                <div style="font-family:var(--font-headline);font-size:22px;color:var(--teal-deep);line-height:1;">8–20</div>
+                <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-top:2px;">Live Attendees</div>
+              </div>
+              <div style="background:var(--off-white);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;">
+                <div style="font-family:var(--font-headline);font-size:22px;color:var(--teal-deep);line-height:1;">1,100+</div>
+                <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-top:2px;">Get the Replay</div>
+              </div>
+              <div style="background:var(--off-white);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;">
+                <div style="font-family:var(--font-headline);font-size:22px;color:var(--teal-deep);line-height:1;">1,500+</div>
+                <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-top:2px;">Avg. YouTube Views</div>
+              </div>
+            </div>
+
+            <!-- Real example callout -->
+            <div style="background:var(--off-white);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="width:20px;height:20px;flex-shrink:0;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+              <div style="flex:1;">
+                <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text-dark);">Presentations also go on YouTube</div>
+                <div style="font-family:var(--font-ui);font-size:12px;color:var(--text-muted);">Our most recent operator presentation has <strong style="color:var(--text-dark);">1,500+ views</strong> and counting. Your pitch keeps reaching new investors for months.</div>
+              </div>
+            </div>
+
             <button class="upsell-cta" onclick="bookPresentation()">
               Reserve My Slot — $1,000
             </button>

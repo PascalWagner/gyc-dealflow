@@ -5,7 +5,7 @@
 // No auth required — data is aggregated/anonymized.
 // Cached aggressively (15 min) since it changes slowly.
 
-import { getAdminClient, setCors, rateLimit } from './_supabase.js';
+import { getAdminClient, setCors, rateLimit, ghlFetch } from './_supabase.js';
 
 export default async function handler(req, res) {
   setCors(res);
@@ -31,8 +31,25 @@ export default async function handler(req, res) {
 
     const boxes = buyBoxes || [];
 
-    // Accredited count
-    const accreditedCount = boxes.filter(b => b.accreditation === 'accredited').length;
+    // Accredited count — combine buy box data + GHL tags
+    const buyBoxAccredited = boxes.filter(b => b.accreditation === 'accredited').length;
+
+    // Also count from GHL: search for contacts tagged as accredited
+    let ghlAccredited = 0;
+    try {
+      const ghlResp = await ghlFetch(
+        'https://rest.gohighlevel.com/v1/contacts/?query=accredited&limit=1'
+      );
+      if (ghlResp && ghlResp.ok) {
+        const ghlData = await ghlResp.json();
+        // GHL returns meta.total for total matching contacts
+        ghlAccredited = ghlData.meta?.total || ghlData.contacts?.length || 0;
+      }
+    } catch (e) {
+      // Non-blocking — fall back to buy box count only
+    }
+
+    const accreditedCount = Math.max(buyBoxAccredited, ghlAccredited);
 
     // Goal distribution (Income / Tax / Growth)
     const goalDist = { income: 0, tax: 0, growth: 0 };
