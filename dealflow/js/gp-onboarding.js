@@ -632,9 +632,9 @@
   }
 
   function renderNetworkStats(stats) {
-    // Welcome page stats — use at least 1,100 as the floor
+    // Welcome page stats — use known GHL numbers as floor
     animateNumber('statTotalLPs', Math.max(stats.totalLPs || 0, 1100));
-    animateNumber('statAccredited', stats.accreditedCount);
+    animateNumber('statAccredited', Math.max(stats.accreditedCount || 0, 600));
     animateNumber('statBuyBoxes', stats.completedBuyBoxes);
 
     // Presentation page — hardcode 1,100+ minimum

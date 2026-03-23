@@ -1094,10 +1094,6 @@ select.form-input { cursor: pointer; appearance: auto; }
                 <div class="net-stat-value" id="statAccredited">--</div>
                 <div class="net-stat-label">Accredited</div>
               </div>
-              <div class="net-stat">
-                <div class="net-stat-value" id="statBuyBoxes">--</div>
-                <div class="net-stat-label">Active Buy Boxes</div>
-              </div>
             </div>
 
             <!-- Asset class demand chart -->
@@ -1150,18 +1146,7 @@ select.form-input { cursor: pointer; appearance: auto; }
               <option value="operator">Operator / Manager</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">Firm Type</label>
-            <select class="form-input" id="firmType">
-              <option value="">Select...</option>
-              <option value="Syndicator">Syndicator</option>
-              <option value="Fund Manager">Fund Manager</option>
-              <option value="Developer">Developer</option>
-              <option value="Property Manager">Property Manager</option>
-              <option value="Lending / Credit">Lending / Credit</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+          <input type="hidden" id="firmType" value="">
         </div>
         <!-- Hidden fields for later profile completion -->
         <input type="hidden" id="ceo"><input type="hidden" id="linkedinCeo"><input type="hidden" id="website"><input type="hidden" id="foundingYear">
