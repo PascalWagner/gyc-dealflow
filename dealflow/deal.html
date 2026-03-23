@@ -8545,16 +8545,9 @@ function submitIntroConfirmation() {
     btn.innerHTML = 'Requesting...';
   }
 
-  var token = '';
-  try {
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
-      if (k && k.indexOf('-auth-token') > -1) {
-        var v = JSON.parse(localStorage.getItem(k) || '{}');
-        if (v.access_token) { token = v.access_token; break; }
-      }
-    }
-  } catch(e) {}
+  var user = {};
+  try { user = JSON.parse(localStorage.getItem('gycUser') || '{}'); } catch(e) {}
+  var token = user.token || '';
 
   var sponsors = deal.sponsors || [];
   var op = sponsors.find(function(s) { return s.role === 'operator'; });
