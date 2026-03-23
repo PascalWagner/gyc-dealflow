@@ -6797,15 +6797,10 @@ async function renderDeal() {
       { key: 'prop', label: 'Property Mgmt Fee', patterns: [/property\s*(?:management|mgmt)\s*fee/i], lowerBetter: true },
       { key: 'const', label: 'Construction Mgmt Fee', patterns: [/construction\s*(?:management|mgmt|oversight)\s*fee/i], lowerBetter: true },
       { key: 'dev', label: 'Development Fee', patterns: [/development\s*fee/i, /dev(?:elopment)?\s*fee/i], lowerBetter: true },
-      { key: 'perf', label: 'Performance Fee', patterns: [/performance\s*fee/i, /incentive\s*fee/i], lowerBetter: true },
-      { key: 'carry', label: 'Carried Interest', patterns: [/carri(?:ed|y)\s*interest/i, /carry/i, /promote/i], lowerBetter: true },
-      { key: 'setup', label: 'Setup / Org Fee', patterns: [/setup\s*fee/i, /org(?:anization(?:al)?)?\s*fee/i, /formation\s*fee/i], lowerBetter: true },
       { key: 'serv', label: 'Servicing Fee', patterns: [/servic(?:e|ing)\s*fee/i, /loan\s*servicing/i], lowerBetter: true },
-      { key: 'captx', label: 'Capital Transaction Fee', patterns: [/capital\s*transaction\s*fee/i, /capital\s*event\s*fee/i], lowerBetter: true },
       { key: 'refi', label: 'Refinance Fee', patterns: [/refin(?:ance|ancing)\s*fee/i, /refi\s*fee/i], lowerBetter: true },
       { key: 'guarantee', label: 'Guarantee Fee', patterns: [/guarantee\s*fee/i, /guaranty\s*fee/i, /loan\s*guarantee/i], lowerBetter: true },
-      { key: 'dd', label: 'Due Diligence Fee', patterns: [/due\s*diligence\s*fee/i, /dd\s*fee/i], lowerBetter: true },
-      { key: 'finance', label: 'Financing Fee', patterns: [/financ(?:e|ing)\s*fee/i, /debt\s*(?:placement|arrangement)\s*fee/i], lowerBetter: true }
+      { key: 'dd', label: 'Due Diligence Fee', patterns: [/due\s*diligence\s*fee/i, /dd\s*fee/i], lowerBetter: true }
     ];
 
     // Extract percentage from a fee string
@@ -6836,15 +6831,7 @@ async function renderDeal() {
       return result;
     }
 
-    // Parse LP/GP split into LP percentage
-    function parseSplit(splitStr) {
-      if (!splitStr) return null;
-      var m = String(splitStr).match(/(\d+)\s*[\/\-]\s*(\d+)/);
-      return m ? parseInt(m[1]) : null;
-    }
-
     var dealFees = parseFees(deal.fees);
-    var dealSplitLP = parseSplit(deal.lpGpSplit);
     // Always show — comprehensive fee check displays all categories even if Not Charged
 
     // Get peers (same logic as benchmark section)
@@ -6862,7 +6849,7 @@ async function renderDeal() {
 
     // Parse all peer fees
     var peerFeesParsed = peers.map(function(d) {
-      return { fees: parseFees(d.fees), splitLP: parseSplit(d.lpGpSplit) };
+      return { fees: parseFees(d.fees) };
     });
 
     // For each fee category, gather peer values
@@ -6948,38 +6935,6 @@ async function renderDeal() {
           chargeRate: chargeRate
         });
       }
-    }
-
-    // LP/GP split row
-    var peerSplitVals = peerFeesParsed.map(function(p) { return p.splitLP; }).filter(function(v) { return v !== null; });
-    var splitMed = median(peerSplitVals.slice());
-    if (dealSplitLP !== null) {
-      var splitVerdict, splitColor, splitBg;
-      if (splitMed !== null && peerSplitVals.length >= 2) {
-        if (dealSplitLP >= splitMed) {
-          splitVerdict = 'LP-Favorable';
-          splitColor = '#10b981';
-          splitBg = 'rgba(16,185,129,0.08)';
-        } else {
-          splitVerdict = 'Below Market for LPs';
-          splitColor = '#f59e0b';
-          splitBg = 'rgba(245,158,11,0.08)';
-        }
-      } else {
-        splitVerdict = 'Limited Data';
-        splitColor = 'var(--text-muted)';
-        splitBg = 'var(--bg-cream)';
-      }
-      rows.push({
-        label: 'LP / GP Split',
-        dealVal: deal.lpGpSplit,
-        marketVal: splitMed !== null ? splitMed + '/' + (100 - splitMed) : '—',
-        peerCount: peerSplitVals.length,
-        verdict: splitVerdict,
-        verdictColor: splitColor,
-        verdictBg: splitBg,
-        isSplit: true
-      });
     }
 
     var hasPeerComparison = rows.length > 0;
