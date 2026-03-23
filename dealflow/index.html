@@ -7421,6 +7421,7 @@ const _supa = window.supabase.createClient(
       <div class="topbar-title">Admin Dashboard</div>
       <div style="margin-left:auto;display:flex;gap:8px;">
         <a href="https://analytics.google.com/analytics/web/#/p/G-F8B5NMB9J9" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;text-decoration:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12s4.48 10 10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 12V8M12 12V6M16 12v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 22l4-4m0 0l-4-4m4 4H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Google Analytics</a>
+        <button id="ghlSyncBtn" onclick="triggerGhlSync()" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Sync GHL</button>
         <button onclick="switchAdminDashTab(adminDashCurrentTab)" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);cursor:pointer;">Refresh</button>
         <button id="admindashClearBtn" onclick="clearAnalyticsData()" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 14px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--red);cursor:pointer;">Clear Data</button>
       </div>
@@ -22919,6 +22920,23 @@ function analyticsPageLeave() {
 window.addEventListener('beforeunload', analyticsPageLeave);
 
 // --- SaaS Metrics Dashboard ---
+async function triggerGhlSync() {
+  var btn = document.getElementById('ghlSyncBtn');
+  if (btn) { btn.textContent = 'Syncing...'; btn.disabled = true; }
+  try {
+    var resp = await fetch('/api/ghl-sync', { method: 'POST' });
+    var data = await resp.json();
+    if (data.success) {
+      alert('GHL Sync complete: ' + data.synced + ' synced, ' + data.skipped + ' skipped, ' + data.errors + ' errors');
+    } else {
+      alert('GHL Sync failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch(e) {
+    alert('GHL Sync error: ' + e.message);
+  }
+  if (btn) { btn.textContent = 'Sync GHL'; btn.disabled = false; }
+}
+
 async function loadSaasMetrics() {
   if (!isAdmin()) return;
   var loadingEl = document.getElementById('saasLoading');

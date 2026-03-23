@@ -128,7 +128,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Store event in Supabase (the source of truth)
+    // Store event in Supabase immediately (the source of truth)
     const { error: insertError } = await supabase
       .from('user_events')
       .insert({
@@ -139,35 +139,40 @@ export default async function handler(req, res) {
 
     if (insertError) throw insertError;
 
-    // Update activity summary on user_profiles
-    const profileUpdate = { last_activity_date: new Date().toISOString() };
-    if (event === 'deal_viewed' && data?.viewCount !== undefined)
-      profileUpdate.deals_viewed_count = data.viewCount;
-    if (event === 'deal_saved' && data?.saveCount !== undefined)
-      profileUpdate.deals_saved_count = data.saveCount;
-    if (event === 'session_start' && data?.sessionCount !== undefined)
-      profileUpdate.sessions_count = data.sessionCount;
-    if (event === 'wizard_complete')
-      profileUpdate.buy_box_complete = true;
+    // Update activity summary on user_profiles (best-effort, columns may not exist)
+    try {
+      const profileUpdate = { last_activity_date: new Date().toISOString() };
+      if (event === 'deal_viewed' && data?.viewCount !== undefined)
+        profileUpdate.deals_viewed_count = data.viewCount;
+      if (event === 'deal_saved' && data?.saveCount !== undefined)
+        profileUpdate.deals_saved_count = data.saveCount;
+      if (event === 'session_start' && data?.sessionCount !== undefined)
+        profileUpdate.sessions_count = data.sessionCount;
+      if (event === 'wizard_complete')
+        profileUpdate.buy_box_complete = true;
 
-    // Funnel status: only advance, never regress
-    const newFunnel = EVENT_FUNNEL[event];
-    if (newFunnel) {
-      const { data: currentProfile } = await supabase
-        .from('user_profiles')
-        .select('funnel_status')
-        .eq('id', profile.id)
-        .single();
-      const currentStatus = currentProfile?.funnel_status || 'new';
-      if (FUNNEL_ORDER.indexOf(newFunnel) > FUNNEL_ORDER.indexOf(currentStatus)) {
-        profileUpdate.funnel_status = newFunnel;
+      // Funnel status: only advance, never regress
+      const newFunnel = EVENT_FUNNEL[event];
+      if (newFunnel) {
+        const { data: currentProfile } = await supabase
+          .from('user_profiles')
+          .select('funnel_status')
+          .eq('id', profile.id)
+          .single();
+        const currentStatus = currentProfile?.funnel_status || 'new';
+        if (FUNNEL_ORDER.indexOf(newFunnel) > FUNNEL_ORDER.indexOf(currentStatus)) {
+          profileUpdate.funnel_status = newFunnel;
+        }
       }
-    }
 
-    await supabase
-      .from('user_profiles')
-      .update(profileUpdate)
-      .eq('id', profile.id);
+      await supabase
+        .from('user_profiles')
+        .update(profileUpdate)
+        .eq('id', profile.id);
+    } catch (profileErr) {
+      // Activity columns may not exist yet — event is already stored, so this is non-fatal
+      console.warn('Profile update skipped (columns may not exist):', profileErr.message);
+    }
 
     // Persist goals_complete data to user_goals
     if (event === 'goals_complete' && data) {
@@ -184,12 +189,22 @@ export default async function handler(req, res) {
       }
     }
 
-    // Sync to GHL in background
-    const ghlResult = await syncEventToGhl(email, event, data);
+    // GHL sync: only for high-value events (wizard_complete, call_booked, deal_saved with 3+ saves)
+    // Low-frequency events get real-time GHL sync; everything else is batched
+    const HIGH_VALUE_EVENTS = ['wizard_complete', 'goals_complete', 'call_booked', 'fund_cta_clicked', 'academy_cta_clicked'];
+    const isHighValue = HIGH_VALUE_EVENTS.includes(event)
+      || (event === 'deal_saved' && data?.saveCount >= 3)
+      || (event === 'session_start' && data?.sessionCount >= 3);
+
+    let ghlResult = { fieldsUpdated: 0, tagsAdded: [] };
+    if (isHighValue) {
+      ghlResult = await syncEventToGhl(email, event, data);
+    }
 
     return res.status(200).json({
       success: true,
       event,
+      ghlSynced: isHighValue,
       fieldsUpdated: ghlResult.fieldsUpdated,
       tagsAdded: ghlResult.tagsAdded
     });
