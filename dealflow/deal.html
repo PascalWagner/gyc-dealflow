@@ -8463,7 +8463,7 @@ function openIntroConfirmation() {
   var _icTier = _icUser.tier || 'free';
   var _icIsPaid = _icTier !== 'free';
   var _icIsAdmin = _icUser && _icUser.email && ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'].indexOf((_icUser.email || '').toLowerCase()) >= 0;
-  var canSubmit = _icIsPaid || _icIsAdmin;
+  var canSubmit = true; // Introductions available to all tiers
 
   // Build modal HTML
   var modalHtml = '<div class="intro-confirm-modal">'
