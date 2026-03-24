@@ -1,0 +1,15 @@
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+	plugins: [sveltekit()],
+	server: {
+		// Proxy API calls to existing Vercel serverless functions during dev
+		proxy: {
+			'/api': {
+				target: 'https://deals.growyourcashflow.io',
+				changeOrigin: true
+			}
+		}
+	}
+});

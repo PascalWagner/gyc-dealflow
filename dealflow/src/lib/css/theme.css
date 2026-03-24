@@ -1,0 +1,105 @@
+/* GYC Dealflow Design System
+   Single source of truth for all brand tokens.
+   Import this in +layout.svelte — never redefine these in components. */
+
+/* ===== Fonts ===== */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+/* ===== Light Mode (default) ===== */
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #3da866;
+  --primary-light: rgba(81, 190, 123, 0.1);
+
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0A1E21;
+  --bg-sidebar-hover: #14333A;
+  --bg-sidebar-active: #1F5159;
+
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --text-sidebar: rgba(255,255,255,0.55);
+  --text-sidebar-active: #FFFFFF;
+
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --red: #e57373;
+  --blue: #3b82f6;
+  --orange: #f97316;
+  --purple: #a855f7;
+
+  --transition: 0.2s ease;
+
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* ===== Dark Mode ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-cream: #0A1E21;
+    --bg-card: #14333A;
+    --bg-sidebar: #061215;
+    --bg-sidebar-hover: #0A1E21;
+    --bg-sidebar-active: #1F5159;
+
+    --text-dark: #E8EDE9;
+    --text-secondary: #9DB0B5;
+    --text-muted: #607179;
+
+    --border: #1F5159;
+    --border-light: #14333A;
+
+    --green-bg: #0D2E1A;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  }
+}
+
+/* ===== Base Reset ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Utility Classes ===== */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ===== Safe Areas (iOS) ===== */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}

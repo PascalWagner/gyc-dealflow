@@ -1,7 +1,5 @@
 {
-  "buildCommand": "",
-  "installCommand": "",
-  "framework": null,
+  "framework": "sveltekit",
   "functions": {
     "api/deck-upload.js": { "maxDuration": 60 },
     "api/portfolio-upload.js": { "maxDuration": 60 },
@@ -10,10 +8,6 @@
   },
   "crons": [
     { "path": "/api/ghl-sync", "schedule": "0 * * * *" }
-  ],
-  "rewrites": [
-    { "source": "/", "destination": "/landing.html" },
-    { "source": "/cashflow-academy", "destination": "/index.html" }
   ],
   "headers": [
     {
