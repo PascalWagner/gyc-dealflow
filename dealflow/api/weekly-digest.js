@@ -187,9 +187,9 @@ async function fetchDealSaveStats(supabase, dealIds) {
 // Render a single deal as an email-safe card (table-based for email clients)
 function dealCard(deal, opts = {}) {
   const BASE = 'https://dealflow.growyourcashflow.io';
-  const viewUrl = `${BASE}/deal.html?id=${deal.id}`;
+  const viewUrl = `${BASE}/deal/${deal.id}`;
   const imageUrl = `${BASE}/api/deal-card-og?id=${deal.id}`;
-  const saveUrl = opts.email ? generateSaveUrl(deal.id, opts.email) : `${BASE}/deal.html?id=${deal.id}&action=save`;
+  const saveUrl = opts.email ? generateSaveUrl(deal.id, opts.email) : `${BASE}/deal/${deal.id}&action=save`;
 
   const yieldVal = deal.preferred_return || deal.cash_on_cash || deal.target_irr || 0;
   const yieldPct = yieldVal > 1 ? yieldVal.toFixed(1) : (yieldVal * 100).toFixed(1);
@@ -324,8 +324,8 @@ function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals =
 
   const BASE = 'https://dealflow.growyourcashflow.io';
   const imageUrl = `${BASE}/api/deal-card-og?id=${heroDeal.id}`;
-  const viewUrl = `${BASE}/deal.html?id=${heroDeal.id}`;
-  const saveUrl = user.email ? generateSaveUrl(heroDeal.id, user.email) : `${BASE}/deal.html?id=${heroDeal.id}&action=save`;
+  const viewUrl = `${BASE}/deal/${heroDeal.id}`;
+  const saveUrl = user.email ? generateSaveUrl(heroDeal.id, user.email) : `${BASE}/deal/${heroDeal.id}&action=save`;
   const heroSaveCount = saveStats[heroDeal.id] || 0;
 
   let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>

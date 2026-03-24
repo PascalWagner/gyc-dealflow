@@ -79,7 +79,7 @@
 		loading = false;
 	});
 
-	const dealUrl = $derived(deal ? `${BASE_URL}/deal.html?id=${deal.id}` : '#');
+	const dealUrl = $derived(deal ? `${BASE_URL}/deal/${deal.id}` : '#');
 	const subject = $derived(deal ? `${deal.name} — ${deal.asset_class || 'Deal'}, ${fmtPct(deal.target_irr)} IRR, ${fmt$(deal.minimum_investment)} min` : '');
 </script>
 
@@ -215,7 +215,7 @@
 						<tbody><tr><td style="padding:16px 20px;text-align:center;">
 							<div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Not the right fit?</div>
 							<div style="font-size:12px;color:#607179;margin-bottom:10px;">Update your buy box and we'll send better matches next time.</div>
-							<a href="{BASE_URL}/index.html#buybox?step=4" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Update Buy Box &#8594;</a>
+							<a href="{BASE_URL}/app/plan" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Update Buy Box &#8594;</a>
 						</td></tr>
 					</tbody></table>
 				</td></tr>
@@ -223,7 +223,7 @@
 				<!-- Footer -->
 				<tr><td align="center" style="padding:24px 0 0;">
 					<div style="font-size:11px;color:#8A9AA0;">
-						<a href="{BASE_URL}/index.html#settings" style="color:#8A9AA0;text-decoration:underline;">Manage preferences</a>
+						<a href="{BASE_URL}/app/settings" style="color:#8A9AA0;text-decoration:underline;">Manage preferences</a>
 						<span style="margin:0 4px;">&#183;</span>
 						<a href="{BASE_URL}/api/unsubscribe?email={encodeURIComponent(userEmail)}" style="color:#8A9AA0;text-decoration:underline;">Unsubscribe</a>
 					</div>

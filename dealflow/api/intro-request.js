@@ -143,13 +143,13 @@ export default async function handler(req, res) {
   <p style="font-size:16px;font-weight:700;color:#e53e3e;">⚠️ Intro Requested — No IR Contact on File</p>
   <table style="width:100%;border-collapse:collapse;margin:12px 0;">
     <tr><td style="padding:6px 0;font-weight:600;width:120px;">LP:</td><td>${userName} (${user.email})</td></tr>
-    <tr><td style="padding:6px 0;font-weight:600;">Deal:</td><td><a href="${BASE}/deal.html?id=${dealId}" style="color:#51BE7B;">${dealName}</a></td></tr>
+    <tr><td style="padding:6px 0;font-weight:600;">Deal:</td><td><a href="${BASE}/deal/${dealId}" style="color:#51BE7B;">${dealName}</a></td></tr>
     <tr><td style="padding:6px 0;font-weight:600;">Operator:</td><td>${operatorName}</td></tr>
     ${operatorCeo ? `<tr><td style="padding:6px 0;font-weight:600;">CEO:</td><td>${operatorCeo}</td></tr>` : ''}
     ${message ? `<tr><td style="padding:6px 0;font-weight:600;">Message:</td><td>${message}</td></tr>` : ''}
   </table>
   <p><strong>Action needed:</strong> Find an IR or investor relations contact at ${operatorName} and make the introduction manually.</p>
-  ${managementCompanyId ? `<p><a href="${BASE}/sponsor.html?id=${managementCompanyId}" style="color:#51BE7B;font-weight:600;">View Operator Page →</a></p>` : ''}
+  ${managementCompanyId ? `<p><a href="${BASE}/sponsor?id=${managementCompanyId}" style="color:#51BE7B;font-weight:600;">View Operator Page →</a></p>` : ''}
 </div>`;
 
       try {

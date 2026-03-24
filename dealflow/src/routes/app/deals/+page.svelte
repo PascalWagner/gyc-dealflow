@@ -43,7 +43,7 @@
 		($deals || []).filter(deal => {
 			const stage = $dealStages[deal.id] || 'browse';
 			if (currentTab === 'browse') return !$dealStages[deal.id];
-			if (currentTab === 'saved') return stage === 'saved' || stage === 'vetting';
+			if (currentTab === 'saved') return stage === 'saved';
 			return stage === currentTab;
 		})
 	);

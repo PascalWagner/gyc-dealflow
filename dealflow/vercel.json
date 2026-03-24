@@ -9,6 +9,28 @@
   "crons": [
     { "path": "/api/ghl-sync", "schedule": "0 * * * *" }
   ],
+  "redirects": [
+    { "source": "/index.html", "destination": "/app/deals", "permanent": true },
+    { "source": "/deal.html", "destination": "/app/deals", "permanent": true },
+    { "source": "/deal-login.html", "destination": "/login", "permanent": true },
+    { "source": "/landing.html", "destination": "/landing", "permanent": true },
+    { "source": "/gp-dashboard.html", "destination": "/gp-dashboard", "permanent": true },
+    { "source": "/sponsor.html", "destination": "/sponsor", "permanent": true },
+    { "source": "/person.html", "destination": "/person", "permanent": true },
+    { "source": "/asset.html", "destination": "/asset", "permanent": true },
+    { "source": "/gp-onboarding.html", "destination": "/onboarding", "permanent": true },
+    { "source": "/onboarding.html", "destination": "/onboarding", "permanent": true },
+    { "source": "/deal-review.html", "destination": "/deal-review", "permanent": true },
+    { "source": "/book-pitch.html", "destination": "/book-pitch", "permanent": true },
+    { "source": "/pitch-confirmed.html", "destination": "/pitch-confirmed", "permanent": true },
+    { "source": "/for-operators.html", "destination": "/for-operators", "permanent": true },
+    { "source": "/privacy.html", "destination": "/privacy", "permanent": true },
+    { "source": "/maintenance.html", "destination": "/maintenance", "permanent": true },
+    { "source": "/weekly-digest-preview.html", "destination": "/weekly-digest-preview", "permanent": true },
+    { "source": "/login-minimal.html", "destination": "/login", "permanent": true },
+    { "source": "/login-split.html", "destination": "/login", "permanent": true },
+    { "source": "/login-vault.html", "destination": "/login", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/(.*)",

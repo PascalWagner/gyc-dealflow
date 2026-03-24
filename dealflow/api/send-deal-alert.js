@@ -104,7 +104,7 @@ export default async function handler(req, res) {
     const token = genToken(email, deal.id);
     const saveUrl = `${BASE}/api/deal-save?id=${deal.id}&email=${encodeURIComponent(email)}&token=${token}`;
     const skipUrl = `${saveUrl}&action=skip`;
-    const viewUrl = `${BASE}/deal.html?id=${deal.id}`;
+    const viewUrl = `${BASE}/deal/${deal.id}`;
 
     const irr = fp(deal.target_irr);
     const min = fmtMoney(deal.investment_minimum);
@@ -145,8 +145,8 @@ ${fundingBar}
 </table>
 </td></tr>
 <tr><td align="center" style="padding:16px 0 20px;"><a href="${BASE}" style="font-size:13px;font-weight:600;color:#51BE7B;text-decoration:none;">Browse all deals in the database &#8594;</a></td></tr>
-<tr><td><table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F0F9F4;border-radius:10px;"><tr><td style="padding:16px 20px;text-align:center;"><div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Not the right fit?</div><div style="font-size:12px;color:#607179;margin-bottom:10px;">Update your buy box and we'll send better matches next time.</div><a href="${BASE}/index.html#buybox?step=4" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Update Buy Box &#8594;</a></td></tr></table></td></tr>
-<tr><td align="center" style="padding:24px 0 0;"><div style="font-size:11px;color:#8A9AA0;"><a href="${BASE}/index.html#settings" style="color:#8A9AA0;text-decoration:underline;">Manage preferences</a><span style="margin:0 4px;">&#183;</span><a href="${BASE}/api/unsubscribe?email=${encodeURIComponent(email)}" style="color:#8A9AA0;text-decoration:underline;">Unsubscribe</a></div><div style="font-size:11px;color:#C4CDD1;margin-top:8px;">Grow Your Cashflow &#183; growyourcashflow.io</div></td></tr>
+<tr><td><table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F0F9F4;border-radius:10px;"><tr><td style="padding:16px 20px;text-align:center;"><div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Not the right fit?</div><div style="font-size:12px;color:#607179;margin-bottom:10px;">Update your buy box and we'll send better matches next time.</div><a href="${BASE}/app/plan" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Update Buy Box &#8594;</a></td></tr></table></td></tr>
+<tr><td align="center" style="padding:24px 0 0;"><div style="font-size:11px;color:#8A9AA0;"><a href="${BASE}/app/settings" style="color:#8A9AA0;text-decoration:underline;">Manage preferences</a><span style="margin:0 4px;">&#183;</span><a href="${BASE}/api/unsubscribe?email=${encodeURIComponent(email)}" style="color:#8A9AA0;text-decoration:underline;">Unsubscribe</a></div><div style="font-size:11px;color:#C4CDD1;margin-top:8px;">Grow Your Cashflow &#183; growyourcashflow.io</div></td></tr>
 </table></td></tr></table>`;
 
     // Send via Resend

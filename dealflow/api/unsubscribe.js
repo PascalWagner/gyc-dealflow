@@ -68,5 +68,5 @@ export default async function handler(req, res) {
   }
 
   // Redirect to Settings → Notifications with unsubscribed flag
-  return res.redirect(302, 'https://dealflow.growyourcashflow.io/index.html#settings?unsubscribed=true');
+  return res.redirect(302, 'https://dealflow.growyourcashflow.io/app/settings?unsubscribed=true');
 }

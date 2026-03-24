@@ -81,7 +81,7 @@ export default async function handler(req, res) {
         claimerEmail: email,
         company,
         role,
-        dealUrl: 'https://deals.growyourcashflow.io/deal.html?id=' + dealId
+        dealUrl: 'https://dealflow.growyourcashflow.io/deal/' + dealId
       })
     }).catch(e => console.error('Make webhook error:', e));
   }

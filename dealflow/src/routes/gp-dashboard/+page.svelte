@@ -167,10 +167,10 @@
 				items.push({ urgency: 'orange', icon: 'orange', name, desc: 'Missing investor deck', btnLabel: 'Upload Deck', action: () => uploadDealDoc(id, 'deck') });
 			}
 			if (!hasStrategy(d)) {
-				items.push({ urgency: 'yellow', icon: 'yellow', name, desc: 'No investment strategy description', href: `/deal.html?id=${encodeURIComponent(id)}`, btnLabel: 'Add Description' });
+				items.push({ urgency: 'yellow', icon: 'yellow', name, desc: 'No investment strategy description', href: `/deal/${id}`, btnLabel: 'Add Description' });
 			}
 			if (!hasTargetIRR(d) && !hasPrefReturn(d)) {
-				items.push({ urgency: 'yellow', icon: 'yellow', name, desc: 'Missing key terms (IRR / Pref Return)', href: `/deal.html?id=${encodeURIComponent(id)}`, btnLabel: 'Complete Terms' });
+				items.push({ urgency: 'yellow', icon: 'yellow', name, desc: 'Missing key terms (IRR / Pref Return)', href: `/deal/${id}`, btnLabel: 'Complete Terms' });
 			}
 		});
 		const urgencyOrder = { red: 0, orange: 1, yellow: 2 };
@@ -218,7 +218,7 @@
 
 			const stage = item.stage;
 			const stageLabel = (stage === 'saved' || stage === 'interested') ? 'Started review' :
-				(stage === 'vetting' || stage === 'duediligence' || stage === 'diligence') ? 'Ready to connect' :
+				(stage === 'diligence') ? 'Ready to connect' :
 				(stage === 'invested' || stage === 'portfolio') ? 'Invested' : stage;
 
 			const signalParts = [stageLabel];
@@ -687,7 +687,7 @@
 								<tbody>
 									{#each sortedDeals() as d}
 										<tr>
-											<td><a href="/deal.html?id={encodeURIComponent(d.id)}" class="health-table-name">{d.name}</a></td>
+											<td><a href="/deal/{d.id}" class="health-table-name">{d.name}</a></td>
 											<td>
 												{#if d.status}
 													<span class="deal-badge {statusBadgeClass(d.status)}">{d.status}</span>
@@ -718,9 +718,9 @@
 											</td>
 											<td style="text-align:center;">
 												{#if d.gpReviewedAt}
-													<a href="/deal-review.html?id={encodeURIComponent(d.id)}" style="font-size:13px;color:var(--text-muted);text-decoration:none;">Edit</a>
+													<a href="/deal-review?id={d.id}" style="font-size:13px;color:var(--text-muted);text-decoration:none;">Edit</a>
 												{:else}
-													<a href="/deal-review.html?id={encodeURIComponent(d.id)}" style="font-size:13px;color:var(--orange);font-weight:600;text-decoration:none;">Review</a>
+													<a href="/deal-review?id={d.id}" style="font-size:13px;color:var(--orange);font-weight:600;text-decoration:none;">Review</a>
 												{/if}
 											</td>
 										</tr>

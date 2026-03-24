@@ -164,7 +164,7 @@
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 							Skip
 						</button>
-						<a href="/deal.html?id={currentDeal.id}" class="swipe-action view">
+						<a href="/deal/{currentDeal.id}" class="swipe-action view">
 							View Deal
 						</a>
 						<button class="swipe-action save" onclick={saveDeal}>
@@ -190,7 +190,7 @@
 	<div class="feed-grid">
 		{#each deals as deal (deal.id)}
 			{@const hero = getHero(deal)}
-			<a href="/deal.html?id={deal.id}" class="feed-card">
+			<a href="/deal/{deal.id}" class="feed-card">
 				<div class="feed-hero" style="background:{hero.gradient}">
 					<span class="feed-badge">{deal.assetClass || 'Real Estate'}</span>
 					{#if deal.targetIRR}

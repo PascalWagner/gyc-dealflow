@@ -99,7 +99,7 @@ export default async function handler(req, res) {
     // Generate magic link server-side and send via Resend
     // (Supabase's built-in OTP email requires SMTP config we don't have)
     const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
-    const redirectTo = siteUrl + '/deal-login.html';
+    const redirectTo = siteUrl + '/login';
 
     try {
       // Try generateLink — if user doesn't exist, create them first then retry.

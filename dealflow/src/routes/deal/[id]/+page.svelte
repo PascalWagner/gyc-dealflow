@@ -30,7 +30,7 @@
 		{ key: 'decision', label: 'Decide', num: '4' },
 		{ key: 'invested', label: 'Invested', num: '5' }
 	];
-	const stageOrder = { browse: 0, saved: 1, vetting: 1, diligence: 2, decision: 3, invested: 4 };
+	const stageOrder = { browse: 0, saved: 1, diligence: 2, decision: 3, invested: 4 };
 	const currentStageIdx = $derived(currentStage === 'passed' ? -1 : (stageOrder[currentStage] ?? 0));
 
 	const isCredit = $derived(deal ? isCreditFund(deal) : false);

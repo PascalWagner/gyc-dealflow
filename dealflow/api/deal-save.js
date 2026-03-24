@@ -30,17 +30,17 @@ export default async function handler(req, res) {
   setCors(res);
 
   const { id, email, token, action } = req.query;
-  // Map to DB stage names (same as deal.html's dbStageMap)
+  // Map to DB stage names
   const stage = action === 'skip' ? 'passed' : 'saved';
 
   if (!id || !email || !token) {
-    return res.redirect(302, `https://dealflow.growyourcashflow.io/deal.html?id=${id || ''}`);
+    return res.redirect(302, `https://dealflow.growyourcashflow.io/deal/${id || ''}`);
   }
 
   // Verify token
   const expected = generateSaveToken(email, id);
   if (token !== expected) {
-    return res.redirect(302, `https://dealflow.growyourcashflow.io/deal.html?id=${id}`);
+    return res.redirect(302, `https://dealflow.growyourcashflow.io/deal/${id}`);
   }
 
   try {
@@ -86,6 +86,6 @@ export default async function handler(req, res) {
 
   // Both Save and Skip go to the deal page with the action result
   const actionParam = stage === 'passed' ? 'skipped=true' : 'saved=true';
-  const redirect = `https://dealflow.growyourcashflow.io/deal.html?id=${id}&${actionParam}`;
+  const redirect = `https://dealflow.growyourcashflow.io/deal/${id}&${actionParam}`;
   return res.redirect(302, redirect);
 }

@@ -85,7 +85,7 @@
 	</div>
 
 	<!-- Body -->
-	<a href="/deal.html?id={deal.id}" class="card-body">
+	<a href="/deal/{deal.id}" class="card-body">
 		<div class="card-title">{deal.investmentName}</div>
 		<div class="card-manager">
 			{deal.managementCompany || ''}
