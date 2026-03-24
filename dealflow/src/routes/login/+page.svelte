@@ -529,6 +529,13 @@
 	}
 
 	.split-layout {
+		--green: #51BE7B;
+		--green-hover: #45A86C;
+		--teal: #1F5159;
+		--teal-dark: #0A1E21;
+		--charcoal: #141413;
+		--slate: #6B7280;
+		--border: #E5E7EB;
 		display: flex;
 		min-height: 100vh;
 		min-height: 100dvh;
