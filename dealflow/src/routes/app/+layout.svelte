@@ -17,18 +17,14 @@
 		return path || 'dashboard';
 	});
 
-	let clientReady = $state(false);
-
-	// Auth guard — on client mount, re-check auth and redirect if needed
+	// Auth guard — on client mount, re-hydrate store from localStorage
 	onMount(() => {
-		// Re-initialize store from localStorage (SSR may have set it to null)
 		const stored = localStorage.getItem('gycUser');
 		if (stored && stored !== 'null') {
 			try {
 				const parsed = JSON.parse(stored);
 				if (parsed?.email) {
 					user.set(parsed);
-					clientReady = true;
 					return;
 				}
 			} catch {}
@@ -39,7 +35,7 @@
 	});
 </script>
 
-{#if $isLoggedIn && clientReady}
+{#if $isLoggedIn}
 	<div class="app-layout">
 		<Sidebar currentPage={currentPage()} />
 		<main class="app-main">
