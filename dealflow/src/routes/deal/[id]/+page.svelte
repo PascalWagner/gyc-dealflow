@@ -1942,7 +1942,7 @@
 											</tbody>
 											<tfoot>
 												<tr class="cf-summary-row">
-													<td><div class="cf-summary-value">{fmt(investment, 'money')}</div><div class="cf-summary-label">Invested</div></td>
+													<td><div class="cf-summary-value">{fmt(cfInvestment, 'money')}</div><div class="cf-summary-label">Invested</div></td>
 													<td></td>
 													<td><div class="cf-summary-value green">{fmt(cfRows[cfRows.length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
 													<td>{#if cfAvgCoC > 0}<div class="cf-summary-value green">{cfAvgCoC.toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
