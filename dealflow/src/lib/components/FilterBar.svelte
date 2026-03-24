@@ -201,32 +201,33 @@
 	.filter-bar {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 10px 0;
+		gap: 10px;
+		padding: 16px 0;
 		flex-wrap: wrap;
+		border-bottom: 1px solid var(--border-light);
 	}
 
 	.buybox-toggle {
-		padding: 6px 14px;
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
+		padding: 7px 14px;
+		background: var(--bg-card);
+		border: 2px solid var(--border);
+		border-radius: 20px;
 		font-family: var(--font-ui);
-		font-weight: 700;
-		font-size: 11px;
+		font-weight: 600;
+		font-size: 12px;
 		cursor: pointer;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
-		gap: 5px;
+		gap: 6px;
 		white-space: nowrap;
 		color: var(--text-secondary);
-		transition: all 0.15s;
+		transition: all var(--transition, 0.15s);
 	}
-	.buybox-toggle:hover { border-color: var(--primary); color: var(--primary); }
+	.buybox-toggle:hover { border-color: var(--green, var(--primary)); color: var(--green, var(--primary)); }
 	.buybox-toggle.active {
-		background: var(--primary);
+		background: var(--green, var(--primary));
 		color: #fff;
-		border-color: var(--primary);
+		border-color: var(--green, var(--primary));
 	}
 
 	.filters-toggle {
@@ -285,13 +286,18 @@
 	.filter-bar-stats {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 12px;
+		margin-left: auto;
 		font-family: var(--font-ui);
 		font-size: 12px;
 		color: var(--text-muted);
 		white-space: nowrap;
 	}
-	.fbs-dot { opacity: 0.4; }
+	.filter-bar-stats :global(strong) {
+		color: var(--text-dark);
+		font-weight: 700;
+	}
+	.fbs-dot { color: var(--border); }
 
 	.add-deal-btn {
 		padding: 6px 14px;

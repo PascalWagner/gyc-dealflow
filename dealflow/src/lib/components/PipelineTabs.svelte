@@ -78,11 +78,11 @@
 	.pipeline-tabs {
 		display: flex;
 		align-items: center;
-		gap: 0;
+		gap: 4px;
 		background: var(--bg-card);
-		border-radius: 10px;
-		padding: 4px;
-		border: 1px solid var(--border-light);
+		border-radius: 8px;
+		padding: 3px;
+		border: 1px solid var(--border);
 	}
 
 	.pipeline-tab {

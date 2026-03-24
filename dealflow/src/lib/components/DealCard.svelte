@@ -193,45 +193,65 @@
 <style>
 	.deal-card {
 		background: var(--bg-card);
-		border: 1px solid var(--border-light);
-		border-radius: var(--radius-lg);
+		border: 1px solid var(--border);
+		border-radius: var(--radius, 12px);
+		box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04));
 		overflow: hidden;
-		transition: transform 0.15s ease, box-shadow 0.15s ease;
+		cursor: pointer;
+		transition: all 0.25s ease;
+		display: flex;
+		flex-direction: column;
 		position: relative;
+		animation: fadeInUp 0.3s ease forwards;
+	}
+	@keyframes fadeInUp {
+		from { opacity: 0; transform: translateY(10px); }
+		to { opacity: 1; transform: translateY(0); }
 	}
 	.deal-card:hover {
+		box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04));
 		transform: translateY(-2px);
-		box-shadow: var(--shadow-md);
+		border-color: #D4C9AD;
 	}
 
 	.card-hero {
-		height: 120px;
 		position: relative;
+		padding: 14px 18px;
+		height: 200px;
+		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		padding: 12px;
+		overflow: hidden;
 	}
 
 	.hero-badges {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 4px;
+		gap: 6px;
+		position: relative;
+		z-index: 1;
 	}
 	.badge {
-		background: rgba(0,0,0,0.4);
+		display: inline-flex;
+		align-items: center;
+		background: rgba(0,0,0,0.45);
 		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		border: 1px solid rgba(255,255,255,0.15);
 		color: #fff;
 		font-family: var(--font-ui);
-		font-size: 9px;
+		font-size: 10px;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
-		padding: 3px 8px;
-		border-radius: 4px;
+		padding: 3px 10px;
+		border-radius: 20px;
 	}
 	.badge.audit {
-		background: rgba(81,190,123,0.8);
+		background: rgba(81,190,123,0.25);
+		color: #7DEFA5;
+		border-color: transparent;
 	}
 
 	.status-badges {
@@ -257,44 +277,53 @@
 	.pill-updated { background: #3b82f6; color: #fff; }
 	.pill-closing { background: #f97316; color: #fff; }
 	.pill-verified { background: #22c55e; color: #fff; }
-	.pill-nodeck { background: rgba(150,150,150,0.7); color: #fff; }
+	.pill-nodeck { background: #fbbf24; color: #78350f; }
 
 	.hero-icon {
 		font-size: 32px;
 		position: absolute;
 		bottom: 12px;
-		left: 12px;
+		left: 18px;
 		opacity: 0.6;
 	}
 
 	.hero-irr {
-		position: absolute;
-		bottom: 8px;
-		right: 12px;
-		text-align: right;
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		margin-top: auto;
+		padding-top: 16px;
 	}
 	.irr-value {
 		display: block;
 		font-family: var(--font-ui);
-		font-size: 22px;
+		font-size: 28px;
 		font-weight: 800;
 		color: #fff;
+		letter-spacing: -0.5px;
 		line-height: 1;
+		text-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
 	}
 	.irr-label {
 		font-family: var(--font-ui);
-		font-size: 9px;
-		color: rgba(255,255,255,0.7);
+		font-size: 10px;
+		font-weight: 600;
+		color: rgba(255,255,255,0.75);
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+		margin-top: 2px;
+		text-shadow: 0 1px 4px rgba(0,0,0,0.4);
 	}
 
 	.card-body {
-		display: block;
-		padding: 16px;
+		display: flex;
+		flex-direction: column;
+		padding: 0;
 		text-decoration: none;
 		color: inherit;
 		cursor: pointer;
+		flex: 1;
 	}
 
 	.card-title {
@@ -303,33 +332,53 @@
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-bottom: 2px;
+		line-height: 1.3;
+		letter-spacing: -0.2px;
+		padding: 12px 16px 0;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		min-height: calc(2 * 1.3em);
 	}
 
 	.card-manager {
-		font-family: var(--font-ui);
+		font-family: var(--font-body);
 		font-size: 12px;
 		color: var(--text-muted);
-		margin-bottom: 12px;
+		font-weight: 500;
+		margin-bottom: 4px;
+		padding: 0 16px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.metrics {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 8px;
-		margin-bottom: 12px;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px 16px;
+		padding: 14px 18px;
+		margin-bottom: 0;
+		flex: 1;
+	}
+	.metric {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 	}
 	.metric-label {
 		font-family: var(--font-ui);
-		font-size: 9px;
+		font-size: 10px;
 		font-weight: 600;
 		text-transform: uppercase;
-		letter-spacing: 0.3px;
+		letter-spacing: 0.5px;
 		color: var(--text-muted);
-		margin-bottom: 2px;
+		margin-bottom: 0;
 	}
 	.metric-value {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 14px;
 		font-weight: 700;
 		color: var(--text-dark);
 	}
@@ -338,7 +387,8 @@
 	}
 
 	.funding-bar {
-		margin-top: 4px;
+		padding: 8px 14px 10px;
+		margin-top: auto;
 	}
 	.funding-labels {
 		display: flex;
@@ -348,16 +398,20 @@
 		color: var(--text-muted);
 		margin-bottom: 4px;
 	}
+	.funding-labels span:first-child {
+		color: var(--primary);
+		font-weight: 600;
+	}
 	.funding-track {
-		height: 4px;
-		background: var(--border-light);
-		border-radius: 2px;
+		height: 5px;
+		background: var(--border);
+		border-radius: 3px;
 		overflow: hidden;
 	}
 	.funding-fill {
 		height: 100%;
 		background: var(--primary);
-		border-radius: 2px;
+		border-radius: 3px;
 		transition: width 0.3s ease;
 	}
 	.funding-fill.empty {
@@ -367,13 +421,18 @@
 	.funding-bar.no-data .funding-labels {
 		opacity: 0.5;
 	}
+	.funding-bar.no-data .funding-labels span:first-child {
+		color: var(--text-muted);
+		font-weight: 500;
+		font-style: italic;
+	}
 
 	.stage-badge {
 		position: absolute;
-		top: 8px;
-		right: 8px;
-		padding: 3px 10px;
-		border-radius: 4px;
+		top: 10px;
+		right: 10px;
+		padding: 4px 10px;
+		border-radius: 20px;
 		font-family: var(--font-ui);
 		font-size: 9px;
 		font-weight: 700;
