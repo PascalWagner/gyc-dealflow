@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 
-// During migration, redirect root to the static main app.
-// index.html handles its own auth gating (shows landing vs dashboard).
+// Root route: always redirect to landing.
+// Logged-in users who hit / will see landing; the login flow sends them to /app/deals directly.
 export function load() {
 	redirect(302, '/landing');
 }

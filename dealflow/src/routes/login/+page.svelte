@@ -148,7 +148,7 @@
 					managementCompanyId: data.managementCompanyId,
 					managementCompanyName: data.managementCompanyName
 				});
-				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/';
+				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/app/deals';
 				goto(dest, { replaceState: true });
 			})
 			.catch(() => {
@@ -162,7 +162,7 @@
 					isAdmin: false,
 					tags: []
 				});
-				goto('/', { replaceState: true });
+				goto('/app/deals', { replaceState: true });
 			});
 	});
 
@@ -187,7 +187,7 @@
 			if (data.bypass && data.token) {
 				// Dev bypass — store session and redirect immediately
 				storeUser(data);
-				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/';
+				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/app/deals';
 				goto(dest, { replaceState: true });
 				return;
 			}
