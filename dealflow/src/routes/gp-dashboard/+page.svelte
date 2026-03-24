@@ -52,6 +52,8 @@
 
 	// ===== Admin Emails =====
 	const ADMIN_EMAILS = ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'];
+	const DIST_COLORS = ['#51BE7B', '#2563EB', '#CF7A30', '#CA8A04', '#D04040', '#8B5CF6'];
+	const DEAL_TYPE_COLORS = ['#2563EB', '#51BE7B', '#CF7A30', '#CA8A04', '#8B5CF6', '#D04040'];
 
 	// ===== Helpers =====
 	function escHtml(str) { return str || ''; }
@@ -91,6 +93,34 @@
 		if (s.includes('evergreen')) return 'blue';
 		if (s.includes('closed')) return 'orange';
 		return 'green';
+	}
+
+	function maxPct(items = []) {
+		return items.reduce((max, item) => Math.max(max, Number(item?.pct || 0)), 0);
+	}
+
+	function widthFromPct(value, max) {
+		if (!max || !value) return 0;
+		return Math.round((Number(value) / max) * 100);
+	}
+
+	function buildDonutGradient(items = [], colors = DIST_COLORS) {
+		if (!items.length) return '';
+		const stops = [];
+		let cumulative = 0;
+		items.forEach((item, index) => {
+			const pct = Number(item?.pct || 0);
+			const color = colors[index % colors.length];
+			stops.push(`${color} ${cumulative}%`);
+			cumulative += pct;
+			stops.push(`${color} ${cumulative}%`);
+		});
+		return `conic-gradient(${stops.join(', ')})`;
+	}
+
+	function checkSizeBarHeight(value, max) {
+		if (!max || !value) return 0;
+		return Math.max(Math.round((Number(value) / max) * 90), 4);
 	}
 
 	// ===== Deal Field Helpers =====
@@ -361,15 +391,6 @@
 		const items = actionItems;
 		if (items.length > 0) return 'Complete your deal profile first, then amplify your reach by pitching directly to our investor network.';
 		return 'Your deals are getting attention. Take it further \u2014 pitch directly to our investor network in a live webinar.';
-	});
-
-	// Dynamic webinar attendance stat
-	const webinarAttendanceStat = $derived.by(() => {
-		// Use total platform activity as a proxy for webinar attendance interest
-		const totalInterest = (analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0);
-		const baseAttendance = 42; // baseline avg attendance
-		const boost = Math.min(Math.floor(totalInterest * 0.8), 30);
-		return baseAttendance + boost;
 	});
 
 	// ===== Competitive Analysis Derived Data =====
@@ -825,7 +846,7 @@
 					maintainAspectRatio: false,
 					plugins: {
 						legend: {
-							display: true,
+							display: false,
 							position: 'top',
 							labels: {
 								boxWidth: 10,
@@ -908,7 +929,7 @@
 
 <!-- Mobile top bar -->
 <div class="mobile-topbar">
-	<button class="mobile-menu-btn" onclick={toggleSidebar}>
+	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={toggleSidebar}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
 	<div class="mobile-topbar-title">GP Dashboard</div>
@@ -1070,101 +1091,7 @@
 				</div>
 			</div>
 
-			<!-- 3. Investor Activity + Webinar CTA -->
-			<div class="dashboard-grid-3-2">
-				<!-- LEFT: Investor Activity -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Investor Activity</div>
-					</div>
-					<div class="section-body">
-						<!-- KPI Metrics -->
-						<div class="analytics-grid">
-							<div class="analytics-metric">
-								<div class="analytics-metric-value">{analytics.totalSaves || 0}</div>
-								<div class="analytics-metric-label">In Review</div>
-							</div>
-							<div class="analytics-metric">
-								<div class="analytics-metric-value">{analytics.totalVetting || 0}</div>
-								<div class="analytics-metric-label">Connecting</div>
-							</div>
-							<div class="analytics-metric">
-								<div class="analytics-metric-value">{analytics.totalInvested || 0}</div>
-								<div class="analytics-metric-label">Invested</div>
-							</div>
-						</div>
-
-						<!-- Empty state nudge -->
-						{#if !hasActivity}
-							<div class="activity-empty-nudge">
-								<p>Investor activity will appear here as LPs discover your deals. Complete your action items above to increase visibility.</p>
-							</div>
-						{/if}
-
-						<!-- Weekly Activity Chart (Chart.js) -->
-						{#if hasActivity}
-							<div class="weekly-chart-wrap">
-								<div class="weekly-chart-title">Investor Activity Over Time</div>
-								{#if weeklyChartData}
-									<div class="weekly-chartjs-container">
-										<canvas bind:this={weeklyChartEl}></canvas>
-									</div>
-								{:else}
-									<div class="weekly-chart-empty">No activity yet. As investors discover your deals, you'll see their engagement here.</div>
-								{/if}
-							</div>
-
-							<!-- Recent LP Activity Feed -->
-							{#if activityItems.length > 0}
-								<div style="margin-top:16px;">
-									{#if analytics.highIntentCount > 0}
-										<div class="high-intent-summary">
-											{analytics.highIntentCount} high-intent LP{analytics.highIntentCount !== 1 ? 's' : ''} engaged with your deals this month
-										</div>
-									{/if}
-									{#each activityItems as item}
-										<div class="activity-card-item">
-											<span class="intent-badge {item.tierClass}">{item.tierEmoji} {item.tierLabel}</span>
-											<div class="activity-card-body">
-												<div class="activity-card-deal">{item.dealName}</div>
-												<div class="activity-card-signal">{item.signalParts.join(' \u00B7 ')}</div>
-											</div>
-											<span class="activity-card-time">{item.timeAgo}</span>
-										</div>
-									{/each}
-								</div>
-							{/if}
-						{/if}
-					</div>
-				</div>
-
-				<!-- RIGHT: Webinar CTA -->
-				<div class="section-card webinar-cta-section">
-					<div class="section-header">
-						<div class="section-title">Get In Front of LPs</div>
-					</div>
-					<div class="section-body">
-						<div class="webinar-cta-card">
-							<div class="webinar-cta-title">Pitch to Our Investor Network</div>
-							<div class="webinar-attendance-widget">
-								<div class="webinar-attendance-number">{webinarAttendanceStat}</div>
-								<div class="webinar-attendance-label">investors attended our last session</div>
-							</div>
-							<div class="webinar-cta-stat">{webinarCtaStat}</div>
-							<div class="webinar-cta-desc">{webinarCtaDesc}</div>
-							<ul class="webinar-cta-features">
-								<li>30-minute dedicated pitch slot</li>
-								<li>Qualified accredited investor audience</li>
-								<li>Recorded &amp; shared with all platform members</li>
-								<li>Q&amp;A session with interested LPs</li>
-							</ul>
-							<a href="/book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $1,000 &rarr;</a>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- 4. Competitive Analysis -->
+			<!-- 3. Competitive Analysis -->
 			<div class="section-card">
 				<div class="section-header">
 					<div class="section-title">Competitive Analysis</div>
@@ -1273,7 +1200,7 @@
 				</div>
 			</div>
 
-			<!-- 5. Market Intelligence -->
+			<!-- 4. Market Intelligence -->
 			<div class="section-card">
 				<div class="section-header">
 					<div class="section-title">Market Intelligence</div>
@@ -1302,12 +1229,12 @@
 									<div class="mi-card-value" style="color: {card.color};">{card.value}</div>
 									<div class="mi-card-desc">{card.desc}</div>
 									{#if card.barData}
-										{@const maxPct = Math.max(...card.barData.map(a => a.pct))}
+										{@const maxBarPct = Math.max(...card.barData.map(a => a.pct))}
 										{#each card.barData as item}
 											<div class="mi-bar-row">
 												<span class="mi-bar-label">{item.name}</span>
 												<div class="mi-bar-track">
-													<div class="mi-bar-fill" style="width: {maxPct > 0 ? Math.round((item.pct / maxPct) * 100) : 0}%; background: {item.isGP ? 'var(--primary)' : 'var(--border)'};"></div>
+													<div class="mi-bar-fill" style="width: {maxBarPct > 0 ? Math.round((item.pct / maxBarPct) * 100) : 0}%; background: {item.isGP ? 'var(--primary)' : 'var(--border)'};"></div>
 												</div>
 												<span class="mi-bar-pct">{item.pct}%</span>
 											</div>
@@ -1316,10 +1243,254 @@
 								</div>
 							{/each}
 						</div>
-						{#if investorInsights?.totalInvestors}
+						{#if investorInsights?.topAssetClasses?.length > 0}
+							{@const topAssetMaxValue = maxPct(investorInsights.topAssetClasses)}
+							<div class="market-intel-insights">
+								<div class="insights-sub-title">Most Popular Asset Classes</div>
+								<div class="insights-bar-chart">
+									{#each investorInsights.topAssetClasses as item}
+										<div class="insights-bar-row">
+											<span class="insights-bar-label">{item.name}</span>
+											<div class="insights-bar-track">
+												<div
+													class="insights-bar-fill"
+													class:gp-highlight={item.isGP}
+													style={`width:${widthFromPct(item.pct, topAssetMaxValue)}%;`}
+												>
+													{#if item.isGP}
+														<span class="insights-bar-gp-tag">Your Deals</span>
+													{/if}
+												</div>
+											</div>
+											<span class="insights-bar-pct">{item.pct}%</span>
+										</div>
+									{/each}
+								</div>
+
+								{#if (investorInsights.preferredDistributions?.length > 0) || (investorInsights.topGoals?.length > 1)}
+									<div class="insights-two-col">
+										{#if investorInsights.preferredDistributions?.length > 0}
+											<div>
+												<div class="insights-sub-title">Distribution Preferences</div>
+												<div class="goals-donut-wrap">
+													<div class="goals-donut" style={`background:${buildDonutGradient(investorInsights.preferredDistributions, DIST_COLORS)};`}>
+														<div class="goals-donut-center">
+															<div class="goals-donut-center-value" style="font-size:16px;">{investorInsights.preferredDistributions[0].pct}%</div>
+															<div class="goals-donut-center-label">{investorInsights.preferredDistributions[0].name}</div>
+														</div>
+													</div>
+													<div class="goals-legend">
+														{#each investorInsights.preferredDistributions as item, index}
+															<div class="goals-legend-item">
+																<span class="goals-legend-swatch" style={`background:${DIST_COLORS[index % DIST_COLORS.length]};`}></span>
+																{item.name}
+																<span class="goals-legend-pct">{item.pct}%</span>
+															</div>
+														{/each}
+													</div>
+												</div>
+											</div>
+										{/if}
+
+										{#if investorInsights.topGoals?.length > 1}
+											<div>
+												<div class="insights-sub-title">Investor Goals</div>
+												<div class="goals-donut-wrap">
+													<div class="goals-donut" style={`background:${buildDonutGradient(investorInsights.topGoals, DIST_COLORS)};`}>
+														<div class="goals-donut-center">
+															<div class="goals-donut-center-value">{investorInsights.totalInvestors || 0}</div>
+															<div class="goals-donut-center-label">Investors</div>
+														</div>
+													</div>
+													<div class="goals-legend">
+														{#each investorInsights.topGoals as item, index}
+															<div class="goals-legend-item">
+																<span class="goals-legend-swatch" style={`background:${DIST_COLORS[index % DIST_COLORS.length]};`}></span>
+																{item.name}
+																<span class="goals-legend-pct">{item.pct}%</span>
+															</div>
+														{/each}
+													</div>
+												</div>
+											</div>
+										{/if}
+									</div>
+								{/if}
+
+								<div class="insights-two-col">
+									<div>
+										<div class="insights-sub-title">Max Check Size LPs Will Write</div>
+										{#if (investorInsights.checkSizeDistribution || []).length > 0}
+											<div class="check-size-chart">
+												{#each investorInsights.checkSizeDistribution || [] as item}
+													<div class="check-size-bar-col">
+														<span class="check-size-bar-pct">{item.pct > 0 ? `${item.pct}%` : ''}</span>
+														<div
+															class="check-size-bar"
+															class:is-peak={item.pct === maxPct(investorInsights.checkSizeDistribution || []) && item.pct > 0}
+															style={`height:${checkSizeBarHeight(item.pct, maxPct(investorInsights.checkSizeDistribution || []))}px;`}
+														></div>
+														<span class="check-size-bar-label">{item.label}</span>
+													</div>
+												{/each}
+											</div>
+										{:else}
+											<div class="insights-empty">Not enough data yet</div>
+										{/if}
+									</div>
+
+									<div>
+										<div class="insights-sub-title">Deal Structure Preference</div>
+										{#if investorInsights.topDealTypes?.length > 0}
+											<div class="goals-donut-wrap">
+												<div class="goals-donut" style={`background:${buildDonutGradient(investorInsights.topDealTypes, DEAL_TYPE_COLORS)};`}>
+													<div class="goals-donut-center">
+														<div class="goals-donut-center-value" style="font-size:16px;">{investorInsights.topDealTypes[0].pct}%</div>
+														<div class="goals-donut-center-label">{investorInsights.topDealTypes[0].name}</div>
+													</div>
+												</div>
+												<div class="goals-legend">
+													{#each investorInsights.topDealTypes as item, index}
+														<div class="goals-legend-item">
+															<span class="goals-legend-swatch" style={`background:${DEAL_TYPE_COLORS[index % DEAL_TYPE_COLORS.length]};`}></span>
+															{item.name}
+															<span class="goals-legend-pct">{item.pct}%</span>
+														</div>
+													{/each}
+												</div>
+											</div>
+										{:else}
+											<div class="insights-empty">Not enough data yet</div>
+										{/if}
+									</div>
+								</div>
+
+								{#if (investorInsights.operatorPreferences?.length > 0) || (investorInsights.operatorSizePrefs?.length > 0)}
+									<div class="insights-two-col">
+										{#if investorInsights.operatorPreferences?.length > 0}
+											<div>
+												<div class="insights-sub-title">Preferred Operator Type</div>
+												<div class="insights-bar-chart">
+													{#each investorInsights.operatorPreferences as item}
+														<div class="insights-bar-row">
+															<span class="insights-bar-label">{item.name}</span>
+															<div class="insights-bar-track">
+																<div class="insights-bar-fill" style={`width:${widthFromPct(item.pct, maxPct(investorInsights.operatorPreferences))}%;`}></div>
+															</div>
+															<span class="insights-bar-pct">{item.pct}%</span>
+														</div>
+													{/each}
+												</div>
+											</div>
+										{/if}
+
+										{#if investorInsights.operatorSizePrefs?.length > 0}
+											<div>
+												<div class="insights-sub-title">Preferred Operator Size</div>
+												<div class="insights-bar-chart">
+													{#each investorInsights.operatorSizePrefs as item}
+														<div class="insights-bar-row">
+															<span class="insights-bar-label">{item.name}</span>
+															<div class="insights-bar-track">
+																<div class="insights-bar-fill" style={`width:${widthFromPct(item.pct, maxPct(investorInsights.operatorSizePrefs))}%;`}></div>
+															</div>
+															<span class="insights-bar-pct">{item.pct}%</span>
+														</div>
+													{/each}
+												</div>
+											</div>
+										{/if}
+									</div>
+								{/if}
+
+								<div class="insights-footer">Based on {investorInsights.totalInvestors || 0} investor profiles</div>
+							</div>
+						{:else if investorInsights?.totalInvestors}
 							<div class="mi-footer">Based on {investorInsights.totalInvestors} investor profiles</div>
 						{/if}
 					{/if}
+				</div>
+			</div>
+
+			<!-- 5. Investor Activity + Webinar CTA -->
+			<div class="dashboard-grid-3-2">
+				<!-- LEFT: Investor Activity -->
+				<div class="section-card">
+					<div class="section-header">
+						<div class="section-title">Investor Activity</div>
+					</div>
+					<div class="section-body">
+						<div class="analytics-grid">
+							<div class="analytics-metric">
+								<div class="analytics-metric-value">{analytics.totalSaves || 0}</div>
+								<div class="analytics-metric-label">In Review</div>
+							</div>
+							<div class="analytics-metric">
+								<div class="analytics-metric-value">{analytics.totalVetting || 0}</div>
+								<div class="analytics-metric-label">Connecting</div>
+							</div>
+							<div class="analytics-metric">
+								<div class="analytics-metric-value">{analytics.totalInvested || 0}</div>
+								<div class="analytics-metric-label">Invested</div>
+							</div>
+						</div>
+
+						{#if !hasActivity}
+							<div class="activity-empty-nudge">
+								<p>Investor activity will appear here as LPs discover your deals. Complete your action items above to increase visibility.</p>
+							</div>
+						{/if}
+
+						<div class="weekly-chart-wrap">
+							<div class="weekly-chart-title">Investor Activity Over Time</div>
+							<div class="weekly-chart-legend">
+								<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>In Review</span>
+								<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>Connecting</span>
+								<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
+							</div>
+							{#if hasActivity && weeklyChartData}
+								<div class="weekly-chartjs-container">
+									<canvas bind:this={weeklyChartEl}></canvas>
+								</div>
+							{:else}
+								<div class="weekly-chart-empty">No activity yet. As investors discover your deals, you'll see their engagement here.</div>
+							{/if}
+						</div>
+
+						<div class="recent-activity-hidden">
+							{#each activityItems as item}
+								<div class="activity-card-item">
+									<span class="intent-badge {item.tierClass}">{item.tierEmoji} {item.tierLabel}</span>
+									<div class="activity-card-body">
+										<div class="activity-card-deal">{item.dealName}</div>
+										<div class="activity-card-signal">{item.signalParts.join(' \u00B7 ')}</div>
+									</div>
+									<span class="activity-card-time">{item.timeAgo}</span>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+
+				<!-- RIGHT: Webinar CTA -->
+				<div class="section-card webinar-cta-section">
+					<div class="section-header">
+						<div class="section-title">Get In Front of LPs</div>
+					</div>
+					<div class="section-body">
+						<div class="webinar-cta-card">
+							<div class="webinar-cta-title">&#127919; Pitch to Our Investor Network</div>
+							<div class="webinar-cta-stat">{webinarCtaStat}</div>
+							<div class="webinar-cta-desc">{webinarCtaDesc}</div>
+							<ul class="webinar-cta-features">
+								<li>30-minute dedicated pitch slot</li>
+								<li>Qualified accredited investor audience</li>
+								<li>Recorded &amp; shared with all platform members</li>
+								<li>Q&amp;A session with interested LPs</li>
+							</ul>
+							<a href="/book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $1,000 &rarr;</a>
+						</div>
+					</div>
 				</div>
 			</div>
 
@@ -2326,30 +2497,6 @@
 		background: var(--primary-hover);
 		transform: translateY(-1px);
 	}
-	.webinar-attendance-widget {
-		display: flex;
-		align-items: baseline;
-		gap: 8px;
-		margin-bottom: 12px;
-		padding: 12px 16px;
-		background: rgba(81, 190, 123, 0.08);
-		border-radius: var(--radius-sm, 8px);
-		border-left: 3px solid var(--primary);
-	}
-	.webinar-attendance-number {
-		font-family: var(--font-headline);
-		font-size: 28px;
-		font-weight: 800;
-		color: var(--primary);
-		line-height: 1;
-	}
-	.webinar-attendance-label {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--text-secondary);
-		line-height: 1.3;
-	}
 
 	/* Webinar CTA as standalone section-card */
 	.webinar-cta-section .section-header {
@@ -2473,6 +2620,11 @@
 		font-size: 12px;
 		color: var(--text-muted);
 		text-align: center;
+	}
+	.market-intel-insights {
+		margin-top: 28px;
+		padding-top: 20px;
+		border-top: 1px solid var(--border-light);
 	}
 
 	/* ====== INVESTOR INSIGHTS (What Our Investors Want) ====== */
@@ -2612,6 +2764,50 @@
 		text-transform: uppercase;
 		letter-spacing: 0.8px;
 	}
+	.insights-empty {
+		text-align: center;
+		padding: 20px;
+		color: var(--text-muted);
+		font-family: var(--font-ui);
+		font-size: 13px;
+	}
+	.check-size-chart {
+		display: flex;
+		align-items: flex-end;
+		gap: 6px;
+		height: 100px;
+		padding-top: 8px;
+	}
+	.check-size-bar-col {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+	}
+	.check-size-bar-pct {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--text-muted);
+		min-height: 12px;
+	}
+	.check-size-bar {
+		width: 100%;
+		background: var(--border);
+		border-radius: 4px 4px 0 0;
+		transition: height 0.4s ease;
+	}
+	.check-size-bar.is-peak {
+		background: var(--primary);
+	}
+	.check-size-bar-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		white-space: nowrap;
+	}
 
 	/* ====== LEAD QUALITY / INTENT BADGES ====== */
 	.activity-card-item {
@@ -2680,16 +2876,8 @@
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.high-intent-summary {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--teal-deep, #1F5159);
-		margin-bottom: 14px;
-		padding: 10px 14px;
-		background: var(--green-bg);
-		border-radius: var(--radius-sm, 8px);
-		border-left: 3px solid var(--primary);
+	.recent-activity-hidden {
+		display: none;
 	}
 
 	/* ====== COMPETITIVE ANALYSIS ====== */

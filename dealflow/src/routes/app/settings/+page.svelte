@@ -348,7 +348,7 @@
 				<div class="settings-card-title">Share My Deal Activity</div>
 				<div class="settings-card-desc" style="margin-bottom:16px;">When on, your deal activity counts toward "X LPs are reviewing this deal" on deal pages. Your name and dollar amounts are never shown.</div>
 				<div class="toggle-row">
-					<button class="toggle-track" class:on={shareActivity} onclick={() => updateShareActivity(!shareActivity)}>
+					<button class="toggle-track" class:on={shareActivity} aria-label="Toggle deal activity sharing" onclick={() => updateShareActivity(!shareActivity)}>
 						<div class="toggle-thumb"></div>
 					</button>
 					<div>
@@ -447,7 +447,7 @@
 				<div class="notif-title">Deal Alerts</div>
 				<div class="notif-desc">Get notified when new deals match your buy box criteria.</div>
 				<div class="toggle-row">
-					<button class="toggle-track" class:on={dealAlerts} onclick={toggleDealAlerts}>
+					<button class="toggle-track" class:on={dealAlerts} aria-label="Toggle deal alerts" onclick={toggleDealAlerts}>
 						<div class="toggle-thumb"></div>
 					</button>
 					<div>
@@ -461,7 +461,7 @@
 				<div class="notif-title">Weekly Digest</div>
 				<div class="notif-desc">A summary of new deals, market insights, and your portfolio activity.</div>
 				<div class="toggle-row">
-					<button class="toggle-track" class:on={weeklyDigest} onclick={toggleWeeklyDigest}>
+					<button class="toggle-track" class:on={weeklyDigest} aria-label="Toggle weekly digest emails" onclick={toggleWeeklyDigest}>
 						<div class="toggle-thumb"></div>
 					</button>
 					<div>
@@ -584,6 +584,14 @@
 	.logout-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
 	.logout-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; border: 1px solid #D04040; border-radius: 8px; background: transparent; font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: #D04040; cursor: pointer; transition: all 0.15s; }
 	.logout-btn:hover { background: rgba(208,64,64,0.06); }
+
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.settings-page {
+			max-width: 640px;
+			margin: 0 auto;
+			padding: 0 24px 32px;
+		}
+	}
 
 	@media (max-width: 768px) {
 		.settings-page { padding: 0 16px 24px; }
