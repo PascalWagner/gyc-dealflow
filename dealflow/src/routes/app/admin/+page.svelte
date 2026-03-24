@@ -7,6 +7,22 @@
 
 	let activeTab = $state('overview');
 	const tabs = ['overview', 'users', 'schema', 'devnotes', 'network', 'transactions', 'feedback'];
+	const tabLabels = {
+		overview: 'Overview',
+		users: 'Users',
+		schema: 'Database Schema',
+		devnotes: 'Dev Notes',
+		network: 'Network & Moat',
+		transactions: 'Transactions',
+		feedback: 'Feedback'
+	};
+	const userTierOptions = [
+		{ value: 'all', label: 'All Tiers' },
+		{ value: 'free', label: 'Free' },
+		{ value: 'academy', label: 'Academy' },
+		{ value: 'alumni', label: 'Alumni' }
+	];
+	const feedbackTypes = ['all', 'bug', 'feature', 'question'];
 
 	// Overview state
 	let overviewLoading = $state(true);
@@ -242,7 +258,7 @@
 					class:active={activeTab === tab}
 					onclick={() => switchTab(tab)}
 				>
-					{tab === 'overview' ? 'Overview' : tab === 'users' ? 'Users' : tab === 'schema' ? 'Database Schema' : tab === 'devnotes' ? 'Dev Notes' : tab === 'network' ? 'Network & Moat' : tab === 'transactions' ? 'Transactions' : 'Feedback'}
+					{tabLabels[tab]}
 				</button>
 			{/each}
 		</div>
@@ -437,12 +453,17 @@
 									placeholder="Search by email or name..."
 									bind:value={userSearch}
 								/>
-								<select class="users-tier-select" bind:value={userTierFilter}>
-									<option value="all">All Tiers</option>
-									<option value="free">Free</option>
-									<option value="academy">Academy</option>
-									<option value="alumni">Alumni</option>
-								</select>
+								<div class="users-tier-toggle">
+									{#each userTierOptions as option}
+										<button
+											class="filter-btn tier-filter-btn"
+											class:active={userTierFilter === option.value}
+											onclick={() => (userTierFilter = option.value)}
+										>
+											{option.label}
+										</button>
+									{/each}
+								</div>
 							</div>
 						</div>
 						<div class="table-wrap">
@@ -945,7 +966,7 @@
 					<span class="badge">{filteredFeedback.length}</span>
 				</div>
 				<div class="feedback-filters">
-					{#each ['all', 'bug', 'feature', 'question'] as type}
+					{#each feedbackTypes as type}
 						<button class="filter-btn" class:active={feedbackFilter === type} onclick={() => feedbackFilter = type}>
 							{type === 'all' ? 'All' : type === 'bug' ? 'Bugs' : type === 'feature' ? 'Features' : 'Questions'}
 						</button>
@@ -989,10 +1010,45 @@
 	.content { padding: 24px; margin: 0 auto; }
 
 	/* Tab bar */
-	.tab-bar { display: flex; gap: 4px; margin-bottom: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; flex-wrap: wrap; }
-	.tab-btn { flex: 1; min-width: 100px; padding: 10px 12px; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-secondary); }
-	.tab-btn.active { background: var(--primary); color: #fff; }
-	.tab-btn:hover:not(.active) { background: var(--bg-cream); }
+	.tab-bar {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 24px;
+		padding: 6px;
+		background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,251,0.94));
+		border: 1px solid rgba(31, 81, 89, 0.12);
+		border-radius: 18px;
+		box-shadow: 0 14px 32px rgba(16, 37, 42, 0.06);
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.tab-bar::-webkit-scrollbar { display: none; }
+	.tab-btn {
+		flex: 0 0 auto;
+		min-width: max-content;
+		padding: 11px 16px;
+		border: 1px solid transparent;
+		border-radius: 12px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.2px;
+		cursor: pointer;
+		transition: all 0.18s ease;
+		background: transparent;
+		color: var(--text-secondary);
+		white-space: nowrap;
+	}
+	.tab-btn.active {
+		background: linear-gradient(135deg, #1f5159, #10252a);
+		border-color: rgba(31, 81, 89, 0.3);
+		color: #fff;
+		box-shadow: 0 10px 22px rgba(16, 37, 42, 0.16);
+	}
+	.tab-btn:hover:not(.active) {
+		background: rgba(81, 190, 123, 0.08);
+		color: var(--text-dark);
+	}
 
 	/* Loading */
 	.loading-msg { text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
@@ -1190,9 +1246,30 @@
 	.revenue-unit { font-size: 10px; color: var(--text-muted); }
 
 	/* Feedback */
-	.feedback-filters { display: flex; gap: 8px; margin-bottom: 16px; }
-	.filter-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
-	.filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+	.feedback-filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+	.filter-btn {
+		padding: 8px 14px;
+		border: 1px solid transparent;
+		border-radius: 10px;
+		background: transparent;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: all 0.18s ease;
+		white-space: nowrap;
+	}
+	.filter-btn.active {
+		background: linear-gradient(135deg, #1f5159, #10252a);
+		color: #fff;
+		border-color: rgba(31, 81, 89, 0.28);
+		box-shadow: 0 8px 18px rgba(16, 37, 42, 0.14);
+	}
+	.filter-btn:hover:not(.active) {
+		background: rgba(81, 190, 123, 0.08);
+		color: var(--text-dark);
+	}
 	.feedback-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
 	.feedback-type { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; background: var(--bg-cream); color: var(--text-muted); white-space: nowrap; height: fit-content; }
 	.feedback-type.bug { background: rgba(239,68,68,0.1); color: #ef4444; }
@@ -1211,18 +1288,24 @@
 
 	/* Users toolbar */
 	.users-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-	.users-filters { display: flex; gap: 8px; align-items: center; }
+	.users-filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 	.users-search {
-		padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-		font-family: var(--font-body); font-size: 13px; width: 240px; background: var(--bg-card); color: var(--text-dark);
+		min-height: 42px; padding: 0 14px; border: 1px solid rgba(31, 81, 89, 0.12); border-radius: 12px;
+		font-family: var(--font-body); font-size: 13px; width: 260px; background: rgba(255,255,255,0.9); color: var(--text-dark);
+		box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
 	}
-	.users-search:focus { outline: none; border-color: var(--primary); }
-	.users-tier-select {
-		padding: 8px 28px 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-		background: var(--bg-card); font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
-		appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');
-		background-repeat: no-repeat; background-position: right 8px center;
+	.users-search:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(81,190,123,0.12); }
+	.users-tier-toggle {
+		display: flex;
+		gap: 6px;
+		padding: 4px;
+		border: 1px solid rgba(31, 81, 89, 0.12);
+		border-radius: 14px;
+		background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,250,251,0.94));
+		box-shadow: 0 10px 20px rgba(16, 37, 42, 0.04);
+		flex-wrap: wrap;
 	}
+	.tier-filter-btn { min-height: 34px; }
 
 	/* Tier badges */
 	.tier-badge {
@@ -1315,7 +1398,9 @@
 		.flywheel-arrow { display: none; }
 		.market-grid { grid-template-columns: repeat(2, 1fr); }
 		.phase-names { grid-template-columns: repeat(2, 1fr); }
-		.users-search { width: 160px; }
+		.users-search { width: 100%; }
+		.users-filters { width: 100%; justify-content: stretch; }
+		.users-tier-toggle { width: 100%; }
 		.integrations-grid { grid-template-columns: 1fr; }
 	}
 </style>

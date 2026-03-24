@@ -105,10 +105,6 @@
 		}
 	]);
 
-	const accountItems = [
-		{ page: 'settings', icon: 'settings', label: 'Settings' }
-	];
-
 	const adminItems = [
 		{ page: 'admin', icon: 'schema', label: 'Admin Dashboard' },
 		{ page: 'case-studies', icon: 'casestudies', label: 'Member Success' },
@@ -282,19 +278,6 @@
 
 		<div class="nav-spacer"></div>
 
-		<!-- Account -->
-		{#each accountItems as item}
-			<a
-				class="nav-item"
-				class:active={isActive(item.page)}
-				href={href(item.page)}
-				onclick={closeMobile}
-			>
-				<span class="nav-icon">{@html icons[item.icon]}</span>
-				{item.label}
-			</a>
-		{/each}
-
 		<!-- Admin -->
 		{#if $isAdmin}
 			<div class="nav-section-label">Admin</div>
@@ -397,6 +380,16 @@
 				<span class="toggle-thumb"></span>
 			</span>
 		</button>
+
+		<a
+			class="footer-link"
+			class:active={isActive('settings')}
+			href={href('settings')}
+			onclick={closeMobile}
+		>
+			<span class="nav-icon">{@html icons.settings}</span>
+			Settings
+		</a>
 	</div>
 
 	<!-- User profile at bottom -->
@@ -528,7 +521,8 @@
 	}
 
 	.sidebar-feedback,
-	.theme-toggle {
+	.theme-toggle,
+	.footer-link {
 		display: flex;
 		align-items: center;
 		gap: 10px;
@@ -546,7 +540,16 @@
 		transition: color var(--transition), opacity var(--transition);
 	}
 	.sidebar-feedback:hover,
-	.theme-toggle:hover {
+	.theme-toggle:hover,
+	.footer-link:hover {
+		color: #fff;
+		opacity: 1;
+	}
+	.footer-link {
+		margin-top: 8px;
+		text-decoration: none;
+	}
+	.footer-link.active {
 		color: #fff;
 		opacity: 1;
 	}

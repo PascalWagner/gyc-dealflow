@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 		const programSlug = req.query.programSlug || 'cashflow_academy';
 		const eventType = req.query.eventType || 'office_hours';
 		const rawLimit = Number.parseInt(req.query.limit || '6', 10);
-		const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 12) : 6;
+		const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 24) : 6;
 
 		const payload = await getMemberEvents({ programSlug, eventType, limit });
 		return res.status(200).json({

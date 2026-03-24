@@ -17,14 +17,22 @@
 	let nextSession = $state(null);
 	let localTimeZone = $state(null);
 	let sourceLabel = $state('Google Calendar');
+	let activeMonthIndex = $state(0);
 
 	const replayLibraryUrl = '/app/resources?category=Office%20Hours';
+	const calendarDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 	const canAccess = $derived($isAdmin || $isAcademy);
 	const timezoneSummary = $derived.by(() => {
 		if (!localTimeZone) return 'Local timezone unavailable. Eastern Time is the canonical schedule reference.';
 		return `Showing your local time in ${localTimeZone}. Eastern Time remains the canonical schedule reference.`;
 	});
+	const calendarSummary = $derived.by(() => {
+		if (!localTimeZone) return 'Month view is using your browser date. Eastern Time remains the canonical schedule reference.';
+		return `Month view uses your local date in ${localTimeZone}. Eastern Time remains the canonical schedule reference.`;
+	});
+	const calendarMonths = $derived.by(() => buildCalendarMonths(events));
+	const activeCalendarMonth = $derived.by(() => calendarMonths[activeMonthIndex] || null);
 
 	function canonicalDate(event) {
 		return formatCanonicalDate(event.startDateTime);
@@ -36,6 +44,21 @@
 
 	function localTime(event) {
 		return formatLocalDateTimeRange(event.startDateTime, event.endDateTime, localTimeZone);
+	}
+
+	function calendarTime(event) {
+		return new Date(event.startDateTime).toLocaleTimeString('en-US', {
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
+
+	function previousMonth() {
+		if (activeMonthIndex > 0) activeMonthIndex -= 1;
+	}
+
+	function nextMonth() {
+		if (activeMonthIndex < calendarMonths.length - 1) activeMonthIndex += 1;
 	}
 
 	async function loadOfficeHours() {
@@ -53,7 +76,7 @@
 				throw new Error('Missing session token');
 			}
 
-			const response = await fetch('/api/member-events?programSlug=cashflow_academy&eventType=office_hours&limit=6', {
+			const response = await fetch('/api/member-events?programSlug=cashflow_academy&eventType=office_hours&limit=20', {
 				headers: {
 					Authorization: `Bearer ${token}`
 				}
@@ -73,7 +96,8 @@
 			const payload = await response.json();
 			sourceLabel = payload.sourceKind === 'google_calendar' ? 'Live Google Calendar' : 'Event source';
 			events = payload.upcomingSessions || payload.events || [];
-			nextSession = payload.nextSession || events[0] || null;
+			nextSession = payload.nextSession || payload.upcomingSessions?.[0] || payload.events?.[0] || null;
+			activeMonthIndex = 0;
 		} catch (fetchError) {
 			console.warn('office hours load failed:', fetchError);
 			error = 'Unable to load the Office Hours schedule right now.';
@@ -85,6 +109,104 @@
 	onMount(() => {
 		loadOfficeHours();
 	});
+
+	$effect(() => {
+		if (calendarMonths.length === 0) {
+			activeMonthIndex = 0;
+			return;
+		}
+		if (activeMonthIndex > calendarMonths.length - 1) {
+			activeMonthIndex = calendarMonths.length - 1;
+		}
+	});
+
+	function buildCalendarMonths(items) {
+		const monthMap = new Map();
+
+		for (const event of items) {
+			const start = new Date(event.startDateTime);
+			if (Number.isNaN(start.getTime())) continue;
+
+			const monthKey = `${start.getFullYear()}-${pad(start.getMonth() + 1)}`;
+			const dayKey = buildDayKey(start);
+			if (!monthMap.has(monthKey)) {
+				const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+				monthMap.set(monthKey, {
+					key: monthKey,
+					label: monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+					monthStart,
+					eventsByDay: new Map()
+				});
+			}
+
+			const monthData = monthMap.get(monthKey);
+			if (!monthData.eventsByDay.has(dayKey)) monthData.eventsByDay.set(dayKey, []);
+			monthData.eventsByDay.get(dayKey).push(event);
+		}
+
+		return Array.from(monthMap.values())
+			.sort((a, b) => a.monthStart - b.monthStart)
+			.map((month) => ({
+				...month,
+				weeks: buildCalendarWeeks(month.monthStart, month.eventsByDay)
+			}));
+	}
+
+	function buildCalendarWeeks(monthStart, eventsByDay) {
+		const year = monthStart.getFullYear();
+		const month = monthStart.getMonth();
+		const firstWeekday = new Date(year, month, 1).getDay();
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		const prevMonthDays = new Date(year, month, 0).getDate();
+		const today = new Date();
+		const cells = [];
+
+		for (let i = 0; i < firstWeekday; i += 1) {
+			const date = new Date(year, month - 1, prevMonthDays - firstWeekday + i + 1);
+			cells.push(buildCalendarCell(date, false, [], today));
+		}
+
+		for (let day = 1; day <= daysInMonth; day += 1) {
+			const date = new Date(year, month, day);
+			const dayEvents = [...(eventsByDay.get(buildDayKey(date)) || [])].sort(
+				(a, b) => new Date(a.startDateTime) - new Date(b.startDateTime)
+			);
+			cells.push(buildCalendarCell(date, true, dayEvents, today));
+		}
+
+		while (cells.length % 7 !== 0) {
+			const overflowDay = cells.length - (firstWeekday + daysInMonth) + 1;
+			const date = new Date(year, month + 1, overflowDay);
+			cells.push(buildCalendarCell(date, false, [], today));
+		}
+
+		const weeks = [];
+		for (let index = 0; index < cells.length; index += 7) {
+			weeks.push(cells.slice(index, index + 7));
+		}
+		return weeks;
+	}
+
+	function buildCalendarCell(date, isCurrentMonth, dayEvents, today) {
+		return {
+			key: `${buildDayKey(date)}-${isCurrentMonth ? 'current' : 'overflow'}`,
+			dayNumber: date.getDate(),
+			isCurrentMonth,
+			isToday:
+				date.getFullYear() === today.getFullYear() &&
+				date.getMonth() === today.getMonth() &&
+				date.getDate() === today.getDate(),
+			events: dayEvents
+		};
+	}
+
+	function buildDayKey(date) {
+		return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+	}
+
+	function pad(value) {
+		return String(value).padStart(2, '0');
+	}
 </script>
 
 <svelte:head>
@@ -217,6 +339,68 @@
 				{/if}
 			</section>
 		</div>
+
+		<section class="schedule-card calendar-card">
+			<div class="card-header calendar-header">
+				<div>
+					<div class="card-label">Monthly View</div>
+					<h2>Office Hours calendar</h2>
+					<p class="calendar-copy">
+						Switch months to see the weekday cadence and any moved sessions at a glance. {calendarSummary}
+					</p>
+				</div>
+				{#if activeCalendarMonth}
+					<div class="calendar-controls">
+						<button class="calendar-nav-btn" onclick={previousMonth} disabled={activeMonthIndex === 0} aria-label="Previous month">
+							&larr;
+						</button>
+						<div class="calendar-month-label">{activeCalendarMonth.label}</div>
+						<button class="calendar-nav-btn" onclick={nextMonth} disabled={activeMonthIndex >= calendarMonths.length - 1} aria-label="Next month">
+							&rarr;
+						</button>
+					</div>
+				{/if}
+			</div>
+
+			{#if activeCalendarMonth}
+				<div class="calendar-weekdays">
+					{#each calendarDayLabels as dayLabel}
+						<div>{dayLabel}</div>
+					{/each}
+				</div>
+				<div class="calendar-grid">
+					{#each activeCalendarMonth.weeks as week}
+						{#each week as day}
+							<div
+								class="calendar-day"
+								class:calendar-day-outside={!day.isCurrentMonth}
+								class:calendar-day-today={day.isToday}
+								class:calendar-day-has-events={day.events.length > 0}
+							>
+								<div class="calendar-day-number">{day.dayNumber}</div>
+								{#if day.events.length > 0}
+									<div class="calendar-day-events">
+										{#each day.events as event}
+											<div class="calendar-event-chip">
+												<span>{calendarTime(event)}</span>
+												{#if event.status === 'rescheduled'}
+													<span class="calendar-event-status">Moved</span>
+												{/if}
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/each}
+					{/each}
+				</div>
+				<div class="calendar-footnote">
+					Session dates come from the live Office Hours calendar. If a Thursday session moves, the month view reflects the moved date.
+				</div>
+			{:else}
+				<div class="empty-state">No monthly calendar is available yet.</div>
+			{/if}
+		</section>
 	{/if}
 </div>
 
@@ -314,6 +498,7 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1.06fr) minmax(320px, 0.94fr);
 		gap: 20px;
+		margin-bottom: 20px;
 	}
 
 	.schedule-card,
@@ -337,6 +522,10 @@
 		align-items: flex-start;
 		gap: 16px;
 		margin-bottom: 20px;
+	}
+
+	.calendar-header {
+		align-items: center;
 	}
 
 	.card-label {
@@ -438,6 +627,138 @@
 
 	.button-reset {
 		appearance: none;
+	}
+
+	.calendar-card {
+		padding-bottom: 20px;
+	}
+
+	.calendar-copy,
+	.calendar-footnote {
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+		margin: 10px 0 0;
+	}
+
+	.calendar-controls {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.calendar-month-label {
+		min-width: 158px;
+		text-align: center;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.calendar-nav-btn {
+		width: 38px;
+		height: 38px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--bg-card);
+		color: var(--text-dark);
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 800;
+		cursor: pointer;
+		transition: all 0.18s ease;
+	}
+
+	.calendar-nav-btn:hover:not(:disabled) {
+		border-color: var(--primary);
+		color: var(--primary);
+		transform: translateY(-1px);
+	}
+
+	.calendar-nav-btn:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+
+	.calendar-weekdays,
+	.calendar-grid {
+		display: grid;
+		grid-template-columns: repeat(7, minmax(0, 1fr));
+		gap: 10px;
+	}
+
+	.calendar-weekdays {
+		margin-bottom: 10px;
+	}
+
+	.calendar-weekdays div {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		text-align: center;
+	}
+
+	.calendar-day {
+		min-height: 110px;
+		padding: 12px;
+		border-radius: 18px;
+		border: 1px solid var(--border);
+		background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,251,252,0.92));
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.calendar-day-outside {
+		opacity: 0.42;
+		background: rgba(245, 247, 248, 0.8);
+	}
+
+	.calendar-day-today {
+		border-color: rgba(81, 190, 123, 0.5);
+		box-shadow: inset 0 0 0 1px rgba(81, 190, 123, 0.12);
+	}
+
+	.calendar-day-has-events {
+		background: linear-gradient(180deg, rgba(81,190,123,0.08), rgba(255,255,255,0.96));
+	}
+
+	.calendar-day-number {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.calendar-day-events {
+		display: grid;
+		gap: 6px;
+	}
+
+	.calendar-event-chip {
+		display: inline-flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		padding: 7px 9px;
+		border-radius: 12px;
+		background: rgba(16, 37, 42, 0.07);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.calendar-event-status {
+		font-size: 10px;
+		font-weight: 800;
+		color: #b45309;
+		text-transform: uppercase;
 	}
 
 	.session-list {
@@ -546,6 +867,10 @@
 			align-items: center;
 			min-width: 0;
 		}
+
+		.calendar-header {
+			align-items: flex-start;
+		}
 	}
 
 	@media (max-width: 640px) {
@@ -565,6 +890,31 @@
 
 		h2 {
 			font-size: 24px;
+		}
+
+		.calendar-controls {
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.calendar-month-label {
+			min-width: 0;
+			flex: 1;
+		}
+
+		.calendar-weekdays,
+		.calendar-grid {
+			gap: 6px;
+		}
+
+		.calendar-day {
+			min-height: 92px;
+			padding: 10px;
+		}
+
+		.calendar-event-chip {
+			padding: 6px 8px;
+			font-size: 10px;
 		}
 	}
 </style>
