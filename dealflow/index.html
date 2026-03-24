@@ -21486,14 +21486,7 @@ async function adminLoadData() {
   // Intros tab — fetch directly from Supabase
   if (_adminTab === 'intros') {
     try {
-      var user = getUser();
-      if (!user || !user.token) { adminRenderEmptyState('Sign in to view intros'); return; }
-      var introResp = await fetch('/api/admin-manage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
-        body: JSON.stringify({ action: 'list-intros', search: search })
-      });
-      var introResult = await introResp.json();
+      var introResult = await adminFetch({ action: 'list-intros', search: search });
       if (introResult.success) {
         adminRenderIntros(introResult.data || []);
       } else {
