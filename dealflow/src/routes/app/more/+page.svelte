@@ -13,9 +13,10 @@
 			]
 		},
 		{
-			label: 'Learn',
+			label: 'Support',
 			items: [
 				{ href: '/app/academy', label: 'Cash Flow Academy', icon: '📚' },
+				{ href: '/app/office-hours', label: 'Office Hours', icon: '🕛' },
 				{ href: '/app/income-fund', label: 'GYC Income Fund', icon: '💰' }
 			]
 		},

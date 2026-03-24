@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
-	import { userTier, isAcademy } from '$lib/stores/auth.js';
+	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
+	import { isAcademy, isAdmin } from '$lib/stores/auth.js';
 
 	let searchQuery = $state('');
 	let activeCategory = $state('All');
@@ -75,6 +76,11 @@
 	}
 
 	onMount(async () => {
+		const requestedCategory = $page.url.searchParams.get('category');
+		if (requestedCategory && categories.includes(requestedCategory)) {
+			activeCategory = requestedCategory;
+		}
+
 		try {
 			const res = await fetch('/api/resources');
 			if (res.ok) {
@@ -94,7 +100,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="resources-page">
-	{#if !$isAcademy}
+	{#if !$isAcademy && !$isAdmin}
 		<!-- Academy gate -->
 		<div class="gate-wrap">
 			<div class="academy-gate-cta">
