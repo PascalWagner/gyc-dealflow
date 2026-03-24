@@ -184,6 +184,12 @@
 	.badge { display: inline-block; padding: 2px 8px; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; font-size: 10px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
 	.badge.muted { color: var(--text-muted); }
 	.empty-state { grid-column: 1 / -1; text-align: center; padding: 60px; color: var(--text-muted); font-size: 14px; }
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.filter-bar { padding: 16px 24px; }
+		.filter-input { flex: 1 1 260px; min-width: 240px; }
+		.stats-bar { flex-basis: 100%; margin-left: 0; }
+		.managers-grid { grid-template-columns: repeat(2, 1fr); padding: 20px 24px 24px; }
+	}
 	@media (max-width: 1024px) { .managers-grid { grid-template-columns: repeat(2, 1fr); } }
 	@media (max-width: 768px) {
 		.managers-grid { grid-template-columns: 1fr; padding: 16px; }

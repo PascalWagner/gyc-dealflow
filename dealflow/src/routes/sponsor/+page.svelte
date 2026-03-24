@@ -598,7 +598,7 @@
 								<div class="person-avatar placeholder-avatar">+</div>
 								<div class="person-info">
 									<div class="person-name" style="color:var(--text-muted)">More team members</div>
-									<div class="person-role">Coming soon</div>
+									<div class="person-role">Profiles added regularly</div>
 								</div>
 							</div>
 						</div>

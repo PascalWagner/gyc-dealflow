@@ -620,7 +620,7 @@
 				<div class="section-card">
 					<div class="section-header-row"><span class="dot yellow"></span><span class="section-title">Known Issues</span></div>
 					<div class="issues-list">
-						{#each ['GHL -> Supabase sync is login-only', 'Magic link / forgot password not built', 'Weekly digest email kill-switched', 'Mobile swipe feed is beta', 'Analytics data stored in localStorage'] as issue}
+						{#each ['GHL -> Supabase sync is login-only', 'Magic link / forgot password not built', 'Weekly digest email kill-switched', 'Mobile swipe feed polish in progress', 'Analytics data stored in localStorage'] as issue}
 							<div class="issue-item">&#10007; {issue}</div>
 						{/each}
 					</div>

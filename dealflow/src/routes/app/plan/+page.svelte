@@ -581,6 +581,11 @@
 	.summary-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 	.summary-tag { padding: 4px 10px; border-radius: 6px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; background: rgba(44,110,73,0.08); color: #2C6E49; }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.plan-page { padding: 20px 24px 40px; max-width: 840px; }
+		.wizard-modal { max-width: 560px; }
+	}
+
 	@media (max-width: 768px) {
 		.plan-page { padding: 16px; }
 		.wizard-modal { padding: 24px 20px; }

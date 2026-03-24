@@ -1,6 +1,8 @@
 <script>
 	import { dealStages, stageLabel, STAGE_META, normalizeStage } from '$lib/stores/deals.js';
 	import { getDealHeroImage } from '$lib/utils/dealHero.js';
+	import { tapLight, tapMedium, notifySuccess } from '$lib/utils/haptics.js';
+	import { shareDeal, canShare } from '$lib/utils/share.js';
 
 	let { deals = [], search = '', onfilter = () => {}, onsearch = () => {} } = $props();
 
@@ -56,6 +58,7 @@
 		if (currentDeal) {
 			dealStages.setStage(currentDeal.id, 'passed');
 		}
+		tapMedium();
 		nextCard();
 	}
 
@@ -63,7 +66,14 @@
 		if (currentDeal) {
 			dealStages.setStage(currentDeal.id, 'saved');
 		}
+		notifySuccess();
 		nextCard();
+	}
+
+	async function handleShare(deal) {
+		if (!deal) return;
+		tapLight();
+		await shareDeal(deal);
 	}
 
 	function nextCard() {
@@ -172,6 +182,15 @@
 						<a href="/deal/{currentDeal.id}" class="swipe-action view">
 							View Deal
 						</a>
+						{#if canShare()}
+							<button class="swipe-action share" onclick={() => handleShare(currentDeal)} aria-label="Share deal">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+									<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+									<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+								</svg>
+								Share
+							</button>
+						{/if}
 						<button class="swipe-action save" onclick={saveDeal}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
 							Save
@@ -401,6 +420,15 @@
 	.swipe-action.skip:hover { border-color: var(--red, #e74c3c); color: var(--red, #e74c3c); }
 	.swipe-action.save { background: var(--primary); color: #fff; border-color: var(--primary); }
 	.swipe-action.view { border-color: var(--primary); color: var(--primary); }
+	.swipe-action.share {
+		flex: 0 0 88px;
+	}
+
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.swipe-card {
+			max-width: 480px;
+		}
+	}
 
 	.swipe-nav {
 		display: flex;

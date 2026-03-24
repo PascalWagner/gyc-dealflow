@@ -1282,6 +1282,34 @@
 	}
 	.btn-danger:hover { background: #fde8e8; }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.topbar {
+			padding: 0 24px;
+		}
+
+		.content-area {
+			padding: 20px 24px 40px;
+		}
+
+		.summary-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.charts-row {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 20px;
+		}
+
+		.import-section {
+			max-width: 640px;
+			padding: 40px 24px;
+		}
+
+		.modal-card {
+			max-width: 560px;
+		}
+	}
+
 	/* ── Mobile Breakpoints ── */
 	@media (max-width: 768px) {
 		.mobile-menu-btn { display: block; }

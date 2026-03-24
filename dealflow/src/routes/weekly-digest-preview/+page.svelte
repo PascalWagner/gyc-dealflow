@@ -4,7 +4,7 @@
 
 	const BASE_URL = 'https://dealflow.growyourcashflow.io';
 
-	const SAMPLE = {
+	const FALLBACK_DEAL = {
 		id: '4088aa9d-78ab-4dcd-91c8-8a18f16503b5',
 		name: 'F Street West Bend, LLC',
 		operator_name: 'F Street',
@@ -66,16 +66,16 @@
 					const data = await res.json();
 					const d = Array.isArray(data) ? data[0] : data;
 					if (d) {
-						deal = { ...SAMPLE, ...d };
+						deal = { ...FALLBACK_DEAL, ...d };
 						loading = false;
 						return;
 					}
 				}
 			} catch (e) {
-				console.warn('Failed to fetch deal, using sample data:', e);
+				console.warn('Failed to fetch deal, using fallback deal data:', e);
 			}
 		}
-		deal = SAMPLE;
+		deal = FALLBACK_DEAL;
 		loading = false;
 	});
 

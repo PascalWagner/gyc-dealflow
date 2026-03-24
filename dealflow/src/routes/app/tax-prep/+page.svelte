@@ -568,6 +568,11 @@
 	}
 	.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.tax-page { padding: 20px 24px 40px; max-width: 840px; }
+		.modal { max-width: 560px; }
+	}
+
 	@media (max-width: 768px) {
 		.tax-page { padding: 16px; }
 		.form-grid { grid-template-columns: 1fr; }

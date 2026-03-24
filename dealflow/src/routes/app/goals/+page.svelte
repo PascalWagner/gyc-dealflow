@@ -425,6 +425,13 @@
 	.rm-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
 	.rm-value { font-size: 20px; font-weight: 800; color: var(--text-dark); }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.topbar { padding: 16px 24px; }
+		.wizard-container { padding: 0 24px; }
+		.goals-dashboard { padding: 0 24px 40px; }
+		.metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+
 	@media (max-width: 768px) {
 		.mobile-menu-btn { display: block; }
 		.goals-dashboard { padding: 0 16px 40px; }

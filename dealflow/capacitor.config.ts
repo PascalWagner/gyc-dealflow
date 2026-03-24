@@ -31,7 +31,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: 'automatic',
-    preferredContentMode: 'mobile',
+    preferredContentMode: 'recommended',
     scheme: 'Cashflow Academy',
   },
 };

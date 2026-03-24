@@ -94,4 +94,16 @@
 	.menu-icon { font-size: 18px; width: 24px; text-align: center; }
 	.menu-label { flex: 1; font-family: var(--font-ui); font-size: 15px; font-weight: 600; }
 	.chevron { color: var(--text-muted); flex-shrink: 0; }
+
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.more-page {
+			max-width: 600px;
+			padding: 24px;
+		}
+
+		.menu-item {
+			min-height: 48px;
+			padding: 16px 14px;
+		}
+	}
 </style>

@@ -259,6 +259,12 @@
 	.banner-title { font-family: var(--font-ui); font-size: 18px; font-weight: 800; margin-bottom: 8px; }
 	.banner-desc { font-family: var(--font-body); font-size: 13px; opacity: 0.85; }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.page-header { padding: 20px 24px 0; }
+		.stats-grid { padding: 0 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.two-col, .two-col.uneven { grid-template-columns: 1fr; }
+	}
+
 	@media (max-width: 768px) {
 		.two-col, .two-col.uneven { grid-template-columns: 1fr; padding: 0 16px; }
 		.chart-card { margin: 0 16px 16px; }

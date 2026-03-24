@@ -144,42 +144,18 @@
 			</div>
 		</div>
 	{:else if videos.length === 0}
-		<!-- Coming soon state -->
 		<div class="page-desc">
 			Office hours recordings, deal reviews, and educational content from the Cashflow Academy.
 		</div>
-		<div class="coming-soon-wrap">
-			<div class="resource-grid blurred">
-				{#each previewCards as card}
-					<div class="resource-card preview-card">
-						<div class="resource-thumb">
-							<div class="play-overlay">
-								<div class="play-btn">
-									<svg viewBox="0 0 24 24" fill="none" width="24" height="24">
-										<polygon points="5 3 19 12 5 21 5 3" fill="#1a2e35" />
-									</svg>
-								</div>
-							</div>
-						</div>
-						<div class="resource-meta">
-							<h3>{card.title}</h3>
-							<div class="resource-info">
-								<span class="resource-badge {badgeClass(card.category)}">{card.category}</span>
-								<span>Coming soon</span>
-							</div>
-						</div>
-					</div>
-				{/each}
+		<div class="resource-library-empty">
+			<div class="empty-icon">&#127916;</div>
+			<div class="empty-title">Your resource library is ready</div>
+			<div class="empty-desc">
+				Recorded office hours, deal reviews, and training sessions appear here as soon as they are published to the member library.
 			</div>
-			<div class="coming-soon-overlay">
-				<div class="coming-soon-card">
-					<div class="coming-soon-emoji">&#127916;</div>
-					<div class="coming-soon-title">Coming Soon</div>
-					<div class="coming-soon-desc">
-						Office hours recordings, deal reviews, and educational sessions are being added. Check
-						back soon.
-					</div>
-				</div>
+			<div class="empty-actions">
+				<a href="/app/office-hours" class="gate-btn">View Office Hours</a>
+				<a href="/app/deals" class="resource-empty-link">Browse Deal Flow</a>
 			</div>
 		</div>
 	{:else}
@@ -226,7 +202,7 @@
 				<div class="empty-icon">&#127909;</div>
 				<div class="empty-title">No resources found</div>
 				<div class="empty-desc">
-					{searchQuery ? 'Try a different search term.' : 'New recordings coming soon.'}
+					{searchQuery ? 'Try a different search term.' : 'No recordings are available in this category yet.'}
 				</div>
 			</div>
 		{:else}
@@ -398,49 +374,28 @@
 		padding: 20px 0;
 	}
 
-	/* ===== Coming Soon ===== */
-	.coming-soon-wrap {
-		position: relative;
+	.resource-library-empty {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 40px 32px;
+		text-align: center;
+		box-shadow: var(--shadow-card);
 	}
-	.blurred {
-		filter: blur(3px);
-		opacity: 0.5;
-		user-select: none;
-		pointer-events: none;
-	}
-	.coming-soon-overlay {
-		position: absolute;
-		inset: 0;
+	.empty-actions {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		z-index: 5;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-top: 20px;
 	}
-	.coming-soon-card {
-		text-align: center;
-		background: rgba(255, 255, 255, 0.92);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 40px 48px;
-		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-	}
-	.coming-soon-emoji {
-		font-size: 48px;
-		margin-bottom: 12px;
-	}
-	.coming-soon-title {
+	.resource-empty-link {
 		font-family: var(--font-ui);
-		font-size: 20px;
-		font-weight: 800;
-		color: var(--text-dark);
-		margin-bottom: 6px;
-	}
-	.coming-soon-desc {
-		font-family: var(--font-body);
 		font-size: 13px;
-		color: var(--text-secondary);
-		max-width: 320px;
-		line-height: 1.6;
+		font-weight: 700;
+		color: var(--primary);
+		text-decoration: none;
 	}
 
 	/* ===== Search & Filters ===== */
@@ -691,6 +646,15 @@
 			grid-template-columns: repeat(2, 1fr);
 		}
 	}
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.resources-page {
+			padding: 0 24px 40px;
+		}
+
+		.resource-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
 	@media (max-width: 600px) {
 		.resource-grid {
 			grid-template-columns: 1fr;
@@ -720,9 +684,6 @@
 		.resource-card:hover {
 			transform: none;
 			box-shadow: none;
-		}
-		.coming-soon-card {
-			padding: 28px 24px;
 		}
 	}
 	.sk-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; overflow: hidden; }

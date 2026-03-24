@@ -1,4 +1,6 @@
 <script>
+	import { selectionChanged } from '$lib/utils/haptics.js';
+
 	let {
 		search = '',
 		assetClass = '',
@@ -28,11 +30,13 @@
 		+ (showArchived ? 1 : 0)
 	);
 
-	function emit(field, value) {
+	function emit(field, value, withHaptic = false) {
+		if (withHaptic) selectionChanged();
 		onchange({ field, value });
 	}
 
 	function clearAll() {
+		selectionChanged();
 		filterPanelOpen = false;
 		onclear();
 	}
@@ -42,7 +46,10 @@
 	<button
 		class="buybox-toggle"
 		class:active={buyBoxApplied}
-		onclick={ontoggleBuyBox}
+		onclick={() => {
+			selectionChanged();
+			ontoggleBuyBox();
+		}}
 	>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
 		Apply My Plan
@@ -51,7 +58,10 @@
 	<button
 		class="filters-toggle"
 		class:active={filterPanelOpen}
-		onclick={() => filterPanelOpen = !filterPanelOpen}
+		onclick={() => {
+			selectionChanged();
+			filterPanelOpen = !filterPanelOpen;
+		}}
 	>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
 		Filters
@@ -90,7 +100,7 @@
 		<div class="filter-panel-grid">
 			<div class="filter-field">
 				<label>Asset Class</label>
-				<select value={assetClass} onchange={(e) => emit('assetClass', e.target.value)}>
+				<select value={assetClass} onchange={(e) => emit('assetClass', e.target.value, true)}>
 					<option value="">All</option>
 					<option value="Multi-Family">Multi-Family</option>
 					<option value="Industrial">Industrial</option>
@@ -106,7 +116,7 @@
 
 			<div class="filter-field">
 				<label>Deal Type</label>
-				<select value={dealType} onchange={(e) => emit('dealType', e.target.value)}>
+				<select value={dealType} onchange={(e) => emit('dealType', e.target.value, true)}>
 					<option value="">All</option>
 					<option value="Fund">Fund</option>
 					<option value="Syndication">Syndication</option>
@@ -115,7 +125,7 @@
 
 			<div class="filter-field">
 				<label>Strategy</label>
-				<select value={strategy} onchange={(e) => emit('strategy', e.target.value)}>
+				<select value={strategy} onchange={(e) => emit('strategy', e.target.value, true)}>
 					<option value="">All</option>
 					<option value="Lending">Lending</option>
 					<option value="Buy & Hold">Buy & Hold</option>
@@ -127,7 +137,7 @@
 
 			<div class="filter-field">
 				<label>Max Investment Min.</label>
-				<select value={maxInvest} onchange={(e) => emit('maxInvest', e.target.value)}>
+				<select value={maxInvest} onchange={(e) => emit('maxInvest', e.target.value, true)}>
 					<option value="">Any</option>
 					<option value="25000">$25K or less</option>
 					<option value="50000">$50K or less</option>
@@ -138,7 +148,7 @@
 
 			<div class="filter-field">
 				<label>Max Lockup</label>
-				<select value={maxLockup} onchange={(e) => emit('maxLockup', e.target.value)}>
+				<select value={maxLockup} onchange={(e) => emit('maxLockup', e.target.value, true)}>
 					<option value="">Any</option>
 					<option value="1">1 year or less</option>
 					<option value="3">3 years or less</option>
@@ -150,7 +160,7 @@
 
 			<div class="filter-field">
 				<label>Distributions</label>
-				<select value={distributions} onchange={(e) => emit('distributions', e.target.value)}>
+				<select value={distributions} onchange={(e) => emit('distributions', e.target.value, true)}>
 					<option value="">Any</option>
 					<option value="Monthly">Monthly</option>
 					<option value="Quarterly">Quarterly</option>
@@ -160,7 +170,7 @@
 
 			<div class="filter-field">
 				<label>Min Target IRR</label>
-				<select value={minIRR} onchange={(e) => emit('minIRR', e.target.value)}>
+				<select value={minIRR} onchange={(e) => emit('minIRR', e.target.value, true)}>
 					<option value="">Any</option>
 					<option value="0.06">6%+</option>
 					<option value="0.08">8%+</option>
@@ -173,7 +183,7 @@
 
 			<div class="filter-field">
 				<label>Sort By</label>
-				<select value={sortBy} onchange={(e) => emit('sortBy', e.target.value)}>
+				<select value={sortBy} onchange={(e) => emit('sortBy', e.target.value, true)}>
 					<option value="newest">Newest</option>
 					<option value="irr">Highest IRR</option>
 					<option value="min_invest">Lowest Min Investment</option>
@@ -185,7 +195,7 @@
 				<input
 					type="checkbox"
 					checked={showArchived}
-					onchange={(e) => emit('showArchived', e.target.checked)}
+					onchange={(e) => emit('showArchived', e.target.checked, true)}
 				>
 				Show archived
 			</label>

@@ -122,6 +122,10 @@
 		grid-column: 1 / -1; text-align: center; padding: 60px 20px;
 		font-family: var(--font-body); font-size: 14px; color: var(--text-muted);
 	}
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.page-header { padding: 20px 24px; }
+		.gp-grid { padding: 0 24px 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
 	@media (max-width: 768px) {
 		.page-header { padding: 16px; }
 		.gp-grid { padding: 0 16px 16px; grid-template-columns: 1fr; }

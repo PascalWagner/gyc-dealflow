@@ -1,9 +1,11 @@
 <script>
 	import { PIPELINE_STAGES, OUTCOME_STAGES, STAGE_META } from '$lib/stores/deals.js';
+	import { selectionChanged } from '$lib/utils/haptics.js';
 
 	let { currentTab = 'browse', counts = {}, onswitch = () => {} } = $props();
 
 	function switchTab(tab) {
+		selectionChanged();
 		onswitch(tab);
 	}
 </script>

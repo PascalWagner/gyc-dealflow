@@ -1535,6 +1535,36 @@
 		font-size: 12px;
 	}
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.topbar {
+			padding: 0 24px;
+		}
+
+		.content-area {
+			padding: 20px 24px 40px;
+		}
+
+		.dash-hero {
+			padding: 28px 24px;
+		}
+
+		.goal-cta {
+			padding: 24px;
+		}
+
+		.momentum-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.dashboard-columns {
+			grid-template-columns: 1fr;
+		}
+
+		.portfolio-preview-layout {
+			grid-template-columns: 240px minmax(0, 1fr);
+		}
+	}
+
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
 		.topbar { padding: 0 16px; padding-top: env(safe-area-inset-top, 0px); }

@@ -692,6 +692,11 @@
 	.empty-mobile { text-align: center; color: var(--text-muted, #9ca3af); padding: 2rem 0; }
 
 	/* ── Responsive ───────────────────────────────────────────────────── */
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.page { padding: 1.5rem 1.25rem 3.5rem; }
+		.stats-row { grid-template-columns: repeat(2, 1fr); }
+	}
+
 	@media (max-width: 768px) {
 		.page { padding: 1rem 1rem 3rem; }
 		.stats-row { grid-template-columns: repeat(2, 1fr); }

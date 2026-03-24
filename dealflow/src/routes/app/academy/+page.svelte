@@ -424,6 +424,14 @@
 
 	.disclaimer { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-align: center; opacity: 0.5; line-height: 1.6; }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.academy-page { max-width: 900px; padding: 0 24px 48px; }
+		.hero { padding: 40px 28px; }
+		.hero-stats { gap: 24px; }
+		.compare-grid, .tools-grid, .bonus-grid, .quotes-grid, .pascal-grid { gap: 16px; }
+		.who-grid, .gp-grid, .video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+
 	@media (max-width: 768px) {
 		.academy-page { padding: 0 16px 40px; }
 		.hero { padding: 32px 20px; }

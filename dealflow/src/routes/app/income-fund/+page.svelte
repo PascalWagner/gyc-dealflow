@@ -235,6 +235,25 @@
 	}
 
 	/* ===== Responsive ===== */
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.if-page {
+			max-width: 840px;
+			padding: 0 24px 40px;
+		}
+
+		.if-hero {
+			padding: 52px 28px;
+		}
+
+		.if-hero h1 {
+			font-size: 36px;
+		}
+
+		.if-hero-stats {
+			gap: 24px;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.if-hero {
 			padding: 40px 16px;

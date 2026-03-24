@@ -549,6 +549,22 @@
 		.skeleton-grid { grid-template-columns: repeat(2, 1fr); }
 	}
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.deals-page {
+			padding: 0 24px 40px;
+		}
+
+		.header-row {
+			flex-wrap: wrap;
+		}
+
+		.deals-grid,
+		.skeleton-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 18px;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.deals-page { padding: 16px; }
 		.deals-header { padding: 8px 0 12px; }

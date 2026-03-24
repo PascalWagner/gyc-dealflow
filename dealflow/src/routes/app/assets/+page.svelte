@@ -316,6 +316,13 @@
 
 	.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.topbar { padding: 14px 24px; }
+		.asset-list { padding: 20px 24px; }
+		.asset-grid-wrap { padding: 20px 24px 24px; }
+		.asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+
 	@media (max-width: 768px) {
 		.topbar { flex-direction: column; align-items: stretch; }
 		.topbar-controls { margin-left: 0; flex-wrap: wrap; }

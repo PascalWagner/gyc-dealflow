@@ -98,7 +98,11 @@
 			{/each}
 		</div>
 	{:else}
-		<div class="empty">No data</div>
+		<div class="empty">
+			<div class="empty-title">No allocation yet</div>
+			<div class="empty-copy">Add an investment to see your portfolio mix.</div>
+			<a href="/app/portfolio" class="empty-link">Add investment</a>
+		</div>
 	{/if}
 </div>
 
@@ -143,6 +147,26 @@
 		font-size: 13px;
 		color: var(--text-muted);
 		padding: 20px;
+		border: 1px dashed var(--border);
+		border-radius: var(--radius-sm);
+	}
+	.empty-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.empty-copy {
+		margin-top: 4px;
+	}
+	.empty-link {
+		display: inline-block;
+		margin-top: 10px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--primary);
+		text-decoration: none;
 	}
 	@media (max-width: 768px) {
 		.chart-wrapper { width: 100%; }

@@ -5,6 +5,7 @@
 	import { user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
+	import { selectionChanged } from '$lib/utils/haptics.js';
 
 	let { currentPage = '' } = $props();
 
@@ -34,6 +35,7 @@
 	});
 
 	function toggleTheme() {
+		selectionChanged();
 		isDark = !isDark;
 		if (isDark) {
 			document.documentElement.classList.add('dark');
@@ -259,7 +261,7 @@
 	<button class="sidebar-backdrop" onclick={closeMobile} aria-label="Close menu"></button>
 {/if}
 
-<aside class="sidebar" class:open={mobileOpen}>
+<aside id="sidebar" class="sidebar" class:open={mobileOpen}>
 	<div class="sidebar-logo">
 		<div class="sidebar-logo-text">Grow Your Cashflow</div>
 	</div>
@@ -640,7 +642,7 @@
 		cursor: default;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1024px) {
 		.sidebar {
 			transform: translateX(-100%);
 		}

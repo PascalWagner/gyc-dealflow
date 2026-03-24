@@ -354,15 +354,19 @@
 		if (!ctx) return;
 		const funds = filteredDebtFunds;
 		if (!funds.length) return;
-		const metricKeys = { yield: '_yieldData', delinquency: '_delinquencyData', ltv: '_ltvData', leverage: '_leverageData' };
-		const metricLabels = { yield: 'Yield (%)', delinquency: 'Delinquency Rate (%)', ltv: 'Loan-to-Value (%)', leverage: 'Leverage Ratio (x)' };
-		const key = metricKeys[debtChartMetric] || '_yieldData';
+		const metricConfig = {
+			yield: { key: '_yieldData', label: 'Yield (%)', format: (value) => `${Number(value).toFixed(1)}%`, min: 0, max: 40 },
+			delinquency: { key: '_delinquencyData', label: 'Delinquency Rate (%)', format: (value) => `${Number(value).toFixed(1)}%` },
+			ltv: { key: '_ltvData', label: 'Loan-to-Value (%)', format: (value) => `${Number(value).toFixed(0)}%` },
+			leverage: { key: '_leverageData', label: 'Leverage Ratio (x)', format: (value) => `${Number(value).toFixed(1)}x` }
+		};
+		const config = metricConfig[debtChartMetric] || metricConfig.yield;
 		const datasets = funds.map(f => {
 			const isHL = highlightedDebtFunds.has(f.id);
 			const anyHL = highlightedDebtFunds.size > 0;
-			return { label: f.investmentName, data: f[key], borderColor: anyHL ? (isHL ? f._color : 'rgba(200,200,200,0.25)') : f._color, backgroundColor: 'transparent', borderWidth: anyHL ? (isHL ? 3 : 1) : 2, pointRadius: anyHL ? (isHL ? 4 : 0) : 2, tension: 0.3 };
+			return { label: f.investmentName, data: f[config.key], borderColor: anyHL ? (isHL ? f._color : 'rgba(200,200,200,0.25)') : f._color, backgroundColor: 'transparent', borderWidth: anyHL ? (isHL ? 3 : 1) : 2, pointRadius: anyHL ? (isHL ? 4 : 0) : 2, tension: 0.3 };
 		});
-		charts.debtFund = new Chart(ctx, { type: 'line', data: { labels: MONTH_LABELS, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%' } } }, scales: { x: { grid: { display: false } }, y: { min: debtChartMetric === 'yield' ? 0 : undefined, max: debtChartMetric === 'yield' ? 40 : undefined, title: { display: true, text: metricLabels[debtChartMetric] || 'Yield (%)' }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: v => v.toFixed(1) + '%' } } } } });
+		charts.debtFund = new Chart(ctx, { type: 'line', data: { labels: MONTH_LABELS, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${config.format(c.parsed.y)}` } } }, scales: { x: { grid: { display: false } }, y: { min: config.min, max: config.max, title: { display: true, text: config.label }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: (value) => config.format(value) } } } } });
 	}
 
 	async function renderDealFlowCharts() {
@@ -862,12 +866,7 @@
 					</div>
 				</div>
 				<div class="chart-wrap" style="height:360px;"><canvas id="debtFundChart"></canvas></div>
-				{#if debtChartMetric !== 'yield'}
-					<div class="coming-soon-overlay">
-						<div class="coming-soon-title">Coming Soon</div>
-						<div class="coming-soon-desc">{debtChartMetric === 'leverage' ? 'Leverage ratio' : debtChartMetric === 'ltv' ? 'Loan-to-value' : 'Delinquency rate'} data is not yet available.</div>
-					</div>
-				{/if}
+				<div class="debt-chart-note">Compare reported fund trends by yield, leverage, loan-to-value, and delinquency using the selectors above.</div>
 			</div>
 			<div class="debt-table-wrap">
 				<table class="debt-table">
@@ -974,9 +973,7 @@
 	.debt-metric-toggles { display: flex; gap: 8px; }
 	.debt-metric-toggles button { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
 	.debt-metric-toggles button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-	.coming-soon-overlay { position: absolute; inset: 60px 24px 24px; background: rgba(255,255,255,0.85); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; border-radius: var(--radius); z-index: 10; }
-	.coming-soon-title { font-family: var(--font-ui); font-size: 22px; font-weight: 700; color: var(--text-secondary); }
-	.coming-soon-desc { font-family: var(--font-body); font-size: 14px; color: var(--text-muted); max-width: 340px; text-align: center; }
+	.debt-chart-note { margin-top: 12px; font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
 	.debt-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
 	.debt-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
 	.debt-table th { text-align: left; padding: 12px 14px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); cursor: pointer; white-space: nowrap; }
@@ -989,6 +986,26 @@
 	.fin-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 	.fin-badge.audited { background: var(--green-bg, rgba(81,190,123,0.1)); color: var(--green, #51BE7B); }
 	.fin-badge.unaudited { background: var(--orange-bg, rgba(230,126,34,0.1)); color: var(--orange, #E67E22); }
+
+	@media (min-width: 769px) and (max-width: 1024px) {
+		.mi-page {
+			padding: 20px 24px 40px;
+		}
+
+		.chart-card {
+			padding: 20px;
+		}
+
+		.chart-grid-2,
+		.df-bottom-grid {
+			grid-template-columns: 1fr;
+			gap: 20px;
+		}
+
+		.debt-filters {
+			gap: 12px;
+		}
+	}
 
 	@media (max-width: 768px) {
 		.chart-grid-2 { grid-template-columns: 1fr; }

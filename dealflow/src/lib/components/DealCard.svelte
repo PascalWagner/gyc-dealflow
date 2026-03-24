@@ -1,6 +1,8 @@
 <script>
 	import { dealStages, networkCounts } from '$lib/stores/deals.js';
 	import { getDealHeroImage } from '$lib/utils/dealHero.js';
+	import { notifySuccess, tapLight } from '$lib/utils/haptics.js';
+	import { canShare, shareDeal } from '$lib/utils/share.js';
 
 	let { deal } = $props();
 
@@ -66,7 +68,20 @@
 	function handleAction(event, action) {
 		event.stopPropagation();
 		if (!action.next || action.disabled) return;
+		if (action.next === 'saved' || action.next === 'invested') {
+			notifySuccess();
+		}
 		dealStages.setStage(deal.id, action.next);
+	}
+
+	function handleCardClick() {
+		tapLight();
+	}
+
+	async function handleShare(event) {
+		event.stopPropagation();
+		tapLight();
+		await shareDeal(deal);
 	}
 
 	function getActions(stageKey) {
@@ -170,7 +185,7 @@
 		{/if}
 	</div>
 
-	<a href="/deal/{deal.id}" class="card-body">
+	<a href="/deal/{deal.id}" class="card-body" onclick={handleCardClick}>
 		<div class="card-title">{deal.investmentName}</div>
 		<div class="card-manager">{deal.managementCompany || ''}</div>
 		{#if deal.location}
@@ -251,6 +266,14 @@
 	</a>
 
 	<div class="card-footer">
+		{#if canShare()}
+			<button class="card-btn share-btn" onclick={handleShare} aria-label="Share deal">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+					<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+					<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+				</svg>
+			</button>
+		{/if}
 		{#each actions as action}
 			<button
 				class="card-btn"
@@ -653,6 +676,11 @@
 
 	.card-btn:disabled {
 		opacity: 1;
+	}
+
+	.share-btn {
+		flex: 0 0 42px;
+		padding: 9px;
 	}
 
 	@media (max-width: 1200px) {
