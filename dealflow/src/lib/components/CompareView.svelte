@@ -168,11 +168,10 @@
 						<td class="col-label">Stage</td>
 						{#each deals as deal}
 							<td class="col-deal">
-								<a href="/deal.html?id={deal.id}" class="action-btn primary">Open Deal</a>
-								{@const action = getNextAction(deal.id)}
-								{#if action}
-									<button class="action-btn" onclick={() => onstagechange(deal.id, action.next)}>
-										{action.label}
+								<a href="/deal/{deal.id}" class="action-btn primary">Open Deal</a>
+								{#if getNextAction(deal.id)}
+									<button class="action-btn" onclick={() => onstagechange(deal.id, getNextAction(deal.id).next)}>
+										{getNextAction(deal.id).label}
 									</button>
 								{:else}
 									<button class="action-btn" disabled>{stageLabel(getStage(deal.id))}</button>

@@ -107,25 +107,23 @@
 	<div class="swipe-container">
 		{#if deals.length === 0}
 			<div class="swipe-empty">
-				<div class="swipe-empty-icon">\u{1f50d}</div>
+				<div class="swipe-empty-icon">🔍</div>
 				<div class="swipe-empty-text">No deals to show</div>
 				<div class="swipe-empty-sub">Try adjusting your filters</div>
 			</div>
 		{:else if currentDeal}
 			<div class="swipe-counter">{currentIndex + 1} / {deals.length}</div>
 			<div class="swipe-card">
-				{@const hero = getHero(currentDeal)}
-				{@const heroImg = currentDeal.propertyImageUrl || ''}
 				<div
 					class="swipe-hero"
-					style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}"
+					style="background:{currentDeal.propertyImageUrl ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${currentDeal.propertyImageUrl})` : getHero(currentDeal).gradient};{currentDeal.propertyImageUrl ? 'background-size:cover;background-position:center;' : ''}"
 				>
 					<div class="swipe-badges">
 						<span class="badge">{currentDeal.assetClass || 'Real Estate'}</span>
 						<span class="badge">{currentDeal.dealType || 'Fund'}</span>
 					</div>
-					{#if !heroImg}
-						<div class="swipe-hero-icon">{hero.icon}</div>
+					{#if !currentDeal.propertyImageUrl}
+						<div class="swipe-hero-icon">{getHero(currentDeal).icon}</div>
 					{/if}
 					{#if currentDeal.targetIRR}
 						<div class="swipe-irr">
