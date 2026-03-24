@@ -107,9 +107,9 @@
 
 	<!-- Email body (table-based for email fidelity) -->
 	<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#FAF9F5;">
-		<tr><td align="center" style="padding:32px 16px;">
+		<tbody><tr><td align="center" style="padding:32px 16px;">
 			<table cellpadding="0" cellspacing="0" border="0" width="480" style="max-width:480px;">
-
+				<tbody>
 				<!-- Header -->
 				<tr><td align="center" style="padding-bottom:24px;">
 					<div style="display:inline-block;">
@@ -122,7 +122,7 @@
 				<!-- Deal Card -->
 				<tr><td>
 					<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-
+						<tbody>
 						<!-- Card Hero -->
 						<tr><td style="background:linear-gradient(135deg,#1a2332 0%,#2d3748 100%);padding:24px 24px 20px;">
 							<a href={dealUrl} style="text-decoration:none;color:inherit;">
@@ -153,25 +153,25 @@
 						<!-- Metrics Row 1 -->
 						<tr><td style="background:#fff;padding:0 24px;">
 							<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #F0F0EE;">
-								<tr>
+								<tbody><tr>
 									<td class="metric-cell"><div class="metric-label">TARGET IRR</div><div class="metric-value green">{fmtPct(deal.target_irr)}</div></td>
 									<td class="metric-cell"><div class="metric-label">MINIMUM</div><div class="metric-value">{fmt$(deal.minimum_investment)}</div></td>
 									<td class="metric-cell"><div class="metric-label">LOCKUP</div><div class="metric-value">{deal.lockup_period || '--'}</div></td>
 									<td class="metric-cell"><div class="metric-label">DISTRIBUTION</div><div class="metric-value">{deal.distribution_frequency || 'Unknown'}</div></td>
 								</tr>
-							</table>
+							</tbody></table>
 						</td></tr>
 
 						<!-- Metrics Row 2 -->
 						<tr><td style="background:#fff;padding:0 24px 16px;">
 							<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #F0F0EE;">
-								<tr>
+								<tbody><tr>
 									<td class="metric-cell"><div class="metric-label">LP/GP SPLIT</div><div class="metric-value">{deal.lp_gp_split || '--'}</div></td>
 									<td class="metric-cell"><div class="metric-label">EQUITY MULT.</div><div class="metric-value">{deal.equity_multiple ? deal.equity_multiple.toFixed(2) + 'x' : '--'}</div></td>
 									<td class="metric-cell"><div class="metric-label">MANAGER SIZE</div><div class="metric-value">{deal.manager_aum ? fmt$(deal.manager_aum) : '--'}</div></td>
 									<td class="metric-cell"><div class="metric-label">FOUNDED</div><div class="metric-value">{deal.founded_year || '--'}</div></td>
 								</tr>
-							</table>
+							</tbody></table>
 						</td></tr>
 
 						<!-- Funding progress bar -->
@@ -190,7 +190,7 @@
 						<!-- Skip + Save buttons -->
 						<tr><td style="background:#fff;padding:8px 24px 20px;">
 							<table cellpadding="0" cellspacing="0" border="0" width="100%">
-								<tr>
+								<tbody><tr>
 									<td style="width:48%;padding-right:6px;">
 										<a href="{BASE_URL}/api/deal-save?id={deal.id}&email={encodeURIComponent(userEmail)}&action=skip" class="btn-skip">&#10005; SKIP</a>
 									</td>
@@ -198,10 +198,10 @@
 										<a href="{BASE_URL}/api/deal-save?id={deal.id}&email={encodeURIComponent(userEmail)}" class="btn-save">&#128204; SAVE</a>
 									</td>
 								</tr>
-							</table>
+							</tbody></table>
 						</td></tr>
 
-					</table>
+					</tbody></table>
 				</td></tr>
 
 				<!-- More deals -->
@@ -212,12 +212,12 @@
 				<!-- Buy box nudge -->
 				<tr><td>
 					<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F0F9F4;border-radius:10px;">
-						<tr><td style="padding:16px 20px;text-align:center;">
+						<tbody><tr><td style="padding:16px 20px;text-align:center;">
 							<div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Not the right fit?</div>
 							<div style="font-size:12px;color:#607179;margin-bottom:10px;">Update your buy box and we'll send better matches next time.</div>
 							<a href="{BASE_URL}/index.html#buybox?step=4" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Update Buy Box &#8594;</a>
 						</td></tr>
-					</table>
+					</tbody></table>
 				</td></tr>
 
 				<!-- Footer -->
@@ -230,8 +230,8 @@
 					<div style="font-size:11px;color:#C4CDD1;margin-top:8px;">Grow Your Cashflow &#183; growyourcashflow.io</div>
 				</td></tr>
 
-			</table>
-		</td></tr>
+			</tbody></table>
+		</td></tr></tbody>
 	</table>
 
 </div>

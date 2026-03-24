@@ -94,7 +94,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="resources-page">
-	{#if !$isAcademy && $userTier === 'free'}
+	{#if !$isAcademy}
 		<!-- Academy gate -->
 		<div class="gate-wrap">
 			<div class="academy-gate-cta">
