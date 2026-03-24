@@ -564,7 +564,8 @@
 	// ===== Init =====
 	onMount(async () => {
 		if (!$isLoggedIn) {
-			goto('/login?return=/onboarding');
+			const returnTo = '/onboarding' + $page.url.search + $page.url.hash;
+			goto('/login?return=' + encodeURIComponent(returnTo));
 			return;
 		}
 
