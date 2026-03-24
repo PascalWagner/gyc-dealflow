@@ -644,11 +644,8 @@ async function syncProfileToGhl(email, fields) {
 
   const updates = {};
   if (fields.phone) {
-    // GHL requires E.164 format — strip formatting and prepend +1 for US numbers
-    const digits = fields.phone.replace(/\D/g, '');
-    if (digits.length === 10) updates.phone = '+1' + digits;
-    else if (digits.length === 11 && digits.startsWith('1')) updates.phone = '+' + digits;
-    else updates.phone = '+' + digits; // best effort
+    // GHL v1 API accepts formatted phone numbers directly
+    updates.phone = fields.phone;
   }
   if (fields.full_name) {
     const parts = fields.full_name.trim().split(/\s+/);
