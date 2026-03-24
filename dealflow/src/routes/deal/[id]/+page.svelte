@@ -17,6 +17,31 @@
 	let ddAccordionOpen = $state({});
 	let shareDropdownOpen = $state(false);
 	let socialProof = $state(null);
+	let similarDeals = $state([]);
+	let peerStats = $state(null);
+	let allDeals = $state([]);
+
+	// Stress Test sliders
+	let stInvestment = $state(0);
+	let stRentGrowth = $state(3);
+	let stExitCap = $state(6);
+	let stVacancy = $state(5);
+	let stInterest = $state(6);
+	let stHold = $state(5);
+
+	// Cash flow chart/table toggle
+	let cfView = $state('table');
+	let bgCheck = $state(null);
+	let bgCheckLoading = $state(false);
+	let questions = $state([]);
+	let qaLoading = $state(false);
+	let newQuestion = $state('');
+	let qaSubmitting = $state(false);
+	let gpInsights = $state(null);
+	let gpInsightsLoading = $state(false);
+	let buyBox = $state(null);
+	let deckViewed = $state(false);
+	let introRequested = $state(false);
 
 	// ===== Derived =====
 	const dealId = $derived($page.params.id);
@@ -41,6 +66,15 @@
 
 	const isStale = $derived(deal ? checkStaleness(deal) : false);
 
+	// Buy Box Match
+	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
+	const buyBoxScore = $derived(() => {
+		if (buyBoxChecks.length === 0) return { matched: 0, total: 0, pct: 0 };
+		const matched = buyBoxChecks.filter(c => c.match).length;
+		const total = buyBoxChecks.length;
+		return { matched, total, pct: Math.round((matched / total) * 100) };
+	});
+
 	// DD Checklist
 	const checklist = $derived(deal ? getChecklistForDeal(deal) : null);
 	const ddProgress = $derived(checklist ? calcDDProgress(checklist, ddAnswers, deal) : { answered: 0, total: 0, pct: 0 });
@@ -51,6 +85,66 @@
 		if (idx < 0 || idx >= stages.length - 1) return null;
 		return stages[idx + 1];
 	});
+
+	// ===== Deal Fit Summary =====
+	const dealFit = $derived.by(() => {
+		if (!deal) return null;
+		const fits = [];
+		const warnings = [];
+		const irr = deal.targetIRR;
+		if (irr) { const p = irr > 1 ? irr : irr * 100; if (p > 12) fits.push(`Target IRR of ${p.toFixed(1)}% exceeds 12% threshold`); else if (p < 8) warnings.push(`Target IRR of ${p.toFixed(1)}% is below 8%`); }
+		const pref = deal.preferredReturn;
+		if (pref) { const p = pref > 1 ? pref : pref * 100; if (p >= 7) fits.push(`Preferred return of ${p.toFixed(1)}% meets 7%+ benchmark`); else warnings.push(`Preferred return of ${p.toFixed(1)}% is below 7% benchmark`); }
+		if (deal.equityMultiple) { if (deal.equityMultiple >= 1.5) fits.push(`Equity multiple of ${deal.equityMultiple.toFixed(2)}x exceeds 1.5x target`); else warnings.push(`Equity multiple of ${deal.equityMultiple.toFixed(2)}x is below 1.5x target`); }
+		if (deal.fees) { const m = String(deal.fees).match(/([\d.]+)\s*%/); if (m) { const f = parseFloat(m[1]); if (f <= 2) fits.push(`Management fee of ${f}% is within acceptable range`); else warnings.push(`Management fee of ${f}% exceeds 2% typical threshold`); } }
+		const oy = deal.mcFoundingYear ? (new Date().getFullYear() - deal.mcFoundingYear) : 0;
+		if (oy >= 10) fits.push(`Operator has ${oy}+ years of track record`); else if (oy > 0 && oy < 3) warnings.push(`Newer operator with only ${oy} year${oy !== 1 ? 's' : ''} of track record`);
+		if (deal.distributions) { const dl = deal.distributions.toLowerCase(); if (dl.includes('monthly')) fits.push('Monthly distributions provide regular cash flow'); else if (dl.includes('quarterly')) fits.push('Quarterly distributions'); }
+		if (deal.offeringType && deal.offeringType.includes('506')) fits.push(`${deal.offeringType} SEC-registered offering`);
+		if (isStale) warnings.push('This deal may no longer be accepting new investors');
+		if (fits.length === 0 && warnings.length === 0) return null;
+		const score = fits.length - warnings.length;
+		let verdict, verdictColor;
+		if (score >= 3) { verdict = 'Strong Fit'; verdictColor = 'var(--primary)'; }
+		else if (score >= 1) { verdict = 'Good Fit'; verdictColor = '#3b82f6'; }
+		else if (score >= -1) { verdict = 'Weak Fit'; verdictColor = '#f59e0b'; }
+		else { verdict = 'Poor Fit'; verdictColor = '#ef4444'; }
+		return { fits, warnings, verdict, verdictColor, score };
+	});
+
+	function bgStatusClass(s) { return s === 'clear' ? 'bg-clear' : s === 'flagged' ? 'bg-flagged' : 'bg-pending'; }
+	function bgStatusLabel(s) { return s === 'clear' ? 'Clear' : s === 'flagged' ? 'Flag' : 'Pending'; }
+
+	function getRelativeTime(ds) { if (!ds) return ''; const d = Date.now() - new Date(ds).getTime(), m = Math.floor(d/60000); if (m<1) return 'just now'; if (m<60) return m+'m ago'; const h = Math.floor(m/60); if (h<24) return h+'h ago'; const dy = Math.floor(h/24); if (dy<30) return dy+'d ago'; return Math.floor(dy/30)+'mo ago'; }
+
+	async function loadQuestions() { if (!deal) return; qaLoading = true; try { const r = await fetch(`/api/deal-qa?dealId=${encodeURIComponent(deal.id)}`); if (r.ok) { const d = await r.json(); questions = d.questions || []; } } catch {} qaLoading = false; }
+
+	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (!$isLoggedIn) { window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`; return; } qaSubmitting = true; try { const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {}; const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
+
+	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {}; const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'Pascal' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
+
+	async function upvoteQuestion(qid) { if (!$isLoggedIn || !browser) return; const up = JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]'); if (up.includes(qid)) return; up.push(qid); localStorage.setItem('gycQAUpvoted', JSON.stringify(up)); try { await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upvote', recordId: qid }) }); await loadQuestions(); } catch {} }
+
+	function hasUpvoted(qid) { if (!browser) return false; return JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]').includes(qid); }
+
+	// ===== Cash Flow Projection (derived) =====
+	const cfYieldRate = $derived(() => { if (!deal) return 0; let r = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0; if (r > 1) r = r / 100; return r; });
+	const cfInvestment = $derived(deal?.investmentMinimum || 100000);
+	const cfHold = $derived(() => { if (!deal) return 5; let h = deal.holdPeriod || 5; if (h < 1) h = 1; if ((deal.status || '').toLowerCase() === 'evergreen') return 5; return Math.min(Math.ceil(h), 10); });
+	const cfIsEvergreen = $derived(deal ? (deal.status || '').toLowerCase() === 'evergreen' : false);
+	const cfRows = $derived(() => { const yr = cfYieldRate(); if (!yr || yr <= 0) return []; const inv = cfInvestment; const yrs = cfHold(); const em = deal?.equityMultiple || 0; const cr = isCredit; const ev = cfIsEvergreen; let rows = []; let td = 0; for (let y = 1; y <= yrs; y++) { let d, c = 0, n = ''; if (cr) { d = inv * yr; if (!ev && y === yrs) { c = inv; n = 'Capital returned'; } } else { if (y === 1) { d = inv * yr * 0.5; n = 'Partial year (ramp-up)'; } else { d = inv * yr; } if (y === yrs && em > 0) { const tp = inv * em; c = tp - td - d; if (c < 0) c = 0; n = 'Sale / capital event'; } else if (y === yrs && !ev) { c = inv; n = 'Capital returned'; } } td += d; rows.push({ year: y, dist: d, capReturn: c, cumDist: td, note: n }); } return rows; });
+	const cfTotalCash = $derived(() => { const r = cfRows(); if (!r.length) return 0; return r[r.length-1].cumDist + r[r.length-1].capReturn; });
+	const cfAvgCoC = $derived(() => { const r = cfRows(); const y = cfHold(); const i = cfInvestment; if (!r.length||!y||!i) return 0; return (r[r.length-1].cumDist/y/i)*100; });
+	const cfMaxBar = $derived(() => { const r = cfRows(); let m = 0; for (const x of r) { const t = x.dist+x.capReturn; if (t>m) m=t; } return m||1; });
+	// ===== Stress Test derived =====
+	const stBaseIRR = $derived(() => { const v = deal?.targetIRR || 0.15; return v > 1 ? v/100 : v; });
+	const stBaseCoC = $derived(() => { const v = deal?.cashOnCash || 0.08; return v > 1 ? v/100 : v; });
+	const stBaseEM = $derived(deal?.equityMultiple || 2.0);
+	const stBaseHold = $derived(deal?.holdPeriod || 5);
+	const stResults = $derived(() => { if (!deal||isCredit) return null; const inv = stInvestment||deal?.investmentMinimum||50000; const rg = stRentGrowth/100; const ec = stExitCap/100; const vc = stVacancy/100; const ir = stInterest/100; const h = stHold; const bc = stBaseCoC(); let noi = inv*(bc>0?bc:0.08); let td = 0; for (let y=1;y<=h;y++){const yn=noi*Math.pow(1+rg,y-1)*(1-vc);const ds=inv*0.65*ir;const cf=yn-ds*0.3;td+=Math.max(cf,0);} const en=noi*Math.pow(1+rg,h)*(1-vc);const sp=ec>0?en/ec:0;const tr=td+sp;const em=inv>0?tr/inv:0;const irr=h>0&&inv>0?(Math.pow(Math.max(tr/inv,0.01),1/h)-1):0;return{annualCF:h>0?td/h:0,totalDist:td,saleProceeds:sp,totalReturn:tr,irr,em}; });
+	const stScenarios = $derived(() => { if (!deal||isCredit) return null; const bi = stBaseIRR(); const be = stBaseEM; return { bear:{irr:bi*0.55,em:be*0.65}, base:{irr:bi,em:be}, bull:{irr:bi*1.35,em:be*1.3} }; });
+	// ===== Peer Comparison derived =====
+	const peerComparison = $derived(() => { if (!deal||!allDeals.length) return null; const peers = allDeals.filter(d => { if (d.id===deal.id) return false; if (isCredit) return isCreditFund(d); return d.assetClass&&deal.assetClass&&d.assetClass===deal.assetClass; }); if (peers.length<2) return null; function av(f){const v=peers.map(d=>d[f]).filter(v=>v!=null&&v>0);return v.length>0?v.reduce((a,b)=>a+b,0)/v.length:null;} const ms=[{label:'Target IRR',field:'targetIRR',format:'pct',hb:true},{label:'Pref Return',field:'preferredReturn',format:'pct',hb:true},{label:'Equity Multiple',field:'equityMultiple',format:'multiple',hb:true},{label:'Min Investment',field:'investmentMinimum',format:'money',hb:false},{label:'Hold Period',field:'holdPeriod',format:'years',hb:false}]; const rows=ms.map(m=>{const dv=deal[m.field];const pa=av(m.field);let vd='No Data',vc='neutral';if(dv&&pa){const n=typeof dv==='number'?dv:parseFloat(dv);if(m.hb){if(n>pa*1.02){vd='Above Average';vc='good';}else if(n<pa*0.98){vd='Below Average';vc='bad';}else{vd='At Market';vc='neutral';}}else{if(n<pa*0.98){vd='Better than Avg';vc='good';}else if(n>pa*1.02){vd='Above Average';vc='bad';}else{vd='At Market';vc='neutral';}}}return{...m,dealVal:dv,peerAvg:pa,verdict:vd,verdictClass:vc};}); return{rows,peerCount:peers.length,peerLabel:isCredit?'Lending':(deal.assetClass||'Similar')}; });
 
 	// ===== Formatters =====
 	function fmt(val, type) {
@@ -145,6 +239,117 @@
 		if (!d.investmentStrategy) return '';
 		const dot = d.investmentStrategy.indexOf('. ');
 		return dot > 0 ? d.investmentStrategy.substring(0, dot + 1) : (d.investmentStrategy.length > 200 ? d.investmentStrategy.substring(0, 200) + '...' : d.investmentStrategy);
+	}
+
+	// ===== Buy Box Matching =====
+	function bbFmtMoney(v) {
+		const n = parseFloat(v);
+		if (!n) return '---';
+		if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+		if (n >= 1e3) return '$' + (n / 1e3).toFixed(0) + 'K';
+		return '$' + n.toLocaleString();
+	}
+
+	function computeBuyBoxChecks(d, bb) {
+		const checks = [];
+		if (bb.assetClasses?.length > 0) {
+			checks.push({ label: 'Asset Class', match: bb.assetClasses.includes(d.assetClass), want: bb.assetClasses.join(', '), got: d.assetClass || '---' });
+		}
+		if (bb.checkSize) {
+			checks.push({ label: 'Check Size', match: (d.investmentMinimum || 0) <= bb.checkSize, want: 'Up to ' + bbFmtMoney(bb.checkSize), got: fmt(d.investmentMinimum, 'money') });
+		}
+		if (bb.minIRR) {
+			const bbIRR = parseFloat(bb.minIRR);
+			const dealIRR = d.targetIRR || 0;
+			const dealIRRpct = dealIRR <= 1 ? dealIRR * 100 : dealIRR;
+			const bbIRRpct = bbIRR <= 1 ? bbIRR * 100 : bbIRR;
+			checks.push({ label: 'Target Return', match: dealIRRpct >= bbIRRpct, want: bbIRRpct.toFixed(1) + '%+', got: dealIRRpct ? dealIRRpct.toFixed(1) + '%' : '---' });
+		}
+		if (bb.strategies?.length > 0) {
+			checks.push({ label: 'Strategy', match: bb.strategies.includes(d.strategy), want: bb.strategies.join(', '), got: d.strategy || '---' });
+		}
+		if (bb.maxLockup) {
+			const maxLock = parseFloat(bb.maxLockup);
+			const holdYrs = parseFloat(d.holdPeriod) || 0;
+			checks.push({ label: 'Hold Period', match: holdYrs <= maxLock, want: maxLock + ' yrs max', got: d.holdPeriod ? formatHold(d.holdPeriod) : '---' });
+		}
+		if (bb.distributions && d.distributions && d.distributions !== 'Unknown') {
+			const distRank = { monthly: 1, quarterly: 2, 'semi-annually': 3, annually: 4 };
+			const bbDR = distRank[(bb.distributions || '').toLowerCase()] || 99;
+			const dealDR = distRank[(d.distributions || '').toLowerCase()] || 99;
+			checks.push({ label: 'Distributions', match: dealDR <= bbDR, want: bb.distributions, got: d.distributions });
+		}
+		if (bb.goal || bb._branch) {
+			const branch = bb._branch || bb.goal || '';
+			let goalMatch = false;
+			let goalGot = '';
+			if (branch === 'cashflow') {
+				const hasDist = d.distributions && d.distributions !== 'Unknown' && d.distributions !== 'None';
+				goalMatch = !!(hasDist || (d.cashOnCash > 0) || (d.preferredReturn > 0));
+				const parts = [];
+				if (d.preferredReturn > 0) parts.push(fmt(d.preferredReturn, 'pct') + ' pref');
+				if (d.cashOnCash > 0) parts.push(fmt(d.cashOnCash, 'pct') + ' CoC');
+				if (hasDist) parts.push(d.distributions.toLowerCase() + ' dist.');
+				goalGot = goalMatch ? parts.join(', ') : 'No regular income';
+			} else if (branch === 'tax') {
+				goalMatch = !!d.firstYrDepreciation;
+				goalGot = d.firstYrDepreciation ? d.firstYrDepreciation + ' yr-1 depr.' : 'No depreciation data';
+			} else if (branch === 'growth') {
+				goalMatch = !!((d.equityMultiple >= 1.5) || (d.targetIRR && (d.targetIRR > 1 ? d.targetIRR : d.targetIRR * 100) >= 15));
+				const gParts = [];
+				if (d.equityMultiple) gParts.push(fmt(d.equityMultiple, 'multiple') + ' multiple');
+				if (d.targetIRR) gParts.push(fmt(d.targetIRR, 'pct') + ' IRR');
+				goalGot = gParts.length > 0 ? gParts.join(' / ') : 'No growth metrics';
+			}
+			const goalLabels = { cashflow: 'Income / Cash Flow', tax: 'Tax Benefits', growth: 'Growth / Appreciation' };
+			checks.push({ label: 'Goal Alignment', match: goalMatch, want: goalLabels[branch] || branch, got: goalGot || '---' });
+		}
+		if (bb.capital90Day) {
+			const cap = parseFloat(bb.capital90Day);
+			if (cap && d.investmentMinimum) {
+				checks.push({ label: 'Capital Fit', match: d.investmentMinimum <= cap, want: 'Up to ' + bbFmtMoney(cap) + ' (90-day)', got: fmt(d.investmentMinimum, 'money') + ' min' });
+			}
+		}
+		return checks;
+	}
+
+	// ===== Share Actions =====
+	function shareDealEmail() {
+		if (!deal || !browser) return;
+		const subject = encodeURIComponent(`Check out this deal: ${deal.investmentName}`);
+		const body = encodeURIComponent(`I found this deal on GYC and thought you might be interested:\n\n${deal.investmentName}\n${window.location.href}`);
+		window.open(`mailto:?subject=${subject}&body=${body}`);
+		shareDropdownOpen = false;
+	}
+
+	function shareDealText() {
+		if (!deal || !browser) return;
+		const text = encodeURIComponent(`Check out ${deal.investmentName} on GYC: ${window.location.href}`);
+		window.open(`sms:?&body=${text}`);
+		shareDropdownOpen = false;
+	}
+
+	function shareInviteLink() {
+		if (!deal || !browser) return;
+		const inviteUrl = `${window.location.origin}/invite?deal=${encodeURIComponent(deal.id)}&ref=${encodeURIComponent(deal.investmentName)}`;
+		navigator.clipboard.writeText(inviteUrl);
+		shareDropdownOpen = false;
+	}
+
+	function trackDeckView() {
+		if (!deal || !browser) return;
+		localStorage.setItem('gycDeckViewed_' + deal.id, 'true');
+		deckViewed = true;
+	}
+
+	function claimDeal() {
+		if (!deal || !browser) return;
+		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		fetch('/api/events', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
+			body: JSON.stringify({ event: 'deal_claimed', dealId: deal.id, dealName: deal.investmentName, managementCompany: deal.managementCompany })
+		}).catch(() => {});
 	}
 
 	// ===== DD Checklist =====
@@ -427,6 +632,9 @@
 				managementCompany: deal.managementCompany
 			})
 		}).catch(() => {});
+		// Mark intro as requested
+		if (browser) localStorage.setItem('gycIntroRequested_' + deal.id, 'true');
+		introRequested = true;
 		// Advance stage to Connect
 		if (currentStageIdx < 2) {
 			dealStages.setStage(deal.id, 'diligence');
@@ -448,6 +656,81 @@
 		fetch(`/api/deal-stats?dealId=${encodeURIComponent(deal.id)}`, { headers })
 			.then(r => r.ok ? r.json() : null)
 			.then(stats => { if (stats) socialProof = stats; })
+			.catch(() => {});
+
+		// Load deck-viewed and intro-requested state
+		deckViewed = !!localStorage.getItem('gycDeckViewed_' + deal.id);
+		introRequested = !!localStorage.getItem('gycIntroRequested_' + deal.id);
+
+		// Load buy box from localStorage (saved by buy box wizard)
+		try {
+			const bbRaw = localStorage.getItem('gycBuyBoxWizard');
+			if (bbRaw) buyBox = JSON.parse(bbRaw);
+		} catch {}
+
+		// Also try fetching buy box from API
+		if (token) {
+			fetch('/api/buy-box', { headers })
+				.then(r => r.ok ? r.json() : null)
+				.then(data => { if (data) buyBox = data; })
+				.catch(() => {});
+		}
+
+		// Load Q&A
+		loadQuestions();
+
+		// Load background check
+		if (deal.managementCompanyId) {
+			bgCheckLoading = true;
+			fetch(`/api/background-check?managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers })
+				.then(r => r.ok ? r.json() : null)
+				.then(data => { if (data?.results?.[0]) bgCheck = data.results[0]; })
+				.catch(() => {})
+				.finally(() => { bgCheckLoading = false; });
+		}
+
+		// Load GP Insights (admin only)
+		if ($isAdmin && deal.managementCompanyId) {
+			gpInsightsLoading = true;
+			fetch(`/api/sponsor-analytics?dealId=${encodeURIComponent(deal.id)}&managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers })
+				.then(r => r.ok ? r.json() : null)
+				.then(data => { if (data) gpInsights = data; })
+				.catch(() => {})
+				.finally(() => { gpInsightsLoading = false; });
+		}
+
+		// Initialize stress test sliders from deal data
+		stInvestment = deal.investmentMinimum || 50000;
+		stHold = deal.holdPeriod || 5;
+
+		// Load all deals for peer comparison and similar deals
+		fetch('/api/deals', { headers })
+			.then(r => r.ok ? r.json() : null)
+			.then(data => {
+				if (data?.deals) {
+					allDeals = data.deals;
+					// Build similar deals list
+					const scored = data.deals
+						.filter(d => d.id !== deal.id && d.investmentName)
+						.map(d => {
+							let score = 0;
+							const dealIsCredit = isCreditFund(deal);
+							if (dealIsCredit && isCreditFund(d)) score += 5;
+							else if (d.assetClass && d.assetClass === deal.assetClass) score += 3;
+							if (d.dealType && d.dealType === deal.dealType) score += 2;
+							if (!dealIsCredit && d.strategy && d.strategy === deal.strategy) score += 2;
+							const dYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
+							const pYield = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
+							if (dYield > 0 && pYield > 0 && Math.abs(dYield - pYield) < 0.03) score += 1;
+							if (deal.investmentMinimum && d.investmentMinimum) { const ratio = d.investmentMinimum / deal.investmentMinimum; if (ratio >= 0.5 && ratio <= 2) score += 1; }
+							return { deal: d, score };
+						})
+						.filter(s => s.score >= 3)
+						.sort((a, b) => b.score - a.score)
+						.slice(0, 8);
+					similarDeals = scored.map(s => s.deal);
+				}
+			})
 			.catch(() => {});
 
 		// Set document title
@@ -601,9 +884,21 @@
 								</button>
 								{#if shareDropdownOpen}
 									<div class="share-dropdown active" onclick={(e) => e.stopPropagation()}>
+										<button class="share-dropdown-item share-invite" onclick={shareInviteLink}>
+											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+											<span class="share-invite-text">Invite a co-investor</span>
+										</button>
 										<button class="share-dropdown-item" onclick={copyDealLink}>
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
 											Copy link
+										</button>
+										<button class="share-dropdown-item" onclick={shareDealEmail}>
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+											Email to a friend
+										</button>
+										<button class="share-dropdown-item" onclick={shareDealText}>
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+											Text message
 										</button>
 									</div>
 								{/if}
@@ -648,6 +943,45 @@
 					{/each}
 				</div>
 
+				<!-- ==================== DECK VIEWED PROMPT ==================== -->
+				{#if currentStage === 'saved' && deckViewed}
+					<div class="deck-viewed-prompt">
+						<div class="deck-viewed-left">
+							<span class="deck-viewed-title">You've reviewed the deck.</span>
+							<span class="deck-viewed-sub">Interested in this deal?</span>
+						</div>
+						<button class="btn-advance btn-sm" onclick={() => setStage('diligence')}>Ready to Connect &rarr;</button>
+					</div>
+				{/if}
+
+				<!-- ==================== INTRO NUDGE ==================== -->
+				{#if currentStage === 'decision' && !introRequested}
+					<div class="intro-nudge-banner">
+						<div class="intro-nudge-icon">
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+						</div>
+						<div class="intro-nudge-text">
+							<div class="intro-nudge-title">Talk to the operator before investing</div>
+							<div class="intro-nudge-desc">Most successful investors speak with the sponsor before committing.</div>
+						</div>
+						<button class="btn-advance btn-sm" onclick={requestIntroduction}>Request Introduction</button>
+					</div>
+				{/if}
+
+				<!-- ==================== DEAL CLAIM BANNER ==================== -->
+				{#if deal.managementCompany && !$isAdmin}
+					<div class="claim-deal-banner">
+						<div class="claim-deal-icon">
+							<svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" width="22" height="22"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+						</div>
+						<div class="claim-deal-text">
+							<div class="claim-deal-title">Are you the operator of this deal?</div>
+							<div class="claim-deal-desc">Claim this deal to update your profile, respond to investor questions, and see who's interested.</div>
+						</div>
+						<button class="btn-claim" onclick={claimDeal}>Claim This Deal</button>
+					</div>
+				{/if}
+
 				<!-- ==================== DATA COMPLETENESS ==================== -->
 				<div class="data-completeness">
 					<span class="data-completeness-label">Data Quality</span>
@@ -685,6 +1019,44 @@
 								<span class="metric-label">+ More Metrics</span>
 							</div>
 						{/if}
+					</div>
+				{/if}
+
+				<!-- ==================== BUY BOX MATCH ==================== -->
+				{#if isPaid && buyBoxChecks.length > 0}
+					{@const score = buyBoxScore()}
+					{@const matchColor = score.pct >= 80 ? '#4ade80' : score.pct >= 50 ? '#fbbf24' : '#f87171'}
+					{@const matchLabel = score.pct >= 80 ? 'Strong Match' : score.pct >= 50 ? 'Partial Match' : 'Low Match'}
+					{@const bbCols = buyBoxChecks.length <= 3 ? buyBoxChecks.length : (buyBoxChecks.length % 4 === 0 || buyBoxChecks.length >= 8 ? 4 : buyBoxChecks.length % 3 === 0 ? 3 : buyBoxChecks.length <= 4 ? 2 : buyBoxChecks.length <= 6 ? 3 : 4)}
+					<div class="buybox-card">
+						<div class="buybox-header">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={matchColor} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+							<span class="buybox-title">Buy Box Match</span>
+							<span class="buybox-badge" style="background:{matchColor}18;color:{matchColor}">{matchLabel}</span>
+							<span class="buybox-score" style="color:{matchColor}">{score.matched}/{score.total}</span>
+							<div class="buybox-progress">
+								<div class="buybox-progress-fill" style="width:{score.pct}%;background:{matchColor}"></div>
+							</div>
+							<a href="/app/settings#buybox" class="buybox-edit">Edit Buy Box &rarr;</a>
+						</div>
+						<div class="buybox-criteria-grid" style="grid-template-columns:repeat({bbCols}, 1fr)">
+							{#each buyBoxChecks as check}
+								<a href="/app/settings#buybox" class="buybox-criterion" class:match={check.match} class:miss={!check.match}>
+									<div class="buybox-criterion-icon">
+										{#if check.match}
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+										{:else}
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+										{/if}
+									</div>
+									<div class="buybox-criterion-content">
+										<div class="buybox-criterion-label" style="color:{check.match ? '#4ade80' : '#f87171'}">{check.label}</div>
+										<div class="buybox-criterion-detail">You want <strong>{check.want}</strong></div>
+										<div class="buybox-criterion-got">Deal: {check.got}</div>
+									</div>
+								</a>
+							{/each}
+						</div>
 					</div>
 				{/if}
 
@@ -900,6 +1272,310 @@
 					</div>
 				{/if}
 
+				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
+				{#if cfRows().length > 0}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+							<span class="section-title">Projected LP Cash Flow</span>
+						</div>
+						<div class="section-body" style="position:relative;min-height:120px;">
+							{#if !isPaid}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+										</div>
+										<div class="gate-title">Unlock Cash Flow Projections</div>
+										<div class="gate-text">See year-by-year projected distributions, capital returns, and cash-on-cash analysis for this deal.</div>
+										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid}>
+								<div class="cf-assumptions">
+									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate(), 'pct')} {isCredit ? 'yield' : 'pref return'} over {cfHold()}{cfIsEvergreen ? '+ years' : ' years'}. Projections are illustrative only.
+								</div>
+
+								<div class="cf-toggle">
+									<button class:active={cfView === 'chart'} onclick={() => cfView = 'chart'}>Chart</button>
+									<button class:active={cfView === 'table'} onclick={() => cfView = 'table'}>Table</button>
+								</div>
+
+								{#if cfView === 'chart'}
+									<div class="cf-chart-wrap">
+										{#each cfRows() as row, i}
+											<div class="cf-bar-row">
+												<div class="cf-bar-label">Yr {row.year}</div>
+												<div class="cf-bar-track">
+													<div class="cf-bar-dist" style="width: {((row.dist) / cfMaxBar()) * 100}%"></div>
+													{#if row.capReturn > 0}
+														<div class="cf-bar-cap" style="width: {(row.capReturn / cfMaxBar()) * 100}%; left: {(row.dist / cfMaxBar()) * 100}%"></div>
+													{/if}
+												</div>
+												<div class="cf-bar-value">{fmt(row.dist + row.capReturn, 'money')}</div>
+											</div>
+										{/each}
+										<div class="cf-legend">
+											<span class="cf-legend-item"><span class="cf-legend-dot dist"></span>Distributions</span>
+											{#if cfRows().some(r => r.capReturn > 0)}
+												<span class="cf-legend-item"><span class="cf-legend-dot cap"></span>Capital Return</span>
+											{/if}
+										</div>
+									</div>
+								{:else}
+									<div class="cf-table-wrap">
+										<table class="cf-table">
+											<thead>
+												<tr>
+													<th>Year</th><th>Capital</th><th>Distributions</th><th>% CoC</th><th>Total Cash</th><th>Cumulative</th><th>Notes</th>
+												</tr>
+											</thead>
+											<tbody>
+												{#each cfRows() as row, i}
+													{@const investment = cfInvestment}
+													<tr class:cf-total-row={i === cfRows().length - 1}>
+														<td>Year {row.year}</td>
+														<td>
+															{#if i === 0}
+																<span class="cf-cap-out">({fmt(investment, 'money')})</span>
+															{:else if row.capReturn > 0}
+																<span class="cf-cap-in">{fmt(row.capReturn, 'money')}</span>
+															{:else}
+																&mdash;
+															{/if}
+														</td>
+														<td class="cf-highlight">{fmt(row.dist, 'money')}</td>
+														<td class="cf-highlight">{investment > 0 ? ((row.dist / investment) * 100).toFixed(1) : '0.0'}%</td>
+														<td>{fmt(row.dist + row.capReturn, 'money')}</td>
+														<td>{fmt(row.cumDist + (i === cfRows().length - 1 ? row.capReturn : 0), 'money')}</td>
+														<td class="cf-note">{row.note || ''}</td>
+													</tr>
+												{/each}
+											</tbody>
+											<tfoot>
+												<tr class="cf-summary-row">
+													<td><div class="cf-summary-value">{fmt(investment, 'money')}</div><div class="cf-summary-label">Invested</div></td>
+													<td></td>
+													<td><div class="cf-summary-value green">{fmt(cfRows()[cfRows().length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
+													<td>{#if cfAvgCoC() > 0}<div class="cf-summary-value green">{cfAvgCoC().toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
+													<td><div class="cf-summary-value">{fmt(cfTotalCash(), 'money')}</div><div class="cf-summary-label">Total Cash</div></td>
+													<td>{#if deal.targetIRR}<div class="cf-summary-value green">{fmt(deal.targetIRR, 'pct')}</div><div class="cf-summary-label">Target IRR</div>{/if}</td>
+													<td></td>
+												</tr>
+											</tfoot>
+										</table>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- ==================== PEER COMPARISON ==================== -->
+				{#if peerComparison()}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+							<span class="section-title">Peer Comparison</span>
+							<span class="peer-count-label">vs {peerComparison().peerCount} {peerComparison().peerLabel} peers</span>
+						</div>
+						<div class="section-body" style="position:relative;min-height:120px;">
+							{#if !isPaid}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+										</div>
+										<div class="gate-title">Unlock Peer Comparison</div>
+										<div class="gate-text">See how this deal's metrics compare to {peerComparison().peerCount} similar {peerComparison().peerLabel} deals.</div>
+										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid}>
+								<div class="peer-table-wrap">
+									<table class="peer-table">
+										<thead>
+											<tr>
+												<th class="peer-th">Metric</th>
+												<th class="peer-th center">This Deal</th>
+												<th class="peer-th center">Peer Average</th>
+												<th class="peer-th center">Verdict</th>
+											</tr>
+										</thead>
+										<tbody>
+											{#each peerComparison().rows as row}
+												<tr>
+													<td class="peer-td label">{row.label}</td>
+													<td class="peer-td center bold">{row.dealVal ? fmt(row.dealVal, row.format) : '---'}</td>
+													<td class="peer-td center muted">{row.peerAvg ? fmt(row.peerAvg, row.format) : '---'}</td>
+													<td class="peer-td center">
+														<span class="peer-verdict {row.verdictClass}">{row.verdict}</span>
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+								<div class="peer-footnote">
+									Each metric is compared to the average of {peerComparison().peerCount} comparable {peerComparison().peerLabel} deals. Green indicates favorable to investors; red indicates less favorable.
+								</div>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- ==================== STRESS TEST CALCULATOR ==================== -->
+				{#if deal && !isCredit}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+							<span class="section-title">Stress Test Calculator</span>
+						</div>
+						<div class="section-body" style="position:relative;min-height:120px;">
+							{#if !isPaid}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+										</div>
+										<div class="gate-title">Unlock Stress Test Calculator</div>
+										<div class="gate-text">Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.</div>
+										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid}>
+								<div class="st-base-case">
+									<div class="st-base-title">Base Case from Deal Data</div>
+									<div class="st-base-pills">
+										<span class="st-pill">IRR {fmt(stBaseIRR(), 'pct')}</span>
+										<span class="st-pill">CoC {fmt(stBaseCoC(), 'pct')}</span>
+										<span class="st-pill">EM {stBaseEM.toFixed(2)}x</span>
+										<span class="st-pill">Hold {stBaseHold} yrs</span>
+									</div>
+								</div>
+
+								<div class="st-grid">
+									<div class="st-inputs">
+										<div class="st-input-group">
+											<div class="st-input-label">Investment Amount <span class="st-input-val">{fmt(stInvestment, 'money')}</span></div>
+											<input type="number" class="st-number-input" bind:value={stInvestment} min="5000" step="5000" />
+										</div>
+										<div class="st-input-group">
+											<div class="st-input-label">Annual Rent Growth <span class="st-input-val">{stRentGrowth.toFixed(1)}%</span></div>
+											<input type="range" class="st-slider" bind:value={stRentGrowth} min="0" max="8" step="0.5" />
+										</div>
+										<div class="st-input-group">
+											<div class="st-input-label">Exit Cap Rate <span class="st-input-val">{stExitCap.toFixed(2)}%</span></div>
+											<input type="range" class="st-slider" bind:value={stExitCap} min="4" max="10" step="0.25" />
+										</div>
+										<div class="st-input-group">
+											<div class="st-input-label">Vacancy Rate <span class="st-input-val">{stVacancy}%</span></div>
+											<input type="range" class="st-slider" bind:value={stVacancy} min="0" max="20" step="1" />
+										</div>
+										<div class="st-input-group">
+											<div class="st-input-label">Interest Rate <span class="st-input-val">{stInterest.toFixed(2)}%</span></div>
+											<input type="range" class="st-slider" bind:value={stInterest} min="3" max="10" step="0.25" />
+										</div>
+										<div class="st-input-group">
+											<div class="st-input-label">Hold Period <span class="st-input-val">{stHold} yrs</span></div>
+											<input type="range" class="st-slider" bind:value={stHold} min="3" max="10" step="1" />
+										</div>
+									</div>
+
+									<div class="st-outputs">
+										<div class="st-outputs-title">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+											Projected Returns
+										</div>
+										{#if stResults()}
+											{@const res = stResults()}
+											<div class="st-output-item"><span class="st-output-label">Annual Cash Flow</span><span class="st-output-value">{fmt(res.annualCF, 'money')}</span></div>
+											<div class="st-output-item"><span class="st-output-label">Total Distributions</span><span class="st-output-value">{fmt(res.totalDist, 'money')}</span></div>
+											<div class="st-output-item"><span class="st-output-label">Projected Sale Proceeds</span><span class="st-output-value">{fmt(res.saleProceeds, 'money')}</span></div>
+											<div class="st-output-item"><span class="st-output-label">Total Return</span><span class="st-output-value">{fmt(res.totalReturn, 'money')}</span></div>
+											<div class="st-output-item"><span class="st-output-label">Projected IRR</span><span class="st-output-value">{(res.irr * 100).toFixed(1)}%</span></div>
+											<div class="st-output-item"><span class="st-output-label">Equity Multiple</span><span class="st-output-value">{res.em.toFixed(2)}x</span></div>
+										{/if}
+									</div>
+								</div>
+
+								{#if stScenarios()}
+									{@const sc = stScenarios()}
+									<div class="st-scenarios">
+										<div class="st-scenarios-title">Scenario Comparison</div>
+										<table class="st-scenario-table">
+											<thead>
+												<tr><th></th><th class="bear">Bear Case</th><th class="base">Base Case</th><th class="bull">Bull Case</th></tr>
+											</thead>
+											<tbody>
+												<tr><td class="st-sc-label">Projected IRR</td><td class="bear">{(sc.bear.irr * 100).toFixed(1)}%</td><td class="base">{(sc.base.irr * 100).toFixed(1)}%</td><td class="bull">{(sc.bull.irr * 100).toFixed(1)}%</td></tr>
+												<tr><td class="st-sc-label">Equity Multiple</td><td class="bear">{sc.bear.em.toFixed(2)}x</td><td class="base">{sc.base.em.toFixed(2)}x</td><td class="bull">{sc.bull.em.toFixed(2)}x</td></tr>
+											</tbody>
+										</table>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- ==================== SIMILAR DEALS ==================== -->
+				{#if similarDeals.length > 0}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+							<span class="section-title">Similar Deals</span>
+							<span class="peer-count-label">{similarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals</span>
+						</div>
+						<div class="section-body">
+							<div class="similar-table-wrap">
+								<table class="similar-table">
+									<thead>
+										<tr>
+											<th class="sim-th left">Deal Name</th>
+											<th class="sim-th">Target IRR</th>
+											<th class="sim-th">Pref Return</th>
+											<th class="sim-th">Eq Multiple</th>
+											<th class="sim-th">Minimum</th>
+											<th class="sim-th">Hold Period</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr class="sim-current-row">
+											<td class="sim-td left">
+												<div class="sim-deal-name current">{deal.investmentName}</div>
+												<div class="sim-deal-company">{deal.managementCompany || ''}</div>
+												<span class="sim-badge current">THIS DEAL</span>
+											</td>
+											<td class="sim-td">{deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</td>
+											<td class="sim-td">{deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</td>
+											<td class="sim-td">{deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '---'}</td>
+											<td class="sim-td">{deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '---'}</td>
+											<td class="sim-td">{deal.holdPeriod ? deal.holdPeriod + ' Yrs' : '---'}</td>
+										</tr>
+										{#each similarDeals as sd}
+											<tr class="sim-peer-row">
+												<td class="sim-td left">
+													<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
+													<div class="sim-deal-company">{sd.managementCompany || ''}</div>
+												</td>
+												<td class="sim-td">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</td>
+												<td class="sim-td">{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</td>
+												<td class="sim-td">{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</td>
+												<td class="sim-td">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</td>
+												<td class="sim-td">{sd.holdPeriod ? sd.holdPeriod + ' Yrs' : '---'}</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				{/if}
+
 				<!-- ==================== Q&A (Coming Soon) ==================== -->
 				<div class="section">
 					<div class="section-header">
@@ -952,20 +1628,61 @@
 
 			<!-- ==================== STICKY ACTION BAR ==================== -->
 			<div class="sticky-action-bar">
-				<button class="btn-pass" onclick={skipDeal}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-					Skip
-				</button>
-				<span class="stage-label">
-					Stage: <strong>{STAGE_META[currentStage]?.label || 'Filter'}</strong>
-				</span>
-				{#if nextStage()}
-					<button class="btn-advance" onclick={advanceStage}>
-						Move to {nextStage().label}
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+				{#if currentStage === 'browse' || !currentStage}
+					<button class="btn-pass" onclick={skipDeal}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						Skip
+					</button>
+					<span class="stage-label">Stage: <strong>Filter</strong></span>
+					<button class="btn-advance" onclick={() => setStage('saved')}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+						Save Deal
+					</button>
+				{:else if currentStage === 'saved'}
+					<button class="btn-pass" onclick={skipDeal}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						Skip
+					</button>
+					<span class="stage-label">Stage: <strong>Review</strong></span>
+					{#if !deckViewed && deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
+						<a href={deal.deckUrl} target="_blank" rel="noopener" class="btn-advance" onclick={trackDeckView}>
+							View Investment Deck &rarr;
+						</a>
+					{:else}
+						<button class="btn-advance" onclick={() => setStage('diligence')}>
+							Ready to Connect &rarr;
+						</button>
+					{/if}
+				{:else if currentStage === 'diligence'}
+					<button class="btn-pass" onclick={skipDeal}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						Skip
+					</button>
+					<span class="stage-label">Stage: <strong>Connect</strong></span>
+					<button class="btn-advance" onclick={() => setStage('decision')}>
+						Decide &rarr;
+					</button>
+				{:else if currentStage === 'decision'}
+					<button class="btn-pass" onclick={() => setStage('diligence')}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+						Back to Connect
+					</button>
+					<button class="btn-pass" onclick={skipDeal}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+						Pass
+					</button>
+					<span class="stage-label">Stage: <strong>Decide</strong></span>
+					<button class="btn-advance" onclick={() => setStage('invested')}>
+						I'm Investing &rarr;
 					</button>
 				{:else if currentStage === 'invested'}
+					<a href="/app/deals#portfolio" class="btn-pass" style="text-decoration:none;">My Portfolio</a>
 					<span class="stage-label" style="color:var(--primary);font-weight:700;">Invested</span>
+				{:else if currentStage === 'passed'}
+					<span class="stage-label">Stage: <strong>Passed</strong></span>
+					<button class="btn-advance" onclick={() => setStage('saved')}>
+						Reconsider Deal &rarr;
+					</button>
 				{/if}
 			</div>
 		{/if}
@@ -1199,11 +1916,138 @@
 
 	.deal-page-content { padding-bottom: 80px; }
 
+	/* ===== Share Dropdown Enhancements ===== */
+	.share-invite { border-bottom: 1px solid var(--border-light); padding-bottom: 10px; margin-bottom: 4px; }
+	.share-invite-text { color: var(--primary); font-weight: 700; }
+
+	/* ===== Deck Viewed Prompt ===== */
+	.deck-viewed-prompt {
+		background: rgba(81,190,123,0.08);
+		border: 1px solid rgba(81,190,123,0.2);
+		border-radius: 10px;
+		padding: 12px 20px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 16px;
+		gap: 12px;
+	}
+	.deck-viewed-left { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+	.deck-viewed-title { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); }
+	.deck-viewed-sub { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
+
+	/* ===== Intro Nudge Banner ===== */
+	.intro-nudge-banner {
+		background: rgba(245,158,11,0.06);
+		border: 1px solid rgba(245,158,11,0.15);
+		border-radius: 10px;
+		padding: 16px 20px;
+		margin-bottom: 16px;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+	.intro-nudge-icon {
+		width: 40px; height: 40px; border-radius: 50%;
+		background: rgba(245,158,11,0.12);
+		display: flex; align-items: center; justify-content: center;
+		flex-shrink: 0;
+	}
+	.intro-nudge-text { flex: 1; }
+	.intro-nudge-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
+	.intro-nudge-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
+
+	/* ===== Claim Deal Banner ===== */
+	.claim-deal-banner {
+		background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02));
+		border: 1px solid rgba(37,99,235,0.2);
+		border-radius: var(--radius-sm, 8px);
+		padding: 18px 20px;
+		margin-bottom: 16px;
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		flex-wrap: wrap;
+	}
+	.claim-deal-icon {
+		width: 44px; height: 44px; border-radius: 12px;
+		background: rgba(37,99,235,0.1);
+		display: flex; align-items: center; justify-content: center;
+		flex-shrink: 0;
+	}
+	.claim-deal-text { flex: 1; min-width: 200px; }
+	.claim-deal-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
+	.claim-deal-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+	.btn-claim {
+		flex-shrink: 0; padding: 10px 20px;
+		background: #2563eb; color: #fff; border: none; border-radius: 8px;
+		font-family: var(--font-ui); font-size: 13px; font-weight: 700;
+		cursor: pointer; white-space: nowrap; transition: background 0.15s;
+	}
+	.btn-claim:hover { background: #1d4ed8; }
+
+	/* ===== Buy Box Match ===== */
+	.buybox-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius, 12px);
+		padding: 16px 20px;
+		margin-bottom: 20px;
+	}
+	.buybox-header {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 12px;
+		flex-wrap: wrap;
+	}
+	.buybox-title { font-family: var(--font-ui); font-size: 14px; font-weight: 800; color: var(--text-dark); }
+	.buybox-badge {
+		display: inline-flex; align-items: center; gap: 4px;
+		padding: 3px 10px; border-radius: 10px;
+		font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+	}
+	.buybox-score { font-family: var(--font-ui); font-size: 14px; font-weight: 800; }
+	.buybox-progress {
+		flex: 1; min-width: 60px; max-width: 120px;
+		height: 5px; background: var(--border-light); border-radius: 3px; overflow: hidden;
+	}
+	.buybox-progress-fill { height: 100%; border-radius: 3px; }
+	.buybox-edit {
+		margin-left: auto;
+		font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+		color: var(--primary); text-decoration: none; opacity: 0.8;
+	}
+	.buybox-edit:hover { opacity: 1; }
+	.buybox-criteria-grid { display: grid; gap: 10px; }
+	.buybox-criterion {
+		text-decoration: none;
+		display: flex; align-items: flex-start; gap: 8px;
+		padding: 10px 12px;
+		border-radius: 10px;
+		transition: background 0.15s;
+		border: 1px solid;
+	}
+	.buybox-criterion.match { background: rgba(74,222,128,0.06); border-color: rgba(74,222,128,0.15); }
+	.buybox-criterion.match:hover { background: rgba(74,222,128,0.12); }
+	.buybox-criterion.miss { background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.15); }
+	.buybox-criterion.miss:hover { background: rgba(248,113,113,0.12); }
+	.buybox-criterion-icon { flex-shrink: 0; margin-top: 1px; }
+	.buybox-criterion-content { flex: 1; min-width: 0; }
+	.buybox-criterion-label { font-family: var(--font-ui); font-size: 12px; font-weight: 700; }
+	.buybox-criterion-detail { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+	.buybox-criterion-detail strong { color: var(--text-secondary); font-weight: 600; }
+	.buybox-criterion-got { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+	/* Small advance button variant */
+	.btn-sm { padding: 8px 20px; font-size: 12px; }
+
 	/* ===== Responsive ===== */
 	@media (max-width: 900px) {
 		.deal-header-inner { flex-direction: column; align-items: flex-start; }
 		.hero-right { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
 		.two-col-grid { grid-template-columns: 1fr; }
+		.buybox-criteria-grid { grid-template-columns: repeat(2, 1fr) !important; }
 	}
 	@media (max-width: 768px) {
 		.main { margin-left: 0; padding-top: 56px; }
@@ -1219,6 +2063,10 @@
 		.journey-step { font-size: 9px; padding: 3px 4px; }
 		.step-dot { width: 24px; height: 24px; font-size: 11px; }
 		.journey-connector { min-width: 8px; max-width: 20px; }
+		.buybox-criteria-grid { grid-template-columns: 1fr !important; }
+		.intro-nudge-banner { flex-direction: column; text-align: center; }
+		.claim-deal-banner { flex-direction: column; text-align: center; }
+		.deck-viewed-prompt { flex-direction: column; text-align: center; gap: 8px; }
 	}
 	@media (max-width: 480px) {
 		.details-grid { grid-template-columns: 1fr; }

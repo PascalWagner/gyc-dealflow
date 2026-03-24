@@ -43,6 +43,10 @@
 	// Weekly chart ref
 	let weeklyChartEl = $state(null);
 
+	// Competitive Analysis state
+	let compExtraFields = $state({}); // keyed by tableId -> array of field keys
+	let compDropdownOpen = $state({}); // keyed by tableId -> boolean
+
 	// ===== Admin Emails =====
 	const ADMIN_EMAILS = ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'];
 
@@ -125,6 +129,82 @@
 	}
 	function hasDistributions(d) {
 		return !!(d.distributions || d.Distributions);
+	}
+
+	// ===== Competitive Analysis Field Helpers =====
+	function getDealPref(d) {
+		const v = d.preferredReturn ?? d.pref_return ?? d.prefReturn;
+		return v != null ? Number(v) : null;
+	}
+	function getDealMin(d) {
+		return d.investmentMinimum ?? d.investment_minimum ?? d.minInvestment ?? d.min_investment ?? d.minimumInvestment ?? null;
+	}
+	function getDealDist(d) {
+		return d.distributions || d.Distributions || null;
+	}
+	function getDealIRR(d) {
+		const v = d.targetIRR ?? d.target_irr ?? d.targetIrr;
+		return v != null ? Number(v) : null;
+	}
+	function getDealHoldPeriod(d) {
+		const v = d.holdPeriod ?? d.hold_period_years ?? d.hold_period;
+		return v != null ? Number(v) : null;
+	}
+
+	const extraFieldDefs = [
+		{ key: 'equityMultiple', label: 'Equity Multiple', format: 'x', get: (d) => d.equityMultiple ?? d.equity_multiple ?? null },
+		{ key: 'cashOnCash', label: 'Cash on Cash', format: 'pct', get: (d) => d.cashOnCash ?? d.cash_on_cash ?? null },
+		{ key: 'holdPeriod', label: 'Hold Period', format: 'yr', get: (d) => getDealHoldPeriod(d) },
+		{ key: 'offeringType', label: 'Offering Type', format: 'text', get: (d) => d.offeringType || d.offering_type || null },
+		{ key: 'occupancyPct', label: 'Occupancy', format: 'pct', get: (d) => d.occupancyPct ?? d.occupancy_pct ?? null },
+		{ key: 'loanToValue', label: 'Loan to Value', format: 'pct', get: (d) => d.loanToValue ?? d.loan_to_value ?? null },
+		{ key: 'purchasePrice', label: 'Purchase Price', format: 'dollar', get: (d) => d.purchasePrice ?? d.purchase_price ?? null },
+		{ key: 'location', label: 'Location', format: 'text', get: (d) => d.location || d.investing_geography || null },
+		{ key: 'assetClass', label: 'Asset Class', format: 'text', get: (d) => d.assetClass || d.asset_class || null }
+	];
+
+	function formatFieldValue(val, fmt) {
+		if (val == null) return '--';
+		if (fmt === 'pct') return formatPctDisplay(val);
+		if (fmt === 'x') return Number(val).toFixed(1) + 'x';
+		if (fmt === 'yr') return Number(val).toFixed(0) + ' yrs';
+		if (fmt === 'dollar') return '$' + Number(val).toLocaleString();
+		return String(val);
+	}
+
+	function computePercentile(sortedArr, value) {
+		if (!sortedArr.length) return 0;
+		let below = 0;
+		for (const v of sortedArr) { if (v < value) below++; }
+		return Math.round((below / sortedArr.length) * 100);
+	}
+
+	function toggleCompDropdown(tableId) {
+		compDropdownOpen = { ...compDropdownOpen, [tableId]: !compDropdownOpen[tableId] };
+	}
+
+	function addCompField(tableId, fieldKey) {
+		const current = compExtraFields[tableId] || [];
+		if (!current.includes(fieldKey)) {
+			compExtraFields = { ...compExtraFields, [tableId]: [...current, fieldKey] };
+			try { localStorage.setItem('compExtraFields_' + tableId, JSON.stringify(compExtraFields[tableId])); } catch {}
+		}
+		compDropdownOpen = { ...compDropdownOpen, [tableId]: false };
+	}
+
+	function removeCompField(tableId, fieldKey) {
+		const current = (compExtraFields[tableId] || []).filter(k => k !== fieldKey);
+		compExtraFields = { ...compExtraFields, [tableId]: current };
+		try { localStorage.setItem('compExtraFields_' + tableId, JSON.stringify(current)); } catch {}
+	}
+
+	function loadSavedCompFields(tableId) {
+		if (compExtraFields[tableId]) return compExtraFields[tableId];
+		try {
+			const saved = JSON.parse(localStorage.getItem('compExtraFields_' + tableId) || '[]');
+			compExtraFields = { ...compExtraFields, [tableId]: saved };
+			return saved;
+		} catch { return []; }
 	}
 
 	function dealCompleteness(d) {
@@ -278,6 +358,147 @@
 		const items = actionItems();
 		if (items.length > 0) return 'Complete your deal profile first, then amplify your reach by pitching directly to our investor network.';
 		return 'Your deals are getting attention. Take it further \u2014 pitch directly to our investor network in a live webinar.';
+	});
+
+	// ===== Competitive Analysis Derived Data =====
+	const activeDeals = $derived((allDeals || []).filter(d => {
+		const s = (d.status || '').toLowerCase();
+		return s !== 'closed' && s !== 'fully funded' && s !== 'completed';
+	}));
+
+	const competitiveData = $derived(() => {
+		if (deals.length === 0 || activeDeals.length < 3) return [];
+		const prefDists = investorInsights?.preferredDistributions || [];
+		let monthlyDistPct = 0;
+		for (const pd of prefDists) {
+			if ((pd.name || '').toLowerCase().includes('month')) { monthlyDistPct = pd.pct; break; }
+		}
+
+		return deals.map(deal => {
+			const name = getDealName(deal);
+			const ac = getDealAssetClass(deal);
+			if (!ac) return null;
+
+			const myId = getDealId(deal);
+			const peers = activeDeals.filter(d => {
+				const dAc = d.assetClass || d.asset_class || '';
+				const dId = d.id || d.airtable_id || '';
+				return dAc === ac && dId !== myId;
+			});
+			if (peers.length === 0) return null;
+
+			const sorted = [...peers].sort((a, b) => (getDealPref(b) || 0) - (getDealPref(a) || 0));
+			const top3 = sorted.slice(0, 3);
+			const tableId = 'comp-table-' + (myId || '').replace(/[^a-zA-Z0-9]/g, '');
+
+			const myPref = getDealPref(deal);
+			const myMin = getDealMin(deal);
+			const myDist = getDealDist(deal);
+			const myIRR = getDealIRR(deal);
+
+			const compPrefs = top3.map(d => getDealPref(d));
+			const compMins = top3.map(d => getDealMin(d));
+			const compDists = top3.map(d => getDealDist(d));
+
+			// Insights
+			const insights = [];
+			const validCompPrefs = compPrefs.filter(v => v != null);
+			if (myPref != null && validCompPrefs.length > 0) {
+				const avgCompPref = validCompPrefs.reduce((a, b) => a + b, 0) / validCompPrefs.length;
+				if (myPref < avgCompPref) {
+					insights.push({ type: 'bad', text: `Your preferred return (${formatPctDisplay(myPref)}) is below the top ${validCompPrefs.length} competitors (avg ${formatPctDisplay(avgCompPref)}). Consider increasing to attract more LP interest.` });
+				} else {
+					insights.push({ type: 'good', text: `Your preferred return (${formatPctDisplay(myPref)}) is competitive with the top ${validCompPrefs.length} deals (avg ${formatPctDisplay(avgCompPref)}).` });
+				}
+			}
+			const validCompMins = compMins.filter(v => v != null);
+			if (myMin != null && validCompMins.length > 0) {
+				const lowerCount = validCompMins.filter(v => v < myMin).length;
+				if (lowerCount > 0) {
+					insights.push({ type: 'bad', text: `Your minimum ($${Number(myMin).toLocaleString()}) is higher than ${lowerCount} of the top ${validCompMins.length} competitors. A lower entry point could increase deal flow.` });
+				} else {
+					insights.push({ type: 'good', text: `Your minimum ($${Number(myMin).toLocaleString()}) is at or below competitors.` });
+				}
+			}
+			if (myDist && monthlyDistPct > 30) {
+				const isMonthly = (myDist || '').toLowerCase().includes('month');
+				if (!isMonthly) {
+					insights.push({ type: 'bad', text: `Monthly distributions are preferred by ${monthlyDistPct}% of LPs — your ${myDist.toLowerCase()} schedule may reduce appeal.` });
+				} else {
+					insights.push({ type: 'good', text: `Your monthly distribution schedule aligns with what ${monthlyDistPct}% of LPs prefer.` });
+				}
+			}
+
+			return { deal, name, ac, top3, tableId, myPref, myMin, myDist, myIRR, insights };
+		}).filter(Boolean);
+	});
+
+	// ===== Market Intelligence Derived Data =====
+	const marketIntelData = $derived(() => {
+		const cards = [];
+		const gpDeals = deals;
+
+		// Card 1: Competitive Position
+		if (gpDeals.length > 0 && activeDeals.length >= 3) {
+			const prefReturns = activeDeals
+				.map(d => getDealPref(d))
+				.filter(v => v != null && !isNaN(v))
+				.sort((a, b) => a - b);
+
+			let bestDeal = null, bestPct = -1;
+			for (const d of gpDeals) {
+				const pref = getDealPref(d);
+				if (pref != null && prefReturns.length >= 3) {
+					const pct = computePercentile(prefReturns, pref);
+					if (pct > bestPct) { bestPct = pct; bestDeal = d; }
+				}
+			}
+			if (bestDeal) {
+				const posColor = bestPct >= 75 ? 'var(--green)' : bestPct >= 40 ? 'var(--yellow)' : 'var(--red)';
+				const posLabel = bestPct >= 75 ? 'Top quartile' : bestPct >= 50 ? 'Above average' : bestPct >= 25 ? 'Below average' : 'Bottom quartile';
+				const posAdvice = bestPct >= 75 ? 'Your pref return is highly competitive. Highlight this in your deck.' : bestPct >= 50 ? 'Solid positioning. Consider emphasizing track record to stand out.' : 'Consider increasing your pref return or lowering your minimum to attract more LPs.';
+				cards.push({ key: 'position', icon: 'bar-chart', color: posColor, title: 'Competitive Position', value: posLabel, desc: posAdvice });
+			}
+		}
+
+		// Card 2: LP Demand
+		const totalActivity = (analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0);
+		const saves = analytics.totalSaves || 0;
+		const vetting = analytics.totalVetting || 0;
+		const invested = analytics.totalInvested || 0;
+		const demandLevel = totalActivity >= 20 ? 'High' : totalActivity >= 5 ? 'Growing' : totalActivity > 0 ? 'Early' : 'No activity yet';
+		const demandColor = totalActivity >= 20 ? 'var(--green)' : totalActivity >= 5 ? '#2563EB' : totalActivity > 0 ? 'var(--yellow)' : 'var(--text-muted)';
+		const demandAdvice = totalActivity >= 20 ? `${saves} saves, ${vetting} vetting, ${invested} invested. Strong interest — follow up with active LPs.` :
+			totalActivity >= 5 ? `${saves} saves, ${vetting} vetting. Momentum building — consider a webinar to convert interest.` :
+			totalActivity > 0 ? 'A few LPs are watching. Complete your deal profile and add your deck to increase visibility.' :
+			'No LP activity yet. Make sure your deals have complete profiles, decks, and competitive terms.';
+		cards.push({ key: 'demand', icon: 'users', color: demandColor, title: 'LP Demand', value: demandLevel, desc: demandAdvice });
+
+		// Card 3: Market Share
+		const gpAssetClasses = {};
+		gpDeals.forEach(d => { const ac = getDealAssetClass(d); if (ac) gpAssetClasses[ac] = (gpAssetClasses[ac] || 0) + 1; });
+		const acKeys = Object.keys(gpAssetClasses);
+		if (acKeys.length > 0 && activeDeals.length > 0) {
+			let totalInClass = 0, gpInClass = 0;
+			acKeys.forEach(ac => {
+				activeDeals.forEach(d => { if ((d.assetClass || d.asset_class) === ac) totalInClass++; });
+				gpInClass += gpAssetClasses[ac];
+			});
+			const sharePct = totalInClass > 0 ? Math.round((gpInClass / totalInClass) * 100) : 0;
+			const shareAdvice = sharePct >= 10 ? 'You have strong representation in your asset classes.' : 'Adding more deals in your asset class could increase your visibility to targeted LPs.';
+			cards.push({ key: 'share', icon: 'globe', color: '#2563EB', title: 'Market Share', value: `${gpInClass} of ${totalInClass} deals`, desc: shareAdvice });
+		}
+
+		// Card 4: Investor Preferences
+		if (investorInsights?.topAssetClasses?.length > 0) {
+			const topAC = investorInsights.topAssetClasses[0];
+			const gpMatch = investorInsights.topAssetClasses.find(a => a.isGP);
+			const matchAdvice = gpMatch ? `Your ${gpMatch.name} deals align with ${gpMatch.pct}% of investor interest.` : `Most investors prefer ${topAC.name} (${topAC.pct}%). Consider if your strategy aligns.`;
+			cards.push({ key: 'prefs', icon: 'message', color: '#8B5CF6', title: 'Investor Preferences', value: `${topAC.name} — ${topAC.pct}%`, desc: matchAdvice,
+				barData: investorInsights.topAssetClasses.slice(0, 4) });
+		}
+
+		return cards;
 	});
 
 	// ===== Toast =====
@@ -842,7 +1063,166 @@
 				</div>
 			</div>
 
-			<!-- 4. Settings -->
+			<!-- 4. Competitive Analysis -->
+			<div class="section-card">
+				<div class="section-header">
+					<div class="section-title">Competitive Analysis</div>
+				</div>
+				<div class="section-body">
+					{#if deals.length === 0 || activeDeals.length < 3}
+						<div class="empty-inline">
+							<p>Not enough active deals to generate competitive analysis. At least 3 active deals are needed on the platform.</p>
+						</div>
+					{:else if competitiveData().length === 0}
+						<div class="empty-inline">
+							<p>Add asset class and financial details to your deals to see competitive analysis.</p>
+						</div>
+					{:else}
+						{#each competitiveData() as comp}
+							{@const savedFields = loadSavedCompFields(comp.tableId)}
+							{@const usedKeys = ['targetIRR', 'preferredReturn', 'investmentMinimum', 'distributions', ...savedFields]}
+							{@const availableFields = extraFieldDefs.filter(f => !usedKeys.includes(f.key))}
+							<div class="comp-deal-section">
+								<div class="comp-deal-title">{comp.name} vs Top {comp.top3.length} {comp.ac} Deals</div>
+								<div class="comp-table-wrap">
+									<table class="comp-table">
+										<thead>
+											<tr>
+												<th></th>
+												<th class="col-gp"><a href="/deal/{getDealId(comp.deal)}">{comp.name}</a></th>
+												{#each comp.top3 as peer}
+													<th><a href="/deal/{getDealId(peer)}">{getDealName(peer)}</a></th>
+												{/each}
+											</tr>
+										</thead>
+										<tbody>
+											<tr>
+												<td class="comp-metric-label">Target IRR</td>
+												<td class="col-gp">{comp.myIRR != null ? formatPctDisplay(comp.myIRR) : '--'}</td>
+												{#each comp.top3 as peer}
+													<td>{getDealIRR(peer) != null ? formatPctDisplay(getDealIRR(peer)) : '--'}</td>
+												{/each}
+											</tr>
+											<tr>
+												<td class="comp-metric-label">Pref Return</td>
+												<td class="col-gp">{comp.myPref != null ? formatPctDisplay(comp.myPref) : '--'}</td>
+												{#each comp.top3 as peer}
+													<td>{getDealPref(peer) != null ? formatPctDisplay(getDealPref(peer)) : '--'}</td>
+												{/each}
+											</tr>
+											<tr>
+												<td class="comp-metric-label">Min Investment</td>
+												<td class="col-gp">{comp.myMin != null ? '$' + Number(comp.myMin).toLocaleString() : '--'}</td>
+												{#each comp.top3 as peer}
+													{@const peerMin = getDealMin(peer)}
+													<td>{peerMin != null ? '$' + Number(peerMin).toLocaleString() : '--'}</td>
+												{/each}
+											</tr>
+											<tr>
+												<td class="comp-metric-label">Distributions</td>
+												<td class="col-gp">{comp.myDist || '--'}</td>
+												{#each comp.top3 as peer}
+													<td>{getDealDist(peer) || '--'}</td>
+												{/each}
+											</tr>
+											{#each savedFields as fieldKey}
+												{@const def = extraFieldDefs.find(f => f.key === fieldKey)}
+												{#if def}
+													<tr class="comp-extra-row">
+														<td class="comp-metric-label">
+															{def.label}
+															<button class="comp-remove-field-btn" onclick={() => removeCompField(comp.tableId, fieldKey)} title="Remove field">&times;</button>
+														</td>
+														<td class="col-gp">{formatFieldValue(def.get(comp.deal), def.format)}</td>
+														{#each comp.top3 as peer}
+															<td>{formatFieldValue(def.get(peer), def.format)}</td>
+														{/each}
+													</tr>
+												{/if}
+											{/each}
+											{#if availableFields.length > 0}
+												<tr class="comp-add-field-row">
+													<td colspan={2 + comp.top3.length}>
+														<button class="comp-add-field-trigger" onclick={() => toggleCompDropdown(comp.tableId)}>
+															<span class="comp-add-icon">+</span> Add Field to Compare
+														</button>
+														{#if compDropdownOpen[comp.tableId]}
+															<div class="comp-add-dropdown">
+																{#each availableFields as f}
+																	<button class="comp-add-option" onclick={() => addCompField(comp.tableId, f.key)}>{f.label}</button>
+																{/each}
+															</div>
+														{/if}
+													</td>
+												</tr>
+											{/if}
+										</tbody>
+									</table>
+								</div>
+								{#if comp.insights.length > 0}
+									<ul class="comp-insights">
+										{#each comp.insights as item}
+											<li><span class="comp-insight-{item.type}">{item.text}</span></li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				</div>
+			</div>
+
+			<!-- 5. Market Intelligence -->
+			<div class="section-card">
+				<div class="section-header">
+					<div class="section-title">Market Intelligence</div>
+				</div>
+				<div class="section-body">
+					{#if marketIntelData().length === 0}
+						<div class="empty-inline">
+							<p>Not enough data to generate market intelligence yet. Add deals with financial details to get started.</p>
+						</div>
+					{:else}
+						<div class="mi-grid">
+							{#each marketIntelData() as card}
+								<div class="mi-card">
+									<div class="mi-card-icon" style="background: {card.color}20;">
+										{#if card.icon === 'bar-chart'}
+											<svg viewBox="0 0 24 24" fill="none" stroke={card.color} stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+										{:else if card.icon === 'users'}
+											<svg viewBox="0 0 24 24" fill="none" stroke={card.color} stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+										{:else if card.icon === 'globe'}
+											<svg viewBox="0 0 24 24" fill="none" stroke={card.color} stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 2v20"/></svg>
+										{:else if card.icon === 'message'}
+											<svg viewBox="0 0 24 24" fill="none" stroke={card.color} stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+										{/if}
+									</div>
+									<div class="mi-card-title">{card.title}</div>
+									<div class="mi-card-value" style="color: {card.color};">{card.value}</div>
+									<div class="mi-card-desc">{card.desc}</div>
+									{#if card.barData}
+										{@const maxPct = Math.max(...card.barData.map(a => a.pct))}
+										{#each card.barData as item}
+											<div class="mi-bar-row">
+												<span class="mi-bar-label">{item.name}</span>
+												<div class="mi-bar-track">
+													<div class="mi-bar-fill" style="width: {maxPct > 0 ? Math.round((item.pct / maxPct) * 100) : 0}%; background: {item.isGP ? 'var(--primary)' : 'var(--border)'};"></div>
+												</div>
+												<span class="mi-bar-pct">{item.pct}%</span>
+											</div>
+										{/each}
+									{/if}
+								</div>
+							{/each}
+						</div>
+						{#if investorInsights?.totalInvestors}
+							<div class="mi-footer">Based on {investorInsights.totalInvestors} investor profiles</div>
+						{/if}
+					{/if}
+				</div>
+			</div>
+
+			<!-- 6. Settings -->
 			<div class="section-card">
 				<div class="section-header">
 					<div class="section-title">Settings</div>
@@ -1705,6 +2085,240 @@
 	.mobile-tab-item.active :global(svg) { stroke: var(--primary); }
 	.mobile-tab-item.active span { color: var(--primary); }
 
+	/* ====== COMPETITIVE ANALYSIS ====== */
+	.comp-deal-section {
+		margin-bottom: 28px;
+	}
+	.comp-deal-section:last-child { margin-bottom: 0; }
+	.comp-deal-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 12px;
+	}
+	.comp-table-wrap {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	.comp-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-family: var(--font-ui);
+		font-size: 13px;
+	}
+	.comp-table th {
+		padding: 10px 14px;
+		text-align: left;
+		font-weight: 700;
+		font-size: 12px;
+		color: var(--text-muted);
+		border-bottom: 2px solid var(--border);
+		white-space: nowrap;
+	}
+	.comp-table th a {
+		color: var(--primary);
+		text-decoration: none;
+		font-weight: 700;
+	}
+	.comp-table th a:hover { text-decoration: underline; }
+	.comp-table th.col-gp a { color: var(--primary); }
+	.comp-table td {
+		padding: 10px 14px;
+		border-bottom: 1px solid var(--border-light);
+		color: var(--text-secondary);
+		white-space: nowrap;
+	}
+	.comp-table td.col-gp {
+		font-weight: 700;
+		color: var(--text-dark);
+		background: rgba(81, 190, 123, 0.05);
+	}
+	.comp-metric-label {
+		font-weight: 600;
+		color: var(--text-dark);
+		position: relative;
+	}
+	.comp-remove-field-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 18px;
+		height: 18px;
+		border: none;
+		background: var(--border-light);
+		border-radius: 50%;
+		font-size: 13px;
+		line-height: 1;
+		color: var(--text-muted);
+		cursor: pointer;
+		margin-left: 6px;
+		vertical-align: middle;
+		transition: all 0.15s ease;
+	}
+	.comp-remove-field-btn:hover { background: var(--red-bg); color: var(--red); }
+	.comp-add-field-row td {
+		border-bottom: none;
+		padding-top: 4px;
+	}
+	.comp-add-field-trigger {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 12px;
+		border: 1px dashed var(--border);
+		border-radius: 6px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		background: none;
+		transition: all 0.15s ease;
+	}
+	.comp-add-field-trigger:hover { border-color: var(--primary); color: var(--primary); }
+	.comp-add-icon { font-size: 14px; font-weight: 700; }
+	.comp-add-dropdown {
+		margin-top: 6px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+		padding: 4px;
+		display: inline-block;
+	}
+	.comp-add-option {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 8px 14px;
+		border: none;
+		background: none;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-dark);
+		cursor: pointer;
+		border-radius: 6px;
+		transition: background 0.1s ease;
+	}
+	.comp-add-option:hover { background: var(--off-white); }
+	.comp-insights {
+		list-style: none;
+		padding: 12px 0 0;
+		margin: 0;
+	}
+	.comp-insights li {
+		padding: 6px 0;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		line-height: 1.5;
+	}
+	.comp-insights li::before {
+		display: inline-block;
+		margin-right: 8px;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		content: '';
+		vertical-align: middle;
+	}
+	.comp-insight-good { color: var(--green); }
+	.comp-insights li:has(.comp-insight-good)::before { background: var(--green); }
+	.comp-insight-bad { color: var(--text-secondary); }
+	.comp-insights li:has(.comp-insight-bad)::before { background: var(--orange); }
+
+	/* ====== MARKET INTELLIGENCE ====== */
+	.mi-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+		gap: 16px;
+	}
+	.mi-card {
+		background: var(--off-white);
+		border: 1px solid var(--border-light);
+		border-radius: 10px;
+		padding: 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		transition: box-shadow 0.2s ease;
+	}
+	.mi-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+	.mi-card-icon {
+		width: 36px;
+		height: 36px;
+		border-radius: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 4px;
+	}
+	.mi-card-icon svg { width: 18px; height: 18px; }
+	.mi-card-title {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.8px;
+		color: var(--text-muted);
+	}
+	.mi-card-value {
+		font-family: var(--font-ui);
+		font-size: 20px;
+		font-weight: 800;
+		line-height: 1.2;
+	}
+	.mi-card-desc {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+	.mi-bar-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 6px;
+	}
+	.mi-bar-label {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		min-width: 80px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.mi-bar-track {
+		flex: 1;
+		height: 6px;
+		background: var(--border-light);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	.mi-bar-fill {
+		height: 100%;
+		border-radius: 3px;
+		transition: width 0.4s ease;
+	}
+	.mi-bar-pct {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--text-muted);
+		min-width: 30px;
+		text-align: right;
+	}
+	.mi-footer {
+		margin-top: 16px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-light);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
+		text-align: center;
+	}
 	/* ====== DARK MODE ====== */
 	:global(html.dark) .weekly-chart-bar-seg.seg-portfolio { background: #9DB0B5; }
 	:global(html.dark) .intent-badge.intent-high { background: var(--red-bg); }
@@ -1719,6 +2333,24 @@
 	:global(html.dark) .mobile-tab-bar { background: rgba(10,30,33,0.92); border-top-color: rgba(255,255,255,0.08); }
 	:global(html.dark) .health-table tr:hover td { background: var(--bg-sidebar-hover); }
 	:global(html.dark) .skeleton::after { background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%); }
+	/* Dark mode: Competitive Analysis */
+	:global(html.dark) .comp-deal-title { color: var(--text-light, #E5E7EB); }
+	:global(html.dark) .comp-table th { border-bottom-color: var(--border); color: var(--text-muted); }
+	:global(html.dark) .comp-table td { border-bottom-color: var(--border); color: var(--text-secondary); }
+	:global(html.dark) .comp-table td.col-gp { background: rgba(81, 190, 123, 0.08); color: var(--text-light, #E5E7EB); }
+	:global(html.dark) .comp-metric-label { color: var(--text-light, #E5E7EB); }
+	:global(html.dark) .comp-remove-field-btn { background: var(--border); color: var(--text-muted); }
+	:global(html.dark) .comp-add-field-trigger { border-color: var(--border); color: var(--text-muted); }
+	:global(html.dark) .comp-add-dropdown { background: var(--bg-sidebar); border-color: var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+	:global(html.dark) .comp-add-option { color: var(--text-light, #E5E7EB); }
+	:global(html.dark) .comp-add-option:hover { background: var(--bg-sidebar-hover); }
+	/* Dark mode: Market Intelligence */
+	:global(html.dark) .mi-card { background: var(--bg-card); border-color: var(--border); }
+	:global(html.dark) .mi-card-title { color: var(--text-muted); }
+	:global(html.dark) .mi-card-desc { color: var(--text-secondary); }
+	:global(html.dark) .mi-bar-track { background: var(--border); }
+	:global(html.dark) .mi-footer { border-top-color: var(--border); color: var(--text-muted); }
+	:global(html.dark) .empty-inline p { color: var(--text-muted); }
 
 	/* ====== RESPONSIVE ====== */
 	@media (max-width: 768px) {
@@ -1737,6 +2369,9 @@
 		.action-item { flex-wrap: wrap; }
 		.action-item-btn { margin-left: auto; }
 		.dashboard-grid-3-2 { grid-template-columns: 1fr; }
+		.mi-grid { grid-template-columns: 1fr; }
+		.comp-table { font-size: 12px; }
+		.comp-table th, .comp-table td { padding: 8px 10px; }
 	}
 	@media (max-width: 480px) {
 		.analytics-grid { grid-template-columns: 1fr; }

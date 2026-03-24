@@ -33,6 +33,21 @@
 	function sortedEntries(obj) {
 		return Object.entries(obj).sort((a, b) => b[1] - a[1]);
 	}
+	function groupByQuarter(dealArr) {
+		const quarters = {};
+		dealArr.forEach(d => {
+			const dateStr = d.addedDate || d.createdTime || '';
+			if (!dateStr) return;
+			const dt = new Date(dateStr);
+			if (isNaN(dt.getTime())) return;
+			const q = 'Q' + (Math.floor(dt.getMonth() / 3) + 1) + ' ' + dt.getFullYear();
+			if (!quarters[q]) quarters[q] = { deals: [], date: new Date(dt.getFullYear(), Math.floor(dt.getMonth() / 3) * 3, 1) };
+			quarters[q].deals.push(d);
+		});
+		return Object.entries(quarters)
+			.sort((a, b) => a[1].date - b[1].date)
+			.map(e => ({ label: e[0], deals: e[1].deals }));
+	}
 	const chartColors = ['#51BE7B','#3B9DDD','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316','#6366F1','#84CC16','#06B6D4','#D946EF'];
 
 	// Debt fund helpers
@@ -182,6 +197,7 @@
 		await new Promise(r => setTimeout(r, 50));
 		const ds = activeDeals;
 		const primary = '#51BE7B';
+		const primaryLight = '#51BE7B44';
 		const irrs = ds.filter(d => d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2).map(d => d.targetIRR);
 		const prefs = ds.filter(d => d.preferredReturn && d.preferredReturn > 0 && d.preferredReturn < 1).map(d => d.preferredReturn);
 		const mins = ds.filter(d => d.investmentMinimum && d.investmentMinimum > 0).map(d => d.investmentMinimum);
@@ -230,9 +246,9 @@
 
 		// 506b vs 506c
 		const b506 = ds.filter(d => d.is506b).length;
-		const c506 = ds.length - b506;
+		const c506val = ds.length - b506;
 		const c8 = document.getElementById('mi506Chart');
-		if (c8) charts.filing = new Chart(c8, { type: 'doughnut', data: { labels: ['506(c) - Can advertise', '506(b) - Cannot advertise'], datasets: [{ data: [c506, b506], backgroundColor: ['#51BE7B', '#F59E0B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } } } });
+		if (c8) charts.filing = new Chart(c8, { type: 'doughnut', data: { labels: ['506(c) - Can advertise', '506(b) - Cannot advertise'], datasets: [{ data: [c506val, b506], backgroundColor: ['#51BE7B', '#F59E0B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } } } });
 
 		// Strategy
 		const stratCounts = countMap(ds.filter(d => d.strategy).map(d => d.strategy));
@@ -246,6 +262,88 @@
 		holds.forEach(h => { if (h <= 2) holdBuckets['1-2 yrs']++; else if (h <= 4) holdBuckets['3-4 yrs']++; else if (h <= 6) holdBuckets['5-6 yrs']++; else if (h <= 8) holdBuckets['7-8 yrs']++; else if (h <= 10) holdBuckets['9-10 yrs']++; else holdBuckets['10+ yrs']++; });
 		const c10 = document.getElementById('miHoldChart');
 		if (c10) charts.hold = new Chart(c10, { type: 'bar', data: { labels: Object.keys(holdBuckets), datasets: [{ data: Object.values(holdBuckets), backgroundColor: primary, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false } } } } });
+
+		// ========== TREND LINE CHARTS ==========
+		const byQ = groupByQuarter(ds);
+		const qLabels = byQ.map(q => q.label);
+		const tLineOpts = {
+			responsive: true, maintainAspectRatio: false,
+			plugins: { legend: { display: false } },
+			scales: { y: { beginAtZero: false, grid: { color: 'rgba(128,128,128,0.1)' } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } },
+			elements: { point: { radius: 3, hoverRadius: 5 }, line: { tension: 0.3 } }
+		};
+		const tLineOptsZero = { ...tLineOpts, scales: { ...tLineOpts.scales, y: { ...tLineOpts.scales.y, beginAtZero: true } } };
+
+		// Trend 1: New Offerings Per Quarter
+		const newDealsCtx = document.getElementById('miNewDealsChart');
+		if (newDealsCtx && byQ.length > 1) {
+			charts.newDeals = new Chart(newDealsCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'New Deals', data: byQ.map(q => q.deals.length), borderColor: primary, backgroundColor: primaryLight, fill: true, borderWidth: 2 }] }, options: tLineOptsZero });
+		}
+
+		// Trend 2: Cumulative Capital Raised
+		const cumCapCtx = document.getElementById('miCumCapitalChart');
+		if (cumCapCtx && byQ.length > 1) {
+			let cumCap = 0;
+			const cumCapData = byQ.map(q => { q.deals.forEach(d => { const s = parseFloat(d.offeringSize) || 0; if (s > 0 && s < 1e12) cumCap += s; }); return cumCap; });
+			charts.cumCapital = new Chart(cumCapCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Cumulative Capital', data: cumCapData, borderColor: '#3B9DDD', backgroundColor: '#3B9DDD22', fill: true, borderWidth: 2 }] }, options: { ...tLineOpts, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + (c.raw / 1e6).toFixed(0) + 'M' } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => '$' + (v / 1e9).toFixed(1) + 'B' } }, x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } } } } });
+		}
+
+		// Trend 3: Target IRR Over Time
+		const irrTrendCtx = document.getElementById('miIRRTrendChart');
+		if (irrTrendCtx && byQ.length > 1) {
+			const irrTrendData = byQ.map(q => { const vals = q.deals.filter(d => d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2).map(d => d.targetIRR); return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length * 100) : null; });
+			charts.irrTrend = new Chart(irrTrendCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Avg Target IRR', data: irrTrendData, borderColor: '#EF4444', backgroundColor: '#EF444422', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => v.toFixed(0) + '%' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(1) + '% avg IRR' } } } } });
+		}
+
+		// Trend 4: Preferred Return Over Time
+		const prefTrendCtx = document.getElementById('miPrefTrendChart');
+		if (prefTrendCtx && byQ.length > 1) {
+			const prefTrendData = byQ.map(q => { const vals = q.deals.filter(d => d.preferredReturn && d.preferredReturn > 0 && d.preferredReturn < 1).map(d => d.preferredReturn); return vals.length >= 2 ? (vals.reduce((a, b) => a + b, 0) / vals.length * 100) : null; });
+			charts.prefTrend = new Chart(prefTrendCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Avg Pref Return', data: prefTrendData, borderColor: '#F59E0B', backgroundColor: '#F59E0B22', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => v.toFixed(1) + '%' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(1) + '% avg pref' } } } } });
+		}
+
+		// Trend 5: Average Minimum Investment
+		const minTrendCtx = document.getElementById('miMinTrendChart');
+		if (minTrendCtx && byQ.length > 1) {
+			const minTrendData = byQ.map(q => { const vals = q.deals.filter(d => d.investmentMinimum && d.investmentMinimum > 0).map(d => d.investmentMinimum); return vals.length >= 2 ? vals.reduce((a, b) => a + b, 0) / vals.length : null; });
+			charts.minTrend = new Chart(minTrendCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Avg Minimum', data: minTrendData, borderColor: '#8B5CF6', backgroundColor: '#8B5CF622', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => '$' + (v / 1000).toFixed(0) + 'K' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + (c.raw / 1000).toFixed(0) + 'K avg minimum' } } } } });
+		}
+
+		// Trend 6: Average Offering Size
+		const offerTrendCtx = document.getElementById('miOfferSizeTrendChart');
+		if (offerTrendCtx && byQ.length > 1) {
+			const offerTrendData = byQ.map(q => { const vals = q.deals.filter(d => { const s = parseFloat(d.offeringSize) || 0; return s > 0 && s < 1e12; }).map(d => parseFloat(d.offeringSize)); return vals.length >= 2 ? vals.reduce((a, b) => a + b, 0) / vals.length : null; });
+			charts.offerTrend = new Chart(offerTrendCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Avg Offering Size', data: offerTrendData, borderColor: '#EC4899', backgroundColor: '#EC489922', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => '$' + (v / 1e6).toFixed(0) + 'M' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + (c.raw / 1e6).toFixed(1) + 'M avg size' } } } } });
+		}
+
+		// Trend 7: Multi-Family Market Share
+		const mfShareCtx = document.getElementById('miMFShareChart');
+		if (mfShareCtx && byQ.length > 1) {
+			const mfShareData = byQ.map(q => { if (q.deals.length < 3) return null; const mf = q.deals.filter(d => d.assetClass === 'Multi-Family').length; return (mf / q.deals.length * 100); });
+			charts.mfShare = new Chart(mfShareCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Multi-Family %', data: mfShareData, borderColor: '#14B8A6', backgroundColor: '#14B8A622', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => v + '%' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(0) + '% multi-family' } } } } });
+		}
+
+		// Trend 8: 506(b) Share Over Time
+		const t506Ctx = document.getElementById('mi506TrendDealChart');
+		if (t506Ctx && byQ.length > 1) {
+			const t506Data = byQ.map(q => { if (q.deals.length < 3) return null; const b = q.deals.filter(d => d.is506b).length; return (b / q.deals.length * 100); });
+			charts.t506 = new Chart(t506Ctx, { type: 'line', data: { labels: qLabels, datasets: [{ label: '506(b) %', data: t506Data, borderColor: '#F97316', backgroundColor: '#F9731622', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { min: 0, max: 100, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => v + '%' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(0) + '% are 506(b)' } } } } });
+		}
+
+		// Trend 9: Lending vs Equity (stacked area)
+		const lendEqCtx = document.getElementById('miLendVsEquityChart');
+		if (lendEqCtx && byQ.length > 1) {
+			const lendingData = byQ.map(q => q.deals.filter(d => d.strategy === 'Lending').length);
+			const equityData = byQ.map(q => q.deals.filter(d => d.strategy && d.strategy !== 'Lending').length);
+			charts.lendEq = new Chart(lendEqCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Lending', data: lendingData, borderColor: '#3B9DDD', backgroundColor: '#3B9DDD44', fill: true, borderWidth: 2 }, { label: 'Equity / Other', data: equityData, borderColor: '#51BE7B', backgroundColor: '#51BE7B44', fill: true, borderWidth: 2 }] }, options: { ...tLineOptsZero, plugins: { legend: { display: true, position: 'top', labels: { font: { size: 11 }, usePointStyle: true, padding: 16 } } } } });
+		}
+
+		// Trend 10: Audit Rate Over Time
+		const auditTrendCtx = document.getElementById('miAuditTrendChart');
+		if (auditTrendCtx && byQ.length > 1) {
+			const auditTrendData = byQ.map(q => { const withFin = q.deals.filter(d => d.financials && d.financials !== 'Unknown'); if (withFin.length < 3) return null; const aud = withFin.filter(d => d.financials === 'Audited').length; return (aud / withFin.length * 100); });
+			charts.auditTrend = new Chart(auditTrendCtx, { type: 'line', data: { labels: qLabels, datasets: [{ label: 'Audit Rate', data: auditTrendData, borderColor: '#EF4444', backgroundColor: '#EF444422', fill: true, borderWidth: 2, spanGaps: true }] }, options: { ...tLineOpts, scales: { y: { min: 0, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { callback: v => v + '%' } }, x: tLineOpts.scales.x }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.raw.toFixed(0) + '% audited' } } } } });
+		}
 	}
 
 	async function renderDebtChart() {
@@ -267,6 +365,75 @@
 		charts.debtFund = new Chart(ctx, { type: 'line', data: { labels: MONTH_LABELS, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.parsed.y.toFixed(2) + '%' } } }, scales: { x: { grid: { display: false } }, y: { min: debtChartMetric === 'yield' ? 0 : undefined, max: debtChartMetric === 'yield' ? 40 : undefined, title: { display: true, text: metricLabels[debtChartMetric] || 'Yield (%)' }, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: v => v.toFixed(1) + '%' } } } } });
 	}
 
+	async function renderDealFlowCharts() {
+		if (!Chart || !$deals.length) return;
+		await new Promise(r => setTimeout(r, 50));
+		const now = new Date();
+		const twelveMonthsAgo = new Date(now);
+		twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+		const dealsWithDates = $deals.map(d => {
+			const dateStr = d.addedDate || d.createdTime || '';
+			const date = dateStr ? new Date(dateStr) : null;
+			return { ...d, parsedDate: date };
+		}).filter(d => d.parsedDate && !isNaN(d.parsedDate));
+
+		// Monthly aggregation
+		const monthlyData = {};
+		dealsWithDates.forEach(d => {
+			if (d.parsedDate >= twelveMonthsAgo) {
+				const key = d.parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+				monthlyData[key] = (monthlyData[key] || 0) + 1;
+			}
+		});
+		const monthLabels = Object.keys(monthlyData);
+		const monthValues = Object.values(monthlyData);
+
+		const barCtx = document.getElementById('dealFlowBarChart');
+		if (barCtx && monthLabels.length) {
+			charts.dfBar = new Chart(barCtx, { type: 'bar', data: { labels: monthLabels, datasets: [{ label: 'New Deals', data: monthValues, backgroundColor: '#2C6E49', borderRadius: 4, barThickness: 'flex' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } } });
+		}
+
+		// Source distribution
+		const knownSources = { '506 Investors Group': 0, 'Capital Raiser Email List': 0, 'Turbine Capital': 0, 'GoBundance': 0, 'User Submission': 0, 'Direct / Other': 0 };
+		dealsWithDates.forEach(d => {
+			let sources = d.dealSource || [];
+			if (typeof sources === 'string') sources = [sources];
+			if (!Array.isArray(sources)) sources = [];
+			if (sources.length === 0) { knownSources['Direct / Other']++; }
+			else {
+				let matched = false;
+				sources.forEach(s => { if (knownSources[s] !== undefined) { knownSources[s]++; matched = true; } });
+				if (!matched) knownSources['Direct / Other']++;
+			}
+		});
+		dealsWithDates.forEach(d => { if (d.submittor && !['Raven Ryan Abano Camins', ''].includes(d.submittor)) knownSources['User Submission']++; });
+
+		const sourceLabels = Object.keys(knownSources).filter(k => knownSources[k] > 0);
+		const sourceValues = sourceLabels.map(k => knownSources[k]);
+		const sourceColors = ['#2C6E49', '#4C956C', '#FEFEE3', '#D68C45', '#3D405B', '#8B5E3C'];
+
+		const pieCtx = document.getElementById('dealSourcePieChart');
+		if (pieCtx) {
+			charts.dfSource = new Chart(pieCtx, { type: 'doughnut', data: { labels: sourceLabels, datasets: [{ data: sourceValues, backgroundColor: sourceColors.slice(0, sourceLabels.length), borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 10, usePointStyle: true } } } } });
+		}
+
+		// Asset class distribution
+		const assetClasses = {};
+		dealsWithDates.forEach(d => {
+			let classes = d.assetClass || [];
+			if (typeof classes === 'string') classes = [classes];
+			if (!Array.isArray(classes)) classes = [];
+			classes.forEach(c => { assetClasses[c] = (assetClasses[c] || 0) + 1; });
+		});
+		const topAssetClasses = Object.entries(assetClasses).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+		const acPieCtx = document.getElementById('dealAssetPieChart');
+		if (acPieCtx && topAssetClasses.length) {
+			charts.dfAsset = new Chart(acPieCtx, { type: 'doughnut', data: { labels: topAssetClasses.map(e => e[0]), datasets: [{ data: topAssetClasses.map(e => e[1]), backgroundColor: chartColors.slice(0, topAssetClasses.length), borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 10, usePointStyle: true } } } } });
+		}
+	}
+
 	// Summary stats for deal insights
 	const dealInsightStats = $derived(() => {
 		const ds = activeDeals;
@@ -277,6 +444,8 @@
 		const topSplits = sortedEntries(splitCounts);
 		const audited = ds.filter(d => d.financials === 'Audited').length;
 		const withFin = ds.filter(d => d.financials && d.financials !== 'Unknown').length;
+		const acCounts = countMap(ds.filter(d => d.assetClass).map(d => d.assetClass));
+		const b506 = ds.filter(d => d.is506b).length;
 		return {
 			medIRR: (median(irrs) * 100).toFixed(1) + '%',
 			irrRange: irrs.length ? (Math.min(...irrs) * 100).toFixed(0) + '% - ' + (Math.max(...irrs) * 100).toFixed(0) + '%' : '',
@@ -287,8 +456,28 @@
 			topSplit: topSplits.length ? topSplits[0][0] : '--',
 			splitNote: topSplits.length ? topSplits[0][1] + ' deals (' + Math.round(topSplits[0][1] / ds.length * 100) + '%)' : '',
 			auditPct: withFin ? Math.round(audited / withFin * 100) + '%' : '--',
-			auditNote: audited + ' of ' + withFin + ' deals audited'
+			auditNote: audited + ' of ' + withFin + ' deals audited',
+			b506Pct: ds.length ? Math.round(b506 / ds.length * 100) : 0,
+			mfPct: acCounts['Multi-Family'] ? Math.round(acCounts['Multi-Family'] / ds.length * 100) : 0,
+			irrs,
+			mins,
+			audited,
+			withFin
 		};
+	});
+
+	// Key insights for deal insights tab
+	const keyInsights = $derived(() => {
+		const s = dealInsightStats();
+		if (!s) return [];
+		return [
+			{ title: 'Only ' + s.auditPct + ' of deals are audited', body: 'Out of ' + s.withFin + ' deals with financial data, just ' + s.audited + ' have audited financials. Always ask your sponsor if their books are audited by a third party.' },
+			{ title: '70/30 is the new 80/20', body: 'The most common LP/GP profit split is now 70/30, meaning the sponsor keeps 30% of profits above the preferred return. Negotiate for 80/20 when you can.' },
+			{ title: 'Median IRR: ' + s.medIRR, body: 'Across ' + s.irrs.length + ' deals, the median target IRR is ' + s.medIRR + '. Be skeptical of anything promising 25%+ unless it is a development or value-add strategy.' },
+			{ title: s.b506Pct + '% are 506(b) offerings', body: '506(b) deals cannot legally advertise. If you see one promoted on social media, that is a compliance red flag worth investigating.' },
+			{ title: 'Most deals need $50K-$100K', body: Math.round(s.mins.filter(m => m >= 50000 && m < 100000).length / (s.mins.length || 1) * 100) + '% of deals have minimums in the $50K-$100K range. Start with lower-minimum debt funds if you are newer.' },
+			{ title: 'Multi-Family is ' + s.mfPct + '% of the market', body: 'Nearly ' + s.mfPct + '% of all private offerings are multifamily. Consider diversifying into self-storage, industrial, or lending.' }
+		];
 	});
 
 	// SEC summary stats
@@ -319,7 +508,81 @@
 		return { count: funds.length, total: debtFunds.length, avgYield, avgLTV, totalAUM: fmtAUM(totalAUM) };
 	});
 
-	let tabsRendered = $state({ sec: false, deals: false, debtfunds: false });
+	// Deal flow stats
+	const dealFlowStats = $derived(() => {
+		const now = new Date();
+		const twelveMonthsAgo = new Date(now);
+		twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+		const thirtyDaysAgo = new Date(now);
+		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+		const dealsWithDates = $deals.map(d => {
+			const dateStr = d.addedDate || d.createdTime || '';
+			const date = dateStr ? new Date(dateStr) : null;
+			return { ...d, parsedDate: date };
+		}).filter(d => d.parsedDate && !isNaN(d.parsedDate));
+
+		const recentDeals = dealsWithDates.filter(d => d.parsedDate >= thirtyDaysAgo);
+		const last12 = dealsWithDates.filter(d => d.parsedDate >= twelveMonthsAgo).length;
+
+		// Monthly data for avg
+		const monthlyData = {};
+		dealsWithDates.forEach(d => {
+			if (d.parsedDate >= twelveMonthsAgo) {
+				const key = d.parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+				monthlyData[key] = (monthlyData[key] || 0) + 1;
+			}
+		});
+		const monthCount = Object.keys(monthlyData).length;
+		const avgPerMonth = monthCount > 0 ? Math.round(last12 / monthCount * 10) / 10 : 0;
+
+		// Week streak
+		const weekStart = new Date(twelveMonthsAgo);
+		weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+		const weeklyData = {};
+		for (let d = new Date(weekStart); d <= now; d.setDate(d.getDate() + 7)) {
+			weeklyData[d.toISOString().split('T')[0]] = 0;
+		}
+		dealsWithDates.forEach(d => {
+			if (d.parsedDate >= twelveMonthsAgo) {
+				const weekOf = new Date(d.parsedDate);
+				weekOf.setDate(weekOf.getDate() - weekOf.getDay());
+				const key = weekOf.toISOString().split('T')[0];
+				if (weeklyData[key] !== undefined) weeklyData[key]++;
+			}
+		});
+		const weekVals = Object.values(weeklyData);
+		let streak = 0;
+		for (let i = weekVals.length - 1; i >= 0; i--) {
+			if (weekVals[i] > 0) streak++;
+			else break;
+		}
+
+		// Deal types
+		const dealTypes = {};
+		dealsWithDates.forEach(d => { const t = d.dealType || 'Unknown'; dealTypes[t] = (dealTypes[t] || 0) + 1; });
+
+		// Asset classes count
+		const assetClasses = {};
+		dealsWithDates.forEach(d => {
+			let classes = d.assetClass || [];
+			if (typeof classes === 'string') classes = [classes];
+			if (!Array.isArray(classes)) classes = [];
+			classes.forEach(c => { assetClasses[c] = (assetClasses[c] || 0) + 1; });
+		});
+
+		return {
+			totalDeals: $deals.length,
+			recentCount: recentDeals.length,
+			avgPerMonth,
+			streak,
+			dealTypes: Object.entries(dealTypes).sort((a, b) => b[1] - a[1]),
+			assetClassCount: Object.keys(assetClasses).length,
+			recentDeals: recentDeals.sort((a, b) => b.parsedDate - a.parsedDate).slice(0, 15)
+		};
+	});
+
+	let tabsRendered = $state({ sec: false, deals: false, dealflow: false, debtfunds: false });
 
 	async function switchTab(tab) {
 		activeTab = tab;
@@ -334,6 +597,10 @@
 		if (tab === 'deals' && !tabsRendered.deals) {
 			tabsRendered.deals = true;
 			await renderDealInsightCharts();
+		}
+		if (tab === 'dealflow' && !tabsRendered.dealflow) {
+			tabsRendered.dealflow = true;
+			await renderDealFlowCharts();
 		}
 		if (tab === 'debtfunds' && !tabsRendered.debtfunds) {
 			tabsRendered.debtfunds = true;
@@ -424,6 +691,8 @@
 				<div class="stat-card"><div class="stat-label">Most Common Split</div><div class="stat-value">{dealInsightStats()?.topSplit || '--'}</div><div class="stat-sub">{dealInsightStats()?.splitNote}</div></div>
 				<div class="stat-card"><div class="stat-label">Audited Financials</div><div class="stat-value">{dealInsightStats()?.auditPct || '--'}</div><div class="stat-sub">{dealInsightStats()?.auditNote}</div></div>
 			</div>
+
+			<!-- Distribution Charts -->
 			<div class="chart-grid-2">
 				<div class="chart-card"><h3>Target IRR Distribution</h3><p>What sponsors are promising across {activeDeals.filter(d => d.targetIRR && d.targetIRR > 0).length} deals</p><div class="chart-wrap"><canvas id="miIRRChart"></canvas></div></div>
 				<div class="chart-card"><h3>Deals by Asset Class</h3><p>Multi-Family dominates but alternatives are growing</p><div class="chart-wrap"><canvas id="miAssetClassChart"></canvas></div></div>
@@ -444,15 +713,123 @@
 				<div class="chart-card"><h3>Investment Strategy</h3><p>Lending and Value-Add dominate the market</p><div class="chart-wrap"><canvas id="miStrategyChart"></canvas></div></div>
 				<div class="chart-card"><h3>Hold Period Distribution</h3><p>How long your money is locked up</p><div class="chart-wrap"><canvas id="miHoldChart"></canvas></div></div>
 			</div>
+
+			<!-- Trend Charts Section -->
+			<div class="trend-section-header">
+				<h2>Trends Over Time</h2>
+				<p>How deal terms and market dynamics are shifting quarter by quarter.</p>
+			</div>
+			<div class="chart-grid-2">
+				<div class="chart-card"><h3>New Offerings Per Quarter</h3><p>How fast the deal pipeline is growing</p><div class="chart-wrap"><canvas id="miNewDealsChart"></canvas></div></div>
+				<div class="chart-card"><h3>Cumulative Capital Raised</h3><p>Total capital tracked in the database over time</p><div class="chart-wrap"><canvas id="miCumCapitalChart"></canvas></div></div>
+			</div>
+			<div class="chart-grid-2">
+				<div class="chart-card"><h3>Average Target IRR Over Time</h3><p>Are sponsors lowering their promises?</p><div class="chart-wrap"><canvas id="miIRRTrendChart"></canvas></div></div>
+				<div class="chart-card"><h3>Average Pref Return Over Time</h3><p>Preferred return trends across the market</p><div class="chart-wrap"><canvas id="miPrefTrendChart"></canvas></div></div>
+			</div>
+			<div class="chart-grid-2">
+				<div class="chart-card"><h3>Average Minimum Investment</h3><p>Are deals getting more or less accessible?</p><div class="chart-wrap"><canvas id="miMinTrendChart"></canvas></div></div>
+				<div class="chart-card"><h3>Average Offering Size</h3><p>How large are deals getting?</p><div class="chart-wrap"><canvas id="miOfferSizeTrendChart"></canvas></div></div>
+			</div>
+			<div class="chart-grid-2">
+				<div class="chart-card"><h3>Multi-Family Market Share</h3><p>Is the multifamily dominance increasing or waning?</p><div class="chart-wrap"><canvas id="miMFShareChart"></canvas></div></div>
+				<div class="chart-card"><h3>506(b) Share Over Time</h3><p>Percentage of 506(b) filings in our database</p><div class="chart-wrap"><canvas id="mi506TrendDealChart"></canvas></div></div>
+			</div>
+			<div class="chart-grid-2">
+				<div class="chart-card"><h3>Lending vs Equity Deals</h3><p>The rise of private lending in real estate</p><div class="chart-wrap"><canvas id="miLendVsEquityChart"></canvas></div></div>
+				<div class="chart-card"><h3>Audit Rate Over Time</h3><p>Are more sponsors getting audited?</p><div class="chart-wrap"><canvas id="miAuditTrendChart"></canvas></div></div>
+			</div>
+
+			<!-- Key Insights -->
+			{#if keyInsights().length}
+				<div class="insights-section">
+					<h2>Key Insights</h2>
+					<div class="insights-grid">
+						{#each keyInsights() as insight}
+							<div class="insight-card">
+								<div class="insight-title">{insight.title}</div>
+								<div class="insight-body">{insight.body}</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			<div class="mi-disclaimer">Data sourced from GYC deal database. This is market research, not investment advice. Past performance does not guarantee future results.</div>
 		</div>
 	{/if}
 
-	<!-- Deal Flow Tab (placeholder - links to stats page) -->
+	<!-- Deal Flow Tab -->
 	{#if activeTab === 'dealflow'}
-		<div class="mi-section" style="text-align:center;padding:60px 20px;">
-			<p style="color:var(--text-muted);margin-bottom:16px;">Deal flow pipeline analytics are available on the dedicated page.</p>
-			<a href="/app/deal-flow-stats" class="btn-primary">View Deal Flow Stats &rarr;</a>
+		<div class="mi-section">
+			<h2 class="df-title">Deal Flow Stats</h2>
+			<p class="mi-section-desc">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>
+
+			<div class="stat-cards">
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Total Deals</div><div class="stat-value">{dealFlowStats().totalDeals}</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Last 30 Days</div><div class="stat-value" style="color:#2C6E49;">{dealFlowStats().recentCount}</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Avg / Month</div><div class="stat-value">{dealFlowStats().avgPerMonth}</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Week Streak</div><div class="stat-value" style="color:#D68C45;">{dealFlowStats().streak}</div><div class="stat-sub">consecutive weeks</div></div>
+			</div>
+
+			<div class="chart-card" style="margin-bottom:24px;">
+				<h3>New Deals Added Per Month</h3>
+				<p>Last 12 months of deal sourcing activity</p>
+				<div class="chart-wrap"><canvas id="dealFlowBarChart"></canvas></div>
+			</div>
+
+			<div class="chart-grid-2">
+				<div class="chart-card"><h3>Deal Sources</h3><p>Where deals are found</p><div class="chart-wrap" style="height:240px;"><canvas id="dealSourcePieChart"></canvas></div></div>
+				<div class="chart-card"><h3>Asset Classes</h3><p>Investment categories in the database</p><div class="chart-wrap" style="height:240px;"><canvas id="dealAssetPieChart"></canvas></div></div>
+			</div>
+
+			<div class="df-bottom-grid">
+				<!-- Deal Types -->
+				<div class="chart-card">
+					<h3>Deal Types</h3>
+					{#each dealFlowStats().dealTypes as [type, count]}
+						<div class="df-type-row">
+							<span class="df-type-name">{type}</span>
+							<span class="df-type-count">{count} ({Math.round(count / (dealFlowStats().totalDeals || 1) * 100)}%)</span>
+						</div>
+					{/each}
+				</div>
+
+				<!-- Recent Deals -->
+				<div class="chart-card">
+					<h3>Recently Added Deals</h3>
+					<div class="df-recent-table-wrap">
+						<table class="df-recent-table">
+							<thead>
+								<tr>
+									<th>Deal</th>
+									<th>Type</th>
+									<th>Asset Class</th>
+									<th style="text-align:right;">Added</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each dealFlowStats().recentDeals as d}
+									<tr>
+										<td class="df-deal-name">{d.name || d.investmentName || '--'}</td>
+										<td>{d.dealType || '--'}</td>
+										<td>{Array.isArray(d.assetClass) ? (d.assetClass[0] || '--') : (d.assetClass || '--')}</td>
+										<td style="text-align:right;color:var(--text-muted);">{d.parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
+									</tr>
+								{:else}
+									<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">No recent deals</td></tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<!-- Value prop footer -->
+			<div class="df-footer">
+				<div class="df-footer-title">This database can't be rebuilt overnight.</div>
+				<div class="df-footer-desc">With {dealFlowStats().totalDeals} deals tracked, {dealFlowStats().assetClassCount} asset classes, and new opportunities sourced weekly -- this is the most comprehensive private placement database available to LP investors.</div>
+			</div>
 		</div>
 	{/if}
 
@@ -558,6 +935,36 @@
 	.mi-gate-card h2 { font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; }
 	.mi-gate-card p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
 	.mi-gate-card a { display: inline-block; padding: 14px 32px; background: var(--primary); color: #fff; border-radius: 8px; font-family: var(--font-ui); font-size: 14px; font-weight: 700; text-decoration: none; }
+
+	/* Trend section header */
+	.trend-section-header { margin: 40px 0 24px; border-top: 2px solid var(--border); padding-top: 24px; }
+	.trend-section-header h2 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-dark); margin: 0 0 4px; }
+	.trend-section-header p { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin: 0; }
+
+	/* Key Insights */
+	.insights-section { margin: 40px 0 24px; border-top: 2px solid var(--border); padding-top: 24px; }
+	.insights-section h2 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-dark); margin: 0 0 16px; }
+	.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+	.insight-card { background: linear-gradient(135deg, #1a2e35, #2C3E2D); border-radius: 8px; padding: 20px; }
+	.insight-title { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+	.insight-body { font-family: var(--font-body); font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+
+	/* Deal Flow Tab */
+	.df-title { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0 0 4px; }
+	.df-bottom-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px; }
+	.df-type-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+	.df-type-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; }
+	.df-type-count { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+	.df-recent-table-wrap { max-height: 300px; overflow-y: auto; }
+	.df-recent-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+	.df-recent-table th { text-align: left; padding: 6px 8px; font-family: var(--font-ui); font-weight: 700; border-bottom: 2px solid var(--border); }
+	.df-recent-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+	.df-deal-name { font-weight: 600; }
+	.df-footer { background: linear-gradient(135deg, #2C3E2D, #3D5A3E); border-radius: var(--radius); padding: 24px; color: #fff; text-align: center; margin-bottom: 24px; }
+	.df-footer-title { font-family: var(--font-ui); font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+	.df-footer-desc { font-family: var(--font-body); font-size: 13px; opacity: 0.85; }
+
+	/* Debt Funds */
 	.debt-filters { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 	.filter-group { display: flex; flex-direction: column; gap: 4px; }
 	.filter-group label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -583,10 +990,17 @@
 	.fin-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 	.fin-badge.audited { background: var(--green-bg, rgba(81,190,123,0.1)); color: var(--green, #51BE7B); }
 	.fin-badge.unaudited { background: var(--orange-bg, rgba(230,126,34,0.1)); color: var(--orange, #E67E22); }
+
 	@media (max-width: 768px) {
 		.chart-grid-2 { grid-template-columns: 1fr; }
 		.debt-filters { flex-direction: column; }
 		.debt-metric-toggles { flex-wrap: wrap; }
 		.mi-page { padding: 16px; }
+		.df-bottom-grid { grid-template-columns: 1fr; }
+		.insights-grid { grid-template-columns: 1fr; }
+		.mi-header h1 { font-size: 22px; }
+		.stat-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+		.stat-value { font-size: 22px; }
+		.stat-card { padding: 14px; }
 	}
 </style>

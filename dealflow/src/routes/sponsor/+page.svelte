@@ -173,6 +173,67 @@
 		return '';
 	}
 
+	function getBgDetailItems(source, result) {
+		if (!result) return [];
+		const items = [];
+		const sourceUrls = getBgSourceUrls(result);
+		const sourceUrl = sourceUrls[source.key] || '';
+
+		switch (source.key) {
+			case 'sec': {
+				const secEntities = result.sec_entities || result.secEntities || [];
+				secEntities.slice(0, 5).forEach(e => {
+					const edgarLink = e.cik ? 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=' + e.cik + '&type=D&dateb=&owner=include&count=40' : '';
+					items.push({ text: (e.entityName || 'Filing') + (e.filingDate ? ' (' + e.filingDate + ')' : ''), url: edgarLink });
+				});
+				if (secEntities.length > 5) items.push({ text: '+ ' + (secEntities.length - 5) + ' more filing(s)', url: sourceUrl });
+				break;
+			}
+			case 'finra': {
+				if (result.finra_found || result.finraFound) {
+					const finraDet = result.finra_details || result.finraDetails || {};
+					const disc = result.finra_disclosures || result.finraDisclosures || 0;
+					if (finraDet.crd) items.push({ text: 'CRD# ' + finraDet.crd + (finraDet.firmName ? ' — ' + finraDet.firmName : ''), url: 'https://brokercheck.finra.org/individual/summary/' + finraDet.crd });
+					if (disc > 0) items.push({ text: 'View ' + disc + ' disclosure(s) on BrokerCheck', url: sourceUrl, severity: 'medium' });
+				}
+				break;
+			}
+			case 'iapd': {
+				if ((result.iapd_found || result.iapdFound) && (result.iapd_disclosures || result.iapdDisclosures || 0) > 0) {
+					items.push({ text: 'View disclosure(s) on IAPD', url: sourceUrl, severity: 'medium' });
+				}
+				break;
+			}
+			case 'ofac': {
+				if (result.ofac_found || result.ofacFound) {
+					items.push({ text: 'Search OFAC sanctions list to verify', url: sourceUrl, severity: 'high' });
+				}
+				break;
+			}
+			case 'court': {
+				const courtDetails = result.court_details || result.courtDetails || [];
+				courtDetails.slice(0, 5).forEach(c => {
+					const caseUrl = c.docketNumber ? 'https://www.courtlistener.com/?q=%22' + encodeURIComponent(c.docketNumber) + '%22&type=r' : sourceUrl;
+					const isBk = (c.court || '').toLowerCase().includes('bankr') || (c.caseName || '').toLowerCase().includes('bankrupt');
+					items.push({ text: (c.caseName || 'Case') + (c.dateFiled ? ' — ' + c.dateFiled : '') + (c.court ? ' (' + c.court + ')' : ''), url: caseUrl, severity: isBk ? 'high' : 'medium' });
+				});
+				if (courtDetails.length > 5) items.push({ text: '+ ' + (courtDetails.length - 5) + ' more case(s)', url: sourceUrl });
+				break;
+			}
+		}
+		return items;
+	}
+
+	function getCeoRegStatus(result) {
+		if (!result) return { finra: null, sec: null };
+		const finraFound = result.finra_found || result.finraFound;
+		const iapdFound = result.iapd_found || result.iapdFound;
+		return {
+			finra: finraFound ? (result.finra_disclosures || result.finraDisclosures || 0) > 0 ? 'flagged' : 'registered' : null,
+			sec: iapdFound ? (result.iapd_disclosures || result.iapdDisclosures || 0) > 0 ? 'flagged' : 'registered' : null
+		};
+	}
+
 	let bgOverallStatus = $derived(bgResult?.overall_status || 'pending');
 
 	async function triggerBgCheck() {
@@ -471,11 +532,32 @@
 					<div class="section-body">
 						<div class="people-grid">
 							{#if sponsor.ceo}
+								{@const regStatus = getCeoRegStatus(bgResult)}
 								<div class="person-card" style="cursor:pointer;" onclick={() => goto('/person?name=' + encodeURIComponent(sponsor.ceo))}>
-									<div class="person-avatar">{getInitials(sponsor.ceo)}</div>
+									{#if sponsor.ceoPhoto}
+										<img class="person-avatar-img" src={sponsor.ceoPhoto} alt={sponsor.ceo} />
+									{:else}
+										<div class="person-avatar">{getInitials(sponsor.ceo)}</div>
+									{/if}
 									<div class="person-info">
 										<div class="person-name">{sponsor.ceo}</div>
 										<div class="person-role">Chief Executive Officer</div>
+										{#if regStatus.finra || regStatus.sec}
+											<div class="person-reg-badges">
+												{#if regStatus.finra}
+													<span class="person-reg-badge" class:flagged={regStatus.finra === 'flagged'}>
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+														FINRA {regStatus.finra === 'flagged' ? 'Flagged' : 'Registered'}
+													</span>
+												{/if}
+												{#if regStatus.sec}
+													<span class="person-reg-badge" class:flagged={regStatus.sec === 'flagged'}>
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+														SEC RIA {regStatus.sec === 'flagged' ? 'Flagged' : 'Registered'}
+													</span>
+												{/if}
+											</div>
+										{/if}
 										<div class="person-links">
 											{#if sponsor.linkedinCeo}
 												<a href={sponsor.linkedinCeo} target="_blank" rel="noopener" class="person-link" onclick={(e) => e.stopPropagation()}>
@@ -487,6 +569,30 @@
 										</div>
 									</div>
 								</div>
+							{/if}
+							{#if sponsor.teamMembers?.length}
+								{#each sponsor.teamMembers as member}
+									<div class="person-card" style="cursor:pointer;" onclick={() => goto('/person?name=' + encodeURIComponent(member.name))}>
+										{#if member.photo}
+											<img class="person-avatar-img" src={member.photo} alt={member.name} />
+										{:else}
+											<div class="person-avatar">{getInitials(member.name)}</div>
+										{/if}
+										<div class="person-info">
+											<div class="person-name">{member.name}</div>
+											<div class="person-role">{member.title || 'Team Member'}</div>
+											<div class="person-links">
+												{#if member.linkedin}
+													<a href={member.linkedin} target="_blank" rel="noopener" class="person-link" onclick={(e) => e.stopPropagation()}>
+														<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+														LinkedIn
+													</a>
+												{/if}
+												<a href="/person?name={encodeURIComponent(member.name)}" class="person-link" onclick={(e) => e.stopPropagation()}>View Profile &rarr;</a>
+											</div>
+										</div>
+									</div>
+								{/each}
 							{/if}
 							<div class="person-card placeholder-card">
 								<div class="person-avatar placeholder-avatar">+</div>
