@@ -177,11 +177,17 @@
 		loading = true;
 
 		try {
+			const controller = new AbortController();
+			const timeout = setTimeout(() => controller.abort(), 15000);
+
 			const res = await fetch('/api/auth', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'magic-link', email: trimmed })
+				body: JSON.stringify({ action: 'magic-link', email: trimmed }),
+				signal: controller.signal
 			});
+			clearTimeout(timeout);
+
 			const data = await res.json();
 
 			if (data.bypass && data.token) {
@@ -192,11 +198,22 @@
 				return;
 			}
 
+			if (data.error) {
+				error = data.error;
+				loading = false;
+				return;
+			}
+
 			// Normal flow — show "check your email"
 			sent = true;
-		} catch {
-			// Still show success state — magic link may have sent
-			sent = true;
+		} catch (e) {
+			if (e.name === 'AbortError') {
+				// Timeout — still show success since email may have been sent
+				sent = true;
+			} else {
+				// Network error — show success state anyway (magic link may have sent)
+				sent = true;
+			}
 		}
 
 		loading = false;
