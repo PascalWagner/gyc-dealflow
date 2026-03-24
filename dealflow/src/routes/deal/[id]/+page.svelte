@@ -970,6 +970,111 @@
 		introSending = false;
 	}
 
+	// ===== Investment Report PDF =====
+	function generateReport() {
+		if (!isPaid) { window.location.href = '/app/academy'; return; }
+		if (!deal) { alert('Deal data not available.'); return; }
+		const d = deal;
+		const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+		const bb = buyBox || {};
+		const rpU = (stored.name || stored.firstName || 'Investor').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+		const rpD = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+		function rF(v, t) { if (v == null || v === '' || v === '---') return '\u2014'; if (t === 'pct') { const n = typeof v === 'number' ? v : parseFloat(v); if (isNaN(n)) return '\u2014'; return (n > 1 ? n : n * 100).toFixed(1) + '%'; } if (t === 'money') { const n = typeof v === 'string' ? parseFloat(v.replace(/[$,]/g, '')) : v; if (isNaN(n)) return '\u2014'; if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B'; if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M'; if (n >= 1e3) return '$' + Math.round(n).toLocaleString(); return '$' + n.toLocaleString(); } if (t === 'multiple') { const n = typeof v === 'number' ? v : parseFloat(v); if (isNaN(n)) return '\u2014'; return n.toFixed(2) + 'x'; } return String(v); }
+		const gL = { passive_income:'Cash Flow', reduce_taxes:'Tax Optimization', build_wealth:'Equity Growth', cashflow:'Cash Flow', tax:'Tax Optimization', growth:'Equity Growth' };
+		let h = '';
+		h += '<div class="rs"><h2>1. My Investment Criteria</h2><table class="rt"><tbody>';
+		h += '<tr><td class="l">Investment Goal</td><td>' + (gL[bb._branch]||gL[bb.goal]||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Asset Classes</td><td>' + ((bb.assetClasses||[]).join(', ')||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Strategies</td><td>' + ((bb.strategies||[]).join(', ')||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Check Size</td><td>' + (bb.checkSize?rF(bb.checkSize,'money'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Max Lockup</td><td>' + (bb.maxLockup?bb.maxLockup+' years':'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Distribution Pref</td><td>' + (bb.distributions||'\u2014') + '</td></tr>';
+		h += '</tbody></table></div>';
+		const rpSp = d.sponsors||[]; const rpOp = rpSp.find(s => s.role==='operator')||null;
+		const rpOpN = rpOp?(rpOp.name||rpOp.company||''):(d.managementCompany||d.sponsor||'\u2014');
+		h += '<div class="rs"><h2>2. Deal Overview</h2><table class="rt"><tbody>';
+		h += '<tr><td class="l">Deal Name</td><td>' + (d.investmentName||d.name||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Operator</td><td>' + rpOpN + '</td></tr>';
+		h += '<tr><td class="l">Asset Class</td><td>' + (d.assetClass||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Deal Type</td><td>' + (d.dealType||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Strategy</td><td>' + (d.strategy||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Target IRR</td><td>' + (d.targetIRR?rF(d.targetIRR,'pct'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Pref Return</td><td>' + (d.preferredReturn?rF(d.preferredReturn,'pct'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Cash-on-Cash</td><td>' + (d.cashOnCash?rF(d.cashOnCash,'pct'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Equity Multiple</td><td>' + (d.equityMultiple?rF(d.equityMultiple,'multiple'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Hold Period</td><td>' + (d.holdPeriod?d.holdPeriod+' Years':'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Offering Size</td><td>' + (d.offeringSize?rF(d.offeringSize,'money'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Min Investment</td><td>' + (d.investmentMinimum?rF(d.investmentMinimum,'money'):'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Distributions</td><td>' + (d.distributions||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Debt Position</td><td>' + (d.debtPosition||'\u2014') + '</td></tr>';
+		h += '<tr><td class="l">Offering Type</td><td>' + (d.offeringType||'\u2014') + '</td></tr>';
+		h += '</tbody></table></div>';
+		const bbCh = buyBoxChecks;
+		if (bbCh.length > 0) {
+			const mc = bbCh.filter(c=>c.match).length;
+			h += '<div class="rs"><h2>3. Buy Box Alignment <span class="mb">' + mc + '/' + bbCh.length + ' match</span></h2><table class="rt"><tbody>';
+			bbCh.forEach(c => { const ic = c.match?'<span class="cy">\u2713</span>':'<span class="cn">\u2717</span>'; h += '<tr><td style="width:24px;text-align:center;">'+ic+'</td><td class="l">'+c.label+'</td><td>'+(c.got||'\u2014')+(c.want?' (want: '+c.want+')':'')+'</td></tr>'; });
+			h += '</tbody></table></div>';
+		} else { h += '<div class="rs"><h2>3. Buy Box Alignment</h2><p class="mu">Set up your Buy Box to see alignment.</p></div>'; }
+		const rpFit = dealFit;
+		h += '<div class="rs"><h2>4. Deal Fit Analysis</h2>';
+		if (rpFit) {
+			h += '<p style="font-weight:700;color:'+rpFit.verdictColor+';margin-bottom:8px;">'+rpFit.verdict+' (score: '+(rpFit.score>=0?'+':'')+rpFit.score+')</p>';
+			if (rpFit.fits.length) { h += '<p style="font-weight:600;margin-bottom:4px;color:#16a34a;">Strengths</p><ul class="rl">'; rpFit.fits.forEach(f => { h += '<li>'+f+'</li>'; }); h += '</ul>'; }
+			if (rpFit.warnings.length) { h += '<p style="font-weight:600;margin:8px 0 4px;color:#dc2626;">Concerns</p><ul class="rl">'; rpFit.warnings.forEach(w => { h += '<li>'+w+'</li>'; }); h += '</ul>'; }
+		} else { h += '<p class="mu">Insufficient data to analyze deal fit.</p>'; }
+		h += '</div>';
+		h += '<div class="rs"><h2>5. Fee Structure</h2>';
+		if (d.fees) { h += '<p>' + String(d.fees).replace(/\n/g,'<br>') + '</p>'; } else { h += '<p class="mu">Fee data not available for this deal.</p>'; }
+		h += '</div>';
+		const rpCfR = cfRows();
+		h += '<div class="rs"><h2>6. Projected Cash Flow</h2>';
+		if (rpCfR.length > 0) {
+			const inv = cfInvestment;
+			h += '<p class="mu" style="margin-bottom:8px;">Based on '+rF(inv,'money')+' invested at '+rF(cfYieldRate(),'pct')+' '+(isCredit?'yield':'pref return')+' over '+cfHold()+' years</p>';
+			h += '<table class="rt cf"><thead><tr><th>Year</th><th>Distributions</th><th>Capital Return</th><th>Cumulative</th><th>Note</th></tr></thead><tbody>';
+			rpCfR.forEach(r => { h += '<tr><td>Year '+r.year+'</td><td>'+rF(r.dist,'money')+'</td><td>'+(r.capReturn>0?rF(r.capReturn,'money'):'\u2014')+'</td><td>'+rF(r.cumDist,'money')+'</td><td>'+(r.note||'')+'</td></tr>'; });
+			h += '</tbody></table><p style="margin-top:8px;font-size:13px;"><strong>Total Cash Returned:</strong> '+rF(cfTotalCash(),'money')+' &nbsp; <strong>Avg Cash-on-Cash:</strong> '+cfAvgCoC().toFixed(1)+'%</p>';
+		} else { h += '<p class="mu">Projected cash flow data not available.</p>'; }
+		h += '</div>';
+		h += '<div class="rs"><h2>7. Background Check Summary</h2>';
+		if (bgCheck) {
+			const bg = bgCheck;
+			const sLabel = bg.overallStatus==='clear'?'Clear':bg.overallStatus==='flagged'?'Flagged':'Pending';
+			const sCol = bg.overallStatus==='clear'?'#16a34a':bg.overallStatus==='flagged'?'#dc2626':'#f59e0b';
+			h += '<p style="margin-bottom:8px;"><strong>Overall Status:</strong> <span style="color:'+sCol+';font-weight:700;">'+sLabel+'</span></p>';
+			const bgI = [{label:'SEC Registration',val:bg.secRegistration},{label:'Legal / Litigation',val:bg.legalHistory},{label:'Regulatory',val:bg.regulatoryHistory},{label:'Bankruptcy',val:bg.bankruptcy}];
+			h += '<table class="rt"><tbody>';
+			bgI.forEach(c => { if (c.val != null) { const s = typeof c.val==='string'?c.val:(c.val?.status||'pending'); const col = s==='clear'?'#16a34a':s==='flagged'?'#dc2626':'#f59e0b'; h += '<tr><td class="l">'+c.label+'</td><td style="color:'+col+';font-weight:600;">'+s.charAt(0).toUpperCase()+s.slice(1)+'</td></tr>'; } });
+			h += '</tbody></table>';
+			if (bg.notes) h += '<p style="margin-top:8px;font-size:12px;color:#666;">'+bg.notes+'</p>';
+		} else { h += '<p class="mu">Background check data not available.</p>'; }
+		h += '</div>';
+		if (!isCredit && stResults()) {
+			const st = stResults();
+			h += '<div class="rs"><h2>8. Stress Test Scenario</h2>';
+			h += '<p class="mu" style="margin-bottom:8px;">Rent Growth: '+stRentGrowth+'% | Exit Cap: '+stExitCap+'% | Vacancy: '+stVacancy+'% | Interest: '+stInterest+'% | Hold: '+stHold+' yrs</p>';
+			h += '<table class="rt"><tbody>';
+			h += '<tr><td class="l">Projected IRR</td><td>'+(st.irr*100).toFixed(1)+'%</td></tr>';
+			h += '<tr><td class="l">Equity Multiple</td><td>'+st.em.toFixed(2)+'x</td></tr>';
+			h += '<tr><td class="l">Avg Annual Cash Flow</td><td>'+rF(st.annualCF,'money')+'</td></tr>';
+			h += '<tr><td class="l">Total Distributions</td><td>'+rF(st.totalDist,'money')+'</td></tr>';
+			h += '<tr><td class="l">Sale Proceeds</td><td>'+rF(st.saleProceeds,'money')+'</td></tr>';
+			h += '<tr><td class="l">Total Return</td><td>'+rF(st.totalReturn,'money')+'</td></tr>';
+			h += '</tbody></table></div>';
+		}
+		const css = '*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif; color: #1a1a1a; line-height: 1.5; padding: 40px; max-width: 800px; margin: 0 auto; } .rh { text-align: center; margin-bottom: 40px; padding-bottom: 24px; border-bottom: 2px solid #51be7b; } .rh h1 { font-family: "DM Serif Display", Georgia, serif; font-size: 28px; font-weight: 400; margin-bottom: 4px; } .rh .dn { font-size: 18px; color: #51be7b; font-weight: 600; margin-bottom: 8px; } .rh .mt { font-size: 12px; color: #888; } .rh .br { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; } .rs { margin-bottom: 28px; page-break-inside: avoid; } .rs h2 { font-family: -apple-system, "Segoe UI", sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1a1a1a; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e5e5e5; } .mb { font-size: 12px; font-weight: 700; color: #51be7b; text-transform: none; letter-spacing: 0; margin-left: 8px; } .rt { width: 100%; border-collapse: collapse; font-size: 13px; } .rt td, .rt th { padding: 6px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; } .rt .l { color: #666; font-weight: 500; width: 40%; } .rt th { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; color: #888; border-bottom: 2px solid #e5e5e5; } .cf td:not(:first-child), .cf th:not(:first-child) { text-align: right; } .cy { color: #51be7b; font-weight: 700; font-size: 16px; } .cn { color: #d04040; font-weight: 700; font-size: 16px; } .rl { padding-left: 20px; font-size: 13px; } .rl li { margin-bottom: 4px; } .mu { color: #888; font-size: 12px; } .rf { text-align: center; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e5e5; font-size: 11px; color: #aaa; } @media print { body { padding: 20px; } .no-print { display: none !important; } @page { margin: 0.75in; } }';
+		const full = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Investment Report \u2014 '+(d.investmentName||d.name||'Deal')+'</title><style>'+css+'</style></head><body>'
+			+ '<div class="rh"><div class="br">Grow Your Cashflow</div><h1>Investment Report</h1><div class="dn">'+(d.investmentName||d.name||'Deal')+'</div><div class="mt">Prepared for '+rpU+' &middot; '+rpD+'</div></div>'
+			+ h
+			+ '<div class="rf">Generated by GYC Dealflow &middot; growyourcashflow.io</div>'
+			+ '<div class="no-print" style="text-align:center;margin-top:24px;"><button onclick="window.print()" style="padding:12px 32px;background:#51be7b;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Save as PDF</button></div>'
+			+ '</body></html>';
+		const rw = window.open('', '_blank');
+		if (rw) { rw.document.write(full); rw.document.close(); setTimeout(() => { rw.print(); }, 500); }
+		else { alert('Please allow popups to generate your investment report.'); }
+	}
+
 	// ===== Lifecycle =====
 	onMount(() => {
 		if (!deal) return;
@@ -990,6 +1095,18 @@
 		// Load deck-viewed and intro-requested state
 		deckViewed = !!localStorage.getItem('gycDeckViewed_' + deal.id);
 		introRequested = !!localStorage.getItem('gycIntroRequested_' + deal.id);
+
+		// Auto-select first share class (sorted by highest min investment) on initial load
+		if (deal.shareClasses && deal.shareClasses.length > 0) {
+			let bestIdx = 0, bestMin = 0;
+			for (let i = 0; i < deal.shareClasses.length; i++) {
+				if ((deal.shareClasses[i].investmentMinimum || 0) > bestMin) {
+					bestMin = deal.shareClasses[i].investmentMinimum || 0;
+					bestIdx = i;
+				}
+			}
+			activeShareClass = bestIdx;
+		}
 
 		// Load buy box from localStorage (saved by buy box wizard)
 		try {
@@ -2127,6 +2244,10 @@
 				{:else if currentStage === 'invested'}
 					<a href="/app/deals#portfolio" class="btn-pass" style="text-decoration:none;">My Portfolio</a>
 					<span class="stage-label" style="color:var(--primary);font-weight:700;">Invested</span>
+					<button class="btn-advance" onclick={generateReport}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+						Generate Investment Report
+					</button>
 				{:else if currentStage === 'passed'}
 					<span class="stage-label">Stage: <strong>Passed</strong></span>
 					<button class="btn-advance" onclick={() => setStage('saved')}>
@@ -3400,4 +3521,211 @@
 	}
 	.modal-btn-claim:hover:not(:disabled) { background: #1d4ed8; }
 	.modal-btn-claim:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	/* ===== Share Class Toggle ===== */
+	.sc-toggle-bar {
+		display: inline-flex;
+		gap: 0;
+		background: var(--bg-main, var(--bg-cream));
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 3px;
+		margin-bottom: 12px;
+	}
+	.sc-toggle-pill {
+		padding: 6px 16px;
+		border: none;
+		background: transparent;
+		border-radius: 6px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.2s;
+		white-space: nowrap;
+	}
+	.sc-toggle-pill:hover { color: var(--text-dark); }
+	.sc-toggle-pill.active {
+		background: var(--primary);
+		color: #fff;
+		box-shadow: 0 1px 3px rgba(81,190,123,0.3);
+	}
+
+	/* ===== Deck Viewer Modal ===== */
+	.deck-viewer-overlay {
+		position: fixed;
+		top: 0; left: 0; right: 0; bottom: 0;
+		background: rgba(0,0,0,0.75);
+		z-index: 1000;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+	}
+	.deck-viewer-modal {
+		background: var(--bg-card, #fff);
+		border-radius: 12px;
+		width: 100%;
+		max-width: 1100px;
+		height: 85vh;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+		overflow: hidden;
+	}
+	.deck-viewer-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 14px 20px;
+		border-bottom: 1px solid var(--border);
+		flex-shrink: 0;
+	}
+	.deck-viewer-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.deck-viewer-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+	.deck-viewer-download {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 14px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--primary);
+		text-decoration: none;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		transition: background 0.15s;
+	}
+	.deck-viewer-download:hover { background: var(--bg-cream, #f8f8f6); }
+	.deck-viewer-close {
+		width: 32px;
+		height: 32px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: none;
+		border: none;
+		font-size: 24px;
+		color: var(--text-muted);
+		cursor: pointer;
+		border-radius: 6px;
+		transition: background 0.15s;
+	}
+	.deck-viewer-close:hover { background: var(--bg-cream, #f8f8f6); color: var(--text-dark); }
+	.deck-viewer-body {
+		flex: 1;
+		overflow: hidden;
+	}
+	.deck-viewer-iframe {
+		width: 100%;
+		height: 100%;
+		border: none;
+	}
+
+	/* ===== Doc item enhancements ===== */
+	.doc-item-row {
+		display: flex;
+		gap: 8px;
+	}
+	.doc-view-btn {
+		flex: 1;
+		cursor: pointer;
+		border: none;
+		background: rgba(81,190,123,0.08);
+		color: var(--primary);
+		font-weight: 700;
+	}
+	.doc-view-btn:hover { background: rgba(81,190,123,0.15); }
+	.doc-download-link {
+		flex: 1;
+	}
+	.doc-enrich-btn {
+		cursor: pointer;
+		border: 1px dashed rgba(59,130,246,0.3);
+		background: rgba(59,130,246,0.04);
+		color: #3b82f6;
+		font-weight: 600;
+	}
+	.doc-enrich-btn:hover { background: rgba(59,130,246,0.1); }
+
+	/* ===== Enrichment Wizard ===== */
+	.enrich-wizard { text-align: left; }
+	.enrich-header {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		margin-bottom: 16px;
+	}
+	.enrich-fields {
+		max-height: 360px;
+		overflow-y: auto;
+		border: 1px solid var(--border-light, #eee);
+		border-radius: 8px;
+	}
+	.enrich-field {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 14px;
+		border-bottom: 1px solid var(--border-light, #eee);
+	}
+	.enrich-field:last-child { border-bottom: none; }
+	.enrich-checkbox input {
+		width: 16px;
+		height: 16px;
+		accent-color: var(--primary);
+		cursor: pointer;
+	}
+	.enrich-field-label {
+		flex: 0 0 130px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-muted);
+		text-transform: uppercase;
+		letter-spacing: 0.3px;
+	}
+	.enrich-field-value {
+		flex: 1;
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-dark);
+	}
+	.enrich-actions {
+		display: flex;
+		gap: 10px;
+		margin-top: 16px;
+	}
+	.enrich-spinner {
+		width: 32px;
+		height: 32px;
+		border: 3px solid var(--border);
+		border-top-color: var(--primary);
+		border-radius: 50%;
+		animation: spin 0.8s linear infinite;
+		margin: 0 auto;
+	}
+	@keyframes spin { to { transform: rotate(360deg); } }
+
+	@media (max-width: 768px) {
+		.deck-viewer-overlay { padding: 8px; }
+		.deck-viewer-modal { height: 90vh; }
+		.deck-viewer-title { font-size: 12px; }
+		.doc-item-row { flex-direction: column; }
+		.enrich-field-label { flex: 0 0 100px; font-size: 10px; }
+	}
 </style>
