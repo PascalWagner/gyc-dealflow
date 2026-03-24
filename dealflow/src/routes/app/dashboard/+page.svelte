@@ -6,6 +6,8 @@
 	import { deals, dealStages, stageCounts, STAGE_META } from '$lib/stores/deals.js';
 	import GoalProgress from '$lib/components/GoalProgress.svelte';
 
+	const ALLOCATION_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+
 	// Local state
 	let portfolio = $state([]);
 	let wizardData = $state({});
@@ -235,6 +237,17 @@
 		});
 		return map;
 	});
+	const allocationEntries = $derived.by(() => Object.entries(allocationMap).sort(([, a], [, b]) => b - a));
+	const previewInvestments = $derived.by(() => portfolio.slice(0, 4));
+	const viewsLeftToday = $derived(Math.max(0, DAILY_LIMIT - dailyDealCount));
+	const daysActive = $derived.by(() => {
+		if (!browser) return 1;
+		const createdAt = $user?.createdAt || localStorage.getItem('gycFirstActivity');
+		if (!createdAt) return dealsReviewed > 0 ? Math.max(1, dealsReviewed) : 1;
+		const diff = Date.now() - new Date(createdAt).getTime();
+		return Math.max(1, Math.ceil(diff / 86400000));
+	});
+	const nextMilestone = $derived.by(() => milestones.find((milestone) => !milestone.done) || null);
 
 	// Action items
 	function assetKey(value) {
@@ -381,6 +394,40 @@
 		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 	}
 
+	function quickActionHref(action) {
+		return action.tab ? `${action.href}#${action.tab}` : action.href;
+	}
+
+	function activityStageLabel(stage) {
+		return STAGE_META[stage]?.label || 'Updated';
+	}
+
+	function allocationColor(index) {
+		return ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
+	}
+
+	function portfolioStatusColor(status) {
+		if (status === 'Active') return 'var(--primary)';
+		if (status === 'Distributing') return '#3b82f6';
+		if (status === 'Pending') return '#f59e0b';
+		return 'var(--text-muted)';
+	}
+
+	function milestoneAction(milestone) {
+		if (!milestone) return null;
+		if (milestone.key === 'save') return { label: 'Browse Deals', href: '/app/deals' };
+		if (milestone.key === 'deck') return { label: 'Review Deals', href: '/app/deals' };
+		if (milestone.key === 'dd') return { label: 'Connect Now', href: '/app/deals' };
+		if (milestone.key === 'invest') return { label: 'View Portfolio', href: '/app/portfolio' };
+		return { label: 'Explore Deals', href: '/app/deals' };
+	}
+
+	function milestoneStatusLabel(milestone) {
+		if (!milestone) return '';
+		if (milestone.done) return 'Done';
+		return 'Next';
+	}
+
 	function fmtDollar(n) {
 		if (!n || isNaN(n)) return '$0';
 		if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
@@ -406,7 +453,7 @@
 </script>
 
 <div class="topbar">
-	<button class="mobile-menu-btn" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
+	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
 	<div class="topbar-title">Dashboard</div>
@@ -508,33 +555,197 @@
 			</div>
 		{/if}
 
-		<!-- Action Items -->
-		{#if actionItems.length > 0}
-			<div class="action-card">
-				<div class="action-header">Action Items</div>
-				{#each actionItems as item}
-					<a href="/app/{item.page}" class="action-row">
-						<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
-							{#if item.icon === 'plan'}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-							{:else if item.icon === 'card'}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-							{:else if item.icon === 'bookmark'}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-							{:else if item.icon === 'connect'}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
-							{:else if item.icon === 'tax'}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-							{:else}
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-							{/if}
-						</div>
-						<div class="action-text">{@html item.text}</div>
-						<span class="action-link">{item.link} →</span>
-					</a>
-				{/each}
+		{#if coachMsg.msg}
+			<div class="coaching-card">
+				<div class="coaching-copy">
+					{#if firstName}
+						<div class="coaching-eyebrow">{firstName}'s next step</div>
+					{/if}
+					<div class="coaching-text">{coachMsg.msg}</div>
+				</div>
+				{#if coachMsg.cta}
+					<button class="coaching-btn" onclick={coachMsg.page ? () => goto(`/app/${coachMsg.page}`) : openWizard}>
+						{coachMsg.cta} →
+					</button>
+				{/if}
 			</div>
 		{/if}
+
+		<div class="momentum-grid">
+			<div class="momentum-card">
+				<div class="momentum-label">Deals Reviewed</div>
+				<div class="momentum-value">{dealsReviewed}</div>
+			</div>
+			<div class="momentum-card">
+				<div class="momentum-label">In Pipeline</div>
+				<div class="momentum-value">{inPipeline}</div>
+			</div>
+			<div class="momentum-card">
+				<div class="momentum-label">Decisions Made</div>
+				<div class="momentum-value">{decisionsMade}</div>
+			</div>
+			<div class="momentum-card" class:highlight={isFreeUser}>
+				<div class="momentum-label">{isFreeUser ? 'Views Left Today' : 'Days Active'}</div>
+				<div class="momentum-value">{isFreeUser ? viewsLeftToday : daysActive}</div>
+				<div class="momentum-sub">
+					{#if isFreeUser}
+						{viewsLeftToday}/{DAILY_LIMIT} remaining
+					{:else}
+						in your pipeline
+					{/if}
+				</div>
+			</div>
+		</div>
+
+		{#if nextMilestone}
+			{@const nextMilestoneAction = milestoneAction(nextMilestone)}
+			<div class="dashboard-milestone-card">
+				<div class="dashboard-milestone-icon">
+					{#if nextMilestone.icon === 'bookmark'}
+						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+					{:else if nextMilestone.icon === 'doc'}
+						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+					{:else if nextMilestone.icon === 'check'}
+						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+					{:else}
+						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><path d="M12 1v22"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"></path></svg>
+					{/if}
+				</div>
+				<div class="dashboard-milestone-info">
+					<div class="dashboard-milestone-title">{nextMilestone.label}</div>
+					<div class="dashboard-milestone-desc">{nextMilestone.desc} · {milestoneProgress}% complete</div>
+				</div>
+				<a href={nextMilestoneAction.href} class="dashboard-milestone-action">{nextMilestoneAction.label} →</a>
+			</div>
+		{/if}
+
+		<div class="dashboard-columns">
+			{#if actionItems.length > 0 || recentActivity.length > 0}
+				<div class="dashboard-main-column">
+					{#if actionItems.length > 0}
+						<div class="action-card">
+							<div class="action-header">Action Items</div>
+							{#each actionItems as item}
+								<a href="/app/{item.page}" class="action-row">
+									<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
+										{#if item.icon === 'plan'}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+										{:else if item.icon === 'card'}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+										{:else if item.icon === 'bookmark'}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+										{:else if item.icon === 'connect'}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
+										{:else if item.icon === 'tax'}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+										{:else}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+										{/if}
+									</div>
+									<div class="action-text">{@html item.text}</div>
+									<span class="action-link">{item.link} →</span>
+								</a>
+							{/each}
+						</div>
+					{/if}
+
+					{#if recentActivity.length > 0}
+						<div class="dashboard-panel">
+							<div class="dashboard-panel-header">
+								<div class="dashboard-panel-title">Recent Activity</div>
+								<div class="dashboard-panel-meta">{recentActivity.length} updates</div>
+							</div>
+							<div class="activity-list">
+								{#each recentActivity as item}
+									<a href="/deal/{item.dealId}" class="activity-row">
+										<div class="activity-copy">
+											<div class="activity-title">{item.dealName}</div>
+											<div class="activity-desc">{item.verb}</div>
+										</div>
+										<div class="activity-meta">
+											<span class="activity-stage">{activityStageLabel(item.stage)}</span>
+											{#if item.timestamp}
+												<span class="activity-time">{formatTimeAgo(item.timestamp)}</span>
+											{/if}
+										</div>
+									</a>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<div class="dashboard-side-column">
+				<div class="dashboard-panel">
+					<div class="dashboard-panel-header">
+						<div class="dashboard-panel-title">Quick Actions</div>
+					</div>
+					<div class="quick-actions-grid">
+						{#each quickActions as action}
+							<a href={quickActionHref(action)} class="quick-action-card">
+								<div class="quick-action-icon">
+									{#if action.icon === 'search'}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+									{:else if action.icon === 'clipboard'}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect></svg>
+									{:else}
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path></svg>
+									{/if}
+								</div>
+								<div class="quick-action-label">{action.label}</div>
+							</a>
+						{/each}
+						{#if hasPlan}
+							<a href="/app/plan" class="quick-action-card">
+								<div class="quick-action-icon">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+								</div>
+								<div class="quick-action-label">View Plan</div>
+							</a>
+						{/if}
+					</div>
+				</div>
+
+				<div class="dashboard-panel portfolio-preview-card">
+					<div class="dashboard-panel-header">
+						<div class="dashboard-panel-title">Your Portfolio</div>
+						<a href="/app/portfolio" class="dashboard-panel-link">View Full Portfolio →</a>
+					</div>
+					{#if previewInvestments.length > 0}
+						<div class="portfolio-preview-layout">
+							<div class="portfolio-allocation-list">
+								{#each allocationEntries.slice(0, 4) as [assetClass, amount], index}
+									<div class="portfolio-allocation-row">
+										<span class="portfolio-allocation-dot" style="background:{allocationColor(index)}"></span>
+										<span class="portfolio-allocation-label">{assetClass}</span>
+										<span class="portfolio-allocation-value">{Math.round((amount / totalInvested) * 100)}%</span>
+									</div>
+								{/each}
+							</div>
+							<div class="portfolio-preview-table">
+								{#each previewInvestments as investment}
+									<div class="portfolio-preview-row">
+										<div class="portfolio-preview-copy">
+											<div class="portfolio-preview-name">{investment.investmentName || 'Investment'}</div>
+											<div class="portfolio-preview-sub">{investment.sponsor || 'Unknown sponsor'}{investment.assetClass ? ` · ${investment.assetClass}` : ''}</div>
+										</div>
+										<div class="portfolio-preview-amount">{fmtDollar(parseFloat(investment.amountInvested) || 0)}</div>
+										<span class="portfolio-preview-status" style={`--status-color:${portfolioStatusColor(investment.status)}`}>{investment.status || 'Active'}</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{:else}
+						<div class="portfolio-preview-empty">
+							<div class="portfolio-preview-empty-title">No investments yet</div>
+							<div class="portfolio-preview-empty-desc">Add investments to track your portfolio here.</div>
+							<a href="/app/portfolio" class="btn-primary portfolio-preview-empty-btn">+ Add Investment</a>
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
@@ -872,13 +1083,198 @@
 		text-decoration: none;
 	}
 
+	.coaching-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--primary);
+		border-radius: var(--radius);
+		padding: 20px 24px;
+		margin-bottom: 20px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		flex-wrap: wrap;
+		box-shadow: var(--shadow-card);
+	}
+	.coaching-copy {
+		flex: 1;
+		min-width: 220px;
+	}
+	.coaching-eyebrow {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 6px;
+	}
+	.coaching-text {
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.5;
+		color: var(--text-dark);
+	}
+	.coaching-btn {
+		flex-shrink: 0;
+		padding: 10px 22px;
+		background: var(--primary);
+		color: #fff;
+		border: none;
+		border-radius: var(--radius-sm);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.momentum-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 12px;
+		margin-bottom: 20px;
+	}
+	.momentum-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 12px 14px;
+		text-align: center;
+		box-shadow: var(--shadow-card);
+	}
+	.momentum-card.highlight .momentum-value {
+		color: var(--primary);
+	}
+	.momentum-label {
+		font-family: var(--font-ui);
+		font-size: 9px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 3px;
+	}
+	.momentum-value {
+		font-family: var(--font-headline);
+		font-size: 18px;
+		color: var(--text-secondary);
+	}
+	.momentum-sub {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		color: var(--text-muted);
+		margin-top: 3px;
+	}
+
+	.dashboard-milestone-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 16px 20px;
+		margin-bottom: 24px;
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		box-shadow: var(--shadow-card);
+	}
+	.dashboard-milestone-icon {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background: var(--green-bg);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+	.dashboard-milestone-icon svg {
+		width: 18px;
+		height: 18px;
+	}
+	.dashboard-milestone-info {
+		flex: 1;
+		min-width: 0;
+	}
+	.dashboard-milestone-title {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 2px;
+	}
+	.dashboard-milestone-desc {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.dashboard-milestone-action {
+		padding: 6px 14px;
+		background: var(--primary);
+		color: #fff;
+		border-radius: var(--radius-sm);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.dashboard-columns {
+		display: grid;
+		grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+		gap: 20px;
+		align-items: start;
+	}
+	.dashboard-main-column,
+	.dashboard-side-column {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.dashboard-panel {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-card);
+		overflow: hidden;
+	}
+	.dashboard-panel-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px 18px 0;
+		margin-bottom: 12px;
+	}
+	.dashboard-panel-title {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+	}
+	.dashboard-panel-meta {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.dashboard-panel-link {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--primary);
+		text-decoration: none;
+	}
+
 	/* ── Action Items ── */
 	.action-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		overflow: hidden;
-		margin-bottom: 20px;
 		box-shadow: var(--shadow-card);
 	}
 	.action-header {
@@ -927,6 +1323,218 @@
 	}
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 
+	.quick-actions-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px;
+		padding: 0 18px 18px;
+	}
+	.quick-action-card {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 14px 16px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-page);
+		color: var(--text-dark);
+		text-decoration: none;
+		transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+	}
+	.quick-action-card:hover {
+		border-color: var(--primary);
+		transform: translateY(-1px);
+		box-shadow: 0 6px 18px rgba(10, 30, 33, 0.06);
+	}
+	.quick-action-icon {
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		background: var(--green-bg);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--primary);
+		flex-shrink: 0;
+	}
+	.quick-action-icon svg {
+		width: 16px;
+		height: 16px;
+	}
+	.quick-action-label {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+		line-height: 1.35;
+	}
+
+	.activity-list {
+		padding-bottom: 2px;
+	}
+	.activity-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		padding: 14px 18px;
+		border-top: 1px solid var(--border-light);
+		text-decoration: none;
+		transition: background 0.15s;
+	}
+	.activity-row:hover {
+		background: var(--bg-cream);
+	}
+	.activity-copy {
+		min-width: 0;
+		flex: 1;
+	}
+	.activity-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.activity-desc {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-secondary);
+		margin-top: 2px;
+	}
+	.activity-meta {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 4px;
+		flex-shrink: 0;
+	}
+	.activity-stage {
+		padding: 3px 8px;
+		border-radius: 10px;
+		background: rgba(81, 190, 123, 0.08);
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+	.activity-time {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		color: var(--text-muted);
+	}
+
+	.portfolio-preview-card {
+		overflow: visible;
+	}
+	.portfolio-preview-layout {
+		display: grid;
+		grid-template-columns: 220px minmax(0, 1fr);
+		gap: 20px;
+		padding: 0 18px 18px;
+	}
+	.portfolio-allocation-list {
+		background: var(--bg-page);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 14px 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.portfolio-allocation-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+	}
+	.portfolio-allocation-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 3px;
+		flex-shrink: 0;
+	}
+	.portfolio-allocation-label {
+		flex: 1;
+		color: var(--text-secondary);
+	}
+	.portfolio-allocation-value {
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.portfolio-preview-table {
+		display: flex;
+		flex-direction: column;
+	}
+	.portfolio-preview-row {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		gap: 12px;
+		align-items: center;
+		padding: 12px 0;
+		border-bottom: 1px solid var(--border-light);
+	}
+	.portfolio-preview-row:last-child {
+		border-bottom: none;
+	}
+	.portfolio-preview-copy {
+		min-width: 0;
+	}
+	.portfolio-preview-name {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.portfolio-preview-sub {
+		font-family: var(--font-body);
+		font-size: 11px;
+		color: var(--text-muted);
+		margin-top: 2px;
+	}
+	.portfolio-preview-amount {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.portfolio-preview-status {
+		--status-color: var(--primary);
+		padding: 4px 10px;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--status-color) 10%, transparent);
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--status-color);
+		white-space: nowrap;
+	}
+	.portfolio-preview-empty {
+		padding: 0 18px 18px;
+	}
+	.portfolio-preview-empty-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 4px;
+	}
+	.portfolio-preview-empty-desc {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-bottom: 14px;
+	}
+	.portfolio-preview-empty-btn {
+		font-size: 12px;
+	}
+
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
 		.topbar { padding: 0 16px; padding-top: env(safe-area-inset-top, 0px); }
@@ -952,6 +1560,35 @@
 			justify-content: center;
 		}
 		.content-area { padding: 12px !important; }
+		.coaching-card {
+			padding: 18px 16px;
+		}
+		.momentum-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.dashboard-milestone-card {
+			padding: 16px;
+			flex-wrap: wrap;
+		}
+		.dashboard-columns {
+			grid-template-columns: 1fr;
+		}
+		.quick-actions-grid {
+			grid-template-columns: 1fr;
+		}
+		.portfolio-preview-layout {
+			grid-template-columns: 1fr;
+		}
+		.portfolio-preview-row {
+			grid-template-columns: 1fr;
+			gap: 6px;
+		}
+		.activity-row {
+			align-items: flex-start;
+		}
+		.activity-meta {
+			align-items: flex-start;
+		}
 		.dash-hero { padding: 24px; }
 		.plan-cta-card,
 		.blueprint-card { padding: 18px 16px; }

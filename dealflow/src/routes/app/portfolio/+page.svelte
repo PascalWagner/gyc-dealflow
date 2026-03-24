@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { user, isAdmin, userTier } from '$lib/stores/auth.js';
+	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
 
 
 	let portfolio = $state([]);
@@ -129,6 +130,16 @@
 	const PIE_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
 	const sorted = $derived(portfolio);
+	const investedUnloggedDeals = $derived.by(() => {
+		const investedIds = Object.entries($dealStages || {})
+			.filter(([, stage]) => stage === 'invested')
+			.map(([id]) => id);
+		return investedIds
+			.map((id) => ($deals || []).find((deal) => deal.id === id))
+			.filter(Boolean)
+			.filter((deal) => !portfolio.some((investment) => investment.dealId === deal.id));
+	});
+	const taxReceivedCount = $derived(taxDocuments.filter(doc => doc.uploadStatus === 'Received').length);
 
 	const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
 
@@ -248,6 +259,7 @@
 
 	onMount(async () => {
 		if (!browser) return;
+		fetchDeals();
 		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
 		taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
 		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
@@ -255,7 +267,7 @@
 </script>
 
 <div class="topbar">
-	<button class="mobile-menu-btn" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
+	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
 	<div class="topbar-title">Dashboard</div>
@@ -440,6 +452,30 @@
 			{/each}
 		</div>
 
+		{#if investedUnloggedDeals.length > 0}
+			<div class="pending-section-label">Needs Investment Details</div>
+			<div class="inv-list pending-list">
+				{#each investedUnloggedDeals as deal}
+					<div class="inv-card pending-card">
+						<div class="inv-card-stripe pending-stripe"></div>
+						<div class="inv-card-body">
+							<div class="inv-card-top">
+								<div class="inv-card-info">
+									<div class="inv-card-name">{deal.investmentName || deal.investment_name || deal.name || 'Unknown Deal'}</div>
+									<div class="inv-card-sub">{deal.managementCompany || deal.sponsor || deal.management_company || ''}{deal.assetClass ? ` · ${deal.assetClass}` : ''}</div>
+								</div>
+								<div class="inv-card-actions">
+									<span class="inv-status pending-status">Pending</span>
+									<button class="btn-pending-add" onclick={() => selectDealForPortfolio(deal)}>Add Details</button>
+								</div>
+							</div>
+							<div class="pending-card-desc">This deal is already marked as invested in your pipeline, but it has not been logged in your tracked portfolio yet.</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+
 		<!-- Tax Documents Collapsible -->
 		{#if portfolio.length > 0 || taxDocuments.length > 0}
 			<div class="tax-section">
@@ -447,6 +483,9 @@
 					<div class="tax-header-left">
 						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 						<span class="tax-title">Tax Documents</span>
+						{#if taxDocuments.length > 0}
+							<span class="tax-subtitle">{taxReceivedCount} of {taxDocuments.length} received</span>
+						{/if}
 					</div>
 					<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:16px;height:16px;transition:transform 0.2s;transform:{taxSectionOpen ? 'rotate(180deg)' : 'none'}"><polyline points="6 9 12 15 18 9"/></svg>
 				</button>
@@ -630,7 +669,7 @@
 	}
 
 	/* ── Content Area ── */
-	.content-area { padding: 24px; max-width: 1200px; }
+	.content-area { padding: 24px 24px 48px; max-width: 1200px; }
 
 	/* ── Summary Stat Cards ── */
 	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -783,6 +822,15 @@
 	/* ── Investment List Header ── */
 	.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 	.inv-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
+	.pending-section-label {
+		margin: 20px 0 8px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+	}
 
 	/* ── Investment Cards ── */
 	.inv-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
@@ -804,6 +852,11 @@
 	.inv-card-sub { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
 	.inv-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 12px; }
 	.inv-status { padding: 4px 12px; border-radius: 100px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--sc) 8%, transparent); color: var(--sc); }
+	.pending-status {
+		--sc: #f59e0b;
+		background: rgba(245, 158, 11, 0.08);
+		color: #f59e0b;
+	}
 	.btn-edit {
 		background: transparent;
 		border: 1px solid var(--border);
@@ -825,6 +878,26 @@
 	.m-label { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 	.m-value { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); font-variant-numeric: tabular-nums; }
 	.m-value.green { color: var(--primary); }
+	.pending-stripe { background: #f59e0b; }
+	.pending-card-desc {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-secondary);
+		line-height: 1.5;
+	}
+	.btn-pending-add {
+		padding: 6px 14px;
+		background: var(--primary);
+		color: #fff;
+		border: none;
+		border-radius: var(--radius-sm);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.btn-pending-add:hover { background: var(--primary-hover); }
 
 	/* ── Empty State ── */
 	.empty-charts {
@@ -988,6 +1061,11 @@
 	.tax-header:hover { background: var(--bg-cream); }
 	.tax-header-left { display: flex; align-items: center; gap: 10px; }
 	.tax-title { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+	.tax-subtitle {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
+	}
 	.tax-content {
 		border: 1px solid var(--border);
 		border-top: none;

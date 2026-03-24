@@ -2871,13 +2871,13 @@
 	}
 
 	/* ===== Sticky Action Bar ===== */
-	.sticky-action-bar { position: fixed; bottom: 0; left: 240px; right: 0; background: var(--bg-card); border-top: 1px solid var(--border); padding: 12px 32px; display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); }
-	.btn-pass { padding: 10px 20px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+	.sticky-action-bar { position: fixed; bottom: 0; left: var(--sidebar-width, 240px); right: 0; background: var(--bg-card); border-top: 1px solid var(--border); padding: 12px 32px; display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); }
+	.btn-pass { padding: 10px 20px; border: 1px solid var(--border); background: var(--bg-card); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; }
 	.btn-pass:hover { border-color: #ef4444; color: #ef4444; }
-	.btn-advance { padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+	.btn-advance { padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
 	.btn-advance:hover { background: #3da86a; transform: translateY(-1px); }
 	.btn-stage-select { padding: 10px 20px; background: var(--bg-page); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; gap: 6px; }
-	.btn-compare { padding: 10px 16px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; margin-left: auto; transition: all 0.15s; }
+	.btn-compare { padding: 10px 16px; border: 1px solid var(--border); background: var(--bg-card); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; margin-left: auto; transition: all 0.15s; }
 	.btn-compare:hover { border-color: var(--primary); color: var(--primary); }
 	.floating-compare-badge { position: fixed; bottom: 80px; right: 24px; background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.15s; }
 	.floating-compare-badge:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
