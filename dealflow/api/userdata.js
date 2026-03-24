@@ -353,11 +353,11 @@ async function handlePost(req, res, supabase, user) {
     if (error) throw error;
 
     // Sync phone + name to GHL contact
+    // NOTE: GHL v1 PUT /contacts/:id returns 400 — needs v2 API key or Make.com integration
+    // Keeping the code in place for when v2 key is available
     if (fields.phone || fields.full_name) {
-      console.log('GHL profile sync: starting for', user.email, 'fields:', Object.keys(fields).join(','));
       try {
         await syncProfileToGhl(user.email, fields);
-        console.log('GHL profile sync: completed');
       } catch (e) {
         console.warn('GHL profile sync failed:', e.message);
       }
