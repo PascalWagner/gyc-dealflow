@@ -112,46 +112,57 @@ export default async function handler(req, res) {
       return res.status(200).json({ deal });
     }
 
-    // Single query: deals + operator info via foreign key join
-    const { data: allDeals, error: dealsError } = await supabase
-      .from('opportunities')
-      .select(`
-        *,
-        management_company:management_companies (
-          id,
-          operator_name,
-          ceo,
-          website,
-          linkedin_ceo,
-          invest_clearly_profile,
-          founding_year,
-          type,
-          asset_classes,
-          total_investors,
-          authorized_emails,
-          booking_url,
-          ir_contact_name,
-          ir_contact_email,
-          full_cycle_deals
-        )
-      `)
-      .not('investment_name', 'eq', '')
-      .order('added_date', { ascending: false });
+    // Run deals + sponsors queries in parallel (was sequential — ~2x faster)
+    const [dealsResult, sponsorsResult] = await Promise.all([
+      // Deals: select only columns the frontend actually uses (not SELECT *)
+      supabase
+        .from('opportunities')
+        .select(`
+          id, deal_number, investment_name, asset_class, deal_type,
+          target_irr, equity_multiple, preferred_return, investment_minimum,
+          lp_gp_split, hold_period_years, added_date, status, offering_type,
+          offering_size, purchase_price, investing_geography, investment_strategy,
+          distributions, financials, available_to, sponsor_in_deal_pct, fees,
+          first_yr_depreciation, strategy, instrument, cash_on_cash, debt_position,
+          fund_aum, loan_count, avg_loan_ltv, location, property_address,
+          deck_url, ppm_url, sub_agreement_url, parent_deal_id, share_class_label,
+          vertical_integration, case_study, is_506b, issuer_entity, gp_entity,
+          sponsor_entity, unit_count, year_built, square_footage, occupancy_pct,
+          property_type, sec_cik, sec_entity_name, date_of_first_sale,
+          total_amount_sold, total_investors, updated_at,
+          acquisition_loan, loan_to_value, loan_rate, loan_term_years,
+          loan_io_years, capex_budget, closing_costs,
+          acquisition_fee_pct, asset_mgmt_fee_pct, property_mgmt_fee_pct,
+          capital_event_fee_pct, disposition_fee_pct, construction_mgmt_fee_pct,
+          waterfall_details,
+          management_company:management_companies (
+            id, operator_name, ceo, website, linkedin_ceo,
+            invest_clearly_profile, founding_year, type, asset_classes,
+            total_investors, authorized_emails, booking_url,
+            ir_contact_name, ir_contact_email, full_cycle_deals
+          )
+        `)
+        .not('investment_name', 'eq', '')
+        .order('added_date', { ascending: false }),
 
+      // Sponsors: fetch in parallel instead of after deals
+      supabase
+        .from('deal_sponsors')
+        .select(`
+          deal_id, role, is_primary, display_order,
+          company:management_companies (
+            id, operator_name, ceo, website, linkedin_ceo,
+            invest_clearly_profile, founding_year, type,
+            asset_classes, total_investors, booking_url
+          )
+        `)
+        .order('display_order', { ascending: true })
+    ]);
+
+    const { data: allDeals, error: dealsError } = dealsResult;
     if (dealsError) throw dealsError;
 
-    // Fetch deal sponsors (multi-sponsor support)
-    const { data: sponsorRows } = await supabase
-      .from('deal_sponsors')
-      .select(`
-        deal_id, role, is_primary, display_order,
-        company:management_companies (
-          id, operator_name, ceo, website, linkedin_ceo,
-          invest_clearly_profile, founding_year, type,
-          asset_classes, total_investors, booking_url
-        )
-      `)
-      .order('display_order', { ascending: true });
+    const { data: sponsorRows } = sponsorsResult;
 
     // Build lookup: deal_id → sponsors[]
     const sponsorsByDeal = {};
@@ -349,27 +360,23 @@ export default async function handler(req, res) {
         };
       });
 
-    // Management companies as separate array (for filters/search)
-    const { data: mcData, error: mcError } = await supabase
-      .from('management_companies')
-      .select('*');
-
-    if (mcError) throw mcError;
-
-    const managementCompanies = (mcData || []).map(mc => ({
-      id: mc.id,
-      name: mc.operator_name,
-      ceo: mc.ceo,
-      website: mc.website,
-      linkedin: mc.linkedin_ceo,
-      foundingYear: mc.founding_year,
-      assetClasses: mc.asset_classes || [],
-      type: mc.type,
-      investClearlyProfile: mc.invest_clearly_profile,
-      totalInvestors: mc.total_investors,
-      fullCycleDeals: mc.full_cycle_deals || 0,
-      authorizedEmails: mc.authorized_emails || []
-    }));
+    // Build management companies from the already-joined deal data (no extra query needed)
+    const mcMap = {};
+    for (const d of allDeals) {
+      const mc = d.management_company;
+      if (mc && mc.id && !mcMap[mc.id]) {
+        mcMap[mc.id] = {
+          id: mc.id, name: mc.operator_name, ceo: mc.ceo, website: mc.website,
+          linkedin: mc.linkedin_ceo, foundingYear: mc.founding_year,
+          assetClasses: mc.asset_classes || [], type: mc.type,
+          investClearlyProfile: mc.invest_clearly_profile,
+          totalInvestors: mc.total_investors,
+          fullCycleDeals: mc.full_cycle_deals || 0,
+          authorizedEmails: mc.authorized_emails || []
+        };
+      }
+    }
+    const managementCompanies = Object.values(mcMap);
 
     return res.status(200).json({
       deals,
@@ -377,7 +384,7 @@ export default async function handler(req, res) {
       people: [],  // People table can be dropped or migrated later if needed
       meta: {
         totalOpportunities: allDeals.length,
-        totalCompanies: mcData.length,
+        totalCompanies: managementCompanies.length,
         totalPeople: 0,
         fetchedAt: new Date().toISOString()
       }

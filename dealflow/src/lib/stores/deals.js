@@ -125,12 +125,12 @@ export async function fetchDeals() {
 	dealsLoading.set(true);
 	dealsError.set(null);
 	try {
-		const countsPromise = fetchNetworkCounts();
+		// Fire network counts in background — don't block deals loading on it
+		fetchNetworkCounts().catch(() => {});
 		const res = await fetch('/api/deals');
 		if (!res.ok) throw new Error('Failed to load deals');
 		const data = await res.json();
 		deals.set(data.deals || data || []);
-		await countsPromise;
 	} catch (err) {
 		dealsError.set(err.message);
 	} finally {

@@ -3,10 +3,21 @@
 	import { page, navigating } from '$app/stores';
 	import { user, isLoggedIn, isGuest } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
+
+	// Trigger page-in animation after each client-side navigation
+	let pageTransitionEl = $state(null);
+	afterNavigate(() => {
+		if (pageTransitionEl) {
+			pageTransitionEl.style.animation = 'none';
+			// Force reflow to restart animation
+			pageTransitionEl.offsetHeight;
+			pageTransitionEl.style.animation = '';
+		}
+	});
 
 	// Navigation progress bar state
 	let navProgress = $state(0);
@@ -72,11 +83,9 @@
 	<div class="app-layout">
 		<Sidebar currentPage={currentPage} />
 		<main class="app-main">
-			{#key $page.url.pathname}
-				<div class="page-transition">
-					{@render children()}
-				</div>
-			{/key}
+			<div class="page-transition" bind:this={pageTransitionEl}>
+				{@render children()}
+			</div>
 		</main>
 		<!-- Mobile bottom tab bar -->
 		<nav class="mobile-tabs">
