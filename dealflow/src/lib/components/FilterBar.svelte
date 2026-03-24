@@ -205,7 +205,7 @@
 		padding: 16px 0;
 		flex-wrap: wrap;
 		border-bottom: 1px solid var(--border-light);
-		background: transparent;
+		background: var(--bg-cream);
 	}
 
 	.buybox-toggle {
@@ -232,23 +232,27 @@
 	}
 
 	.filters-toggle {
-		padding: 8px 14px;
-		background: var(--bg-card);
+		padding: 6px 14px;
+		background: transparent;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		font-family: var(--font-ui);
-		font-weight: 500;
-		font-size: 12px;
+		font-weight: 700;
+		font-size: 11px;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
 		gap: 6px;
 		white-space: nowrap;
-		color: var(--text-dark);
+		color: var(--text-secondary);
 		transition: all 0.15s;
 	}
+	.filters-toggle:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
 	.filters-toggle.active {
-		background: var(--bg-card);
+		background: rgba(81, 190, 123, 0.08);
 		border-color: var(--primary);
 		color: var(--primary);
 	}
@@ -266,7 +270,7 @@
 	.search-wrap {
 		position: relative;
 		flex: 1 1 320px;
-		min-width: 240px;
+		min-width: 160px;
 		max-width: none;
 	}
 
@@ -322,10 +326,11 @@
 	}
 
 	.filter-panel {
-		background: transparent;
-		border: none;
-		padding: 10px 0 0;
-		margin: 0;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-top: none;
+		padding: 14px 24px;
+		margin: -1px 0 0;
 	}
 
 	.filter-panel-grid {

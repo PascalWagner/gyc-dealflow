@@ -376,7 +376,7 @@
 
 	.stage-banner {
 		padding: 14px 20px;
-		margin: 24px 0 16px;
+		margin: 16px 0;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
@@ -405,7 +405,7 @@
 	}
 
 	.daily-views {
-		margin-bottom: 20px;
+		margin-bottom: 16px;
 		padding: 10px 16px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);

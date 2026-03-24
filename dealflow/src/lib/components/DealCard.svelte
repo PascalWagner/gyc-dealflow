@@ -172,12 +172,10 @@
 
 	<a href="/deal/{deal.id}" class="card-body">
 		<div class="card-title">{deal.investmentName}</div>
-		<div class="card-manager">
-			{deal.managementCompany || ''}
-			{#if deal.location}
-				&middot; {deal.location}
-			{/if}
-		</div>
+		<div class="card-manager">{deal.managementCompany || ''}</div>
+		{#if deal.location}
+			<div class="card-location">{deal.location}</div>
+		{/if}
 		{#if strategySummary}
 			<div class="card-summary">{strategySummary}</div>
 		{/if}
@@ -437,11 +435,24 @@
 		font-size: 12px;
 		color: var(--text-muted);
 		font-weight: 500;
-		margin-bottom: 4px;
+		margin-bottom: 2px;
 		padding: 0 16px;
-		white-space: nowrap;
+		display: -webkit-box;
+		-webkit-line-clamp: 1;
+		-webkit-box-orient: vertical;
 		overflow: hidden;
-		text-overflow: ellipsis;
+	}
+
+	.card-location {
+		font-family: var(--font-body);
+		font-size: 11px;
+		color: var(--text-muted);
+		padding: 0 16px;
+		margin-bottom: 4px;
+		display: -webkit-box;
+		-webkit-line-clamp: 1;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 
 	.card-summary {

@@ -186,11 +186,30 @@
 		viewAsSearch = query;
 		if (!query || query.length < 2) { viewAsResults = []; return; }
 		try {
-			const stored = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || localStorage.getItem('gycUser') || '{}');
-			const res = await fetch(`/api/admin/users?q=${encodeURIComponent(query)}`, {
-				headers: { 'Authorization': 'Bearer ' + (stored.token || '') }
-			});
-			if (res.ok) { const data = await res.json(); viewAsResults = (data.users || data || []).slice(0, 8); }
+			const realUser = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || 'null');
+			const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const adminEmail = (realUser?.email || currentUser?.email || '').trim();
+			if (!adminEmail) {
+				viewAsResults = [];
+				return;
+			}
+
+			const res = await fetch(`/api/users?q=${encodeURIComponent(query)}&admin=${encodeURIComponent(adminEmail)}`);
+			if (res.ok) {
+				const data = await res.json();
+				const contacts = Array.isArray(data?.contacts)
+					? data.contacts
+					: Array.isArray(data?.users)
+						? data.users
+						: Array.isArray(data)
+							? data
+							: [];
+				viewAsResults = contacts
+					.filter((contact) => contact?.email && contact.email.toLowerCase() !== adminEmail.toLowerCase())
+					.slice(0, 8);
+			} else {
+				viewAsResults = [];
+			}
 		} catch (e) { viewAsResults = []; }
 	}
 
@@ -202,6 +221,8 @@
 		}
 		localStorage.setItem('gycUser', JSON.stringify({
 			...targetUser,
+			name: targetUser.name || targetUser.fullName || targetUser.email?.split('@')[0] || '',
+			fullName: targetUser.fullName || targetUser.name || '',
 			token: currentUser.token,
 			isAdmin: false
 		}));
@@ -326,7 +347,12 @@
 							{#each viewAsResults as u}
 								<button class="view-as-result" onclick={() => viewAs(u)}>
 									<div class="view-as-result-name">{u.name || u.email?.split('@')[0] || 'Unknown'}</div>
-									<div class="view-as-result-email">{u.email}</div>
+									<div class="view-as-result-meta">
+										<div class="view-as-result-email">{u.email}</div>
+										{#if u.tier}
+											<span class="view-as-result-tier" class:tier-paid={u.tier !== 'free'}>{u.tier === 'academy' ? 'Academy' : u.tier}</span>
+										{/if}
+									</div>
 								</button>
 							{/each}
 							{#if viewAsSearch.length >= 2 && viewAsResults.length === 0}
@@ -737,6 +763,22 @@
 	}
 	.view-as-result:hover { background: rgba(81,190,123,0.08); }
 	.view-as-result-name { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark, #141413); }
+	.view-as-result-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 	.view-as-result-email { font-size: 10px; color: var(--text-muted, #8A9AA0); }
+	.view-as-result-tier {
+		flex-shrink: 0;
+		padding: 2px 8px;
+		border-radius: 999px;
+		font-size: 9px;
+		font-weight: 700;
+		letter-spacing: 0.3px;
+		text-transform: uppercase;
+		background: rgba(138,154,160,0.12);
+		color: var(--text-muted, #8A9AA0);
+	}
+	.view-as-result-tier.tier-paid {
+		background: rgba(81,190,123,0.12);
+		color: var(--primary);
+	}
 	.view-as-no-results { padding: 12px; text-align: center; font-size: 11px; color: var(--text-muted); }
 </style>
