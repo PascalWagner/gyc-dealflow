@@ -1576,24 +1576,17 @@
 					</div>
 				{/if}
 
-				<!-- ==================== Q&A (Coming Soon) ==================== -->
-				<div class="section">
-					<div class="section-header">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-						<span class="section-title">Investor Q&A</span>
-					</div>
-					<div class="section-body coming-soon-section">
-						<div class="coming-soon-overlay">
-							<div class="coming-soon-label">Coming Soon</div>
-							<div class="coming-soon-desc">Ask questions and discuss deals during weekly office hours</div>
-						</div>
-						<div class="coming-soon-placeholder">
-							<div class="qa-placeholder-item">What is the redemption policy for this fund?</div>
-							<div class="qa-placeholder-item">How are distributions calculated and paid?</div>
-							<div class="qa-placeholder-item">What happens if the fund doesn't hit its raise target?</div>
-						</div>
-					</div>
-				</div>
+				<!-- ==================== DEAL FIT SUMMARY ==================== -->
+				{#if dealFit}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div><div class="section-body deal-fit-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="gate-title">Unlock Deal Fit Summary</div><div class="gate-text">See how this deal matches common investor benchmarks.</div><a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}><div class="fit-verdict" style="--verdict-color:{dealFit.verdictColor}"><div class="fit-verdict-icon">{#if dealFit.score >= 3}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>{:else if dealFit.score >= -1}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{:else}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>{/if}</div><div><div class="fit-verdict-text">{dealFit.verdict}</div><div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div></div></div>{#if dealFit.fits.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-good">What Works</div>{#each dealFit.fits as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span>{item}</span></div>{/each}</div>{/if}{#if dealFit.warnings.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-warn">Watch Out For</div>{#each dealFit.warnings as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>{item}</span></div>{/each}</div>{/if}</div></div></div>{/if}
+
+				<!-- ==================== BACKGROUND CHECK ==================== -->
+				{#if deal.managementCompanyId}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Background Check</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div><div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="gate-title">Unlock Background Check</div><div class="gate-text">Academy members get SEC EDGAR, FINRA, IAPD, and OFAC screening.</div><a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}>{#if bgCheckLoading}<div class="bg-loading">Loading background check data...</div>{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}</div></div></div>{/if}
+
+				<!-- ==================== INVESTOR Q&A ==================== -->
+				<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div><div class="section-body"><div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>{#if qaLoading}<div class="qa-loading">Loading questions...</div>{:else if questions.length === 0}<div class="qa-empty">No questions yet. Be the first to ask!</div>{:else}<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)}><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>{/if}</div></div>
+
+				<!-- ==================== GP INSIGHTS (admin only) ==================== -->
+				{#if $isAdmin && deal.managementCompany}<div class="section gp-insights-section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights -- Investor Pipeline</span><span class="gp-admin-badge">ADMIN</span></div><div class="section-body">{#if gpInsightsLoading}<div class="gp-loading">Loading investor pipeline...</div>{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.saved || 0}</div><div class="gp-funnel-label">Saved</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.reviewing || 0}</div><div class="gp-funnel-label">Reviewing</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connecting || 0}</div><div class="gp-funnel-label">Connecting</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}<div class="gp-share-card"><div class="gp-share-label">Share with Investors</div><div class="gp-share-desc">Send this link to the operator so they can share their deal page.</div><div class="gp-share-row"><input class="gp-share-input" type="text" readonly value={browser ? `${window.location.origin}/deal/${deal.id}` : `/deal/${deal.id}`} /><button class="gp-share-copy" onclick={() => { if (browser) navigator.clipboard.writeText(`${window.location.origin}/deal/${deal.id}`); }}>Copy</button></div></div></div></div>{/if}
 
 				<!-- ==================== COMMUNITY ==================== -->
 				{#if socialProof}
@@ -2072,5 +2065,229 @@
 		.details-grid { grid-template-columns: 1fr; }
 		.deal-name { font-size: 20px; }
 		.hero-metrics { flex-wrap: wrap; }
+	}
+
+	/* ===== Cash Flow Projection ===== */
+	.cf-assumptions { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin-bottom: 14px; padding: 8px 12px; background: var(--bg-main, var(--bg-cream)); border-radius: 6px; }
+	.cf-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 16px; }
+	.cf-toggle button { padding: 6px 16px; border: none; background: none; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+	.cf-toggle button.active { background: var(--primary); color: #fff; }
+	.cf-chart-wrap { padding: 8px 0; }
+	.cf-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+	.cf-bar-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); min-width: 36px; text-align: right; }
+	.cf-bar-track { flex: 1; height: 24px; background: var(--bg-cream, #f8f8f6); border-radius: 4px; position: relative; overflow: hidden; }
+	.cf-bar-dist { position: absolute; top: 0; left: 0; height: 100%; background: #51be7b; border-radius: 4px 0 0 4px; transition: width 0.3s ease; }
+	.cf-bar-cap { position: absolute; top: 0; height: 100%; background: #2d8a54; border-radius: 0 4px 4px 0; transition: all 0.3s ease; }
+	.cf-bar-value { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-dark); min-width: 60px; }
+	.cf-legend { display: flex; gap: 16px; margin-top: 8px; justify-content: flex-end; }
+	.cf-legend-item { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+	.cf-legend-dot { width: 12px; height: 6px; border-radius: 2px; display: inline-block; }
+	.cf-legend-dot.dist { background: #51be7b; }
+	.cf-legend-dot.cap { background: #2d8a54; }
+	.cf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.cf-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
+	.cf-table thead th { padding: 8px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); text-align: right; }
+	.cf-table thead th:first-child { text-align: left; }
+	.cf-table tbody td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--border-light); font-weight: 600; color: var(--text-dark); }
+	.cf-table tbody td:first-child { text-align: left; }
+	.cf-total-row { background: rgba(81,190,123,0.04); }
+	.cf-highlight { color: var(--primary) !important; font-weight: 700 !important; }
+	.cf-cap-out { color: var(--text-muted); }
+	.cf-cap-in { color: var(--primary); font-weight: 700; }
+	.cf-note { font-size: 10px !important; color: var(--text-muted) !important; font-style: italic; font-weight: 400 !important; }
+	.cf-summary-row td { padding: 14px 12px; border-bottom: none; vertical-align: top; text-align: right; }
+	.cf-summary-row td:first-child { text-align: left; }
+	.cf-summary-value { font-size: 16px; font-weight: 800; color: var(--text-dark); }
+	.cf-summary-value.green { color: var(--primary); }
+	.cf-summary-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+	.blurred { opacity: 0.15; pointer-events: none; user-select: none; filter: blur(3px); }
+
+	/* ===== Peer Comparison ===== */
+	.peer-count-label { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-left: auto; }
+	.peer-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.peer-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
+	.peer-th { padding: 8px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); text-align: left; }
+	.peer-th.center { text-align: center; }
+	.peer-td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
+	.peer-td.center { text-align: center; }
+	.peer-td.label { font-weight: 600; color: var(--text-dark); }
+	.peer-td.bold { font-weight: 700; color: var(--text-dark); }
+	.peer-td.muted { color: var(--text-muted); }
+	.peer-verdict { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+	.peer-verdict.good { color: #10b981; background: rgba(16,185,129,0.08); }
+	.peer-verdict.bad { color: #ef4444; background: rgba(239,68,68,0.08); }
+	.peer-verdict.neutral { color: var(--text-muted); background: var(--bg-cream, #f8f8f6); }
+	.peer-footnote { margin-top: 12px; padding: 10px 14px; background: var(--bg-cream, #f8f8f6); border-radius: 6px; font-family: var(--font-body); font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+	/* ===== Stress Test Calculator ===== */
+	.st-base-case { background: linear-gradient(135deg, rgba(81,190,123,0.08) 0%, #f0fdf4 100%); border: 1px solid rgba(81,190,123,0.15); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+	.st-base-title { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 10px; }
+	.st-base-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+	.st-pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #fff; border: 1px solid rgba(81,190,123,0.2); border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary); }
+	.st-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+	.st-inputs { display: flex; flex-direction: column; gap: 16px; }
+	.st-input-label { display: flex; align-items: center; justify-content: space-between; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; }
+	.st-input-val { font-weight: 700; color: var(--primary); font-size: 12px; }
+	.st-number-input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-ui); font-size: 14px; font-weight: 600; outline: none; }
+	.st-number-input:focus { border-color: var(--primary); }
+	.st-slider { width: 100%; height: 6px; -webkit-appearance: none; appearance: none; background: var(--border-light); border-radius: 3px; outline: none; }
+	.st-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+	.st-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+	.st-outputs { background: var(--bg-cream, #f8f8f6); border-radius: 8px; padding: 20px; }
+	.st-outputs-title { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--primary); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+	.st-output-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+	.st-output-item:last-child { border-bottom: none; }
+	.st-output-label { font-family: var(--font-ui); font-size: 13px; color: var(--text-secondary); }
+	.st-output-value { font-family: var(--font-ui); font-size: 14px; font-weight: 800; color: var(--text-dark); }
+	.st-scenarios { margin-top: 24px; }
+	.st-scenarios-title { font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 12px; }
+	.st-scenario-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
+	.st-scenario-table thead th { padding: 10px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); text-align: center; }
+	.st-scenario-table thead th:first-child { text-align: left; }
+	.st-scenario-table thead th.bear { color: #ef4444; }
+	.st-scenario-table thead th.base { color: var(--text-dark); }
+	.st-scenario-table thead th.bull { color: #10b981; }
+	.st-scenario-table tbody td { padding: 10px 16px; text-align: center; font-weight: 700; border-bottom: 1px solid var(--border-light); }
+	.st-sc-label { text-align: left !important; font-weight: 600 !important; color: var(--text-dark); }
+	.st-scenario-table tbody td.bear { color: #ef4444; }
+	.st-scenario-table tbody td.base { color: var(--text-dark); }
+	.st-scenario-table tbody td.bull { color: #10b981; }
+
+	/* ===== Similar Deals Table ===== */
+	.similar-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.similar-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+	.sim-th { padding: 10px 12px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; text-align: right; white-space: nowrap; border-bottom: 2px solid var(--border); }
+	.sim-th.left { text-align: left; min-width: 180px; }
+	.sim-td { padding: 10px 12px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); text-align: right; border-bottom: 1px solid var(--border-light); }
+	.sim-td.left { text-align: left; }
+	.sim-current-row { background: rgba(81,190,123,0.06); }
+	.sim-deal-name { font-weight: 700; color: var(--text-dark); }
+	.sim-deal-name.current { font-weight: 800; color: var(--primary); }
+	.sim-deal-company { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+	.sim-deal-link { color: var(--text-dark); text-decoration: none; font-weight: 600; }
+	.sim-deal-link:hover { color: var(--primary); text-decoration: underline; }
+	.sim-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-top: 2px; }
+	.sim-badge.current { background: var(--primary); color: #fff; }
+	.sim-peer-row { transition: background 0.1s; }
+	.sim-peer-row:hover { background: var(--bg-cream, #f8f8f6); }
+
+	/* ===== Responsive for new sections ===== */
+	@media (max-width: 768px) {
+		.st-grid { grid-template-columns: 1fr; }
+		.cf-table, .peer-table, .similar-table { font-size: 12px; }
+		.st-scenario-table { font-size: 12px; }
+	}
+	@media (max-width: 480px) {
+		.cf-bar-row { gap: 6px; }
+		.cf-bar-value { font-size: 11px; min-width: 48px; }
+		.st-base-pills { gap: 6px; }
+		.st-pill { font-size: 11px; padding: 4px 8px; }
+	}
+
+	/* ===== Deal Fit Summary ===== */
+	.deal-fit-body { position: relative; min-height: 100px; }
+	.deal-fit-body.gated { min-height: 180px; }
+	.fit-verdict { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: color-mix(in srgb, var(--verdict-color) 6%, transparent); border: 1px solid color-mix(in srgb, var(--verdict-color) 15%, transparent); border-radius: 10px; margin-bottom: 20px; }
+	.fit-verdict-icon { flex-shrink: 0; color: var(--verdict-color); }
+	.fit-verdict-text { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--verdict-color); }
+	.fit-verdict-sub { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+	.fit-list-section { margin-bottom: 16px; }
+	.fit-list-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+	.fit-label-good { color: var(--primary); }
+	.fit-label-warn { color: #f59e0b; }
+	.fit-list-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; font-family: var(--font-body); font-size: 13px; color: var(--text-dark); line-height: 1.5; }
+	.fit-list-item svg { flex-shrink: 0; margin-top: 2px; }
+
+	/* ===== Background Check ===== */
+	.bg-check-body { position: relative; min-height: 100px; }
+	.bg-check-body.gated { min-height: 180px; }
+	.bg-status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px; border-radius: 20px; font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-left: auto; }
+	.bg-status-badge.bg-clear { background: #E7F5F0; color: #51BE7B; }
+	.bg-status-badge.bg-flagged { background: #FEE2E2; color: #DC2626; }
+	.bg-status-badge.bg-pending { background: #FFF3E6; color: #CF7A30; }
+	.bg-sources { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+	.bg-source-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; }
+	.bg-source-badge.bg-clear { background: #E7F5F0; color: #51BE7B; }
+	.bg-source-badge.bg-flagged { background: #FEE2E2; color: #DC2626; }
+	.bg-source-badge.bg-pending { background: var(--bg-main, #f5f5f5); color: var(--text-muted); }
+	.bg-source-label { font-weight: 700; }
+	.bg-source-detail { font-weight: 500; }
+	.bg-source-link { color: inherit; opacity: 0.7; transition: opacity 0.15s; }
+	.bg-source-link:hover { opacity: 1; }
+	.bg-flags { padding: 10px 14px; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; margin-bottom: 12px; }
+	.bg-flag-item { font-family: var(--font-ui); font-size: 11px; color: #991B1B; line-height: 1.6; }
+	.bg-footer { display: flex; align-items: center; justify-content: space-between; }
+	.bg-full-report { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
+	.bg-run-date { font-family: var(--font-ui); font-size: 10px; color: var(--text-muted); }
+	.bg-loading { text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px; }
+	.bg-empty { text-align: center; padding: 16px; }
+	.bg-empty-text { font-family: var(--font-ui); font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; }
+	.bg-run-cta { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--primary); color: #fff; border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; }
+
+	/* ===== Q&A Section ===== */
+	.qa-count { font-family: var(--font-ui); font-size: 11px; font-weight: 700; background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+	.qa-ask-form { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 20px; }
+	.qa-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-body); font-size: 13px; resize: vertical; min-height: 40px; }
+	.qa-input:focus { border-color: var(--primary); outline: none; }
+	.qa-submit-btn { padding: 10px 20px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+	.qa-submit-btn:hover:not(:disabled) { background: #3da86a; }
+	.qa-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+	.qa-loading, .qa-empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+	.qa-list { }
+	.qa-item { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--border-light); }
+	.qa-item:last-child { border-bottom: none; }
+	.qa-vote-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+	.qa-upvote-btn { background: none; border: none; cursor: pointer; padding: 2px; color: var(--text-muted); transition: color 0.15s; }
+	.qa-upvote-btn.upvoted { color: var(--primary); cursor: default; }
+	.qa-upvote-btn:hover:not(.upvoted) { color: var(--primary); }
+	.qa-vote-count { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-muted); }
+	.qa-vote-count.has-votes { color: var(--text-dark); }
+	.qa-content { flex: 1; min-width: 0; }
+	.qa-question-text { font-family: var(--font-body); font-size: 14px; color: var(--text-dark); line-height: 1.5; }
+	.qa-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+	.qa-author { font-weight: 600; }
+	.qa-time { margin-left: 4px; }
+	.qa-answer { margin-top: 12px; padding: 12px 16px; background: rgba(81,190,123,0.06); border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0; }
+	.qa-answer-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+	.qa-answer-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 10px; font-weight: 800; }
+	.qa-answer-by { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-dark); }
+	.qa-answer-time { font-size: 11px; color: var(--text-muted); }
+	.qa-answer-text { font-family: var(--font-body); font-size: 13px; color: var(--text-dark); line-height: 1.6; }
+	.qa-answer-form { margin-top: 8px; }
+	.qa-answer-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-body); font-size: 12px; resize: vertical; box-sizing: border-box; }
+	.qa-answer-submit { margin-top: 4px; padding: 6px 14px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-family: var(--font-ui); font-weight: 700; font-size: 11px; cursor: pointer; }
+	.qa-awaiting { margin-top: 8px; font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+	/* ===== GP Insights ===== */
+	.gp-insights-section { border-color: rgba(59,130,246,0.2); }
+	.gp-admin-badge { font-family: var(--font-ui); font-size: 10px; font-weight: 700; padding: 2px 8px; background: rgba(59,130,246,0.1); color: #3b82f6; border-radius: 10px; margin-left: 8px; }
+	.gp-loading, .gp-empty { text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px; }
+	.gp-funnel { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 20px; flex-wrap: wrap; }
+	.gp-funnel-step { text-align: center; padding: 12px 16px; }
+	.gp-funnel-count { font-family: var(--font-ui); font-size: 28px; font-weight: 800; color: var(--text-dark); line-height: 1; }
+	.gp-funnel-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+	.gp-funnel-arrow { color: var(--text-muted); opacity: 0.4; }
+	.gp-funnel-invested .gp-funnel-count { color: var(--primary); }
+	.gp-stats-row { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+	.gp-stat { font-family: var(--font-ui); font-size: 13px; color: var(--text-secondary); }
+	.gp-stat-value { font-weight: 800; color: var(--text-dark); }
+	.gp-share-card { margin-top: 20px; padding: 16px 20px; border: 1px dashed var(--primary); border-radius: 10px; background: rgba(81,190,123,0.03); }
+	.gp-share-label { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+	.gp-share-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+	.gp-share-row { display: flex; gap: 8px; align-items: center; }
+	.gp-share-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-ui); font-size: 12px; color: var(--text-dark); background: var(--bg-cream); }
+	.gp-share-copy { padding: 10px 20px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-family: var(--font-ui); font-weight: 700; font-size: 12px; cursor: pointer; white-space: nowrap; }
+
+	/* ===== Responsive for new sections ===== */
+	@media (max-width: 768px) {
+		.qa-ask-form { flex-direction: column; }
+		.qa-submit-btn { width: 100%; }
+		.bg-sources { gap: 6px; }
+		.bg-source-badge { font-size: 10px; padding: 4px 8px; }
+		.gp-funnel-step { padding: 8px 10px; }
+		.gp-funnel-count { font-size: 22px; }
+		.gp-share-row { flex-direction: column; }
+		.gp-share-copy { width: 100%; text-align: center; }
+		.fit-verdict { flex-direction: column; gap: 8px; padding: 12px 16px; }
 	}
 </style>

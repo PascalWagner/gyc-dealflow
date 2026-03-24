@@ -193,7 +193,7 @@
 				if (result.finra_found || result.finraFound) {
 					const finraDet = result.finra_details || result.finraDetails || {};
 					const disc = result.finra_disclosures || result.finraDisclosures || 0;
-					if (finraDet.crd) items.push({ text: 'CRD# ' + finraDet.crd + (finraDet.firmName ? ' — ' + finraDet.firmName : ''), url: 'https://brokercheck.finra.org/individual/summary/' + finraDet.crd });
+					if (finraDet.crd) items.push({ text: 'CRD# ' + finraDet.crd + (finraDet.firmName ? ' \u2014 ' + finraDet.firmName : ''), url: 'https://brokercheck.finra.org/individual/summary/' + finraDet.crd });
 					if (disc > 0) items.push({ text: 'View ' + disc + ' disclosure(s) on BrokerCheck', url: sourceUrl, severity: 'medium' });
 				}
 				break;
@@ -215,7 +215,7 @@
 				courtDetails.slice(0, 5).forEach(c => {
 					const caseUrl = c.docketNumber ? 'https://www.courtlistener.com/?q=%22' + encodeURIComponent(c.docketNumber) + '%22&type=r' : sourceUrl;
 					const isBk = (c.court || '').toLowerCase().includes('bankr') || (c.caseName || '').toLowerCase().includes('bankrupt');
-					items.push({ text: (c.caseName || 'Case') + (c.dateFiled ? ' — ' + c.dateFiled : '') + (c.court ? ' (' + c.court + ')' : ''), url: caseUrl, severity: isBk ? 'high' : 'medium' });
+					items.push({ text: (c.caseName || 'Case') + (c.dateFiled ? ' \u2014 ' + c.dateFiled : '') + (c.court ? ' (' + c.court + ')' : ''), url: caseUrl, severity: isBk ? 'high' : 'medium' });
 				});
 				if (courtDetails.length > 5) items.push({ text: '+ ' + (courtDetails.length - 5) + ' more case(s)', url: sourceUrl });
 				break;
@@ -640,7 +640,19 @@
 							<div class="bg-checks-grid">
 								{#each BG_CHECK_SOURCES as src}
 									<div class="bg-check-row" style="opacity:0.6;">
-										<div class="bg-check-icon {src.icon}"></div>
+										<div class="bg-check-icon {src.icon}">
+											{#if src.key === 'sec'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+											{:else if src.key === 'finra'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+											{:else if src.key === 'iapd'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+											{:else if src.key === 'ofac'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+											{:else if src.key === 'court'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/><path d="M9 10h.01"/><path d="M15 10h.01"/></svg>
+											{/if}
+										</div>
 										<div class="bg-check-info">
 											<div class="bg-check-source">{src.name}</div>
 											<div class="bg-check-desc">{src.description}</div>
@@ -661,23 +673,59 @@
 									{@const status = getBgStatus(src, bgResult)}
 									{@const sourceUrls = getBgSourceUrls(bgResult)}
 									{@const searchedNames = getBgSearchedNames(bgResult)}
+									{@const detailItems = getBgDetailItems(src, bgResult)}
 									<div class="bg-check-row">
-										<div class="bg-check-icon {src.icon}"></div>
+										<div class="bg-check-icon {src.icon}">
+											{#if src.key === 'sec'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+											{:else if src.key === 'finra'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+											{:else if src.key === 'iapd'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+											{:else if src.key === 'ofac'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+											{:else if src.key === 'court'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/><path d="M9 10h.01"/><path d="M15 10h.01"/></svg>
+											{/if}
+										</div>
 										<div class="bg-check-info">
 											<div class="bg-check-source">
 												{src.name}
 												<span class="check-badge {status}">{getBgStatusLabel(status)}</span>
 											</div>
 											<div class="bg-check-desc">{src.description}</div>
-											<div class="bg-check-result">
-												{getBgResultText(src, bgResult)}
-												{#if searchedNames[src.key]}
-													<span class="searched-name">Searched: {searchedNames[src.key]}</span>
-												{/if}
-												{#if sourceUrls[src.key]}
-													<a href={sourceUrls[src.key]} target="_blank" rel="noopener">View Search &rarr;</a>
+											<div class="bg-check-result" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+												<span>{getBgResultText(src, bgResult)}</span>
+												{#if searchedNames[src.key] || sourceUrls[src.key]}
+													<span class="bg-check-result-links">
+														{#if searchedNames[src.key]}
+															<span class="searched-name">Searched: {searchedNames[src.key]}</span>
+														{/if}
+														{#if sourceUrls[src.key]}
+															<a href={sourceUrls[src.key]} target="_blank" rel="noopener">View Search &rarr;</a>
+														{/if}
+													</span>
 												{/if}
 											</div>
+											{#if detailItems.length > 0}
+												{@const hasSevere = detailItems.some(d => d.severity)}
+												<div class="bg-detail-items" class:has-severe={hasSevere}>
+													{#each detailItems as item}
+														<div class="bg-detail-item" style="color:{item.severity === 'high' ? '#DC2626' : item.severity === 'medium' ? '#CF7A30' : 'var(--text-secondary)'}">
+															{#if item.severity}
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="bg-detail-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+															{:else}
+																<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" class="bg-detail-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+															{/if}
+															{#if item.url}
+																<a href={item.url} target="_blank" rel="noopener" class="bg-detail-link" class:bg-detail-severity={item.severity}>{item.text}</a>
+															{:else}
+																<span>{item.text}</span>
+															{/if}
+														</div>
+													{/each}
+												</div>
+											{/if}
 										</div>
 									</div>
 								{/each}
@@ -697,7 +745,19 @@
 							<div class="bg-checks-grid">
 								{#each BG_CHECK_SOURCES as src}
 									<div class="bg-check-row">
-										<div class="bg-check-icon {src.icon}"></div>
+										<div class="bg-check-icon {src.icon}">
+											{#if src.key === 'sec'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+											{:else if src.key === 'finra'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+											{:else if src.key === 'iapd'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+											{:else if src.key === 'ofac'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+											{:else if src.key === 'court'}
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/><path d="M9 10h.01"/><path d="M15 10h.01"/></svg>
+											{/if}
+										</div>
 										<div class="bg-check-info">
 											<div class="bg-check-source">{src.name} <span class="check-badge pending">Pending</span></div>
 											<div class="bg-check-desc">{src.description}</div>
@@ -839,10 +899,14 @@
 	.person-card:hover { border-color: var(--primary); box-shadow: var(--shadow-card-hover); }
 	.placeholder-card { border-style: dashed; opacity: 0.4; }
 	.person-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--teal-midnight), var(--teal-deep)); display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-weight: 700; color: var(--accent-green); font-size: 20px; flex-shrink: 0; margin-bottom: 14px; }
+	.person-avatar-img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex-shrink: 0; margin-bottom: 14px; border: 2px solid var(--border-light); }
 	.placeholder-avatar { background: var(--border-light) !important; color: var(--text-muted) !important; font-size: 24px !important; }
 	.person-info { width: 100%; }
 	.person-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 3px; }
-	.person-role { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+	.person-role { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+	.person-reg-badges { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+	.person-reg-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 8px; background: var(--green-bg); color: var(--green); }
+	.person-reg-badge.flagged { background: #FEE2E2; color: #DC2626; }
 	.person-links { display: flex; justify-content: center; gap: 8px; }
 	.person-link { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--teal-deep); text-decoration: none; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); transition: all var(--transition); }
 	.person-link:hover { background: var(--mint-bg); border-color: var(--primary); }
@@ -862,6 +926,7 @@
 	.bg-check-row { display: flex; align-items: flex-start; gap: 14px; padding: 16px 20px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); transition: border-color var(--transition); }
 	.bg-check-row:hover { border-color: var(--border); }
 	.bg-check-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+	.bg-check-icon svg { width: 20px; height: 20px; }
 	.bg-check-icon.sec { background: #F3E8FF; color: #7C3AED; }
 	.bg-check-icon.finra { background: #DBEAFE; color: #1D4ED8; }
 	.bg-check-icon.iapd { background: #E0E7FF; color: #4338CA; }
@@ -874,11 +939,24 @@
 	.check-badge.flagged { background: #FEE2E2; color: #DC2626; }
 	.check-badge.needs_review { background: var(--orange-bg); color: var(--orange); }
 	.check-badge.not_found, .check-badge.pending, .check-badge.not_checked { background: var(--bg-cream); color: var(--text-muted); }
+	.check-badge.error { background: #FEE2E2; color: #DC2626; }
 	.bg-check-desc { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 4px; }
 	.bg-check-result { font-family: var(--font-ui); font-size: 12px; color: var(--text-secondary); font-weight: 500; }
 	.bg-check-result a { color: var(--primary); text-decoration: none; font-weight: 600; }
 	.bg-check-result a:hover { text-decoration: underline; }
-	.searched-name { color: var(--text-muted); font-size: 10px; margin-left: 8px; }
+	.bg-check-result-links { display: flex; align-items: center; gap: 8px; }
+	.searched-name { color: var(--text-muted); font-size: 10px; }
+
+	/* Background Detail Items */
+	.bg-detail-items { margin-top: 8px; padding: 10px 12px; background: var(--bg-cream); border-radius: 6px; border: 1px solid var(--border-light); }
+	.bg-detail-items.has-severe { background: #FEF2F2; border-color: #FECACA; }
+	.bg-detail-item { display: flex; align-items: flex-start; gap: 6px; font-family: var(--font-ui); font-size: 11px; line-height: 1.5; }
+	.bg-detail-item + .bg-detail-item { margin-top: 4px; }
+	.bg-detail-icon { width: 12px; height: 12px; flex-shrink: 0; margin-top: 2px; }
+	.bg-detail-link { color: inherit; text-decoration: none; border-bottom: 1px solid var(--border); }
+	.bg-detail-link.bg-detail-severity { border-bottom-color: currentColor; }
+	.bg-detail-link:hover { text-decoration: underline; }
+
 	.bg-report-gate { text-align: center; padding: 32px 24px; background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%); border: 1px dashed rgba(59,130,246,0.3); border-radius: var(--radius-sm); margin-top: 20px; }
 	.bg-report-gate-title { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; }
 	.bg-report-gate-sub { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.6; }
