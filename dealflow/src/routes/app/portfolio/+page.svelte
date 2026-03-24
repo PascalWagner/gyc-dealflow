@@ -7,13 +7,10 @@
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
 	let wizardData = $state({});
-	let sortCol = $state('investmentName');
-	let sortAsc = $state(true);
 	let showAddModal = $state(false);
 	let showDealSearch = $state(false);
 	let editingId = $state('');
 	let taxSectionOpen = $state(false);
-	let searchQuery = $state('');
 	let dealSearchQuery = $state('');
 	let dealSearchResults = $state([]);
 	let dealSearchLoading = $state(false);
@@ -131,45 +128,9 @@
 
 	const PIE_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
-	// Filtered portfolio based on search
-	const filtered = $derived.by(() => {
-		if (!searchQuery.trim()) return portfolio;
-		const q = searchQuery.toLowerCase();
-		return portfolio.filter(i => {
-			const hay = [i.investmentName, i.sponsor, i.assetClass, i.investingEntity, i.entityInvestedInto].join(' ').toLowerCase();
-			return hay.includes(q);
-		});
-	});
-
-	const sorted = $derived.by(() => {
-		return [...filtered].sort((a, b) => {
-			let va = a[sortCol], vb = b[sortCol];
-			if (['amountInvested', 'distributionsReceived', 'targetIRR', 'equityMultiple'].includes(sortCol)) {
-				va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
-			}
-			if (sortCol === 'dateInvested') {
-				va = va ? new Date(va).getTime() : 0;
-				vb = vb ? new Date(vb).getTime() : 0;
-			}
-			if (typeof va === 'string') va = va.toLowerCase();
-			if (typeof vb === 'string') vb = vb.toLowerCase();
-			if (va < vb) return sortAsc ? -1 : 1;
-			if (va > vb) return sortAsc ? 1 : -1;
-			return 0;
-		});
-	});
+	const sorted = $derived(portfolio);
 
 	const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
-
-	function sortBy(col) {
-		if (sortCol === col) sortAsc = !sortAsc;
-		else { sortCol = col; sortAsc = true; }
-	}
-
-	function sortArrow(col) {
-		if (sortCol !== col) return '';
-		return sortAsc ? ' \u25B2' : ' \u25BC';
-	}
 
 	function openDealSearchModal() {
 		dealSearchQuery = '';
@@ -440,30 +401,9 @@
 
 		<!-- Investment cards -->
 		<div class="inv-header">
-			<div class="inv-title">Your Investments ({filtered.length})</div>
-			<div class="inv-header-right">
-				<div class="search-box">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-					<input type="text" placeholder="Search portfolio..." bind:value={searchQuery} class="search-input">
-				</div>
-				<button class="btn-add" onclick={() => openDealSearchModal()}>+ Add Investment</button>
-			</div>
+			<div class="inv-title">Your Investments</div>
+			<button class="btn-add section-add-btn" onclick={() => openDealSearchModal()}>+ Add Investment</button>
 		</div>
-
-		<!-- Sort bar -->
-		<div class="sort-bar">
-			<button class="sort-btn" class:active={sortCol === 'investmentName'} onclick={() => sortBy('investmentName')}>Name{sortArrow('investmentName')}</button>
-			<button class="sort-btn" class:active={sortCol === 'amountInvested'} onclick={() => sortBy('amountInvested')}>Amount{sortArrow('amountInvested')}</button>
-			<button class="sort-btn" class:active={sortCol === 'dateInvested'} onclick={() => sortBy('dateInvested')}>Date{sortArrow('dateInvested')}</button>
-			<button class="sort-btn" class:active={sortCol === 'status'} onclick={() => sortBy('status')}>Status{sortArrow('status')}</button>
-			<button class="sort-btn" class:active={sortCol === 'assetClass'} onclick={() => sortBy('assetClass')}>Asset Class{sortArrow('assetClass')}</button>
-			<button class="sort-btn" class:active={sortCol === 'distributionsReceived'} onclick={() => sortBy('distributionsReceived')}>Distributions{sortArrow('distributionsReceived')}</button>
-			<button class="sort-btn" class:active={sortCol === 'targetIRR'} onclick={() => sortBy('targetIRR')}>IRR{sortArrow('targetIRR')}</button>
-		</div>
-
-		{#if sorted.length === 0 && searchQuery}
-			<div class="no-results">No investments match "{searchQuery}"</div>
-		{/if}
 
 		<div class="inv-list">
 			{#each sorted as inv}
@@ -684,6 +624,10 @@
 		transition: background var(--transition);
 	}
 	.btn-add:hover { background: var(--primary-hover); }
+	.section-add-btn {
+		padding: 8px 20px;
+		font-size: 12px;
+	}
 
 	/* ── Content Area ── */
 	.content-area { padding: 24px; max-width: 1200px; }
@@ -861,18 +805,22 @@
 	.inv-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 12px; }
 	.inv-status { padding: 4px 12px; border-radius: 100px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; background: color-mix(in srgb, var(--sc) 8%, transparent); color: var(--sc); }
 	.btn-edit {
-		background: var(--bg-cream);
-		border: none;
-		border-radius: 8px;
-		padding: 5px 14px;
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 5px 12px;
 		cursor: pointer;
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 600;
-		color: var(--text-secondary);
+		color: var(--text-muted);
 		transition: all 0.15s ease;
 	}
-	.btn-edit:hover { background: var(--border); color: var(--text-dark); }
+	.btn-edit:hover {
+		background: transparent;
+		border-color: var(--primary);
+		color: var(--primary);
+	}
 	.inv-card-metrics { display: flex; gap: 28px; flex-wrap: wrap; }
 	.m-label { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 	.m-value { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); font-variant-numeric: tabular-nums; }
@@ -1050,54 +998,6 @@
 	.tax-empty { text-align: center; padding: 16px; font-size: 13px; color: var(--text-muted); }
 	.tax-summary { font-size: 13px; color: var(--text-secondary); }
 	.section-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
-
-	/* ── Search Box ── */
-	.inv-header-right { display: flex; align-items: center; gap: 12px; }
-	.search-box { position: relative; }
-	.search-icon {
-		width: 16px;
-		height: 16px;
-		position: absolute;
-		left: 12px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: var(--text-muted);
-		pointer-events: none;
-	}
-	.search-input {
-		padding: 8px 14px 8px 36px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		background: var(--bg-card);
-		color: var(--text-dark);
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 500;
-		min-width: 200px;
-		box-sizing: border-box;
-		transition: border-color var(--transition);
-	}
-	.search-input:focus { outline: none; border-color: var(--primary); }
-
-	/* ── Sort Bar ── */
-	.sort-bar { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
-	.sort-btn {
-		background: none;
-		border: 1px solid transparent;
-		padding: 4px 10px;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-muted);
-		cursor: pointer;
-		border-radius: var(--radius-sm);
-		white-space: nowrap;
-		transition: all var(--transition);
-	}
-	.sort-btn:hover { color: var(--text-dark); background: var(--bg-cream); }
-	.sort-btn.active { color: var(--primary); border-color: var(--primary); background: rgba(81, 190, 123, 0.06); }
-
-	.no-results { text-align: center; padding: 32px; color: var(--text-muted); font-size: 14px; }
 
 	/* ── Delete Button ── */
 	.btn-delete {
@@ -1342,10 +1242,7 @@
 		.modal-grid { grid-template-columns: 1fr; }
 		.content-area { padding: 16px; padding-bottom: 16px; }
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
-		.inv-header-right { flex-direction: column; gap: 8px; }
-		.search-input { width: 100%; min-width: 0; }
-		.sort-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-		.sort-bar::-webkit-scrollbar { display: none; }
+		.section-add-btn { width: 100%; }
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }
 		.chartjs-donut-wrap { max-width: 200px; }
 		.chartjs-timeline-wrap { height: 200px; }
