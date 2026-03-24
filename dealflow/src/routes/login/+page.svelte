@@ -149,7 +149,7 @@
 					managementCompanyName: data.managementCompanyName
 				});
 				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/app/deals';
-				goto(dest, { replaceState: true });
+				window.location.href = dest;
 			})
 			.catch(() => {
 				// Fallback: store minimal session
@@ -162,7 +162,7 @@
 					isAdmin: false,
 					tags: []
 				});
-				goto('/app/deals', { replaceState: true });
+				window.location.href = '/app/deals';
 			});
 	});
 
@@ -191,10 +191,10 @@
 			const data = await res.json();
 
 			if (data.bypass && data.token) {
-				// Dev bypass — store session and redirect immediately
+				// Dev bypass — store session and redirect with full page reload
 				storeUser(data);
 				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/app/deals';
-				goto(dest, { replaceState: true });
+				window.location.href = dest;
 				return;
 			}
 
