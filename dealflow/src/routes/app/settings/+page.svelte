@@ -487,16 +487,17 @@
 </div>
 
 <style>
-	.settings-page { padding: 24px 20px; max-width: 720px; margin: 0 auto; }
-	.settings-tabs { display: flex; gap: 4px; margin-bottom: 24px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-	.settings-tab { padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: all 0.15s; }
-	.settings-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+	.settings-page { padding: 32px; max-width: 900px; }
+	.settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.settings-tab { padding: 12px 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition, 0.2s); white-space: nowrap; }
+	.settings-tab:hover { color: var(--text-dark); }
+	.settings-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 	.settings-panel { }
-	.settings-page-title { font-family: var(--font-headline); font-size: 22px; color: var(--text-dark); margin-bottom: 4px; }
-	.settings-page-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
-	.settings-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-card); }
+	.settings-page-title { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin-bottom: 8px; }
+	.settings-page-desc { font-family: var(--font-body); font-size: 15px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.6; }
+	.settings-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
 	.settings-card-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-	.settings-card-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+	.settings-card-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
 	.always-private { background: var(--bg-cream); border: 1px solid var(--border-light); }
 	.card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 	.private-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
@@ -509,17 +510,18 @@
 	.upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer; transition: all 0.15s; }
 	.upload-btn:hover { border-color: var(--primary); }
 
-	.profile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
-	.profile-field { margin-top: 16px; }
-	.profile-row .profile-field { margin-top: 0; }
-	.profile-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
-	.profile-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 14px; color: var(--text-dark); background: var(--bg-main); box-sizing: border-box; }
+	.profile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+	.profile-field { margin-bottom: 20px; }
+	.profile-row .profile-field { margin-bottom: 0; }
+	.profile-label { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+	.profile-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); background: var(--bg-card); box-sizing: border-box; }
 	.profile-input:focus { outline: none; border-color: var(--primary); }
 	.profile-input[readonly] { background: var(--bg-cream); color: var(--text-muted); }
 
-	.settings-save-bar { margin-top: 24px; display: flex; align-items: center; gap: 16px; justify-content: flex-end; }
-	.save-msg { font-family: var(--font-ui); font-size: 13px; color: #059669; font-weight: 600; }
-	.btn-cta-primary { padding: 12px 28px; border-radius: 8px; background: var(--primary); color: #fff; font-family: var(--font-ui); font-size: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; }
+	.settings-save-bar { display: flex; gap: 12px; align-items: center; padding: 20px 0; border-top: 1px solid var(--border-light); margin-top: 24px; }
+	.settings-save-bar .btn-cta-primary { width: auto; padding: 12px 32px; }
+	.save-msg { font-family: var(--font-ui); font-size: 13px; color: var(--primary); font-weight: 600; }
+	.btn-cta-primary { padding: 12px 32px; border-radius: 8px; background: var(--primary); color: #fff; font-family: var(--font-ui); font-size: 14px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; }
 	.btn-cta-primary:hover { background: #45A86C; }
 	.btn-cta-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -530,7 +532,7 @@
 
 	.toggle-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-cream); border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
 	.toggle-track { position: relative; width: 48px; height: 26px; flex-shrink: 0; cursor: pointer; border: none; background: var(--border); border-radius: 13px; transition: background 0.2s; padding: 0; }
-	.toggle-track.on { background: var(--primary); }
+	.toggle-track.on { background: var(--teal-deep, var(--primary)); }
 	.toggle-thumb { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; pointer-events: none; }
 	.toggle-track.on .toggle-thumb { transform: translateX(22px); }
 	.toggle-label { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
@@ -547,11 +549,12 @@
 	.deal-preview-sub.green { color: var(--primary); }
 	.deal-preview-sub.muted { color: var(--text-muted); }
 
-	.notif-card { margin-top: 24px; padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
+	.notif-card { margin-top: 24px; padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); }
 	.notif-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 	.notif-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
 	.notif-btns { display: flex; gap: 10px; flex-wrap: wrap; }
 	.notif-freq-btn { flex: 1; min-width: 120px; padding: 14px 20px; border: 2px solid var(--border); border-radius: 10px; background: var(--bg-main); font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: 0.2s; text-align: left; }
+	.notif-freq-btn:hover { border-color: var(--primary) !important; color: var(--primary) !important; }
 	.notif-freq-btn.active { border-color: var(--primary); background: rgba(81,190,123,0.08); color: var(--primary); }
 	.notif-freq-sub { font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 4px; }
 	.notif-freq-btn.active .notif-freq-sub { color: var(--text-secondary); }
@@ -563,11 +566,11 @@
 	.logout-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 24px; border: 1px solid #D04040; border-radius: 8px; background: transparent; font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: #D04040; cursor: pointer; transition: all 0.15s; }
 	.logout-btn:hover { background: rgba(208,64,64,0.06); }
 
-	@media (max-width: 600px) {
-		.settings-page { padding: 16px 12px; }
+	@media (max-width: 768px) {
+		.settings-page { padding: 16px; }
 		.profile-row { grid-template-columns: 1fr; }
 		.private-grid { grid-template-columns: 1fr; }
-		.settings-tabs { gap: 2px; }
-		.settings-tab { padding: 8px 12px; font-size: 12px; }
+		.settings-tabs { scrollbar-width: none; }
+		.settings-tabs::-webkit-scrollbar { display: none; }
 	}
 </style>
