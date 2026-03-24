@@ -10,14 +10,20 @@
 	let sortCol = $state('investmentName');
 	let sortAsc = $state(true);
 	let showAddModal = $state(false);
+	let showDealSearch = $state(false);
 	let editingId = $state('');
 	let taxSectionOpen = $state(false);
+	let searchQuery = $state('');
+	let dealSearchQuery = $state('');
+	let dealSearchResults = $state([]);
+	let dealSearchLoading = $state(false);
 
 	// Modal form data
 	let modalData = $state({
 		investmentName: '', sponsor: '', assetClass: '', amountInvested: '',
 		dateInvested: '', status: 'Active', targetIRR: '', distributionsReceived: '',
-		equityMultiple: '', investingEntity: '', entityInvestedInto: ''
+		equityMultiple: '', investingEntity: '', entityInvestedInto: '',
+		holdPeriod: '', notes: '', dealId: ''
 	});
 
 	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
@@ -27,6 +33,16 @@
 		const withIRR = portfolio.filter(i => i.targetIRR);
 		if (withIRR.length === 0) return 0;
 		return withIRR.reduce((s, i) => s + parseFloat(i.targetIRR), 0) / withIRR.length;
+	});
+	const avgHoldPeriod = $derived(() => {
+		const withDate = portfolio.filter(i => i.dateInvested && (i.status === 'Active' || i.status === 'Distributing'));
+		if (withDate.length === 0) return 0;
+		const now = new Date();
+		const totalMonths = withDate.reduce((s, i) => {
+			const d = new Date(i.dateInvested);
+			return s + ((now - d) / (1000 * 60 * 60 * 24 * 30.44));
+		}, 0);
+		return totalMonths / withDate.length;
 	});
 	const assetClasses = $derived(new Set(portfolio.map(i => i.assetClass).filter(Boolean)));
 	const sponsors = $derived(new Set(portfolio.map(i => i.sponsor).filter(Boolean)));
@@ -56,11 +72,25 @@
 		return insights;
 	});
 
+	// Filtered portfolio based on search
+	const filtered = $derived(() => {
+		if (!searchQuery.trim()) return portfolio;
+		const q = searchQuery.toLowerCase();
+		return portfolio.filter(i => {
+			const hay = [i.investmentName, i.sponsor, i.assetClass, i.investingEntity, i.entityInvestedInto].join(' ').toLowerCase();
+			return hay.includes(q);
+		});
+	});
+
 	const sorted = $derived(() => {
-		return [...portfolio].sort((a, b) => {
+		return [...filtered()].sort((a, b) => {
 			let va = a[sortCol], vb = b[sortCol];
-			if (['amountInvested', 'distributionsReceived', 'targetIRR'].includes(sortCol)) {
+			if (['amountInvested', 'distributionsReceived', 'targetIRR', 'equityMultiple'].includes(sortCol)) {
 				va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+			}
+			if (sortCol === 'dateInvested') {
+				va = va ? new Date(va).getTime() : 0;
+				vb = vb ? new Date(vb).getTime() : 0;
 			}
 			if (typeof va === 'string') va = va.toLowerCase();
 			if (typeof vb === 'string') vb = vb.toLowerCase();
@@ -77,33 +107,123 @@
 		else { sortCol = col; sortAsc = true; }
 	}
 
+	function sortArrow(col) {
+		if (sortCol !== col) return '';
+		return sortAsc ? ' \u25B2' : ' \u25BC';
+	}
+
+	function openDealSearchModal() {
+		dealSearchQuery = '';
+		dealSearchResults = [];
+		showDealSearch = true;
+	}
+
+	async function searchDeals() {
+		const q = dealSearchQuery.trim();
+		if (q.length < 2) { dealSearchResults = []; return; }
+		dealSearchLoading = true;
+		try {
+			const res = await fetch(`/api/deals?q=${encodeURIComponent(q)}&limit=10`);
+			if (res.ok) {
+				const data = await res.json();
+				dealSearchResults = Array.isArray(data) ? data : (data.deals || []);
+			} else {
+				dealSearchResults = [];
+			}
+		} catch {
+			dealSearchResults = [];
+		}
+		dealSearchLoading = false;
+	}
+
+	function selectDealForPortfolio(deal) {
+		showDealSearch = false;
+		editingId = '';
+		modalData = {
+			investmentName: deal.investmentName || deal.investment_name || deal.name || '',
+			sponsor: deal.managementCompany || deal.sponsor || deal.management_company || '',
+			assetClass: deal.assetClass || deal.asset_class || '',
+			amountInvested: '',
+			dateInvested: '',
+			status: 'Active',
+			targetIRR: deal.targetIRR || deal.target_irr || '',
+			distributionsReceived: '',
+			equityMultiple: deal.equityMultiple || deal.equity_multiple || '',
+			investingEntity: '',
+			entityInvestedInto: '',
+			holdPeriod: '',
+			notes: '',
+			dealId: deal.id || ''
+		};
+		showAddModal = true;
+	}
+
 	function openAddModal(id = '') {
 		editingId = id;
 		if (id) {
 			const inv = portfolio.find(i => i.id === id);
 			if (inv) modalData = { ...inv };
 		} else {
-			modalData = { investmentName: '', sponsor: '', assetClass: '', amountInvested: '', dateInvested: '', status: 'Active', targetIRR: '', distributionsReceived: '', equityMultiple: '', investingEntity: '', entityInvestedInto: '' };
+			modalData = {
+				investmentName: '', sponsor: '', assetClass: '', amountInvested: '',
+				dateInvested: '', status: 'Active', targetIRR: '', distributionsReceived: '',
+				equityMultiple: '', investingEntity: '', entityInvestedInto: '',
+				holdPeriod: '', notes: '', dealId: ''
+			};
 		}
 		showAddModal = true;
 	}
 
 	function saveInvestment() {
+		if (!modalData.investmentName.trim()) { alert('Please enter an investment name.'); return; }
 		if (editingId) {
 			const idx = portfolio.findIndex(i => i.id === editingId);
 			if (idx >= 0) portfolio[idx] = { ...portfolio[idx], ...modalData };
 		} else {
-			portfolio.push({ ...modalData, id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5) });
+			const newInv = { ...modalData, id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5) };
+			portfolio.push(newInv);
+			// Auto-add tax document for new investments
+			if (browser) {
+				const taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+				const year = new Date().getFullYear();
+				const alreadyExists = taxDocs.some(t => t.investmentName === newInv.investmentName && t.taxYear == year);
+				if (!alreadyExists) {
+					taxDocs.push({
+						id: 'tax_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+						taxYear: year,
+						investmentName: newInv.investmentName,
+						investingEntity: newInv.investingEntity || '',
+						entityInvestedInto: newInv.entityInvestedInto || '',
+						formType: 'K-1',
+						uploadStatus: 'Pending',
+						dateReceived: '', portalUrl: '', contact: '', notes: '', fileUrl: ''
+					});
+					localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocs));
+					taxDocuments = taxDocs;
+				}
+			}
 		}
 		portfolio = [...portfolio];
 		if (browser) localStorage.setItem('gycPortfolio', JSON.stringify(portfolio));
 		showAddModal = false;
 	}
 
+	function deleteInvestment(id) {
+		if (!confirm('Delete this investment from your portfolio?')) return;
+		portfolio = portfolio.filter(i => i.id !== id);
+		if (browser) localStorage.setItem('gycPortfolio', JSON.stringify(portfolio));
+	}
+
 	function handlePPMUpload(file) {
 		if (!file) return;
-		// In production this calls the enrichment API; for now show toast
 		alert('PPM upload processing is available in the full application. Please add investments manually for now.');
+	}
+
+	function formatHoldPeriod(months) {
+		if (!months || months <= 0) return '--';
+		if (months < 12) return Math.round(months) + 'mo';
+		const yrs = months / 12;
+		return yrs.toFixed(1) + 'yr';
 	}
 
 	onMount(() => {
@@ -125,7 +245,7 @@
 		<a href="/app/plan" class="dash-tab">My Plan</a>
 	</div>
 	<div class="topbar-spacer"></div>
-	<button class="btn-add" onclick={() => openAddModal()}>+ Add Investment</button>
+	<button class="btn-add" onclick={() => openDealSearchModal()}>+ Add Investment</button>
 </div>
 
 <div class="content-area">
@@ -170,6 +290,7 @@
 			<div class="stat-card"><div class="stat-label">Active Investments</div><div class="stat-value">{activeCount}</div></div>
 			<div class="stat-card"><div class="stat-label">Total Distributions</div><div class="stat-value">${totalDistributions.toLocaleString()}</div></div>
 			<div class="stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">{avgIRR() ? avgIRR().toFixed(1) + '%' : '--'}</div></div>
+			<div class="stat-card"><div class="stat-label">Avg Hold Period</div><div class="stat-value">{formatHoldPeriod(avgHoldPeriod())}</div></div>
 		</div>
 
 		<!-- Charts row -->
@@ -196,9 +317,31 @@
 
 		<!-- Investment cards -->
 		<div class="inv-header">
-			<div class="inv-title">Your Investments</div>
-			<button class="btn-add" onclick={() => openAddModal()}>+ Add Investment</button>
+			<div class="inv-title">Your Investments ({filtered().length})</div>
+			<div class="inv-header-right">
+				<div class="search-box">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+					<input type="text" placeholder="Search portfolio..." bind:value={searchQuery} class="search-input">
+				</div>
+				<button class="btn-add" onclick={() => openDealSearchModal()}>+ Add Investment</button>
+			</div>
 		</div>
+
+		<!-- Sort bar -->
+		<div class="sort-bar">
+			<button class="sort-btn" class:active={sortCol === 'investmentName'} onclick={() => sortBy('investmentName')}>Name{sortArrow('investmentName')}</button>
+			<button class="sort-btn" class:active={sortCol === 'amountInvested'} onclick={() => sortBy('amountInvested')}>Amount{sortArrow('amountInvested')}</button>
+			<button class="sort-btn" class:active={sortCol === 'dateInvested'} onclick={() => sortBy('dateInvested')}>Date{sortArrow('dateInvested')}</button>
+			<button class="sort-btn" class:active={sortCol === 'status'} onclick={() => sortBy('status')}>Status{sortArrow('status')}</button>
+			<button class="sort-btn" class:active={sortCol === 'assetClass'} onclick={() => sortBy('assetClass')}>Asset Class{sortArrow('assetClass')}</button>
+			<button class="sort-btn" class:active={sortCol === 'distributionsReceived'} onclick={() => sortBy('distributionsReceived')}>Distributions{sortArrow('distributionsReceived')}</button>
+			<button class="sort-btn" class:active={sortCol === 'targetIRR'} onclick={() => sortBy('targetIRR')}>IRR{sortArrow('targetIRR')}</button>
+		</div>
+
+		{#if sorted().length === 0 && searchQuery}
+			<div class="no-results">No investments match "{searchQuery}"</div>
+		{/if}
+
 		<div class="inv-list">
 			{#each sorted() as inv}
 				{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
@@ -213,6 +356,7 @@
 							<div class="inv-card-actions">
 								<span class="inv-status" style="--sc:{sc}">{inv.status || 'Unknown'}</span>
 								<button class="btn-edit" onclick={() => openAddModal(inv.id)}>Edit</button>
+								<button class="btn-delete" onclick={() => deleteInvestment(inv.id)} title="Delete investment">&times;</button>
 							</div>
 						</div>
 						<div class="inv-card-metrics">
@@ -225,6 +369,9 @@
 								<div><div class="m-label">Equity Multiple</div><div class="m-value">{inv.equityMultiple}x</div></div>
 							{/if}
 						</div>
+						{#if inv.notes}
+							<div class="inv-card-notes">{inv.notes}</div>
+						{/if}
 					</div>
 				</div>
 			{/each}
@@ -260,6 +407,54 @@
 	{/if}
 </div>
 
+<!-- Deal Search Modal -->
+{#if showDealSearch}
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showDealSearch = false; }}>
+		<div class="modal-card" style="max-width:520px;">
+			<div class="modal-top">
+				<div class="modal-title">Add to Portfolio</div>
+				<button class="modal-close" onclick={() => showDealSearch = false}>&times;</button>
+			</div>
+			<p class="deal-search-hint">Search for an existing deal or add a custom investment.</p>
+			<input
+				type="text"
+				placeholder="Search deals by name or sponsor..."
+				bind:value={dealSearchQuery}
+				oninput={searchDeals}
+				class="deal-search-input"
+			>
+			<div class="deal-search-results">
+				{#if dealSearchQuery.length < 2}
+					<div class="deal-search-empty">Type to search deals...</div>
+				{:else if dealSearchLoading}
+					<div class="deal-search-empty">Searching...</div>
+				{:else if dealSearchResults.length === 0}
+					<div class="deal-search-empty">No deals found. Use "Add Custom Investment" below.</div>
+				{:else}
+					{#each dealSearchResults as deal}
+						{@const alreadyAdded = portfolio.some(i => i.dealId === deal.id)}
+						<button
+							class="deal-search-item"
+							class:already={alreadyAdded}
+							disabled={alreadyAdded}
+							onclick={() => selectDealForPortfolio(deal)}
+						>
+							<div>
+								<div class="deal-search-name">{deal.investmentName || deal.investment_name || deal.name}</div>
+								<div class="deal-search-sub">{deal.managementCompany || deal.sponsor || deal.management_company || ''} &middot; {deal.assetClass || deal.asset_class || ''}</div>
+							</div>
+							<div class="deal-search-action">{alreadyAdded ? 'Already Added' : 'Select \u2192'}</div>
+						</button>
+					{/each}
+				{/if}
+			</div>
+			<div class="deal-search-divider">
+				<button class="btn-manual-add" onclick={() => { showDealSearch = false; openAddModal(); }}>+ Add Custom Investment (Not in Database)</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <!-- Add/Edit Investment Modal -->
 {#if showAddModal}
 	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }}>
@@ -269,10 +464,19 @@
 				<button class="modal-close" onclick={() => showAddModal = false}>&times;</button>
 			</div>
 			<div class="modal-grid">
-				<div class="modal-field"><label>Investment Name</label><input bind:value={modalData.investmentName}></div>
-				<div class="modal-field"><label>Sponsor</label><input bind:value={modalData.sponsor}></div>
-				<div class="modal-field"><label>Asset Class</label><input bind:value={modalData.assetClass}></div>
-				<div class="modal-field"><label>Amount Invested ($)</label><input type="number" bind:value={modalData.amountInvested}></div>
+				<div class="modal-field"><label>Investment Name *</label><input bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II"></div>
+				<div class="modal-field"><label>Sponsor</label><input bind:value={modalData.sponsor} placeholder="e.g. Acme Capital"></div>
+				<div class="modal-field">
+					<label>Asset Class</label>
+					<select bind:value={modalData.assetClass}>
+						<option value="">Select...</option>
+						<option>Multi Family</option><option>Self Storage</option><option>Industrial</option>
+						<option>Lending</option><option>Short Term Rental</option><option>Hotels/Hospitality</option>
+						<option>Mixed-Use</option><option>RV/Mobile Home Parks</option><option>Senior Living</option>
+						<option>Land</option><option>Car Wash</option><option>Oil & Gas</option><option>Other</option>
+					</select>
+				</div>
+				<div class="modal-field"><label>Amount Invested ($)</label><input type="number" bind:value={modalData.amountInvested} placeholder="50000"></div>
 				<div class="modal-field"><label>Date Invested</label><input type="date" bind:value={modalData.dateInvested}></div>
 				<div class="modal-field">
 					<label>Status</label>
@@ -280,11 +484,19 @@
 						<option>Active</option><option>Distributing</option><option>Exited</option><option>Pending</option>
 					</select>
 				</div>
-				<div class="modal-field"><label>Target IRR (%)</label><input bind:value={modalData.targetIRR}></div>
-				<div class="modal-field"><label>Distributions Received ($)</label><input type="number" bind:value={modalData.distributionsReceived}></div>
-				<div class="modal-field"><label>Equity Multiple</label><input bind:value={modalData.equityMultiple}></div>
+				<div class="modal-field"><label>Target IRR (%)</label><input type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15"></div>
+				<div class="modal-field"><label>Distributions Received ($)</label><input type="number" bind:value={modalData.distributionsReceived} placeholder="0"></div>
+				<div class="modal-field"><label>Equity Multiple</label><input type="number" step="0.01" bind:value={modalData.equityMultiple} placeholder="1.8"></div>
+				<div class="modal-field"><label>Hold Period (years)</label><input bind:value={modalData.holdPeriod} placeholder="e.g. 5"></div>
+				<div class="modal-field"><label>Investing Entity</label><input bind:value={modalData.investingEntity} placeholder="e.g. My LLC"></div>
+				<div class="modal-field"><label>Entity Invested Into</label><input bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC"></div>
+				<div class="modal-field full-width"><label>Notes</label><textarea bind:value={modalData.notes} rows="2" placeholder="Optional notes about this investment..."></textarea></div>
 			</div>
 			<div class="modal-actions">
+				{#if editingId}
+					<button class="btn-danger" onclick={() => { showAddModal = false; deleteInvestment(editingId); }}>Delete</button>
+				{/if}
+				<div style="flex:1"></div>
 				<button class="btn-cancel" onclick={() => showAddModal = false}>Cancel</button>
 				<button class="btn-primary" onclick={saveInvestment}>{editingId ? 'Save Changes' : 'Add Investment'}</button>
 			</div>
@@ -375,6 +587,45 @@
 	.tax-summary { font-size: 13px; color: var(--text-secondary); }
 	.section-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
 
+	/* Search box */
+	.inv-header-right { display: flex; align-items: center; gap: 12px; }
+	.search-box { position: relative; }
+	.search-icon { width: 16px; height: 16px; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+	.search-input { padding: 8px 12px 8px 32px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; width: 220px; box-sizing: border-box; background: var(--bg-main); }
+	.search-input:focus { outline: none; border-color: var(--primary); }
+
+	/* Sort bar */
+	.sort-bar { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+	.sort-btn { background: none; border: 1px solid transparent; padding: 4px 10px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-sm); white-space: nowrap; }
+	.sort-btn:hover { color: var(--text-dark); background: var(--bg-cream); }
+	.sort-btn.active { color: var(--primary); border-color: var(--primary); background: rgba(81, 190, 123, 0.06); }
+
+	.no-results { text-align: center; padding: 32px; color: var(--text-muted); font-size: 14px; }
+
+	/* Delete button on cards */
+	.btn-delete { background: none; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 4px 8px; cursor: pointer; font-size: 16px; line-height: 1; color: var(--text-muted); font-weight: 400; }
+	.btn-delete:hover { color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.06); }
+
+	/* Investment notes */
+	.inv-card-notes { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+	/* Deal search modal */
+	.deal-search-hint { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
+	.deal-search-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 14px; margin-bottom: 12px; box-sizing: border-box; }
+	.deal-search-input:focus { outline: none; border-color: var(--primary); }
+	.deal-search-results { max-height: 280px; overflow-y: auto; margin-bottom: 16px; }
+	.deal-search-empty { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+	.deal-search-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; transition: background 0.15s; width: 100%; background: none; text-align: left; font-family: inherit; }
+	.deal-search-item:hover:not(:disabled) { background: var(--bg-cream); }
+	.deal-search-item.already { opacity: 0.5; cursor: default; }
+	.deal-search-name { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); }
+	.deal-search-sub { font-size: 11px; color: var(--text-secondary); }
+	.deal-search-action { font-size: 11px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; margin-left: 12px; }
+	.deal-search-item.already .deal-search-action { color: var(--primary); }
+	.deal-search-divider { border-top: 1px solid var(--border); padding-top: 12px; text-align: center; }
+	.btn-manual-add { padding: 10px 20px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 600; font-size: 13px; cursor: pointer; color: var(--text-secondary); }
+	.btn-manual-add:hover { border-color: var(--primary); color: var(--primary); }
+
 	/* Modal */
 	.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 	.modal-card { background: var(--bg-card); border-radius: var(--radius); padding: 28px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
@@ -383,11 +634,16 @@
 	.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); line-height: 1; }
 	.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 	.modal-field { margin-bottom: 16px; }
+	.modal-field.full-width { grid-column: 1 / -1; }
 	.modal-field label { display: block; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
-	.modal-field input, .modal-field select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box; }
-	.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+	.modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box; font-family: var(--font-body); }
+	.modal-field textarea { resize: vertical; }
+	.modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { outline: none; border-color: var(--primary); }
+	.modal-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 	.btn-cancel { padding: 10px 20px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 600; font-size: 13px; cursor: pointer; color: var(--text-secondary); }
 	.btn-primary { padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 13px; cursor: pointer; }
+	.btn-danger { padding: 10px 20px; background: transparent; border: 1px solid #ef4444; border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 600; font-size: 13px; cursor: pointer; color: #ef4444; }
+	.btn-danger:hover { background: rgba(239, 68, 68, 0.06); }
 
 	@media (max-width: 768px) {
 		.mobile-menu-btn { display: block; }
@@ -395,5 +651,10 @@
 		.empty-charts { flex-direction: column; align-items: center; }
 		.modal-grid { grid-template-columns: 1fr; }
 		.content-area { padding: 16px; }
+		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
+		.inv-header-right { flex-direction: column; gap: 8px; }
+		.search-input { width: 100%; }
+		.sort-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+		.summary-grid { grid-template-columns: repeat(2, 1fr); }
 	}
 </style>

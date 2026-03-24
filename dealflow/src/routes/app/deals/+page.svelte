@@ -28,6 +28,11 @@
 	let showArchived = $state(false);
 	let buyBoxApplied = $state(false);
 
+	// Whether any filter is active (for empty state messaging)
+	const hasActiveFilters = $derived(
+		!!search || !!assetClass || !!dealType || !!strategy || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
+	);
+
 	function switchTab(tab) {
 		currentTab = tab;
 		// Reset to grid on tab switch (unless on Filter)
@@ -141,7 +146,7 @@
 		{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
 		totalDeals={filteredDeals().length} avgIRR={avgIRR()}
 		isAdmin={$isAdmin}
-		onchange={(key, val) => {
+		onchange={({ field: key, value: val }) => {
 			if (key === 'search') search = val;
 			else if (key === 'assetClass') assetClass = val;
 			else if (key === 'dealType') dealType = val;
@@ -183,26 +188,35 @@
 	{:else if filteredDeals().length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
-			<div class="empty-title">
-				{currentTab === 'browse' ? 'No deals match your filters' : `No deals in ${STAGE_META[currentTab]?.label || 'this stage'} yet`}
-			</div>
-			<div class="empty-desc">
-				{#if currentTab === 'browse'}
-					Try adjusting your filters or clearing them to see all deals.
-				{:else if currentTab === 'saved'}
-					Save deals from the Filter tab to start building your pipeline.
-				{:else if currentTab === 'diligence'}
-					Move deals from Review when you're ready to talk to the operator.
-				{:else if currentTab === 'decision'}
-					Move deals here when you're comparing finalists.
-				{:else if currentTab === 'invested'}
-					Deals you've committed to will appear here.
-				{:else}
-					Passed deals will show here. You can always bring them back.
-				{/if}
-			</div>
-			{#if currentTab !== 'browse'}
-				<a href="/app/deals" class="btn-browse" onclick={() => switchTab('browse')}>Browse Deals</a>
+			{#if hasActiveFilters && currentTab === 'browse'}
+				<div class="empty-title">No deals match your filters</div>
+				<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+				<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+			{:else if currentTab === 'browse'}
+				<div class="empty-title">No deals available</div>
+				<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+			{:else if currentTab === 'saved'}
+				<div class="empty-title">No deals in Review yet</div>
+				<div class="empty-desc">Save deals from Filter to start reviewing. Read the deck, work the checklist, and understand the deal before talking to anyone.</div>
+				<button class="btn-browse" onclick={() => switchTab('browse')}>Go to Filter</button>
+			{:else if currentTab === 'diligence'}
+				<div class="empty-title">No deals in Connect yet</div>
+				<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+				<button class="btn-browse" onclick={() => switchTab('saved')}>Go to Review</button>
+			{:else if currentTab === 'decision'}
+				<div class="empty-title">No deals in Decide yet</div>
+				<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+				<button class="btn-browse" onclick={() => switchTab('diligence')}>Go to Connect</button>
+			{:else if currentTab === 'invested'}
+				<div class="empty-title">No investments yet</div>
+				<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+			{:else if currentTab === 'passed'}
+				<div class="empty-title">No skipped deals</div>
+				<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+			{:else}
+				<div class="empty-title">Nothing here yet</div>
+				<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+				<button class="btn-browse" onclick={() => switchTab('browse')}>Browse Deals</button>
 			{/if}
 		</div>
 	{:else if viewMode === 'list' && !isMobile}
@@ -274,6 +288,7 @@
 		display: inline-block; padding: 10px 24px; background: var(--primary);
 		color: #fff; border-radius: 8px; font-family: var(--font-ui);
 		font-size: 13px; font-weight: 700; text-decoration: none; margin-top: 8px;
+		border: none; cursor: pointer;
 	}
 
 	.desktop-only { display: flex; }

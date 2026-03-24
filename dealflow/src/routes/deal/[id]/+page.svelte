@@ -42,6 +42,36 @@
 	let buyBox = $state(null);
 	let deckViewed = $state(false);
 	let introRequested = $state(false);
+	let toastMessage = $state('');
+	let toastVisible = $state(false);
+
+	// Intro Request Modal
+	let showIntroModal = $state(false);
+	let introMessage = $state('');
+	let introMethod = $state('email');
+	let introPhone = $state('');
+	let introSending = $state(false);
+	let introSuccess = $state(false);
+
+	// Invite Co-Investors Modal
+	let showInviteModal = $state(false);
+	let inviteEmail = $state('');
+	let inviteMessage = $state('');
+	let inviteCode = $state(null);
+	let inviteUrl = $state('');
+	const inviteUserName = $derived(browser ? (JSON.parse(localStorage.getItem('gycUser') || '{}').name || 'Someone') : 'Someone');
+	const inviteEmailSubject = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal with you: ' + (deal.investmentName || deal.name || '')) : '');
+	const inviteEmailBody = $derived(deal ? encodeURIComponent(inviteUserName + ' thinks you might be interested in this deal:\n\n' + (deal.investmentName || deal.name || '') + '\n\n' + inviteUrl + '\n\nView the full deal details on GYC Dealflow.') : '');
+	const inviteSmsBody = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal: ' + (deal.investmentName || deal.name || '') + ' - ' + inviteUrl) : '');
+
+	// Claim Deal Modal
+	let showClaimModal = $state(false);
+	let claimName = $state('');
+	let claimEmail = $state('');
+	let claimRole = $state('');
+	let claimCompany = $state('');
+	let claimSubmitting = $state(false);
+	let claimSuccess = $state(false);
 
 	// ===== Derived =====
 	const dealId = $derived($page.params.id);
@@ -313,27 +343,83 @@
 		return checks;
 	}
 
+	// ===== Toast =====
+	function showShareToast(msg) {
+		toastMessage = msg;
+		toastVisible = true;
+		setTimeout(() => { toastVisible = false; }, 3000);
+	}
+
 	// ===== Share Actions =====
 	function shareDealEmail() {
 		if (!deal || !browser) return;
+		const url = window.location.href;
 		const subject = encodeURIComponent(`Check out this deal: ${deal.investmentName}`);
-		const body = encodeURIComponent(`I found this deal on GYC and thought you might be interested:\n\n${deal.investmentName}\n${window.location.href}`);
+		const body = encodeURIComponent(`I found this deal on GYC Dealflow and thought you might be interested:\n\n${deal.investmentName}\n${url}\n\nYou can sign up for free to see deal details, pitch decks, and more.`);
 		window.open(`mailto:?subject=${subject}&body=${body}`);
 		shareDropdownOpen = false;
 	}
 
 	function shareDealText() {
 		if (!deal || !browser) return;
-		const text = encodeURIComponent(`Check out ${deal.investmentName} on GYC: ${window.location.href}`);
+		const url = window.location.href;
+		const text = encodeURIComponent(`Check out this deal on GYC Dealflow: ${deal.investmentName} - ${url}`);
 		window.open(`sms:?&body=${text}`);
 		shareDropdownOpen = false;
 	}
 
-	function shareInviteLink() {
-		if (!deal || !browser) return;
-		const inviteUrl = `${window.location.origin}/invite?deal=${encodeURIComponent(deal.id)}&ref=${encodeURIComponent(deal.investmentName)}`;
-		navigator.clipboard.writeText(inviteUrl);
+	function copyDealLink() {
+		if (!browser || !deal) return;
+		navigator.clipboard.writeText(window.location.href).then(() => {
+			showShareToast('Link copied to clipboard');
+		}).catch(() => {
+			showShareToast('Link copied to clipboard');
+		});
 		shareDropdownOpen = false;
+	}
+
+	function openInviteModal() {
+		if (!deal || !browser) return;
+		if (!$isLoggedIn) {
+			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
+			return;
+		}
+		shareDropdownOpen = false;
+		inviteEmail = '';
+		inviteMessage = '';
+		inviteCode = null;
+
+		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		const userName = stored.name || stored.firstName || (stored.email ? stored.email.split('@')[0] : 'Someone');
+		const baseUrl = `${window.location.origin}/deal/${deal.id}`;
+
+		// Try to get an invite code from API
+		fetch('/api/invite', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
+			body: JSON.stringify({ dealId: deal.id })
+		}).then(r => r.json()).then(data => {
+			if (data.success && data.code) {
+				inviteCode = data.code;
+				inviteUrl = `${baseUrl}?inv=${data.code}`;
+			} else {
+				inviteUrl = baseUrl;
+			}
+		}).catch(() => {
+			inviteUrl = baseUrl;
+		});
+
+		inviteUrl = baseUrl;
+		showInviteModal = true;
+	}
+
+	function copyInviteLink() {
+		if (!browser) return;
+		navigator.clipboard.writeText(inviteUrl).then(() => {
+			showShareToast('Invite link copied!');
+		}).catch(() => {
+			showShareToast('Invite link copied!');
+		});
 	}
 
 	function trackDeckView() {
@@ -342,14 +428,49 @@
 		deckViewed = true;
 	}
 
-	function claimDeal() {
+	function openClaimModal() {
 		if (!deal || !browser) return;
+		if (!$isLoggedIn) {
+			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
+			return;
+		}
 		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		fetch('/api/events', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
-			body: JSON.stringify({ event: 'deal_claimed', dealId: deal.id, dealName: deal.investmentName, managementCompany: deal.managementCompany })
-		}).catch(() => {});
+		claimName = stored.name || '';
+		claimEmail = stored.email || '';
+		claimCompany = deal.managementCompany || '';
+		claimRole = '';
+		claimSubmitting = false;
+		claimSuccess = false;
+		showClaimModal = true;
+	}
+
+	async function submitClaim() {
+		if (!deal || claimSubmitting) return;
+		claimSubmitting = true;
+		try {
+			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const r = await fetch('/api/deal-claim', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
+				body: JSON.stringify({
+					dealId: deal.id,
+					name: claimName,
+					email: claimEmail,
+					company: claimCompany,
+					role: claimRole
+				})
+			});
+			const data = await r.json();
+			if (data.success !== false) {
+				claimSuccess = true;
+				showShareToast('Claim submitted successfully');
+			} else {
+				showShareToast('Something went wrong. Please try again.');
+			}
+		} catch {
+			showShareToast('Something went wrong. Please try again.');
+		}
+		claimSubmitting = false;
 	}
 
 	// ===== DD Checklist =====
@@ -608,37 +729,86 @@
 		ddAccordionOpen = { ...ddAccordionOpen, [sectionIdx]: !ddAccordionOpen[sectionIdx] };
 	}
 
-	function copyDealLink() {
-		if (!browser || !deal) return;
-		navigator.clipboard.writeText(window.location.href);
-		shareDropdownOpen = false;
-	}
-
 	function requestIntroduction() {
 		if (!deal) return;
 		if (!$isLoggedIn) {
-			// Show a simple alert for now; in production this would be a modal
 			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
 			return;
 		}
-		const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
-		fetch('/api/events', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
-			body: JSON.stringify({
-				event: 'intro_requested',
-				dealId: deal.id,
-				dealName: deal.investmentName,
-				managementCompany: deal.managementCompany
-			})
-		}).catch(() => {});
-		// Mark intro as requested
-		if (browser) localStorage.setItem('gycIntroRequested_' + deal.id, 'true');
-		introRequested = true;
-		// Advance stage to Connect
-		if (currentStageIdx < 2) {
-			dealStages.setStage(deal.id, 'diligence');
+		// Check if already requested
+		if (browser && localStorage.getItem('gycIntroRequested_' + deal.id)) {
+			showShareToast("You've already requested an intro for this deal.");
+			return;
 		}
+		// Rate limit: 3 intros per day
+		if (browser) {
+			const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
+			const todayCount = parseInt(localStorage.getItem(todayKey) || '0', 10);
+			if (todayCount >= 3) {
+				showShareToast("You've reached the daily limit of 3 introduction requests. Try again tomorrow.");
+				return;
+			}
+		}
+		introMessage = '';
+		introMethod = 'email';
+		introPhone = '';
+		introSending = false;
+		introSuccess = false;
+		showIntroModal = true;
+	}
+
+	async function submitIntroRequest() {
+		if (!deal || introSending) return;
+		introSending = true;
+		try {
+			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+			const sponsors = deal.sponsors || [];
+			const op = sponsors.find(s => s.role === 'operator');
+			const opName = op ? op.name : (deal.managementCompany || '');
+			const opCeo = op ? (op.ceo || '') : (deal.ceo || '');
+
+			const r = await fetch('/api/intro-request', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
+				body: JSON.stringify({
+					dealId: deal.id,
+					dealName: deal.investmentName,
+					operatorName: opName,
+					operatorCeo: opCeo,
+					managementCompanyId: deal.managementCompanyId || '',
+					message: introMessage,
+					contactMethod: introMethod,
+					phone: introPhone
+				})
+			});
+			const data = await r.json();
+			if (data.success) {
+				// Store in localStorage for dedup
+				if (browser) {
+					localStorage.setItem('gycIntroRequested_' + deal.id, Date.now().toString());
+					const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
+					localStorage.setItem(todayKey, (parseInt(localStorage.getItem(todayKey) || '0', 10) + 1).toString());
+					// Store in gycIntroRequests array
+					try {
+						let intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
+						if (!Array.isArray(intros)) intros = [];
+						intros.push({ dealId: deal.id, deal: deal.investmentName, company: opName, userEmail: stored.email || '', timestamp: Date.now() });
+						localStorage.setItem('gycIntroRequests', JSON.stringify(intros));
+					} catch {}
+				}
+				introRequested = true;
+				introSuccess = true;
+				// Advance stage to Connect
+				if (currentStageIdx < 2) {
+					dealStages.setStage(deal.id, 'diligence');
+				}
+			} else {
+				showShareToast('Something went wrong. Please try again.');
+			}
+		} catch {
+			showShareToast('Something went wrong. Please try again.');
+		}
+		introSending = false;
 	}
 
 	// ===== Lifecycle =====
@@ -884,7 +1054,7 @@
 								</button>
 								{#if shareDropdownOpen}
 									<div class="share-dropdown active" onclick={(e) => e.stopPropagation()}>
-										<button class="share-dropdown-item share-invite" onclick={shareInviteLink}>
+										<button class="share-dropdown-item share-invite" onclick={openInviteModal}>
 											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
 											<span class="share-invite-text">Invite a co-investor</span>
 										</button>
@@ -978,7 +1148,7 @@
 							<div class="claim-deal-title">Are you the operator of this deal?</div>
 							<div class="claim-deal-desc">Claim this deal to update your profile, respond to investor questions, and see who's interested.</div>
 						</div>
-						<button class="btn-claim" onclick={claimDeal}>Claim This Deal</button>
+						<button class="btn-claim" onclick={openClaimModal}>Claim This Deal</button>
 					</div>
 				{/if}
 
@@ -1600,9 +1770,24 @@
 							</div>
 							<div class="section-body">
 								{#if reviewing > 0}
-									<div class="community-stat">
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-										{reviewing} LP{reviewing === 1 ? '' : 's'} {reviewing === 1 ? 'is' : 'are'} reviewing this deal
+									{@const names = (socialProof.namedInvestors || []).concat(socialProof.namedWatchers || []).slice(0, 5)}
+									<div class="community-stat-row">
+										{#if names.length > 0}
+											<div class="community-avatar-stack">
+												{#each names as name, i}
+													<div class="community-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]};z-index:{5-i}" title={name}>
+														{name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}
+													</div>
+												{/each}
+												{#if reviewing > names.length}
+													<div class="community-avatar community-avatar-more" style="z-index:0">+{reviewing - names.length}</div>
+												{/if}
+											</div>
+										{/if}
+										<div class="community-stat">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+											{reviewing} investor{reviewing === 1 ? '' : 's'} reviewing this deal
+										</div>
 									</div>
 								{/if}
 								{#if invested > 0}
@@ -1681,6 +1866,169 @@
 		{/if}
 	</div>
 </main>
+
+<!-- ==================== TOAST ==================== -->
+{#if toastVisible}
+	<div class="toast-notification" class:visible={toastVisible}>
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+		{toastMessage}
+	</div>
+{/if}
+
+<!-- ==================== INTRO REQUEST MODAL ==================== -->
+{#if showIntroModal && deal}
+	{@const sponsors = deal.sponsors || []}
+	{@const op = sponsors.find(s => s.role === 'operator') || (deal.managementCompany ? { name: deal.managementCompany, ceo: deal.ceo, foundingYear: deal.mcFoundingYear, website: deal.mcWebsite } : null)}
+	{@const opName = op ? op.name : (deal.managementCompany || 'the operator')}
+	{@const opCeo = op ? (op.ceo || '') : (deal.ceo || '')}
+	{@const opYears = op && op.foundingYear ? ((new Date().getFullYear()) - op.foundingYear) + '+ years' : ''}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showIntroModal = false; }}>
+		<div class="modal-container">
+			<button class="modal-close" onclick={() => showIntroModal = false}>&times;</button>
+			{#if introSuccess}
+				<div class="modal-success">
+					<div class="modal-success-icon">
+						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+					</div>
+					<div class="modal-success-title">You're all set</div>
+					<div class="modal-success-text">Pascal will personally introduce you to {opName}. Check your email -- you'll be CC'd on the intro.</div>
+					<button class="modal-btn-primary" style="background:var(--text-dark);" onclick={() => showIntroModal = false}>Back to Deal</button>
+				</div>
+			{:else}
+				<div class="modal-header-centered">
+					<div class="modal-avatar">{getInitials(opName)}</div>
+					<div class="modal-avatar-name">{opName}</div>
+					<div class="modal-avatar-meta">
+						{#if opCeo}<span>{opCeo}</span>{/if}
+						{#if opCeo && opYears}<span>&middot;</span>{/if}
+						{#if opYears}<span>{opYears}</span>{/if}
+						{#if op?.website}
+							{#if opCeo || opYears}<span>&middot;</span>{/if}
+							<a href={op.website} target="_blank" rel="noopener" class="modal-avatar-link">Website</a>
+						{/if}
+					</div>
+				</div>
+				<div class="modal-body-text">
+					We'll connect you with {opName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
+				</div>
+				<div class="modal-field">
+					<label class="modal-label">Preferred Contact Method</label>
+					<div class="modal-radio-group">
+						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="email" /> Email</label>
+						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="phone" /> Phone</label>
+						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="video" /> Video Call</label>
+					</div>
+				</div>
+				{#if introMethod === 'phone'}
+					<div class="modal-field">
+						<label class="modal-label">Phone Number (optional)</label>
+						<input type="tel" class="modal-input" placeholder="(555) 123-4567" bind:value={introPhone} />
+					</div>
+				{/if}
+				<div class="modal-field">
+					<label class="modal-label">Message to Operator (optional)</label>
+					<textarea class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
+				</div>
+				<div class="modal-actions">
+					<button class="modal-btn-secondary" onclick={() => showIntroModal = false}>Cancel</button>
+					<button class="modal-btn-primary" onclick={submitIntroRequest} disabled={introSending}>
+						{introSending ? 'Requesting...' : 'Request Introduction'}
+					</button>
+				</div>
+				<div class="modal-footer-note">
+					3 introductions available per day
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- ==================== INVITE CO-INVESTORS MODAL ==================== -->
+{#if showInviteModal && deal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showInviteModal = false; }}>
+		<div class="modal-container">
+			<div class="modal-header-row">
+				<div class="modal-title">Invite a Co-Investor</div>
+				<button class="modal-close-inline" onclick={() => showInviteModal = false}>&times;</button>
+			</div>
+			<div class="modal-body-text" style="margin-bottom:20px;">
+				Share a personal invite link for <strong>{deal.investmentName}</strong>. Your friend will see the deal and can sign up to save it.
+			</div>
+			<div class="invite-link-row">
+				<input type="text" class="modal-input invite-link-input" readonly value={inviteUrl} onclick={(e) => e.target.select()} />
+				<button class="modal-btn-primary invite-copy-btn" onclick={copyInviteLink}>Copy Link</button>
+			</div>
+			<div class="modal-field" style="margin-top:16px;">
+				<label class="modal-label">Email a friend directly (optional)</label>
+				<input type="email" class="modal-input" placeholder="friend@example.com" bind:value={inviteEmail} />
+			</div>
+			<div class="modal-field">
+				<label class="modal-label">Personal message (optional)</label>
+				<textarea class="modal-textarea" rows="2" placeholder="Hey, check out this deal..." bind:value={inviteMessage}></textarea>
+			</div>
+			<div class="invite-share-row">
+				<a href="mailto:{inviteEmail}?subject={inviteEmailSubject}&body={inviteEmailBody}" class="invite-share-btn">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+					Email
+				</a>
+				<a href="sms:?&body={inviteSmsBody}" class="invite-share-btn">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+					Text
+				</a>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- ==================== CLAIM DEAL MODAL ==================== -->
+{#if showClaimModal && deal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showClaimModal = false; }}>
+		<div class="modal-container">
+			<div class="modal-header-row">
+				<div class="modal-title">Claim This Deal</div>
+				<button class="modal-close-inline" onclick={() => showClaimModal = false}>&times;</button>
+			</div>
+			{#if claimSuccess}
+				<div class="modal-success" style="padding:24px 0;">
+					<div class="modal-success-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="32" height="32"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+					</div>
+					<div class="modal-success-title">Claim submitted!</div>
+					<div class="modal-success-text">We'll review and get back to you within 24 hours.</div>
+					<button class="modal-btn-primary" style="margin-top:16px;" onclick={() => showClaimModal = false}>Close</button>
+				</div>
+			{:else}
+				<div class="modal-body-text" style="margin-bottom:20px;">
+					Claim <strong>{deal.investmentName}</strong> to manage your deal listing, see investor interest, and respond to questions.
+				</div>
+				<div class="claim-user-card">
+					<div class="claim-user-name">{claimName}</div>
+					<div class="claim-user-email">{claimEmail}</div>
+					{#if claimCompany}<div class="claim-user-company">{claimCompany}</div>{/if}
+				</div>
+				<div class="modal-field">
+					<label class="modal-label">Your Role</label>
+					<select class="modal-select" bind:value={claimRole} required>
+						<option value="">Select your role...</option>
+						<option value="founder">Founder / CEO</option>
+						<option value="ir">IR / Investor Relations</option>
+						<option value="partner">Managing Partner</option>
+						<option value="authorized">Authorized Representative</option>
+					</select>
+				</div>
+				<button class="modal-btn-claim" onclick={submitClaim} disabled={claimSubmitting || !claimRole}>
+					{claimSubmitting ? 'Submitting...' : 'Submit Claim'}
+				</button>
+			{/if}
+		</div>
+	</div>
+{/if}
 
 <style>
 	/* ===== Layout ===== */
@@ -1898,6 +2246,27 @@
 	.community-stat { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; }
 	.community-stat.invested { color: var(--primary); }
 	.community-privacy { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-light); }
+	.community-stat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+	.community-avatar-stack { display: flex; align-items: center; flex-shrink: 0; }
+	.community-avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		color: #fff;
+		border: 2px solid var(--bg-card, #fff);
+		margin-right: -8px;
+		position: relative;
+	}
+	.community-avatar-more {
+		background: var(--text-muted) !important;
+		font-size: 9px;
+	}
 
 	/* ===== Sticky Action Bar ===== */
 	.sticky-action-bar { position: fixed; bottom: 0; left: 240px; right: 0; background: var(--bg-card); border-top: 1px solid var(--border); padding: 12px 32px; display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.06); }
@@ -2289,5 +2658,376 @@
 		.gp-share-row { flex-direction: column; }
 		.gp-share-copy { width: 100%; text-align: center; }
 		.fit-verdict { flex-direction: column; gap: 8px; padding: 12px 16px; }
+		.modal-container { max-width: 95vw; padding: 24px; }
+		.invite-link-row { flex-direction: column; }
+		.invite-copy-btn { width: 100%; }
+		.invite-share-row { flex-direction: column; }
+		.invite-share-btn { width: 100%; }
+		.modal-actions { flex-direction: column-reverse; }
+		.modal-btn-secondary, .modal-btn-primary { width: 100%; }
 	}
+
+	/* ===== Toast Notification ===== */
+	.toast-notification {
+		position: fixed;
+		bottom: 80px;
+		left: 50%;
+		transform: translateX(-50%);
+		background: var(--text-dark, #1a1a2e);
+		color: #fff;
+		padding: 12px 24px;
+		border-radius: 10px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		z-index: 10000;
+		box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+		animation: toastIn 0.25s ease, toastOut 0.25s ease 2.5s forwards;
+	}
+	@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+	@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+
+	/* ===== Modal Overlay & Container ===== */
+	.modal-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0,0,0,0.5);
+		backdrop-filter: blur(4px);
+		-webkit-backdrop-filter: blur(4px);
+		animation: modalFadeIn 0.2s ease;
+	}
+	@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+	@keyframes modalSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+	.modal-container {
+		background: var(--bg-card, #fff);
+		border-radius: 16px;
+		padding: 32px;
+		max-width: 480px;
+		width: 90%;
+		box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+		animation: modalSlideUp 0.25s ease;
+		position: relative;
+	}
+
+	.modal-close {
+		position: absolute;
+		top: 16px;
+		right: 16px;
+		background: none;
+		border: none;
+		font-size: 24px;
+		color: var(--text-muted);
+		cursor: pointer;
+		line-height: 1;
+		padding: 4px;
+	}
+	.modal-close:hover { color: var(--text-dark); }
+
+	.modal-close-inline {
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: var(--text-muted);
+		font-size: 20px;
+		line-height: 1;
+	}
+	.modal-close-inline:hover { color: var(--text-dark); }
+
+	.modal-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 12px;
+	}
+	.modal-title {
+		font-family: var(--font-display, var(--font-headline));
+		font-size: 20px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.modal-header-centered {
+		padding: 8px 0 0;
+		text-align: center;
+	}
+	.modal-avatar {
+		width: 72px;
+		height: 72px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #0f2027, #1a3a4a);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: var(--font-ui);
+		font-size: 22px;
+		font-weight: 700;
+		color: #fff;
+		margin: 0 auto 16px;
+		box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+	}
+	.modal-avatar-name {
+		font-family: var(--font-ui);
+		font-size: 20px;
+		font-weight: 800;
+		color: var(--text-dark);
+		margin-bottom: 4px;
+	}
+	.modal-avatar-meta {
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-muted);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		flex-wrap: wrap;
+		margin-bottom: 16px;
+	}
+	.modal-avatar-link {
+		color: var(--primary);
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	.modal-body-text {
+		font-family: var(--font-body);
+		font-size: 14px;
+		color: var(--text-secondary);
+		line-height: 1.6;
+		text-align: center;
+	}
+	.modal-body-text strong { color: var(--text-dark); }
+
+	.modal-field {
+		margin-bottom: 16px;
+	}
+	.modal-label {
+		display: block;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 6px;
+	}
+	.modal-input {
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-dark);
+		background: var(--bg-page, #f5f5f5);
+		box-sizing: border-box;
+	}
+	.modal-input:focus { border-color: var(--primary); outline: none; }
+
+	.modal-textarea {
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-dark);
+		resize: vertical;
+		box-sizing: border-box;
+	}
+	.modal-textarea:focus { border-color: var(--primary); outline: none; }
+
+	.modal-select {
+		width: 100%;
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-dark);
+		background: var(--bg-page, #f5f5f5);
+		box-sizing: border-box;
+	}
+
+	.modal-radio-group {
+		display: flex;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+	.modal-radio {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-dark);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		cursor: pointer;
+	}
+	.modal-radio input[type="radio"] { accent-color: var(--primary); }
+
+	.modal-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-top: 20px;
+	}
+	.modal-btn-secondary {
+		padding: 14px 24px;
+		background: none;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: all 0.15s;
+		white-space: nowrap;
+	}
+	.modal-btn-secondary:hover { border-color: var(--text-muted); }
+
+	.modal-btn-primary {
+		flex: 1;
+		padding: 14px 24px;
+		background: var(--primary);
+		color: #fff;
+		border: none;
+		border-radius: 12px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.15s;
+		box-shadow: 0 2px 8px rgba(81,190,123,0.3);
+	}
+	.modal-btn-primary:hover:not(:disabled) { background: #3dbd6d; box-shadow: 0 4px 16px rgba(81,190,123,0.4); }
+	.modal-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+	.modal-footer-note {
+		text-align: center;
+		padding-top: 12px;
+		font-family: var(--font-body);
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+
+	/* Modal Success State */
+	.modal-success {
+		text-align: center;
+		padding: 16px 0;
+	}
+	.modal-success-icon {
+		width: 64px;
+		height: 64px;
+		border-radius: 50%;
+		background: rgba(81,190,123,0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 0 auto 20px;
+	}
+	.modal-success-title {
+		font-family: var(--font-ui);
+		font-size: 20px;
+		font-weight: 800;
+		color: var(--text-dark);
+		margin-bottom: 8px;
+	}
+	.modal-success-text {
+		font-family: var(--font-body);
+		font-size: 14px;
+		color: var(--text-secondary);
+		line-height: 1.6;
+		max-width: 320px;
+		margin: 0 auto 20px;
+	}
+
+	/* ===== Invite Modal Specifics ===== */
+	.invite-link-row {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 16px;
+	}
+	.invite-link-input {
+		flex: 1;
+		min-width: 0;
+		font-size: 12px !important;
+	}
+	.invite-copy-btn {
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+	.invite-share-row {
+		display: flex;
+		gap: 8px;
+		margin-top: 16px;
+	}
+	.invite-share-btn {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		padding: 10px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		text-decoration: none;
+		transition: background 0.15s;
+	}
+	.invite-share-btn:hover { background: var(--bg-page, #f5f5f5); }
+
+	/* ===== Claim Modal Specifics ===== */
+	.claim-user-card {
+		background: var(--bg-page, #f5f5f5);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		padding: 14px 16px;
+		margin-bottom: 20px;
+	}
+	.claim-user-name {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 2px;
+	}
+	.claim-user-email {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.claim-user-company {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-top: 2px;
+	}
+	.modal-btn-claim {
+		width: 100%;
+		padding: 14px;
+		background: #2563eb;
+		color: #fff;
+		border: none;
+		border-radius: 10px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: background 0.15s;
+	}
+	.modal-btn-claim:hover:not(:disabled) { background: #1d4ed8; }
+	.modal-btn-claim:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

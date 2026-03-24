@@ -40,7 +40,17 @@
 	const annualDeploy = $derived(capitalNeeded > 0 ? Math.round(capitalNeeded / roadmapYears) : 0);
 	const annualDeals = $derived(annualDeploy > 0 ? Math.ceil(annualDeploy / 100000) : 0);
 
-	function saveGoals() {
+	let saving = $state(false);
+	let saveMsg = $state('');
+
+	function getToken() {
+		if (!browser) return null;
+		return localStorage.getItem('sb_token') || localStorage.getItem('ghlToken') || JSON.parse(localStorage.getItem('gycUser') || '{}').token || null;
+	}
+
+	async function saveGoals() {
+		saving = true;
+		saveMsg = '';
 		investorGoals = {
 			type: goalType,
 			currentIncome: parseFloat(currentIncome) || 0,
@@ -52,16 +62,41 @@
 			createdAt: new Date().toISOString()
 		};
 		if (browser) localStorage.setItem('gycGoals', JSON.stringify(investorGoals));
+		try {
+			const token = getToken();
+			if (token) {
+				const resp = await fetch('/api/userdata', {
+					method: 'POST',
+					headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						type: 'goals',
+						data: {
+							'Goal Type': investorGoals.type,
+							'Current Income': investorGoals.currentIncome,
+							'Target Income': investorGoals.targetIncome,
+							'Capital Available': investorGoals.capital,
+							'Timeline': investorGoals.timeline,
+							'Tax Reduction': investorGoals.taxReduction
+						}
+					})
+				});
+				if (resp.ok) {
+					saveMsg = 'Goals saved';
+				} else {
+					saveMsg = 'Saved locally (sync pending)';
+				}
+			} else {
+				saveMsg = 'Goals saved locally';
+			}
+		} catch (e) {
+			console.warn('Goals sync failed:', e);
+			saveMsg = 'Saved locally (sync pending)';
+		}
+		saving = false;
+		setTimeout(() => saveMsg = '', 3000);
 	}
 
 	function editGoals() {
-		investorGoals = null;
-	}
-
-	onMount(() => {
-		if (!browser) return;
-		investorGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
-		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
 		if (investorGoals) {
 			goalType = investorGoals.type || 'passive_income';
 			currentIncome = investorGoals.currentIncome || 0;
@@ -70,6 +105,60 @@
 			checkSize = investorGoals.checkSize || 100000;
 			timeline = investorGoals.timeline || 5;
 			taxReduction = investorGoals.taxReduction || 0;
+		}
+		investorGoals = null;
+	}
+
+	function populateFormFromGoals(g) {
+		if (!g) return;
+		goalType = g.type || g['Goal Type'] || 'passive_income';
+		currentIncome = g.currentIncome || g['Current Income'] || 0;
+		targetIncome = g.targetIncome || g['Target Income'] || 100000;
+		capital = g.capital || g['Capital Available'] || '$500k - $999k';
+		checkSize = g.checkSize || 100000;
+		timeline = g.timeline || g['Timeline'] || 5;
+		taxReduction = g.taxReduction || g['Tax Reduction'] || 0;
+	}
+
+	onMount(async () => {
+		if (!browser) return;
+		// Load from localStorage first for fast render
+		investorGoals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
+		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+		if (investorGoals) populateFormFromGoals(investorGoals);
+
+		// Then try to load from API
+		try {
+			const token = getToken();
+			if (token) {
+				const resp = await fetch('/api/userdata?type=goals', {
+					headers: { 'Authorization': 'Bearer ' + token }
+				});
+				if (resp.ok) {
+					const data = await resp.json();
+					if (data && (data.goals || data.data)) {
+						const apiGoals = data.goals || data.data;
+						if (apiGoals && Object.keys(apiGoals).length > 0) {
+							// Normalize API response to our format
+							const normalized = {
+								type: apiGoals['Goal Type'] || apiGoals.type || 'passive_income',
+								currentIncome: parseFloat(apiGoals['Current Income'] || apiGoals.currentIncome) || 0,
+								targetIncome: parseFloat(apiGoals['Target Income'] || apiGoals.targetIncome) || 100000,
+								capital: apiGoals['Capital Available'] || apiGoals.capital || '$500k - $999k',
+								checkSize: parseFloat(apiGoals.checkSize) || 100000,
+								timeline: parseInt(apiGoals['Timeline'] || apiGoals.timeline) || 5,
+								taxReduction: parseFloat(apiGoals['Tax Reduction'] || apiGoals.taxReduction) || 0,
+								createdAt: apiGoals.createdAt || new Date().toISOString()
+							};
+							investorGoals = normalized;
+							localStorage.setItem('gycGoals', JSON.stringify(normalized));
+							populateFormFromGoals(normalized);
+						}
+					}
+				}
+			}
+		} catch (e) {
+			console.warn('Failed to load goals from API:', e);
 		}
 	});
 </script>
@@ -135,7 +224,12 @@
 					<label>Annual Taxable Income to Reduce ($, optional)</label>
 					<input type="number" bind:value={taxReduction} placeholder="0">
 				</div>
-				<button class="btn-submit" onclick={saveGoals}>Build My Plan →</button>
+				<button class="btn-submit" onclick={saveGoals} disabled={saving}>
+				{saving ? 'Saving...' : 'Build My Plan →'}
+			</button>
+			{#if saveMsg}
+				<div class="save-toast">{saveMsg}</div>
+			{/if}
 			</div>
 		</div>
 	</div>
@@ -272,6 +366,8 @@
 	.field input, .field select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; box-sizing: border-box; }
 	.field-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 	.btn-submit { width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 4px; }
+	.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+	.save-toast { margin-top: 12px; padding: 10px 16px; background: #F0F9F4; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; color: #059669; font-weight: 600; text-align: center; }
 
 	/* Dashboard */
 	.goals-dashboard { padding: 0 24px 40px; max-width: 900px; margin: 0 auto; }

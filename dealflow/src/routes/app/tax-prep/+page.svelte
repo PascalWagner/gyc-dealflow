@@ -1,6 +1,5 @@
 <script>
 	import { onMount } from 'svelte';
-	import { user, isLoggedIn, userToken } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 
 	let taxDocs = $state([]);
@@ -9,6 +8,8 @@
 	let sortCol = $state('taxYear');
 	let sortDir = $state('desc');
 	let showAddModal = $state(false);
+	let autoPopulating = $state(false);
+	let collapsedYears = $state({});
 
 	// Form state
 	let formYear = $state(new Date().getFullYear() - 1);
@@ -20,12 +21,9 @@
 	let formDate = $state('');
 	let editId = $state(null);
 
-	const years = $derived(() => {
-		const all = [...new Set(taxDocs.map(d => d.taxYear))].sort((a, b) => b - a);
-		return all;
-	});
+	const years = $derived([...new Set(taxDocs.map(d => d.taxYear))].sort((a, b) => b - a));
 
-	const filteredDocs = $derived(() => {
+	const sortedDocs = $derived((() => {
 		let docs = yearFilter ? taxDocs.filter(d => String(d.taxYear) === yearFilter) : taxDocs;
 		docs = [...docs].sort((a, b) => {
 			const aVal = a[sortCol] || '';
@@ -34,30 +32,54 @@
 			return sortDir === 'asc' ? cmp : -cmp;
 		});
 		return docs;
-	});
+	})());
 
-	const summary = $derived(() => {
-		const docs = filteredDocs();
+	// Group by year for expandable sections
+	const groupedByYear = $derived((() => {
+		const groups = {};
+		for (const doc of sortedDocs) {
+			const yr = doc.taxYear || 'Unknown';
+			if (!groups[yr]) groups[yr] = [];
+			groups[yr].push(doc);
+		}
+		return Object.entries(groups).sort((a, b) => String(b[0]).localeCompare(String(a[0])));
+	})());
+
+	const summary = $derived((() => {
 		return {
-			total: docs.length,
-			received: docs.filter(d => d.uploadStatus === 'received').length,
-			pending: docs.filter(d => d.uploadStatus === 'pending').length,
-			k1s: docs.filter(d => d.formType === 'K-1').length
+			total: sortedDocs.length,
+			received: sortedDocs.filter(d => d.uploadStatus === 'received').length,
+			pending: sortedDocs.filter(d => d.uploadStatus === 'pending').length,
+			k1s: sortedDocs.filter(d => d.formType === 'K-1').length
 		};
-	});
+	})());
 
 	function toggleSort(col) {
 		if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
 		else { sortCol = col; sortDir = 'desc'; }
 	}
 
+	function sortIndicator(col) {
+		if (sortCol !== col) return '';
+		return sortDir === 'asc' ? ' \u25B2' : ' \u25BC';
+	}
+
+	function toggleYearSection(yr) {
+		collapsedYears = { ...collapsedYears, [yr]: !collapsedYears[yr] };
+	}
+
+	function getToken() {
+		if (!browser) return null;
+		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		return stored?.token || null;
+	}
+
 	async function loadDocs() {
-		if (!browser) return;
+		const token = getToken();
+		if (!token) { loading = false; return; }
 		try {
-			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-			if (!stored?.token) { loading = false; return; }
 			const res = await fetch('/api/userdata?type=tax_docs', {
-				headers: { 'Authorization': 'Bearer ' + stored.token }
+				headers: { 'Authorization': 'Bearer ' + token }
 			});
 			if (res.ok) {
 				const data = await res.json();
@@ -68,8 +90,8 @@
 	}
 
 	async function saveTaxDoc() {
-		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		if (!stored?.token) return;
+		const token = getToken();
+		if (!token) return;
 		const doc = {
 			taxYear: formYear,
 			investmentName: formInvestment,
@@ -83,12 +105,96 @@
 
 		await fetch('/api/userdata', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + stored.token },
+			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
 			body: JSON.stringify({ type: 'tax_docs', data: doc })
 		});
 		showAddModal = false;
 		editId = null;
 		await loadDocs();
+	}
+
+	async function deleteTaxDoc(doc) {
+		if (!confirm(`Delete tax document for "${doc.investmentName || 'Untitled'}"?`)) return;
+		const token = getToken();
+		if (!token) return;
+
+		// Remove from local state immediately
+		taxDocs = taxDocs.filter(d => d.id !== doc.id);
+
+		try {
+			await fetch('/api/userdata', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+				body: JSON.stringify({ type: 'tax_docs', action: 'delete', id: doc.id })
+			});
+		} catch (e) {
+			console.warn('Failed to delete tax doc:', e);
+			await loadDocs(); // reload on error to restore state
+		}
+	}
+
+	async function autoPopulate() {
+		const token = getToken();
+		if (!token) return;
+		autoPopulating = true;
+
+		try {
+			const res = await fetch('/api/userdata?type=portfolio', {
+				headers: { 'Authorization': 'Bearer ' + token }
+			});
+			if (!res.ok) {
+				alert('Failed to load portfolio. Please try again.');
+				return;
+			}
+			const data = await res.json();
+			const investments = data.docs || data || [];
+
+			if (investments.length === 0) {
+				alert('No investments in your portfolio yet. Add investments first, then auto-populate tax docs.');
+				return;
+			}
+
+			const yr = yearFilter ? Number(yearFilter) : new Date().getFullYear() - 1;
+			const existingNames = taxDocs
+				.filter(d => String(d.taxYear) === String(yr))
+				.map(d => d.investmentName);
+
+			let added = 0;
+			for (const inv of investments) {
+				if (!inv.investmentName || existingNames.includes(inv.investmentName)) continue;
+
+				const doc = {
+					taxYear: yr,
+					investmentName: inv.investmentName,
+					investingEntity: inv.investingEntity || '',
+					entityInvestedInto: inv.entityInvestedInto || '',
+					formType: (inv.assetClass || '').toLowerCase() === 'lending' ? '1099-INT' : 'K-1',
+					uploadStatus: 'pending',
+					dateReceived: '',
+					notes: 'Auto-populated from portfolio'
+				};
+
+				await fetch('/api/userdata', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+					body: JSON.stringify({ type: 'tax_docs', data: doc })
+				});
+				added++;
+			}
+
+			await loadDocs();
+
+			if (added > 0) {
+				alert(`Added ${added} tax document${added > 1 ? 's' : ''} for tax year ${yr}.`);
+			} else {
+				alert(`All portfolio investments already have tax documents for ${yr}.`);
+			}
+		} catch (e) {
+			console.warn('Auto-populate failed:', e);
+			alert('Failed to auto-populate. Please try again.');
+		} finally {
+			autoPopulating = false;
+		}
 	}
 
 	function openEdit(doc) {
@@ -105,7 +211,7 @@
 
 	function openNew() {
 		editId = null;
-		formYear = new Date().getFullYear() - 1;
+		formYear = yearFilter ? Number(yearFilter) : new Date().getFullYear() - 1;
 		formInvestment = ''; formEntity = ''; formEntityInto = '';
 		formType = 'K-1'; formStatus = 'pending'; formDate = '';
 		showAddModal = true;
@@ -127,13 +233,15 @@
 		<div class="filter-row">
 			<select bind:value={yearFilter} class="year-select">
 				<option value="">All Years</option>
-				{#each years() as yr}
+				{#each years as yr}
 					<option value={String(yr)}>{yr}</option>
 				{/each}
 			</select>
 		</div>
 		<div class="action-row">
-			<button class="btn-outline" onclick={loadDocs}>Auto-Populate from Portfolio</button>
+			<button class="btn-outline" onclick={autoPopulate} disabled={autoPopulating}>
+				{autoPopulating ? 'Populating...' : 'Auto-Populate from Portfolio'}
+			</button>
 			<button class="btn-primary" onclick={openNew}>+ Add Document</button>
 		</div>
 	</div>
@@ -148,7 +256,9 @@
 			<div class="empty-title">No tax documents yet</div>
 			<div class="empty-desc">Track K-1s, 1099s, and other tax forms for all your investments.</div>
 			<div class="empty-actions">
-				<button class="btn-primary" onclick={loadDocs}>Auto-Populate from Portfolio</button>
+				<button class="btn-primary" onclick={autoPopulate} disabled={autoPopulating}>
+					{autoPopulating ? 'Populating...' : 'Auto-Populate from Portfolio'}
+				</button>
 				<button class="btn-outline" onclick={openNew}>+ Add Manually</button>
 			</div>
 		</div>
@@ -157,57 +267,119 @@
 		<div class="summary-grid">
 			<div class="summary-card">
 				<div class="sc-label">Total Documents</div>
-				<div class="sc-value">{summary().total}</div>
+				<div class="sc-value">{summary.total}</div>
 			</div>
 			<div class="summary-card">
 				<div class="sc-label">Received</div>
-				<div class="sc-value green">{summary().received}</div>
+				<div class="sc-value green">{summary.received}</div>
 			</div>
 			<div class="summary-card">
 				<div class="sc-label">Pending</div>
-				<div class="sc-value orange">{summary().pending}</div>
+				<div class="sc-value orange">{summary.pending}</div>
 			</div>
 			<div class="summary-card">
 				<div class="sc-label">K-1s</div>
-				<div class="sc-value">{summary().k1s}</div>
+				<div class="sc-value">{summary.k1s}</div>
 			</div>
 		</div>
 
-		<!-- Table -->
-		<div class="table-wrap">
-			<table>
-				<thead>
-					<tr>
-						<th onclick={() => toggleSort('taxYear')}>Tax Year</th>
-						<th onclick={() => toggleSort('investmentName')}>Investment</th>
-						<th onclick={() => toggleSort('investingEntity')}>Investing Entity</th>
-						<th onclick={() => toggleSort('entityInvestedInto')}>Entity Invested Into</th>
-						<th onclick={() => toggleSort('formType')}>Form Type</th>
-						<th onclick={() => toggleSort('uploadStatus')}>Status</th>
-						<th onclick={() => toggleSort('dateReceived')}>Date Received</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each filteredDocs() as doc}
+		<!-- Grouped by year with collapsible sections -->
+		{#if yearFilter}
+			<!-- Single year view: flat table -->
+			<div class="table-wrap">
+				<table>
+					<thead>
 						<tr>
-							<td>{doc.taxYear}</td>
-							<td class="fw-600">{doc.investmentName || '—'}</td>
-							<td>{doc.investingEntity || '—'}</td>
-							<td>{doc.entityInvestedInto || '—'}</td>
-							<td><span class="form-badge">{doc.formType || '—'}</span></td>
-							<td>
-								<span class="status-badge" class:received={doc.uploadStatus === 'received'} class:pending={doc.uploadStatus === 'pending'}>
-									{doc.uploadStatus || 'pending'}
-								</span>
-							</td>
-							<td>{doc.dateReceived || '—'}</td>
-							<td><button class="edit-btn" onclick={() => openEdit(doc)}>Edit</button></td>
+							<th onclick={() => toggleSort('taxYear')}>Tax Year{sortIndicator('taxYear')}</th>
+							<th onclick={() => toggleSort('investmentName')}>Investment{sortIndicator('investmentName')}</th>
+							<th onclick={() => toggleSort('investingEntity')}>Investing Entity{sortIndicator('investingEntity')}</th>
+							<th onclick={() => toggleSort('entityInvestedInto')}>Entity Invested Into{sortIndicator('entityInvestedInto')}</th>
+							<th onclick={() => toggleSort('formType')}>Form Type{sortIndicator('formType')}</th>
+							<th onclick={() => toggleSort('uploadStatus')}>Status{sortIndicator('uploadStatus')}</th>
+							<th onclick={() => toggleSort('dateReceived')}>Date Received{sortIndicator('dateReceived')}</th>
+							<th>Actions</th>
 						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+					</thead>
+					<tbody>
+						{#each sortedDocs as doc}
+							<tr>
+								<td>{doc.taxYear}</td>
+								<td class="fw-600">{doc.investmentName || '\u2014'}</td>
+								<td>{doc.investingEntity || '\u2014'}</td>
+								<td>{doc.entityInvestedInto || '\u2014'}</td>
+								<td><span class="form-badge">{doc.formType || '\u2014'}</span></td>
+								<td>
+									<span class="status-badge" class:received={doc.uploadStatus === 'received'} class:pending={doc.uploadStatus === 'pending'}>
+										{doc.uploadStatus || 'pending'}
+									</span>
+								</td>
+								<td>{doc.dateReceived || '\u2014'}</td>
+								<td class="actions-cell">
+									<button class="edit-btn" onclick={() => openEdit(doc)}>Edit</button>
+									<button class="delete-btn" onclick={() => deleteTaxDoc(doc)}>Delete</button>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{:else}
+			<!-- All years: grouped with collapsible sections -->
+			{#each groupedByYear as [yr, docs]}
+				<div class="year-section">
+					<button class="year-header" onclick={() => toggleYearSection(yr)}>
+						<span class="year-chevron" class:collapsed={collapsedYears[yr]}>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+								<polyline points="6 9 12 15 18 9"/>
+							</svg>
+						</span>
+						<span class="year-title">Tax Year {yr}</span>
+						<span class="year-count">{docs.length} document{docs.length !== 1 ? 's' : ''}</span>
+						<span class="year-status-summary">
+							{#if docs.filter(d => d.uploadStatus === 'received').length > 0}<span class="mini-badge received">{docs.filter(d => d.uploadStatus === 'received').length} received</span>{/if}
+							{#if docs.filter(d => d.uploadStatus === 'pending').length > 0}<span class="mini-badge pending">{docs.filter(d => d.uploadStatus === 'pending').length} pending</span>{/if}
+						</span>
+					</button>
+					{#if !collapsedYears[yr]}
+						<div class="table-wrap">
+							<table>
+								<thead>
+									<tr>
+										<th onclick={() => toggleSort('investmentName')}>Investment{sortIndicator('investmentName')}</th>
+										<th onclick={() => toggleSort('investingEntity')}>Investing Entity{sortIndicator('investingEntity')}</th>
+										<th onclick={() => toggleSort('entityInvestedInto')}>Entity Invested Into{sortIndicator('entityInvestedInto')}</th>
+										<th onclick={() => toggleSort('formType')}>Form Type{sortIndicator('formType')}</th>
+										<th onclick={() => toggleSort('uploadStatus')}>Status{sortIndicator('uploadStatus')}</th>
+										<th onclick={() => toggleSort('dateReceived')}>Date Received{sortIndicator('dateReceived')}</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each docs as doc}
+										<tr>
+											<td class="fw-600">{doc.investmentName || '\u2014'}</td>
+											<td>{doc.investingEntity || '\u2014'}</td>
+											<td>{doc.entityInvestedInto || '\u2014'}</td>
+											<td><span class="form-badge">{doc.formType || '\u2014'}</span></td>
+											<td>
+												<span class="status-badge" class:received={doc.uploadStatus === 'received'} class:pending={doc.uploadStatus === 'pending'}>
+													{doc.uploadStatus || 'pending'}
+												</span>
+											</td>
+											<td>{doc.dateReceived || '\u2014'}</td>
+											<td class="actions-cell">
+												<button class="edit-btn" onclick={() => openEdit(doc)}>Edit</button>
+												<button class="delete-btn" onclick={() => deleteTaxDoc(doc)}>Delete</button>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</div>
+			{/each}
+		{/if}
 	{/if}
 </div>
 
@@ -215,7 +387,10 @@
 {#if showAddModal}
 	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }} role="dialog">
 		<div class="modal">
-			<h3>{editId ? 'Edit' : 'Add'} Tax Document</h3>
+			<div class="modal-header">
+				<h3>{editId ? 'Edit' : 'Add'} Tax Document</h3>
+				<button class="modal-close" onclick={() => showAddModal = false}>&times;</button>
+			</div>
 			<div class="form-grid">
 				<label>
 					<span>Tax Year</span>
@@ -257,7 +432,7 @@
 			</div>
 			<div class="modal-actions">
 				<button class="btn-outline" onclick={() => showAddModal = false}>Cancel</button>
-				<button class="btn-primary" onclick={saveTaxDoc}>Save</button>
+				<button class="btn-primary" onclick={saveTaxDoc}>{editId ? 'Save Changes' : 'Add Document'}</button>
 			</div>
 		</div>
 	</div>
@@ -284,10 +459,12 @@
 		padding: 8px 16px; background: var(--primary); color: #fff; border: none;
 		border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 13px; cursor: pointer;
 	}
+	.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 	.btn-outline {
 		padding: 8px 16px; background: transparent; color: var(--primary); border: 1px solid var(--primary);
 		border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 600; font-size: 13px; cursor: pointer;
 	}
+	.btn-outline:disabled { opacity: 0.6; cursor: not-allowed; }
 
 	.loading { text-align: center; padding: 80px 20px; font-family: var(--font-ui); color: var(--text-muted); }
 
@@ -304,12 +481,34 @@
 	.sc-value.green { color: #059669; }
 	.sc-value.orange { color: #D68C45; }
 
+	/* Year sections */
+	.year-section { margin-bottom: 16px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); overflow: hidden; }
+	.year-header {
+		display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 16px;
+		background: var(--bg-card); border: none; cursor: pointer; font-family: var(--font-ui);
+		text-align: left; transition: background 0.15s;
+	}
+	.year-header:hover { background: rgba(0,0,0,0.02); }
+	.year-chevron { display: flex; align-items: center; transition: transform 0.2s; color: var(--text-muted); }
+	.year-chevron.collapsed { transform: rotate(-90deg); }
+	.year-title { font-size: 15px; font-weight: 800; color: var(--text-dark); }
+	.year-count { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+	.year-status-summary { display: flex; gap: 6px; margin-left: auto; }
+	.mini-badge {
+		padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
+	}
+	.mini-badge.received { background: rgba(5,150,105,0.1); color: #059669; }
+	.mini-badge.pending { background: rgba(214,140,69,0.1); color: #D68C45; }
+	.year-section .table-wrap { border-top: 1px solid var(--border-light); }
+
 	.table-wrap { overflow-x: auto; }
 	table { width: 100%; border-collapse: collapse; font-size: 13px; }
 	th {
 		text-align: left; padding: 10px 12px; font-family: var(--font-ui); font-weight: 700;
 		border-bottom: 2px solid var(--border-light); cursor: pointer; white-space: nowrap;
+		user-select: none; transition: color 0.15s;
 	}
+	th:hover { color: var(--primary); }
 	td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); }
 	.fw-600 { font-weight: 600; }
 	.form-badge {
@@ -321,10 +520,18 @@
 		background: rgba(214,140,69,0.1); color: #D68C45;
 	}
 	.status-badge.received { background: rgba(5,150,105,0.1); color: #059669; }
+	.actions-cell { white-space: nowrap; }
 	.edit-btn {
 		padding: 4px 10px; border: 1px solid var(--border-light); border-radius: 4px;
 		background: none; font-size: 12px; cursor: pointer; color: var(--text-secondary);
+		margin-right: 4px;
 	}
+	.edit-btn:hover { background: rgba(0,0,0,0.04); }
+	.delete-btn {
+		padding: 4px 10px; border: 1px solid rgba(220,38,38,0.3); border-radius: 4px;
+		background: none; font-size: 12px; cursor: pointer; color: #dc2626;
+	}
+	.delete-btn:hover { background: rgba(220,38,38,0.06); }
 
 	.modal-overlay {
 		position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
@@ -334,7 +541,13 @@
 		background: var(--bg-card); border-radius: 12px; padding: 24px;
 		max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
 	}
-	.modal h3 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; margin: 0 0 20px; }
+	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+	.modal h3 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; margin: 0; }
+	.modal-close {
+		background: none; border: none; font-size: 22px; cursor: pointer;
+		color: var(--text-muted); line-height: 1; padding: 0 4px;
+	}
+	.modal-close:hover { color: var(--text-dark); }
 	.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 	.form-grid label { display: flex; flex-direction: column; gap: 4px; }
 	.form-grid span { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-muted); }
@@ -348,5 +561,6 @@
 		.tax-page { padding: 16px; }
 		.form-grid { grid-template-columns: 1fr; }
 		.header-row { flex-direction: column; }
+		.year-status-summary { display: none; }
 	}
 </style>

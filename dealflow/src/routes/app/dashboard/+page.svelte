@@ -102,6 +102,61 @@
 	const inPipeline = $derived(($stageCounts.saved || 0) + ($stageCounts.diligence || 0));
 	const decisionsMade = $derived(($stageCounts.passed || 0) + ($stageCounts.invested || 0));
 
+	// Recent activity feed — derived from dealStages + deals list
+	const recentActivity = $derived(() => {
+		const stageEntries = Object.entries($dealStages);
+		if (stageEntries.length === 0) return [];
+		const dealsMap = {};
+		($deals || []).forEach(d => { dealsMap[d.id] = d; });
+
+		const actionVerbs = {
+			saved: 'saved for review',
+			diligence: 'moved to Connect',
+			decision: 'moved to Decide',
+			invested: 'marked as invested',
+			passed: 'skipped'
+		};
+
+		const activities = stageEntries
+			.map(([dealId, stage]) => {
+				const deal = dealsMap[dealId];
+				if (!deal) return null;
+				return {
+					dealId,
+					dealName: deal.name || deal.investmentName || 'Unknown Deal',
+					stage,
+					verb: actionVerbs[stage] || `moved to ${stage}`,
+					timestamp: deal.stageUpdatedAt || deal.addedDate || deal.createdTime || null
+				};
+			})
+			.filter(Boolean)
+			.sort((a, b) => {
+				if (!a.timestamp && !b.timestamp) return 0;
+				if (!a.timestamp) return 1;
+				if (!b.timestamp) return -1;
+				return new Date(b.timestamp) - new Date(a.timestamp);
+			})
+			.slice(0, 8);
+
+		return activities;
+	});
+
+	// Quick actions — context-aware buttons
+	const quickActions = $derived(() => {
+		const actions = [];
+		actions.push({ label: 'Browse Deals', href: '/app/deals', icon: 'search' });
+		const saved = $stageCounts.saved || 0;
+		if (saved > 0) {
+			actions.push({ label: `Continue Review (${saved})`, href: '/app/deals', icon: 'clipboard', tab: 'saved' });
+		}
+		if (portfolio.length > 0) {
+			actions.push({ label: 'View Portfolio', href: '/app/portfolio', icon: 'briefcase' });
+		} else {
+			actions.push({ label: 'View Portfolio', href: '/app/portfolio', icon: 'briefcase' });
+		}
+		return actions;
+	});
+
 	// Allocation for pie chart
 	const allocationMap = $derived(() => {
 		const map = {};
@@ -189,6 +244,23 @@
 		if (typeof s === 'number') return s;
 		if (!s) return 0;
 		return parseInt(String(s).replace(/[$,\s]/g, ''), 10) || 0;
+	}
+
+	function formatTimeAgo(dateStr) {
+		if (!dateStr) return '';
+		const now = new Date();
+		const date = new Date(dateStr);
+		const diffMs = now - date;
+		const diffMins = Math.floor(diffMs / 60000);
+		if (diffMins < 1) return 'just now';
+		if (diffMins < 60) return `${diffMins}m ago`;
+		const diffHours = Math.floor(diffMins / 60);
+		if (diffHours < 24) return `${diffHours}h ago`;
+		const diffDays = Math.floor(diffHours / 24);
+		if (diffDays < 7) return `${diffDays}d ago`;
+		const diffWeeks = Math.floor(diffDays / 7);
+		if (diffWeeks < 4) return `${diffWeeks}w ago`;
+		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 	}
 
 	function fmtDollar(n) {
@@ -294,6 +366,40 @@
 				<div class="metric-value">{fmtDollar(totalInvested)}</div>
 			</div>
 		</div>
+
+		<!-- Quick Actions -->
+		<div class="quick-actions">
+			{#each quickActions() as action}
+				<a href={action.href} class="quick-action-btn">
+					{#if action.icon === 'search'}
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+					{:else if action.icon === 'clipboard'}
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+					{:else if action.icon === 'briefcase'}
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+					{/if}
+					{action.label}
+				</a>
+			{/each}
+		</div>
+
+		<!-- Recent Activity Feed -->
+		{#if recentActivity().length > 0}
+			<div class="activity-card">
+				<div class="activity-header">Recent Activity</div>
+				{#each recentActivity() as activity}
+					<a href="/app/deals/{activity.dealId}" class="activity-row">
+						<span class="activity-stage-dot" style="background: {STAGE_META[activity.stage]?.color || 'var(--text-muted)'}"></span>
+						<div class="activity-text">
+							<strong>{activity.dealName}</strong> {activity.verb}
+						</div>
+						{#if activity.timestamp}
+							<span class="activity-time">{formatTimeAgo(activity.timestamp)}</span>
+						{/if}
+					</a>
+				{/each}
+			</div>
+		{/if}
 
 		<!-- Action Items -->
 		{#if actionItems().length > 0}
@@ -483,6 +589,90 @@
 	.empty-title { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
 	.empty-desc { font-family: var(--font-body); font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
 
+	/* Quick Actions */
+	.quick-actions {
+		display: flex;
+		gap: 10px;
+		margin-bottom: 20px;
+		flex-wrap: wrap;
+	}
+	.quick-action-btn {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 12px 20px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+		text-decoration: none;
+		transition: all 0.15s;
+		cursor: pointer;
+		flex: 1;
+		min-width: 140px;
+		justify-content: center;
+	}
+	.quick-action-btn:hover {
+		border-color: var(--primary);
+		color: var(--primary);
+		background: rgba(81, 190, 123, 0.04);
+	}
+	.quick-action-btn svg { flex-shrink: 0; }
+
+	/* Recent Activity */
+	.activity-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		overflow: hidden;
+		margin-bottom: 20px;
+	}
+	.activity-header {
+		padding: 16px 16px 0;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 8px;
+	}
+	.activity-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 16px;
+		border-bottom: 1px solid var(--border);
+		text-decoration: none;
+		transition: background 0.15s;
+	}
+	.activity-row:last-child { border-bottom: none; }
+	.activity-row:hover { background: var(--bg-cream); }
+	.activity-stage-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+	.activity-text {
+		flex: 1;
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
+	.activity-text strong { color: var(--text-dark); font-weight: 600; }
+	.activity-time {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		color: var(--text-muted);
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
 	@media (max-width: 768px) {
 		.mobile-menu-btn { display: block; }
 		.topbar-title { font-size: 14px; }
@@ -491,5 +681,7 @@
 		.momentum-grid { grid-template-columns: repeat(2, 1fr); }
 		.portfolio-layout { flex-direction: column; }
 		.content-area { padding: 16px; }
+		.quick-actions { flex-direction: column; }
+		.quick-action-btn { min-width: unset; }
 	}
 </style>

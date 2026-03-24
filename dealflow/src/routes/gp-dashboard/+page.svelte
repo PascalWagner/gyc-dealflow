@@ -7,6 +7,7 @@
 
 	// ===== Reactive State (Svelte 5 Runes) =====
 	let loading = $state(true);
+	let refreshing = $state(false);
 	let accessDenied = $state(false);
 	let toastMsg = $state('');
 	let toastVisible = $state(false);
@@ -778,6 +779,13 @@
 		loadData();
 	});
 
+	async function refreshData() {
+		refreshing = true;
+		await loadData();
+		refreshing = false;
+		showToast('Dashboard data refreshed');
+	}
+
 	function toggleSidebar() { sidebarOpen = !sidebarOpen; }
 	function closeSidebar() { sidebarOpen = false; }
 
@@ -845,6 +853,10 @@
 							<span class="gp-tag type-tag">GP Portal</span>
 						</div>
 					</div>
+					<button class="btn-refresh" onclick={refreshData} disabled={refreshing} title="Refresh dashboard data">
+						<svg class:spinning={refreshing} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+						{refreshing ? 'Refreshing...' : 'Refresh'}
+					</button>
 				</div>
 			</div>
 
@@ -1469,6 +1481,36 @@
 		color: var(--accent-green, #40E47F);
 	}
 	.gp-tag.type-tag { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+
+	/* ====== REFRESH BUTTON ====== */
+	.btn-refresh {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 10px 20px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		background: rgba(255,255,255,0.12);
+		color: rgba(255,255,255,0.85);
+		border: 1px solid rgba(255,255,255,0.2);
+		white-space: nowrap;
+		flex-shrink: 0;
+		align-self: flex-start;
+	}
+	.btn-refresh:hover { background: rgba(255,255,255,0.2); color: #fff; }
+	.btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
+	.btn-refresh :global(svg) { width: 14px; height: 14px; }
+	.btn-refresh :global(svg.spinning) {
+		animation: spin 1s linear infinite;
+	}
+	@keyframes spin {
+		from { transform: rotate(0deg); }
+		to { transform: rotate(360deg); }
+	}
 
 	/* ====== SECTION CARDS ====== */
 	.section-card {

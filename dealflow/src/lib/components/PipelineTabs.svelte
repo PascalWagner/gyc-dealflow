@@ -17,7 +17,7 @@
 			onclick={() => switchTab(stage)}
 		>
 			{STAGE_META[stage].label}
-			{#if stage !== 'browse' && (counts[stage] || 0) > 0}
+			{#if (counts[stage] || 0) > 0}
 				<span class="tab-count">{counts[stage]}</span>
 			{/if}
 		</button>
@@ -51,7 +51,7 @@
 			onclick={() => switchTab(stage)}
 		>
 			{STAGE_META[stage].label}
-			{#if stage !== 'browse' && (counts[stage] || 0) > 0}
+			{#if (counts[stage] || 0) > 0}
 				<span class="pill-count">{counts[stage]}</span>
 			{/if}
 		</button>

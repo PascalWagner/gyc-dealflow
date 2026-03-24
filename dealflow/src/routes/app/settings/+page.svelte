@@ -20,8 +20,13 @@
 	// Privacy
 	let shareActivity = $state(true);
 
+	// Investor profile
+	let accreditedStatus = $state('');
+
 	// Notifications
 	let notifFreq = $state('weekly');
+	let dealAlerts = $state(true);
+	let weeklyDigest = $state(true);
 	let notifSaved = $state(false);
 
 	// Tier display
@@ -50,6 +55,7 @@
 		avatarUrl = u.avatar_url || '';
 		avatarInitials = getInitials(u);
 		shareActivity = u.share_activity !== false;
+		accreditedStatus = u.accredited_status || '';
 	}
 
 	async function saveProfile() {
@@ -60,19 +66,23 @@
 			u.lastName = lastName;
 			u.phone = phone;
 			u.location = location;
+			u.accredited_status = accreditedStatus;
 			u.name = (firstName + ' ' + lastName).trim();
 			localStorage.setItem('gycUser', JSON.stringify(u));
 		}
 		try {
 			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
 			if (token) {
-				await fetch('/api/userdata', {
+				const resp = await fetch('/api/userdata', {
 					method: 'POST',
 					headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'profile', data: { firstName, lastName, phone, location } })
+					body: JSON.stringify({ type: 'profile', data: { firstName, lastName, phone, location, accredited_status: accreditedStatus } })
 				});
+				if (!resp.ok) console.warn('Profile save returned', resp.status);
 			}
-		} catch (e) { /* silent */ }
+		} catch (e) {
+			console.warn('Profile save failed:', e);
+		}
 		profileSaving = false;
 		profileSaved = true;
 		setTimeout(() => profileSaved = false, 2000);
@@ -97,40 +107,62 @@
 		} catch (e) { /* silent */ }
 	}
 
-	async function setNotifFrequency(freq) {
-		notifFreq = freq;
-		if (browser) localStorage.setItem('gycNotifPrefs', JSON.stringify({ frequency: freq }));
+	async function saveNotifPrefs() {
+		const prefs = { frequency: notifFreq, deal_alerts: dealAlerts, weekly_digest: weeklyDigest };
+		if (browser) localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
 		try {
 			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
 			if (token) {
 				await fetch('/api/userdata', {
 					method: 'POST',
 					headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'notif_prefs', data: { frequency: freq } })
+					body: JSON.stringify({ type: 'notif_prefs', data: prefs })
 				});
 			}
-		} catch (e) { /* silent */ }
+		} catch (e) {
+			console.warn('Notif prefs save failed:', e);
+		}
 		notifSaved = true;
 		setTimeout(() => notifSaved = false, 2000);
 	}
 
+	function setNotifFrequency(freq) {
+		notifFreq = freq;
+		saveNotifPrefs();
+	}
+
+	function toggleDealAlerts() {
+		dealAlerts = !dealAlerts;
+		saveNotifPrefs();
+	}
+
+	function toggleWeeklyDigest() {
+		weeklyDigest = !weeklyDigest;
+		saveNotifPrefs();
+	}
+
 	async function loadNotifPrefs() {
-		let freq = 'weekly';
+		let prefs = { frequency: 'weekly', deal_alerts: true, weekly_digest: true };
 		try {
 			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
 			if (token) {
 				const resp = await fetch('/api/userdata?type=notif_prefs', { headers: { 'Authorization': 'Bearer ' + token } });
 				if (resp.ok) {
 					const data = await resp.json();
-					if (data.notif_frequency) freq = data.notif_frequency;
+					if (data.notif_frequency) prefs.frequency = data.notif_frequency;
+					if (data.deal_alerts !== undefined) prefs.deal_alerts = data.deal_alerts;
+					if (data.weekly_digest !== undefined) prefs.weekly_digest = data.weekly_digest;
 				}
 			}
 		} catch (e) { /* use default */ }
-		if (!freq || freq === 'weekly') {
-			const local = browser ? JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}') : {};
-			if (local.frequency) freq = local.frequency;
-		}
-		notifFreq = freq;
+		// Fallback to localStorage
+		const local = browser ? JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}') : {};
+		if (local.frequency && prefs.frequency === 'weekly') prefs.frequency = local.frequency;
+		if (local.deal_alerts !== undefined) prefs.deal_alerts = local.deal_alerts;
+		if (local.weekly_digest !== undefined) prefs.weekly_digest = local.weekly_digest;
+		notifFreq = prefs.frequency;
+		dealAlerts = prefs.deal_alerts !== false;
+		weeklyDigest = prefs.weekly_digest !== false;
 	}
 
 	function handleAvatarUpload(event) {
@@ -242,6 +274,16 @@
 						<div class="profile-label">Location</div>
 						<input type="text" class="profile-input" bind:value={location} placeholder="City, State" />
 					</div>
+				</div>
+				<div class="profile-field">
+					<div class="profile-label">Accredited Investor Status</div>
+					<select class="profile-input" bind:value={accreditedStatus}>
+						<option value="">-- Select --</option>
+						<option value="accredited">Accredited Investor</option>
+						<option value="qualified_purchaser">Qualified Purchaser</option>
+						<option value="not_accredited">Not Yet Accredited</option>
+						<option value="prefer_not_to_say">Prefer Not to Say</option>
+					</select>
 				</div>
 			</div>
 
@@ -375,9 +417,17 @@
 			<div class="settings-page-desc">Control how and when you receive deal alert emails.</div>
 
 			<div class="notif-card">
-				<div class="notif-title">Deal Alert Frequency</div>
+				<div class="notif-title">Email Frequency</div>
 				<div class="notif-desc">We'll email you new deals that match your buy box. Choose how often.</div>
 				<div class="notif-btns">
+					<button class="notif-freq-btn" class:active={notifFreq === 'realtime'} onclick={() => setNotifFrequency('realtime')}>
+						<div>Real-Time</div>
+						<div class="notif-freq-sub">As deals arrive</div>
+					</button>
+					<button class="notif-freq-btn" class:active={notifFreq === 'daily'} onclick={() => setNotifFrequency('daily')}>
+						<div>Daily</div>
+						<div class="notif-freq-sub">Morning digest</div>
+					</button>
 					<button class="notif-freq-btn" class:active={notifFreq === 'weekly'} onclick={() => setNotifFrequency('weekly')}>
 						<div>Weekly</div>
 						<div class="notif-freq-sub">Every Friday</div>
@@ -386,6 +436,34 @@
 						<div>Off</div>
 						<div class="notif-freq-sub">No deal emails</div>
 					</button>
+				</div>
+			</div>
+
+			<div class="notif-card" style="margin-top:16px;">
+				<div class="notif-title">Deal Alerts</div>
+				<div class="notif-desc">Get notified when new deals match your buy box criteria.</div>
+				<div class="toggle-row">
+					<button class="toggle-track" class:on={dealAlerts} onclick={toggleDealAlerts}>
+						<div class="toggle-thumb"></div>
+					</button>
+					<div>
+						<div class="toggle-label">{dealAlerts ? 'Deal alerts are on' : 'Deal alerts are off'}</div>
+						<div class="toggle-desc">{dealAlerts ? 'You will receive alerts for matching deals' : 'You will not receive deal alert notifications'}</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="notif-card" style="margin-top:16px;">
+				<div class="notif-title">Weekly Digest</div>
+				<div class="notif-desc">A summary of new deals, market insights, and your portfolio activity.</div>
+				<div class="toggle-row">
+					<button class="toggle-track" class:on={weeklyDigest} onclick={toggleWeeklyDigest}>
+						<div class="toggle-thumb"></div>
+					</button>
+					<div>
+						<div class="toggle-label">{weeklyDigest ? 'Weekly digest is on' : 'Weekly digest is off'}</div>
+						<div class="toggle-desc">{weeklyDigest ? 'Sent every Friday morning' : 'You will not receive the weekly digest'}</div>
+					</div>
 				</div>
 			</div>
 
