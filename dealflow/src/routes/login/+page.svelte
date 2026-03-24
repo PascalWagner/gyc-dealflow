@@ -1,75 +1,123 @@
 <script>
-	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores/auth.js';
-	import LoginForm from '$lib/components/LoginForm.svelte';
 
-	// ── Carousel state ──
-	const screenLabels = [
-		'Every deal vetted. Every sponsor tracked.',
-		"Know exactly who you're investing with.",
-		'Your buy box. Your matches. Your plan.'
+	// ── Reactive state (Svelte 5 runes) ──
+	let email = $state('');
+	let loading = $state(false);
+	let error = $state('');
+	let sent = $state(false);
+	let signingIn = $state(false);
+	let signInFailed = $state(false);
+
+	// Carousel
+	const screens = [
+		{ label: 'Every deal vetted. Every sponsor tracked.' },
+		{ label: 'Know exactly who you\'re investing with.' },
+		{ label: 'Your buy box. Your matches. Your plan.' }
 	];
-	let currentScreen = $state(0);
+	let currentSlide = $state(0);
+
+	// Testimonials
+	const testimonials = [
+		{
+			initials: 'MR',
+			quote: 'Deployed $200K into my first two deals within 60 days. I\'d still be on the sidelines without this.',
+			author: 'Michael R.',
+			role: 'Business Owner, Tampa FL'
+		},
+		{
+			initials: 'SK',
+			quote: 'I vetted my first sponsor in 20 minutes. My advisor said I was crazy. I\'m up 11% while his clients are flat.',
+			author: 'Sarah K.',
+			role: 'Physician, Austin TX'
+		},
+		{
+			initials: 'DL',
+			quote: '$8,200/month in distributions. That\'s my mortgage, car, and kids\' school — covered. And I still have my W-2.',
+			author: 'David L.',
+			role: 'Software Executive, Denver CO'
+		}
+	];
 	let currentTestimonial = $state(0);
-	let autoTimer = $state(undefined);
-	let callbackStatus = $state(''); // '' | 'loading' | 'error'
+
+	// Derived
+	let showcaseLabel = $derived(screens[currentSlide].label);
+	let returnUrl = $derived($page.url.searchParams.get('return'));
+
+	// ── Auto-rotate carousel ──
+	$effect(() => {
+		const timer = setInterval(() => {
+			currentSlide = (currentSlide + 1) % screens.length;
+		}, 5000);
+		return () => clearInterval(timer);
+	});
+
+	// ── Auto-rotate testimonials ──
+	$effect(() => {
+		const timer = setInterval(() => {
+			currentTestimonial = (currentTestimonial + 1) % testimonials.length;
+		}, 4000);
+		return () => clearInterval(timer);
+	});
 
 	function showScreen(i) {
-		currentScreen = i;
-		clearInterval(autoTimer);
-		autoTimer = setInterval(() => {
-			currentScreen = (currentScreen + 1) % screenLabels.length;
-		}, 5000);
+		currentSlide = i;
 	}
 
-	// ── Get return URL from query params ──
-	let returnUrl = $derived(
-		browser ? new URLSearchParams(window.location.search).get('return') : null
-	);
-
-	// ── Auto-rotation for screenshots ──
-	$effect(() => {
-		if (!browser) return;
-		autoTimer = setInterval(() => {
-			currentScreen = (currentScreen + 1) % screenLabels.length;
-		}, 5000);
-		return () => clearInterval(autoTimer);
-	});
-
-	// ── Testimonial rotation (independent) ──
-	$effect(() => {
-		if (!browser) return;
-		const t = setInterval(() => {
-			currentTestimonial = (currentTestimonial + 1) % 3;
-		}, 4000);
-		return () => clearInterval(t);
-	});
+	// ── Store user data helper ──
+	function storeUser(data) {
+		const userData = {
+			email: data.email,
+			name: data.name || data.email?.split('@')[0],
+			token: data.token,
+			refreshToken: data.refreshToken || '',
+			tier: data.tier || 'free',
+			isAdmin: data.isAdmin || false,
+			tags: data.tags || [],
+			contactId: data.contactId || null,
+			phone: data.phone || '',
+			location: data.location || '',
+			share_saved: data.share_saved !== false,
+			share_dd: data.share_dd !== false,
+			share_invested: data.share_invested !== false,
+			allow_follows: data.allow_follows !== false,
+			...(data.gpType && {
+				gpType: data.gpType,
+				managementCompanyId: data.managementCompanyId,
+				managementCompanyName: data.managementCompanyName
+			})
+		};
+		localStorage.setItem('gycUser', JSON.stringify(userData));
+		user.set(userData);
+		return userData;
+	}
 
 	// ── Magic link callback handler ──
-	// Supabase redirects back with #access_token=...&type=magiclink
-	$effect(() => {
-		if (!browser) return;
+	onMount(() => {
 		const hash = window.location.hash.substring(1);
 		if (!hash) return;
+
 		const params = new URLSearchParams(hash);
 		const accessToken = params.get('access_token');
 		const refreshToken = params.get('refresh_token');
 		const type = params.get('type');
 		if (!accessToken || type !== 'magiclink') return;
 
-		callbackStatus = 'loading';
+		signingIn = true;
 
 		// Decode the JWT to get the email
-		let email = '';
+		let userEmail = '';
 		try {
 			const payload = JSON.parse(atob(accessToken.split('.')[1]));
-			email = payload.email || '';
+			userEmail = payload.email || '';
 		} catch {}
 
-		if (!email) {
-			callbackStatus = 'error';
+		if (!userEmail) {
+			signInFailed = true;
+			signingIn = false;
 			return;
 		}
 
@@ -77,74 +125,100 @@
 		fetch('/api/auth', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ action: 'lookup', email })
+			body: JSON.stringify({ action: 'lookup', email: userEmail })
 		})
 			.then((r) => r.json())
 			.then((data) => {
-				const userData = {
-					email,
-					name: data.name || email.split('@')[0],
+				storeUser({
+					email: userEmail,
+					name: data.name || userEmail.split('@')[0],
 					token: accessToken,
 					refreshToken: refreshToken || '',
-					tier: data.tier || 'free',
-					isAdmin: data.isAdmin || false,
-					tags: data.tags || [],
-					contactId: data.contactId || null,
-					phone: data.phone || '',
-					location: data.location || '',
-					share_saved: data.share_saved !== false,
-					share_dd: data.share_dd !== false,
-					share_invested: data.share_invested !== false,
-					allow_follows: data.allow_follows !== false,
-					...(data.gpType && {
-						gpType: data.gpType,
-						managementCompanyId: data.managementCompanyId,
-						managementCompanyName: data.managementCompanyName
-					})
-				};
-				user.set(userData);
+					tier: data.tier,
+					isAdmin: data.isAdmin,
+					tags: data.tags,
+					contactId: data.contactId,
+					phone: data.phone,
+					location: data.location,
+					share_saved: data.share_saved,
+					share_dd: data.share_dd,
+					share_invested: data.share_invested,
+					allow_follows: data.allow_follows,
+					gpType: data.gpType,
+					managementCompanyId: data.managementCompanyId,
+					managementCompanyName: data.managementCompanyName
+				});
 				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/';
-				window.location.replace(dest);
+				goto(dest, { replaceState: true });
 			})
 			.catch(() => {
 				// Fallback: store minimal session
-				user.set({
-					email,
-					name: email.split('@')[0],
+				storeUser({
+					email: userEmail,
+					name: userEmail.split('@')[0],
 					token: accessToken,
 					refreshToken: refreshToken || '',
 					tier: 'free',
 					isAdmin: false,
 					tags: []
 				});
-				window.location.replace('/');
+				goto('/', { replaceState: true });
 			});
 	});
 
-	// ── Handle dev bypass from LoginForm ──
-	function handleBypass(data) {
-		user.set({
-			email: data.email,
-			name: data.name,
-			token: data.token,
-			refreshToken: data.refreshToken,
-			tier: data.tier,
-			isAdmin: data.isAdmin,
-			tags: data.tags,
-			contactId: data.contactId,
-			phone: data.phone || '',
-			location: data.location || '',
-			share_saved: data.share_saved !== false,
-			share_dd: data.share_dd !== false,
-			share_invested: data.share_invested !== false,
-			allow_follows: data.allow_follows !== false
-		});
-		const dest = returnUrl ? decodeURIComponent(returnUrl) : '/';
-		window.location.href = dest;
+	// ── Form submit ──
+	async function handleSubmit() {
+		error = '';
+		const trimmed = email.trim();
+		if (!trimmed || !trimmed.includes('@')) {
+			error = 'Please enter a valid email.';
+			return;
+		}
+		loading = true;
+
+		try {
+			const res = await fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'magic-link', email: trimmed })
+			});
+			const data = await res.json();
+
+			if (data.bypass && data.token) {
+				// Dev bypass — store session and redirect immediately
+				storeUser(data);
+				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/';
+				goto(dest, { replaceState: true });
+				return;
+			}
+
+			// Normal flow — show "check your email"
+			sent = true;
+		} catch {
+			// Still show success state — magic link may have sent
+			sent = true;
+		}
+
+		loading = false;
+	}
+
+	function resetForm() {
+		sent = false;
+		loading = false;
+		email = '';
+		error = '';
+	}
+
+	function onKeydown(e) {
+		if (e.key === 'Enter') handleSubmit();
 	}
 </script>
 
 <svelte:head>
+	<link
+		href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600&display=swap"
+		rel="stylesheet"
+	/>
 	<title>GYC - Sign In</title>
 </svelte:head>
 
@@ -155,14 +229,14 @@
 			<div class="screenshot-carousel">
 				<div class="screenshot-frame">
 					<!-- Screen 1: Deal Flow -->
-					<div class="screen screen-deals" class:active={currentScreen === 0}>
+					<div class="screen screen-deals" class:active={currentSlide === 0}>
 						<div class="page-title">Deal Flow</div>
 						<div class="page-subtitle">838 deals from 455 vetted sponsors</div>
 						<div class="tabs-row">
-							<div class="tab on">Browse</div>
-							<div class="tab">Saved</div>
-							<div class="tab">Vetting</div>
-							<div class="tab">Due Diligence</div>
+							<div class="tab on">Filter</div>
+							<div class="tab">Review</div>
+							<div class="tab">Connect</div>
+							<div class="tab">Decide</div>
 						</div>
 						<div class="deal-grid">
 							<div class="deal-card">
@@ -225,10 +299,7 @@
 									<div class="deal-metric"><strong>8%</strong>Pref Return</div>
 									<div class="deal-metric"><strong>17%</strong>Target IRR</div>
 								</div>
-								<div
-									class="deal-card-tag"
-									style="background:rgba(234,179,8,0.1);color:#CA8A04;"
-								>
+								<div class="deal-card-tag" style="background:rgba(234,179,8,0.1);color:#CA8A04;">
 									Closing Soon
 								</div>
 							</div>
@@ -236,7 +307,7 @@
 					</div>
 
 					<!-- Screen 2: Sponsor Profile -->
-					<div class="screen screen-sponsor" class:active={currentScreen === 1}>
+					<div class="screen screen-sponsor" class:active={currentSlide === 1}>
 						<div class="sponsor-header">
 							<div class="sponsor-logo">MC</div>
 							<div>
@@ -267,33 +338,25 @@
 							<div class="sponsor-track-title">Track Record by Asset Class</div>
 							<div class="track-bar-row">
 								<div class="track-bar-label">Self Storage</div>
-								<div class="track-bar-bg">
-									<div class="track-bar-fill" style="width:85%"></div>
-								</div>
+								<div class="track-bar-bg"><div class="track-bar-fill" style="width:85%"></div></div>
 							</div>
 							<div class="track-bar-row">
 								<div class="track-bar-label">Industrial</div>
-								<div class="track-bar-bg">
-									<div class="track-bar-fill" style="width:60%"></div>
-								</div>
+								<div class="track-bar-bg"><div class="track-bar-fill" style="width:60%"></div></div>
 							</div>
 							<div class="track-bar-row">
 								<div class="track-bar-label">Multifamily</div>
-								<div class="track-bar-bg">
-									<div class="track-bar-fill" style="width:35%"></div>
-								</div>
+								<div class="track-bar-bg"><div class="track-bar-fill" style="width:35%"></div></div>
 							</div>
 							<div class="track-bar-row">
 								<div class="track-bar-label">Retail</div>
-								<div class="track-bar-bg">
-									<div class="track-bar-fill" style="width:15%"></div>
-								</div>
+								<div class="track-bar-bg"><div class="track-bar-fill" style="width:15%"></div></div>
 							</div>
 						</div>
 					</div>
 
 					<!-- Screen 3: Dashboard -->
-					<div class="screen screen-dashboard" class:active={currentScreen === 2}>
+					<div class="screen screen-dashboard" class:active={currentSlide === 2}>
 						<div class="dash-greeting">Good morning, Sarah</div>
 						<div class="dash-cards">
 							<div class="dash-card">
@@ -318,7 +381,9 @@
 								<div class="dash-match-icon" style="background:#EBF5FF;">&#x1F3E2;</div>
 								<div class="dash-match-info">
 									<div class="dash-match-name">Meridian Self Storage Fund III</div>
-									<div class="dash-match-detail">8.2% Pref &middot; 18.5% IRR &middot; Self Storage</div>
+									<div class="dash-match-detail">
+										8.2% Pref &middot; 18.5% IRR &middot; Self Storage
+									</div>
 								</div>
 								<div class="dash-match-badge">98% Match</div>
 							</div>
@@ -326,7 +391,9 @@
 								<div class="dash-match-icon" style="background:#FFF5EB;">&#x1F3E8;</div>
 								<div class="dash-match-info">
 									<div class="dash-match-name">Gulf Coast Hospitality REIT</div>
-									<div class="dash-match-detail">10% Pref &middot; 22% IRR &middot; Hospitality</div>
+									<div class="dash-match-detail">
+										10% Pref &middot; 22% IRR &middot; Hospitality
+									</div>
 								</div>
 								<div class="dash-match-badge">94% Match</div>
 							</div>
@@ -334,7 +401,9 @@
 								<div class="dash-match-icon" style="background:#F0FFF4;">&#x1F3ED;</div>
 								<div class="dash-match-info">
 									<div class="dash-match-name">Sunbelt Industrial Portfolio</div>
-									<div class="dash-match-detail">7% Pref &middot; 16% IRR &middot; Industrial</div>
+									<div class="dash-match-detail">
+										7% Pref &middot; 16% IRR &middot; Industrial
+									</div>
 								</div>
 								<div class="dash-match-badge">91% Match</div>
 							</div>
@@ -344,12 +413,12 @@
 			</div>
 
 			<div class="showcase-caption">
-				<div class="showcase-label">{screenLabels[currentScreen]}</div>
+				<div class="showcase-label">{showcaseLabel}</div>
 				<div class="showcase-dots">
-					{#each screenLabels as _, i}
+					{#each screens as _, i}
 						<button
 							class="showcase-dot"
-							class:active={currentScreen === i}
+							class:active={currentSlide === i}
 							onclick={() => showScreen(i)}
 						></button>
 					{/each}
@@ -357,39 +426,16 @@
 			</div>
 
 			<div class="testimonial-section">
-				<div class="testimonial-slide" class:active={currentTestimonial === 0}>
-					<div class="testimonial-avatar">MR</div>
-					<div class="testimonial-body">
-						<div class="testimonial-quote">
-							"Deployed $200K into my first two deals within 60 days. I'd still be on the
-							sidelines without this."
+				{#each testimonials as t, i}
+					<div class="testimonial-slide" class:active={currentTestimonial === i}>
+						<div class="testimonial-avatar">{t.initials}</div>
+						<div class="testimonial-body">
+							<div class="testimonial-quote">"{t.quote}"</div>
+							<div class="testimonial-author">{t.author}</div>
+							<div class="testimonial-role">{t.role}</div>
 						</div>
-						<div class="testimonial-author">Michael R.</div>
-						<div class="testimonial-role">Business Owner, Tampa FL</div>
 					</div>
-				</div>
-				<div class="testimonial-slide" class:active={currentTestimonial === 1}>
-					<div class="testimonial-avatar">SK</div>
-					<div class="testimonial-body">
-						<div class="testimonial-quote">
-							"I vetted my first sponsor in 20 minutes. My advisor said I was crazy. I'm up 11%
-							while his clients are flat."
-						</div>
-						<div class="testimonial-author">Sarah K.</div>
-						<div class="testimonial-role">Physician, Austin TX</div>
-					</div>
-				</div>
-				<div class="testimonial-slide" class:active={currentTestimonial === 2}>
-					<div class="testimonial-avatar">DL</div>
-					<div class="testimonial-body">
-						<div class="testimonial-quote">
-							"$8,200/month in distributions. That's my mortgage, car, and kids' school &mdash;
-							covered. And I still have my W-2."
-						</div>
-						<div class="testimonial-author">David L.</div>
-						<div class="testimonial-role">Software Executive, Denver CO</div>
-					</div>
-				</div>
+				{/each}
 			</div>
 		</div>
 	</div>
@@ -411,19 +457,77 @@
 				<div class="brand-mark-text">Grow Your Cashflow</div>
 			</div>
 
-			{#if callbackStatus === 'loading'}
-				<p class="callback-msg">Signing you in...</p>
-			{:else if callbackStatus === 'error'}
-				<p class="callback-msg error">Sign-in failed. Please try again.</p>
+			{#if signingIn}
+				<!-- Auth callback loading state -->
+				{#if signInFailed}
+					<p style="text-align:center;color:#dc2626;padding:40px 0;">
+						Sign-in failed. Please try again.
+					</p>
+				{:else}
+					<p style="text-align:center;color:var(--slate);font-size:16px;padding:40px 0;">
+						Signing you in...
+					</p>
+				{/if}
+			{:else if sent}
+				<!-- Success state -->
+				<div class="success-state show">
+					<div class="success-check">
+						<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+						</svg>
+					</div>
+					<h2>Check your email</h2>
+					<p>
+						We sent a login link to<br /><span class="email-highlight">{email.trim()}</span>
+					</p>
+					<button class="retry" onclick={resetForm}>Use a different email</button>
+				</div>
 			{:else}
-				<LoginForm onBypass={handleBypass} />
+				<!-- Form state -->
+				<div class="form-title">Build your cash-flowing portfolio</div>
+				<div class="form-desc">
+					Whether you're deploying your first $50K or your next $500K — research vetted sponsors,
+					match deals to your goals, and invest with a plan.
+				</div>
+
+				<label class="field-label" for="emailInput">Email address</label>
+				<input
+					type="email"
+					class="field-input"
+					id="emailInput"
+					placeholder="you@example.com"
+					autocomplete="email"
+					bind:value={email}
+					onkeydown={onKeydown}
+				/>
+				{#if error}
+					<div class="error-msg show">{error}</div>
+				{/if}
+
+				<button
+					class="submit-btn"
+					class:loading
+					onclick={handleSubmit}
+					disabled={loading}
+				>
+					{loading ? 'Sending...' : 'Get Started'}
+				</button>
+
+				<div class="helper-text">No password needed. We'll send you a secure link.</div>
 			{/if}
 		</div>
 	</div>
 </div>
 
 <style>
-	/* ─── Split layout ─── */
+	:global(body) {
+		font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+		-webkit-font-smoothing: antialiased;
+		margin: 0;
+		min-height: 100vh;
+		min-height: 100dvh;
+	}
+
 	.split-layout {
 		display: flex;
 		min-height: 100vh;
@@ -539,36 +643,36 @@
 	.screen-deals {
 		background: #faf9f5;
 		padding: 20px;
-		font-family: var(--font-ui, 'Plus Jakarta Sans', sans-serif);
+		font-family: 'Plus Jakarta Sans', sans-serif;
 	}
 	.screen-deals .page-title {
-		font-family: var(--font-headline, 'DM Serif Display', serif);
+		font-family: 'DM Serif Display', serif;
 		font-size: 18px;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 		margin-bottom: 4px;
 	}
 	.screen-deals .page-subtitle {
 		font-size: 10px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		margin-bottom: 14px;
 	}
-	.tabs-row {
+	.screen-deals .tabs-row {
 		display: flex;
 		gap: 0;
 		border-bottom: 2px solid #e5e7eb;
 		margin-bottom: 14px;
 	}
-	.tab {
+	.screen-deals .tab {
 		padding: 6px 12px;
 		font-size: 9px;
 		font-weight: 600;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		border-bottom: 2px solid transparent;
 		margin-bottom: -2px;
 	}
-	.tab.on {
-		color: var(--green, #51be7b);
-		border-bottom-color: var(--green, #51be7b);
+	.screen-deals .tab.on {
+		color: var(--green);
+		border-bottom-color: var(--green);
 	}
 	.deal-grid {
 		display: grid;
@@ -599,12 +703,12 @@
 	.deal-card-name {
 		font-size: 10px;
 		font-weight: 700;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 		line-height: 1.2;
 	}
 	.deal-card-sponsor {
 		font-size: 8px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		margin-top: 1px;
 	}
 	.deal-card-metrics {
@@ -614,12 +718,12 @@
 	}
 	.deal-metric {
 		font-size: 8px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 	}
 	.deal-metric strong {
 		display: block;
 		font-size: 11px;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 		font-weight: 700;
 	}
 	.deal-card-tag {
@@ -637,7 +741,7 @@
 	.screen-sponsor {
 		background: #faf9f5;
 		padding: 20px;
-		font-family: var(--font-ui, 'Plus Jakarta Sans', sans-serif);
+		font-family: 'Plus Jakarta Sans', sans-serif;
 	}
 	.sponsor-header {
 		display: flex;
@@ -649,7 +753,7 @@
 		width: 44px;
 		height: 44px;
 		border-radius: 10px;
-		background: linear-gradient(135deg, var(--teal, #1f5159), #2a6b75);
+		background: linear-gradient(135deg, var(--teal), #2a6b75);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -660,11 +764,11 @@
 	.sponsor-name {
 		font-size: 16px;
 		font-weight: 700;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 	}
 	.sponsor-type {
 		font-size: 10px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		margin-top: 2px;
 	}
 	.sponsor-verified {
@@ -673,7 +777,7 @@
 		gap: 4px;
 		font-size: 8px;
 		font-weight: 700;
-		color: var(--green, #51be7b);
+		color: var(--green);
 		background: rgba(81, 190, 123, 0.1);
 		padding: 3px 8px;
 		border-radius: 4px;
@@ -695,11 +799,11 @@
 	.sponsor-stat-val {
 		font-size: 14px;
 		font-weight: 800;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 	}
 	.sponsor-stat-label {
 		font-size: 7px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		margin-top: 2px;
 		text-transform: uppercase;
 		letter-spacing: 0.3px;
@@ -713,7 +817,7 @@
 	.sponsor-track-title {
 		font-size: 10px;
 		font-weight: 700;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 		margin-bottom: 10px;
 	}
 	.track-bar-row {
@@ -724,7 +828,7 @@
 	}
 	.track-bar-label {
 		font-size: 8px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		width: 60px;
 		flex-shrink: 0;
 	}
@@ -738,19 +842,19 @@
 	.track-bar-fill {
 		height: 100%;
 		border-radius: 3px;
-		background: var(--green, #51be7b);
+		background: var(--green);
 	}
 
 	/* ─── Screen 3: Dashboard ─── */
 	.screen-dashboard {
 		background: #faf9f5;
 		padding: 20px;
-		font-family: var(--font-ui, 'Plus Jakarta Sans', sans-serif);
+		font-family: 'Plus Jakarta Sans', sans-serif;
 	}
 	.dash-greeting {
-		font-family: var(--font-headline, 'DM Serif Display', serif);
+		font-family: 'DM Serif Display', serif;
 		font-size: 16px;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 		margin-bottom: 14px;
 	}
 	.dash-cards {
@@ -767,7 +871,7 @@
 	}
 	.dash-card-label {
 		font-size: 8px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		text-transform: uppercase;
 		letter-spacing: 0.3px;
 		margin-bottom: 4px;
@@ -775,18 +879,18 @@
 	.dash-card-val {
 		font-size: 18px;
 		font-weight: 800;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 	}
 	.dash-card-change {
 		font-size: 8px;
 		font-weight: 600;
-		color: var(--green, #51be7b);
+		color: var(--green);
 		margin-top: 2px;
 	}
 	.dash-section-title {
 		font-size: 10px;
 		font-weight: 700;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 		margin-bottom: 8px;
 	}
 	.dash-match-list {
@@ -819,11 +923,11 @@
 	.dash-match-name {
 		font-size: 10px;
 		font-weight: 700;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 	}
 	.dash-match-detail {
 		font-size: 8px;
-		color: var(--text-secondary, #607179);
+		color: var(--slate);
 		margin-top: 1px;
 	}
 	.dash-match-badge {
@@ -832,7 +936,7 @@
 		padding: 3px 8px;
 		border-radius: 4px;
 		background: rgba(81, 190, 123, 0.1);
-		color: var(--green, #51be7b);
+		color: var(--green);
 		text-transform: uppercase;
 		letter-spacing: 0.3px;
 	}
@@ -865,12 +969,12 @@
 		padding: 0;
 	}
 	.showcase-dot.active {
-		background: var(--green, #51be7b);
+		background: var(--green);
 		width: 24px;
 		border-radius: 3px;
 	}
 
-	/* ─── Testimonials ─── */
+	/* ─── Testimonial below screenshot ─── */
 	.testimonial-section {
 		margin-top: 32px;
 		max-width: 520px;
@@ -900,7 +1004,7 @@
 		justify-content: center;
 		font-size: 13px;
 		font-weight: 700;
-		color: var(--green, #51be7b);
+		color: var(--green);
 		flex-shrink: 0;
 		margin-top: 2px;
 	}
@@ -952,7 +1056,7 @@
 	.brand-mark-icon {
 		width: 36px;
 		height: 36px;
-		background: linear-gradient(135deg, var(--green, #51be7b) 0%, var(--teal, #1f5159) 100%);
+		background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
 		border-radius: 10px;
 		display: flex;
 		align-items: center;
@@ -963,22 +1067,158 @@
 		letter-spacing: -0.3px;
 	}
 	.brand-mark-text {
-		font-family: var(--font-headline, 'DM Serif Display', Georgia, serif);
+		font-family: 'DM Serif Display', Georgia, serif;
 		font-size: 18px;
-		color: var(--text-dark, #141413);
+		color: var(--charcoal);
 	}
 
-	.callback-msg {
-		text-align: center;
-		color: var(--text-secondary, #607179);
-		font-size: 16px;
-		padding: 40px 0;
+	.form-title {
+		font-family: 'DM Serif Display', Georgia, serif;
+		font-size: 30px;
+		color: var(--charcoal);
+		margin-bottom: 8px;
+		line-height: 1.2;
 	}
-	.callback-msg.error {
+
+	.form-desc {
+		font-size: 15px;
+		color: var(--slate);
+		margin-bottom: 36px;
+		line-height: 1.5;
+	}
+
+	.field-label {
+		display: block;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--charcoal);
+		margin-bottom: 8px;
+	}
+
+	.field-input {
+		width: 100%;
+		padding: 16px 18px;
+		font-family: 'Plus Jakarta Sans', sans-serif;
+		font-size: 15px;
+		color: var(--charcoal);
+		background: #fafafa;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		outline: none;
+		transition: all 0.2s;
+		-webkit-appearance: none;
+	}
+	.field-input::placeholder {
+		color: #b0b8c0;
+	}
+	.field-input:focus {
+		border-color: var(--green);
+		background: #fff;
+		box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.1);
+	}
+
+	.submit-btn {
+		width: 100%;
+		padding: 16px 24px;
+		font-family: 'Plus Jakarta Sans', sans-serif;
+		font-size: 15px;
+		font-weight: 600;
+		color: #fff;
+		background: var(--green);
+		border: none;
+		border-radius: 12px;
+		cursor: pointer;
+		transition: all 0.2s;
+		margin-top: 20px;
+	}
+	.submit-btn:hover {
+		background: var(--green-hover);
+	}
+	.submit-btn:active {
+		transform: scale(0.985);
+	}
+	.submit-btn.loading {
+		pointer-events: none;
+		opacity: 0.6;
+	}
+
+	.helper-text {
+		text-align: center;
+		font-size: 13px;
+		color: #b0b8c0;
+		margin-top: 20px;
+		line-height: 1.5;
+	}
+
+	/* Error */
+	.error-msg {
+		font-size: 13px;
 		color: #dc2626;
+		margin-top: 8px;
+		display: none;
+	}
+	.error-msg.show {
+		display: block;
+	}
+
+	/* Success */
+	.success-state {
+		display: none;
+		text-align: center;
+	}
+	.success-state.show {
+		display: block;
+	}
+	.success-check {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		background: rgba(81, 190, 123, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 0 auto 20px;
+	}
+	.success-check svg {
+		width: 24px;
+		height: 24px;
+		color: var(--green);
+	}
+	.success-state h2 {
+		font-family: 'DM Serif Display', Georgia, serif;
+		font-size: 24px;
+		color: var(--charcoal);
+		margin-bottom: 10px;
+	}
+	.success-state p {
+		font-size: 14px;
+		color: var(--slate);
+		line-height: 1.6;
+	}
+	.success-state .email-highlight {
+		color: var(--charcoal);
+		font-weight: 600;
+	}
+	.retry {
+		display: inline-block;
+		margin-top: 20px;
+		color: var(--green);
+		text-decoration: none;
+		font-size: 13px;
+		font-weight: 600;
+		cursor: pointer;
+		background: none;
+		border: none;
+		font-family: inherit;
+	}
+	.retry:hover {
+		text-decoration: underline;
 	}
 
 	/* ─── Mobile ─── */
+	.mobile-header {
+		display: none;
+	}
 	@media (max-width: 899px) {
 		.split-layout {
 			flex-direction: column;
@@ -1001,7 +1241,7 @@
 		.mobile-brand .brand-mark-icon {
 			width: 32px;
 			height: 32px;
-			background: linear-gradient(135deg, var(--green, #51be7b) 0%, var(--teal, #1f5159) 100%);
+			background: linear-gradient(135deg, var(--green) 0%, var(--teal) 100%);
 			border-radius: 8px;
 			display: flex;
 			align-items: center;
@@ -1011,7 +1251,7 @@
 			color: #fff;
 		}
 		.mobile-brand .brand-mark-text {
-			font-family: var(--font-headline, 'DM Serif Display', Georgia, serif);
+			font-family: 'DM Serif Display', Georgia, serif;
 			font-size: 17px;
 			color: #fff;
 		}
@@ -1035,6 +1275,34 @@
 		.form-container {
 			max-width: 420px;
 			margin: 0 auto;
+		}
+		.form-title {
+			font-size: 26px;
+			margin-bottom: 8px;
+		}
+		.form-desc {
+			font-size: 14px;
+			margin-bottom: 28px;
+			line-height: 1.5;
+		}
+		.field-input {
+			padding: 14px 16px;
+			font-size: 16px;
+		}
+		.submit-btn {
+			padding: 14px 20px;
+			font-size: 16px;
+			margin-top: 16px;
+		}
+		.helper-text {
+			margin-top: 16px;
+			font-size: 12px;
+		}
+		.success-state h2 {
+			font-size: 22px;
+		}
+		.success-state p {
+			font-size: 13px;
 		}
 	}
 	@media (min-width: 900px) {
