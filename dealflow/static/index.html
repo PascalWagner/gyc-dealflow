@@ -2202,6 +2202,12 @@ html.dark .credit-chart-legend-divider {
     margin-bottom: 0;
     align-items: center;
   }
+  /* Spacer after last pill so rightmost tab isn't clipped at screen edge */
+  .mobile-pill-tabs::after {
+    content: '';
+    flex-shrink: 0;
+    width: 12px;
+  }
   .mobile-pill-tabs::-webkit-scrollbar { display: none; }
   .mobile-pill-tab {
     flex-shrink: 0;
@@ -2409,7 +2415,7 @@ html.cap-ios .topbar-view-toggle {
 /* Pill tabs on cap-ios */
 html.cap-ios .mobile-pill-tabs {
   display: flex !important;
-  padding-top: 8px;
+  padding: 8px 0 4px 0;
 }
 
 /* ── Hide elements not needed on iOS / mobile ──────────────── */
@@ -8726,9 +8732,20 @@ async function loadDeals() {
     } catch (e) { /* fall through to API */ }
   }
 
-  // Fetch fresh data from Supabase API
+  // Fetch fresh data from Supabase API with retry logic
+  // Mobile/iOS connections are often slow or interrupted — retry up to 3 times with backoff
+  let freshDeals = null;
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      console.log('Retrying deal fetch (attempt ' + (attempt + 1) + '/' + (MAX_RETRIES + 1) + ')...');
+      await new Promise(r => setTimeout(r, 1000 * attempt)); // 1s, 2s, 3s backoff
+    }
+    freshDeals = await fetchDeals();
+    if (freshDeals && freshDeals.length > 0) break;
+  }
+
   try {
-    const freshDeals = await fetchDeals();
     if (freshDeals && freshDeals.length > 0) {
       DEALS = freshDeals;
       window.DEALS = DEALS;
@@ -8744,15 +8761,15 @@ async function loadDeals() {
       renderAll();
       if (document.getElementById('wizardOverlay').classList.contains('active')) renderWizardStep();
     } else {
-      // API returned nothing — show error state
+      // All retries exhausted — show error state with retry button
       _dealsLoaded = true;
       const grid = document.getElementById('cardGrid');
       if (grid) {
         grid.innerHTML = '<div class="empty-state">'
           + '<div class="empty-state-icon">&#x26A0;</div>'
           + '<div class="empty-state-text">Unable to load deals</div>'
-          + '<div class="empty-state-sub">Please check your connection and try refreshing the page.</div>'
-          + '<button onclick="location.reload()" class="btn-cta btn-cta-primary" style="width:auto;padding:10px 24px;font-size:12px;margin-top:16px;">Refresh</button>'
+          + '<div class="empty-state-sub">Please check your connection and try again.</div>'
+          + '<button onclick="loadDeals()" class="btn-cta btn-cta-primary" style="width:auto;padding:10px 24px;font-size:12px;margin-top:16px;">Retry</button>'
           + '</div>';
       }
       updateDealCount();
