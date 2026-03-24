@@ -214,6 +214,10 @@
 </script>
 
 <div class="settings-page">
+	<div class="settings-shell">
+		<div class="settings-shell-title">Settings</div>
+	</div>
+
 	<div class="settings-tabs">
 		<button class="settings-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>Profile</button>
 		<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>Membership</button>
@@ -275,7 +279,7 @@
 						<input type="text" class="profile-input" bind:value={location} placeholder="City, State" />
 					</div>
 				</div>
-				<div class="profile-field">
+				<div class="profile-field accreditation-field">
 					<div class="profile-label">Accredited Investor Status</div>
 					<select class="profile-input" bind:value={accreditedStatus}>
 						<option value="">-- Select --</option>
@@ -487,11 +491,23 @@
 </div>
 
 <style>
-	.settings-page { padding: 32px; max-width: 900px; }
+	.settings-page { padding: 0 32px 40px; max-width: 900px; }
+	.settings-shell {
+		padding: 26px 0 18px;
+		margin: 0 -32px 22px;
+		padding-left: 32px;
+		padding-right: 32px;
+		border-bottom: 1px solid var(--border);
+	}
+	.settings-shell-title {
+		font-family: var(--font-headline);
+		font-size: 22px;
+		font-weight: 400;
+		color: var(--text-dark);
+		letter-spacing: -0.3px;
+	}
 	.settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 	.settings-tab { padding: 12px 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition, 0.2s); white-space: nowrap; }
-	.settings-tabs .settings-tab:nth-child(2),
-	.settings-tabs .settings-tab:nth-child(3) { display: none; }
 	.settings-tab:hover { color: var(--text-dark); }
 	.settings-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 	.settings-panel { }
@@ -505,9 +521,8 @@
 	.private-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
 	.private-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
 
-	.avatar-row { display: flex; align-items: center; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
-	.settings-card:has(.avatar-row) { display: none; }
-	.avatar-preview { width: 80px; height: 80px; border-radius: 50%; background: var(--bg-cream); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 24px; font-weight: 700; color: var(--text-muted); overflow: hidden; flex-shrink: 0; }
+	.avatar-row { display: flex; align-items: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+	.avatar-preview { width: 52px; height: 52px; border-radius: 50%; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 17px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }
 	.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 	.avatar-initials { }
 	.upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer; transition: all 0.15s; }
@@ -520,6 +535,7 @@
 	.profile-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); background: var(--bg-card); box-sizing: border-box; }
 	.profile-input:focus { outline: none; border-color: var(--primary); }
 	.profile-input[readonly] { background: var(--bg-cream); color: var(--text-muted); }
+	.accreditation-field { display: none; }
 
 	.settings-save-bar { display: flex; gap: 12px; align-items: center; padding: 20px 0; border-top: 1px solid var(--border-light); margin-top: 24px; }
 	.settings-save-bar .btn-cta-primary { width: auto; padding: 12px 32px; }
@@ -570,7 +586,12 @@
 	.logout-btn:hover { background: rgba(208,64,64,0.06); }
 
 	@media (max-width: 768px) {
-		.settings-page { padding: 16px; }
+		.settings-page { padding: 0 16px 24px; }
+		.settings-shell {
+			margin: 0 -16px 20px;
+			padding: 20px 16px 14px;
+		}
+		.settings-shell-title { font-size: 20px; }
 		.profile-row { grid-template-columns: 1fr; }
 		.private-grid { grid-template-columns: 1fr; }
 		.settings-tabs { scrollbar-width: none; }

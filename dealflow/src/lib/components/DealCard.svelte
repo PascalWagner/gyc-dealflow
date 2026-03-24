@@ -1,5 +1,6 @@
 <script>
 	import { dealStages } from '$lib/stores/deals.js';
+	import { getDealHeroImage } from '$lib/utils/dealHero.js';
 
 	let { deal } = $props();
 
@@ -112,7 +113,7 @@
 	};
 
 	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)', icon: '🏠' });
-	const heroImg = $derived(deal.propertyImageUrl || deal.imageUrl || '');
+	const heroImg = $derived(deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '');
 	const managerTier = $derived(getManagerTier(deal));
 	const strategySummary = $derived(getStrategySummary(deal));
 	const fundingPct = $derived(deal.pctFunded ? Math.min(Number(deal.pctFunded), 100) : 0);

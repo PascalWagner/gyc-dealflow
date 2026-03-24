@@ -1,5 +1,6 @@
 <script>
 	import { dealStages, stageLabel, STAGE_META, normalizeStage } from '$lib/stores/deals.js';
+	import { getDealHeroImage } from '$lib/utils/dealHero.js';
 
 	let { deals = [], search = '', onfilter = () => {}, onsearch = () => {} } = $props();
 
@@ -45,6 +46,10 @@
 
 	function getHero(deal) {
 		return assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #1a2332, #2d3a4c)', icon: '\u{1f3e0}' };
+	}
+
+	function getHeroImage(deal) {
+		return deal.propertyImageUrl || getDealHeroImage(deal) || deal.imageUrl || '';
 	}
 
 	function skipDeal() {
@@ -116,13 +121,13 @@
 			<div class="swipe-card">
 				<div
 					class="swipe-hero"
-					style="background:{currentDeal.propertyImageUrl ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${currentDeal.propertyImageUrl})` : getHero(currentDeal).gradient};{currentDeal.propertyImageUrl ? 'background-size:cover;background-position:center;' : ''}"
+					style="background:{getHeroImage(currentDeal) ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${getHeroImage(currentDeal)})` : getHero(currentDeal).gradient};{getHeroImage(currentDeal) ? 'background-size:cover;background-position:center;' : ''}"
 				>
 					<div class="swipe-badges">
 						<span class="badge">{currentDeal.assetClass || 'Real Estate'}</span>
 						<span class="badge">{currentDeal.dealType || 'Fund'}</span>
 					</div>
-					{#if !currentDeal.propertyImageUrl}
+					{#if !getHeroImage(currentDeal)}
 						<div class="swipe-hero-icon">{getHero(currentDeal).icon}</div>
 					{/if}
 					{#if currentDeal.targetIRR}
@@ -190,8 +195,9 @@
 	<div class="feed-grid">
 		{#each deals as deal (deal.id)}
 			{@const hero = getHero(deal)}
+			{@const heroImg = getHeroImage(deal)}
 			<a href="/deal/{deal.id}" class="feed-card">
-				<div class="feed-hero" style="background:{hero.gradient}">
+				<div class="feed-hero" style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.4) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}">
 					<span class="feed-badge">{deal.assetClass || 'Real Estate'}</span>
 					{#if deal.targetIRR}
 						<span class="feed-irr">{fmtPct(deal.targetIRR)} IRR</span>
