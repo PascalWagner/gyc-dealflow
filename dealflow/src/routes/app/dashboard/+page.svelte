@@ -137,7 +137,7 @@
 	});
 
 	const milestoneProgress = $derived.by(() => {
-		const ms = milestones();
+		const ms = milestones;
 		const done = ms.filter(m => m.done).length;
 		return Math.round((done / ms.length) * 100);
 	});
@@ -261,7 +261,7 @@
 
 	// Coaching message
 	const coachMsg = $derived.by(() => {
-		const name = firstName();
+		const name = firstName;
 		if (!buyBoxComplete && !branch) {
 			return { msg: "Let's start by setting up your investor profile — it takes 2 minutes and helps us find deals that match your goals.", cta: 'Get Started', page: '' };
 		}
@@ -347,7 +347,7 @@
 				<div class="first-time-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
 				</div>
-				<h1>{firstName() ? `${firstName()}, let's find` : "Let's find"}<br>your perfect deals.</h1>
+				<h1>{firstName ? `${firstName}, let's find` : "Let's find"}<br>your perfect deals.</h1>
 				<p>Tell us what you're looking for in 2 minutes.<br>We'll match you with deals that fit.</p>
 				<button class="btn-primary" onclick={openWizard}>Set Up My Investor Profile →</button>
 				<div class="first-time-alt">or <a href="/app/deals">browse deals first</a></div>
@@ -376,8 +376,8 @@
 		{#if coachMsg.msg}
 			<div class="coaching-card">
 				<div class="coaching-inner">
-					{#if firstName()}
-						<div class="coaching-label">{firstName()}'s next step</div>
+					{#if firstName}
+						<div class="coaching-label">{firstName}'s next step</div>
 					{/if}
 					<div class="coaching-msg">{coachMsg.msg}</div>
 				</div>
@@ -408,27 +408,27 @@
 			{#if isFreeUser}
 				<div class="metric-card daily-deals-card">
 					<div class="metric-label">Deals Today</div>
-					<div class="metric-value">{dailyDealCount()}<span class="daily-limit-label">/{DAILY_LIMIT}</span></div>
+					<div class="metric-value">{dailyDealCount}<span class="daily-limit-label">/{DAILY_LIMIT}</span></div>
 					<div class="daily-bar-wrap">
-						<div class="daily-bar-fill" style="width:{Math.min(100, (dailyDealCount() / DAILY_LIMIT) * 100)}%"></div>
+						<div class="daily-bar-fill" style="width:{Math.min(100, (dailyDealCount / DAILY_LIMIT) * 100)}%"></div>
 					</div>
 				</div>
 			{/if}
 		</div>
 
 		<!-- Milestone Tracker -->
-		{#if milestoneProgress() < 100}
+		{#if milestoneProgress < 100}
 			<div class="milestone-card">
 				<div class="milestone-header">
 					<div class="milestone-title">Your Activation Journey</div>
-					<div class="milestone-pct">{milestoneProgress()}% complete</div>
+					<div class="milestone-pct">{milestoneProgress}% complete</div>
 				</div>
 				<div class="milestone-bar-wrap">
-					<div class="milestone-bar-fill" style="width:{milestoneProgress()}%"></div>
+					<div class="milestone-bar-fill" style="width:{milestoneProgress}%"></div>
 				</div>
 				<div class="milestone-steps">
-					{#each milestones() as ms, i}
-						<div class="milestone-step" class:done={ms.done} class:next={!ms.done && (i === 0 || milestones()[i - 1].done)}>
+					{#each milestones as ms, i}
+						<div class="milestone-step" class:done={ms.done} class:next={!ms.done && (i === 0 || milestones[i - 1].done)}>
 							<div class="milestone-icon" class:done={ms.done}>
 								{#if ms.done}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
@@ -454,7 +454,7 @@
 
 		<!-- Quick Actions -->
 		<div class="quick-actions">
-			{#each quickActions() as action}
+			{#each quickActions as action}
 				<a href={action.href} class="quick-action-btn">
 					{#if action.icon === 'search'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -469,10 +469,10 @@
 		</div>
 
 		<!-- Recent Activity Feed -->
-		{#if recentActivity().length > 0}
+		{#if recentActivity.length > 0}
 			<div class="activity-card">
 				<div class="activity-header">Recent Activity</div>
-				{#each recentActivity() as activity}
+				{#each recentActivity as activity}
 					<a href="/app/deals/{activity.dealId}" class="activity-row">
 						<span class="activity-stage-dot" style="background: {STAGE_META[activity.stage]?.color || 'var(--text-muted)'}"></span>
 						<div class="activity-text">
@@ -487,10 +487,10 @@
 		{/if}
 
 		<!-- Action Items -->
-		{#if actionItems().length > 0}
+		{#if actionItems.length > 0}
 			<div class="action-card">
 				<div class="action-header">Action Items</div>
-				{#each actionItems() as item}
+				{#each actionItems as item}
 					<a href="/app/{item.page}" class="action-row">
 						<div class="action-text">{@html item.text}</div>
 						<span class="action-link">{item.link} →</span>
@@ -508,8 +508,8 @@
 				</div>
 				<div class="portfolio-layout">
 					<PortfolioChart
-						allocations={allocationMap()}
-						planAllocations={planAllocationMap()}
+						allocations={allocationMap}
+						planAllocations={planAllocationMap}
 					/>
 					<div class="portfolio-table-wrap">
 						<table>
