@@ -60,12 +60,19 @@ export default async function handler(req, res) {
     const BYPASS_EMAILS = ['test@test.com', 'info@pascalwagner.com'];
     if (BYPASS_EMAILS.includes(email.toLowerCase())) {
       try {
-        // Generate magic link server-side (no email sent)
-        const { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
+        // Ensure user exists first
+        let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
           type: 'magiclink',
           email
         });
-        if (linkErr) throw linkErr;
+        if (linkErr) {
+          // User doesn't exist — create and retry
+          await adminSupabase.auth.admin.createUser({ email, email_confirm: true });
+          const retry = await adminSupabase.auth.admin.generateLink({ type: 'magiclink', email });
+          linkData = retry.data;
+          linkErr = retry.error;
+          if (linkErr) throw linkErr;
+        }
 
         // Verify the OTP to get a real session
         const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
