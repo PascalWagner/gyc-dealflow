@@ -1,14 +1,20 @@
 <script>
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
+	import { deals, fetchDeals } from '$lib/stores/deals.js';
 
 	let { currentPage = '' } = $props();
 
 	let isDark = $state(false);
 
 	onMount(() => {
+		if (!get(deals).length) {
+			fetchDeals();
+		}
+
 		const saved = localStorage.getItem('gyc-theme');
 		if (saved === 'dark') {
 			isDark = true;
@@ -113,12 +119,13 @@
 	const userEmail = $derived($user?.email || '');
 	const tierLabel = $derived({
 		free: 'Free',
-		academy: 'Academy',
+		academy: 'Academy Member',
 		founding: 'Founding',
 		'inner-circle': 'Inner Circle',
 		alumni: 'Alumni'
 	}[$userTier] || $userTier || 'Free');
 	const tierClass = $derived($userTier === 'free' ? 'tier-free' : 'tier-paid');
+	const dealFlowCount = $derived($deals.length || 0);
 
 	// Check if user is a GP (has management company)
 	const isGP = $derived(!!($user?.managementCompanyId || $user?.isGP));
@@ -250,6 +257,9 @@
 				>
 					<span class="nav-icon">{@html icons[item.icon]}</span>
 					{item.label}
+					{#if item.badge && dealFlowCount > 0}
+						<span class="nav-badge">{dealFlowCount}</span>
+					{/if}
 					{#if item.paidOnly && isFree}
 						<svg class="nav-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
 							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -395,7 +405,6 @@
 				<div class="user-name">{userName}</div>
 				<div class="user-tier {tierClass}">{tierLabel}</div>
 			</div>
-			<svg class="user-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 		</a>
 	{/if}
 </aside>
@@ -495,6 +504,18 @@
 	.nav-icon :global(svg) { width: 18px; height: 18px; }
 
 	.nav-lock { margin-left: auto; opacity: 0.35; flex-shrink: 0; }
+	.nav-badge {
+		margin-left: auto;
+		padding: 2px 8px;
+		border-radius: 999px;
+		background: var(--primary);
+		color: #fff;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		line-height: 1.5;
+		box-shadow: 0 2px 8px rgba(81, 190, 123, 0.22);
+	}
 
 	.nav-spacer { margin-top: auto; }
 
@@ -626,8 +647,6 @@
 	.user-info { flex: 1; min-width: 0; }
 	.sidebar-user { text-decoration: none; cursor: pointer; transition: background 0.15s; }
 	.sidebar-user:hover { background: var(--bg-sidebar-hover); }
-	.sidebar-user:hover .user-gear { color: rgba(255,255,255,0.7); }
-	.user-gear { color: rgba(255,255,255,0.28); flex-shrink: 0; margin-left: auto; transition: color 0.15s; }
 	.user-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.user-tier { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 	.tier-free { color: rgba(255,255,255,0.4); }

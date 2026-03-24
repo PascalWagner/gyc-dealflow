@@ -5,7 +5,6 @@
 	import { user, isLoggedIn, isAdmin, userTier } from '$lib/stores/auth.js';
 	import { deals, dealStages, stageCounts, STAGE_META } from '$lib/stores/deals.js';
 	import GoalProgress from '$lib/components/GoalProgress.svelte';
-	import PortfolioChart from '$lib/components/PortfolioChart.svelte';
 
 	// Local state
 	let portfolio = $state([]);
@@ -96,6 +95,27 @@
 			? ` · ${filledCount} of ${planSlots.length} investments made`
 			: ''
 	);
+	const hasPlan = $derived(!!(planSlots && planSlots.length > 0 && planSlots[0]?.asset_class));
+	const totalPlanSlots = $derived(planSlots?.length || 0);
+	const filledPlanSlots = $derived.by(() => (planSlots || []).filter(slot => slot.filled_by));
+	const totalPlanIncome = $derived.by(() => (planSlots || []).reduce((sum, slot) => sum + (slot.est_income || 0), 0));
+	const filledPlanIncome = $derived.by(() => filledPlanSlots.reduce((sum, slot) => sum + (slot.est_income || 0), 0));
+	const planTargetIncome = $derived(portfolioPlan?.target_income || totalPlanIncome || targetIncome || 0);
+	const blendedYieldPct = $derived.by(() => {
+		if (!planSlots || planSlots.length === 0) return 0;
+		const total = planSlots.reduce((sum, slot) => sum + (slot.target_coc || 0), 0);
+		return Math.round((total / planSlots.length) * 100);
+	});
+	const blueprintProgress = $derived(
+		planTargetIncome > 0 ? Math.min(100, Math.round((filledPlanIncome / planTargetIncome) * 100)) : 0
+	);
+	const yearsToGoal = $derived.by(() => {
+		if (!planSlots || planSlots.length === 0) return 0;
+		const dealsPerYear = portfolioPlan?.deals_per_year || 1;
+		return Math.ceil((planSlots.length - filledCount) / dealsPerYear);
+	});
+	const nextPlanSlot = $derived.by(() => (planSlots || []).find(slot => !slot.filled_by) || null);
+	const planCheckSize = $derived(portfolioPlan?.check_size || nextPlanSlot?.check_size || wizardData.checkSize || 100000);
 
 	// Momentum metrics
 	const dealsReviewed = $derived(Object.keys($dealStages).length);
@@ -217,19 +237,68 @@
 	});
 
 	// Action items
+	function assetKey(value) {
+		return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+	}
+
+	function slotMatchesDeal(slot, deal) {
+		const slotAsset = assetKey(slot?.asset_class);
+		const dealAsset = assetKey(deal?.assetClass);
+		const lendingKeys = ['privatedebtcredit', 'lending', 'debt'];
+		if (!slotAsset) return true;
+		if (lendingKeys.includes(slotAsset)) {
+			return lendingKeys.includes(dealAsset) || assetKey(deal?.strategy) === 'lending';
+		}
+		return slotAsset === dealAsset;
+	}
+
+	const nextSlotMatchCount = $derived.by(() => {
+		if (!nextPlanSlot || !$deals.length) return 0;
+		return $deals.filter((deal) => {
+			const stage = $dealStages[deal.id] || 'browse';
+			return stage !== 'passed' && slotMatchesDeal(nextPlanSlot, deal);
+		}).length;
+	});
+
 	const actionItems = $derived.by(() => {
 		const items = [];
 		const saved = $stageCounts.saved || 0;
 		const diligence = $stageCounts.diligence || 0;
+		const investedDealIds = Object.entries($dealStages)
+			.filter(([, stage]) => stage === 'invested')
+			.map(([id]) => id);
+		const portfolioDealIds = portfolio.map((investment) => investment.dealId).filter(Boolean);
+		const unloggedInvested = investedDealIds.filter((id) => !portfolioDealIds.includes(id));
+
+		if (hasPlan && filledCount > 0 && nextPlanSlot) {
+			items.push({
+				icon: 'plan',
+				text: `<strong>${filledCount} of ${totalPlanSlots}</strong> plan slots filled. Next: <strong>${nextPlanSlot.asset_class}</strong> at ${fmtDollar(nextPlanSlot.check_size)}`,
+				link: 'View Plan',
+				page: 'plan'
+			});
+		}
+
+		if (unloggedInvested.length > 0) {
+			const unloggedDeal = ($deals || []).find((deal) => deal.id === unloggedInvested[0]);
+			items.push({
+				icon: 'card',
+				text: `${unloggedDeal ? `<strong>${unloggedDeal.investmentName}</strong>` : `<strong>${unloggedInvested.length} deal${unloggedInvested.length !== 1 ? 's' : ''}</strong>`} marked as invested but not logged in portfolio`,
+				link: 'Log Now',
+				page: 'portfolio'
+			});
+		}
 
 		if (saved > 0) {
 			items.push({
+				icon: 'bookmark',
 				text: `You have <strong>${saved} deal${saved !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
 				link: 'Review Deals', page: 'deals'
 			});
 		}
 		if (diligence > 0) {
 			items.push({
+				icon: 'connect',
 				text: `<strong>${diligence} deal${diligence !== 1 ? 's' : ''} ready to connect</strong> — request an intro with the operator`,
 				link: 'Connect Now', page: 'deals'
 			});
@@ -243,11 +312,20 @@
 				const pending = taxDocs.filter(d => d.taxYear == taxYear && d.uploadStatus === 'Pending');
 				if (pending.length > 0) {
 					items.push({
+						icon: 'tax',
 						text: `<strong>${pending.length} K-1${pending.length > 1 ? 's' : ''} still pending</strong> for ${taxYear} tax year`,
 						link: 'Tax Prep', page: 'tax-prep'
 					});
 				}
 			}
+		}
+		if (items.length === 0 && !hasPlan && portfolio.length === 0 && $deals.length > 0) {
+			items.push({
+				icon: 'browse',
+				text: `Browse <strong>${$deals.length} deals</strong> and start building your pipeline`,
+				link: 'Explore Deals',
+				page: 'deals'
+			});
 		}
 		return items;
 	});
@@ -372,117 +450,61 @@
 			</div>
 		{/if}
 
-		<!-- Coaching Message -->
-		{#if coachMsg.msg}
-			<div class="coaching-card">
-				<div class="coaching-inner">
-					{#if firstName}
-						<div class="coaching-label">{firstName}'s next step</div>
-					{/if}
-					<div class="coaching-msg">{coachMsg.msg}</div>
+		{#if hasPlan}
+			<div class="blueprint-card">
+				<div class="blueprint-header">
+					<div class="blueprint-eyebrow">Your Investment Plan</div>
+					<a href="/app/plan" class="blueprint-link">Edit Plan</a>
 				</div>
-				{#if coachMsg.cta}
-					<a href="/app/{coachMsg.page}" class="btn-primary coaching-btn">{coachMsg.cta} →</a>
+				<div class="blueprint-summary">
+					<strong>{filledCount} of {totalPlanSlots}</strong> investments ·
+					<strong class="summary-accent">{fmtDollar(filledPlanIncome)}</strong>
+					of {fmtDollar(planTargetIncome)}/yr
+				</div>
+				<div class="blueprint-meta">
+					{totalPlanSlots} deals × {fmtDollar(planCheckSize)} · ~{blendedYieldPct}% avg yield{#if yearsToGoal > 0} · ~{yearsToGoal} yr to goal{/if}
+				</div>
+				<div class="blueprint-track">
+					<div class="blueprint-fill" style="width:{blueprintProgress}%"></div>
+				</div>
+
+				{#if filledPlanSlots.length > 0}
+					<div class="blueprint-list">
+						{#each filledPlanSlots as slot}
+							<div class="blueprint-row">
+								<span class="blueprint-dot"></span>
+								<div class="blueprint-row-copy">
+									<div class="blueprint-row-title">{slot.filled_name || 'Investment'}</div>
+									<div class="blueprint-row-meta">{slot.asset_class} · {fmtDollar(slot.check_size)} · {fmtDollar(slot.est_income)}/yr</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				{#if nextPlanSlot}
+					<div class="blueprint-next">
+						<div class="blueprint-next-copy">
+							<div class="blueprint-next-label">Next Investment</div>
+							<div class="blueprint-next-title">
+								<strong>{nextPlanSlot.asset_class}</strong> · {fmtDollar(nextPlanSlot.check_size)} · ~{Math.round((nextPlanSlot.target_coc || 0) * 100)}% CoC · ~{fmtDollar(nextPlanSlot.est_income)}/yr
+							</div>
+							{#if nextSlotMatchCount > 0}
+								<div class="blueprint-next-matches">{nextSlotMatchCount} deal{nextSlotMatchCount === 1 ? '' : 's'} match</div>
+							{/if}
+						</div>
+						<a href="/app/deals" class="btn-primary blueprint-next-btn">Browse Deals →</a>
+					</div>
 				{/if}
 			</div>
-		{/if}
-
-		<!-- Momentum Metrics -->
-		<div class="momentum-grid">
-			<div class="metric-card">
-				<div class="metric-label">Deals Reviewed</div>
-				<div class="metric-value">{dealsReviewed}</div>
-			</div>
-			<div class="metric-card">
-				<div class="metric-label">In Pipeline</div>
-				<div class="metric-value">{inPipeline}</div>
-			</div>
-			<div class="metric-card">
-				<div class="metric-label">Decisions Made</div>
-				<div class="metric-value">{decisionsMade}</div>
-			</div>
-			<div class="metric-card">
-				<div class="metric-label">Total Invested</div>
-				<div class="metric-value">{fmtDollar(totalInvested)}</div>
-			</div>
-			{#if isFreeUser}
-				<div class="metric-card daily-deals-card">
-					<div class="metric-label">Deals Today</div>
-					<div class="metric-value">{dailyDealCount}<span class="daily-limit-label">/{DAILY_LIMIT}</span></div>
-					<div class="daily-bar-wrap">
-						<div class="daily-bar-fill" style="width:{Math.min(100, (dailyDealCount / DAILY_LIMIT) * 100)}%"></div>
-					</div>
+		{:else if hasOnboarding}
+			<div class="plan-cta-card">
+				<div>
+					<div class="plan-cta-eyebrow">Your Investment Plan</div>
+					<div class="plan-cta-title">Turn your goal into concrete deal slots.</div>
+					<div class="plan-cta-copy">Map out check sizes, target yields, and the next investment that should fill your plan.</div>
 				</div>
-			{/if}
-		</div>
-
-		<!-- Milestone Tracker -->
-		{#if milestoneProgress < 100}
-			<div class="milestone-card">
-				<div class="milestone-header">
-					<div class="milestone-title">Your Activation Journey</div>
-					<div class="milestone-pct">{milestoneProgress}% complete</div>
-				</div>
-				<div class="milestone-bar-wrap">
-					<div class="milestone-bar-fill" style="width:{milestoneProgress}%"></div>
-				</div>
-				<div class="milestone-steps">
-					{#each milestones as ms, i}
-						<div class="milestone-step" class:done={ms.done} class:next={!ms.done && (i === 0 || milestones[i - 1].done)}>
-							<div class="milestone-icon" class:done={ms.done}>
-								{#if ms.done}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
-								{:else if ms.icon === 'bookmark'}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-								{:else if ms.icon === 'doc'}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-								{:else if ms.icon === 'check'}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
-								{:else}
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-								{/if}
-							</div>
-							<div class="milestone-text">
-								<div class="milestone-label">{ms.label}</div>
-								<div class="milestone-desc">{ms.desc}</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
-		{/if}
-
-		<!-- Quick Actions -->
-		<div class="quick-actions">
-			{#each quickActions as action}
-				<a href={action.href} class="quick-action-btn">
-					{#if action.icon === 'search'}
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-					{:else if action.icon === 'clipboard'}
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-					{:else if action.icon === 'briefcase'}
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-					{/if}
-					{action.label}
-				</a>
-			{/each}
-		</div>
-
-		<!-- Recent Activity Feed -->
-		{#if recentActivity.length > 0}
-			<div class="activity-card">
-				<div class="activity-header">Recent Activity</div>
-				{#each recentActivity as activity}
-					<a href="/app/deals/{activity.dealId}" class="activity-row">
-						<span class="activity-stage-dot" style="background: {STAGE_META[activity.stage]?.color || 'var(--text-muted)'}"></span>
-						<div class="activity-text">
-							<strong>{activity.dealName}</strong> {activity.verb}
-						</div>
-						{#if activity.timestamp}
-							<span class="activity-time">{formatTimeAgo(activity.timestamp)}</span>
-						{/if}
-					</a>
-				{/each}
+				<a href="/app/plan" class="btn-primary plan-cta-btn">Build My Plan →</a>
 			</div>
 		{/if}
 
@@ -492,57 +514,25 @@
 				<div class="action-header">Action Items</div>
 				{#each actionItems as item}
 					<a href="/app/{item.page}" class="action-row">
+						<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
+							{#if item.icon === 'plan'}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+							{:else if item.icon === 'card'}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+							{:else if item.icon === 'bookmark'}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+							{:else if item.icon === 'connect'}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect><path d="M9 14l2 2 4-4"></path></svg>
+							{:else if item.icon === 'tax'}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+							{:else}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+							{/if}
+						</div>
 						<div class="action-text">{@html item.text}</div>
 						<span class="action-link">{item.link} →</span>
 					</a>
 				{/each}
-			</div>
-		{/if}
-
-		<!-- Portfolio Summary -->
-		{#if portfolio.length > 0}
-			<div class="portfolio-section">
-				<div class="section-header">
-					<div class="section-title">Your Portfolio</div>
-					<a href="/app/portfolio" class="section-link">View Full Portfolio →</a>
-				</div>
-				<div class="portfolio-layout">
-					<PortfolioChart
-						allocations={allocationMap}
-						planAllocations={planAllocationMap}
-					/>
-					<div class="portfolio-table-wrap">
-						<table>
-							<thead>
-								<tr><th>Investment</th><th>Invested</th><th>Distributions</th><th>Status</th></tr>
-							</thead>
-							<tbody>
-								{#each portfolio as p}
-									<tr>
-										<td>
-											<div class="inv-name">{p.investmentName}</div>
-											<div class="inv-sub">{p.sponsor || ''}{p.sponsor && p.assetClass ? ' · ' : ''}{p.assetClass || ''}</div>
-										</td>
-										<td>${(parseFloat(p.amountInvested) || 0).toLocaleString()}</td>
-										<td class="dist-col">${(parseFloat(p.distributionsReceived) || 0).toLocaleString()}</td>
-										<td>
-											<span class="status-badge" style="--status-color: {p.status === 'Active' ? 'var(--primary)' : p.status === 'Distributing' ? '#3b82f6' : p.status === 'Exited' ? '#6b7280' : '#f59e0b'}">
-												{p.status || 'Active'}
-											</span>
-										</td>
-									</tr>
-								{/each}
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-		{:else}
-			<div class="portfolio-empty">
-				<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-				<div class="empty-title">No investments yet</div>
-				<div class="empty-desc">Add investments to track your portfolio here.</div>
-				<a href="/app/portfolio" class="btn-primary">+ Add Investment</a>
 			</div>
 		{/if}
 	{/if}
@@ -706,43 +696,166 @@
 	}
 	.goal-cta-btn:hover { background: var(--primary-hover); }
 
-	/* ── Coaching / Next Step Card ── */
-	.coaching-card {
+	/* ── Plan Blueprint ── */
+	.plan-cta-card,
+	.blueprint-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-left: 3px solid var(--primary);
 		border-radius: var(--radius);
-		padding: 18px 22px;
-		margin-bottom: 24px;
+		padding: 22px 20px;
+		margin-bottom: 18px;
+		box-shadow: var(--shadow-card);
+	}
+	.plan-cta-card {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 14px;
+		gap: 16px;
 		flex-wrap: wrap;
-		box-shadow: var(--shadow-card);
 	}
-	.coaching-inner { flex: 1; min-width: 200px; }
-	.coaching-label {
+	.plan-cta-eyebrow,
+	.blueprint-eyebrow,
+	.action-header {
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
-		margin-bottom: 6px;
 	}
-	.coaching-msg {
+	.plan-cta-title {
+		font-family: var(--font-ui);
+		font-size: 18px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-top: 8px;
+	}
+	.plan-cta-copy {
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--text-secondary);
+		margin-top: 4px;
+		max-width: 560px;
+	}
+	.plan-cta-btn {
+		white-space: nowrap;
+	}
+	.blueprint-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 4px;
+	}
+	.blueprint-link {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--primary);
+		text-decoration: none;
+	}
+	.blueprint-summary {
+		font-family: var(--font-body);
+		font-size: 14px;
+		color: var(--text-dark);
+	}
+	.summary-accent {
+		color: var(--primary);
+	}
+	.blueprint-meta {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-top: 6px;
+	}
+	.blueprint-track {
+		height: 8px;
+		background: var(--border-light);
+		border-radius: 4px;
+		overflow: hidden;
+		margin: 14px 0 12px;
+	}
+	.blueprint-fill {
+		height: 100%;
+		min-width: 0;
+		border-radius: 4px;
+		background: linear-gradient(90deg, var(--primary), #3bba78);
+	}
+	.blueprint-list {
+		margin-bottom: 14px;
+	}
+	.blueprint-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 0;
+		border-bottom: 1px solid var(--border);
+	}
+	.blueprint-row:last-child {
+		border-bottom: none;
+	}
+	.blueprint-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--primary);
+		flex-shrink: 0;
+	}
+	.blueprint-row-copy {
+		min-width: 0;
+	}
+	.blueprint-row-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.blueprint-row-meta {
+		font-family: var(--font-body);
+		font-size: 11px;
+		color: var(--text-muted);
+		margin-top: 1px;
+	}
+	.blueprint-next {
+		padding: 14px 18px;
+		background: linear-gradient(135deg, rgba(81, 190, 123, 0.06), rgba(37, 99, 235, 0.06));
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px;
+		flex-wrap: wrap;
+	}
+	.blueprint-next-copy {
+		flex: 1;
+		min-width: 220px;
+	}
+	.blueprint-next-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 4px;
+	}
+	.blueprint-next-title {
 		font-family: var(--font-body);
 		font-size: 13px;
 		color: var(--text-dark);
-		line-height: 1.55;
+		line-height: 1.5;
 	}
-	.coaching-btn {
+	.blueprint-next-matches {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--primary);
+		margin-top: 4px;
+	}
+	.blueprint-next-btn {
 		flex-shrink: 0;
 		white-space: nowrap;
-		text-decoration: none;
-		padding: 8px 18px;
-		font-size: 11px;
 	}
 
 	.btn-primary {
@@ -759,306 +872,60 @@
 		text-decoration: none;
 	}
 
-	/* ── Momentum Metrics ── */
-	.momentum-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 10px;
-		margin-bottom: 28px;
-	}
-	.metric-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 14px 12px;
-		text-align: center;
-		box-shadow: var(--shadow-card);
-	}
-	.metric-label {
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		margin-bottom: 6px;
-	}
-	.metric-value {
-		font-family: var(--font-headline);
-		font-size: 22px;
-		color: var(--text-dark);
-		line-height: 1;
-	}
-	.daily-limit-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-	.daily-deals-card { border-color: var(--primary); border-width: 1px 1px 1px 3px; }
-	.daily-bar-wrap { height: 4px; background: var(--border-light); border-radius: 999px; margin-top: 10px; overflow: hidden; }
-	.daily-bar-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s ease; }
-
 	/* ── Action Items ── */
 	.action-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		overflow: hidden;
-		margin-bottom: 28px;
+		margin-bottom: 20px;
 		box-shadow: var(--shadow-card);
 	}
 	.action-header {
-		padding: 16px 20px 0;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
+		padding: 16px 16px 0;
 		margin-bottom: 12px;
 	}
 	.action-row {
 		display: flex;
 		align-items: center;
-		gap: 14px;
-		padding: 14px 20px;
-		border-bottom: 1px solid var(--border-light);
+		gap: 12px;
+		padding: 13px 16px;
+		border-bottom: 1px solid var(--border);
 		cursor: pointer;
 		transition: background var(--transition);
 		text-decoration: none;
 	}
 	.action-row:last-child { border-bottom: none; }
 	.action-row:hover { background: var(--bg-cream); }
-	.action-text { flex: 1; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
-	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
-
-	/* ── Portfolio Section ── */
-	.portfolio-section {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 24px;
-		margin-bottom: 28px;
-		box-shadow: var(--shadow-card);
-	}
-	.section-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 16px;
-	}
-	.section-title {
-		font-family: var(--font-ui);
-		font-size: 15px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.section-link {
-		padding: 5px 14px;
-		background: transparent;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		font-family: var(--font-ui);
-		font-weight: 600;
-		font-size: 11px;
-		cursor: pointer;
-		color: var(--text-secondary);
-		transition: all var(--transition);
-		text-decoration: none;
-	}
-	.section-link:hover { border-color: var(--primary); color: var(--primary); }
-	.portfolio-layout { display: flex; gap: 24px; align-items: flex-start; }
-	.portfolio-table-wrap { flex: 1; overflow-x: auto; }
-	table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 13px; }
-	th {
-		text-align: left;
-		padding: 10px 12px;
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		border-bottom: 2px solid var(--border);
-	}
-	th:nth-child(2), th:nth-child(3) { text-align: right; }
-	th:nth-child(4) { text-align: center; }
-	td {
-		padding: 12px;
-		font-family: var(--font-body);
-		font-size: 13px;
-		color: var(--text-dark);
-	}
-	tbody tr {
-		border-bottom: 1px solid var(--border-light);
-		transition: background var(--transition);
-	}
-	tbody tr:hover { background: var(--bg-cream); cursor: pointer; }
-	td:nth-child(2), td:nth-child(3) { text-align: right; font-weight: 600; }
-	td:nth-child(4) { text-align: center; }
-	.inv-name { font-weight: 700; color: var(--text-dark); }
-	.inv-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-	.dist-col { color: var(--primary); }
-	.status-badge {
-		padding: 3px 8px;
-		border-radius: 10px;
-		font-size: 10px;
-		font-weight: 700;
-		background: color-mix(in srgb, var(--status-color) 12%, transparent);
-		color: var(--status-color);
-	}
-
-	/* ── Portfolio Empty State ── */
-	.portfolio-empty {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 48px 20px;
-		text-align: center;
-		margin-bottom: 28px;
-		box-shadow: var(--shadow-card);
-	}
-	.portfolio-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.35; }
-	.empty-title {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 4px;
-	}
-	.empty-desc {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-bottom: 16px;
-	}
-
-	/* ── Quick Actions ── */
-	.quick-actions {
-		display: flex;
-		gap: 10px;
-		margin-bottom: 28px;
-		flex-wrap: wrap;
-	}
-	.quick-action-btn {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 20px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		text-decoration: none;
-		transition: all var(--transition);
-		cursor: pointer;
-		flex: 1;
-		min-width: 140px;
-		justify-content: center;
-		box-shadow: var(--shadow-card);
-	}
-	.quick-action-btn:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-		background: var(--green-bg);
-		box-shadow: var(--shadow-card-hover);
-	}
-	.quick-action-btn svg { flex-shrink: 0; }
-
-	/* ── Recent Activity ── */
-	.activity-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		overflow: hidden;
-		margin-bottom: 28px;
-		box-shadow: var(--shadow-card);
-	}
-	.activity-header {
-		padding: 16px 20px 0;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		margin-bottom: 8px;
-	}
-	.activity-row {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		padding: 10px 20px;
-		border-bottom: 1px solid var(--border-light);
-		text-decoration: none;
-		transition: background var(--transition);
-	}
-	.activity-row:last-child { border-bottom: none; }
-	.activity-row:hover { background: var(--bg-cream); }
-	.activity-stage-dot {
-		width: 8px;
-		height: 8px;
+	.action-icon {
+		width: 20px;
+		height: 20px;
 		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--primary);
 		flex-shrink: 0;
 	}
-	.activity-text {
+	.action-icon.warn {
+		color: #ef4444;
+	}
+	.action-icon svg {
+		width: 16px;
+		height: 16px;
+	}
+	.action-text {
 		flex: 1;
 		font-family: var(--font-body);
 		font-size: 13px;
 		color: var(--text-secondary);
-		line-height: 1.4;
+		line-height: 1.5;
 	}
-	.activity-text :global(strong) { color: var(--text-dark); font-weight: 600; }
-	.activity-time {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		color: var(--text-muted);
-		white-space: nowrap;
-		flex-shrink: 0;
+	.action-text :global(strong) {
+		color: var(--text-dark);
+		font-weight: 700;
 	}
-
-	/* ── Milestone Tracker ── */
-	.milestone-card {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 20px 24px;
-		margin-bottom: 28px;
-		box-shadow: var(--shadow-card);
-	}
-	.milestone-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-	.milestone-title {
-		font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark);
-	}
-	.milestone-pct {
-		font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary);
-	}
-	.milestone-bar-wrap {
-		height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 16px;
-	}
-	.milestone-bar-fill {
-		height: 100%; background: linear-gradient(90deg, var(--primary), #2563EB); border-radius: 3px;
-		transition: width 0.5s ease;
-	}
-	.milestone-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-	.milestone-step {
-		display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
-		border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-cream);
-		opacity: 0.5; transition: all 0.2s;
-	}
-	.milestone-step.done { opacity: 1; border-color: rgba(81,190,123,0.3); background: rgba(81,190,123,0.04); }
-	.milestone-step.next { opacity: 1; border-color: var(--primary); background: rgba(81,190,123,0.06); }
-	.milestone-icon {
-		width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-		background: var(--border); color: var(--text-muted); flex-shrink: 0;
-	}
-	.milestone-icon.done { background: var(--primary); color: #fff; }
-	.milestone-text { min-width: 0; }
-	.milestone-label {
-		font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-dark); line-height: 1.3;
-	}
-	.milestone-desc {
-		font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4;
-	}
+	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
@@ -1086,19 +953,8 @@
 		}
 		.content-area { padding: 12px !important; }
 		.dash-hero { padding: 24px; }
-		.momentum-grid { grid-template-columns: repeat(2, 1fr); }
-		.metric-value { font-size: 18px !important; }
-		.portfolio-layout { flex-direction: column; gap: 16px; }
-		.portfolio-section { padding: 16px; }
-		.portfolio-section table { font-size: 12px; }
-		.portfolio-section th { padding: 8px 8px !important; font-size: 9px !important; }
-		.portfolio-section td { padding: 10px 8px !important; font-size: 12px !important; }
-		.portfolio-section th:nth-child(3),
-		.portfolio-section th:nth-child(4),
-		.portfolio-section td:nth-child(3),
-		.portfolio-section td:nth-child(4) { display: none; }
-		.quick-actions { flex-direction: column; }
-		.quick-action-btn { min-width: unset; }
-		.milestone-steps { grid-template-columns: repeat(2, 1fr); }
+		.plan-cta-card,
+		.blueprint-card { padding: 18px 16px; }
+		.blueprint-next { padding: 14px; }
 	}
 </style>

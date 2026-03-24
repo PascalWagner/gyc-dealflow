@@ -38,6 +38,8 @@ export function stageLabel(stage) {
 export const deals = writable([]);
 export const dealsLoading = writable(true);
 export const dealsError = writable(null);
+export const networkCounts = writable({});
+let networkCountsLoaded = false;
 
 // ===== Deal Stages Store =====
 // Map of dealId → stage
@@ -105,14 +107,30 @@ export const stageCounts = derived([deals, dealStages], ([$deals, $stages]) => {
 });
 
 // ===== API =====
+export async function fetchNetworkCounts(force = false) {
+	if (!browser) return;
+	if (networkCountsLoaded && !force) return;
+	try {
+		const res = await fetch('/api/network?action=counts');
+		if (!res.ok) throw new Error('Failed to load network counts');
+		const data = await res.json();
+		networkCounts.set(data || {});
+		networkCountsLoaded = true;
+	} catch (err) {
+		console.warn('Network counts failed:', err.message);
+	}
+}
+
 export async function fetchDeals() {
 	dealsLoading.set(true);
 	dealsError.set(null);
 	try {
+		const countsPromise = fetchNetworkCounts();
 		const res = await fetch('/api/deals');
 		if (!res.ok) throw new Error('Failed to load deals');
 		const data = await res.json();
 		deals.set(data.deals || data || []);
+		await countsPromise;
 	} catch (err) {
 		dealsError.set(err.message);
 	} finally {

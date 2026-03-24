@@ -7,13 +7,6 @@
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
 	let wizardData = $state({});
-
-	// Chart.js refs
-	let allocationCanvasEl = $state(null);
-	let timelineCanvasEl = $state(null);
-	let allocationChartInstance = $state(null);
-	let timelineChartInstance = $state(null);
-	let chartJsLoaded = $state(false);
 	let sortCol = $state('investmentName');
 	let sortAsc = $state(true);
 	let showAddModal = $state(false);
@@ -59,6 +52,36 @@
 		portfolio.forEach(i => { const cls = i.assetClass || 'Other'; map[cls] = (map[cls] || 0) + (parseFloat(i.amountInvested) || 0); });
 		return map;
 	});
+	const allocationEntries = $derived(Object.entries(allocationMap).sort((a, b) => b[1] - a[1]));
+	const allocationTotal = $derived(allocationEntries.reduce((sum, [, amount]) => sum + amount, 0));
+	const allocationSlices = $derived.by(() => {
+		if (allocationEntries.length === 0 || allocationTotal === 0) return [];
+		let currentAngle = -90;
+		return allocationEntries.map(([assetClass, amount], index) => {
+			const pct = amount / allocationTotal;
+			const angle = pct * 360;
+			const startAngle = currentAngle * Math.PI / 180;
+			const endAngle = (currentAngle + angle) * Math.PI / 180;
+			const largeArcFlag = angle > 180 ? 1 : 0;
+			const x1 = 80 + 60 * Math.cos(startAngle);
+			const y1 = 80 + 60 * Math.sin(startAngle);
+			const x2 = 80 + 60 * Math.cos(endAngle);
+			const y2 = 80 + 60 * Math.sin(endAngle);
+			currentAngle += angle;
+			return {
+				assetClass,
+				amount,
+				pct,
+				color: PIE_COLORS[index % PIE_COLORS.length],
+				x1,
+				y1,
+				x2,
+				y2,
+				largeArcFlag,
+				isOnly: allocationEntries.length === 1
+			};
+		});
+	});
 
 	// Risk insights
 	const riskInsights = $derived.by(() => {
@@ -101,110 +124,12 @@
 		});
 		return { labels: sorted.map(([k]) => k), amounts: sorted.map(([, v]) => v) };
 	});
-
-	// Chart.js rendering functions
-	async function loadChartJs() {
-		if (chartJsLoaded) return;
-		const { Chart, DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } = await import('chart.js');
-		Chart.register(DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
-		chartJsLoaded = true;
-	}
+	const timelineMax = $derived.by(() => {
+		if (!timelineData?.amounts?.length) return 0;
+		return Math.max(...timelineData.amounts, totalInvested);
+	});
 
 	const PIE_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
-
-	function renderAllocationChart() {
-		if (!allocationCanvasEl || !chartJsLoaded) return;
-		const alloc = allocationMap;
-		const entries = Object.entries(alloc).sort((a, b) => b[1] - a[1]);
-		if (entries.length === 0) return;
-
-		if (allocationChartInstance) allocationChartInstance.destroy();
-
-		const { Chart } = window.Chart ? { Chart: window.Chart } : {};
-		import('chart.js').then(({ Chart: C }) => {
-			allocationChartInstance = new C(allocationCanvasEl, {
-				type: 'doughnut',
-				data: {
-					labels: entries.map(([k]) => k),
-					datasets: [{
-						data: entries.map(([, v]) => v),
-						backgroundColor: entries.map((_, i) => PIE_COLORS[i % PIE_COLORS.length]),
-						borderWidth: 2,
-						borderColor: 'var(--bg-card)',
-						hoverBorderColor: '#fff',
-						hoverOffset: 6
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					cutout: '60%',
-					plugins: {
-						legend: { display: false },
-						tooltip: {
-							callbacks: {
-								label: (ctx) => {
-									const val = ctx.raw;
-									const pct = ((val / totalInvested) * 100).toFixed(1);
-									return `$${val.toLocaleString()} (${pct}%)`;
-								}
-							}
-						}
-					}
-				}
-			});
-		});
-	}
-
-	function renderTimelineChart() {
-		if (!timelineCanvasEl || !chartJsLoaded) return;
-		const tData = timelineData;
-		if (!tData) return;
-
-		if (timelineChartInstance) timelineChartInstance.destroy();
-
-		import('chart.js').then(({ Chart: C }) => {
-			timelineChartInstance = new C(timelineCanvasEl, {
-				type: 'bar',
-				data: {
-					labels: tData.labels,
-					datasets: [{
-						label: 'Amount Invested',
-						data: tData.amounts,
-						backgroundColor: '#51BE7B',
-						borderRadius: 4,
-						maxBarThickness: 40
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: {
-						legend: { display: false },
-						tooltip: {
-							callbacks: {
-								label: (ctx) => '$' + ctx.raw.toLocaleString()
-							}
-						}
-					},
-					scales: {
-						y: {
-							beginAtZero: true,
-							ticks: {
-								callback: (v) => '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
-								font: { size: 11 }
-							},
-							grid: { color: 'rgba(0,0,0,0.05)' }
-						},
-						x: {
-							ticks: { font: { size: 11 } },
-							grid: { display: false }
-						}
-					}
-				}
-			});
-		});
-	}
 
 	// Filtered portfolio based on search
 	const filtered = $derived.by(() => {
@@ -365,22 +290,6 @@
 		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
 		taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
 		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-
-		// Load Chart.js dynamically (SSR-safe)
-		await loadChartJs();
-		renderAllocationChart();
-		renderTimelineChart();
-	});
-
-	// Re-render charts when portfolio data changes
-	$effect(() => {
-		// Access reactive deps
-		const _alloc = allocationMap;
-		const _timeline = timelineData;
-		if (chartJsLoaded && browser) {
-			renderAllocationChart();
-			renderTimelineChart();
-		}
 	});
 </script>
 
@@ -388,7 +297,7 @@
 	<button class="mobile-menu-btn" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
-	<div class="topbar-title">My Portfolio</div>
+	<div class="topbar-title">Dashboard</div>
 	<div class="dash-tabs">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
 		<a href="/app/portfolio" class="dash-tab active">Portfolio</a>
@@ -440,7 +349,6 @@
 			<div class="stat-card"><div class="stat-label">Active Investments</div><div class="stat-value">{activeCount}</div></div>
 			<div class="stat-card"><div class="stat-label">Total Distributions</div><div class="stat-value">${totalDistributions.toLocaleString()}</div></div>
 			<div class="stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">{avgIRR ? avgIRR.toFixed(1) + '%' : '--'}</div></div>
-			<div class="stat-card"><div class="stat-label">Avg Hold Period</div><div class="stat-value">{formatHoldPeriod(avgHoldPeriod)}</div></div>
 		</div>
 
 		<!-- Charts row -->
@@ -448,10 +356,24 @@
 			<div class="chart-card">
 				<div class="chart-card-title">Asset Class Allocation</div>
 				<div class="chartjs-donut-wrap">
-					<canvas bind:this={allocationCanvasEl}></canvas>
+					{#if allocationSlices.length > 0}
+						<svg viewBox="0 0 160 160" class="allocation-donut" aria-hidden="true">
+							{#each allocationSlices as slice}
+								{#if slice.isOnly}
+									<circle cx="80" cy="80" r="60" fill={slice.color}></circle>
+								{:else}
+									<path
+										d={`M80,80 L${slice.x1},${slice.y1} A60,60 0 ${slice.largeArcFlag},1 ${slice.x2},${slice.y2} Z`}
+										fill={slice.color}
+									></path>
+								{/if}
+							{/each}
+							<circle cx="80" cy="80" r="33" fill="var(--bg-card)"></circle>
+						</svg>
+					{/if}
 				</div>
 				<div class="alloc-legend">
-					{#each Object.entries(allocationMap).sort((a, b) => b[1] - a[1]) as [cls, amt], i}
+					{#each allocationEntries as [cls, amt], i}
 						<div class="alloc-legend-item">
 							<span class="alloc-legend-dot" style="background:{PIE_COLORS[i % PIE_COLORS.length]}"></span>
 							<span class="alloc-legend-label">{cls}</span>
@@ -495,7 +417,23 @@
 			<div class="chart-card timeline-card">
 				<div class="chart-card-title">Investment Timeline</div>
 				<div class="chartjs-timeline-wrap">
-					<canvas bind:this={timelineCanvasEl}></canvas>
+					<div class="timeline-grid-lines">
+						<div></div>
+						<div></div>
+						<div></div>
+						<div></div>
+					</div>
+					<div class="timeline-bars">
+						{#each timelineData.labels as label, index}
+							<div class="timeline-col">
+								<div
+									class="timeline-bar"
+									style={`height:${timelineMax ? Math.max(8, Math.round((timelineData.amounts[index] / timelineMax) * 180)) : 8}px`}
+								></div>
+								<div class="timeline-label">{label}</div>
+							</div>
+						{/each}
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -749,7 +687,6 @@
 
 	/* ── Content Area ── */
 	.content-area { padding: 24px; max-width: 1200px; }
-	.dash-tabs { display: none; }
 
 	/* ── Summary Stat Cards ── */
 	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -797,8 +734,19 @@
 	.alloc-num { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); }
 	.alloc-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
 
-	/* ── Chart.js Donut ── */
-	.chartjs-donut-wrap { max-width: 280px; margin: 0 auto; }
+	/* ── Allocation Donut ── */
+	.chartjs-donut-wrap {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		min-height: 172px;
+		margin-bottom: 12px;
+	}
+	.allocation-donut {
+		width: 180px;
+		height: 180px;
+		display: block;
+	}
 	.alloc-legend { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 	.alloc-legend-item { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 12px; }
 	.alloc-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
@@ -843,7 +791,50 @@
 
 	/* ── Timeline Chart ── */
 	.timeline-card { margin-bottom: 24px; }
-	.chartjs-timeline-wrap { position: relative; height: 260px; }
+	.chartjs-timeline-wrap {
+		position: relative;
+		height: 260px;
+		padding: 18px 18px 8px;
+	}
+	.timeline-grid-lines {
+		position: absolute;
+		inset: 18px 18px 34px;
+		display: grid;
+		grid-template-rows: repeat(4, 1fr);
+		pointer-events: none;
+	}
+	.timeline-grid-lines div {
+		border-top: 1px solid rgba(17, 24, 39, 0.08);
+	}
+	.timeline-bars {
+		position: relative;
+		height: 100%;
+		display: flex;
+		align-items: flex-end;
+		gap: 14px;
+	}
+	.timeline-col {
+		flex: 1;
+		min-width: 44px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 10px;
+	}
+	.timeline-bar {
+		width: min(40px, 100%);
+		border-radius: 10px 10px 0 0;
+		background: linear-gradient(180deg, #7ed49c 0%, #51BE7B 100%);
+		box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+	}
+	.timeline-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		color: var(--text-muted);
+		text-align: center;
+		line-height: 1.35;
+	}
 
 	/* ── Investment List Header ── */
 	.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }

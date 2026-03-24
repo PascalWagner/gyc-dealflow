@@ -1,5 +1,5 @@
 <script>
-	import { dealStages } from '$lib/stores/deals.js';
+	import { dealStages, networkCounts } from '$lib/stores/deals.js';
 	import { getDealHeroImage } from '$lib/utils/dealHero.js';
 
 	let { deal } = $props();
@@ -120,6 +120,23 @@
 	const hasFunding = $derived(!!(deal.totalAmountSold && deal.offeringSize && deal.pctFunded));
 	const hasNoDeck = $derived(!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl));
 	const actions = $derived(getActions(stage));
+	const socialCounts = $derived($networkCounts[deal.id] || null);
+	const networkProof = $derived.by(() => {
+		if (!socialCounts) return null;
+		if ((socialCounts.invested || 0) >= 1) {
+			return {
+				text: `${socialCounts.invested} LP${socialCounts.invested === 1 ? '' : 's'} from the network ${socialCounts.invested === 1 ? 'has' : 'have'} invested`,
+				emphasis: true
+			};
+		}
+		if ((socialCounts.reviewing || 0) >= 1) {
+			return {
+				text: `${socialCounts.reviewing} LP${socialCounts.reviewing === 1 ? '' : 's'} ${socialCounts.reviewing === 1 ? 'is' : 'are'} reviewing this deal`,
+				emphasis: false
+			};
+		}
+		return null;
+	});
 </script>
 
 <div class="deal-card">
@@ -219,6 +236,18 @@
 				<div class="funding-track">
 					<div class="funding-fill empty"></div>
 				</div>
+			</div>
+		{/if}
+
+		{#if networkProof}
+			<div class="network-proof" class:is-invested={networkProof.emphasis}>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+					<circle cx="9" cy="7" r="4"></circle>
+					<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+					<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+				</svg>
+				<span>{networkProof.text}</span>
 			</div>
 		{/if}
 	</a>
@@ -516,6 +545,29 @@
 		gap: 8px;
 		border-top: 1px solid var(--border-light);
 		margin-top: auto;
+	}
+
+	.network-proof {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 14px 10px;
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
+
+	.network-proof svg {
+		width: 14px;
+		height: 14px;
+		flex-shrink: 0;
+		opacity: 0.72;
+	}
+
+	.network-proof.is-invested {
+		color: var(--primary);
+		font-weight: 600;
 	}
 
 	.card-btn {
