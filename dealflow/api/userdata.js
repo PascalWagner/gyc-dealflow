@@ -645,7 +645,13 @@ async function syncProfileToGhl(email, fields) {
   if (!contact?.id) { console.log('GHL sync: no contact found, searchData:', JSON.stringify(searchData).substring(0, 200)); return; }
 
   const updates = {};
-  if (fields.phone) updates.phone = fields.phone;
+  if (fields.phone) {
+    // GHL requires E.164 format — strip formatting and prepend +1 for US numbers
+    const digits = fields.phone.replace(/\D/g, '');
+    if (digits.length === 10) updates.phone = '+1' + digits;
+    else if (digits.length === 11 && digits.startsWith('1')) updates.phone = '+' + digits;
+    else updates.phone = '+' + digits; // best effort
+  }
   if (fields.full_name) {
     const parts = fields.full_name.trim().split(/\s+/);
     updates.firstName = parts[0] || '';
