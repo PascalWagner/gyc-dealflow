@@ -10,6 +10,9 @@
     { "path": "/api/ghl-sync", "schedule": "0 * * * *" }
   ],
   "redirects": [
+    { "source": "/old/app", "destination": "/old-index.html" },
+    { "source": "/old/deal", "destination": "/old-deal.html" },
+    { "source": "/old/gp", "destination": "/old-gp-dashboard.html" },
     { "source": "/index.html", "destination": "/app/deals", "permanent": true },
     { "source": "/deal.html", "destination": "/app/deals", "permanent": true },
     { "source": "/deal-login.html", "destination": "/login", "permanent": true },
