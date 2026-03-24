@@ -158,6 +158,63 @@
 	function closeMobile() {
 		mobileOpen = false;
 	}
+
+	// View As (admin impersonation)
+	const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
+	let showViewAsDropdown = $state(false);
+	let viewAsSearch = $state('');
+	let viewAsResults = $state([]);
+	let viewAsUser = $state(null);
+
+	const isImpersonating = $derived(browser ? !!localStorage.getItem(ADMIN_REAL_USER_KEY) : false);
+	const impersonatedName = $derived(() => {
+		if (!browser) return '';
+		const u = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		return u?.name || u?.email?.split('@')[0] || '';
+	});
+	const impersonatedEmail = $derived(() => {
+		if (!browser) return '';
+		return JSON.parse(localStorage.getItem('gycUser') || '{}')?.email || '';
+	});
+
+	async function searchViewAsUsers(query) {
+		viewAsSearch = query;
+		if (!query || query.length < 2) { viewAsResults = []; return; }
+		try {
+			const stored = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || localStorage.getItem('gycUser') || '{}');
+			const res = await fetch(`/api/admin/users?q=${encodeURIComponent(query)}`, {
+				headers: { 'Authorization': 'Bearer ' + (stored.token || '') }
+			});
+			if (res.ok) { const data = await res.json(); viewAsResults = (data.users || data || []).slice(0, 8); }
+		} catch (e) { viewAsResults = []; }
+	}
+
+	function viewAs(targetUser) {
+		if (!browser) return;
+		const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		if (!localStorage.getItem(ADMIN_REAL_USER_KEY)) {
+			localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(currentUser));
+		}
+		localStorage.setItem('gycUser', JSON.stringify({
+			...targetUser,
+			token: currentUser.token,
+			isAdmin: false
+		}));
+		showViewAsDropdown = false;
+		viewAsSearch = '';
+		viewAsResults = [];
+		window.location.reload();
+	}
+
+	function exitViewAs() {
+		if (!browser) return;
+		const realUser = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || '{}');
+		if (realUser.email) {
+			localStorage.setItem('gycUser', JSON.stringify(realUser));
+		}
+		localStorage.removeItem(ADMIN_REAL_USER_KEY);
+		window.location.reload();
+	}
 </script>
 
 <!-- Mobile hamburger -->
@@ -240,6 +297,50 @@
 					{item.label}
 				</a>
 			{/each}
+
+			<!-- View As -->
+			<div class="view-as-section">
+				{#if isImpersonating}
+					<div class="view-as-impersonating">
+						<div class="view-as-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+							<span class="view-as-label">Viewing as</span>
+						</div>
+						<div class="view-as-name">{impersonatedName()}</div>
+						<div class="view-as-email">{impersonatedEmail()}</div>
+						<button class="view-as-exit" onclick={exitViewAs}>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="15 18 9 12 15 6"/></svg>
+							Back to My Account
+						</button>
+					</div>
+				{/if}
+				<button class="view-as-toggle" onclick={() => showViewAsDropdown = !showViewAsDropdown}>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+					View as another user
+				</button>
+				{#if showViewAsDropdown}
+					<div class="view-as-dropdown">
+						<input
+							type="text"
+							class="view-as-input"
+							placeholder="Search by name or email..."
+							bind:value={viewAsSearch}
+							oninput={(e) => searchViewAsUsers(e.target.value)}
+						/>
+						<div class="view-as-results">
+							{#each viewAsResults as u}
+								<button class="view-as-result" onclick={() => viewAs(u)}>
+									<div class="view-as-result-name">{u.name || u.email?.split('@')[0] || 'Unknown'}</div>
+									<div class="view-as-result-email">{u.email}</div>
+								</button>
+							{/each}
+							{#if viewAsSearch.length >= 2 && viewAsResults.length === 0}
+								<div class="view-as-no-results">No users found</div>
+							{/if}
+						</div>
+					</div>
+				{/if}
+			</div>
 		{/if}
 
 		<button class="nav-item feedback-btn" onclick={() => showFeedback = !showFeedback}>
@@ -367,10 +468,19 @@
 		font-size: 13px;
 		font-weight: 500;
 		text-decoration: none;
+		position: relative;
 	}
 
 	.nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
 	.nav-item.active { background: var(--bg-sidebar-active); color: var(--text-sidebar-active); }
+	.nav-item.active::before {
+		content: '';
+		position: absolute;
+		left: 0; top: 4px; bottom: 4px;
+		width: 3px;
+		background: var(--primary, #51BE7B);
+		border-radius: 0 2px 2px 0;
+	}
 
 	.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; }
 	.nav-icon :global(svg) { width: 18px; height: 18px; }
@@ -473,4 +583,46 @@
 		font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;
 	}
 	.feedback-submit:disabled { opacity: 0.5; }
+
+	/* View As */
+	.view-as-section { padding: 4px 16px 8px; }
+	.view-as-impersonating {
+		background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+		border-radius: 8px; padding: 8px 10px; margin-bottom: 4px;
+	}
+	.view-as-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+	.view-as-label { font-size: 10px; font-weight: 700; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; }
+	.view-as-name { font-size: 12px; font-weight: 700; color: #fff; }
+	.view-as-email { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; }
+	.view-as-exit {
+		width: 100%; padding: 4px 8px; background: transparent; border: 1px solid rgba(255,255,255,0.15);
+		border-radius: 6px; font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+		cursor: pointer; color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center; gap: 4px;
+	}
+	.view-as-exit:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+	.view-as-toggle {
+		display: flex; align-items: center; gap: 6px; cursor: pointer; padding: 4px 0;
+		background: none; border: none; font-family: var(--font-ui); font-size: 10px;
+		font-weight: 600; color: var(--text-muted); width: 100%; text-align: left;
+	}
+	.view-as-toggle:hover { color: rgba(255,255,255,0.7); }
+	.view-as-dropdown {
+		position: absolute; bottom: 100%; left: 16px; right: 16px;
+		background: var(--bg-card, #fff); border: 1px solid var(--border, #ddd); border-radius: 8px;
+		box-shadow: 0 -8px 24px rgba(0,0,0,0.15); z-index: 200; margin-bottom: 4px; overflow: hidden;
+	}
+	.view-as-input {
+		width: 100%; padding: 8px 10px; border: none; border-bottom: 1px solid var(--border-light, #eee);
+		font-family: var(--font-body); font-size: 12px; color: var(--text-dark, #141413);
+		background: transparent; box-sizing: border-box; outline: none;
+	}
+	.view-as-results { max-height: 200px; overflow-y: auto; }
+	.view-as-result {
+		display: block; width: 100%; padding: 8px 10px; background: none; border: none;
+		text-align: left; cursor: pointer; transition: background 0.1s;
+	}
+	.view-as-result:hover { background: rgba(81,190,123,0.08); }
+	.view-as-result-name { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark, #141413); }
+	.view-as-result-email { font-size: 10px; color: var(--text-muted, #8A9AA0); }
+	.view-as-no-results { padding: 12px; text-align: center; font-size: 11px; color: var(--text-muted); }
 </style>
