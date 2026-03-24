@@ -135,7 +135,7 @@
 
 	// Buy Box Match
 	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
-	const buyBoxScore = $derived(() => {
+	const buyBoxScore = $derived.by(() => {
 		if (buyBoxChecks.length === 0) return { matched: 0, total: 0, pct: 0 };
 		const matched = buyBoxChecks.filter(c => c.match).length;
 		const total = buyBoxChecks.length;
@@ -147,7 +147,7 @@
 	const ddProgress = $derived(checklist ? calcDDProgress(checklist, ddAnswers, deal) : { answered: 0, total: 0, pct: 0 });
 
 	// Next stage for advance button
-	const nextStage = $derived(() => {
+	const nextStage = $derived.by(() => {
 		const idx = currentStageIdx;
 		if (idx < 0 || idx >= stages.length - 1) return null;
 		return stages[idx + 1];
@@ -195,23 +195,23 @@
 	function hasUpvoted(qid) { if (!browser) return false; return JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]').includes(qid); }
 
 	// ===== Cash Flow Projection (derived) =====
-	const cfYieldRate = $derived(() => { if (!deal) return 0; let r = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0; if (r > 1) r = r / 100; return r; });
+	const cfYieldRate = $derived.by(() => { if (!deal) return 0; let r = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0; if (r > 1) r = r / 100; return r; });
 	const cfInvestment = $derived(deal?.investmentMinimum || 100000);
-	const cfHold = $derived(() => { if (!deal) return 5; let h = deal.holdPeriod || 5; if (h < 1) h = 1; if ((deal.status || '').toLowerCase() === 'evergreen') return 5; return Math.min(Math.ceil(h), 10); });
+	const cfHold = $derived.by(() => { if (!deal) return 5; let h = deal.holdPeriod || 5; if (h < 1) h = 1; if ((deal.status || '').toLowerCase() === 'evergreen') return 5; return Math.min(Math.ceil(h), 10); });
 	const cfIsEvergreen = $derived(deal ? (deal.status || '').toLowerCase() === 'evergreen' : false);
-	const cfRows = $derived(() => { const yr = cfYieldRate(); if (!yr || yr <= 0) return []; const inv = cfInvestment; const yrs = cfHold(); const em = deal?.equityMultiple || 0; const cr = isCredit; const ev = cfIsEvergreen; let rows = []; let td = 0; for (let y = 1; y <= yrs; y++) { let d, c = 0, n = ''; if (cr) { d = inv * yr; if (!ev && y === yrs) { c = inv; n = 'Capital returned'; } } else { if (y === 1) { d = inv * yr * 0.5; n = 'Partial year (ramp-up)'; } else { d = inv * yr; } if (y === yrs && em > 0) { const tp = inv * em; c = tp - td - d; if (c < 0) c = 0; n = 'Sale / capital event'; } else if (y === yrs && !ev) { c = inv; n = 'Capital returned'; } } td += d; rows.push({ year: y, dist: d, capReturn: c, cumDist: td, note: n }); } return rows; });
-	const cfTotalCash = $derived(() => { const r = cfRows(); if (!r.length) return 0; return r[r.length-1].cumDist + r[r.length-1].capReturn; });
-	const cfAvgCoC = $derived(() => { const r = cfRows(); const y = cfHold(); const i = cfInvestment; if (!r.length||!y||!i) return 0; return (r[r.length-1].cumDist/y/i)*100; });
-	const cfMaxBar = $derived(() => { const r = cfRows(); let m = 0; for (const x of r) { const t = x.dist+x.capReturn; if (t>m) m=t; } return m||1; });
+	const cfRows = $derived.by(() => { const yr = cfYieldRate; if (!yr || yr <= 0) return []; const inv = cfInvestment; const yrs = cfHold; const em = deal?.equityMultiple || 0; const cr = isCredit; const ev = cfIsEvergreen; let rows = []; let td = 0; for (let y = 1; y <= yrs; y++) { let d, c = 0, n = ''; if (cr) { d = inv * yr; if (!ev && y === yrs) { c = inv; n = 'Capital returned'; } } else { if (y === 1) { d = inv * yr * 0.5; n = 'Partial year (ramp-up)'; } else { d = inv * yr; } if (y === yrs && em > 0) { const tp = inv * em; c = tp - td - d; if (c < 0) c = 0; n = 'Sale / capital event'; } else if (y === yrs && !ev) { c = inv; n = 'Capital returned'; } } td += d; rows.push({ year: y, dist: d, capReturn: c, cumDist: td, note: n }); } return rows; });
+	const cfTotalCash = $derived.by(() => { const r = cfRows; if (!r.length) return 0; return r[r.length-1].cumDist + r[r.length-1].capReturn; });
+	const cfAvgCoC = $derived.by(() => { const r = cfRows; const y = cfHold; const i = cfInvestment; if (!r.length||!y||!i) return 0; return (r[r.length-1].cumDist/y/i)*100; });
+	const cfMaxBar = $derived.by(() => { const r = cfRows; let m = 0; for (const x of r) { const t = x.dist+x.capReturn; if (t>m) m=t; } return m||1; });
 	// ===== Stress Test derived =====
-	const stBaseIRR = $derived(() => { const v = deal?.targetIRR || 0.15; return v > 1 ? v/100 : v; });
-	const stBaseCoC = $derived(() => { const v = deal?.cashOnCash || 0.08; return v > 1 ? v/100 : v; });
+	const stBaseIRR = $derived.by(() => { const v = deal?.targetIRR || 0.15; return v > 1 ? v/100 : v; });
+	const stBaseCoC = $derived.by(() => { const v = deal?.cashOnCash || 0.08; return v > 1 ? v/100 : v; });
 	const stBaseEM = $derived(deal?.equityMultiple || 2.0);
 	const stBaseHold = $derived(deal?.holdPeriod || 5);
-	const stResults = $derived(() => { if (!deal||isCredit) return null; const inv = stInvestment||deal?.investmentMinimum||50000; const rg = stRentGrowth/100; const ec = stExitCap/100; const vc = stVacancy/100; const ir = stInterest/100; const h = stHold; const bc = stBaseCoC(); let noi = inv*(bc>0?bc:0.08); let td = 0; for (let y=1;y<=h;y++){const yn=noi*Math.pow(1+rg,y-1)*(1-vc);const ds=inv*0.65*ir;const cf=yn-ds*0.3;td+=Math.max(cf,0);} const en=noi*Math.pow(1+rg,h)*(1-vc);const sp=ec>0?en/ec:0;const tr=td+sp;const em=inv>0?tr/inv:0;const irr=h>0&&inv>0?(Math.pow(Math.max(tr/inv,0.01),1/h)-1):0;return{annualCF:h>0?td/h:0,totalDist:td,saleProceeds:sp,totalReturn:tr,irr,em}; });
-	const stScenarios = $derived(() => { if (!deal||isCredit) return null; const bi = stBaseIRR(); const be = stBaseEM; return { bear:{irr:bi*0.55,em:be*0.65}, base:{irr:bi,em:be}, bull:{irr:bi*1.35,em:be*1.3} }; });
+	const stResults = $derived.by(() => { if (!deal||isCredit) return null; const inv = stInvestment||deal?.investmentMinimum||50000; const rg = stRentGrowth/100; const ec = stExitCap/100; const vc = stVacancy/100; const ir = stInterest/100; const h = stHold; const bc = stBaseCoC; let noi = inv*(bc>0?bc:0.08); let td = 0; for (let y=1;y<=h;y++){const yn=noi*Math.pow(1+rg,y-1)*(1-vc);const ds=inv*0.65*ir;const cf=yn-ds*0.3;td+=Math.max(cf,0);} const en=noi*Math.pow(1+rg,h)*(1-vc);const sp=ec>0?en/ec:0;const tr=td+sp;const em=inv>0?tr/inv:0;const irr=h>0&&inv>0?(Math.pow(Math.max(tr/inv,0.01),1/h)-1):0;return{annualCF:h>0?td/h:0,totalDist:td,saleProceeds:sp,totalReturn:tr,irr,em}; });
+	const stScenarios = $derived.by(() => { if (!deal||isCredit) return null; const bi = stBaseIRR; const be = stBaseEM; return { bear:{irr:bi*0.55,em:be*0.65}, base:{irr:bi,em:be}, bull:{irr:bi*1.35,em:be*1.3} }; });
 	// ===== Peer Comparison derived =====
-	const peerComparison = $derived(() => { if (!deal||!allDeals.length) return null; const peers = allDeals.filter(d => { if (d.id===deal.id) return false; if (isCredit) return isCreditFund(d); return d.assetClass&&deal.assetClass&&d.assetClass===deal.assetClass; }); if (peers.length<2) return null; function av(f){const v=peers.map(d=>d[f]).filter(v=>v!=null&&v>0);return v.length>0?v.reduce((a,b)=>a+b,0)/v.length:null;} const ms=[{label:'Target IRR',field:'targetIRR',format:'pct',hb:true},{label:'Pref Return',field:'preferredReturn',format:'pct',hb:true},{label:'Equity Multiple',field:'equityMultiple',format:'multiple',hb:true},{label:'Min Investment',field:'investmentMinimum',format:'money',hb:false},{label:'Hold Period',field:'holdPeriod',format:'years',hb:false}]; const rows=ms.map(m=>{const dv=deal[m.field];const pa=av(m.field);let vd='No Data',vc='neutral';if(dv&&pa){const n=typeof dv==='number'?dv:parseFloat(dv);if(m.hb){if(n>pa*1.02){vd='Above Average';vc='good';}else if(n<pa*0.98){vd='Below Average';vc='bad';}else{vd='At Market';vc='neutral';}}else{if(n<pa*0.98){vd='Better than Avg';vc='good';}else if(n>pa*1.02){vd='Above Average';vc='bad';}else{vd='At Market';vc='neutral';}}}return{...m,dealVal:dv,peerAvg:pa,verdict:vd,verdictClass:vc};}); return{rows,peerCount:peers.length,peerLabel:isCredit?'Lending':(deal.assetClass||'Similar')}; });
+	const peerComparison = $derived.by(() => { if (!deal||!allDeals.length) return null; const peers = allDeals.filter(d => { if (d.id===deal.id) return false; if (isCredit) return isCreditFund(d); return d.assetClass&&deal.assetClass&&d.assetClass===deal.assetClass; }); if (peers.length<2) return null; function av(f){const v=peers.map(d=>d[f]).filter(v=>v!=null&&v>0);return v.length>0?v.reduce((a,b)=>a+b,0)/v.length:null;} const ms=[{label:'Target IRR',field:'targetIRR',format:'pct',hb:true},{label:'Pref Return',field:'preferredReturn',format:'pct',hb:true},{label:'Equity Multiple',field:'equityMultiple',format:'multiple',hb:true},{label:'Min Investment',field:'investmentMinimum',format:'money',hb:false},{label:'Hold Period',field:'holdPeriod',format:'years',hb:false}]; const rows=ms.map(m=>{const dv=deal[m.field];const pa=av(m.field);let vd='No Data',vc='neutral';if(dv&&pa){const n=typeof dv==='number'?dv:parseFloat(dv);if(m.hb){if(n>pa*1.02){vd='Above Average';vc='good';}else if(n<pa*0.98){vd='Below Average';vc='bad';}else{vd='At Market';vc='neutral';}}else{if(n<pa*0.98){vd='Better than Avg';vc='good';}else if(n>pa*1.02){vd='Above Average';vc='bad';}else{vd='At Market';vc='neutral';}}}return{...m,dealVal:dv,peerAvg:pa,verdict:vd,verdictClass:vc};}); return{rows,peerCount:peers.length,peerLabel:isCredit?'Lending':(deal.assetClass||'Similar')}; });
 
 	// ===== Formatters =====
 	function fmt(val, type) {
@@ -869,7 +869,7 @@
 	// ===== Actions =====
 	function advanceStage() {
 		if (!deal) return;
-		const next = nextStage();
+		const next = nextStage;
 		if (next) {
 			dealStages.setStage(deal.id, next.key);
 		}
@@ -1053,14 +1053,14 @@
 		h += '<div class="rs"><h2>5. Fee Structure</h2>';
 		if (d.fees) { h += '<p>' + String(d.fees).replace(/\n/g,'<br>') + '</p>'; } else { h += '<p class="mu">Fee data not available for this deal.</p>'; }
 		h += '</div>';
-		const rpCfR = cfRows();
+		const rpCfR = cfRows;
 		h += '<div class="rs"><h2>6. Projected Cash Flow</h2>';
 		if (rpCfR.length > 0) {
 			const inv = cfInvestment;
-			h += '<p class="mu" style="margin-bottom:8px;">Based on '+rF(inv,'money')+' invested at '+rF(cfYieldRate(),'pct')+' '+(isCredit?'yield':'pref return')+' over '+cfHold()+' years</p>';
+			h += '<p class="mu" style="margin-bottom:8px;">Based on '+rF(inv,'money')+' invested at '+rF(cfYieldRate,'pct')+' '+(isCredit?'yield':'pref return')+' over '+cfHold+' years</p>';
 			h += '<table class="rt cf"><thead><tr><th>Year</th><th>Distributions</th><th>Capital Return</th><th>Cumulative</th><th>Note</th></tr></thead><tbody>';
 			rpCfR.forEach(r => { h += '<tr><td>Year '+r.year+'</td><td>'+rF(r.dist,'money')+'</td><td>'+(r.capReturn>0?rF(r.capReturn,'money'):'\u2014')+'</td><td>'+rF(r.cumDist,'money')+'</td><td>'+(r.note||'')+'</td></tr>'; });
-			h += '</tbody></table><p style="margin-top:8px;font-size:13px;"><strong>Total Cash Returned:</strong> '+rF(cfTotalCash(),'money')+' &nbsp; <strong>Avg Cash-on-Cash:</strong> '+cfAvgCoC().toFixed(1)+'%</p>';
+			h += '</tbody></table><p style="margin-top:8px;font-size:13px;"><strong>Total Cash Returned:</strong> '+rF(cfTotalCash,'money')+' &nbsp; <strong>Avg Cash-on-Cash:</strong> '+cfAvgCoC.toFixed(1)+'%</p>';
 		} else { h += '<p class="mu">Projected cash flow data not available.</p>'; }
 		h += '</div>';
 		h += '<div class="rs"><h2>7. Background Check Summary</h2>';
@@ -1076,8 +1076,8 @@
 			if (bg.notes) h += '<p style="margin-top:8px;font-size:12px;color:#666;">'+bg.notes+'</p>';
 		} else { h += '<p class="mu">Background check data not available.</p>'; }
 		h += '</div>';
-		if (!isCredit && stResults()) {
-			const st = stResults();
+		if (!isCredit && stResults) {
+			const st = stResults;
 			h += '<div class="rs"><h2>8. Stress Test Scenario</h2>';
 			h += '<p class="mu" style="margin-bottom:8px;">Rent Growth: '+stRentGrowth+'% | Exit Cap: '+stExitCap+'% | Vacancy: '+stVacancy+'% | Interest: '+stInterest+'% | Hold: '+stHold+' yrs</p>';
 			h += '<table class="rt"><tbody>';
@@ -1559,7 +1559,7 @@
 
 				<!-- ==================== BUY BOX MATCH ==================== -->
 				{#if isPaid && buyBoxChecks.length > 0}
-					{@const score = buyBoxScore()}
+					{@const score = buyBoxScore}
 					{@const matchColor = score.pct >= 80 ? '#4ade80' : score.pct >= 50 ? '#fbbf24' : '#f87171'}
 					{@const matchLabel = score.pct >= 80 ? 'Strong Match' : score.pct >= 50 ? 'Partial Match' : 'Low Match'}
 					{@const bbCols = buyBoxChecks.length <= 3 ? buyBoxChecks.length : (buyBoxChecks.length % 4 === 0 || buyBoxChecks.length >= 8 ? 4 : buyBoxChecks.length % 3 === 0 ? 3 : buyBoxChecks.length <= 4 ? 2 : buyBoxChecks.length <= 6 ? 3 : 4)}
@@ -1860,7 +1860,7 @@
 				{/if}
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
-				{#if cfRows().length > 0}
+				{#if cfRows.length > 0}
 					<div class="section">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -1881,7 +1881,7 @@
 							{/if}
 							<div class:blurred={!isPaid}>
 								<div class="cf-assumptions">
-									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate(), 'pct')} {isCredit ? 'yield' : 'pref return'} over {cfHold()}{cfIsEvergreen ? '+ years' : ' years'}. Projections are illustrative only.
+									Based on {fmt(cfInvestment, 'money')} invested at {fmt(cfYieldRate, 'pct')} {isCredit ? 'yield' : 'pref return'} over {cfHold}{cfIsEvergreen ? '+ years' : ' years'}. Projections are illustrative only.
 								</div>
 
 								<div class="cf-toggle">
@@ -1891,13 +1891,13 @@
 
 								{#if cfView === 'chart'}
 									<div class="cf-chart-wrap">
-										{#each cfRows() as row, i}
+										{#each cfRows as row, i}
 											<div class="cf-bar-row">
 												<div class="cf-bar-label">Yr {row.year}</div>
 												<div class="cf-bar-track">
-													<div class="cf-bar-dist" style="width: {((row.dist) / cfMaxBar()) * 100}%"></div>
+													<div class="cf-bar-dist" style="width: {((row.dist) / cfMaxBar) * 100}%"></div>
 													{#if row.capReturn > 0}
-														<div class="cf-bar-cap" style="width: {(row.capReturn / cfMaxBar()) * 100}%; left: {(row.dist / cfMaxBar()) * 100}%"></div>
+														<div class="cf-bar-cap" style="width: {(row.capReturn / cfMaxBar) * 100}%; left: {(row.dist / cfMaxBar) * 100}%"></div>
 													{/if}
 												</div>
 												<div class="cf-bar-value">{fmt(row.dist + row.capReturn, 'money')}</div>
@@ -1905,7 +1905,7 @@
 										{/each}
 										<div class="cf-legend">
 											<span class="cf-legend-item"><span class="cf-legend-dot dist"></span>Distributions</span>
-											{#if cfRows().some(r => r.capReturn > 0)}
+											{#if cfRows.some(r => r.capReturn > 0)}
 												<span class="cf-legend-item"><span class="cf-legend-dot cap"></span>Capital Return</span>
 											{/if}
 										</div>
@@ -1919,9 +1919,9 @@
 												</tr>
 											</thead>
 											<tbody>
-												{#each cfRows() as row, i}
+												{#each cfRows as row, i}
 													{@const investment = cfInvestment}
-													<tr class:cf-total-row={i === cfRows().length - 1}>
+													<tr class:cf-total-row={i === cfRows.length - 1}>
 														<td>Year {row.year}</td>
 														<td>
 															{#if i === 0}
@@ -1935,7 +1935,7 @@
 														<td class="cf-highlight">{fmt(row.dist, 'money')}</td>
 														<td class="cf-highlight">{investment > 0 ? ((row.dist / investment) * 100).toFixed(1) : '0.0'}%</td>
 														<td>{fmt(row.dist + row.capReturn, 'money')}</td>
-														<td>{fmt(row.cumDist + (i === cfRows().length - 1 ? row.capReturn : 0), 'money')}</td>
+														<td>{fmt(row.cumDist + (i === cfRows.length - 1 ? row.capReturn : 0), 'money')}</td>
 														<td class="cf-note">{row.note || ''}</td>
 													</tr>
 												{/each}
@@ -1944,9 +1944,9 @@
 												<tr class="cf-summary-row">
 													<td><div class="cf-summary-value">{fmt(investment, 'money')}</div><div class="cf-summary-label">Invested</div></td>
 													<td></td>
-													<td><div class="cf-summary-value green">{fmt(cfRows()[cfRows().length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
-													<td>{#if cfAvgCoC() > 0}<div class="cf-summary-value green">{cfAvgCoC().toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
-													<td><div class="cf-summary-value">{fmt(cfTotalCash(), 'money')}</div><div class="cf-summary-label">Total Cash</div></td>
+													<td><div class="cf-summary-value green">{fmt(cfRows[cfRows.length-1]?.cumDist || 0, 'money')}</div><div class="cf-summary-label">Total Distributions</div></td>
+													<td>{#if cfAvgCoC > 0}<div class="cf-summary-value green">{cfAvgCoC.toFixed(1)}%</div><div class="cf-summary-label">Avg CoC</div>{/if}</td>
+													<td><div class="cf-summary-value">{fmt(cfTotalCash, 'money')}</div><div class="cf-summary-label">Total Cash</div></td>
 													<td>{#if deal.targetIRR}<div class="cf-summary-value green">{fmt(deal.targetIRR, 'pct')}</div><div class="cf-summary-label">Target IRR</div>{/if}</td>
 													<td></td>
 												</tr>
@@ -1960,12 +1960,12 @@
 				{/if}
 
 				<!-- ==================== PEER COMPARISON ==================== -->
-				{#if peerComparison()}
+				{#if peerComparison}
 					<div class="section">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
 							<span class="section-title">Peer Comparison</span>
-							<span class="peer-count-label">vs {peerComparison().peerCount} {peerComparison().peerLabel} peers</span>
+							<span class="peer-count-label">vs {peerComparison.peerCount} {peerComparison.peerLabel} peers</span>
 						</div>
 						<div class="section-body" style="position:relative;min-height:120px;">
 							{#if !isPaid}
@@ -1975,7 +1975,7 @@
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
 										<div class="gate-title">Unlock Peer Comparison</div>
-										<div class="gate-text">See how this deal's metrics compare to {peerComparison().peerCount} similar {peerComparison().peerLabel} deals.</div>
+										<div class="gate-text">See how this deal's metrics compare to {peerComparison.peerCount} similar {peerComparison.peerLabel} deals.</div>
 										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
 									</div>
 								</div>
@@ -1992,7 +1992,7 @@
 											</tr>
 										</thead>
 										<tbody>
-											{#each peerComparison().rows as row}
+											{#each peerComparison.rows as row}
 												<tr>
 													<td class="peer-td label">{row.label}</td>
 													<td class="peer-td center bold">{row.dealVal ? fmt(row.dealVal, row.format) : '---'}</td>
@@ -2006,7 +2006,7 @@
 									</table>
 								</div>
 								<div class="peer-footnote">
-									Each metric is compared to the average of {peerComparison().peerCount} comparable {peerComparison().peerLabel} deals. Green indicates favorable to investors; red indicates less favorable.
+									Each metric is compared to the average of {peerComparison.peerCount} comparable {peerComparison.peerLabel} deals. Green indicates favorable to investors; red indicates less favorable.
 								</div>
 							</div>
 						</div>
@@ -2037,8 +2037,8 @@
 								<div class="st-base-case">
 									<div class="st-base-title">Base Case from Deal Data</div>
 									<div class="st-base-pills">
-										<span class="st-pill">IRR {fmt(stBaseIRR(), 'pct')}</span>
-										<span class="st-pill">CoC {fmt(stBaseCoC(), 'pct')}</span>
+										<span class="st-pill">IRR {fmt(stBaseIRR, 'pct')}</span>
+										<span class="st-pill">CoC {fmt(stBaseCoC, 'pct')}</span>
 										<span class="st-pill">EM {stBaseEM.toFixed(2)}x</span>
 										<span class="st-pill">Hold {stBaseHold} yrs</span>
 									</div>
@@ -2077,8 +2077,8 @@
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
 											Projected Returns
 										</div>
-										{#if stResults()}
-											{@const res = stResults()}
+										{#if stResults}
+											{@const res = stResults}
 											<div class="st-output-item"><span class="st-output-label">Annual Cash Flow</span><span class="st-output-value">{fmt(res.annualCF, 'money')}</span></div>
 											<div class="st-output-item"><span class="st-output-label">Total Distributions</span><span class="st-output-value">{fmt(res.totalDist, 'money')}</span></div>
 											<div class="st-output-item"><span class="st-output-label">Projected Sale Proceeds</span><span class="st-output-value">{fmt(res.saleProceeds, 'money')}</span></div>
@@ -2089,8 +2089,8 @@
 									</div>
 								</div>
 
-								{#if stScenarios()}
-									{@const sc = stScenarios()}
+								{#if stScenarios}
+									{@const sc = stScenarios}
 									<div class="st-scenarios">
 										<div class="st-scenarios-title">Scenario Comparison</div>
 										<table class="st-scenario-table">

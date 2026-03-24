@@ -58,7 +58,7 @@
 		}
 	}
 
-	const sortedDeals = $derived(() => {
+	const sortedDeals = $derived.by(() => {
 		if (!sortCol) return deals;
 		const col = TABLE_COLS.find(c => c.key === sortCol);
 		return [...deals].sort((a, b) => {

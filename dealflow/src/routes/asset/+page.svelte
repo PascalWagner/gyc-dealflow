@@ -88,7 +88,7 @@
 	}
 
 	// ===== Derived =====
-	let heroStats = $derived(() => {
+	let heroStats = $derived.by(() => {
 		const stats = [];
 		const d0 = matchingDeals[0];
 		const unitCount = d0?.unitCount || propertyDetails.units;
@@ -111,7 +111,7 @@
 		return stats;
 	});
 
-	let operators = $derived(() => {
+	let operators = $derived.by(() => {
 		const opSet = {};
 		const ops = [];
 		matchingDeals.forEach(d => {
@@ -140,7 +140,7 @@
 
 	let hasValuationChart = $derived(valuationPoints.length >= 2);
 
-	let valuationChange = $derived(() => {
+	let valuationChange = $derived.by(() => {
 		if (valuationPoints.length < 2) return null;
 		const values = valuationPoints.map(d => d.purchasePrice || d.offeringSize);
 		const first = values[0];
@@ -157,7 +157,7 @@
 	});
 
 	// Property summary text
-	let summaryText = $derived(() => {
+	let summaryText = $derived.by(() => {
 		const d0 = matchingDeals[0] || {};
 		const pd = propertyDetails || {};
 		const parts = [];
@@ -200,7 +200,7 @@
 
 	let showOperatorComp = $derived(matchingDeals.length >= 2);
 
-	let operatorCompRows = $derived(() => {
+	let operatorCompRows = $derived.by(() => {
 		if (matchingDeals.length < 2) return [];
 		const sorted = matchingDeals.slice().sort((a, b) => new Date(a.addedDate || 0) - new Date(b.addedDate || 0));
 		const allRows = [
@@ -229,7 +229,7 @@
 	});
 
 	// Property records
-	let recordItems = $derived(() => {
+	let recordItems = $derived.by(() => {
 		const rc = rentCastData;
 		if (!rc) return [];
 		const items = [];
@@ -246,7 +246,7 @@
 		return items;
 	});
 
-	let taxYears = $derived(() => {
+	let taxYears = $derived.by(() => {
 		if (!rentCastData?.taxAssessments) return [];
 		return Object.keys(rentCastData.taxAssessments).sort().reverse().slice(0, 5);
 	});
@@ -258,7 +258,7 @@
 	let income = $derived(marketData?.population?.filter(d => d.medianIncome > 0) || []);
 	let showMarketIntel = $derived(pop.length >= 2);
 
-	let cleanAreaName = $derived(() => {
+	let cleanAreaName = $derived.by(() => {
 		if (!pop.length || !pop[0].name) return '';
 		return pop[0].name.replace(/^ZCTA5\s*/, 'ZIP ');
 	});
@@ -267,7 +267,7 @@
 		assetClass && (assetClass.toLowerCase().includes('multi') || assetClass.toLowerCase().includes('apartment') || assetClass.toLowerCase().includes('residential'))
 	);
 
-	let risks = $derived(() => {
+	let risks = $derived.by(() => {
 		const r = marketData?.risks?.slice() || [];
 		if (marketData?.populationTrend && !marketData.populationTrend.declining && marketData.populationTrend.annualGrowth > 0.5) {
 			r.push({

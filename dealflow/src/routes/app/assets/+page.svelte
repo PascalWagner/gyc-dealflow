@@ -17,7 +17,7 @@
 	const assetClasses = $derived([...new Set($deals.map(d => d.assetClass).filter(Boolean))].sort());
 	const locations = $derived([...new Set($deals.map(d => d.location || d.investingGeography || '').filter(Boolean))].sort());
 
-	const assets = $derived(() => {
+	const assets = $derived.by(() => {
 		return $deals.filter(d => {
 			if (d.dealType === 'Fund') return false;
 			if (classFilter && d.assetClass !== classFilter) return false;

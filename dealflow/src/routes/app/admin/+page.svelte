@@ -202,7 +202,7 @@
 		feedbackFilter === 'all' ? feedbackItems : feedbackItems.filter(f => f.type === feedbackFilter)
 	);
 
-	const filteredUsers = $derived(() => {
+	const filteredUsers = $derived.by(() => {
 		if (!usersData?.users) return [];
 		let list = usersData.users;
 		if (userTierFilter !== 'all') {
@@ -429,7 +429,7 @@
 				{#if usersData.users}
 					<div class="section-card">
 						<div class="users-toolbar">
-							<div class="section-title">All Users <span class="badge">{filteredUsers().length} of {usersData.users.length}</span></div>
+							<div class="section-title">All Users <span class="badge">{filteredUsers.length} of {usersData.users.length}</span></div>
 							<div class="users-filters">
 								<input
 									type="text"
@@ -455,7 +455,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each filteredUsers() as u}
+									{#each filteredUsers as u}
 										<tr>
 											<td class="bold">{u.email}</td>
 											<td>{u.name || '--'}</td>

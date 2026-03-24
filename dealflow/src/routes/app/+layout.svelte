@@ -10,7 +10,7 @@
 
 	// Derive current page from URL for sidebar highlighting
 	// e.g. /app/deals → 'deals', /app/market-intel → 'market-intel', /app/admin/manage → 'admin-manage'
-	const currentPage = $derived(() => {
+	const currentPage = $derived.by(() => {
 		const path = $page.url.pathname.replace('/app/', '');
 		if (path === 'admin/manage') return 'admin-manage';
 		if (path === 'admin/outreach') return 'outreach';

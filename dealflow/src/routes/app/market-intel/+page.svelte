@@ -12,7 +12,7 @@
 	const totalDeals = $derived($deals.length);
 	const activeDeals = $derived($deals.filter(d => !d.isStale));
 
-	const totalCapital = $derived(() => {
+	const totalCapital = $derived.by(() => {
 		let cap = 0;
 		activeDeals.forEach(d => { if (d.offeringSize && d.offeringSize > 0 && d.offeringSize < 1e12) cap += d.offeringSize; });
 		return cap >= 1e9 ? '$' + (cap / 1e9).toFixed(1) + 'B' : '$' + (cap / 1e6).toFixed(0) + 'M';
@@ -97,7 +97,7 @@
 		}))
 	);
 
-	const filteredDebtFunds = $derived(() => {
+	const filteredDebtFunds = $derived.by(() => {
 		return debtFunds.filter(f => {
 			if (debtFinancials !== 'all' && f.financials !== debtFinancials) return false;
 			if (debtAUM !== 'all') {
@@ -352,7 +352,7 @@
 		if (charts.debtFund?.destroy) charts.debtFund.destroy();
 		const ctx = document.getElementById('debtFundChart');
 		if (!ctx) return;
-		const funds = filteredDebtFunds();
+		const funds = filteredDebtFunds;
 		if (!funds.length) return;
 		const metricKeys = { yield: '_yieldData', delinquency: '_delinquencyData', ltv: '_ltvData', leverage: '_leverageData' };
 		const metricLabels = { yield: 'Yield (%)', delinquency: 'Delinquency Rate (%)', ltv: 'Loan-to-Value (%)', leverage: 'Leverage Ratio (x)' };
@@ -435,7 +435,7 @@
 	}
 
 	// Summary stats for deal insights
-	const dealInsightStats = $derived(() => {
+	const dealInsightStats = $derived.by(() => {
 		const ds = activeDeals;
 		const irrs = ds.filter(d => d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2).map(d => d.targetIRR);
 		const prefs = ds.filter(d => d.preferredReturn && d.preferredReturn > 0 && d.preferredReturn < 1).map(d => d.preferredReturn);
@@ -467,8 +467,8 @@
 	});
 
 	// Key insights for deal insights tab
-	const keyInsights = $derived(() => {
-		const s = dealInsightStats();
+	const keyInsights = $derived.by(() => {
+		const s = dealInsightStats;
 		if (!s) return [];
 		return [
 			{ title: 'Only ' + s.auditPct + ' of deals are audited', body: 'Out of ' + s.withFin + ' deals with financial data, just ' + s.audited + ' have audited financials. Always ask your sponsor if their books are audited by a third party.' },
@@ -481,7 +481,7 @@
 	});
 
 	// SEC summary stats
-	const secStats = $derived(() => {
+	const secStats = $derived.by(() => {
 		if (!secData) return {};
 		const qs = secData.quarters || [];
 		if (!qs.length) return {};
@@ -498,8 +498,8 @@
 	});
 
 	// Debt fund summary stats
-	const debtStats = $derived(() => {
-		const funds = filteredDebtFunds();
+	const debtStats = $derived.by(() => {
+		const funds = filteredDebtFunds;
 		const yields = funds.filter(f => f.targetIRR).map(f => f.targetIRR * 100);
 		const avgYield = yields.length ? (yields.reduce((a, b) => a + b, 0) / yields.length).toFixed(1) : '--';
 		const ltvs = funds.filter(f => f.avgLoanLTV).map(f => f.avgLoanLTV > 1 ? f.avgLoanLTV : f.avgLoanLTV * 100);
@@ -509,7 +509,7 @@
 	});
 
 	// Deal flow stats
-	const dealFlowStats = $derived(() => {
+	const dealFlowStats = $derived.by(() => {
 		const now = new Date();
 		const twelveMonthsAgo = new Date(now);
 		twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
@@ -620,7 +620,7 @@
 <div class="mi-page">
 	<div class="mi-header">
 		<h1>Market Intelligence</h1>
-		<p>Market-wide data from <strong>{secStats()?.totalFilings || '730,640'}</strong> SEC Form D filings combined with deal-level insights from <strong>{totalDeals.toLocaleString()}</strong> offerings we've reviewed (totaling <strong>{totalCapital()}</strong> in capital).</p>
+		<p>Market-wide data from <strong>{secStats?.totalFilings || '730,640'}</strong> SEC Form D filings combined with deal-level insights from <strong>{totalDeals.toLocaleString()}</strong> offerings we've reviewed (totaling <strong>{totalCapital}</strong> in capital).</p>
 	</div>
 
 	<!-- Tab Bar -->
@@ -651,11 +651,11 @@
 			</div>
 			<p class="mi-section-desc">Every Regulation D filing since 2008 -- this is the entire U.S. private placement market, not just our database.</p>
 			<div class="stat-cards">
-				<div class="stat-card"><div class="stat-label">Total Form D Filings</div><div class="stat-value">{secStats()?.totalFilings || '--'}</div><div class="stat-sub">Since Q3 2008</div></div>
-				<div class="stat-card"><div class="stat-label">Capital Raised</div><div class="stat-value">{secStats()?.totalCapital || '--'}</div><div class="stat-sub">Total amount sold</div></div>
-				<div class="stat-card"><div class="stat-label">506(b) Share</div><div class="stat-value">{secStats()?.pct506b || '--'}</div><div class="stat-sub">Latest quarter</div></div>
-				<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{secStats()?.medianMin || '--'}</div><div class="stat-sub">Across all filings</div></div>
-				<div class="stat-card"><div class="stat-label">Real Estate Filings</div><div class="stat-value">{secStats()?.reFilings || '--'}</div><div class="stat-sub">RE + Commercial + Residential</div></div>
+				<div class="stat-card"><div class="stat-label">Total Form D Filings</div><div class="stat-value">{secStats?.totalFilings || '--'}</div><div class="stat-sub">Since Q3 2008</div></div>
+				<div class="stat-card"><div class="stat-label">Capital Raised</div><div class="stat-value">{secStats?.totalCapital || '--'}</div><div class="stat-sub">Total amount sold</div></div>
+				<div class="stat-card"><div class="stat-label">506(b) Share</div><div class="stat-value">{secStats?.pct506b || '--'}</div><div class="stat-sub">Latest quarter</div></div>
+				<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{secStats?.medianMin || '--'}</div><div class="stat-sub">Across all filings</div></div>
+				<div class="stat-card"><div class="stat-label">Real Estate Filings</div><div class="stat-value">{secStats?.reFilings || '--'}</div><div class="stat-sub">RE + Commercial + Residential</div></div>
 			</div>
 			<div class="chart-grid-2">
 				<div class="chart-card"><h3>New Form D Filings Per Quarter</h3><p>The pace of new private offerings entering the U.S. market</p><div class="chart-wrap"><canvas id="secNewFilingsChart"></canvas></div></div>
@@ -685,11 +685,11 @@
 			</div>
 			<p class="mi-section-desc">Data the SEC doesn't track -- actual target returns, pref returns, fee structures, and LP/GP splits from term sheets we've reviewed.</p>
 			<div class="stat-cards">
-				<div class="stat-card"><div class="stat-label">Median Target IRR</div><div class="stat-value">{dealInsightStats()?.medIRR || '--'}</div><div class="stat-sub">Range: {dealInsightStats()?.irrRange}</div></div>
-				<div class="stat-card"><div class="stat-label">Median Pref Return</div><div class="stat-value">{dealInsightStats()?.medPref || '--'}</div><div class="stat-sub">{dealInsightStats()?.prefCount} deals report a pref</div></div>
-				<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{dealInsightStats()?.medMin || '--'}</div><div class="stat-sub">{dealInsightStats()?.minCount} deals with minimums</div></div>
-				<div class="stat-card"><div class="stat-label">Most Common Split</div><div class="stat-value">{dealInsightStats()?.topSplit || '--'}</div><div class="stat-sub">{dealInsightStats()?.splitNote}</div></div>
-				<div class="stat-card"><div class="stat-label">Audited Financials</div><div class="stat-value">{dealInsightStats()?.auditPct || '--'}</div><div class="stat-sub">{dealInsightStats()?.auditNote}</div></div>
+				<div class="stat-card"><div class="stat-label">Median Target IRR</div><div class="stat-value">{dealInsightStats?.medIRR || '--'}</div><div class="stat-sub">Range: {dealInsightStats?.irrRange}</div></div>
+				<div class="stat-card"><div class="stat-label">Median Pref Return</div><div class="stat-value">{dealInsightStats?.medPref || '--'}</div><div class="stat-sub">{dealInsightStats?.prefCount} deals report a pref</div></div>
+				<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{dealInsightStats?.medMin || '--'}</div><div class="stat-sub">{dealInsightStats?.minCount} deals with minimums</div></div>
+				<div class="stat-card"><div class="stat-label">Most Common Split</div><div class="stat-value">{dealInsightStats?.topSplit || '--'}</div><div class="stat-sub">{dealInsightStats?.splitNote}</div></div>
+				<div class="stat-card"><div class="stat-label">Audited Financials</div><div class="stat-value">{dealInsightStats?.auditPct || '--'}</div><div class="stat-sub">{dealInsightStats?.auditNote}</div></div>
 			</div>
 
 			<!-- Distribution Charts -->
@@ -741,11 +741,11 @@
 			</div>
 
 			<!-- Key Insights -->
-			{#if keyInsights().length}
+			{#if keyInsights.length}
 				<div class="insights-section">
 					<h2>Key Insights</h2>
 					<div class="insights-grid">
-						{#each keyInsights() as insight}
+						{#each keyInsights as insight}
 							<div class="insight-card">
 								<div class="insight-title">{insight.title}</div>
 								<div class="insight-body">{insight.body}</div>
@@ -766,10 +766,10 @@
 			<p class="mi-section-desc">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>
 
 			<div class="stat-cards">
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Total Deals</div><div class="stat-value">{dealFlowStats().totalDeals}</div></div>
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Last 30 Days</div><div class="stat-value" style="color:#2C6E49;">{dealFlowStats().recentCount}</div></div>
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Avg / Month</div><div class="stat-value">{dealFlowStats().avgPerMonth}</div></div>
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Week Streak</div><div class="stat-value" style="color:#D68C45;">{dealFlowStats().streak}</div><div class="stat-sub">consecutive weeks</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Total Deals</div><div class="stat-value">{dealFlowStats.totalDeals}</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Last 30 Days</div><div class="stat-value" style="color:#2C6E49;">{dealFlowStats.recentCount}</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Avg / Month</div><div class="stat-value">{dealFlowStats.avgPerMonth}</div></div>
+				<div class="stat-card" style="text-align:center;"><div class="stat-label">Week Streak</div><div class="stat-value" style="color:#D68C45;">{dealFlowStats.streak}</div><div class="stat-sub">consecutive weeks</div></div>
 			</div>
 
 			<div class="chart-card" style="margin-bottom:24px;">
@@ -787,10 +787,10 @@
 				<!-- Deal Types -->
 				<div class="chart-card">
 					<h3>Deal Types</h3>
-					{#each dealFlowStats().dealTypes as [type, count]}
+					{#each dealFlowStats.dealTypes as [type, count]}
 						<div class="df-type-row">
 							<span class="df-type-name">{type}</span>
-							<span class="df-type-count">{count} ({Math.round(count / (dealFlowStats().totalDeals || 1) * 100)}%)</span>
+							<span class="df-type-count">{count} ({Math.round(count / (dealFlowStats.totalDeals || 1) * 100)}%)</span>
 						</div>
 					{/each}
 				</div>
@@ -809,7 +809,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each dealFlowStats().recentDeals as d}
+								{#each dealFlowStats.recentDeals as d}
 									<tr>
 										<td class="df-deal-name">{d.name || d.investmentName || '--'}</td>
 										<td>{d.dealType || '--'}</td>
@@ -828,7 +828,7 @@
 			<!-- Value prop footer -->
 			<div class="df-footer">
 				<div class="df-footer-title">This database can't be rebuilt overnight.</div>
-				<div class="df-footer-desc">With {dealFlowStats().totalDeals} deals tracked, {dealFlowStats().assetClassCount} asset classes, and new opportunities sourced weekly -- this is the most comprehensive private placement database available to LP investors.</div>
+				<div class="df-footer-desc">With {dealFlowStats.totalDeals} deals tracked, {dealFlowStats.assetClassCount} asset classes, and new opportunities sourced weekly -- this is the most comprehensive private placement database available to LP investors.</div>
 			</div>
 		</div>
 	{/if}
@@ -848,10 +848,10 @@
 				<button class="btn-clear" onclick={clearDebtFilters}>Clear Filters</button>
 			</div>
 			<div class="stat-cards">
-				<div class="stat-card"><div class="stat-label">Total Debt Funds</div><div class="stat-value" style="color:var(--primary);">{debtStats().count} <span style="color:var(--text-muted);font-size:18px;">/ {debtStats().total}</span></div></div>
-				<div class="stat-card"><div class="stat-label">Average Yield</div><div class="stat-value" style="color:#51BE7B;">{debtStats().avgYield}%</div></div>
-				<div class="stat-card"><div class="stat-label">Average LTV</div><div class="stat-value" style="color:#E67E22;">{debtStats().avgLTV}%</div></div>
-				<div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value" style="color:#3B82F6;">{debtStats().totalAUM}</div></div>
+				<div class="stat-card"><div class="stat-label">Total Debt Funds</div><div class="stat-value" style="color:var(--primary);">{debtStats.count} <span style="color:var(--text-muted);font-size:18px;">/ {debtStats.total}</span></div></div>
+				<div class="stat-card"><div class="stat-label">Average Yield</div><div class="stat-value" style="color:#51BE7B;">{debtStats.avgYield}%</div></div>
+				<div class="stat-card"><div class="stat-label">Average LTV</div><div class="stat-value" style="color:#E67E22;">{debtStats.avgLTV}%</div></div>
+				<div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value" style="color:#3B82F6;">{debtStats.totalAUM}</div></div>
 			</div>
 			<div class="chart-card" style="margin-bottom:24px;">
 				<div class="debt-chart-header">
@@ -882,7 +882,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filteredDebtFunds().sort((a, b) => { let va = a[debtSortCol] || '', vb = b[debtSortCol] || ''; if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase(); return debtSortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }) as fund (fund.id)}
+						{#each filteredDebtFunds.sort((a, b) => { let va = a[debtSortCol] || '', vb = b[debtSortCol] || ''; if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase(); return debtSortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }) as fund (fund.id)}
 							<tr class:highlighted={highlightedDebtFunds.has(fund.id)} onclick={() => { if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id); else highlightedDebtFunds.add(fund.id); highlightedDebtFunds = new Set(highlightedDebtFunds); renderDebtChart(); }}>
 								<td class="name-cell"><a href="/app/deals?id={fund.id}" onclick={(e) => e.stopPropagation()}>{fund.investmentName}</a></td>
 								<td>{fund.debtPosition || '--'}</td>

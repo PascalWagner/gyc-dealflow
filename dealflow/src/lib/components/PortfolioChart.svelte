@@ -12,7 +12,7 @@
 	const planTotal = $derived(hasPlan ? Object.values(planAllocations).reduce((s, v) => s + v, 0) : 0);
 
 	// Build SVG paths
-	const slices = $derived(() => {
+	const slices = $derived.by(() => {
 		if (entries.length === 0 || total === 0) return [];
 		let cumAngle = 0;
 		return entries.map(([ac, amount], i) => {
@@ -33,7 +33,7 @@
 	});
 
 	// Legend entries including plan-only asset classes
-	const legendItems = $derived(() => {
+	const legendItems = $derived.by(() => {
 		const items = entries.map(([ac, amount], i) => {
 			const actualPct = Math.round((amount / total) * 100);
 			const planPct = hasPlan && planAllocations[ac]

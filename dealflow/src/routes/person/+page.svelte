@@ -33,7 +33,7 @@
 
 	let photoUrl = $derived(person ? getPersonPhotoUrl(person.name) : null);
 
-	let allAssetClasses = $derived(() => {
+	let allAssetClasses = $derived.by(() => {
 		const acs = [];
 		companies.forEach(c => (c.assetClasses || []).forEach(ac => { if (!acs.includes(ac)) acs.push(ac); }));
 		return acs;

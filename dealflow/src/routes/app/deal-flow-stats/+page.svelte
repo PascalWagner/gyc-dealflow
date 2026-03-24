@@ -7,7 +7,7 @@
 	let Chart = $state(null);
 	let charts = {};
 
-	const analytics = $derived(() => {
+	const analytics = $derived.by(() => {
 		const DEALS = $deals || [];
 		const now = new Date();
 		const twelveMonthsAgo = new Date(now);
@@ -95,7 +95,7 @@
 
 	function renderCharts() {
 		if (!Chart) return;
-		const a = analytics();
+		const a = analytics;
 
 		// Monthly bar
 		const barEl = document.getElementById('dfBarChart');
@@ -146,19 +146,19 @@
 <div class="stats-grid">
 	<div class="stat-card">
 		<div class="stat-label">Total Deals</div>
-		<div class="stat-value">{analytics().totalDeals}</div>
+		<div class="stat-value">{analytics.totalDeals}</div>
 	</div>
 	<div class="stat-card">
 		<div class="stat-label">Last 30 Days</div>
-		<div class="stat-value accent">{analytics().recentCount}</div>
+		<div class="stat-value accent">{analytics.recentCount}</div>
 	</div>
 	<div class="stat-card">
 		<div class="stat-label">Avg / Month</div>
-		<div class="stat-value">{analytics().avgPerMonth}</div>
+		<div class="stat-value">{analytics.avgPerMonth}</div>
 	</div>
 	<div class="stat-card">
 		<div class="stat-label">Week Streak</div>
-		<div class="stat-value orange">{analytics().streak}</div>
+		<div class="stat-value orange">{analytics.streak}</div>
 		<div class="stat-sub">consecutive weeks</div>
 	</div>
 </div>
@@ -185,10 +185,10 @@
 <div class="two-col uneven">
 	<div class="chart-card">
 		<h3>Deal Types</h3>
-		{#each Object.entries(analytics().dealTypes) as [type, count]}
+		{#each Object.entries(analytics.dealTypes) as [type, count]}
 			<div class="type-row">
 				<span class="type-name">{type}</span>
-				<span class="type-count">{count} ({Math.round(count / analytics().totalDeals * 100)}%)</span>
+				<span class="type-count">{count} ({Math.round(count / analytics.totalDeals * 100)}%)</span>
 			</div>
 		{/each}
 	</div>
@@ -198,7 +198,7 @@
 			<table class="recent-table">
 				<thead><tr><th>Deal</th><th>Type</th><th>Asset Class</th><th class="text-right">Added</th></tr></thead>
 				<tbody>
-					{#each analytics().recentDeals as d}
+					{#each analytics.recentDeals as d}
 						<tr>
 							<td class="fw-600">{d.name || d.investmentName || '—'}</td>
 							<td>{d.dealType || '—'}</td>
@@ -214,7 +214,7 @@
 
 <div class="value-banner">
 	<div class="banner-title">This database can't be rebuilt overnight.</div>
-	<div class="banner-desc">With {analytics().totalDeals} deals tracked, {analytics().assetClassCount} asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>
+	<div class="banner-desc">With {analytics.totalDeals} deals tracked, {analytics.assetClassCount} asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>
 </div>
 
 <style>

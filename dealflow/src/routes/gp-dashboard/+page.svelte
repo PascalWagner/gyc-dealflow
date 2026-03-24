@@ -229,7 +229,7 @@
 	const gpUserType = $derived(gpIsAdmin ? 'Platform Admin' : ($user?.gp_type || $user?.gpType || 'General Partner'));
 	const gpUserName = $derived($user?.name || ($user?.email ? $user.email.split('@')[0] : ''));
 
-	const assetClassTags = $derived(() => {
+	const assetClassTags = $derived.by(() => {
 		const classes = {};
 		deals.forEach(d => {
 			const ac = getDealAssetClass(d);
@@ -238,7 +238,7 @@
 		return Object.keys(classes);
 	});
 
-	const actionItems = $derived(() => {
+	const actionItems = $derived.by(() => {
 		const items = [];
 		deals.forEach(d => {
 			const name = getDealName(d);
@@ -261,7 +261,7 @@
 		return items.slice(0, 10);
 	});
 
-	const sortedDeals = $derived(() => {
+	const sortedDeals = $derived.by(() => {
 		const enriched = deals.map(d => ({
 			raw: d,
 			name: getDealName(d),
@@ -286,7 +286,7 @@
 	});
 
 	// Activity feed items
-	const activityItems = $derived(() => {
+	const activityItems = $derived.by(() => {
 		const recent = analytics.recentActivity || [];
 		const dealNameMap = {};
 		deals.forEach(d => { dealNameMap[getDealId(d)] = getDealName(d); });
@@ -314,7 +314,7 @@
 	const hasActivity = $derived((analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0) > 0);
 
 	// Weekly chart data
-	const weeklyChartData = $derived(() => {
+	const weeklyChartData = $derived.by(() => {
 		const weeks = analytics.weeklyActivity || [];
 		const hasAny = weeks.some(w => (w.interested || 0) + (w.duediligence || 0) + (w.portfolio || 0) > 0);
 		if (weeks.length === 0 || !hasAny) return null;
@@ -342,7 +342,7 @@
 	});
 
 	// Webinar CTA
-	const webinarCtaStat = $derived(() => {
+	const webinarCtaStat = $derived.by(() => {
 		const gpAssetClasses = {};
 		deals.forEach(d => { const ac = d.assetClass || d.asset_class || ''; if (ac) gpAssetClasses[ac] = (gpAssetClasses[ac] || 0) + 1; });
 		let primaryAC = '', maxCount = 0;
@@ -357,14 +357,14 @@
 		return 'Hundreds of accredited investors are actively reviewing deals';
 	});
 
-	const webinarCtaDesc = $derived(() => {
+	const webinarCtaDesc = $derived.by(() => {
 		const items = actionItems();
 		if (items.length > 0) return 'Complete your deal profile first, then amplify your reach by pitching directly to our investor network.';
 		return 'Your deals are getting attention. Take it further \u2014 pitch directly to our investor network in a live webinar.';
 	});
 
 	// Dynamic webinar attendance stat
-	const webinarAttendanceStat = $derived(() => {
+	const webinarAttendanceStat = $derived.by(() => {
 		// Use total platform activity as a proxy for webinar attendance interest
 		const totalInterest = (analytics.totalSaves || 0) + (analytics.totalVetting || 0) + (analytics.totalInvested || 0);
 		const baseAttendance = 42; // baseline avg attendance
@@ -378,7 +378,7 @@
 		return s !== 'closed' && s !== 'fully funded' && s !== 'completed';
 	}));
 
-	const competitiveData = $derived(() => {
+	const competitiveData = $derived.by(() => {
 		if (deals.length === 0 || activeDeals.length < 3) return [];
 		const prefDists = investorInsights?.preferredDistributions || [];
 		let monthlyDistPct = 0;
@@ -446,7 +446,7 @@
 	});
 
 	// ===== Market Intelligence Derived Data =====
-	const marketIntelData = $derived(() => {
+	const marketIntelData = $derived.by(() => {
 		const cards = [];
 		const gpDeals = deals;
 

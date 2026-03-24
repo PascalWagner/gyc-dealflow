@@ -167,12 +167,12 @@
 	let viewAsUser = $state(null);
 
 	const isImpersonating = $derived(browser ? !!localStorage.getItem(ADMIN_REAL_USER_KEY) : false);
-	const impersonatedName = $derived(() => {
+	const impersonatedName = $derived.by(() => {
 		if (!browser) return '';
 		const u = JSON.parse(localStorage.getItem('gycUser') || '{}');
 		return u?.name || u?.email?.split('@')[0] || '';
 	});
-	const impersonatedEmail = $derived(() => {
+	const impersonatedEmail = $derived.by(() => {
 		if (!browser) return '';
 		return JSON.parse(localStorage.getItem('gycUser') || '{}')?.email || '';
 	});
@@ -306,8 +306,8 @@
 							<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
 							<span class="view-as-label">Viewing as</span>
 						</div>
-						<div class="view-as-name">{impersonatedName()}</div>
-						<div class="view-as-email">{impersonatedEmail()}</div>
+						<div class="view-as-name">{impersonatedName}</div>
+						<div class="view-as-email">{impersonatedEmail}</div>
 						<button class="view-as-exit" onclick={exitViewAs}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="15 18 9 12 15 6"/></svg>
 							Back to My Account

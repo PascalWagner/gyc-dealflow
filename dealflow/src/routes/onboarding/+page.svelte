@@ -62,14 +62,14 @@
 	let headers = $derived($user ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + $user.token } : { 'Content-Type': 'application/json' });
 
 	// LP derived
-	let dealCountFeedback = $derived(() => {
+	let dealCountFeedback = $derived.by(() => {
 		if (lpDealsCount === 0) return "Everyone starts somewhere. We'll walk you through everything.";
 		if (lpDealsCount <= 3) return "Nice, you've got some skin in the game. The database will help you find your next deal.";
 		if (lpDealsCount <= 10) return "Solid portfolio building. You know what you're looking for.";
 		return "Seasoned investor. You'll appreciate the comparison tools and market intel.";
 	});
 
-	let baselineFeedback = $derived(() => {
+	let baselineFeedback = $derived.by(() => {
 		const mo = Math.round(baselineIncome / 12).toLocaleString();
 		if (baselineIncome === 0) return "Most of our members started at $0. That's the whole point.";
 		if (baselineIncome < 25000) return "That's $" + mo + "/mo. Good \u2014 you've already started. Let's accelerate it.";
@@ -185,7 +185,7 @@
 	}
 
 	// ===== LP: Completion =====
-	let completionSummary = $derived(() => {
+	let completionSummary = $derived.by(() => {
 		const goalLabels = { cashflow: 'Build Passive Income', tax: 'Reduce Tax Bill', growth: 'Grow Wealth' };
 		const dealLabel = lpDealsCount === 0 ? 'First-time investor' : lpDealsCount + (lpDealsCount === 1 ? ' deal' : ' deals');
 		const baselineLabel = baselineIncome === 0 ? '$0/mo' : '$' + Math.round(baselineIncome / 12).toLocaleString() + '/mo';
@@ -196,12 +196,12 @@
 		];
 	});
 
-	let completionBtnText = $derived(() => {
+	let completionBtnText = $derived.by(() => {
 		const tier = ($user?.tier || 'free').toLowerCase();
 		return tier !== 'free' ? 'Build My Investment Plan' : 'Start Browsing Deals';
 	});
 
-	let completionSubtitle = $derived(() => {
+	let completionSubtitle = $derived.by(() => {
 		const tier = ($user?.tier || 'free').toLowerCase();
 		return tier !== 'free' ? "Next up: we'll build your personalized investment plan." : "We've personalized your deal feed based on your answers.";
 	});

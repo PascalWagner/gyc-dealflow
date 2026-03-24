@@ -81,7 +81,7 @@
 	);
 
 	// Apply filters
-	const filteredDeals = $derived(() => {
+	const filteredDeals = $derived.by(() => {
 		let result = tabDeals;
 		const q = search.toLowerCase().trim();
 		if (q) {
@@ -121,7 +121,7 @@
 	};
 
 	// Avg IRR for filter bar
-	const avgIRR = $derived(() => {
+	const avgIRR = $derived.by(() => {
 		const withIRR = tabDeals.filter(d => d.targetIRR);
 		if (withIRR.length === 0) return '0';
 		return (withIRR.reduce((s, d) => s + d.targetIRR, 0) / withIRR.length * 100).toFixed(1);
@@ -172,7 +172,7 @@
 	<FilterBar
 		{search} {assetClass} {dealType} {strategy} {maxInvest} {maxLockup}
 		{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
-		totalDeals={filteredDeals().length} avgIRR={avgIRR()}
+		totalDeals={filteredDeals.length} avgIRR={avgIRR}
 		isAdmin={$isAdmin}
 		onchange={({ field: key, value: val }) => {
 			if (key === 'search') search = val;
@@ -210,10 +210,10 @@
 				{/each}
 			</div>
 		</div>
-	{:else if currentTab === 'decision' && filteredDeals().length >= 2}
+	{:else if currentTab === 'decision' && filteredDeals.length >= 2}
 		<!-- Compare view on Decide tab -->
-		<CompareView deals={filteredDeals()} />
-	{:else if filteredDeals().length === 0}
+		<CompareView deals={filteredDeals} />
+	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
 			{#if hasActiveFilters && currentTab === 'browse'}
@@ -248,14 +248,14 @@
 			{/if}
 		</div>
 	{:else if viewMode === 'list' && !isMobile}
-		<DealTable deals={filteredDeals()} />
+		<DealTable deals={filteredDeals} />
 	{:else if viewMode === 'map' && !isMobile}
-		<DealMap deals={filteredDeals()} />
+		<DealMap deals={filteredDeals} />
 	{:else if isMobile && currentTab === 'browse'}
-		<SwipeFeed deals={filteredDeals()} />
+		<SwipeFeed deals={filteredDeals} />
 	{:else}
 		<div class="deals-grid">
-			{#each filteredDeals() as deal (deal.id)}
+			{#each filteredDeals as deal (deal.id)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div onclick={() => trackDealView(deal.id)}>

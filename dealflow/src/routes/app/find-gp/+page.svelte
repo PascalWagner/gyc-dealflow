@@ -30,7 +30,7 @@
 		})).sort((a, b) => b.deals.length - a.deals.length);
 	}
 
-	const filteredGPs = $derived(() => {
+	const filteredGPs = $derived.by(() => {
 		const all = getGPs();
 		const q = searchQuery.toLowerCase();
 		if (!q) return all;
@@ -51,7 +51,7 @@
 </div>
 
 <div class="gp-grid">
-	{#each filteredGPs() as gp}
+	{#each filteredGPs as gp}
 		<a class="gp-card" href="/sponsor?company={encodeURIComponent(gp.company)}">
 			<div class="gp-avatar">{(gp.name || 'N/A').split(' ').map(n => n[0]).join('')}</div>
 			<div class="gp-name">{gp.name || 'Unknown'}</div>
@@ -75,7 +75,7 @@
 			</div>
 		</a>
 	{/each}
-	{#if filteredGPs().length === 0}
+	{#if filteredGPs.length === 0}
 		<div class="empty-state">No sponsors found matching "{searchQuery}"</div>
 	{/if}
 </div>

@@ -58,18 +58,18 @@
 
 	// Status badges
 	const now = new Date();
-	const isNew = $derived(() => {
+	const isNew = $derived.by(() => {
 		const created = deal.createdAt || deal.created_at || deal.createdTime || deal.addedDate;
 		if (!created) return false;
 		return (now - new Date(created)) < 14 * 24 * 60 * 60 * 1000;
 	});
-	const isUpdated = $derived(() => {
+	const isUpdated = $derived.by(() => {
 		const updated = deal.updatedAt || deal.updated_at || deal.lastModified;
 		if (!updated) return false;
 		const diff = now - new Date(updated);
 		return diff < 7 * 24 * 60 * 60 * 1000 && diff > 0;
 	});
-	const isClosingSoon = $derived(() => {
+	const isClosingSoon = $derived.by(() => {
 		if (!deal.close_date && !deal.closeDate) return false;
 		const close = new Date(deal.close_date || deal.closeDate);
 		const diff = close - now;

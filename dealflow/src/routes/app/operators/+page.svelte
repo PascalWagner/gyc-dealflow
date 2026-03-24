@@ -70,7 +70,7 @@
 		allAssetClasses = [...acs].sort();
 	});
 
-	const filtered = $derived(() => {
+	const filtered = $derived.by(() => {
 		let result = companies.filter(c => {
 			if (assetFilter && !c.assetClasses.has(assetFilter)) return false;
 			if (nameSearch && !c.name.toLowerCase().includes(nameSearch.toLowerCase()) && !(c.ceo && c.ceo.toLowerCase().includes(nameSearch.toLowerCase()))) return false;
@@ -121,14 +121,14 @@
 		</select>
 		<button class="btn-reset" onclick={resetFilters}>Reset</button>
 		<div class="stats-bar">
-			<span><strong>{filtered().length}</strong> Operators</span>
+			<span><strong>{filtered.length}</strong> Operators</span>
 			<span><strong>{allAssetClasses.length}</strong> asset classes</span>
-			<span><strong>{filtered().reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
+			<span><strong>{filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
 		</div>
 	</div>
 
 	<div class="managers-grid">
-		{#each filtered() as c (c.name)}
+		{#each filtered as c (c.name)}
 			<a href="/app/deals?company={encodeURIComponent(c.name)}" class="manager-card">
 				<div class="card-header">
 					<div class="avatar">{getInitials(c.name)}</div>

@@ -27,7 +27,7 @@
 	const hasGoals = $derived(goals && goals.targetIncome > 0);
 	const targetIncome = $derived(hasGoals ? goals.targetIncome : 0);
 
-	const currentIncome = $derived(() => {
+	const currentIncome = $derived.by(() => {
 		let income = 0;
 		if (distributions.length > 0) {
 			let firstDist = null, totalDist = 0;
@@ -53,10 +53,10 @@
 		return income;
 	});
 
-	const goalProgress = $derived(hasGoals ? Math.min(100, Math.round((currentIncome() / targetIncome) * 100)) : 0);
+	const goalProgress = $derived(hasGoals ? Math.min(100, Math.round((currentIncome / targetIncome) * 100)) : 0);
 
 	// Goal label
-	const goalLabel = $derived(() => {
+	const goalLabel = $derived.by(() => {
 		if (hasGoals) return 'YOUR PASSIVE INCOME GOAL';
 		if (branch === 'cashflow') return 'PASSIVE INCOME GOAL';
 		if (branch === 'tax') return 'TAX OFFSET GOAL';
@@ -64,8 +64,8 @@
 		return 'YOUR PASSIVE INCOME GOAL';
 	});
 
-	const goalValueText = $derived(() => {
-		if (hasGoals) return `$${currentIncome().toLocaleString()} / $${targetIncome.toLocaleString()} per year`;
+	const goalValueText = $derived.by(() => {
+		if (hasGoals) return `$${currentIncome.toLocaleString()} / $${targetIncome.toLocaleString()} per year`;
 		if (branch === 'cashflow') {
 			const t = parseDollar(wizardData.targetCashFlow) || 100000;
 			return `$0 / $${t.toLocaleString()} per year`;
@@ -105,7 +105,7 @@
 	// Daily deal view counter for free users
 	const DAILY_LIMIT = 10;
 	const isFreeUser = $derived(!$isAdmin && $userTier !== 'academy' && $userTier !== 'paid');
-	const dailyDealCount = $derived(() => {
+	const dailyDealCount = $derived.by(() => {
 		if (!browser) return 0;
 		const todayKey = `gycDailyDeals_${new Date().toISOString().slice(0, 10)}`;
 		const stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
@@ -113,7 +113,7 @@
 	});
 
 	// Milestone tracker — compute activation milestones from deal stages + portfolio
-	const milestones = $derived(() => {
+	const milestones = $derived.by(() => {
 		const stages = $dealStages || {};
 		const stageEntries = Object.entries(stages);
 		const hasSaved = stageEntries.some(([, s]) => s === 'saved' || s === 'diligence' || s === 'decision' || s === 'invested');
@@ -136,14 +136,14 @@
 		];
 	});
 
-	const milestoneProgress = $derived(() => {
+	const milestoneProgress = $derived.by(() => {
 		const ms = milestones();
 		const done = ms.filter(m => m.done).length;
 		return Math.round((done / ms.length) * 100);
 	});
 
 	// Recent activity feed — derived from dealStages + deals list
-	const recentActivity = $derived(() => {
+	const recentActivity = $derived.by(() => {
 		const stageEntries = Object.entries($dealStages);
 		if (stageEntries.length === 0) return [];
 		const dealsMap = {};
@@ -182,7 +182,7 @@
 	});
 
 	// Quick actions — context-aware buttons
-	const quickActions = $derived(() => {
+	const quickActions = $derived.by(() => {
 		const actions = [];
 		actions.push({ label: 'Browse Deals', href: '/app/deals', icon: 'search' });
 		const saved = $stageCounts.saved || 0;
@@ -198,7 +198,7 @@
 	});
 
 	// Allocation for pie chart
-	const allocationMap = $derived(() => {
+	const allocationMap = $derived.by(() => {
 		const map = {};
 		portfolio.forEach(p => {
 			const ac = p.assetClass || 'Other';
@@ -207,7 +207,7 @@
 		return map;
 	});
 
-	const planAllocationMap = $derived(() => {
+	const planAllocationMap = $derived.by(() => {
 		if (!planSlots || planSlots.length === 0 || !planSlots[0]?.asset_class) return null;
 		const map = {};
 		planSlots.forEach(s => {
@@ -217,7 +217,7 @@
 	});
 
 	// Action items
-	const actionItems = $derived(() => {
+	const actionItems = $derived.by(() => {
 		const items = [];
 		const saved = $stageCounts.saved || 0;
 		const diligence = $stageCounts.diligence || 0;
@@ -253,14 +253,14 @@
 	});
 
 	// First name
-	const firstName = $derived(() => {
+	const firstName = $derived.by(() => {
 		const u = $user;
 		const raw = u?.firstName || (u?.name || '').split(' ')[0] || '';
 		return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : '';
 	});
 
 	// Coaching message
-	const coachMsg = $derived(() => {
+	const coachMsg = $derived.by(() => {
 		const name = firstName();
 		if (!buyBoxComplete && !branch) {
 			return { msg: "Let's start by setting up your investor profile — it takes 2 minutes and helps us find deals that match your goals.", cta: 'Get Started', page: '' };
@@ -358,8 +358,8 @@
 		{#if hasOnboarding}
 			<div class="dash-hero">
 				<GoalProgress
-					label={goalLabel()}
-					current={currentIncome()}
+					label={goalLabel}
+					current={currentIncome}
 					target={targetIncome || (parseDollar(wizardData.targetCashFlow) || 100000)}
 					{branch}
 				/>

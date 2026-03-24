@@ -24,7 +24,7 @@
 	let bgLoading = $state(false);
 	let sidebarOpen = $state(false);
 
-	let isPaid = $derived(() => {
+	let isPaid = $derived.by(() => {
 		const u = $user;
 		if (!u) return false;
 		const tier = u.tier || 'free';
@@ -32,7 +32,7 @@
 		return tier !== 'free' || isAdm;
 	});
 
-	let isAdminUser = $derived(() => {
+	let isAdminUser = $derived.by(() => {
 		const u = $user;
 		return u && u.email && ADMIN_EMAILS.includes(u.email.toLowerCase());
 	});
@@ -90,7 +90,7 @@
 	let secUrl = $derived(sponsor ? 'https://www.sec.gov/cgi-bin/browse-edgar?company=' + encodeURIComponent(sponsor.name) + '&CIK=&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany' : '');
 
 	// Portfolio calculations
-	let portfolioData = $derived(() => {
+	let portfolioData = $derived.by(() => {
 		if (!sponsor?.portfolioSnapshot?.length) return null;
 		const ps = sponsor.portfolioSnapshot;
 		let totalPurchase = 0, totalValue = 0, totalSqft = 0, capSum = 0, capCount = 0;

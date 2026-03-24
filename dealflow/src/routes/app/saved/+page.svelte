@@ -4,7 +4,7 @@
 	import { deals, dealStages } from '$lib/stores/deals.js';
 	import { goto } from '$app/navigation';
 
-	const savedDeals = $derived(() => {
+	const savedDeals = $derived.by(() => {
 		const allDeals = $deals || [];
 		const stages = $dealStages || {};
 		return allDeals.filter(d => stages[d.id] === 'saved' || stages[d.id] === 'review');
@@ -17,7 +17,7 @@
 	<h1>Saved Deals</h1>
 </div>
 
-{#if savedDeals().length === 0}
+{#if savedDeals.length === 0}
 	<div class="empty-state">
 		<div class="empty-icon">
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="40" height="40">
@@ -30,7 +30,7 @@
 	</div>
 {:else}
 	<div class="card-grid">
-		{#each savedDeals() as deal}
+		{#each savedDeals as deal}
 			<a class="deal-card" href="/deal/{deal.id}">
 				<div class="deal-name">{deal.name || deal.investmentName || 'Untitled Deal'}</div>
 				<div class="deal-operator">{deal.managementCompany || deal.operator || ''}</div>

@@ -36,12 +36,12 @@
 	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
 	const totalDistributions = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.distributionsReceived) || 0), 0));
 	const activeCount = $derived(portfolio.filter(i => i.status === 'Active' || i.status === 'Distributing').length);
-	const avgIRR = $derived(() => {
+	const avgIRR = $derived.by(() => {
 		const withIRR = portfolio.filter(i => i.targetIRR);
 		if (withIRR.length === 0) return 0;
 		return withIRR.reduce((s, i) => s + parseFloat(i.targetIRR), 0) / withIRR.length;
 	});
-	const avgHoldPeriod = $derived(() => {
+	const avgHoldPeriod = $derived.by(() => {
 		const withDate = portfolio.filter(i => i.dateInvested && (i.status === 'Active' || i.status === 'Distributing'));
 		if (withDate.length === 0) return 0;
 		const now = new Date();
@@ -54,17 +54,17 @@
 	const assetClasses = $derived(new Set(portfolio.map(i => i.assetClass).filter(Boolean)));
 	const sponsors = $derived(new Set(portfolio.map(i => i.sponsor).filter(Boolean)));
 
-	const allocationMap = $derived(() => {
+	const allocationMap = $derived.by(() => {
 		const map = {};
 		portfolio.forEach(i => { const cls = i.assetClass || 'Other'; map[cls] = (map[cls] || 0) + (parseFloat(i.amountInvested) || 0); });
 		return map;
 	});
 
 	// Risk insights
-	const riskInsights = $derived(() => {
+	const riskInsights = $derived.by(() => {
 		const insights = [];
 		if (totalInvested === 0) return [{ type: 'ok', text: 'Add investments to see risk analysis.' }];
-		const alloc = allocationMap();
+		const alloc = allocationMap;
 		for (const [cls, amt] of Object.entries(alloc)) {
 			const pct = (amt / totalInvested) * 100;
 			if (pct > 50) insights.push({ type: 'danger', text: `High concentration in ${cls}`, detail: `${pct.toFixed(0)}% of portfolio. Consider diversifying across asset classes.` });
@@ -76,7 +76,7 @@
 			if (pct > 40) insights.push({ type: 'warn', text: `Operator concentration risk`, detail: `${pct.toFixed(0)}% allocated to ${sp}. Diversifying sponsors reduces counterparty risk.` });
 		}
 		// Hold period risk
-		const avgHoldMonths = avgHoldPeriod();
+		const avgHoldMonths = avgHoldPeriod;
 		if (avgHoldMonths > 84) {
 			insights.push({ type: 'warn', text: `Long average hold period`, detail: `${(avgHoldMonths / 12).toFixed(1)} years avg hold. Longer holds reduce liquidity.` });
 		}
@@ -85,7 +85,7 @@
 	});
 
 	// Timeline data - investments grouped by quarter
-	const timelineData = $derived(() => {
+	const timelineData = $derived.by(() => {
 		const withDate = portfolio.filter(i => i.dateInvested);
 		if (withDate.length === 0) return null;
 		const buckets = {};
@@ -114,7 +114,7 @@
 
 	function renderAllocationChart() {
 		if (!allocationCanvasEl || !chartJsLoaded) return;
-		const alloc = allocationMap();
+		const alloc = allocationMap;
 		const entries = Object.entries(alloc).sort((a, b) => b[1] - a[1]);
 		if (entries.length === 0) return;
 
@@ -158,7 +158,7 @@
 
 	function renderTimelineChart() {
 		if (!timelineCanvasEl || !chartJsLoaded) return;
-		const tData = timelineData();
+		const tData = timelineData;
 		if (!tData) return;
 
 		if (timelineChartInstance) timelineChartInstance.destroy();
@@ -207,7 +207,7 @@
 	}
 
 	// Filtered portfolio based on search
-	const filtered = $derived(() => {
+	const filtered = $derived.by(() => {
 		if (!searchQuery.trim()) return portfolio;
 		const q = searchQuery.toLowerCase();
 		return portfolio.filter(i => {
@@ -216,8 +216,8 @@
 		});
 	});
 
-	const sorted = $derived(() => {
-		return [...filtered()].sort((a, b) => {
+	const sorted = $derived.by(() => {
+		return [...filtered].sort((a, b) => {
 			let va = a[sortCol], vb = b[sortCol];
 			if (['amountInvested', 'distributionsReceived', 'targetIRR', 'equityMultiple'].includes(sortCol)) {
 				va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
@@ -375,8 +375,8 @@
 	// Re-render charts when portfolio data changes
 	$effect(() => {
 		// Access reactive deps
-		const _alloc = allocationMap();
-		const _timeline = timelineData();
+		const _alloc = allocationMap;
+		const _timeline = timelineData;
 		if (chartJsLoaded && browser) {
 			renderAllocationChart();
 			renderTimelineChart();
@@ -439,8 +439,8 @@
 			<div class="stat-card"><div class="stat-label">Total Invested</div><div class="stat-value">${totalInvested.toLocaleString()}</div></div>
 			<div class="stat-card"><div class="stat-label">Active Investments</div><div class="stat-value">{activeCount}</div></div>
 			<div class="stat-card"><div class="stat-label">Total Distributions</div><div class="stat-value">${totalDistributions.toLocaleString()}</div></div>
-			<div class="stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">{avgIRR() ? avgIRR().toFixed(1) + '%' : '--'}</div></div>
-			<div class="stat-card"><div class="stat-label">Avg Hold Period</div><div class="stat-value">{formatHoldPeriod(avgHoldPeriod())}</div></div>
+			<div class="stat-card"><div class="stat-label">Avg Target IRR</div><div class="stat-value">{avgIRR ? avgIRR.toFixed(1) + '%' : '--'}</div></div>
+			<div class="stat-card"><div class="stat-label">Avg Hold Period</div><div class="stat-value">{formatHoldPeriod(avgHoldPeriod)}</div></div>
 		</div>
 
 		<!-- Charts row -->
@@ -451,7 +451,7 @@
 					<canvas bind:this={allocationCanvasEl}></canvas>
 				</div>
 				<div class="alloc-legend">
-					{#each Object.entries(allocationMap()).sort((a, b) => b[1] - a[1]) as [cls, amt], i}
+					{#each Object.entries(allocationMap).sort((a, b) => b[1] - a[1]) as [cls, amt], i}
 						<div class="alloc-legend-item">
 							<span class="alloc-legend-dot" style="background:{PIE_COLORS[i % PIE_COLORS.length]}"></span>
 							<span class="alloc-legend-label">{cls}</span>
@@ -467,7 +467,7 @@
 			<div class="chart-card">
 				<div class="chart-card-title">Risk Analysis</div>
 				<div class="risk-badges">
-					{#each riskInsights() as insight}
+					{#each riskInsights as insight}
 						<div class="risk-badge" class:badge-danger={insight.type === 'danger'} class:badge-warn={insight.type === 'warn'} class:badge-ok={insight.type === 'ok'}>
 							<div class="risk-badge-icon">
 								{#if insight.type === 'danger'}
@@ -491,7 +491,7 @@
 		</div>
 
 		<!-- Portfolio Timeline -->
-		{#if timelineData()}
+		{#if timelineData}
 			<div class="chart-card timeline-card">
 				<div class="chart-card-title">Investment Timeline</div>
 				<div class="chartjs-timeline-wrap">
@@ -502,7 +502,7 @@
 
 		<!-- Investment cards -->
 		<div class="inv-header">
-			<div class="inv-title">Your Investments ({filtered().length})</div>
+			<div class="inv-title">Your Investments ({filtered.length})</div>
 			<div class="inv-header-right">
 				<div class="search-box">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

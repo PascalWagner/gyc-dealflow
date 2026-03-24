@@ -4,7 +4,7 @@
 
 	const progress = $derived(target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0);
 
-	const valueText = $derived(() => {
+	const valueText = $derived.by(() => {
 		if (branch === 'cashflow') return `$${current.toLocaleString()} / $${target.toLocaleString()} per year`;
 		if (branch === 'tax') return `$${current.toLocaleString()} / $${target.toLocaleString()} offset`;
 		if (branch === 'growth') return `$${current.toLocaleString()} → $${target.toLocaleString()}`;
