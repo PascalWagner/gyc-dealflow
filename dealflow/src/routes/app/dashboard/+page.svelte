@@ -373,16 +373,16 @@
 		{/if}
 
 		<!-- Coaching Message -->
-		{#if coachMsg().msg}
+		{#if coachMsg.msg}
 			<div class="coaching-card">
 				<div class="coaching-inner">
 					{#if firstName()}
 						<div class="coaching-label">{firstName()}'s next step</div>
 					{/if}
-					<div class="coaching-msg">{coachMsg().msg}</div>
+					<div class="coaching-msg">{coachMsg.msg}</div>
 				</div>
-				{#if coachMsg().cta}
-					<a href="/app/{coachMsg().page}" class="btn-primary coaching-btn">{coachMsg().cta} →</a>
+				{#if coachMsg.cta}
+					<a href="/app/{coachMsg.page}" class="btn-primary coaching-btn">{coachMsg.cta} →</a>
 				{/if}
 			</div>
 		{/if}

@@ -523,12 +523,12 @@
 			<button class="sort-btn" class:active={sortCol === 'targetIRR'} onclick={() => sortBy('targetIRR')}>IRR{sortArrow('targetIRR')}</button>
 		</div>
 
-		{#if sorted().length === 0 && searchQuery}
+		{#if sorted.length === 0 && searchQuery}
 			<div class="no-results">No investments match "{searchQuery}"</div>
 		{/if}
 
 		<div class="inv-list">
-			{#each sorted() as inv}
+			{#each sorted as inv}
 				{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
 				<div class="inv-card">
 					<div class="inv-card-stripe" style="background:{sc}"></div>

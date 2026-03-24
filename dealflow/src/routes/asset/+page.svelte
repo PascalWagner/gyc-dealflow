@@ -251,7 +251,7 @@
 		return Object.keys(rentCastData.taxAssessments).sort().reverse().slice(0, 5);
 	});
 
-	let showRecords = $derived(recordItems().length > 0 || rentCastData?.lastSalePrice || taxYears().length > 0);
+	let showRecords = $derived(recordItems.length > 0 || rentCastData?.lastSalePrice || taxYears.length > 0);
 
 	// Market intelligence
 	let pop = $derived(marketData?.population?.filter(d => d.population > 0) || []);
@@ -935,7 +935,7 @@
 					</div>
 				</div>
 				<div class="hero-stats">
-					{#each heroStats() as stat}
+					{#each heroStats as stat}
 						<div class="hero-stat">
 							<div class="hero-stat-value">{stat.value}</div>
 							<div class="hero-stat-label">{stat.label}</div>
@@ -945,11 +945,11 @@
 			</div>
 
 			<!-- Property Summary -->
-			{#if summaryText()}
+			{#if summaryText}
 				<div class="section">
 					<div class="section-label">Property Summary</div>
 					<div class="section-card">
-						<div class="summary-text">{summaryText()}</div>
+						<div class="summary-text">{summaryText}</div>
 					</div>
 				</div>
 			{/if}
@@ -960,13 +960,13 @@
 					<div class="section-label">Valuation History</div>
 					<div class="section-card">
 						<div class="chart-wrap">
-							{#if valuationChange()}
+							{#if valuationChange}
 								<div class="chart-subtitle">
-									<span class={valuationChange().isPositive ? 'positive' : 'negative'}>
-										{valuationChange().isPositive ? '+' : ''}{valuationChange().pctChange}%
+									<span class={valuationChange.isPositive ? 'positive' : 'negative'}>
+										{valuationChange.isPositive ? '+' : ''}{valuationChange.pctChange}%
 									</span>
-									since {valuationChange().firstLabel}
-									({currency(valuationChange().first)} &rarr; {currency(valuationChange().last)})
+									since {valuationChange.firstLabel}
+									({currency(valuationChange.first)} &rarr; {currency(valuationChange.last)})
 								</div>
 							{/if}
 							<div class="chart-container">
@@ -1055,7 +1055,7 @@
 
 			<!-- Operator Comparison -->
 			{#if showOperatorComp}
-				{@const compData = operatorCompRows()}
+				{@const compData = operatorCompRows}
 				<div class="section">
 					<div class="section-label">Operator Comparison</div>
 					<div class="section-card">
@@ -1110,9 +1110,9 @@
 							</div>
 						{/if}
 
-						{#if recordItems().length}
+						{#if recordItems.length}
 							<div class="records-grid">
-								{#each recordItems() as item}
+								{#each recordItems as item}
 									<div class="record-item">
 										<div class="record-label">{item.l}</div>
 										<div class="record-value">{item.v}</div>
@@ -1121,7 +1121,7 @@
 							</div>
 						{/if}
 
-						{#if taxYears().length}
+						{#if taxYears.length}
 							<div class="tax-section">
 								<div class="tax-section-label">Tax Assessment History</div>
 								<div class="table-scroll">
@@ -1134,7 +1134,7 @@
 											</tr>
 										</thead>
 										<tbody>
-											{#each taxYears() as yr}
+											{#each taxYears as yr}
 												{@const a = rentCastData.taxAssessments[yr]}
 												{@const tax = rentCastData.propertyTaxes?.[yr]?.total}
 												<tr>
@@ -1175,9 +1175,9 @@
 					<div class="section-label">Market Intelligence</div>
 					<div class="section-card">
 						<!-- Risk Flags -->
-						{#if risks().length}
+						{#if risks.length}
 							<div class="market-risks">
-								{#each risks() as r}
+								{#each risks as r}
 									<div class="mi-risk-card {r.severity}">
 										{#if r.severity === 'danger'}
 											<svg class="mi-risk-icon danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
@@ -1229,7 +1229,7 @@
 											</span>
 										{/if}
 									</div>
-									<div class="mi-subtitle">{cleanAreaName()} ({pop[0].year}--{pop[pop.length-1].year})</div>
+									<div class="mi-subtitle">{cleanAreaName} ({pop[0].year}--{pop[pop.length-1].year})</div>
 									<div class="mi-chart-container"><canvas id="populationChart"></canvas></div>
 								</div>
 								{#if income.length >= 3}
@@ -1243,7 +1243,7 @@
 												{incChange > 0 ? '+' : ''}{incChange}% since {income[0].year}
 											</span>
 										</div>
-										<div class="mi-subtitle">{cleanAreaName()} &middot; ${fmtK(income[0].medianIncome)} &rarr; ${fmtK(income[income.length-1].medianIncome)}</div>
+										<div class="mi-subtitle">{cleanAreaName} &middot; ${fmtK(income[0].medianIncome)} &rarr; ${fmtK(income[income.length-1].medianIncome)}</div>
 										<div class="mi-chart-container"><canvas id="incomeChart"></canvas></div>
 									</div>
 								{/if}
@@ -1254,7 +1254,7 @@
 						{#if marketData?.ageDistribution?.length}
 							<div class="age-pyramid-section">
 								<div class="mi-chart-title">Population by Age & Sex</div>
-								<div class="mi-subtitle">{cleanAreaName()} &middot; 2023 ACS 5-Year Estimates</div>
+								<div class="mi-subtitle">{cleanAreaName} &middot; 2023 ACS 5-Year Estimates</div>
 								<div style="height:360px;position:relative;"><canvas id="agePyramidChart"></canvas></div>
 								<div class="pyramid-legend">
 									<span class="legend-item"><span class="legend-swatch" style="background:#38bdf8;"></span>Male</span>

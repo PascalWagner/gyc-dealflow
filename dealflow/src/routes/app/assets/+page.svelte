@@ -76,7 +76,7 @@
 
 		// Group assets by coords for clustering
 		const coordGroups = {};
-		const list = assets();
+		const list = assets;
 		list.forEach(d => {
 			const coords = getCoords(d);
 			if (!coords) return;
@@ -123,7 +123,7 @@
 	}
 
 	$effect(() => {
-		assets(); // re-run when assets change
+		assets; // re-run when assets change
 		if (map && L) updateMapMarkers();
 	});
 
@@ -198,8 +198,8 @@
 	{#if viewMode === 'map'}
 		<div id="assetsMapFull" class="map-container-full"></div>
 		<div class="asset-list">
-			<div class="asset-count">{assets().length} assets</div>
-			{#each assets() as d (d.id)}
+			<div class="asset-count">{assets.length} assets</div>
+			{#each assets as d (d.id)}
 				{@const ph = getPlaceholder(d.assetClass)}
 				{@const loc = d.location || d.investingGeography || 'Unknown'}
 				<button class="asset-row" class:highlighted={highlightedId === d.id} onclick={() => highlightAsset(d.id)}>
@@ -230,9 +230,9 @@
 		</div>
 	{:else}
 		<div class="asset-grid-wrap">
-			<div class="asset-count">{assets().length} assets</div>
+			<div class="asset-count">{assets.length} assets</div>
 			<div class="asset-grid">
-				{#each assets() as d (d.id)}
+				{#each assets as d (d.id)}
 					{@const ph = getPlaceholder(d.assetClass)}
 					{@const loc = d.location || d.investingGeography || 'Unknown'}
 					<a href="/deal/{d.id}" class="asset-card">

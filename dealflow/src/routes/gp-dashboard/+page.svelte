@@ -358,7 +358,7 @@
 	});
 
 	const webinarCtaDesc = $derived.by(() => {
-		const items = actionItems();
+		const items = actionItems;
 		if (items.length > 0) return 'Complete your deal profile first, then amplify your reach by pitching directly to our investor network.';
 		return 'Your deals are getting attention. Take it further \u2014 pitch directly to our investor network in a live webinar.';
 	});
@@ -786,7 +786,7 @@
 
 	function renderWeeklyChartJs() {
 		if (!weeklyChartEl || !gpChartJsLoaded) return;
-		const data = weeklyChartData();
+		const data = weeklyChartData;
 		if (!data) return;
 
 		if (weeklyChartInstance) weeklyChartInstance.destroy();
@@ -862,7 +862,7 @@
 
 	// Re-render chart when analytics data changes
 	$effect(() => {
-		const _data = weeklyChartData();
+		const _data = weeklyChartData;
 		if (gpChartJsLoaded && browser && weeklyChartEl) {
 			renderWeeklyChartJs();
 		}
@@ -952,7 +952,7 @@
 						<p class="gp-header-meta"><strong>{gpUserName}</strong> &middot; {gpUserType}</p>
 						<p class="gp-header-subtitle">Manage your deals and track investor interest</p>
 						<div class="gp-header-tags">
-							{#each assetClassTags() as ac}
+							{#each assetClassTags as ac}
 								<span class="gp-tag">{ac}</span>
 							{/each}
 							<span class="gp-tag type-tag">GP Portal</span>
@@ -969,13 +969,13 @@
 			<div class="section-card">
 				<div class="section-header">
 					<div class="section-title">Action Items</div>
-					<span class="section-badge">{actionItems().length}</span>
+					<span class="section-badge">{actionItems.length}</span>
 				</div>
 				<div class="section-body">
-					{#if actionItems().length === 0}
+					{#if actionItems.length === 0}
 						<div class="empty-inline"><p>All deals look good! No action items at this time.</p></div>
 					{:else}
-						{#each actionItems() as item}
+						{#each actionItems as item}
 							<div class="action-item urgency-{item.urgency}">
 								<div class="action-item-icon icon-{item.icon}">
 									{#if item.urgency === 'red' || item.urgency === 'orange'}
@@ -1023,7 +1023,7 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each sortedDeals() as d}
+									{#each sortedDeals as d}
 										<tr>
 											<td><a href="/deal/{d.id}" class="health-table-name">{d.name}</a></td>
 											<td>
@@ -1105,7 +1105,7 @@
 						{#if hasActivity}
 							<div class="weekly-chart-wrap">
 								<div class="weekly-chart-title">Investor Activity Over Time</div>
-								{#if weeklyChartData()}
+								{#if weeklyChartData}
 									<div class="weekly-chartjs-container">
 										<canvas bind:this={weeklyChartEl}></canvas>
 									</div>
@@ -1115,14 +1115,14 @@
 							</div>
 
 							<!-- Recent LP Activity Feed -->
-							{#if activityItems().length > 0}
+							{#if activityItems.length > 0}
 								<div style="margin-top:16px;">
 									{#if analytics.highIntentCount > 0}
 										<div class="high-intent-summary">
 											{analytics.highIntentCount} high-intent LP{analytics.highIntentCount !== 1 ? 's' : ''} engaged with your deals this month
 										</div>
 									{/if}
-									{#each activityItems() as item}
+									{#each activityItems as item}
 										<div class="activity-card-item">
 											<span class="intent-badge {item.tierClass}">{item.tierEmoji} {item.tierLabel}</span>
 											<div class="activity-card-body">
@@ -1147,11 +1147,11 @@
 						<div class="webinar-cta-card">
 							<div class="webinar-cta-title">Pitch to Our Investor Network</div>
 							<div class="webinar-attendance-widget">
-								<div class="webinar-attendance-number">{webinarAttendanceStat()}</div>
+								<div class="webinar-attendance-number">{webinarAttendanceStat}</div>
 								<div class="webinar-attendance-label">investors attended our last session</div>
 							</div>
-							<div class="webinar-cta-stat">{webinarCtaStat()}</div>
-							<div class="webinar-cta-desc">{webinarCtaDesc()}</div>
+							<div class="webinar-cta-stat">{webinarCtaStat}</div>
+							<div class="webinar-cta-desc">{webinarCtaDesc}</div>
 							<ul class="webinar-cta-features">
 								<li>30-minute dedicated pitch slot</li>
 								<li>Qualified accredited investor audience</li>
@@ -1174,12 +1174,12 @@
 						<div class="empty-inline">
 							<p>Not enough active deals to generate competitive analysis. At least 3 active deals are needed on the platform.</p>
 						</div>
-					{:else if competitiveData().length === 0}
+					{:else if competitiveData.length === 0}
 						<div class="empty-inline">
 							<p>Add asset class and financial details to your deals to see competitive analysis.</p>
 						</div>
 					{:else}
-						{#each competitiveData() as comp}
+						{#each competitiveData as comp}
 							{@const savedFields = loadSavedCompFields(comp.tableId)}
 							{@const usedKeys = ['targetIRR', 'preferredReturn', 'investmentMinimum', 'distributions', ...savedFields]}
 							{@const availableFields = extraFieldDefs.filter(f => !usedKeys.includes(f.key))}
@@ -1279,13 +1279,13 @@
 					<div class="section-title">Market Intelligence</div>
 				</div>
 				<div class="section-body">
-					{#if marketIntelData().length === 0}
+					{#if marketIntelData.length === 0}
 						<div class="empty-inline">
 							<p>Not enough data to generate market intelligence yet. Add deals with financial details to get started.</p>
 						</div>
 					{:else}
 						<div class="mi-grid">
-							{#each marketIntelData() as card}
+							{#each marketIntelData as card}
 								<div class="mi-card">
 									<div class="mi-card-icon" style="background: {card.color}20;">
 										{#if card.icon === 'bar-chart'}
