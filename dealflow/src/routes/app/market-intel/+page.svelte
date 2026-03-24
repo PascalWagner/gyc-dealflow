@@ -609,8 +609,7 @@
 	}
 
 	onMount(async () => {
-		await fetchDeals();
-		await loadChartJs();
+		await Promise.all([fetchDeals(), loadChartJs()]);
 		switchTab('sec');
 	});
 

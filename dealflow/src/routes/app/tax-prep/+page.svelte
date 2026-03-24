@@ -247,7 +247,18 @@
 	</div>
 
 	{#if loading}
-		<div class="loading">Loading tax documents...</div>
+		<div class="loading-skeleton">
+			<div class="summary-grid">
+				{#each Array(4) as _}
+					<div class="summary-card"><div class="sk-bar" style="width:50%;height:14px;margin-bottom:8px"></div><div class="sk-bar" style="width:30%;height:24px"></div></div>
+				{/each}
+			</div>
+			<div class="sk-table">
+				{#each Array(4) as _}
+					<div class="sk-row"><div class="sk-bar" style="width:100%;height:14px"></div></div>
+				{/each}
+			</div>
+		</div>
 	{:else if taxDocs.length === 0}
 		<div class="empty-state">
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" class="empty-icon">
@@ -563,4 +574,9 @@
 		.header-row { flex-direction: column; }
 		.year-status-summary { display: none; }
 	}
+	.loading-skeleton { padding: 16px 0; }
+	.sk-bar { background: var(--border-light, #e5e7eb); border-radius: 6px; animation: skPulse 1.5s infinite; }
+	.sk-table { margin-top: 20px; }
+	.sk-row { padding: 12px 16px; background: var(--bg-card, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 8px; margin-bottom: 8px; }
+	@keyframes skPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 </style>

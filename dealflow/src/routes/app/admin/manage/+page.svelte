@@ -216,7 +216,7 @@
 
 		<!-- Data Table -->
 		{#if loading}
-			<div class="loading-msg">Loading...</div>
+			<div class="loading-msg"><div class="sk-bar" style="width:100%;height:180px;background:var(--border-light,#e5e7eb);border-radius:8px;animation:skPulse 1.5s infinite"></div></div>
 		{:else if tableData.length === 0}
 			<div class="empty-msg">No records found.</div>
 		{:else}
@@ -304,4 +304,5 @@
 		.seg-ctrl { margin-left: 0; width: 100%; overflow-x: auto; }
 		.toolbar { flex-direction: column; align-items: stretch; }
 	}
+	@keyframes skPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 </style>

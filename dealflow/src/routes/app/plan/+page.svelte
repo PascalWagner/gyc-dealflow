@@ -258,7 +258,15 @@
 	{/if}
 
 	{#if loading}
-		<div class="loading">Loading your plan...</div>
+		<div class="loading-skeleton">
+			<div class="sk-bar" style="width:40%;height:20px;margin-bottom:16px"></div>
+			<div class="sk-bar" style="width:70%;height:14px;margin-bottom:24px"></div>
+			<div class="sk-card">
+				<div class="sk-bar" style="width:50%;height:16px;margin-bottom:12px"></div>
+				<div class="sk-bar" style="width:80%;height:12px;margin-bottom:8px"></div>
+				<div class="sk-bar" style="width:60%;height:12px"></div>
+			</div>
+		</div>
 	{:else if showWizard}
 		<!-- Buy Box Wizard -->
 		<div class="wizard-overlay">
@@ -578,4 +586,8 @@
 		.wizard-modal { padding: 24px 20px; }
 		.toggle-grid { grid-template-columns: repeat(2, 1fr); }
 	}
+	.loading-skeleton { padding: 24px 0; }
+	.sk-bar { background: var(--border-light, #e5e7eb); border-radius: 6px; animation: skPulse 1.5s infinite; }
+	.sk-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 20px; }
+	@keyframes skPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 </style>

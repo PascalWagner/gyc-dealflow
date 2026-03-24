@@ -1,12 +1,41 @@
 <script>
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { page } from '$app/stores';
+	import { page, navigating } from '$app/stores';
 	import { user, isLoggedIn, isGuest } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
+
+	// Navigation progress bar state
+	let navProgress = $state(0);
+	let navVisible = $state(false);
+	let progressInterval = $state(null);
+
+	// Start progress bar when navigating begins
+	$effect(() => {
+		if ($navigating) {
+			navVisible = true;
+			navProgress = 15;
+			if (progressInterval) clearInterval(progressInterval);
+			progressInterval = setInterval(() => {
+				navProgress = Math.min(navProgress + (90 - navProgress) * 0.1, 90);
+			}, 100);
+		} else {
+			if (progressInterval) {
+				clearInterval(progressInterval);
+				progressInterval = null;
+			}
+			if (navVisible) {
+				navProgress = 100;
+				setTimeout(() => {
+					navVisible = false;
+					navProgress = 0;
+				}, 300);
+			}
+		}
+	});
 
 	// Derive current page from URL for sidebar highlighting
 	// e.g. /app/deals → 'deals', /app/market-intel → 'market-intel', /app/admin/manage → 'admin-manage'
@@ -35,11 +64,19 @@
 	});
 </script>
 
+{#if navVisible}
+	<div class="nav-progress-bar" style="width: {navProgress}%"></div>
+{/if}
+
 {#if $isLoggedIn}
 	<div class="app-layout">
 		<Sidebar currentPage={currentPage} />
 		<main class="app-main">
-			{@render children()}
+			{#key $page.url.pathname}
+				<div class="page-transition">
+					{@render children()}
+				</div>
+			{/key}
 		</main>
 		<!-- Mobile bottom tab bar -->
 		<nav class="mobile-tabs">
@@ -72,6 +109,26 @@
 {/if}
 
 <style>
+	.nav-progress-bar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 3px;
+		background: linear-gradient(90deg, var(--primary, #51BE7B), #2ECC71);
+		z-index: 9999;
+		transition: width 0.15s ease-out;
+		box-shadow: 0 0 8px rgba(81, 190, 123, 0.4);
+	}
+
+	.page-transition {
+		animation: pageIn 0.15s ease-out;
+	}
+
+	@keyframes pageIn {
+		from { opacity: 0.6; }
+		to { opacity: 1; }
+	}
+
 	.app-layout {
 		display: flex;
 		min-height: 100vh;

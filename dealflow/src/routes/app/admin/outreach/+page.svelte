@@ -100,7 +100,7 @@
 			<button class="sb" onclick={seedNew}>Seed New Operators</button>
 			<div class="rc">{totalCount} operators</div>
 		</div>
-		{#if loading}<div class="lm">Loading...</div>
+		{#if loading}<div class="lm"><div class="sk-bar" style="width:100%;height:200px;background:var(--border-light,#e5e7eb);border-radius:8px;animation:skPulse 1.5s infinite"></div></div>
 		{:else}
 		<div class="tc"><div class="tw">
 			<table><thead><tr><th class="c" style="width:50px">Pri</th><th>Operator</th><th class="c" style="width:50px">Deals</th><th>Status</th><th>Contact</th><th>Permission</th><th style="width:200px"></th></tr></thead>
@@ -147,4 +147,5 @@
 	.pb:disabled { opacity: 0.4; cursor: default; }
 	.lm { text-align: center; padding: 40px; color: var(--text-muted); }
 	@media (max-width: 768px) { .fl { flex-direction: column; align-items: stretch; } }
+	@keyframes skPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 </style>

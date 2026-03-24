@@ -130,7 +130,13 @@
 			</div>
 		</div>
 	{:else if loading}
-		<div class="loading-state">Loading resources...</div>
+		<div class="loading-state">
+			<div class="resource-grid">
+				{#each Array(6) as _}
+					<div class="sk-card"><div class="sk-thumb"></div><div class="sk-text" style="width:70%"></div><div class="sk-text" style="width:40%"></div></div>
+				{/each}
+			</div>
+		</div>
 	{:else if videos.length === 0}
 		<!-- Coming soon state -->
 		<div class="page-desc">
@@ -383,12 +389,7 @@
 
 	/* ===== Loading ===== */
 	.loading-state {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 40vh;
-		font-family: var(--font-ui);
-		color: var(--text-muted);
+		padding: 20px 0;
 	}
 
 	/* ===== Coming Soon ===== */
@@ -718,4 +719,9 @@
 			padding: 28px 24px;
 		}
 	}
+	.sk-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; overflow: hidden; }
+	.sk-thumb { width: 100%; height: 140px; background: var(--border-light, #e5e7eb); animation: skPulse 1.5s infinite; }
+	.sk-text { height: 12px; background: var(--border-light, #e5e7eb); border-radius: 6px; margin: 12px 16px 0; animation: skPulse 1.5s infinite; }
+	.sk-text:last-child { margin-bottom: 16px; }
+	@keyframes skPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 </style>
