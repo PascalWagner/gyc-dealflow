@@ -630,19 +630,17 @@ async function syncAutoRenewToGhl(email, autoRenew) {
 }
 
 async function syncProfileToGhl(email, fields) {
-  if (!email) { console.log('GHL sync: no email'); return; }
+  if (!email) return;
 
-  console.log('GHL sync: searching for', email);
-  const searchResp = await ghlFetch(
-    `https://services.leadconnectorhq.com/contacts/search/duplicate?email=${encodeURIComponent(email)}&locationId=${process.env.GHL_LOCATION_ID || process.env.GHL_LOCATION}`,
-    { method: 'GET' }
+  // Use v1 API (rest.gohighlevel.com) — the GHL_API_KEY is a v1 key
+  const lookupResp = await ghlFetch(
+    `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`
   );
 
-  if (!searchResp) { console.log('GHL sync: ghlFetch returned null (no API key?)'); return; }
-  if (!searchResp.ok) { console.log('GHL sync: search failed', searchResp.status); return; }
-  const searchData = await searchResp.json();
-  const contact = searchData.contact;
-  if (!contact?.id) { console.log('GHL sync: no contact found, searchData:', JSON.stringify(searchData).substring(0, 200)); return; }
+  if (!lookupResp || !lookupResp.ok) return;
+  const lookupData = await lookupResp.json();
+  const contact = (lookupData.contacts || [])[0];
+  if (!contact?.id) return;
 
   const updates = {};
   if (fields.phone) {
@@ -661,7 +659,7 @@ async function syncProfileToGhl(email, fields) {
   if (Object.keys(updates).length === 0) return;
 
   await ghlFetch(
-    `https://services.leadconnectorhq.com/contacts/${contact.id}`,
+    `https://rest.gohighlevel.com/v1/contacts/${contact.id}`,
     { method: 'PUT', body: JSON.stringify(updates) }
   );
 }
