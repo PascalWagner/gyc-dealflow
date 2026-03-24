@@ -17,16 +17,29 @@
 		return path || 'dashboard';
 	});
 
-	// Auth guard — redirect to login if not authenticated
+	let clientReady = $state(false);
+
+	// Auth guard — on client mount, re-check auth and redirect if needed
 	onMount(() => {
-		if (!$isLoggedIn) {
-			const returnPath = $page.url.pathname;
-			goto(`/login?return=${encodeURIComponent(returnPath)}`);
+		// Re-initialize store from localStorage (SSR may have set it to null)
+		const stored = localStorage.getItem('gycUser');
+		if (stored && stored !== 'null') {
+			try {
+				const parsed = JSON.parse(stored);
+				if (parsed?.email) {
+					user.set(parsed);
+					clientReady = true;
+					return;
+				}
+			} catch {}
 		}
+		// Not logged in — redirect to login
+		const returnPath = $page.url.pathname;
+		window.location.href = `/login?return=${encodeURIComponent(returnPath)}`;
 	});
 </script>
 
-{#if $isLoggedIn}
+{#if $isLoggedIn && clientReady}
 	<div class="app-layout">
 		<Sidebar currentPage={currentPage()} />
 		<main class="app-main">
