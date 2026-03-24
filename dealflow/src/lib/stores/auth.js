@@ -70,7 +70,11 @@ export const isAcademy = derived(userTier, ($tier) =>
 export const isAdmin = derived(userEmail, ($email) => {
 	const ADMIN_EMAILS = [
 		'pascal@growyourcashflow.io',
+		'pascal@growyourcashflow.com',
+		'pascal.wagner@growyourcashflow.com',
 		'pascal@pascalwagner.com',
+		'info@pascalwagner.com',
+		'pascalwagner@gmail.com',
 		'pascal.alexander.wagner@gmail.com'
 	];
 	return ADMIN_EMAILS.includes($email);
