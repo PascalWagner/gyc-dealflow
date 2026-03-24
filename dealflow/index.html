@@ -21338,6 +21338,11 @@ function adminShowTab(tab, btn) {
     return;
   }
   if (outreachEmbed) outreachEmbed.style.display = 'none';
+  // Restore table wrap in case outreach view hid it
+  var _atw = document.querySelector('#page-admin-manage .admin-table-wrap');
+  if (_atw) _atw.style.display = '';
+  var _toolRow = document.querySelector('#page-admin-manage .sub-page > div:first-child');
+  if (_toolRow) _toolRow.style.display = '';
   adminLoadData();
 }
 
