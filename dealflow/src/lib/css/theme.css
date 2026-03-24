@@ -10,41 +10,59 @@
   --primary: #51BE7B;
   --primary-hover: #3da866;
   --primary-light: rgba(81, 190, 123, 0.1);
+  --accent-green: #40E47F;
 
   --bg-cream: #FAF9F5;
   --bg-card: #FFFFFF;
   --bg-sidebar: #0A1E21;
   --bg-sidebar-hover: #14333A;
   --bg-sidebar-active: #1F5159;
+  --off-white: #FAF9F5;
 
   --text-dark: #141413;
   --text-secondary: #607179;
   --text-muted: #8A9AA0;
   --text-sidebar: rgba(255,255,255,0.55);
   --text-sidebar-active: #FFFFFF;
+  --charcoal: #141413;
+  --slate: #607179;
 
   --border: #DDE5E8;
   --border-light: #EDF1F2;
 
   --green: #51BE7B;
   --green-bg: #E7F5F0;
+  --mint-bg: #E7F5F0;
   --red: #e57373;
+  --red-bg: #FEF2F2;
   --blue: #3b82f6;
+  --teal: #1F5159;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
   --orange: #f97316;
+  --orange-bg: #FFF3E6;
   --purple: #a855f7;
+  --yellow: #CA8A04;
+  --yellow-bg: #FEFCE8;
 
   --transition: 0.2s ease;
 
   --font-headline: 'DM Serif Display', Georgia, serif;
   --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+  --font-display: var(--font-headline);
 
+  --radius: 12px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
+  --sidebar-width: 240px;
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
 }
 
 /* ===== Dark Mode (class-based toggle) ===== */
@@ -54,17 +72,23 @@ html.dark {
   --bg-sidebar: #061215;
   --bg-sidebar-hover: #0A1E21;
   --bg-sidebar-active: #1F5159;
+  --off-white: #0F2A2F;
 
   --text-dark: #E8EDE9;
   --text-secondary: #9DB0B5;
   --text-muted: #607179;
+  --charcoal: #E8EDE9;
+  --slate: #607179;
 
   --border: #1F5159;
   --border-light: #1A3F47;
 
   --green-bg: #0D2E1A;
+  --mint-bg: #0D2E1A;
   --orange-bg: #2E1F0D;
   --blue-bg: #1A2332;
+  --red-bg: #2E1515;
+  --yellow-bg: #2E2A0D;
 
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
@@ -80,17 +104,23 @@ html.dark {
     --bg-sidebar: #061215;
     --bg-sidebar-hover: #0A1E21;
     --bg-sidebar-active: #1F5159;
+    --off-white: #0F2A2F;
 
     --text-dark: #E8EDE9;
     --text-secondary: #9DB0B5;
     --text-muted: #607179;
+    --charcoal: #E8EDE9;
+    --slate: #607179;
 
     --border: #1F5159;
     --border-light: #1A3F47;
 
     --green-bg: #0D2E1A;
+    --mint-bg: #0D2E1A;
     --orange-bg: #2E1F0D;
     --blue-bg: #1A2332;
+    --red-bg: #2E1515;
+    --yellow-bg: #2E2A0D;
 
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.3);

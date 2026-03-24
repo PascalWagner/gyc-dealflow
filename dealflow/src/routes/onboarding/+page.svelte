@@ -476,6 +476,90 @@
 
 	let displayTotalLPs = $derived(Math.max(networkStats?.totalLPs || 0, 1100));
 	let displayAccredited = $derived(Math.max(networkStats?.accreditedCount || 0, 600));
+	const DONUT_CIRCUMFERENCE = 2 * Math.PI * 15.9;
+	const CHART_BAR_COLORS = ['green', 'teal', 'blue', 'green', 'teal', 'blue'];
+	const SAMPLE_ASSET_CLASSES = [
+		{ name: 'Multifamily', count: 42 },
+		{ name: 'Industrial', count: 31 },
+		{ name: 'Private Debt / Credit', count: 28 },
+		{ name: 'Self-Storage', count: 19 },
+		{ name: 'Build-to-Rent', count: 14 },
+		{ name: 'Mobile Home Parks', count: 11 }
+	];
+	const SAMPLE_GOAL_DISTRIBUTION = { income: 58, tax: 27, growth: 15 };
+	const SAMPLE_CAPITAL_RANGES = {
+		'Under $50K': 14,
+		'$50K–$100K': 24,
+		'$100K–$250K': 36,
+		'$250K–$500K': 21,
+		'$500K+': 10
+	};
+
+	function formatCompactCurrency(value) {
+		if (value >= 1000000) return '$' + (value / 1000000).toFixed(1) + 'M';
+		if (value >= 1000) return '$' + Math.round(value / 1000) + 'K';
+		return '$' + value.toLocaleString();
+	}
+
+	let useSampleNetworkData = $derived((networkStats?.totalLPs || 0) < 200 && (networkStats?.completedBuyBoxes || 0) < 200);
+	let capitalReadyValue = $derived.by(() => useSampleNetworkData ? 18500000 : (networkStats?.totalCapitalReady || 0));
+	let capitalReadyDisplay = $derived.by(() => formatCompactCurrency(capitalReadyValue));
+
+	let assetDemandData = $derived.by(() => {
+		let topClasses = Array.isArray(networkStats?.topAssetClasses) ? networkStats.topAssetClasses : [];
+		if (useSampleNetworkData) topClasses = topClasses.length >= 3 ? topClasses : SAMPLE_ASSET_CLASSES;
+		const topSix = topClasses.slice(0, 6);
+		const maxCount = topSix[0]?.count || 1;
+		return topSix.map((assetClass, index) => ({
+			...assetClass,
+			widthPct: Math.max(5, Math.round((assetClass.count / maxCount) * 100)),
+			colorClass: CHART_BAR_COLORS[index % CHART_BAR_COLORS.length]
+		}));
+	});
+
+	let goalDistributionData = $derived.by(() => {
+		let goals = networkStats?.goalDistribution || { income: 0, tax: 0, growth: 0 };
+		const goalTotal = (goals.income || 0) + (goals.tax || 0) + (goals.growth || 0);
+		if (useSampleNetworkData && goalTotal < 10) goals = SAMPLE_GOAL_DISTRIBUTION;
+		const total = (goals.income || 0) + (goals.tax || 0) + (goals.growth || 0) || 1;
+		return [
+			{ label: 'Income', count: goals.income || 0, color: '#51BE7B' },
+			{ label: 'Tax Savings', count: goals.tax || 0, color: '#2563EB' },
+			{ label: 'Growth', count: goals.growth || 0, color: '#CF7A30' }
+		].map((item) => ({ ...item, percent: Math.round((item.count / total) * 100) }));
+	});
+
+	let goalDonutSegments = $derived.by(() => {
+		let offset = 0;
+		const total = goalDistributionData.reduce((sum, item) => sum + item.count, 0) || 1;
+		return goalDistributionData
+			.filter((item) => item.count > 0)
+			.map((item) => {
+				const length = DONUT_CIRCUMFERENCE * (item.count / total);
+				const segment = {
+					...item,
+					dasharray: `${length} ${DONUT_CIRCUMFERENCE - length}`,
+					dashoffset: -offset
+				};
+				offset += length;
+				return segment;
+			});
+	});
+
+	let checkSizeData = $derived.by(() => {
+		const ranges = networkStats?.capitalRanges || {};
+		const hasRealData = Object.values(ranges).some((value) => (value || 0) > 0);
+		const source = hasRealData ? ranges : SAMPLE_CAPITAL_RANGES;
+		const entries = Object.entries(source);
+		const maxCount = Math.max(...entries.map(([, count]) => Number(count) || 0), 1);
+		const colors = ['blue', 'teal', 'green', 'teal', 'green'];
+		return entries.map(([label, count], index) => ({
+			label,
+			count,
+			widthPct: Math.max(5, Math.round(((Number(count) || 0) / maxCount) * 100)),
+			colorClass: colors[index % colors.length]
+		}));
+	});
 
 	// ===== Init =====
 	onMount(async () => {
@@ -706,7 +790,7 @@
 							<button class="count-btn" onclick={() => adjustDealCount(1)}>+</button>
 						</div>
 						<div class="count-label">deals</div>
-						<div class="count-feedback">{dealCountFeedback()}</div>
+						<div class="count-feedback">{dealCountFeedback}</div>
 					</div>
 				</div>
 				<div class="step-footer">
@@ -741,7 +825,7 @@
 							<button class="pill-option" class:selected={baselineIncome === 50000} onclick={() => selectBaselinePreset(50000)}>$50K</button>
 							<button class="pill-option" class:selected={baselineIncome === 100000} onclick={() => selectBaselinePreset(100000)}>$100K+</button>
 						</div>
-						<div class="count-feedback">{baselineFeedback()}</div>
+						<div class="count-feedback">{baselineFeedback}</div>
 					</div>
 				</div>
 				<div class="step-footer">
@@ -765,11 +849,11 @@
 						<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
 					</div>
 					<div class="step-title">You're all set.</div>
-					<div class="step-subtitle">{completionSubtitle()}</div>
+						<div class="step-subtitle">{completionSubtitle}</div>
 				</div>
 				<div class="step-body">
-					<div class="completion-summary">
-						{#each completionSummary() as row}
+						<div class="completion-summary">
+							{#each completionSummary as row}
 							<div class="completion-row">
 								<span class="completion-label">{row.label}</span>
 								<span class="completion-value">{row.value}</span>
@@ -783,7 +867,7 @@
 						Back
 					</button>
 					<button class="btn-primary" onclick={completeLpOnboarding} style="min-width:220px;">
-						<span>{completionBtnText()}</span>
+							<span>{completionBtnText}</span>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
 					</button>
 				</div>
@@ -802,42 +886,84 @@
 				</div>
 				<div class="step-body">
 					<div class="welcome-layout">
-						<div class="welcome-left">
-							<div class="value-prop">
-								<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-								<div class="value-prop-text"><strong>We match your deal to investors who are already looking for it.</strong> Every LP on the platform has a buy box. Your deal gets surfaced to the ones it fits.</div>
+							<div class="welcome-left">
+								<div class="value-prop">
+									<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+									<div class="value-prop-text"><strong>We match your deal to investors who are already looking for it.</strong> Every LP on the platform has a buy box - asset class, check size, return targets. Your deal gets surfaced to the ones it fits.</div>
+								</div>
+								<div class="value-prop">
+									<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+									<div class="value-prop-text"><strong>We make direct introductions to your IR team.</strong> When an investor is interested, we don't send a form - we connect them directly to the person on your team who can close.</div>
+								</div>
+								<div class="value-prop">
+									<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
+									<div class="value-prop-text"><strong>You present live to investors whose buy box matches your deal.</strong> 90-minute session, directly marketed to the LPs most likely to invest. No cold audience - warm, qualified, ready to evaluate.</div>
+								</div>
+								<div class="value-prop">
+									<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div>
+									<div class="value-prop-text"><strong>You see exactly what investors do with your deal.</strong> Who viewed it, who saved it, who's vetting it, who requested an intro. No guessing - real data on real investor behavior.</div>
+								</div>
 							</div>
-							<div class="value-prop">
-								<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-								<div class="value-prop-text"><strong>We make direct introductions to your IR team.</strong> When an investor is interested, we connect them directly.</div>
-							</div>
-							<div class="value-prop">
-								<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
-								<div class="value-prop-text"><strong>You present live to investors whose buy box matches your deal.</strong> 90-minute session with warm, qualified LPs.</div>
-							</div>
-							<div class="value-prop">
-								<div class="value-prop-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div>
-								<div class="value-prop-text"><strong>You see exactly what investors do with your deal.</strong> Who viewed it, who saved it, who requested an intro.</div>
-							</div>
-						</div>
-						<div class="welcome-right">
-							<div class="network-stats-grid">
-								<div class="net-stat highlight" style="grid-column:1/-1;">
+							<div class="welcome-right">
+								<div class="network-stats-grid">
+									<div class="net-stat highlight" style="grid-column:1/-1;">
 									<div class="net-stat-value">{displayTotalLPs.toLocaleString()}</div>
 									<div class="net-stat-label">Investors in our database right now</div>
 								</div>
-								<div class="net-stat highlight">
-									<div class="net-stat-value">{displayAccredited.toLocaleString()}</div>
-									<div class="net-stat-label">Accredited Investors</div>
+									<div class="net-stat highlight">
+										<div class="net-stat-value">{displayAccredited.toLocaleString()}</div>
+										<div class="net-stat-label">Accredited Investors</div>
+									</div>
+									<div class="net-stat highlight">
+										<div class="net-stat-value">{capitalReadyDisplay}</div>
+										<div class="net-stat-label">Capital Ready to Deploy</div>
+									</div>
 								</div>
-								<div class="net-stat highlight">
-									<div class="net-stat-value">$18.5M</div>
-									<div class="net-stat-label">Capital Ready to Deploy</div>
+								<div class="mini-chart-wrap">
+									<div class="mini-chart-title">What They're Looking For</div>
+									{#each assetDemandData as assetClass}
+										<div class="bar-chart-row">
+											<div class="bar-label">{assetClass.name}</div>
+											<div class="bar-track">
+												<div class={`bar-fill ${assetClass.colorClass}`} style={`width:${assetClass.widthPct}%`}></div>
+											</div>
+											<div class="bar-count">{assetClass.count}</div>
+										</div>
+									{/each}
+								</div>
+								<div class="mini-chart-wrap">
+									<div class="mini-chart-title">Investor Goals</div>
+									<div class="donut-wrap">
+										<svg class="donut-svg" viewBox="0 0 42 42">
+											<circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--border-light)" stroke-width="5"></circle>
+											{#each goalDonutSegments as segment}
+												<circle
+													cx="21"
+													cy="21"
+													r="15.9"
+													fill="none"
+													stroke={segment.color}
+													stroke-width="5"
+													stroke-dasharray={segment.dasharray}
+													stroke-dashoffset={segment.dashoffset}
+													transform="rotate(-90 21 21)"
+												></circle>
+											{/each}
+										</svg>
+										<div class="donut-legend">
+											{#each goalDistributionData as goal}
+												<div class="donut-legend-item">
+													<div class="donut-dot" style={`background:${goal.color}`}></div>
+													<span>{goal.label}</span>
+													<span class="donut-legend-pct">{goal.percent}%</span>
+												</div>
+											{/each}
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
 				<div class="step-footer">
 					<span></span>
 					<button class="btn-primary" onclick={() => goToStep('step3')}>
@@ -1089,32 +1215,56 @@
 		{/if}
 
 		{#if currentStep === 'step8'}
-			<div class="step active">
-				<div class="step-header">
-					<div class="step-counter">Step 6 of 8</div>
-					<div class="step-title">Present your deal live to qualified investors</div>
-					<div class="step-subtitle">This is the fastest way to get in front of investors deploying capital</div>
-				</div>
-				<div class="step-body">
-					<div class="presentation-layout">
-						<div>
-							<ul class="pres-benefits">
-								<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="pres-benefit-text"><strong>Directly marketed to matched investors.</strong> Every LP whose buy box matches your deal gets a personal invitation.</div></li>
-								<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="pres-benefit-text"><strong>90-minute live session.</strong> 45 min presentation + 45 min live Q&A.</div></li>
-								<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div><div class="pres-benefit-text"><strong>Recording shared with full investor database.</strong> Your pitch keeps working after the event.</div></li>
-								<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><div class="pres-benefit-text"><strong>Full post-event analytics.</strong> See who attended and who requested follow-up.</div></li>
-							</ul>
-						</div>
-						<div>
-							<div class="network-stats-grid">
-								<div class="net-stat highlight" style="grid-column:1/-1;">
-									<div class="net-stat-value">{displayTotalLPs.toLocaleString()}+</div>
-									<div class="net-stat-label">Investors in our database</div>
+				<div class="step active">
+					<div class="step-header">
+						<div class="step-counter">Step 6 of 8</div>
+						<div class="step-title">Present your deal live to qualified investors</div>
+						<div class="step-subtitle">This is the fastest way to get in front of investors who are actively deploying capital</div>
+					</div>
+					<div class="step-body">
+						<div class="presentation-layout">
+							<div>
+								<ul class="pres-benefits">
+									<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="pres-benefit-text"><strong>Your event is directly marketed to every investor whose buy box matches your deal.</strong> No cold audience - these are LPs who have already told us they want your asset class, return profile, and check size.</div></li>
+									<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="pres-benefit-text"><strong>90-minute live session.</strong> 40-45 minutes for your presentation, 45 minutes of live Q&amp;A where investors can ask you anything. This is where trust gets built and deals move forward.</div></li>
+									<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div><div class="pres-benefit-text"><strong>Recording shared with our full investor database.</strong> Investors who couldn't make the live event watch the replay. Your pitch keeps working after the event ends.</div></li>
+									<li class="pres-benefit"><div class="pres-benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="8" width="4" height="12"/><rect x="17" y="4" width="4" height="16"/></svg></div><div class="pres-benefit-text"><strong>Full post-event analytics.</strong> See exactly who attended, how engaged they were, and who requested a follow-up introduction to your IR team.</div></li>
+								</ul>
+							</div>
+							<div class="presentation-right">
+								<div class="network-stats-grid">
+									<div class="net-stat highlight" style="grid-column:1/-1;">
+										<div class="net-stat-value">{displayTotalLPs.toLocaleString()}+</div>
+										<div class="net-stat-label">Investors in our database</div>
+									</div>
+								</div>
+								<div class="mini-chart-wrap">
+									<div class="mini-chart-title">Weekly Presentation Schedule</div>
+									<div class="presentation-schedule">
+										<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" class="presentation-schedule-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+										<div class="presentation-schedule-copy">
+											<div class="presentation-schedule-title">Every Thursday</div>
+											<div class="presentation-schedule-time">1:00 PM - 2:30 PM ET</div>
+										</div>
+										<span class="presentation-schedule-badge">BOOKING OPEN</span>
+									</div>
+									<div class="presentation-schedule-note">One operator per week - slots fill up fast</div>
+								</div>
+								<div class="mini-chart-wrap">
+									<div class="mini-chart-title">LP Check Size Distribution</div>
+									{#each checkSizeData as sizeRange}
+										<div class="bar-chart-row">
+											<div class="bar-label">{sizeRange.label}</div>
+											<div class="bar-track">
+												<div class={`bar-fill ${sizeRange.colorClass}`} style={`width:${sizeRange.widthPct}%`}></div>
+											</div>
+											<div class="bar-count">{sizeRange.count}</div>
+										</div>
+									{/each}
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
 				<div class="step-footer">
 					<button class="btn-secondary" onclick={() => goToStep('step7', true)}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
@@ -1145,18 +1295,35 @@
 							<div class="upsell-price">$1,000</div>
 							<div class="upsell-price-sub">one-time &mdash; per presentation slot</div>
 						</div>
-						<div class="upsell-body">
-							<ul class="upsell-includes">
-								<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>90-minute live session</strong> &mdash; 45 min to present, 45 min live Q&A</div></li>
-								<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Directly marketed to matched investors</strong></div></li>
-								<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Full recording distributed</strong> to entire investor database</div></li>
-								<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Post-event analytics</strong> &mdash; attendees, engagement, intro requests</div></li>
-								<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Every Thursday at 1:00 PM ET</strong> &mdash; one operator per week</div></li>
-							</ul>
-							<button class="upsell-cta" onclick={() => window.open('https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8', '_blank')}>
-								Reserve My Slot &mdash; $1,000
-							</button>
-							<div class="upsell-guarantee">Secure checkout via GoHighLevel. Cancel anytime before your presentation date.</div>
+							<div class="upsell-body">
+								<ul class="upsell-includes">
+									<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>90-minute live session</strong> &mdash; 45 minutes to present your deal, team, and track record, followed by 45 minutes of live Q&amp;A with qualified investors</div></li>
+									<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Directly marketed to matched investors</strong> &mdash; every LP whose buy box matches your deal gets a personal invitation with your deal summary</div></li>
+									<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Full recording distributed</strong> &mdash; shared with our entire investor database and embedded on your deal page so it keeps working after the event</div></li>
+									<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Post-event analytics</strong> &mdash; see who attended, engagement data, and which investors requested a direct introduction to your IR team</div></li>
+									<li><div class="upsell-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div><strong>Every Thursday at 1:00 PM ET</strong> &mdash; one operator per week, first come first served. Pick your date after checkout.</div></li>
+								</ul>
+								<div class="proof-grid">
+									<div class="proof-stat-card">
+										<div class="proof-stat-value">8-20</div>
+										<div class="proof-stat-label">Live Attendees</div>
+									</div>
+									<div class="proof-stat-card">
+										<div class="proof-stat-value">500+</div>
+										<div class="proof-stat-label">Avg. YouTube Views (90 Days)</div>
+									</div>
+								</div>
+								<div class="youtube-proof">
+									<svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" class="youtube-proof-icon"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+									<div class="youtube-proof-copy">
+										<div class="youtube-proof-title">Presentations also go on YouTube</div>
+										<div class="youtube-proof-text">Our top operator presentation has <strong>1,500+ views</strong> on YouTube. The average hits 500+ views within 90 days. Your pitch keeps reaching new investors for months.</div>
+									</div>
+								</div>
+								<button class="upsell-cta" onclick={() => window.open('https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8', '_blank')}>
+									Reserve My Slot &mdash; $1,000
+								</button>
+								<div class="upsell-guarantee">Secure checkout via GoHighLevel. Cancel anytime before your presentation date.</div>
 						</div>
 					</div>
 				</div>
@@ -1214,12 +1381,12 @@
 					<div class="step-counter">One More Thing</div>
 					<div class="step-title">Are you also an LP?</div>
 				</div>
-				<div class="step-body">
-					<div class="lp-prompt">
-						<div class="lp-prompt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-						<div class="lp-prompt-desc">Many GPs are also active investors. Setting up your LP buy box helps us match you with opportunities that fit your criteria.</div>
-						<div class="lp-prompt-benefits">
-							<div class="lp-benefit-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><div class="lp-benefit-text">Get matched to deals</div></div>
+					<div class="step-body">
+						<div class="lp-prompt">
+							<div class="lp-prompt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+							<div class="lp-prompt-desc">Many GPs are also active investors. If you invest in other operators' deals, setting up your LP buy box helps us match you with opportunities that fit your criteria.</div>
+							<div class="lp-prompt-benefits">
+								<div class="lp-benefit-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><div class="lp-benefit-text">Get matched to deals</div></div>
 							<div class="lp-benefit-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><div class="lp-benefit-text">Personalized deal alerts</div></div>
 							<div class="lp-benefit-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><div class="lp-benefit-text">Compare opportunities</div></div>
 						</div>
@@ -1381,6 +1548,7 @@
 	.donut-legend { flex: 1; }
 	.donut-legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 	.donut-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+	.donut-legend-pct { color: var(--text-muted); margin-left: auto; }
 
 	/* ====== COMPANY TYPEAHEAD ====== */
 	.company-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 50; max-height: 240px; overflow-y: auto; }
@@ -1461,6 +1629,13 @@
 	.pres-benefit-icon { width: 24px; height: 24px; border-radius: 50%; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
 	.pres-benefit-icon svg { width: 12px; height: 12px; }
 	.pres-benefit-text { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); line-height: 1.4; }
+	.presentation-schedule { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border-light); border-radius: var(--radius-sm); background: var(--bg-card); margin-top: 8px; }
+	.presentation-schedule-icon { width: 20px; height: 20px; flex-shrink: 0; }
+	.presentation-schedule-copy { min-width: 0; }
+	.presentation-schedule-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); }
+	.presentation-schedule-time { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); }
+	.presentation-schedule-badge { margin-left: auto; font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--primary); background: var(--green-bg); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+	.presentation-schedule-note { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; }
 
 	/* ====== MATCH HIGHLIGHT ====== */
 	.match-highlight { background: linear-gradient(145deg, var(--teal-midnight), var(--teal-deep)); border-radius: var(--radius); padding: 20px; text-align: center; margin-top: 16px; }
@@ -1479,6 +1654,16 @@
 	.upsell-includes li:last-child { border-bottom: none; }
 	.upsell-check { width: 22px; height: 22px; border-radius: 50%; background: var(--green-bg); color: var(--green); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
 	.upsell-check svg { width: 12px; height: 12px; }
+	.proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; padding-top: 4px; }
+	.proof-stat-card { background: var(--off-white); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 14px 10px; text-align: center; }
+	.proof-stat-value { font-family: var(--font-headline); font-size: 22px; color: var(--teal-deep); line-height: 1; }
+	.proof-stat-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-top: 2px; }
+	.youtube-proof { background: var(--off-white); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+	.youtube-proof-icon { width: 20px; height: 20px; flex-shrink: 0; }
+	.youtube-proof-copy { flex: 1; min-width: 0; }
+	.youtube-proof-title { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); }
+	.youtube-proof-text { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); }
+	.youtube-proof-text strong { color: var(--text-dark); }
 	.upsell-cta { display: block; width: 100%; padding: 16px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 16px; font-weight: 800; cursor: pointer; transition: all var(--transition); text-align: center; letter-spacing: -0.3px; }
 	.upsell-cta:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(81,190,123,0.3); }
 	.upsell-guarantee { text-align: center; margin-top: 12px; font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); }
@@ -1556,6 +1741,8 @@
 		.match-highlight { padding: 16px; }
 		.match-number { font-size: 28px; }
 		.pres-benefit-text { font-size: 13px; }
+		.presentation-schedule { flex-wrap: wrap; }
+		.presentation-schedule-badge { margin-left: 0; }
 
 		/* Checklist */
 		.checklist-item { gap: 10px; padding: 12px 0; }
@@ -1571,6 +1758,8 @@
 		.upsell-header { padding: 20px 16px; }
 		.upsell-price { font-size: 36px; }
 		.upsell-body { padding: 20px 16px; }
+		.proof-grid { grid-template-columns: 1fr; }
+		.youtube-proof { align-items: flex-start; }
 		.upsell-cta { font-size: 15px; padding: 14px; }
 
 		/* Agreement */
