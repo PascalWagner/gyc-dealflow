@@ -96,13 +96,13 @@
 			{/if}
 		</div>
 		<div class="status-badges">
-			{#if isNew()}
+			{#if isNew}
 				<span class="pill pill-new">New</span>
 			{/if}
-			{#if isUpdated()}
+			{#if isUpdated}
 				<span class="pill pill-updated">Updated</span>
 			{/if}
-			{#if isClosingSoon()}
+			{#if isClosingSoon}
 				<span class="pill pill-closing">Closing Soon</span>
 			{/if}
 			{#if isVerified}

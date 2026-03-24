@@ -18,7 +18,7 @@
 		<div class="goal-progress-fill" style="width:{progress}%;{progress > 0 ? 'min-width:6px;' : ''}"></div>
 	</div>
 	<div class="goal-progress-value">
-		{@html valueText()}
+		{@html valueText}
 		<span class="goal-progress-pct">{progress}%</span>
 	</div>
 </div>

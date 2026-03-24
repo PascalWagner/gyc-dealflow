@@ -65,7 +65,7 @@
 	<div class="chart-label">Allocation{hasPlan ? ' vs Plan' : ''}</div>
 	{#if total > 0}
 		<svg viewBox="0 0 160 160" class="pie-svg">
-			{#each slices() as s}
+			{#each slices as s}
 				{#if s.isOnly}
 					<circle cx="80" cy="80" r="60" fill={s.color} />
 				{:else}
@@ -75,7 +75,7 @@
 			<circle cx="80" cy="80" r="35" fill="var(--bg-card)" />
 		</svg>
 		<div class="legend">
-			{#each legendItems() as item}
+			{#each legendItems as item}
 				<div class="legend-item">
 					{#if item.inPortfolio}
 						<div class="legend-dot" style="background:{item.color};"></div>

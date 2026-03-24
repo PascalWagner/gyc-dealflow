@@ -105,12 +105,12 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#if sortedDeals().length === 0}
+			{#if sortedDeals.length === 0}
 				<tr>
 					<td colspan={TABLE_COLS.length} class="empty-row">No deals match your filters.</td>
 				</tr>
 			{:else}
-				{#each sortedDeals() as deal (deal.id)}
+				{#each sortedDeals as deal (deal.id)}
 					<tr onclick={() => onopen(deal.id)}>
 						{#each TABLE_COLS as col, i}
 							<td
