@@ -1,7 +1,7 @@
 <script>
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
 	import { dealStages, STAGE_META, PIPELINE_STAGES, normalizeStage, stageLabel } from '$lib/stores/deals.js';
@@ -45,6 +45,19 @@
 	let toastMessage = $state('');
 	let toastVisible = $state(false);
 
+	// Deck Viewer Modal
+	let showDeckViewer = $state(false);
+
+	// Share Class Switching
+	let activeShareClass = $state(0);
+
+	// Enrichment Wizard (admin)
+	let enrichmentData = $state(null);
+	let showEnrichModal = $state(false);
+	let enrichSaving = $state(false);
+	let enrichSuccess = $state(false);
+	let enrichChecked = $state({});
+
 	// Intro Request Modal
 	let showIntroModal = $state(false);
 	let introMessage = $state('');
@@ -52,6 +65,11 @@
 	let introPhone = $state('');
 	let introSending = $state(false);
 	let introSuccess = $state(false);
+
+	// Property Map
+	let dealMap = $state(null);
+	let dealMapLoading = $state(false);
+	let dealMapError = $state(false);
 
 	// Invite Co-Investors Modal
 	let showInviteModal = $state(false);
@@ -95,6 +113,25 @@
 	const completeness = $derived(deal ? getCompleteness(deal) : 0);
 
 	const isStale = $derived(deal ? checkStaleness(deal) : false);
+
+	// Share Classes
+	const sortedShareClasses = $derived(deal?.shareClasses?.length > 0
+		? deal.shareClasses.map((sc, i) => ({ sc, origIdx: i })).sort((a, b) => (a.sc.investmentMinimum || 0) - (b.sc.investmentMinimum || 0))
+		: []);
+	const hasShareClasses = $derived(sortedShareClasses.length > 1);
+	const activeShareClassData = $derived(hasShareClasses && deal?.shareClasses?.[activeShareClass] ? deal.shareClasses[activeShareClass] : null);
+
+	// Active metrics (overlaid from share class if selected)
+	const displayTargetIRR = $derived(activeShareClassData?.targetReturn != null ? activeShareClassData.targetReturn : deal?.targetIRR);
+	const displayPrefReturn = $derived(activeShareClassData?.preferredReturn != null ? activeShareClassData.preferredReturn : deal?.preferredReturn);
+	const displayMinInvestment = $derived(activeShareClassData?.investmentMinimum != null ? activeShareClassData.investmentMinimum : deal?.investmentMinimum);
+	const displayEquityMultiple = $derived(activeShareClassData?.equityMultiple != null ? activeShareClassData.equityMultiple : deal?.equityMultiple);
+	const displayCashOnCash = $derived(activeShareClassData?.cashOnCash != null ? activeShareClassData.cashOnCash : deal?.cashOnCash);
+	const displayFees = $derived(activeShareClassData?.fees != null ? activeShareClassData.fees : deal?.fees);
+	const displayLpGpSplit = $derived(activeShareClassData?.lpGpSplit != null ? activeShareClassData.lpGpSplit : deal?.lpGpSplit);
+
+	// Deck preview URL
+	const deckPreviewUrl = $derived(deal?.deckUrl ? getDeckPreviewUrl(deal.deckUrl) : null);
 
 	// Buy Box Match
 	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
@@ -426,6 +463,128 @@
 		if (!deal || !browser) return;
 		localStorage.setItem('gycDeckViewed_' + deal.id, 'true');
 		deckViewed = true;
+	}
+
+	function getDeckPreviewUrl(url) {
+		if (!url) return null;
+		// Google Drive file -> preview embed
+		if (url.includes('google.com/file') || url.includes('drive.google.com')) {
+			const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+			if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
+		}
+		// Dropbox -> raw content
+		if (url.includes('dropbox.com')) {
+			return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '').replace('?dl=1', '');
+		}
+		// Direct PDF or other URLs
+		if (url.endsWith('.pdf') || url.includes('.pdf?')) {
+			return url;
+		}
+		// Google Docs viewer fallback for other URLs
+		return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+	}
+
+	function openDeckViewer() {
+		if (!deal?.deckUrl) return;
+		showDeckViewer = true;
+		trackDeckView();
+	}
+
+	function switchShareClass(idx) {
+		activeShareClass = idx;
+	}
+
+	const ENRICHMENT_FIELD_LABELS = {
+		investmentName: 'Investment Name',
+		managementCompany: 'Management Company',
+		ceo: 'CEO / Managing Partner',
+		assetClass: 'Asset Class',
+		dealType: 'Deal Type',
+		strategy: 'Strategy',
+		investmentStrategy: 'Investment Strategy',
+		targetIRR: 'Target IRR',
+		preferredReturn: 'Preferred Return',
+		cashOnCash: 'Cash-on-Cash',
+		equityMultiple: 'Equity Multiple',
+		investmentMinimum: 'Min Investment',
+		holdPeriod: 'Hold Period',
+		offeringType: 'Offering Type',
+		offeringSize: 'Offering Size',
+		distributions: 'Distributions',
+		fees: 'Fees',
+		lpGpSplit: 'LP/GP Split',
+		investingGeography: 'Geography',
+		sponsorCoinvest: 'Sponsor Co-Invest',
+		redemption: 'Redemption Terms',
+		taxForm: 'Tax Form'
+	};
+
+	function formatEnrichmentValue(key, val) {
+		if (val === null || val === undefined) return '';
+		if (['targetIRR', 'preferredReturn', 'cashOnCash', 'sponsorCoinvest'].includes(key)) {
+			return typeof val === 'number' ? (val * 100).toFixed(1) + '%' : val;
+		}
+		if (key === 'equityMultiple') return typeof val === 'number' ? val.toFixed(2) + 'x' : val;
+		if (['investmentMinimum', 'offeringSize', 'purchasePrice'].includes(key)) {
+			return typeof val === 'number' ? '$' + val.toLocaleString() : val;
+		}
+		return String(val);
+	}
+
+	async function openEnrichModal() {
+		if (!deal || !$isAdmin) return;
+		showEnrichModal = true;
+		enrichSuccess = false;
+		enrichSaving = false;
+		// Fetch enrichment data from the deal's deck
+		try {
+			const resp = await fetch(`/api/deal-extract-enrichment?dealId=${deal.id}`);
+			if (resp.ok) {
+				const data = await resp.json();
+				enrichmentData = data.extractedData || {};
+				// Initialize all fields as checked
+				const checked = {};
+				for (const key in enrichmentData) {
+					if (enrichmentData[key] != null && ENRICHMENT_FIELD_LABELS[key]) {
+						checked[key] = true;
+					}
+				}
+				enrichChecked = checked;
+			} else {
+				enrichmentData = {};
+			}
+		} catch {
+			enrichmentData = {};
+		}
+	}
+
+	async function confirmEnrichment() {
+		if (!deal || !enrichmentData) return;
+		enrichSaving = true;
+		const confirmed = {};
+		for (const key in enrichChecked) {
+			if (enrichChecked[key] && enrichmentData[key] != null) {
+				confirmed[key] = enrichmentData[key];
+			}
+		}
+		try {
+			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+			const resp = await fetch('/api/deal-confirm-enrichment', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ dealId: deal.id, confirmedData: confirmed, userEmail: stored.email || '' })
+			});
+			if (resp.ok) {
+				enrichSuccess = true;
+				// Refresh deal data
+				const updated = await resp.json();
+				if (updated.deal) deal = updated.deal;
+			}
+		} catch (err) {
+			console.error('Enrichment save failed:', err);
+		} finally {
+			enrichSaving = false;
+		}
 	}
 
 	function openClaimModal() {
@@ -905,7 +1064,54 @@
 
 		// Set document title
 		document.title = `${deal.investmentName} - GYC Dealflow`;
+
+		// Initialize property location map
+		initDealMap();
 	});
+
+	async function initDealMap() {
+		if (!deal) return;
+		const locationStr = deal.propertyAddress || deal.address || (deal.city && deal.state ? `${deal.city}, ${deal.state}` : null) || deal.location;
+		if (!locationStr) { dealMapError = true; return; }
+		dealMapLoading = true;
+		try {
+			// Dynamically load Leaflet CSS
+			if (!document.querySelector('link[href*="leaflet.css"]')) {
+				const link = document.createElement('link');
+				link.rel = 'stylesheet';
+				link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+				document.head.appendChild(link);
+			}
+			const leaflet = await import('https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js');
+			const L = leaflet.default || leaflet;
+			// Geocode with Nominatim
+			const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(locationStr) + '&limit=1');
+			const data = await resp.json();
+			if (data && data.length > 0) {
+				const lat = parseFloat(data[0].lat);
+				const lon = parseFloat(data[0].lon);
+				dealMapLoading = false;
+				await tick(); // ensure map div is in DOM
+				const el = document.getElementById('dealLocationMap');
+				if (!el) return;
+				dealMap = L.map(el).setView([lat, lon], 13);
+				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+					attribution: '&copy; OpenStreetMap contributors',
+					maxZoom: 18
+				}).addTo(dealMap);
+				L.marker([lat, lon]).addTo(dealMap)
+					.bindPopup(`<strong>${deal.investmentName || deal.name || 'Property'}</strong><br>${locationStr}`)
+					.openPopup();
+			} else {
+				dealMapError = true;
+				dealMapLoading = false;
+			}
+		} catch (e) {
+			console.warn('Deal map geocoding failed:', e);
+			dealMapError = true;
+			dealMapLoading = false;
+		}
+	}
 
 	// Close share dropdown on outside click
 	function handleOutsideClick(e) {
@@ -1037,10 +1243,10 @@
 						<!-- Hero Right: CTA buttons -->
 						<div class="hero-right">
 							{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
-								<a href={deal.deckUrl} target="_blank" rel="noopener" class="hero-deck-btn">
+								<button class="hero-deck-btn" onclick={openDeckViewer}>
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 									View Investment Deck
-								</a>
+								</button>
 							{/if}
 							<button class="hero-deck-btn hero-intro-btn" onclick={requestIntroduction}>
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
@@ -1162,21 +1368,34 @@
 					<span class="data-completeness-hint">{completeness >= 70 ? 'Well documented' : completeness >= 40 ? 'Partial data' : 'Limited data'}</span>
 				</div>
 
+				<!-- ==================== SHARE CLASS TABS ==================== -->
+				{#if hasShareClasses}
+					<div class="sc-toggle-bar">
+						{#each sortedShareClasses as { sc, origIdx }}
+							<button
+								class="sc-toggle-pill"
+								class:active={activeShareClass === origIdx}
+								onclick={() => switchShareClass(origIdx)}
+							>{sc.label}</button>
+						{/each}
+					</div>
+				{/if}
+
 				<!-- ==================== KEY METRICS STRIP ==================== -->
-				{#if deal.targetIRR || deal.investmentMinimum}
+				{#if displayTargetIRR || displayMinInvestment}
 					<div class="metrics-strip">
-						{#if deal.targetIRR}
-							<div class="metric-card"><div class="metric-label">{isCredit ? 'Target Yield' : 'Target IRR'}</div><div class="metric-value highlight">{fmt(deal.targetIRR, 'pct')}</div></div>
+						{#if displayTargetIRR}
+							<div class="metric-card"><div class="metric-label">{isCredit ? 'Target Yield' : 'Target IRR'}</div><div class="metric-value highlight">{fmt(displayTargetIRR, 'pct')}</div></div>
 						{/if}
-						{#if deal.investmentMinimum}
-							<div class="metric-card"><div class="metric-label">Min Investment</div><div class="metric-value">{fmt(deal.investmentMinimum, 'money')}</div></div>
+						{#if displayMinInvestment}
+							<div class="metric-card"><div class="metric-label">Min Investment</div><div class="metric-value">{fmt(displayMinInvestment, 'money')}</div></div>
 						{/if}
 						{#if isPaid}
-							{#if !isCredit && deal.equityMultiple}
-								<div class="metric-card"><div class="metric-label">Equity Multiple</div><div class="metric-value">{fmt(deal.equityMultiple, 'multiple')}</div></div>
+							{#if !isCredit && displayEquityMultiple}
+								<div class="metric-card"><div class="metric-label">Equity Multiple</div><div class="metric-value">{fmt(displayEquityMultiple, 'multiple')}</div></div>
 							{/if}
-							{#if deal.preferredReturn}
-								<div class="metric-card"><div class="metric-label">Pref Return</div><div class="metric-value">{fmt(deal.preferredReturn, 'pct')}</div></div>
+							{#if displayPrefReturn}
+								<div class="metric-card"><div class="metric-label">Pref Return</div><div class="metric-value">{fmt(displayPrefReturn, 'pct')}</div></div>
 							{/if}
 							{#if deal.holdPeriod}
 								<div class="metric-card"><div class="metric-label">{isCredit ? 'Lockup' : 'Hold Period'}</div><div class="metric-value">{formatHold(deal.holdPeriod)}</div></div>
@@ -1237,23 +1456,32 @@
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
 							<span class="section-title">Deal Terms</span>
 						</div>
+						{#if hasShareClasses}
+							<div style="padding:4px 20px 16px;">
+								<div class="sc-toggle-bar">
+									{#each sortedShareClasses as { sc, origIdx }}
+										<button class="sc-toggle-pill" class:active={activeShareClass === origIdx} onclick={() => switchShareClass(origIdx)}>{sc.label}</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
 						<div class="section-body">
 							<div class="details-grid">
-								<div class="detail-item"><div class="detail-label">Target IRR</div><div class="detail-value">{fmt(deal.targetIRR, 'pct')}</div></div>
+								<div class="detail-item"><div class="detail-label">Target IRR</div><div class="detail-value">{fmt(displayTargetIRR, 'pct')}</div></div>
 								{#if isCredit}
-									<div class="detail-item"><div class="detail-label">Pref Return</div><div class="detail-value">{fmt(deal.preferredReturn, 'pct')}</div></div>
+									<div class="detail-item"><div class="detail-label">Pref Return</div><div class="detail-value">{fmt(displayPrefReturn, 'pct')}</div></div>
 								{:else}
-									<div class="detail-item"><div class="detail-label">Cash-on-Cash</div><div class="detail-value">{fmt(deal.cashOnCash, 'pct')}</div></div>
+									<div class="detail-item"><div class="detail-label">Cash-on-Cash</div><div class="detail-value">{fmt(displayCashOnCash, 'pct')}</div></div>
 								{/if}
-								<div class="detail-item"><div class="detail-label">Min Investment</div><div class="detail-value">{fmt(deal.investmentMinimum, 'money')}</div></div>
+								<div class="detail-item"><div class="detail-label">Min Investment</div><div class="detail-value">{fmt(displayMinInvestment, 'money')}</div></div>
 								<div class="detail-item"><div class="detail-label">Lockup</div><div class="detail-value">{formatHold(deal.holdPeriod)}</div></div>
 								<div class="detail-item"><div class="detail-label">Distributions</div><div class="detail-value">{deal.distributions || '---'}</div></div>
 								<div class="detail-item"><div class="detail-label">Offering Type</div><div class="detail-value">{deal.offeringType || '---'}</div></div>
-								{#if deal.equityMultiple}
-									<div class="detail-item"><div class="detail-label">Equity Multiple</div><div class="detail-value">{fmt(deal.equityMultiple, 'multiple')}</div></div>
+								{#if displayEquityMultiple}
+									<div class="detail-item"><div class="detail-label">Equity Multiple</div><div class="detail-value">{fmt(displayEquityMultiple, 'multiple')}</div></div>
 								{/if}
-								{#if deal.lpGpSplit && /\d+\s*\/\s*\d+/.test(deal.lpGpSplit)}
-									<div class="detail-item"><div class="detail-label">LP/GP Split</div><div class="detail-value">{deal.lpGpSplit}</div></div>
+								{#if displayLpGpSplit && /\d+\s*\/\s*\d+/.test(String(displayLpGpSplit))}
+									<div class="detail-item"><div class="detail-label">LP/GP Split</div><div class="detail-value">{displayLpGpSplit}</div></div>
 								{/if}
 								<div class="detail-item"><div class="detail-label">Available To</div><div class="detail-value">{deal.availableTo || '---'}</div></div>
 								<div class="detail-item"><div class="detail-label">Offering Size</div><div class="detail-value">{fmt(deal.offeringSize, 'money')}</div></div>
@@ -1294,6 +1522,37 @@
 							</div>
 						{/if}
 
+						<!-- Property Location Map -->
+						<div class="section">
+							<div class="section-header">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+								<span class="section-title">Property Location</span>
+							</div>
+							<div class="section-body">
+								{#if isPaid}
+									{#if dealMapLoading}
+										<div class="deal-map-placeholder">
+											<div class="deal-map-spinner"></div>
+											<span>Loading map...</span>
+										</div>
+									{:else if dealMapError}
+										<div class="deal-map-placeholder">
+											<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="32" height="32"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+											<span style="color:var(--text-muted);font-size:13px;">Location not available</span>
+										</div>
+									{:else}
+										<div id="dealLocationMap" class="deal-map-container"></div>
+									{/if}
+								{:else}
+									<div class="deal-map-placeholder">
+										<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="24" height="24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+										<span style="color:var(--text-muted);font-size:13px;">Property map available for Academy members</span>
+										<a href="/app/academy" class="btn-upgrade-map">Unlock with Academy</a>
+									</div>
+								{/if}
+							</div>
+						</div>
+
 						<!-- Documents Card -->
 						<div class="section">
 							<div class="section-header">
@@ -1302,10 +1561,16 @@
 							</div>
 							<div class="section-body doc-list">
 								{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
-									<a href={deal.deckUrl} target="_blank" rel="noopener" class="doc-item">
-										<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-										Investment Deck
-									</a>
+									<div class="doc-item-row">
+										<button class="doc-item doc-view-btn" onclick={openDeckViewer}>
+											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+											View Deck
+										</button>
+										<a href={deal.deckUrl} target="_blank" rel="noopener" class="doc-item doc-download-link">
+											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+											Download Deck
+										</a>
+									</div>
 								{/if}
 								{#if deal.ppmUrl && !deal.ppmUrl.includes('airtableusercontent.com')}
 									{#if isPaid}
@@ -1322,6 +1587,12 @@
 								{/if}
 								{#if !deal.deckUrl && !deal.ppmUrl}
 									<div class="doc-empty">No documents available yet</div>
+								{/if}
+								{#if $isAdmin && deal.deckUrl}
+									<button class="doc-item doc-enrich-btn" onclick={openEnrichModal}>
+										<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+										Enrich from Deck
+									</button>
 								{/if}
 							</div>
 						</div>
@@ -1823,9 +2094,9 @@
 					</button>
 					<span class="stage-label">Stage: <strong>Review</strong></span>
 					{#if !deckViewed && deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
-						<a href={deal.deckUrl} target="_blank" rel="noopener" class="btn-advance" onclick={trackDeckView}>
+						<button class="btn-advance" onclick={openDeckViewer}>
 							View Investment Deck &rarr;
-						</a>
+						</button>
 					{:else}
 						<button class="btn-advance" onclick={() => setStage('diligence')}>
 							Ready to Connect &rarr;
@@ -2030,6 +2301,97 @@
 	</div>
 {/if}
 
+<!-- ==================== DECK VIEWER MODAL ==================== -->
+{#if showDeckViewer && deal?.deckUrl}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="deck-viewer-overlay" onclick={(e) => { if (e.target === e.currentTarget) showDeckViewer = false; }}>
+		<div class="deck-viewer-modal">
+			<div class="deck-viewer-header">
+				<span class="deck-viewer-title">{deal.investmentName} - Investment Deck</span>
+				<div class="deck-viewer-actions">
+					<a href={deal.deckUrl} target="_blank" rel="noopener" class="deck-viewer-download">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+						Download
+					</a>
+					<button class="deck-viewer-close" onclick={() => showDeckViewer = false}>&times;</button>
+				</div>
+			</div>
+			<div class="deck-viewer-body">
+				<iframe
+					src={deckPreviewUrl}
+					title="Deck Viewer"
+					class="deck-viewer-iframe"
+					allowfullscreen
+					sandbox="allow-scripts allow-same-origin allow-popups"
+				></iframe>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- ==================== ENRICHMENT WIZARD MODAL ==================== -->
+{#if showEnrichModal && $isAdmin && deal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showEnrichModal = false; }}>
+		<div class="modal-container" style="max-width:560px;">
+			<div class="modal-header-row">
+				<div class="modal-title">Enrich from Deck</div>
+				<button class="modal-close-inline" onclick={() => showEnrichModal = false}>&times;</button>
+			</div>
+			{#if enrichSuccess}
+				<div class="modal-success" style="padding:24px 0;">
+					<div class="modal-success-icon">
+						<svg viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2" width="32" height="32"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+					</div>
+					<div class="modal-success-title">Enrichment saved!</div>
+					<div class="modal-success-text">Deal data has been updated with the confirmed fields.</div>
+					<button class="modal-btn-primary" style="margin-top:16px;" onclick={() => showEnrichModal = false}>Close</button>
+				</div>
+			{:else if enrichmentData === null}
+				<div style="text-align:center;padding:40px 0;">
+					<div class="enrich-spinner"></div>
+					<div style="color:var(--text-muted);font-size:13px;margin-top:12px;">Extracting data from deck...</div>
+				</div>
+			{:else if Object.keys(enrichmentData).filter(k => enrichmentData[k] != null && ENRICHMENT_FIELD_LABELS[k]).length === 0}
+				<div style="text-align:center;padding:32px 0;">
+					<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="32" height="32"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+					<div style="color:var(--text-muted);font-size:14px;margin-top:12px;">No extractable fields found in the deck.</div>
+					<button class="modal-btn-secondary" style="margin-top:16px;" onclick={() => showEnrichModal = false}>Close</button>
+				</div>
+			{:else}
+				<div class="enrich-wizard">
+					<div class="enrich-header">
+						<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+						<div>
+							<div style="font-family:var(--font-ui);font-size:15px;font-weight:700;color:var(--text-dark);">Review Extracted Fields</div>
+							<div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">{Object.keys(enrichChecked).length} fields extracted. Uncheck any you want to skip.</div>
+						</div>
+					</div>
+					<div class="enrich-fields">
+						{#each Object.entries(enrichmentData).filter(([k, v]) => v != null && ENRICHMENT_FIELD_LABELS[k]) as [key, value]}
+							<div class="enrich-field">
+								<label class="enrich-checkbox">
+									<input type="checkbox" bind:checked={enrichChecked[key]} />
+								</label>
+								<label class="enrich-field-label">{ENRICHMENT_FIELD_LABELS[key]}</label>
+								<span class="enrich-field-value">{formatEnrichmentValue(key, value)}</span>
+							</div>
+						{/each}
+					</div>
+					<div class="enrich-actions">
+						<button class="modal-btn-secondary" onclick={() => showEnrichModal = false}>Skip</button>
+						<button class="modal-btn-primary" onclick={confirmEnrichment} disabled={enrichSaving} style="flex:1;">
+							{enrichSaving ? 'Saving...' : 'Confirm & Save'}
+						</button>
+					</div>
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
+
 <style>
 	/* ===== Layout ===== */
 	.main {
@@ -2189,6 +2551,14 @@
 	.operator-ceo { font-family: var(--font-ui); font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 	.operator-meta { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); }
 	.operator-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
+
+	/* ===== Property Location Map ===== */
+	.deal-map-container { height: 260px; border-radius: 8px; overflow: hidden; z-index: 0; }
+	.deal-map-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 180px; background: var(--bg-cream); border-radius: 8px; }
+	.deal-map-spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+	@keyframes spin { to { transform: rotate(360deg); } }
+	.btn-upgrade-map { margin-top: 6px; padding: 6px 16px; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; }
+	.btn-upgrade-map:hover { opacity: 0.9; }
 
 	/* ===== Documents ===== */
 	.doc-list { display: flex; flex-direction: column; gap: 8px; }

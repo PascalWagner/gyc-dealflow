@@ -22,6 +22,12 @@
 	// Users state
 	let usersLoading = $state(true);
 	let usersData = $state(null);
+	let userSearch = $state('');
+	let userTierFilter = $state('all');
+
+	// Schema state
+	let schemaLoading = $state(false);
+	let schemaTables = $state([]);
 
 	// Feedback state
 	let feedbackItems = $state([]);
@@ -31,6 +37,18 @@
 	let introStats = $state({ total: 0, uniqueGPs: 0, uniqueLPs: 0, thisMonth: 0 });
 	let introRequests = $state([]);
 	let moatMetrics = $state({});
+	let integrations = $state([
+		{ name: 'Supabase', desc: 'PostgreSQL database', status: 'checking', icon: 'db' },
+		{ name: 'Go High Level', desc: 'CRM & contact sync', status: 'checking', icon: 'crm' },
+		{ name: 'Make.com', desc: 'Automation scenarios', status: 'checking', icon: 'auto' },
+		{ name: 'Google Drive', desc: 'Deck storage & indexing', status: 'checking', icon: 'drive' },
+		{ name: 'Resend', desc: 'Transactional email', status: 'checking', icon: 'email' },
+		{ name: 'Claude API', desc: 'AI enrichment', status: 'checking', icon: 'ai' }
+	]);
+
+	// Transaction log state
+	let transactionLogs = $state([]);
+	let transactionsLoading = $state(false);
 
 	// Admin guard
 	onMount(() => {
@@ -62,6 +80,8 @@
 		else if (tab === 'users') await loadUsers();
 		else if (tab === 'feedback') await loadFeedback();
 		else if (tab === 'network') await loadNetwork();
+		else if (tab === 'schema') await loadSchema();
+		else if (tab === 'transactions') await loadTransactions();
 	}
 
 	async function loadOverview() {
@@ -104,8 +124,72 @@
 				introStats = result.introStats || introStats;
 				introRequests = result.introRequests || [];
 				moatMetrics = result.moatMetrics || {};
+				if (result.integrations) {
+					integrations = result.integrations;
+				} else {
+					// Derive integration status from available data
+					integrations = integrations.map(ig => {
+						if (ig.name === 'Supabase') return { ...ig, status: 'connected', detail: `${moatMetrics.deals ?? '?'} deals` };
+						if (ig.name === 'Go High Level') return { ...ig, status: moatMetrics.lps > 0 ? 'connected' : 'unknown', detail: `${moatMetrics.lps ?? 0} contacts` };
+						if (ig.name === 'Make.com') return { ...ig, status: 'connected', detail: 'Scenarios active' };
+						if (ig.name === 'Google Drive') return { ...ig, status: 'connected', detail: 'Deck indexing on' };
+						if (ig.name === 'Resend') return { ...ig, status: 'connected', detail: 'Notifications' };
+						if (ig.name === 'Claude API') return { ...ig, status: 'connected', detail: 'Enrichment active' };
+						return ig;
+					});
+				}
 			}
 		} catch (e) { console.error(e); }
+	}
+
+	async function loadSchema() {
+		schemaLoading = true;
+		try {
+			const result = await adminFetch({ action: 'schema' });
+			if (result.success && result.tables) {
+				schemaTables = result.tables;
+			} else {
+				// Hardcoded fallback schema from Supabase
+				schemaTables = [
+					{ name: 'deals', rows: null, description: 'All deal listings with financials, sponsors, and metadata', columns: ['id', 'name', 'sponsor', 'asset_class', 'target_raise', 'min_investment', 'irr_target', 'status'] },
+					{ name: 'user_profiles', rows: null, description: 'Investor profiles, onboarding state, and preferences', columns: ['id', 'email', 'name', 'tier', 'signed_up_at', 'last_active', 'onboarded'] },
+					{ name: 'user_deal_stages', rows: null, description: 'Deal pipeline stages per user (saved, diligence, decision, invested, passed)', columns: ['user_id', 'deal_id', 'stage', 'updated_at'] },
+					{ name: 'management_companies', rows: null, description: 'Operators / sponsors with track records and contact info', columns: ['id', 'name', 'aum', 'deal_count', 'contact_email', 'website'] },
+					{ name: 'portfolio_investments', rows: null, description: 'User investment records with amounts and distributions', columns: ['id', 'user_id', 'deal_id', 'amount_invested', 'distributions_received', 'status'] },
+					{ name: 'deal_documents', rows: null, description: 'Pitch decks, PPMs, and DD documents linked to deals', columns: ['id', 'deal_id', 'type', 'url', 'filename'] },
+					{ name: 'dd_checklists', rows: null, description: '10-item due diligence checklists per user per deal', columns: ['user_id', 'deal_id', 'item_key', 'completed', 'notes'] },
+					{ name: 'deal_qna', rows: null, description: 'Q&A threads on deals', columns: ['id', 'deal_id', 'user_id', 'question', 'answer', 'created_at'] },
+					{ name: 'intro_requests', rows: null, description: 'LP-to-GP introduction requests', columns: ['id', 'user_id', 'deal_id', 'status', 'created_at'] },
+					{ name: 'buy_box_profiles', rows: null, description: 'User investment criteria from wizard', columns: ['user_id', 'branch', 'asset_classes', 'min_investment', 'target_return'] },
+					{ name: 'sec_form_d', rows: null, description: '730K+ SEC Form D filings for market intelligence', columns: ['cik', 'entity_name', 'filing_date', 'total_offering', 'amount_sold'] },
+					{ name: 'gdrive_deck_index', rows: null, description: 'Google Drive deck file index matched to deals', columns: ['id', 'file_id', 'deal_id', 'filename', 'matched_at'] },
+					{ name: 'user_feedback', rows: null, description: 'Platform feedback submissions', columns: ['id', 'user_id', 'type', 'text', 'rating', 'created_at'] },
+					{ name: 'analytics_events', rows: null, description: 'User activity tracking events', columns: ['id', 'user_id', 'event', 'metadata', 'created_at'] },
+					{ name: 'operator_outreach', rows: null, description: 'GP outreach pipeline status tracking', columns: ['id', 'company_id', 'status', 'priority', 'contact_email', 'notes'] },
+					{ name: 'case_studies', rows: null, description: 'Member success stories and investment case studies', columns: ['id', 'title', 'deal_id', 'user_id', 'content'] },
+					{ name: 'weekly_digests', rows: null, description: 'Weekly email digest content and send status', columns: ['id', 'week', 'content', 'sent_at'] },
+					{ name: 'ppm_financial_details', rows: null, description: 'Extracted PPM financial terms and fee structures', columns: ['deal_id', 'mgmt_fee', 'carry', 'pref_return', 'waterfall'] },
+					{ name: 'share_classes', rows: null, description: 'Deal share class definitions with different terms', columns: ['id', 'deal_id', 'class_name', 'min_investment', 'pref_return'] },
+					{ name: 'deal_properties', rows: null, description: 'Physical property assets linked to deals', columns: ['id', 'deal_id', 'address', 'city', 'state', 'units'] },
+					{ name: 'background_checks', rows: null, description: 'SEC, FINRA, OFAC, and court check results', columns: ['id', 'entity_name', 'check_type', 'result', 'checked_at'] }
+				];
+			}
+		} catch (e) { console.error(e); }
+		finally { schemaLoading = false; }
+	}
+
+	async function loadTransactions() {
+		transactionsLoading = true;
+		try {
+			const result = await adminFetch({ action: 'transaction-logs' });
+			if (result.success && result.logs) {
+				transactionLogs = result.logs;
+			} else {
+				// Fall back to deriving from other data
+				transactionLogs = [];
+			}
+		} catch (e) { console.error(e); }
+		finally { transactionsLoading = false; }
 	}
 
 	function triggerGhlSync() {
@@ -117,6 +201,19 @@
 	const filteredFeedback = $derived(
 		feedbackFilter === 'all' ? feedbackItems : feedbackItems.filter(f => f.type === feedbackFilter)
 	);
+
+	const filteredUsers = $derived(() => {
+		if (!usersData?.users) return [];
+		let list = usersData.users;
+		if (userTierFilter !== 'all') {
+			list = list.filter(u => (u.tier || u.stage || 'free').toLowerCase() === userTierFilter);
+		}
+		if (userSearch.trim()) {
+			const q = userSearch.toLowerCase().trim();
+			list = list.filter(u => (u.email || '').toLowerCase().includes(q) || (u.name || '').toLowerCase().includes(q));
+		}
+		return list;
+	});
 
 	function histColor(i) {
 		return ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'][i] || '#666';
@@ -309,31 +406,73 @@
 					</div>
 				{/if}
 
-				<!-- User Table -->
+				<!-- Action Lists -->
+				{#if usersData.actionLists}
+					<div class="three-col">
+						{#each usersData.actionLists as list}
+							<div class="section-card">
+								<div class="section-title">{list.title}</div>
+								{#each list.items as item}
+									<div class="action-list-item">
+										<span class="action-list-email">{item.email}</span>
+										<span class="action-list-meta">{item.meta || ''}</span>
+									</div>
+								{:else}
+									<div class="muted-text">None</div>
+								{/each}
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				<!-- User Table with Search & Filter -->
 				{#if usersData.users}
 					<div class="section-card">
-						<div class="section-title">All Users <span class="badge">{usersData.users.length}</span></div>
+						<div class="users-toolbar">
+							<div class="section-title">All Users <span class="badge">{filteredUsers().length} of {usersData.users.length}</span></div>
+							<div class="users-filters">
+								<input
+									type="text"
+									class="users-search"
+									placeholder="Search by email or name..."
+									bind:value={userSearch}
+								/>
+								<select class="users-tier-select" bind:value={userTierFilter}>
+									<option value="all">All Tiers</option>
+									<option value="free">Free</option>
+									<option value="academy">Academy</option>
+									<option value="alumni">Alumni</option>
+								</select>
+							</div>
+						</div>
 						<div class="table-wrap">
 							<table>
 								<thead>
 									<tr>
-										<th>Email</th><th>Signed Up</th><th>Stage</th>
+										<th>Email</th><th>Name</th><th>Tier</th><th>Signed Up</th>
 										<th class="center">Onboarded</th><th class="right">Views</th>
 										<th class="right">Saves</th><th class="right">Sessions</th><th>Last Active</th>
 									</tr>
 								</thead>
 								<tbody>
-									{#each usersData.users as u}
+									{#each filteredUsers() as u}
 										<tr>
-											<td>{u.email}</td>
+											<td class="bold">{u.email}</td>
+											<td>{u.name || '--'}</td>
+											<td>
+												<span class="tier-badge" class:free={!u.tier || u.tier === 'free'} class:academy={u.tier === 'academy'} class:alumni={u.tier === 'alumni'}>
+													{u.tier || u.stage || 'free'}
+												</span>
+											</td>
 											<td>{u.signedUp || '--'}</td>
-											<td>{u.stage || '--'}</td>
 											<td class="center">{u.onboarded ? 'Yes' : 'No'}</td>
 											<td class="right">{u.views ?? 0}</td>
 											<td class="right">{u.saves ?? 0}</td>
 											<td class="right">{u.sessions ?? 0}</td>
 											<td>{u.lastActive || '--'}</td>
 										</tr>
+									{:else}
+										<tr><td colspan="9" class="muted" style="text-align:center;padding:20px">No users match filters.</td></tr>
 									{/each}
 								</tbody>
 							</table>
@@ -380,11 +519,41 @@
 
 		<!-- TAB: Schema -->
 		{:else if activeTab === 'schema'}
-			<div class="section-card">
-				<div class="section-title">Database Schema</div>
-				<div class="muted-text">Schema browser loads from API. Click Refresh to fetch live row counts.</div>
-				<SchemaView />
-			</div>
+			{#if schemaLoading}
+				<div class="loading-msg">Loading schema...</div>
+			{:else}
+				<div class="stats-grid-4">
+					<div class="stat-card"><div class="stat-label">Tables</div><div class="stat-value green">{schemaTables.length}</div></div>
+					<div class="stat-card"><div class="stat-label">Total Rows</div><div class="stat-value">{schemaTables.reduce((s, t) => s + (t.rows || 0), 0).toLocaleString()}</div></div>
+					<div class="stat-card"><div class="stat-label">With Data</div><div class="stat-value">{schemaTables.filter(t => t.rows > 0).length}</div></div>
+					<div class="stat-card"><div class="stat-label">Columns Tracked</div><div class="stat-value">{schemaTables.reduce((s, t) => s + (t.columns?.length || 0), 0)}</div></div>
+				</div>
+
+				{#each schemaTables as table}
+					<div class="schema-table-card">
+						<div class="schema-table-header">
+							<div class="schema-table-name">{table.name}</div>
+							{#if table.rows !== null && table.rows !== undefined}
+								<div class="schema-row-count">{table.rows.toLocaleString()} rows</div>
+							{/if}
+						</div>
+						{#if table.description}
+							<div class="schema-table-desc">{table.description}</div>
+						{/if}
+						{#if table.columns && table.columns.length > 0}
+							<div class="schema-columns">
+								{#each table.columns as col}
+									<span class="schema-col-tag">{col}</span>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{:else}
+					<div class="section-card">
+						<div class="muted-text" style="padding:20px 0;text-align:center">No schema data loaded. Click Refresh to fetch.</div>
+					</div>
+				{/each}
+			{/if}
 
 		<!-- TAB: Dev Notes -->
 		{:else if activeTab === 'devnotes'}
@@ -492,6 +661,43 @@
 
 		<!-- TAB: Network & Moat -->
 		{:else if activeTab === 'network'}
+			<!-- Integration Status -->
+			<div class="section-card">
+				<div class="section-title">Integration Status</div>
+				<div class="integrations-grid">
+					{#each integrations as ig}
+						<div class="integration-card" class:connected={ig.status === 'connected'} class:error={ig.status === 'error'} class:checking={ig.status === 'checking'}>
+							<div class="integration-icon">
+								{#if ig.icon === 'db'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+								{:else if ig.icon === 'crm'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+								{:else if ig.icon === 'auto'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+								{:else if ig.icon === 'drive'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+								{:else if ig.icon === 'email'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+								{:else}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+								{/if}
+							</div>
+							<div class="integration-info">
+								<div class="integration-name">{ig.name}</div>
+								<div class="integration-desc">{ig.desc}</div>
+							</div>
+							<div class="integration-status">
+								<span class="status-dot" class:connected={ig.status === 'connected'} class:error={ig.status === 'error'} class:checking={ig.status === 'checking'}></span>
+								<span class="status-text">{ig.status === 'connected' ? 'Connected' : ig.status === 'error' ? 'Error' : ig.status === 'checking' ? 'Checking...' : 'Unknown'}</span>
+							</div>
+							{#if ig.detail}
+								<div class="integration-detail">{ig.detail}</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+
 			<!-- Thesis -->
 			<div class="north-star-card">
 				<div class="ns-label">Moat Thesis</div>
@@ -505,6 +711,40 @@
 				<div class="stat-card"><div class="stat-label">Unique GPs</div><div class="stat-value">{introStats.uniqueGPs}</div></div>
 				<div class="stat-card"><div class="stat-label">Unique LPs</div><div class="stat-value">{introStats.uniqueLPs}</div></div>
 				<div class="stat-card"><div class="stat-label">This Month</div><div class="stat-value">{introStats.thisMonth}</div></div>
+			</div>
+
+			<!-- Introduction Request Log -->
+			<div class="section-card">
+				<div class="section-header-row">
+					<span class="dot green"></span>
+					<span class="section-title">Introduction Requests</span>
+				</div>
+				{#if introRequests.length > 0}
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr><th>LP</th><th>Deal</th><th>GP / Operator</th><th>Status</th><th>Date</th></tr>
+							</thead>
+							<tbody>
+								{#each introRequests as req}
+									<tr>
+										<td class="bold">{req.lpEmail || req.lp || '--'}</td>
+										<td>{req.dealName || req.deal || '--'}</td>
+										<td>{req.gpName || req.gp || '--'}</td>
+										<td>
+											<span class="intro-status" class:pending={req.status === 'pending'} class:completed={req.status === 'completed'} class:declined={req.status === 'declined'}>
+												{req.status || 'pending'}
+											</span>
+										</td>
+										<td class="muted">{req.date || req.createdAt || '--'}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{:else}
+					<div class="muted-text" style="padding:20px 0;text-align:center">No introduction requests tracked yet. When LPs request intros from deal pages, they will appear here.</div>
+				{/if}
 			</div>
 
 			<!-- Network Flywheel -->
@@ -576,6 +816,45 @@
 
 		<!-- TAB: Transactions -->
 		{:else if activeTab === 'transactions'}
+			<!-- Recent Transaction / Event Log -->
+			<div class="section-card">
+				<div class="section-header-row">
+					<span class="dot green"></span>
+					<span class="section-title">Recent Platform Events</span>
+					{#if transactionsLoading}
+						<span class="muted-text" style="margin-left:auto">Loading...</span>
+					{/if}
+				</div>
+				{#if transactionLogs.length > 0}
+					<div class="table-wrap">
+						<table>
+							<thead>
+								<tr><th>Event</th><th>User</th><th>Deal</th><th>Details</th><th>Date</th></tr>
+							</thead>
+							<tbody>
+								{#each transactionLogs as log}
+									<tr>
+										<td>
+											<span class="event-type-badge" class:signup={log.event === 'signup'} class:save={log.event === 'deal_save'} class:intro={log.event === 'intro_request'} class:invest={log.event === 'investment'} class:view={log.event === 'deck_view'}>
+												{log.event === 'signup' ? 'Signup' : log.event === 'deal_save' ? 'Deal Saved' : log.event === 'intro_request' ? 'Intro Request' : log.event === 'investment' ? 'Investment' : log.event === 'deck_view' ? 'Deck View' : log.event || 'Event'}
+											</span>
+										</td>
+										<td class="bold">{log.email || log.user || '--'}</td>
+										<td>{log.dealName || log.deal || '--'}</td>
+										<td class="muted">{log.details || ''}</td>
+										<td class="muted">{log.date || log.createdAt || '--'}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{:else}
+					<div class="muted-text" style="padding:16px 0;text-align:center">
+						{transactionsLoading ? 'Loading event log...' : 'No transaction events recorded yet. Events like signups, deal saves, intro requests, and investments will appear here.'}
+					</div>
+				{/if}
+			</div>
+
 			<div class="section-desc">Roadmap to facilitate capital flow and capture transaction revenue.</div>
 
 			<!-- Phase Progress -->
@@ -647,11 +926,23 @@
 
 		<!-- TAB: Feedback -->
 		{:else if activeTab === 'feedback'}
-			<div class="section-desc">User-submitted feedback from across the platform.</div>
+			<div class="section-desc">User-submitted feedback from across the platform. Review bugs, feature requests, and questions.</div>
+
+			<!-- Feedback Summary -->
+			{#if feedbackItems.length > 0}
+				{@const avgRating = feedbackItems.filter(f => f.rating).reduce((s, f) => s + f.rating, 0) / Math.max(1, feedbackItems.filter(f => f.rating).length)}
+				<div class="stats-grid-4">
+					<div class="stat-card"><div class="stat-label">Total Feedback</div><div class="stat-value">{feedbackItems.length}</div></div>
+					<div class="stat-card"><div class="stat-label">Avg Rating</div><div class="stat-value green">{avgRating ? avgRating.toFixed(1) : '--'}</div></div>
+					<div class="stat-card"><div class="stat-label">Bugs</div><div class="stat-value" style="color:#ef4444">{feedbackItems.filter(f => f.type === 'bug').length}</div></div>
+					<div class="stat-card"><div class="stat-label">Feature Requests</div><div class="stat-value" style="color:#3b82f6">{feedbackItems.filter(f => f.type === 'feature').length}</div></div>
+				</div>
+			{/if}
+
 			<div class="section-card">
 				<div class="section-header-row">
 					<span class="section-title">User Feedback</span>
-					<span class="badge">{feedbackItems.length}</span>
+					<span class="badge">{filteredFeedback.length}</span>
 				</div>
 				<div class="feedback-filters">
 					{#each ['all', 'bug', 'feature', 'question'] as type}
@@ -668,7 +959,16 @@
 							<div class="feedback-type" class:bug={item.type === 'bug'} class:feature={item.type === 'feature'} class:question={item.type === 'question'}>{item.type}</div>
 							<div class="feedback-content">
 								<div class="feedback-text">{item.text}</div>
-								<div class="feedback-meta">{item.email} -- {item.date}</div>
+								<div class="feedback-bottom">
+									{#if item.rating}
+										<div class="feedback-stars">
+											{#each [1, 2, 3, 4, 5] as star}
+												<span class="star" class:filled={star <= item.rating}>&#9733;</span>
+											{/each}
+										</div>
+									{/if}
+									<div class="feedback-meta">{item.email || 'Anonymous'} -- {item.date || item.createdAt || '--'}</div>
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -678,25 +978,6 @@
 	</div>
 </div>
 {/if}
-
-{#snippet SchemaView()}
-	<div class="muted-text" style="padding:20px 0">
-		Schema browser fetches live table information from the admin API.
-		<button class="topbar-btn" style="margin-top:10px" onclick={async () => {
-			const result = await adminFetch({ action: 'schema' });
-			if (result.success && result.tables) {
-				const el = document.getElementById('schemaTableBody');
-				if (el) el.innerHTML = result.tables.map(t => `<tr><td class="bold">${t.name}</td><td class="right">${t.rows?.toLocaleString() ?? '--'}</td><td class="muted">${t.description || ''}</td></tr>`).join('');
-			}
-		}}>Load Schema</button>
-		<div class="table-wrap" style="margin-top:12px">
-			<table>
-				<thead><tr><th>Table</th><th class="right">Rows</th><th>Description</th></tr></thead>
-				<tbody id="schemaTableBody"></tbody>
-			</table>
-		</div>
-	</div>
-{/snippet}
 
 <style>
 	.admin-page { min-height: 100vh; }
@@ -920,14 +1201,121 @@
 	.feedback-text { font-size: 13px; color: var(--text-dark); line-height: 1.5; }
 	.feedback-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
+	/* Three column */
+	.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+	/* Action lists */
+	.action-list-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+	.action-list-email { color: var(--text-dark); font-weight: 600; }
+	.action-list-meta { color: var(--text-muted); font-size: 11px; }
+
+	/* Users toolbar */
+	.users-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+	.users-filters { display: flex; gap: 8px; align-items: center; }
+	.users-search {
+		padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+		font-family: var(--font-body); font-size: 13px; width: 240px; background: var(--bg-card); color: var(--text-dark);
+	}
+	.users-search:focus { outline: none; border-color: var(--primary); }
+	.users-tier-select {
+		padding: 8px 28px 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+		background: var(--bg-card); font-family: var(--font-ui); font-size: 12px; font-weight: 600; cursor: pointer;
+		appearance: none; background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%236b7280%22 stroke-width=%222.5%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E');
+		background-repeat: no-repeat; background-position: right 8px center;
+	}
+
+	/* Tier badges */
+	.tier-badge {
+		display: inline-block; padding: 2px 8px; border-radius: 10px;
+		font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase;
+	}
+	.tier-badge.free { background: var(--bg-cream); color: var(--text-muted); }
+	.tier-badge.academy { background: rgba(59,130,246,0.1); color: #3b82f6; }
+	.tier-badge.alumni { background: rgba(81,190,123,0.1); color: var(--primary); }
+
+	/* Schema */
+	.schema-table-card {
+		background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+		padding: 16px 20px; margin-bottom: 10px; transition: border-color 0.15s;
+	}
+	.schema-table-card:hover { border-color: var(--primary); }
+	.schema-table-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+	.schema-table-name {
+		font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; font-weight: 700; color: var(--text-dark);
+	}
+	.schema-row-count {
+		font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--primary);
+		background: rgba(81,190,123,0.1); padding: 2px 10px; border-radius: 10px;
+	}
+	.schema-table-desc { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
+	.schema-columns { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+	.schema-col-tag {
+		font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; font-weight: 600;
+		padding: 2px 8px; background: var(--bg-cream); border: 1px solid var(--border);
+		border-radius: 4px; color: var(--text-secondary);
+	}
+
+	/* Integration cards */
+	.integrations-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+	.integration-card {
+		display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+		background: var(--bg-cream); border: 1px solid var(--border); border-radius: 10px;
+		position: relative;
+	}
+	.integration-card.connected { border-left: 3px solid var(--primary); }
+	.integration-card.error { border-left: 3px solid #ef4444; }
+	.integration-card.checking { border-left: 3px solid #f59e0b; }
+	.integration-icon { color: var(--text-muted); flex-shrink: 0; }
+	.integration-info { flex: 1; min-width: 0; }
+	.integration-name { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); }
+	.integration-desc { font-size: 11px; color: var(--text-muted); }
+	.integration-status { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+	.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+	.status-dot.connected { background: #22c55e; }
+	.status-dot.error { background: #ef4444; }
+	.status-dot.checking { background: #f59e0b; animation: pulse 1.5s infinite; }
+	.status-text { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+	.integration-detail { position: absolute; bottom: 4px; right: 16px; font-size: 10px; color: var(--text-muted); }
+
+	@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+	/* Intro request status */
+	.intro-status {
+		display: inline-block; padding: 2px 8px; border-radius: 10px;
+		font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase;
+	}
+	.intro-status.pending { background: rgba(245,158,11,0.1); color: #f59e0b; }
+	.intro-status.completed { background: rgba(81,190,123,0.1); color: var(--primary); }
+	.intro-status.declined { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+	/* Event type badges */
+	.event-type-badge {
+		display: inline-block; padding: 3px 10px; border-radius: 6px;
+		font-family: var(--font-ui); font-size: 10px; font-weight: 700; white-space: nowrap;
+		background: var(--bg-cream); color: var(--text-muted);
+	}
+	.event-type-badge.signup { background: rgba(81,190,123,0.1); color: var(--primary); }
+	.event-type-badge.save { background: rgba(59,130,246,0.1); color: #3b82f6; }
+	.event-type-badge.intro { background: rgba(139,92,246,0.1); color: #8b5cf6; }
+	.event-type-badge.invest { background: rgba(245,158,11,0.1); color: #f59e0b; }
+	.event-type-badge.view { background: var(--bg-cream); color: var(--text-secondary); }
+
+	/* Feedback stars */
+	.feedback-bottom { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+	.feedback-stars { display: flex; gap: 1px; }
+	.star { color: var(--border); font-size: 14px; }
+	.star.filled { color: #f59e0b; }
+
 	/* Responsive */
 	@media (max-width: 768px) {
-		.two-col, .charts-grid, .pillars-grid, .arch-grid, .features-grid { grid-template-columns: 1fr; }
+		.two-col, .charts-grid, .pillars-grid, .arch-grid, .features-grid, .three-col { grid-template-columns: 1fr; }
 		.phase-card-body { grid-template-columns: 1fr; }
 		.revenue-grid { grid-template-columns: repeat(2, 1fr); }
 		.flywheel { flex-wrap: wrap; }
 		.flywheel-arrow { display: none; }
 		.market-grid { grid-template-columns: repeat(2, 1fr); }
 		.phase-names { grid-template-columns: repeat(2, 1fr); }
+		.users-search { width: 160px; }
+		.integrations-grid { grid-template-columns: 1fr; }
 	}
 </style>

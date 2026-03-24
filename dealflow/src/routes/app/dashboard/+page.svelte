@@ -102,6 +102,36 @@
 	const inPipeline = $derived(($stageCounts.saved || 0) + ($stageCounts.diligence || 0));
 	const decisionsMade = $derived(($stageCounts.passed || 0) + ($stageCounts.invested || 0));
 
+	// Milestone tracker — compute activation milestones from deal stages + portfolio
+	const milestones = $derived(() => {
+		const stages = $dealStages || {};
+		const stageEntries = Object.entries(stages);
+		const hasSaved = stageEntries.some(([, s]) => s === 'saved' || s === 'diligence' || s === 'decision' || s === 'invested');
+		const hasDiligence = stageEntries.some(([, s]) => s === 'diligence' || s === 'decision' || s === 'invested');
+		const hasDecision = stageEntries.some(([, s]) => s === 'decision' || s === 'invested');
+		const hasInvested = stageEntries.some(([, s]) => s === 'invested') || portfolio.length > 0;
+
+		// Check if user has viewed a deck (stored in localStorage)
+		let hasDeckView = false;
+		if (browser) {
+			const deckViews = JSON.parse(localStorage.getItem('gycDeckViews') || '[]');
+			hasDeckView = deckViews.length > 0 || stageEntries.length > 0;
+		}
+
+		return [
+			{ key: 'save', label: 'First Deal Saved', desc: 'Save a deal to your pipeline', done: hasSaved, icon: 'bookmark' },
+			{ key: 'deck', label: 'First Deck Viewed', desc: 'Review a deal pitch deck', done: hasDeckView, icon: 'doc' },
+			{ key: 'dd', label: 'First DD Started', desc: 'Begin due diligence on a deal', done: hasDiligence, icon: 'check' },
+			{ key: 'invest', label: 'First Investment', desc: 'Record your first investment', done: hasInvested, icon: 'star' }
+		];
+	});
+
+	const milestoneProgress = $derived(() => {
+		const ms = milestones();
+		const done = ms.filter(m => m.done).length;
+		return Math.round((done / ms.length) * 100);
+	});
+
 	// Recent activity feed — derived from dealStages + deals list
 	const recentActivity = $derived(() => {
 		const stageEntries = Object.entries($dealStages);
@@ -366,6 +396,42 @@
 				<div class="metric-value">{fmtDollar(totalInvested)}</div>
 			</div>
 		</div>
+
+		<!-- Milestone Tracker -->
+		{#if milestoneProgress() < 100}
+			<div class="milestone-card">
+				<div class="milestone-header">
+					<div class="milestone-title">Your Activation Journey</div>
+					<div class="milestone-pct">{milestoneProgress()}% complete</div>
+				</div>
+				<div class="milestone-bar-wrap">
+					<div class="milestone-bar-fill" style="width:{milestoneProgress()}%"></div>
+				</div>
+				<div class="milestone-steps">
+					{#each milestones() as ms, i}
+						<div class="milestone-step" class:done={ms.done} class:next={!ms.done && (i === 0 || milestones()[i - 1].done)}>
+							<div class="milestone-icon" class:done={ms.done}>
+								{#if ms.done}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+								{:else if ms.icon === 'bookmark'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+								{:else if ms.icon === 'doc'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+								{:else if ms.icon === 'check'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
+								{:else}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+								{/if}
+							</div>
+							<div class="milestone-text">
+								<div class="milestone-label">{ms.label}</div>
+								<div class="milestone-desc">{ms.desc}</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		<!-- Quick Actions -->
 		<div class="quick-actions">
@@ -673,6 +739,46 @@
 		flex-shrink: 0;
 	}
 
+	/* Milestone Tracker */
+	.milestone-card {
+		background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+		padding: 20px 24px; margin-bottom: 20px;
+	}
+	.milestone-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+	.milestone-title {
+		font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark);
+	}
+	.milestone-pct {
+		font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary);
+	}
+	.milestone-bar-wrap {
+		height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 16px;
+	}
+	.milestone-bar-fill {
+		height: 100%; background: linear-gradient(90deg, var(--primary), #2563EB); border-radius: 3px;
+		transition: width 0.5s ease;
+	}
+	.milestone-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+	.milestone-step {
+		display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+		border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-cream);
+		opacity: 0.5; transition: all 0.2s;
+	}
+	.milestone-step.done { opacity: 1; border-color: rgba(81,190,123,0.3); background: rgba(81,190,123,0.04); }
+	.milestone-step.next { opacity: 1; border-color: var(--primary); background: rgba(81,190,123,0.06); }
+	.milestone-icon {
+		width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+		background: var(--border); color: var(--text-muted); flex-shrink: 0;
+	}
+	.milestone-icon.done { background: var(--primary); color: #fff; }
+	.milestone-text { min-width: 0; }
+	.milestone-label {
+		font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-dark); line-height: 1.3;
+	}
+	.milestone-desc {
+		font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.4;
+	}
+
 	@media (max-width: 768px) {
 		.mobile-menu-btn { display: block; }
 		.topbar-title { font-size: 14px; }
@@ -683,5 +789,6 @@
 		.content-area { padding: 16px; }
 		.quick-actions { flex-direction: column; }
 		.quick-action-btn { min-width: unset; }
+		.milestone-steps { grid-template-columns: repeat(2, 1fr); }
 	}
 </style>

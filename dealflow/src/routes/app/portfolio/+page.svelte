@@ -2,11 +2,18 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { user, isAdmin, userTier } from '$lib/stores/auth.js';
-	import PortfolioChart from '$lib/components/PortfolioChart.svelte';
+
 
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
 	let wizardData = $state({});
+
+	// Chart.js refs
+	let allocationCanvasEl = $state(null);
+	let timelineCanvasEl = $state(null);
+	let allocationChartInstance = $state(null);
+	let timelineChartInstance = $state(null);
+	let chartJsLoaded = $state(false);
 	let sortCol = $state('investmentName');
 	let sortAsc = $state(true);
 	let showAddModal = $state(false);
@@ -60,17 +67,144 @@
 		const alloc = allocationMap();
 		for (const [cls, amt] of Object.entries(alloc)) {
 			const pct = (amt / totalInvested) * 100;
-			if (pct > 50) insights.push({ type: 'warn', text: `<strong>High concentration:</strong> ${pct.toFixed(0)}% of portfolio in ${cls}. Consider diversifying across asset classes.` });
+			if (pct > 50) insights.push({ type: 'danger', text: `High concentration in ${cls}`, detail: `${pct.toFixed(0)}% of portfolio. Consider diversifying across asset classes.` });
 		}
 		const sponsorAlloc = {};
 		portfolio.forEach(i => { const sp = i.sponsor || 'Unknown'; sponsorAlloc[sp] = (sponsorAlloc[sp] || 0) + (parseFloat(i.amountInvested) || 0); });
 		for (const [sp, amt] of Object.entries(sponsorAlloc)) {
 			const pct = (amt / totalInvested) * 100;
-			if (pct > 40) insights.push({ type: 'warn', text: `<strong>Sponsor exposure:</strong> ${pct.toFixed(0)}% allocated to ${sp}. Diversifying sponsors reduces counterparty risk.` });
+			if (pct > 40) insights.push({ type: 'warn', text: `Operator concentration risk`, detail: `${pct.toFixed(0)}% allocated to ${sp}. Diversifying sponsors reduces counterparty risk.` });
 		}
-		if (insights.length === 0) return [{ type: 'ok', text: '<strong>Portfolio looks well-diversified.</strong> No major concentration risks detected.' }];
+		// Hold period risk
+		const avgHoldMonths = avgHoldPeriod();
+		if (avgHoldMonths > 84) {
+			insights.push({ type: 'warn', text: `Long average hold period`, detail: `${(avgHoldMonths / 12).toFixed(1)} years avg hold. Longer holds reduce liquidity.` });
+		}
+		if (insights.length === 0) return [{ type: 'ok', text: 'Portfolio looks well-diversified', detail: 'No major concentration risks detected.' }];
 		return insights;
 	});
+
+	// Timeline data - investments grouped by quarter
+	const timelineData = $derived(() => {
+		const withDate = portfolio.filter(i => i.dateInvested);
+		if (withDate.length === 0) return null;
+		const buckets = {};
+		withDate.forEach(i => {
+			const d = new Date(i.dateInvested);
+			const q = Math.floor(d.getMonth() / 3) + 1;
+			const key = `Q${q} ${d.getFullYear()}`;
+			buckets[key] = (buckets[key] || 0) + (parseFloat(i.amountInvested) || 0);
+		});
+		const sorted = Object.entries(buckets).sort((a, b) => {
+			const parseKey = (k) => { const [q, y] = k.split(' '); return parseInt(y) * 4 + parseInt(q[1]); };
+			return parseKey(a[0]) - parseKey(b[0]);
+		});
+		return { labels: sorted.map(([k]) => k), amounts: sorted.map(([, v]) => v) };
+	});
+
+	// Chart.js rendering functions
+	async function loadChartJs() {
+		if (chartJsLoaded) return;
+		const { Chart, DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } = await import('chart.js');
+		Chart.register(DoughnutController, BarController, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+		chartJsLoaded = true;
+	}
+
+	const PIE_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
+
+	function renderAllocationChart() {
+		if (!allocationCanvasEl || !chartJsLoaded) return;
+		const alloc = allocationMap();
+		const entries = Object.entries(alloc).sort((a, b) => b[1] - a[1]);
+		if (entries.length === 0) return;
+
+		if (allocationChartInstance) allocationChartInstance.destroy();
+
+		const { Chart } = window.Chart ? { Chart: window.Chart } : {};
+		import('chart.js').then(({ Chart: C }) => {
+			allocationChartInstance = new C(allocationCanvasEl, {
+				type: 'doughnut',
+				data: {
+					labels: entries.map(([k]) => k),
+					datasets: [{
+						data: entries.map(([, v]) => v),
+						backgroundColor: entries.map((_, i) => PIE_COLORS[i % PIE_COLORS.length]),
+						borderWidth: 2,
+						borderColor: 'var(--bg-card)',
+						hoverBorderColor: '#fff',
+						hoverOffset: 6
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					cutout: '60%',
+					plugins: {
+						legend: { display: false },
+						tooltip: {
+							callbacks: {
+								label: (ctx) => {
+									const val = ctx.raw;
+									const pct = ((val / totalInvested) * 100).toFixed(1);
+									return `$${val.toLocaleString()} (${pct}%)`;
+								}
+							}
+						}
+					}
+				}
+			});
+		});
+	}
+
+	function renderTimelineChart() {
+		if (!timelineCanvasEl || !chartJsLoaded) return;
+		const tData = timelineData();
+		if (!tData) return;
+
+		if (timelineChartInstance) timelineChartInstance.destroy();
+
+		import('chart.js').then(({ Chart: C }) => {
+			timelineChartInstance = new C(timelineCanvasEl, {
+				type: 'bar',
+				data: {
+					labels: tData.labels,
+					datasets: [{
+						label: 'Amount Invested',
+						data: tData.amounts,
+						backgroundColor: '#51BE7B',
+						borderRadius: 4,
+						maxBarThickness: 40
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { display: false },
+						tooltip: {
+							callbacks: {
+								label: (ctx) => '$' + ctx.raw.toLocaleString()
+							}
+						}
+					},
+					scales: {
+						y: {
+							beginAtZero: true,
+							ticks: {
+								callback: (v) => '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+								font: { size: 11 }
+							},
+							grid: { color: 'rgba(0,0,0,0.05)' }
+						},
+						x: {
+							ticks: { font: { size: 11 } },
+							grid: { display: false }
+						}
+					}
+				}
+			});
+		});
+	}
 
 	// Filtered portfolio based on search
 	const filtered = $derived(() => {
@@ -226,11 +360,27 @@
 		return yrs.toFixed(1) + 'yr';
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		if (!browser) return;
 		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
 		taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
 		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+
+		// Load Chart.js dynamically (SSR-safe)
+		await loadChartJs();
+		renderAllocationChart();
+		renderTimelineChart();
+	});
+
+	// Re-render charts when portfolio data changes
+	$effect(() => {
+		// Access reactive deps
+		const _alloc = allocationMap();
+		const _timeline = timelineData();
+		if (chartJsLoaded && browser) {
+			renderAllocationChart();
+			renderTimelineChart();
+		}
 	});
 </script>
 
@@ -297,7 +447,18 @@
 		<div class="charts-row">
 			<div class="chart-card">
 				<div class="chart-card-title">Asset Class Allocation</div>
-				<PortfolioChart allocations={allocationMap()} />
+				<div class="chartjs-donut-wrap">
+					<canvas bind:this={allocationCanvasEl}></canvas>
+				</div>
+				<div class="alloc-legend">
+					{#each Object.entries(allocationMap()).sort((a, b) => b[1] - a[1]) as [cls, amt], i}
+						<div class="alloc-legend-item">
+							<span class="alloc-legend-dot" style="background:{PIE_COLORS[i % PIE_COLORS.length]}"></span>
+							<span class="alloc-legend-label">{cls}</span>
+							<span class="alloc-legend-pct">{((amt / totalInvested) * 100).toFixed(0)}%</span>
+						</div>
+					{/each}
+				</div>
 				<div class="alloc-meta">
 					<div class="alloc-stat"><div class="alloc-num">{assetClasses.size}</div><div class="alloc-label">Asset Classes</div></div>
 					<div class="alloc-stat"><div class="alloc-num">{sponsors.size}</div><div class="alloc-label">Sponsors</div></div>
@@ -305,15 +466,39 @@
 			</div>
 			<div class="chart-card">
 				<div class="chart-card-title">Risk Analysis</div>
-				<div class="risk-insights">
+				<div class="risk-badges">
 					{#each riskInsights() as insight}
-						<div class="risk-insight" class:warn={insight.type === 'warn'} class:ok={insight.type === 'ok'}>
-							{@html insight.text}
+						<div class="risk-badge" class:badge-danger={insight.type === 'danger'} class:badge-warn={insight.type === 'warn'} class:badge-ok={insight.type === 'ok'}>
+							<div class="risk-badge-icon">
+								{#if insight.type === 'danger'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+								{:else if insight.type === 'warn'}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+								{:else}
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+								{/if}
+							</div>
+							<div class="risk-badge-content">
+								<div class="risk-badge-text">{insight.text}</div>
+								{#if insight.detail}
+									<div class="risk-badge-detail">{insight.detail}</div>
+								{/if}
+							</div>
 						</div>
 					{/each}
 				</div>
 			</div>
 		</div>
+
+		<!-- Portfolio Timeline -->
+		{#if timelineData()}
+			<div class="chart-card timeline-card">
+				<div class="chart-card-title">Investment Timeline</div>
+				<div class="chartjs-timeline-wrap">
+					<canvas bind:this={timelineCanvasEl}></canvas>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Investment cards -->
 		<div class="inv-header">
@@ -530,10 +715,35 @@
 	.alloc-num { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); }
 	.alloc-label { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
 
-	.risk-insights { display: flex; flex-direction: column; gap: 12px; }
-	.risk-insight { font-family: var(--font-body); font-size: 13px; line-height: 1.6; padding: 12px; border-radius: var(--radius-sm); }
-	.risk-insight.warn { background: rgba(245, 158, 11, 0.08); color: var(--text-secondary); border-left: 3px solid #f59e0b; }
-	.risk-insight.ok { background: rgba(81, 190, 123, 0.08); color: var(--text-secondary); border-left: 3px solid var(--primary); }
+	/* Chart.js donut */
+	.chartjs-donut-wrap { width: 180px; height: 180px; margin: 0 auto 16px; }
+	.alloc-legend { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+	.alloc-legend-item { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 12px; }
+	.alloc-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+	.alloc-legend-label { flex: 1; color: var(--text-secondary); }
+	.alloc-legend-pct { font-weight: 700; color: var(--text-dark); }
+
+	/* Risk badges */
+	.risk-badges { display: flex; flex-direction: column; gap: 10px; }
+	.risk-badge { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: var(--radius-sm); }
+	.risk-badge-icon { flex-shrink: 0; width: 20px; height: 20px; }
+	.risk-badge-icon svg { width: 20px; height: 20px; }
+	.risk-badge-content { flex: 1; }
+	.risk-badge-text { font-family: var(--font-ui); font-size: 13px; font-weight: 700; line-height: 1.4; }
+	.risk-badge-detail { font-family: var(--font-body); font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 2px; }
+	.risk-badge.badge-danger { background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; }
+	.risk-badge.badge-danger .risk-badge-icon { color: #ef4444; }
+	.risk-badge.badge-danger .risk-badge-text { color: #ef4444; }
+	.risk-badge.badge-warn { background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; }
+	.risk-badge.badge-warn .risk-badge-icon { color: #f59e0b; }
+	.risk-badge.badge-warn .risk-badge-text { color: #f59e0b; }
+	.risk-badge.badge-ok { background: rgba(81, 190, 123, 0.08); border-left: 3px solid var(--primary); }
+	.risk-badge.badge-ok .risk-badge-icon { color: var(--primary); }
+	.risk-badge.badge-ok .risk-badge-text { color: var(--primary); }
+
+	/* Timeline chart */
+	.timeline-card { margin-bottom: 24px; }
+	.chartjs-timeline-wrap { height: 200px; }
 
 	.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 	.inv-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
@@ -656,5 +866,7 @@
 		.search-input { width: 100%; }
 		.sort-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }
+		.chartjs-donut-wrap { width: 150px; height: 150px; }
+		.chartjs-timeline-wrap { height: 160px; }
 	}
 </style>
