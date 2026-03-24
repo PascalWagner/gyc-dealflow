@@ -55,6 +55,28 @@
 	};
 	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #1a2332, #2d3a4c)', icon: '🏠' });
 	const heroImg = $derived(deal.propertyImageUrl || '');
+
+	// Status badges
+	const now = new Date();
+	const isNew = $derived(() => {
+		const created = deal.createdAt || deal.created_at || deal.createdTime || deal.addedDate;
+		if (!created) return false;
+		return (now - new Date(created)) < 14 * 24 * 60 * 60 * 1000;
+	});
+	const isUpdated = $derived(() => {
+		const updated = deal.updatedAt || deal.updated_at || deal.lastModified;
+		if (!updated) return false;
+		const diff = now - new Date(updated);
+		return diff < 7 * 24 * 60 * 60 * 1000 && diff > 0;
+	});
+	const isClosingSoon = $derived(() => {
+		if (!deal.close_date && !deal.closeDate) return false;
+		const close = new Date(deal.close_date || deal.closeDate);
+		const diff = close - now;
+		return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
+	});
+	const isVerified = $derived(!!deal.verified);
+	const hasNoDeck = $derived(!deal.deckUrl);
 </script>
 
 <div class="deal-card">
@@ -71,6 +93,23 @@
 			{/if}
 			{#if deal.financials === 'Audited'}
 				<span class="badge audit">Audited</span>
+			{/if}
+		</div>
+		<div class="status-badges">
+			{#if isNew()}
+				<span class="pill pill-new">New</span>
+			{/if}
+			{#if isUpdated()}
+				<span class="pill pill-updated">Updated</span>
+			{/if}
+			{#if isClosingSoon()}
+				<span class="pill pill-closing">Closing Soon</span>
+			{/if}
+			{#if isVerified}
+				<span class="pill pill-verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg> Verified</span>
+			{/if}
+			{#if hasNoDeck}
+				<span class="pill pill-nodeck">No Deck</span>
 			{/if}
 		</div>
 		{#if !heroImg}
@@ -194,6 +233,31 @@
 	.badge.audit {
 		background: rgba(81,190,123,0.8);
 	}
+
+	.status-badges {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		margin-top: 4px;
+	}
+	.pill {
+		font-family: var(--font-ui);
+		font-size: 9px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.3px;
+		padding: 2px 7px;
+		border-radius: 10px;
+		display: inline-flex;
+		align-items: center;
+		gap: 3px;
+		line-height: 1.4;
+	}
+	.pill-new { background: #22c55e; color: #fff; }
+	.pill-updated { background: #3b82f6; color: #fff; }
+	.pill-closing { background: #f97316; color: #fff; }
+	.pill-verified { background: #22c55e; color: #fff; }
+	.pill-nodeck { background: rgba(150,150,150,0.7); color: #fff; }
 
 	.hero-icon {
 		font-size: 32px;

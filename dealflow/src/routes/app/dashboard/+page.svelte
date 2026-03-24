@@ -102,6 +102,16 @@
 	const inPipeline = $derived(($stageCounts.saved || 0) + ($stageCounts.diligence || 0));
 	const decisionsMade = $derived(($stageCounts.passed || 0) + ($stageCounts.invested || 0));
 
+	// Daily deal view counter for free users
+	const DAILY_LIMIT = 10;
+	const isFreeUser = $derived(!$isAdmin && $userTier !== 'academy' && $userTier !== 'paid');
+	const dailyDealCount = $derived(() => {
+		if (!browser) return 0;
+		const todayKey = `gycDailyDeals_${new Date().toISOString().slice(0, 10)}`;
+		const stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
+		return stored.length;
+	});
+
 	// Milestone tracker — compute activation milestones from deal stages + portfolio
 	const milestones = $derived(() => {
 		const stages = $dealStages || {};
@@ -395,6 +405,15 @@
 				<div class="metric-label">Total Invested</div>
 				<div class="metric-value">{fmtDollar(totalInvested)}</div>
 			</div>
+			{#if isFreeUser}
+				<div class="metric-card daily-deals-card">
+					<div class="metric-label">Deals Today</div>
+					<div class="metric-value">{dailyDealCount()}<span class="daily-limit-label">/{DAILY_LIMIT}</span></div>
+					<div class="daily-bar-wrap">
+						<div class="daily-bar-fill" style="width:{Math.min(100, (dailyDealCount() / DAILY_LIMIT) * 100)}%"></div>
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Milestone Tracker -->
@@ -609,13 +628,17 @@
 	}
 
 	/* Momentum */
-	.momentum-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+	.momentum-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 20px; }
 	.metric-card {
 		background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
 		padding: 12px 14px; text-align: center;
 	}
 	.metric-label { font-family: var(--font-ui); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 3px; }
 	.metric-value { font-family: var(--font-headline); font-size: 18px; color: var(--text-secondary); }
+	.daily-limit-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+	.daily-deals-card { border-color: var(--primary); border-width: 1px 1px 1px 3px; }
+	.daily-bar-wrap { height: 3px; background: var(--border-light); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+	.daily-bar-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s ease; }
 
 	/* Action Items */
 	.action-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }

@@ -1,8 +1,44 @@
 <script>
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import { user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
+	import { browser } from '$app/environment';
 
 	let { currentPage = '' } = $props();
+
+	let isDark = $state(false);
+
+	onMount(() => {
+		const saved = localStorage.getItem('gyc-theme');
+		if (saved === 'dark') {
+			isDark = true;
+			document.documentElement.classList.add('dark');
+			document.documentElement.classList.remove('light');
+		} else if (saved === 'light') {
+			isDark = false;
+			document.documentElement.classList.add('light');
+			document.documentElement.classList.remove('dark');
+		} else {
+			// No preference saved — check system preference
+			isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+			if (isDark) {
+				document.documentElement.classList.add('dark');
+			}
+		}
+	});
+
+	function toggleTheme() {
+		isDark = !isDark;
+		if (isDark) {
+			document.documentElement.classList.add('dark');
+			document.documentElement.classList.remove('light');
+			localStorage.setItem('gyc-theme', 'dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+			document.documentElement.classList.add('light');
+			localStorage.setItem('gyc-theme', 'light');
+		}
+	}
 
 	const isFree = $derived($userTier === 'free' && !$isAdmin);
 
@@ -68,8 +104,47 @@
 	const adminItems = [
 		{ page: 'admin', icon: 'schema', label: 'Admin Dashboard' },
 		{ page: 'case-studies', icon: 'casestudies', label: 'Member Success' },
-		{ page: 'admin-manage', icon: 'manage', label: 'Manage Data' }
+		{ page: 'admin-manage', icon: 'manage', label: 'Manage Data' },
+		{ page: 'outreach', icon: 'outreach', label: 'Outreach' }
 	];
+
+	// User display info
+	const userName = $derived($user?.name || $user?.fullName || $user?.email?.split('@')[0] || '');
+	const userEmail = $derived($user?.email || '');
+	const tierLabel = $derived({
+		free: 'Free',
+		academy: 'Academy',
+		founding: 'Founding',
+		'inner-circle': 'Inner Circle',
+		alumni: 'Alumni'
+	}[$userTier] || $userTier || 'Free');
+	const tierClass = $derived($userTier === 'free' ? 'tier-free' : 'tier-paid');
+
+	// Check if user is a GP (has management company)
+	const isGP = $derived(!!($user?.managementCompanyId || $user?.isGP));
+
+	// Feedback
+	let showFeedback = $state(false);
+	let feedbackText = $state('');
+	let feedbackRating = $state(0);
+	let feedbackSending = $state(false);
+
+	async function submitFeedback() {
+		if (!feedbackText.trim()) return;
+		feedbackSending = true;
+		try {
+			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+			await fetch('/api/feedback', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (stored.token || '') },
+				body: JSON.stringify({ rating: feedbackRating, text: feedbackText, page: currentPage })
+			});
+			feedbackText = '';
+			feedbackRating = 0;
+			showFeedback = false;
+		} catch (e) { console.warn('Feedback failed:', e); }
+		finally { feedbackSending = false; }
+	}
 
 	function isActive(itemPage) {
 		const dashSubPages = ['portfolio', 'goals', 'plan', 'tax-prep'];
@@ -105,6 +180,17 @@
 	<div class="sidebar-logo">
 		<div class="sidebar-logo-text">Grow Your Cashflow</div>
 	</div>
+
+	<!-- User profile -->
+	{#if $isLoggedIn && userName}
+		<div class="sidebar-user">
+			<div class="user-avatar">{userName.charAt(0).toUpperCase()}</div>
+			<div class="user-info">
+				<div class="user-name">{userName}</div>
+				<div class="user-tier {tierClass}">{tierLabel}</div>
+			</div>
+		</div>
+	{/if}
 
 	<nav class="sidebar-nav">
 		{#each navSections as section}
@@ -155,6 +241,47 @@
 				</a>
 			{/each}
 		{/if}
+
+		{#if isGP}
+			<a class="nav-item" class:active={currentPage === 'gp-dashboard'} href="/gp-dashboard" onclick={closeMobile}>
+				<span class="nav-icon">{@html icons.schema}</span>
+				GP Dashboard
+			</a>
+		{/if}
+
+		<button class="nav-item feedback-btn" onclick={() => showFeedback = !showFeedback}>
+			<span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+			Feedback
+		</button>
+
+		{#if showFeedback}
+			<div class="feedback-form">
+				<div class="feedback-stars">
+					{#each [1,2,3,4,5] as star}
+						<button class="star-btn" class:active={feedbackRating >= star} onclick={() => feedbackRating = star}>&#9733;</button>
+					{/each}
+				</div>
+				<textarea class="feedback-input" rows="3" placeholder="What could be better?" bind:value={feedbackText}></textarea>
+				<button class="feedback-submit" onclick={submitFeedback} disabled={feedbackSending}>
+					{feedbackSending ? 'Sending...' : 'Send Feedback'}
+				</button>
+			</div>
+		{/if}
+
+		<button class="theme-toggle" onclick={toggleTheme} aria-label="Toggle dark mode">
+			<span class="nav-icon">
+				{#if isDark}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+						<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+					</svg>
+				{:else}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+					</svg>
+				{/if}
+			</span>
+			{isDark ? 'Light Mode' : 'Dark Mode'}
+		</button>
 	</nav>
 </aside>
 
@@ -171,7 +298,8 @@
 		settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
 		schema: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
 		casestudies: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
-		manage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
+		manage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+		outreach: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'
 	};
 </script>
 
@@ -245,6 +373,25 @@
 
 	.nav-spacer { margin-top: auto; }
 
+	.theme-toggle {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 10px 16px 10px 24px;
+		margin: 8px 0;
+		color: var(--text-sidebar);
+		cursor: pointer;
+		transition: all var(--transition);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 500;
+		background: none;
+		border: none;
+		width: 100%;
+		text-align: left;
+	}
+	.theme-toggle:hover { background: var(--bg-sidebar-hover); color: #fff; }
+
 	.sidebar-hamburger {
 		display: none;
 		position: fixed;
@@ -283,4 +430,38 @@
 			display: block;
 		}
 	}
+
+	/* User profile */
+	.sidebar-user {
+		display: flex; align-items: center; gap: 10px; padding: 16px 20px;
+		border-bottom: 1px solid rgba(255,255,255,0.06);
+	}
+	.user-avatar {
+		width: 32px; height: 32px; border-radius: 50%; background: var(--primary, #51BE7B);
+		display: flex; align-items: center; justify-content: center;
+		font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+	}
+	.user-info { min-width: 0; }
+	.user-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.user-tier { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+	.tier-free { color: rgba(255,255,255,0.4); }
+	.tier-paid { color: #51BE7B; }
+
+	/* Feedback */
+	.feedback-btn { border: none; background: none; width: 100%; text-align: left; }
+	.feedback-form { padding: 8px 20px 12px; }
+	.feedback-stars { display: flex; gap: 4px; margin-bottom: 8px; }
+	.star-btn { background: none; border: none; font-size: 18px; color: rgba(255,255,255,0.2); cursor: pointer; padding: 0; }
+	.star-btn.active { color: #fbbf24; }
+	.feedback-input {
+		width: 100%; padding: 8px 10px; border: 1px solid rgba(255,255,255,0.1);
+		border-radius: 6px; background: rgba(255,255,255,0.05); color: #fff;
+		font-family: var(--font-ui); font-size: 12px; resize: none; box-sizing: border-box;
+	}
+	.feedback-submit {
+		margin-top: 6px; padding: 6px 14px; background: var(--primary, #51BE7B);
+		color: #fff; border: none; border-radius: 6px; font-family: var(--font-ui);
+		font-size: 11px; font-weight: 700; cursor: pointer; width: 100%;
+	}
+	.feedback-submit:disabled { opacity: 0.5; }
 </style>

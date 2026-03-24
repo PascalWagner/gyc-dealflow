@@ -47,9 +47,34 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
 }
 
-/* ===== Dark Mode ===== */
+/* ===== Dark Mode (class-based toggle) ===== */
+html.dark {
+  --bg-cream: #0A1E21;
+  --bg-card: #14333A;
+  --bg-sidebar: #061215;
+  --bg-sidebar-hover: #0A1E21;
+  --bg-sidebar-active: #1F5159;
+
+  --text-dark: #E8EDE9;
+  --text-secondary: #9DB0B5;
+  --text-muted: #607179;
+
+  --border: #1F5159;
+  --border-light: #1A3F47;
+
+  --green-bg: #0D2E1A;
+  --orange-bg: #2E1F0D;
+  --blue-bg: #1A2332;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* Also respect system preference when no class is set */
 @media (prefers-color-scheme: dark) {
-  :root {
+  html:not(.light) {
     --bg-cream: #0A1E21;
     --bg-card: #14333A;
     --bg-sidebar: #061215;
@@ -61,13 +86,178 @@
     --text-muted: #607179;
 
     --border: #1F5159;
-    --border-light: #14333A;
+    --border-light: #1A3F47;
 
     --green-bg: #0D2E1A;
+    --orange-bg: #2E1F0D;
+    --blue-bg: #1A2332;
 
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3);
   }
+}
+
+/* ===== Dark Mode Element Overrides ===== */
+
+/* --- Inputs, selects, textareas --- */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background: var(--bg-sidebar-hover);
+  color: var(--text-dark);
+  border-color: var(--border);
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--text-muted);
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  background: var(--bg-card);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(81, 190, 123, 0.15);
+}
+
+/* --- Modals --- */
+html.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+html.dark .modal-card {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* --- Tables --- */
+html.dark table {
+  border-color: var(--border);
+}
+
+html.dark th {
+  background: var(--bg-sidebar-hover);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+html.dark td {
+  border-color: var(--border-light);
+}
+
+html.dark tr:nth-child(even) td {
+  background: rgba(20, 51, 58, 0.3);
+}
+
+html.dark tr:hover td {
+  background: rgba(31, 81, 89, 0.2);
+}
+
+html.dark .admin-table-wrap {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* --- Admin components --- */
+html.dark .admin-seg-ctrl {
+  background: var(--bg-sidebar-hover);
+}
+
+html.dark .admin-search-input {
+  background: var(--bg-sidebar-hover);
+}
+
+html.dark .admin-field-group {
+  background: var(--bg-sidebar-hover);
+}
+
+html.dark .admin-field-row {
+  border-bottom-color: var(--border);
+}
+
+/* --- Badges & pills --- */
+html.dark .card-match-badge.red {
+  background: #2E1515;
+}
+
+html.dark .badge,
+html.dark .pill {
+  border-color: var(--border);
+}
+
+html.dark .badge-green,
+html.dark .pill-green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+html.dark .badge-orange,
+html.dark .pill-orange {
+  background: var(--orange-bg);
+  color: var(--orange);
+}
+
+html.dark .badge-blue,
+html.dark .pill-blue {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+html.dark .badge-red,
+html.dark .pill-red {
+  background: #2E1515;
+  color: var(--red);
+}
+
+/* --- Cards & sections --- */
+html.dark .card,
+html.dark .section-card {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+html.dark .card:hover,
+html.dark .section-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* --- Mobile tab bar --- */
+html.dark .mobile-tab-bar {
+  background: rgba(10, 30, 33, 0.92);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Member tiers --- */
+html.dark .ms-tier-academy { background: #2e1065; color: #c4b5fd; }
+html.dark .ms-tier-alumni { background: #172554; color: #93c5fd; }
+html.dark .ms-tier-investor { background: #052e16; color: #86efac; }
+html.dark .ms-tier-free { background: #1f2937; color: #9ca3af; }
+
+/* --- Buttons (secondary/outline variants) --- */
+html.dark .btn-secondary,
+html.dark .btn-outline {
+  background: var(--bg-sidebar-hover);
+  border-color: var(--border);
+  color: var(--text-dark);
+}
+
+html.dark .btn-secondary:hover,
+html.dark .btn-outline:hover {
+  background: var(--bg-sidebar-active);
+  border-color: var(--border);
+}
+
+/* --- Scrollbars --- */
+html.dark ::-webkit-scrollbar-track {
+  background: var(--bg-cream);
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* ===== Base Reset ===== */

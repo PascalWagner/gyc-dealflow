@@ -387,6 +387,32 @@
 		setTimeout(() => { toastVisible = false; }, 3000);
 	}
 
+	// ===== Deal Comparison =====
+	let compareCount = $state(0);
+
+	function loadCompareCount() {
+		if (!browser) return;
+		const list = JSON.parse(localStorage.getItem('gycCompareDeals') || '[]');
+		compareCount = list.length;
+	}
+
+	function addToCompare() {
+		if (!browser || !deal) return;
+		let list = JSON.parse(localStorage.getItem('gycCompareDeals') || '[]');
+		if (list.some(d => d.id === deal.id)) {
+			showShareToast('Already in comparison');
+			return;
+		}
+		if (list.length >= 5) {
+			showShareToast('Max 5 deals in comparison. Remove one first.');
+			return;
+		}
+		list.push({ id: deal.id, name: deal.investmentName || deal.name || 'Deal' });
+		localStorage.setItem('gycCompareDeals', JSON.stringify(list));
+		compareCount = list.length;
+		showShareToast(`Added to comparison (${list.length} deal${list.length !== 1 ? 's' : ''})`);
+	}
+
 	// ===== Share Actions =====
 	function shareDealEmail() {
 		if (!deal || !browser) return;
@@ -1095,6 +1121,9 @@
 		// Load deck-viewed and intro-requested state
 		deckViewed = !!localStorage.getItem('gycDeckViewed_' + deal.id);
 		introRequested = !!localStorage.getItem('gycIntroRequested_' + deal.id);
+
+		// Load compare count
+		loadCompareCount();
 
 		// Auto-select first share class (sorted by highest min investment) on initial load
 		if (deal.shareClasses && deal.shareClasses.length > 0) {
@@ -2254,6 +2283,10 @@
 						Reconsider Deal &rarr;
 					</button>
 				{/if}
+				<button class="btn-compare" onclick={addToCompare} title="Add to comparison">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+					Compare
+				</button>
 			</div>
 		{/if}
 	</div>
@@ -2265,6 +2298,14 @@
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
 		{toastMessage}
 	</div>
+{/if}
+
+<!-- ==================== FLOATING COMPARE BADGE ==================== -->
+{#if compareCount > 0}
+	<a href="/app/deals?tab=decision" class="floating-compare-badge">
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+		Compare ({compareCount})
+	</a>
 {/if}
 
 <!-- ==================== INTRO REQUEST MODAL ==================== -->
@@ -2765,6 +2806,10 @@
 	.btn-pass:hover { border-color: #ef4444; color: #ef4444; }
 	.btn-advance { padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
 	.btn-advance:hover { background: #3da86a; transform: translateY(-1px); }
+	.btn-compare { padding: 10px 16px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; margin-left: auto; transition: all 0.15s; }
+	.btn-compare:hover { border-color: var(--primary); color: var(--primary); }
+	.floating-compare-badge { position: fixed; bottom: 80px; right: 24px; background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.15s; }
+	.floating-compare-badge:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
 	.stage-label { font-size: 12px; color: var(--text-muted); font-family: var(--font-ui); }
 
 	.deal-page-content { padding-bottom: 80px; }

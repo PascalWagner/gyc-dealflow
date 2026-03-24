@@ -15,6 +15,33 @@
 	let viewMode = $state('grid'); // grid | list | map
 	let isMobile = $state(false);
 
+	// Daily deal limit for free users
+	let dailyDealCount = $state(0);
+	let showLimitModal = $state(false);
+	const DAILY_LIMIT = 10;
+	const todayKey = $derived(browser ? `gycDailyDeals_${new Date().toISOString().slice(0, 10)}` : '');
+	const isFreeUser = $derived(!$isAdmin && $userTier !== 'academy' && $userTier !== 'paid');
+	const dealsRemaining = $derived(Math.max(0, DAILY_LIMIT - dailyDealCount));
+
+	function loadDailyCount() {
+		if (!browser) return;
+		const stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
+		dailyDealCount = stored.length;
+	}
+
+	function trackDealView(dealId) {
+		if (!browser || !isFreeUser) return;
+		let stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
+		if (!stored.includes(dealId)) {
+			stored.push(dealId);
+			localStorage.setItem(todayKey, JSON.stringify(stored));
+			dailyDealCount = stored.length;
+		}
+		if (dailyDealCount >= DAILY_LIMIT) {
+			showLimitModal = true;
+		}
+	}
+
 	// Filter state
 	let search = $state('');
 	let assetClass = $state('');
@@ -108,6 +135,7 @@
 
 	onMount(() => {
 		fetchDeals();
+		loadDailyCount();
 		if (browser) {
 			isMobile = window.innerWidth <= 768;
 			const handler = () => { isMobile = window.innerWidth <= 768; };
@@ -123,7 +151,7 @@
 	<!-- Header -->
 	<div class="deals-header">
 		<div class="header-row">
-			<h1 class="deals-title">Deal Flow</h1>
+			<h1 class="deals-title">Deal Flow {#if isFreeUser}<span class="daily-remaining">{dealsRemaining}/{DAILY_LIMIT} deals remaining today</span>{/if}</h1>
 			<div class="view-toggle desktop-only">
 				<button class="view-btn" class:active={viewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -228,11 +256,30 @@
 	{:else}
 		<div class="deals-grid">
 			{#each filteredDeals() as deal (deal.id)}
-				<DealCard {deal} />
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<div onclick={() => trackDealView(deal.id)}>
+					<DealCard {deal} />
+				</div>
 			{/each}
 		</div>
 	{/if}
 </div>
+
+<!-- Daily Limit Modal -->
+{#if showLimitModal && isFreeUser}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="limit-overlay" onclick={() => showLimitModal = false}>
+		<div class="limit-modal" onclick={(e) => e.stopPropagation()}>
+			<div class="limit-icon">🔒</div>
+			<h2 class="limit-title">You've reached your daily limit</h2>
+			<p class="limit-desc">Free members can view {DAILY_LIMIT} deals per day. Upgrade to Academy for unlimited access to all deals, due diligence tools, and operator introductions.</p>
+			<a href="/app/academy" class="limit-btn">Upgrade to Academy</a>
+			<button class="limit-dismiss" onclick={() => showLimitModal = false}>Maybe later</button>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.deals-page { padding: 20px 24px; max-width: 1400px; }
@@ -293,11 +340,24 @@
 
 	.desktop-only { display: flex; }
 
+	.daily-remaining { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-left: 12px; background: var(--bg-card); border: 1px solid var(--border-light); padding: 3px 10px; border-radius: 12px; vertical-align: middle; }
+
+	.limit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+	.limit-modal { background: var(--bg-card); border-radius: 16px; padding: 40px 32px; max-width: 420px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+	.limit-icon { font-size: 40px; margin-bottom: 12px; }
+	.limit-title { font-family: var(--font-headline); font-size: 20px; font-weight: 800; color: var(--text-dark); margin: 0 0 10px; }
+	.limit-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); line-height: 1.6; margin: 0 0 20px; }
+	.limit-btn { display: inline-block; padding: 12px 28px; background: var(--primary); color: #fff; border-radius: 8px; font-family: var(--font-ui); font-size: 14px; font-weight: 700; text-decoration: none; margin-bottom: 10px; }
+	.limit-btn:hover { background: #3da86a; }
+	.limit-dismiss { display: block; margin: 0 auto; background: none; border: none; font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 4px; }
+	.limit-dismiss:hover { color: var(--text-dark); }
+
 	@media (max-width: 768px) {
 		.deals-page { padding: 16px; }
 		.deals-grid { grid-template-columns: 1fr; }
 		.deals-title { font-size: 20px; }
 		.desktop-only { display: none; }
 		.skeleton-grid { grid-template-columns: 1fr; }
+		.daily-remaining { display: block; margin: 6px 0 0; }
 	}
 </style>
