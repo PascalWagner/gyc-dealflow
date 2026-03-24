@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e5e5e5; padding: 40px 20px; }
+
+  .container { max-width: 800px; margin: 0 auto; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 24px; }
+
+  /* Tab bar */
+  .tab-bar { display: flex; align-items: center; gap: 0; margin-bottom: 32px; background: #141414; border-radius: 12px; padding: 4px; }
+
+  .tab { padding: 10px 20px; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; border-radius: 8px; transition: all 0.2s; position: relative; white-space: nowrap; }
+  .tab:hover { color: #999; }
+  .tab.active { background: #1a1a1a; color: #fff; }
+  .tab .count { font-size: 11px; color: #444; margin-left: 4px; font-weight: 400; }
+  .tab.active .count { color: #666; }
+
+  /* Divider */
+  .divider { width: 1px; height: 28px; background: #333; margin: 0 4px; flex-shrink: 0; }
+
+  /* Outcome tabs */
+  .tab.outcome { color: #555; }
+  .tab.outcome.invested { }
+  .tab.outcome.skipped { }
+
+  /* Arrow indicators between active tabs */
+  .arrow { color: #333; font-size: 10px; padding: 0 2px; flex-shrink: 0; }
+
+  /* Stage description */
+  .stage-desc { padding: 16px 20px; background: #141414; border-radius: 10px; border-left: 3px solid #4ade80; margin-bottom: 24px; }
+  .stage-desc-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .stage-desc-text { font-size: 13px; color: #888; line-height: 1.5; }
+
+  /* Deal cards placeholder */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 20px; }
+  .card-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .card-sponsor { font-size: 12px; color: #666; margin-bottom: 12px; }
+  .card-meta { display: flex; gap: 16px; font-size: 11px; color: #555; }
+  .card-meta span { display: flex; align-items: center; gap: 4px; }
+  .card-action { margin-top: 14px; padding: 8px 14px; background: #4ade80; color: #000; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+  /* Mobile version */
+  .mobile-bar { display: none; }
+
+  @media (max-width: 640px) {
+    .tab-bar { display: none; }
+    .mobile-bar { display: flex; align-items: center; gap: 0; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; }
+    .mobile-pill { padding: 8px 14px; font-size: 12px; font-weight: 600; color: #666; white-space: nowrap; border-radius: 20px; background: #141414; margin-right: 6px; }
+    .mobile-pill.active { background: #1a1a1a; color: #fff; }
+    .mobile-divider { width: 1px; height: 20px; background: #333; margin: 0 6px; flex-shrink: 0; }
+    .cards { grid-template-columns: 1fr; }
+  }
+
+  /* Variations */
+  .section { margin-bottom: 60px; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #4ade80; margin-bottom: 16px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Option A: Arrows between active, divider before outcomes -->
+  <div class="section">
+    <div class="section-label">Option A — Arrows + Divider</div>
+    <div class="tab-bar">
+      <div class="tab active">Filter <span class="count">47</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Review <span class="count">3</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Connect <span class="count">1</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Decide <span class="count">2</span></div>
+      <div class="divider"></div>
+      <div class="tab outcome invested">Invested <span class="count">4</span></div>
+      <div class="tab outcome skipped">Skipped <span class="count">12</span></div>
+    </div>
+  </div>
+
+  <!-- Option B: Clean, no arrows -->
+  <div class="section">
+    <div class="section-label">Option B — Clean + Divider</div>
+    <div class="tab-bar">
+      <div class="tab active">Filter <span class="count">47</span></div>
+      <div class="tab">Review <span class="count">3</span></div>
+      <div class="tab">Connect <span class="count">1</span></div>
+      <div class="tab">Decide <span class="count">2</span></div>
+      <div class="divider"></div>
+      <div class="tab outcome invested">Invested <span class="count">4</span></div>
+      <div class="tab outcome skipped">Skipped <span class="count">12</span></div>
+    </div>
+  </div>
+
+  <!-- Option C: Dot divider -->
+  <div class="section">
+    <div class="section-label">Option C — Dot Divider</div>
+    <div class="tab-bar">
+      <div class="tab active">Filter <span class="count">47</span></div>
+      <div class="tab">Review <span class="count">3</span></div>
+      <div class="tab">Connect <span class="count">1</span></div>
+      <div class="tab">Decide <span class="count">2</span></div>
+      <div style="color:#333;padding:0 8px;font-size:16px;flex-shrink:0;">·</div>
+      <div class="tab outcome invested">Invested <span class="count">4</span></div>
+      <div class="tab outcome skipped">Skipped <span class="count">12</span></div>
+    </div>
+  </div>
+
+  <!-- Show what "Filter" tab looks like active with description -->
+  <div class="section">
+    <div class="section-label">Filter tab active — with stage description</div>
+    <div class="tab-bar">
+      <div class="tab active">Filter <span class="count">47</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Review <span class="count">3</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Connect <span class="count">1</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Decide <span class="count">2</span></div>
+      <div class="divider"></div>
+      <div class="tab outcome">Invested <span class="count">4</span></div>
+      <div class="tab outcome">Skipped <span class="count">12</span></div>
+    </div>
+    <div class="stage-desc" style="border-left-color: #4ade80;">
+      <div class="stage-desc-title">Filter</div>
+      <div class="stage-desc-text">Browse vetted opportunities. Swipe right to save a deal or left to skip it.</div>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-name">Ascent Income Fund</div>
+        <div class="card-sponsor">Ascent Capital Partners</div>
+        <div class="card-meta"><span>8.2% Pref</span><span>Private Credit</span><span>$50K Min</span></div>
+        <div class="card-action">Save →</div>
+      </div>
+      <div class="card">
+        <div class="card-name">Meridian Multifamily III</div>
+        <div class="card-sponsor">Meridian Equity Group</div>
+        <div class="card-meta"><span>7.0% Pref</span><span>Multifamily</span><span>$100K Min</span></div>
+        <div class="card-action">Save →</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Show what "Review" tab looks like active -->
+  <div class="section">
+    <div class="section-label">Review tab active</div>
+    <div class="tab-bar">
+      <div class="tab">Filter <span class="count">47</span></div>
+      <div class="arrow">›</div>
+      <div class="tab active">Review <span class="count">3</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Connect <span class="count">1</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Decide <span class="count">2</span></div>
+      <div class="divider"></div>
+      <div class="tab outcome">Invested <span class="count">4</span></div>
+      <div class="tab outcome">Skipped <span class="count">12</span></div>
+    </div>
+    <div class="stage-desc" style="border-left-color: #3b82f6;">
+      <div class="stage-desc-title">Review</div>
+      <div class="stage-desc-text">Read the deck, explore the deal page, and work through the checklist. Understand this deal before reaching out.</div>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-name">Ascent Income Fund</div>
+        <div class="card-sponsor">Ascent Capital Partners</div>
+        <div class="card-meta"><span>8.2% Pref</span><span>Checklist: 6/14</span></div>
+        <div style="margin-top:10px;height:5px;background:#222;border-radius:3px;overflow:hidden;"><div style="height:100%;width:43%;background:linear-gradient(90deg,#4ade80,#3bba78);border-radius:3px;"></div></div>
+        <div class="card-action" style="background:#3b82f6;color:#fff;">Continue Review →</div>
+      </div>
+      <div class="card">
+        <div class="card-name">DLP Lending Fund</div>
+        <div class="card-sponsor">DLP Capital</div>
+        <div class="card-meta"><span>9.0% Pref</span><span>Checklist: 12/14</span></div>
+        <div style="margin-top:10px;height:5px;background:#222;border-radius:3px;overflow:hidden;"><div style="height:100%;width:86%;background:linear-gradient(90deg,#4ade80,#3bba78);border-radius:3px;"></div></div>
+        <div class="card-action" style="background:#4ade80;color:#000;">Ready to Connect →</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Show what "Connect" tab looks like active -->
+  <div class="section">
+    <div class="section-label">Connect tab active</div>
+    <div class="tab-bar">
+      <div class="tab">Filter <span class="count">47</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Review <span class="count">3</span></div>
+      <div class="arrow">›</div>
+      <div class="tab active">Connect <span class="count">1</span></div>
+      <div class="arrow">›</div>
+      <div class="tab">Decide <span class="count">2</span></div>
+      <div class="divider"></div>
+      <div class="tab outcome">Invested <span class="count">4</span></div>
+      <div class="tab outcome">Skipped <span class="count">12</span></div>
+    </div>
+    <div class="stage-desc" style="border-left-color: #f97316;">
+      <div class="stage-desc-title">Connect</div>
+      <div class="stage-desc-text">Time to talk to the operator. Request an intro and we'll connect you. Ask your questions, fill in the gaps.</div>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-name">Ascent Income Fund</div>
+        <div class="card-sponsor">Ascent Capital Partners</div>
+        <div class="card-meta"><span>8.2% Pref</span><span>Checklist: 14/14 ✓</span></div>
+        <div class="card-action" style="background:#f97316;color:#fff;">Request Intro →</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile version -->
+  <div class="section">
+    <div class="section-label">Mobile — pill tabs</div>
+    <div style="max-width:375px;background:#0a0a0a;border:1px solid #222;border-radius:16px;padding:16px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px;">
+        <div class="mobile-pill active">Filter 47</div>
+        <div class="mobile-pill">Review 3</div>
+        <div class="mobile-pill">Connect 1</div>
+        <div class="mobile-pill">Decide 2</div>
+        <div style="width:1px;height:18px;background:#333;flex-shrink:0;margin:0 2px;"></div>
+        <div class="mobile-pill">Invested 4</div>
+        <div class="mobile-pill">Skipped 12</div>
+      </div>
+      <div class="stage-desc" style="border-left-color: #4ade80; padding: 12px 14px;">
+        <div class="stage-desc-title" style="font-size:13px;">Filter</div>
+        <div class="stage-desc-text" style="font-size:12px;">Swipe right to save, left to skip.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

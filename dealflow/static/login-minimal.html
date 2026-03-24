@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GYC - Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green: #51BE7B;
+  --green-hover: #45A86C;
+  --teal: #1F5159;
+  --charcoal: #141413;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  background: #fff;
+  color: var(--charcoal);
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  /* Push content up slightly from true center */
+  padding-bottom: 80px;
+}
+
+/* Wordmark */
+.wordmark {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  color: var(--teal);
+  letter-spacing: -0.3px;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: appear 0.6s ease 0.1s forwards;
+}
+
+/* Form */
+.form-wrap {
+  width: 100%;
+  max-width: 340px;
+  opacity: 0;
+  animation: appear 0.6s ease 0.2s forwards;
+}
+
+.email-input {
+  width: 100%;
+  padding: 16px 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  color: var(--charcoal);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #E5E7EB;
+  outline: none;
+  transition: border-color 0.3s;
+  -webkit-appearance: none;
+  text-align: center;
+}
+.email-input::placeholder { color: #C4C9CF; }
+.email-input:focus { border-bottom-color: var(--charcoal); }
+
+.submit-btn {
+  width: 100%;
+  padding: 16px 24px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--green);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 28px;
+}
+.submit-btn:hover { background: var(--green-hover); transform: translateY(-1px); }
+.submit-btn:active { transform: scale(0.985); }
+.submit-btn.loading { pointer-events: none; opacity: 0.6; }
+
+.helper {
+  text-align: center;
+  font-size: 13px;
+  color: #B0B8C0;
+  margin-top: 16px;
+  line-height: 1.5;
+}
+.helper a {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.helper a:hover { text-decoration: underline; }
+
+/* Error */
+.error-msg {
+  text-align: center;
+  font-size: 13px;
+  color: #DC2626;
+  margin-top: 10px;
+  display: none;
+}
+.error-msg.show { display: block; }
+
+/* Success */
+.success-state {
+  display: none;
+  text-align: center;
+  width: 100%;
+  max-width: 340px;
+  opacity: 0;
+}
+.success-state.show {
+  display: block;
+  animation: appear 0.5s ease forwards;
+}
+
+.success-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  position: relative;
+}
+.success-icon svg {
+  width: 48px;
+  height: 48px;
+  color: var(--green);
+}
+.success-icon .circle {
+  stroke-dasharray: 150;
+  stroke-dashoffset: 150;
+  animation: drawCircle 0.6s ease forwards;
+}
+.success-icon .check {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: drawCheck 0.4s ease 0.4s forwards;
+}
+
+.success-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 22px;
+  color: var(--charcoal);
+  margin-bottom: 8px;
+}
+.success-email {
+  font-size: 14px;
+  color: #6B7280;
+}
+.success-email strong {
+  color: var(--charcoal);
+  font-weight: 600;
+}
+.retry-link {
+  display: inline-block;
+  margin-top: 28px;
+  font-size: 13px;
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.retry-link:hover { text-decoration: underline; }
+
+/* Sign up fields */
+.signup-fields {
+  display: none;
+  margin-bottom: 4px;
+}
+.signup-fields.show { display: block; }
+.name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 0;
+}
+.name-input {
+  width: 100%;
+  padding: 16px 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  color: var(--charcoal);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #E5E7EB;
+  outline: none;
+  transition: border-color 0.3s;
+  -webkit-appearance: none;
+  text-align: center;
+}
+.name-input::placeholder { color: #C4C9CF; }
+.name-input:focus { border-bottom-color: var(--charcoal); }
+
+/* Footer */
+.page-footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  color: #D1D5DB;
+}
+.page-footer a { color: #B0B8C0; text-decoration: none; }
+
+/* Animations */
+@keyframes appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes drawCircle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes drawCheck {
+  to { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="wordmark">Grow Your Cashflow</div>
+
+  <div class="form-wrap" id="formWrap">
+    <div class="signup-fields" id="signupFields">
+      <div class="name-row">
+        <input type="text" class="name-input" id="firstName" placeholder="First name" autocomplete="given-name">
+        <input type="text" class="name-input" id="lastName" placeholder="Last name" autocomplete="family-name">
+      </div>
+    </div>
+    <input type="email" class="email-input" id="emailInput" placeholder="Email address" autocomplete="email" autofocus>
+    <div class="error-msg" id="errorMsg"></div>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Continue</button>
+    <div class="helper" id="helperText">
+      No password needed. <a onclick="toggleSignup()">Create an account</a>
+    </div>
+  </div>
+
+  <div class="success-state" id="successState">
+    <div class="success-icon">
+      <svg viewBox="0 0 48 48" fill="none">
+        <circle class="circle" cx="24" cy="24" r="22" stroke="currentColor" stroke-width="2" fill="none"/>
+        <path class="check" d="M14 24l7 7 13-13" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <div class="success-title">Check your email</div>
+    <div class="success-email">Login link sent to <strong id="sentEmail"></strong></div>
+    <a class="retry-link" onclick="resetForm()">Use a different email</a>
+  </div>
+</div>
+
+<div class="page-footer">
+  <a href="privacy.html">Privacy</a>
+</div>
+
+<script>
+let isSignup = false;
+const emailInput = document.getElementById('emailInput');
+emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSubmit(); });
+
+function toggleSignup() {
+  isSignup = !isSignup;
+  const fields = document.getElementById('signupFields');
+  const helper = document.getElementById('helperText');
+  const btn = document.getElementById('submitBtn');
+
+  if (isSignup) {
+    fields.classList.add('show');
+    helper.innerHTML = 'Already have an account? <a onclick="toggleSignup()">Sign in</a>';
+    btn.textContent = 'Create Account';
+    document.getElementById('firstName').focus();
+  } else {
+    fields.classList.remove('show');
+    helper.innerHTML = 'No password needed. <a onclick="toggleSignup()">Create an account</a>';
+    btn.textContent = 'Continue';
+    emailInput.focus();
+  }
+}
+
+function handleSubmit() {
+  const email = emailInput.value.trim();
+  const err = document.getElementById('errorMsg');
+  err.classList.remove('show');
+
+  if (!email || !email.includes('@')) {
+    err.textContent = 'Enter a valid email address.';
+    err.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.classList.add('loading');
+  btn.textContent = 'Sending...';
+
+  setTimeout(() => {
+    document.getElementById('formWrap').style.display = 'none';
+    document.getElementById('sentEmail').textContent = email;
+    document.getElementById('successState').classList.add('show');
+  }, 1000);
+}
+
+function resetForm() {
+  document.getElementById('successState').classList.remove('show');
+  document.getElementById('formWrap').style.display = 'block';
+  const btn = document.getElementById('submitBtn');
+  btn.classList.remove('loading');
+  btn.textContent = isSignup ? 'Create Account' : 'Continue';
+  emailInput.value = '';
+  emailInput.focus();
+}
+</script>
+</body>
+</html>

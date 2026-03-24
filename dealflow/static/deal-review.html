@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review Your Deal - GYC Dealflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --primary-light: #32C583;
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --orange: #CF7A30;
+  --orange-bg: #FFF3E6;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+  --transition: 0.2s ease;
+}
+
+html.dark {
+  --bg-cream: #0A1E21;
+  --bg-card: #14333A;
+  --text-dark: #E8EDE9;
+  --text-secondary: #9DB0B5;
+  --text-muted: #607179;
+  --border: #1F5159;
+  --border-light: #1A3F47;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2);
+  --green-bg: #0D2E1A;
+  --orange-bg: #2E1F0D;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ====== LAYOUT (matches gp-onboarding.html) ====== */
+.onboarding-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+.onboarding-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 860px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ====== PROGRESS BAR ====== */
+.progress-bar-wrap {
+  height: 4px;
+  background: var(--border-light);
+  position: relative;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent-green));
+  border-radius: 0 2px 2px 0;
+  transition: width 0.5s ease;
+}
+
+/* ====== STEP HEADER ====== */
+.step-header {
+  padding: 32px 40px 0;
+  text-align: center;
+}
+.step-counter {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+.step-title {
+  font-family: var(--font-headline);
+  font-size: 28px;
+  color: var(--text-dark);
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.step-subtitle {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ====== STEP BODY ====== */
+.step-body { padding: 28px 40px 32px; }
+
+/* ====== STEP FOOTER ====== */
+.step-footer {
+  padding: 0 40px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ====== STEPS (show/hide) ====== */
+.review-step { display: none; }
+.review-step.active { display: block; }
+
+/* ====== FORM GRID ====== */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-grid .full-width { grid-column: 1 / -1; }
+
+.field-group { position: relative; }
+.field-group label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.field-group input,
+.field-group select,
+.field-group textarea {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus { border-color: var(--primary); }
+.field-group textarea { resize: vertical; min-height: 80px; }
+.field-group select { cursor: pointer; }
+
+/* Auto-fill badge */
+.field-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.badge-auto { background: var(--green-bg); color: var(--green); }
+.badge-empty { background: var(--orange-bg); color: var(--orange); }
+
+/* Suffix/prefix */
+.input-with-suffix { position: relative; }
+.input-with-suffix input { padding-right: 28px; }
+.input-suffix {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 14px; pointer-events: none;
+}
+.input-with-prefix { position: relative; }
+.input-with-prefix input { padding-left: 20px; }
+.input-prefix {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); font-size: 14px; pointer-events: none;
+}
+
+/* Buttons (match onboarding) */
+.btn-primary {
+  font-family: var(--font-ui); font-size: 14px; font-weight: 600;
+  padding: 12px 24px; border-radius: var(--radius-sm); border: none;
+  background: var(--primary); color: white; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background var(--transition);
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary {
+  font-family: var(--font-ui); font-size: 14px; font-weight: 500;
+  padding: 12px 24px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all var(--transition);
+}
+.btn-secondary:hover { background: var(--bg-cream); }
+.btn-skip {
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500;
+  color: var(--text-muted); background: none; border: none; cursor: pointer;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+
+/* Section count pill */
+.section-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500;
+  color: var(--text-muted); margin-top: 4px;
+}
+
+/* Toast */
+.toast {
+  position: fixed; top: 20px; right: 20px;
+  background: var(--teal-midnight); color: white;
+  font-family: var(--font-ui); font-size: 14px;
+  padding: 12px 20px; border-radius: var(--radius-sm);
+  z-index: 200; opacity: 0; transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Loading */
+.loading-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--text-muted); font-family: var(--font-ui);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .step-header { padding: 24px 20px 0; }
+  .step-body { padding: 20px 20px 24px; }
+  .step-footer { padding: 0 20px 24px; flex-wrap: wrap; gap: 8px; }
+  .step-title { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="onboarding-container">
+  <div class="onboarding-card">
+    <!-- Progress bar -->
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+    </div>
+
+    <!-- Loading state -->
+    <div id="loadingState" class="loading-state">Loading deal data...</div>
+
+    <!-- ===== STEP 0: Investment Terms ===== -->
+    <div class="review-step" id="rstep0">
+      <div class="step-header">
+        <div class="step-counter" id="counter0">Review — Step 1 of 5</div>
+        <div class="step-title">Investment Terms</div>
+        <div class="step-subtitle">Verify the key details we extracted from your documents</div>
+      </div>
+      <div class="step-body">
+        <div class="form-grid">
+          <div class="field-group full-width" data-field="investmentName">
+            <label>Investment Name</label>
+            <input type="text" id="f-investmentName">
+          </div>
+          <div class="field-group" data-field="assetClass">
+            <label>Asset Class</label>
+            <select id="f-assetClass">
+              <option value="">--</option>
+              <option>Multi Family</option><option>Lending</option><option>Self Storage</option>
+              <option>Industrial</option><option>Hotels/Hospitality</option><option>RV/Mobile Home Parks</option>
+              <option>Short Term Rental</option><option>Mixed Use</option><option>Office</option>
+              <option>Retail</option><option>Oil & Gas</option><option>Land</option>
+              <option>Data Centers</option><option>Car Washes</option><option>ATMs</option>
+              <option>Build-to-Rent</option><option>Other</option>
+            </select>
+          </div>
+          <div class="field-group" data-field="dealType">
+            <label>Deal Type</label>
+            <select id="f-dealType">
+              <option value="">--</option>
+              <option>Fund</option><option>Syndication</option><option>Direct</option><option>REIT</option>
+            </select>
+          </div>
+          <div class="field-group" data-field="strategy">
+            <label>Strategy</label>
+            <select id="f-strategy">
+              <option value="">--</option>
+              <option>Core</option><option>Core-Plus</option><option>Value-Add</option>
+              <option>Opportunistic</option><option>Development</option><option>Lending</option><option>Distressed</option>
+            </select>
+          </div>
+          <div class="field-group" data-field="offeringType">
+            <label>Offering Type</label>
+            <select id="f-offeringType">
+              <option value="">--</option><option>506(b)</option><option>506(c)</option>
+            </select>
+          </div>
+          <div class="field-group full-width" data-field="investmentStrategy">
+            <label>Investment Strategy Description</label>
+            <textarea id="f-investmentStrategy" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="goBack()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" onclick="nextStep()">
+          Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 1: Financial Terms ===== -->
+    <div class="review-step" id="rstep1">
+      <div class="step-header">
+        <div class="step-counter">Review — Step 2 of 5</div>
+        <div class="step-title">Financial Terms</div>
+        <div class="step-subtitle">Returns, minimums, and deal structure</div>
+      </div>
+      <div class="step-body">
+        <div class="form-grid">
+          <div class="field-group" data-field="targetIRR">
+            <label>Target IRR</label>
+            <div class="input-with-suffix"><input type="number" step="0.1" id="f-targetIRR"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="preferredReturn">
+            <label>Preferred Return</label>
+            <div class="input-with-suffix"><input type="number" step="0.1" id="f-preferredReturn"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="cashOnCash">
+            <label>Cash-on-Cash</label>
+            <div class="input-with-suffix"><input type="number" step="0.1" id="f-cashOnCash"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="equityMultiple">
+            <label>Equity Multiple</label>
+            <input type="number" step="0.01" id="f-equityMultiple" placeholder="e.g. 2.0">
+          </div>
+          <div class="field-group" data-field="investmentMinimum">
+            <label>Investment Minimum</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-investmentMinimum" placeholder="50,000"></div>
+          </div>
+          <div class="field-group" data-field="holdPeriod">
+            <label>Hold Period (Years)</label>
+            <input type="number" step="0.5" id="f-holdPeriod">
+          </div>
+          <div class="field-group" data-field="offeringSize">
+            <label>Offering Size</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-offeringSize" placeholder="10,000,000"></div>
+          </div>
+          <div class="field-group" data-field="purchasePrice">
+            <label>Purchase Price</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-purchasePrice" placeholder="15,000,000"></div>
+          </div>
+          <div class="field-group" data-field="availableTo">
+            <label>Available To</label>
+            <input type="text" id="f-availableTo" placeholder="Accredited Investors">
+          </div>
+          <div class="field-group" data-field="distributions">
+            <label>Distributions</label>
+            <select id="f-distributions">
+              <option value="">--</option><option>Monthly</option><option>Quarterly</option><option>Annual</option><option>None</option>
+            </select>
+          </div>
+          <div class="field-group" data-field="lpGpSplit">
+            <label>LP/GP Split</label>
+            <input type="text" id="f-lpGpSplit" placeholder="80/20">
+          </div>
+          <div class="field-group" data-field="financials">
+            <label>Financials</label>
+            <select id="f-financials">
+              <option value="">--</option><option>Audited</option><option>Unaudited</option>
+            </select>
+          </div>
+          <div class="field-group" data-field="investingGeography">
+            <label>Investing Geography</label>
+            <input type="text" id="f-investingGeography" placeholder="e.g. Southeast US">
+          </div>
+          <div class="field-group" data-field="instrument">
+            <label>Instrument</label>
+            <select id="f-instrument">
+              <option value="">--</option><option>Debt</option><option>Equity</option><option>Preferred Equity</option><option>Hybrid</option>
+            </select>
+          </div>
+          <div class="field-group full-width" data-field="fees">
+            <label>Fee Structure</label>
+            <textarea id="f-fees" rows="2" placeholder="e.g. 1% asset management, 2% acquisition fee"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="prevStep()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" onclick="nextStep()">
+          Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 2: Property & Capital Structure ===== -->
+    <div class="review-step" id="rstep2">
+      <div class="step-header">
+        <div class="step-counter">Review — Step 3 of 5</div>
+        <div class="step-title">Property & Capital Structure</div>
+        <div class="step-subtitle">Address, property details, loan terms, and sponsor info</div>
+      </div>
+      <div class="step-body">
+        <div class="form-grid">
+          <div class="field-group full-width" data-field="propertyAddress">
+            <label>Property Address</label>
+            <input type="text" id="f-propertyAddress" placeholder="Leave blank if not applicable (e.g. fund deals)">
+          </div>
+          <div class="field-group" data-field="propertyType">
+            <label>Property Type</label>
+            <input type="text" id="f-propertyType" placeholder="e.g. Garden-style apartments">
+          </div>
+          <div class="field-group" data-field="unitCount">
+            <label>Unit Count</label>
+            <input type="number" id="f-unitCount">
+          </div>
+          <div class="field-group" data-field="yearBuilt">
+            <label>Year Built</label>
+            <input type="number" id="f-yearBuilt">
+          </div>
+          <div class="field-group" data-field="squareFootage">
+            <label>Square Footage</label>
+            <input type="text" id="f-squareFootage" placeholder="150,000">
+          </div>
+          <div class="field-group" data-field="occupancyPct">
+            <label>Occupancy</label>
+            <div class="input-with-suffix"><input type="number" step="0.1" id="f-occupancyPct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="debtPosition">
+            <label>Debt Position</label>
+            <input type="text" id="f-debtPosition" placeholder="Senior, Mezzanine, Bridge...">
+          </div>
+          <div class="field-group" data-field="acquisitionLoan">
+            <label>Acquisition Loan</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-acquisitionLoan"></div>
+          </div>
+          <div class="field-group" data-field="loanToValue">
+            <label>Loan-to-Value</label>
+            <div class="input-with-suffix"><input type="number" step="0.1" id="f-loanToValue"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="loanRate">
+            <label>Loan Rate</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-loanRate"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="loanTermYears">
+            <label>Loan Term (Years)</label>
+            <input type="number" step="0.5" id="f-loanTermYears">
+          </div>
+          <div class="field-group" data-field="loanIOYears">
+            <label>Interest-Only Period (Years)</label>
+            <input type="number" step="0.5" id="f-loanIOYears">
+          </div>
+          <div class="field-group" data-field="fundAUM">
+            <label>Fund AUM</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-fundAUM" placeholder="100,000,000"></div>
+          </div>
+          <div class="field-group" data-field="sponsorCoinvest">
+            <label>Sponsor Co-Invest</label>
+            <input type="text" id="f-sponsorCoinvest" placeholder="e.g. 10% or $500K">
+          </div>
+          <div class="field-group" data-field="taxForm">
+            <label>Tax Form</label>
+            <input type="text" id="f-taxForm" placeholder="K-1, 1099, etc.">
+          </div>
+          <div class="field-group" data-field="redemption">
+            <label>Redemption Terms</label>
+            <input type="text" id="f-redemption" placeholder="e.g. Quarterly with 90-day notice">
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="prevStep()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" onclick="nextStep()">
+          Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 3: Fee Breakdown ===== -->
+    <div class="review-step" id="rstep3">
+      <div class="step-header">
+        <div class="step-counter">Review — Step 4 of 5</div>
+        <div class="step-title">Fee Breakdown</div>
+        <div class="step-subtitle">Individual fee percentages — leave blank if not applicable</div>
+      </div>
+      <div class="step-body">
+        <div class="form-grid">
+          <div class="field-group" data-field="acquisitionFeePct">
+            <label>Acquisition Fee</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-acquisitionFeePct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="assetMgmtFeePct">
+            <label>Asset Management Fee</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-assetMgmtFeePct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="propertyMgmtFeePct">
+            <label>Property Management Fee</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-propertyMgmtFeePct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="capitalEventFeePct">
+            <label>Capital Event Fee</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-capitalEventFeePct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="dispositionFeePct">
+            <label>Disposition Fee</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-dispositionFeePct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="constructionMgmtFeePct">
+            <label>Construction Management Fee</label>
+            <div class="input-with-suffix"><input type="number" step="0.01" id="f-constructionMgmtFeePct"><span class="input-suffix">%</span></div>
+          </div>
+          <div class="field-group" data-field="capexBudget">
+            <label>CapEx Budget</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-capexBudget"></div>
+          </div>
+          <div class="field-group" data-field="closingCosts">
+            <label>Closing Costs</label>
+            <div class="input-with-prefix"><span class="input-prefix">$</span><input type="text" id="f-closingCosts"></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="prevStep()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="btn-primary" onclick="nextStep()">
+          Continue
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STEP 4: Confirm & Publish ===== -->
+    <div class="review-step" id="rstep4">
+      <div class="step-header">
+        <div class="step-counter">Review — Step 5 of 5</div>
+        <div class="step-title">Confirm & Publish</div>
+        <div class="step-subtitle">Everything look good? Publish your deal to make it visible to investors.</div>
+      </div>
+      <div class="step-body" style="text-align:center;">
+        <div id="confirmSummary" style="text-align:left; max-width:500px; margin:0 auto;"></div>
+      </div>
+      <div class="step-footer">
+        <button class="btn-secondary" onclick="prevStep()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="btn-secondary" id="btnSaveDraft" onclick="saveDraft()">Save as Draft</button>
+          <button class="btn-primary" id="btnPublish" onclick="confirmPublish()">
+            Publish Deal
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /onboarding-card -->
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──
+var params = new URLSearchParams(window.location.search);
+var dealId = params.get('id');
+var fromOnboarding = params.get('from') === 'onboarding';
+var user = null;
+var dealData = null;
+var currentStep = 0;
+var TOTAL_STEPS = 5;
+
+// Percentage fields: stored as decimal (0.15), displayed as number (15)
+var PCT_FIELDS = [
+  'targetIRR', 'preferredReturn', 'cashOnCash',
+  'occupancyPct', 'loanToValue', 'loanRate',
+  'acquisitionFeePct', 'assetMgmtFeePct', 'propertyMgmtFeePct',
+  'capitalEventFeePct', 'dispositionFeePct', 'constructionMgmtFeePct'
+];
+
+// Dollar fields: stored as number, displayed with commas
+var DOLLAR_FIELDS = [
+  'investmentMinimum', 'offeringSize', 'purchasePrice',
+  'fundAUM', 'acquisitionLoan', 'capexBudget', 'closingCosts', 'squareFootage'
+];
+
+// DB column → camelCase mapping
+var DB_TO_CAMEL = {
+  investment_name: 'investmentName', asset_class: 'assetClass', deal_type: 'dealType',
+  strategy: 'strategy', investment_strategy: 'investmentStrategy',
+  target_irr: 'targetIRR', preferred_return: 'preferredReturn', cash_on_cash: 'cashOnCash',
+  equity_multiple: 'equityMultiple', investment_minimum: 'investmentMinimum',
+  hold_period_years: 'holdPeriod', offering_size: 'offeringSize', purchase_price: 'purchasePrice',
+  offering_type: 'offeringType', available_to: 'availableTo', distributions: 'distributions',
+  lp_gp_split: 'lpGpSplit', fees: 'fees', financials: 'financials',
+  investing_geography: 'investingGeography', instrument: 'instrument',
+  debt_position: 'debtPosition', fund_aum: 'fundAUM', redemption: 'redemption',
+  sponsor_in_deal_pct: 'sponsorCoinvest', tax_form: 'taxForm',
+  property_address: 'propertyAddress', unit_count: 'unitCount', year_built: 'yearBuilt',
+  square_footage: 'squareFootage', occupancy_pct: 'occupancyPct', property_type: 'propertyType',
+  acquisition_loan: 'acquisitionLoan', loan_to_value: 'loanToValue', loan_rate: 'loanRate',
+  loan_term_years: 'loanTermYears', loan_io_years: 'loanIOYears',
+  capex_budget: 'capexBudget', closing_costs: 'closingCosts',
+  acquisition_fee_pct: 'acquisitionFeePct', asset_mgmt_fee_pct: 'assetMgmtFeePct',
+  property_mgmt_fee_pct: 'propertyMgmtFeePct', capital_event_fee_pct: 'capitalEventFeePct',
+  disposition_fee_pct: 'dispositionFeePct', construction_mgmt_fee_pct: 'constructionMgmtFeePct'
+};
+
+// ── Init ──
+(function init() {
+  if (localStorage.getItem('gycTheme') === 'dark') document.documentElement.classList.add('dark');
+  try { user = JSON.parse(localStorage.getItem('gycUser')); } catch(e) {}
+  if (!user || !user.token) {
+    document.getElementById('loadingState').textContent = 'Please log in first.';
+    return;
+  }
+  if (!dealId) {
+    document.getElementById('loadingState').textContent = 'No deal ID provided.';
+    return;
+  }
+  loadDeal();
+})();
+
+function loadDeal() {
+  fetch('/api/deals?id=' + dealId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      dealData = data;
+      populateForm(data);
+      document.getElementById('loadingState').style.display = 'none';
+      // Deep link: deal-review.html?id=X#terms|financials|property|fees|publish
+      var hashRoutes = { terms: 0, financials: 1, property: 2, fees: 3, publish: 4 };
+      var hash = window.location.hash.replace('#', '');
+      var startStep = hashRoutes[hash] !== undefined ? hashRoutes[hash] : 0;
+      showStep(startStep);
+    })
+    .catch(function(err) {
+      document.getElementById('loadingState').textContent = 'Failed to load deal: ' + err.message;
+    });
+}
+
+function populateForm(deal) {
+  document.title = 'Review: ' + (deal.investment_name || deal.investmentName || 'Your Deal') + ' - GYC Dealflow';
+
+  var allFields = document.querySelectorAll('[data-field]');
+  allFields.forEach(function(group) {
+    var fieldKey = group.getAttribute('data-field');
+    var el = document.getElementById('f-' + fieldKey);
+    if (!el) return;
+
+    var val = null;
+    for (var dbCol in DB_TO_CAMEL) {
+      if (DB_TO_CAMEL[dbCol] === fieldKey) { val = deal[dbCol]; break; }
+    }
+    if (val === null || val === undefined) val = deal[fieldKey];
+
+    if (PCT_FIELDS.indexOf(fieldKey) !== -1 && val !== null && val !== undefined && val !== '') {
+      var numVal = parseFloat(val);
+      if (!isNaN(numVal) && numVal > 0 && numVal < 1) {
+        val = (numVal * 100).toFixed(1).replace(/\.0$/, '');
+      } else if (!isNaN(numVal)) {
+        val = numVal;
+      }
+    }
+
+    if (DOLLAR_FIELDS.indexOf(fieldKey) !== -1 && val !== null && val !== undefined && val !== '') {
+      var num = parseFloat(val);
+      if (!isNaN(num)) val = num.toLocaleString('en-US');
+    }
+
+    if (Array.isArray(val)) val = val.join(', ');
+
+    if (val !== null && val !== undefined && val !== '') el.value = val;
+
+    // Badge
+    var label = group.querySelector('label');
+    if (label) {
+      var existing = label.querySelector('.field-badge');
+      if (existing) existing.remove();
+      var badge = document.createElement('span');
+      badge.className = 'field-badge';
+      if (val !== null && val !== undefined && val !== '' && val !== 0) {
+        badge.className += ' badge-auto';
+        badge.textContent = 'Auto-filled';
+      } else {
+        badge.className += ' badge-empty';
+        badge.textContent = 'Empty';
+      }
+      label.appendChild(badge);
+    }
+  });
+}
+
+// ── Step Navigation ──
+function showStep(n) {
+  currentStep = n;
+  var steps = document.querySelectorAll('.review-step');
+  for (var i = 0; i < steps.length; i++) {
+    steps[i].classList.toggle('active', i === n);
+  }
+  // Progress bar
+  var pct = Math.round(((n + 1) / TOTAL_STEPS) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  // Update step counter with onboarding context
+  if (fromOnboarding && n < TOTAL_STEPS - 1) {
+    var counter = document.querySelector('#rstep' + n + ' .step-counter');
+    if (counter) counter.textContent = 'Review — Step ' + (n + 1) + ' of ' + TOTAL_STEPS;
+  }
+
+  // Build confirm summary on last step
+  if (n === TOTAL_STEPS - 1) buildSummary();
+
+  window.scrollTo(0, 0);
+}
+
+function nextStep() {
+  if (currentStep < TOTAL_STEPS - 1) showStep(currentStep + 1);
+}
+
+function prevStep() {
+  if (currentStep > 0) showStep(currentStep - 1);
+}
+
+function goBack() {
+  if (fromOnboarding) {
+    window.location.href = 'gp-onboarding.html';
+  } else {
+    window.location.href = 'gp-dashboard.html';
+  }
+}
+
+// ── Summary ──
+function buildSummary() {
+  var vals = collectValues();
+  var name = vals.investmentName || 'Your Deal';
+  var items = [];
+
+  function add(label, key, fmt) {
+    var v = vals[key];
+    if (v === null || v === undefined || v === '') return;
+    if (fmt === 'pct') v = (v * 100).toFixed(1).replace(/\.0$/, '') + '%';
+    if (fmt === 'dollar') v = '$' + parseFloat(v).toLocaleString('en-US');
+    items.push('<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);">' +
+      '<span style="color:var(--text-secondary);font-size:14px;">' + label + '</span>' +
+      '<span style="font-weight:600;font-size:14px;">' + v + '</span></div>');
+  }
+
+  add('Investment Name', 'investmentName');
+  add('Asset Class', 'assetClass');
+  add('Deal Type', 'dealType');
+  add('Strategy', 'strategy');
+  add('Target IRR', 'targetIRR', 'pct');
+  add('Preferred Return', 'preferredReturn', 'pct');
+  add('Cash-on-Cash', 'cashOnCash', 'pct');
+  add('Equity Multiple', 'equityMultiple');
+  add('Investment Minimum', 'investmentMinimum', 'dollar');
+  add('Hold Period', 'holdPeriod');
+  add('Offering Size', 'offeringSize', 'dollar');
+  add('Distributions', 'distributions');
+  add('LP/GP Split', 'lpGpSplit');
+  add('Geography', 'investingGeography');
+  add('Property Address', 'propertyAddress');
+
+  var totalFields = document.querySelectorAll('[data-field]').length;
+  var filled = 0;
+  document.querySelectorAll('[data-field]').forEach(function(g) {
+    var el = document.getElementById('f-' + g.getAttribute('data-field'));
+    if (el && el.value && el.value !== '--' && el.value !== '') filled++;
+  });
+
+  var html = '<div style="text-align:center;margin-bottom:24px;">' +
+    '<div style="font-size:48px;margin-bottom:8px;">&#9989;</div>' +
+    '<div style="font-family:var(--font-ui);font-size:15px;color:var(--text-secondary);">' +
+    filled + ' of ' + totalFields + ' fields filled</div></div>' +
+    '<div style="margin-bottom:24px;">' + items.join('') + '</div>';
+
+  document.getElementById('confirmSummary').innerHTML = html;
+}
+
+// ── Collect form values ──
+function collectValues() {
+  var values = {};
+  document.querySelectorAll('[data-field]').forEach(function(group) {
+    var fieldKey = group.getAttribute('data-field');
+    var el = document.getElementById('f-' + fieldKey);
+    if (!el) return;
+    var val = el.value.trim();
+    if (val === '' || val === '--') { values[fieldKey] = null; return; }
+    if (PCT_FIELDS.indexOf(fieldKey) !== -1) {
+      var num = parseFloat(val);
+      if (!isNaN(num)) { values[fieldKey] = num >= 1 ? num / 100 : num; } else { values[fieldKey] = null; }
+      return;
+    }
+    if (DOLLAR_FIELDS.indexOf(fieldKey) !== -1) {
+      var cleaned = val.replace(/[,$\s]/g, '');
+      var num = parseFloat(cleaned);
+      values[fieldKey] = isNaN(num) ? null : num;
+      return;
+    }
+    if (el.type === 'number') {
+      var num = parseFloat(val);
+      values[fieldKey] = isNaN(num) ? null : num;
+      return;
+    }
+    values[fieldKey] = val;
+  });
+  return values;
+}
+
+// ── Save Draft ──
+function saveDraft() {
+  var values = collectValues();
+  values.status = 'Draft';
+  patchDeal(values, function() {
+    showToast('Draft saved');
+    setTimeout(function() {
+      if (fromOnboarding) {
+        window.location.href = 'gp-onboarding.html?resumeStep=8';
+      } else {
+        window.location.href = 'gp-dashboard.html';
+      }
+    }, 800);
+  });
+}
+
+// ── Confirm & Publish ──
+function confirmPublish() {
+  var values = collectValues();
+  values.status = 'Open to Invest';
+  values.gpReviewedAt = new Date().toISOString();
+  patchDeal(values, function() {
+    showToast('Deal published!');
+    setTimeout(function() {
+      if (fromOnboarding) {
+        window.location.href = 'gp-onboarding.html?resumeStep=8';
+      } else {
+        window.location.href = 'gp-dashboard.html?toast=Deal+published';
+      }
+    }, 800);
+  });
+}
+
+function patchDeal(values, onSuccess) {
+  var btns = document.querySelectorAll('.btn-primary, .btn-secondary');
+  btns.forEach(function(b) { b.disabled = true; });
+
+  fetch('/api/deals/' + dealId, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify(values)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btns.forEach(function(b) { b.disabled = false; });
+    if (data.error) { showToast('Error: ' + data.error); return; }
+    if (onSuccess) onSuccess();
+  })
+  .catch(function(err) {
+    btns.forEach(function(b) { b.disabled = false; });
+    showToast('Save failed: ' + err.message);
+  });
+}
+
+// ── Toast ──
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,3170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Asset Detail - GYC Dealflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0A1E21;
+  --bg-sidebar-hover: #14333A;
+  --bg-sidebar-active: #1F5159;
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --text-sidebar: rgba(255,255,255,0.55);
+  --text-sidebar-active: #FFFFFF;
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-width: 240px;
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --orange: #CF7A30;
+  --orange-bg: #FFF3E6;
+  --red: #D04040;
+  --blue: #2563EB;
+  --blue-bg: #EFF6FF;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --charcoal: #141413;
+  --transition: 0.2s ease;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+  --purple: #7C3AED;
+  --purple-bg: #F3E8FF;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ====== SIDEBAR ====== */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+.sidebar-logo {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar-logo-icon {
+  width: 36px; height: 36px;
+  background: var(--primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: #fff;
+  font-size: 12px;
+}
+.sidebar-logo-text {
+  font-family: var(--font-headline);
+  font-size: 18px;
+  color: #fff;
+}
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+}
+.nav-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 4px;
+}
+.nav-back:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-back svg { width: 16px; height: 16px; }
+.nav-section-label {
+  padding: 16px 24px 8px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.3);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  color: var(--text-sidebar);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-item.active {
+  background: var(--bg-sidebar-active);
+  color: var(--text-sidebar-active);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+}
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.nav-item.active svg, .nav-item:hover svg { opacity: 1; }
+.sidebar-user {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-user-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-logout {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+.sidebar-logout:hover { color: #fff; }
+.sidebar-logout svg { width: 16px; height: 16px; }
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text-sidebar);
+  font-size: 13px;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+.theme-toggle:hover { color: #fff; }
+.toggle-track {
+  width: 40px; height: 22px;
+  background: #444;
+  border-radius: 11px;
+  position: relative;
+  transition: background var(--transition);
+}
+.toggle-track.on { background: var(--teal-deep); }
+.toggle-thumb {
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: transform var(--transition);
+}
+.toggle-track.on .toggle-thumb { transform: translateX(18px); }
+
+/* ====== MAIN ====== */
+.main {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+}
+.content-wrap {
+  max-width: 1060px;
+  padding: 40px 40px 80px;
+  margin: 0 auto;
+}
+
+/* ====== MOBILE ====== */
+.mobile-topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  height: 56px;
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  padding: 0 20px;
+  gap: 12px;
+  z-index: 50;
+}
+.mobile-topbar-title {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex: 1;
+}
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dark);
+  padding: 4px;
+}
+.mobile-menu-btn svg { width: 24px; height: 24px; }
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+
+/* ====== LOADING ====== */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.loading-wrap { display: block; }
+.loaded-wrap { display: none; }
+.skeleton-block {
+  background: var(--border-light);
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.skeleton-block::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+/* ====== BREADCRUMB ====== */
+.breadcrumb {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.breadcrumb a:hover { color: var(--primary); }
+.breadcrumb svg { width: 14px; height: 14px; opacity: 0.4; }
+
+/* ====== PROPERTY HERO CARD ====== */
+.hero-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+.hero-top {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  min-height: 240px;
+}
+.hero-info {
+  padding: 36px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.hero-asset-type {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+.hero-name {
+  font-family: var(--font-headline);
+  font-size: 36px;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.hero-address {
+  font-family: var(--font-body);
+  font-size: 17px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 20px;
+}
+.tag-green { background: var(--green-bg); color: var(--green); }
+.tag-blue { background: var(--blue-bg); color: var(--blue); }
+.tag-orange { background: var(--orange-bg); color: var(--orange); }
+.tag-purple { background: var(--purple-bg); color: var(--purple); }
+
+.hero-map {
+  position: relative;
+  background: var(--border-light);
+}
+.hero-map #propertyMap {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+}
+
+/* Stats row inside hero card */
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border-light);
+}
+.hero-stat {
+  padding: 20px 24px;
+  text-align: center;
+  border-right: 1px solid var(--border-light);
+}
+.hero-stat:last-child { border-right: none; }
+.hero-stat-value {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.3px;
+}
+.hero-stat-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* ====== SECTION ====== */
+.section {
+  margin-bottom: 32px;
+}
+.section-label {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.3px;
+  margin-bottom: 16px;
+}
+.section-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+/* ====== EMPTY STATE ====== */
+.empty-state {
+  padding: 56px 40px;
+  text-align: center;
+}
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--bg-cream);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.empty-state-icon svg {
+  width: 28px;
+  height: 28px;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.empty-state-title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+.empty-state-desc {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 380px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ====== DEAL CARDS ====== */
+.deal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+.deal-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  transition: all var(--transition);
+  text-decoration: none;
+  display: block;
+  color: inherit;
+}
+.deal-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+.deal-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.deal-card-name {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+.deal-card-status {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+.deal-card-sponsor {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+.deal-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-light);
+}
+.deal-metric-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+.deal-metric-value {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.deal-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+}
+.deal-card-type {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.deal-card-date {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ====== PRICE HISTORY TABLE ====== */
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.price-table th {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+.price-table td {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+.price-table tr:last-child td { border-bottom: none; }
+.price-table tr:hover { background: rgba(81,190,123,0.03); }
+.price-date { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); white-space: nowrap; }
+.price-amount { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); }
+.price-per-unit { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.price-change { font-family: var(--font-ui); font-size: 14px; font-weight: 700; }
+.price-change.positive { color: var(--green); }
+.price-change.negative { color: var(--red); }
+.price-operator { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--primary); }
+.price-operator a { color: var(--primary); text-decoration: none; }
+.price-operator a:hover { text-decoration: underline; }
+.event-tag {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.event-tag.new-offering { background: #FEE2E2; color: #DC2626; }
+.event-tag.refinanced { background: #FEF3C7; color: #D97706; }
+.event-tag.sold { background: #D1FAE5; color: #059669; }
+.event-tag.listed { background: #D1FAE5; color: #059669; }
+.event-tag.acquired { background: #DBEAFE; color: #2563EB; }
+.event-tag.closed { background: #F3F4F6; color: #6B7280; }
+.event-tag.open { background: #D1FAE5; color: #059669; }
+.deck-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+.deck-link:hover { text-decoration: underline; }
+.deck-link svg { width: 14px; height: 14px; }
+
+/* ====== VALUATION CHART ====== */
+.chart-wrap {
+  padding: 24px;
+}
+.chart-subtitle {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.chart-subtitle .positive { color: var(--green); font-weight: 700; }
+.chart-subtitle .negative { color: var(--red); font-weight: 700; }
+.chart-container {
+  position: relative;
+  height: 220px;
+}
+
+/* ====== ASSET OVERVIEW ====== */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+.overview-item {
+  padding: 16px;
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+.overview-value {
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.overview-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+.overview-strategy {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+}
+.overview-strategy-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.overview-strategy-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* ====== OPERATOR COMPARISON ====== */
+.op-comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.op-comp-table thead th {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  padding: 16px 20px;
+  text-align: center;
+  border-bottom: 2px solid var(--border);
+}
+.op-comp-table thead th:first-child {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  width: 160px;
+}
+.op-comp-table td {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--text-dark);
+}
+.op-comp-table td:first-child {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+.op-comp-table tr:last-child td { border-bottom: none; }
+.op-comp-table tr:hover { background: rgba(81,190,123,0.03); }
+.op-comp-value { font-weight: 700; }
+.op-comp-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.op-comp-best { color: var(--green); font-weight: 800; }
+.op-comp-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+.op-comp-link:hover { text-decoration: underline; }
+.op-comp-fees { text-align: left !important; font-size: 12px; }
+.op-comp-fee-item { margin-bottom: 3px; }
+
+/* ====== DEAL ECONOMICS ====== */
+.econ-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .econ-grid { grid-template-columns: 1fr; }
+}
+.econ-card {
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+}
+.econ-card-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.econ-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 14px;
+}
+.econ-row:last-child { border-bottom: none; }
+.econ-row-label { color: var(--text-secondary); }
+.econ-row-value { font-weight: 700; color: var(--text-dark); }
+.econ-row-total {
+  font-weight: 800;
+  font-size: 15px;
+  border-top: 2px solid var(--text-dark);
+  border-bottom: none;
+  padding-top: 10px;
+  margin-top: 4px;
+}
+.econ-row-total .econ-row-label,
+.econ-row-total .econ-row-value { color: var(--text-dark); }
+.econ-bar-wrap {
+  margin-top: 16px;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+.econ-bar-seg {
+  height: 100%;
+  transition: width 0.6s ease;
+}
+
+/* ====== PUBLIC RECORDS ====== */
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 24px;
+}
+.record-item {
+  padding: 14px 16px;
+  background: var(--bg-cream);
+  border-radius: var(--radius-sm);
+}
+.record-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.record-value {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+/* Tax table inside records */
+.tax-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 13px;
+  margin-top: 8px;
+}
+.tax-table th {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+}
+.tax-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.tax-table tr:last-child td { border-bottom: none; }
+
+/* ====== NEARBY DEALS ====== */
+.nearby-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 24px;
+}
+.nearby-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition);
+}
+.nearby-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-card-hover);
+}
+.nearby-name {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 3px;
+}
+.nearby-loc {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.nearby-meta {
+  display: flex;
+  gap: 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.nearby-meta strong { color: var(--text-dark); font-weight: 700; }
+
+/* ====== MAP LABELS ====== */
+.map-label {
+  background: #fff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  font-family: var(--font-ui) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--text-dark) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+}
+.map-label::before {
+  border-top-color: #fff !important;
+}
+.map-label-current {
+  background: #0A1E21 !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  border-color: #0A1E21 !important;
+}
+.map-label-current::before {
+  border-top-color: #0A1E21 !important;
+}
+.map-label-nearby:hover {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+}
+
+/* ====== MARKET INTELLIGENCE ====== */
+.mi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+}
+.mi-chart-wrap {
+  position: relative;
+}
+.mi-chart-container {
+  height: 220px;
+  position: relative;
+}
+.mi-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+}
+.mi-trend-badge.positive { background: var(--green-bg); color: var(--green); }
+.mi-trend-badge.negative { background: #FEE2E2; color: var(--red); }
+.mi-trend-badge.neutral { background: var(--blue-bg); color: var(--blue); }
+.mi-subtitle {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.mi-industry-list {
+  list-style: none;
+  padding: 0;
+}
+.mi-industry-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.mi-industry-item:last-child { border-bottom: none; }
+.mi-industry-rank {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 20px;
+  text-align: center;
+}
+.mi-industry-name {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.mi-industry-bar-wrap {
+  width: 180px;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.mi-industry-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.mi-industry-count {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+.mi-risk-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.mi-risk-card:last-child { margin-bottom: 0; }
+.mi-risk-card.warning {
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+}
+.mi-risk-card.danger {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+.mi-risk-card.positive {
+  background: var(--green-bg);
+  border: 1px solid rgba(81,190,123,0.2);
+}
+.mi-risk-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.mi-risk-icon.warning { color: var(--orange); }
+.mi-risk-icon.danger { color: var(--red); }
+.mi-risk-icon.positive { color: var(--green); }
+.mi-risk-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.mi-risk-detail {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+.mi-stat-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+.mi-stat {
+  text-align: center;
+}
+.mi-stat-value {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.3px;
+}
+.mi-stat-label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.mi-source {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(37,99,235,0.08);
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .mobile-topbar { display: flex; }
+  .main { margin-left: 0; }
+  .content-wrap { padding: 20px 12px 48px; }
+  .hero-top { grid-template-columns: 1fr; }
+  .hero-map { height: 200px; order: -1; }
+  .hero-info { padding: 20px 16px; }
+  .hero-name { font-size: 24px; }
+  .hero-address { font-size: 13px; }
+  .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  .hero-stat { border-bottom: 1px solid var(--border-light); padding: 12px 16px; }
+  .deal-grid { grid-template-columns: 1fr; padding: 16px; }
+  .records-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; }
+  .nearby-grid { grid-template-columns: 1fr; padding: 16px; }
+  .mi-grid { grid-template-columns: 1fr; padding: 16px; }
+  .mi-grid canvas { max-height: 200px; }
+  #housingSection { padding: 16px !important; }
+  #housingSection > div { grid-template-columns: 1fr !important; }
+  .mi-stat-row { grid-template-columns: 1fr 1fr; gap: 8px; padding: 16px; }
+  .mi-stat-value { font-size: 18px; }
+  .mi-stat-label { font-size: 8px; }
+  .mi-stat-sub { font-size: 9px; }
+  .mi-industry-bar-wrap { width: 80px; }
+  .mi-industry-name { font-size: 12px; }
+  .mi-industry-count { font-size: 11px; min-width: 45px; }
+  .mi-industry-sub { font-size: 10px; }
+  .price-table { font-size: 12px; }
+  .price-table th, .price-table td { padding: 10px 8px; }
+  .price-table .col-deck { display: none; }
+  .price-table .col-change { display: none; }
+  .price-amount { font-size: 14px; }
+  .section-label { font-size: 16px; }
+  .section-card { border-radius: 8px; }
+  /* Nearby table: hide deal column on mobile, it's redundant with asset */
+  .nearby-table .col-deal { display: none; }
+  .nearby-table th, .nearby-table td { padding: 10px 8px; font-size: 12px; }
+  /* Employment section */
+  #employmentSection { padding: 16px !important; }
+  #empChartView { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #empChartView canvas { min-width: 500px; max-height: 220px; }
+  /* Nearby map */
+  #nearbyMapWrap { height: 280px !important; }
+  /* Source badges */
+  .mi-source { font-size: 9px !important; padding: 6px 10px !important; min-height: 36px; display: inline-flex; align-items: center; }
+  /* iOS safe area bottom padding */
+  .content-wrap { padding-bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+  /* Touch-friendly tap targets (min 44px) */
+  .hero-google-maps-link { min-height: 44px; display: inline-flex; align-items: center; }
+  /* Source area stacks on mobile */
+  #dataRecencyNote { margin-left: 0 !important; width: 100%; margin-top: 4px; }
+  /* Prevent text zoom on iOS */
+  input, select, textarea { font-size: 16px; }
+  /* Charts overflow scroll for touch */
+  .mi-chart-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  .content-wrap { padding: 16px 8px 48px; }
+  .hero-name { font-size: 20px; }
+  .hero-stats { grid-template-columns: 1fr 1fr; }
+  .hero-stat-value { font-size: 16px; }
+  .hero-stat-label { font-size: 8px; }
+  .deal-card-metrics { grid-template-columns: 1fr 1fr; }
+  .mi-stat-row { grid-template-columns: 1fr; }
+  .mi-stat { text-align: left; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+  .mi-stat:last-child { border-bottom: none; }
+  .mi-industry-bar-wrap { width: 50px; }
+  .mi-industry-rank { width: 16px; font-size: 9px; }
+  .mi-industry-item { gap: 8px; padding: 8px 0; }
+  /* Nearby table: also hide operator on very small screens */
+  .nearby-table .col-operator { display: none; }
+  .nearby-table .col-irr { padding-left: 8px !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar (injected by sidebar.js) -->
+<div id="sidebar-root"></div>
+<script>
+(function(){var s=document.createElement('script');s.src='js/sidebar.js?v='+Date.now();s.dataset.page='asset';document.currentScript.parentNode.insertBefore(s,document.currentScript);})();
+</script>
+
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="mobile-topbar-title" id="mobileTitle">Asset Detail</div>
+  <a href="index.html" style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;">Deals</a>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+  <div class="content-wrap">
+
+    <!-- Loading -->
+    <div id="loadingSkeleton" class="loading-wrap">
+      <div class="skeleton-block" style="height:300px;"></div>
+      <div class="skeleton-block" style="height:200px;"></div>
+      <div class="skeleton-block" style="height:160px;"></div>
+    </div>
+
+    <!-- Loaded Content -->
+    <div id="loadedContent" class="loaded-wrap">
+
+      <!-- Breadcrumb -->
+      <div class="breadcrumb" id="breadcrumb">
+        <a href="index.html">Dashboard</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <a href="index.html#assets">Assets</a>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <span id="breadcrumbName" style="color:var(--text-dark);font-weight:600;"></span>
+      </div>
+
+      <!-- Hero Card -->
+      <div class="hero-card">
+        <div class="hero-top">
+          <div class="hero-info">
+            <div class="hero-asset-type" id="heroAssetType"></div>
+            <h1 class="hero-name" id="heroName">Loading...</h1>
+            <div class="hero-address" id="heroAddress"></div>
+            <div class="hero-tags" id="heroTags"></div>
+          </div>
+          <div class="hero-map" id="heroMapWrap">
+            <div id="propertyMap"></div>
+            <div id="mapPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#1F5159,#0A1E21);color:rgba(255,255,255,0.4);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin-bottom:8px;opacity:0.4;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <div style="font-family:var(--font-ui);font-size:12px;font-weight:600;">Map loads with address data</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-stats" id="heroStats"></div>
+      </div>
+
+      <!-- Property Summary -->
+      <div class="section" id="assetOverviewSection" style="display:none;">
+        <div class="section-label">Property Summary</div>
+        <div class="section-card">
+          <div id="assetOverviewContent" style="padding:24px;"></div>
+        </div>
+      </div>
+
+      <!-- Valuation History (chart) -->
+      <div class="section" id="valuationChartSection" style="display:none;">
+        <div class="section-label">Valuation History</div>
+        <div class="section-card" id="valuationChartCard">
+          <div class="chart-wrap">
+            <div class="chart-subtitle" id="chartSubtitle"></div>
+            <div class="chart-container">
+              <canvas id="valuationChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction History (table) -->
+      <div class="section" id="priceHistorySection" style="display:none;">
+        <div class="section-label">Transaction History</div>
+        <div class="section-card" id="priceTableCard">
+          <div id="priceTableContent"></div>
+        </div>
+      </div>
+
+      <!-- Operator Comparison -->
+      <div class="section" id="operatorCompSection" style="display:none;">
+        <div class="section-label">Operator Comparison</div>
+        <div class="section-card">
+          <div id="operatorCompContent"></div>
+        </div>
+      </div>
+
+      <!-- Deal Economics removed — belongs on deal page, not asset page -->
+      </div>
+
+      <!-- Property Records -->
+      <div class="section" id="recordsSection" style="display:none;">
+        <div class="section-label">Property Records</div>
+        <div class="section-card">
+          <div id="recordsContent"></div>
+        </div>
+      </div>
+
+      <!-- Market Intelligence -->
+      <div class="section" id="marketIntelSection" style="display:none;">
+        <div class="section-label">Market Intelligence</div>
+        <div class="section-card">
+          <!-- Risk Flags (shown at top when present) -->
+          <div id="marketRisks" style="display:none;padding:20px 24px 0;"></div>
+          <!-- Summary Stats -->
+          <div id="marketStats" class="mi-stat-row" style="display:none;"></div>
+          <!-- Charts -->
+          <div class="mi-grid" id="marketCharts" style="display:none;">
+            <!-- Population Chart -->
+            <div class="mi-chart-wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Population</div>
+                <div id="popTrendBadge"></div>
+              </div>
+              <div id="popChartSubtitle" class="mi-subtitle"></div>
+              <div class="mi-chart-container">
+                <canvas id="populationChart"></canvas>
+              </div>
+            </div>
+            <!-- Income Chart -->
+            <div class="mi-chart-wrap">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Median Household Income</div>
+                <div id="incomeTrendBadge"></div>
+              </div>
+              <div id="incomeChartSubtitle" class="mi-subtitle"></div>
+              <div class="mi-chart-container">
+                <canvas id="incomeChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- Age Distribution Pyramid -->
+          <div id="agePyramidSection" style="display:none;padding:24px;">
+            <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);margin-bottom:4px;">Population by Age &amp; Sex</div>
+            <div id="agePyramidSubtitle" class="mi-subtitle"></div>
+            <div style="height:360px;position:relative;">
+              <canvas id="agePyramidChart"></canvas>
+            </div>
+            <div style="display:flex;justify-content:center;gap:24px;margin-top:8px;">
+              <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:12px;height:12px;background:#38bdf8;border-radius:2px;"></span>Male</span>
+              <span style="display:flex;align-items:center;gap:6px;font-family:var(--font-ui);font-size:11px;font-weight:600;color:var(--text-muted);"><span style="width:12px;height:12px;background:#fbbf24;border-radius:2px;"></span>Female</span>
+            </div>
+          </div>
+
+          <!-- Housing (multifamily only) -->
+          <div id="housingSection" style="display:none;padding:24px;border-top:1px solid var(--border-light);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+              <!-- Occupancy Chart -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Housing Occupancy</div>
+                  <div id="vacancyBadge"></div>
+                </div>
+                <div id="housingOccSubtitle" class="mi-subtitle"></div>
+                <div class="mi-chart-container">
+                  <canvas id="occupancyChart"></canvas>
+                </div>
+              </div>
+              <!-- Bedroom Mix -->
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Bedrooms in Housing Units</div>
+                  <div id="brViewToggle" style="display:none;background:var(--border-light);border-radius:6px;overflow:hidden;">
+                    <button onclick="toggleBrView('bars')" id="brViewBars" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">Current</button>
+                    <button onclick="toggleBrView('trend')" id="brViewTrend" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">Trend</button>
+                  </div>
+                </div>
+                <div id="bedroomSubtitle" class="mi-subtitle"></div>
+                <div id="brBarsView">
+                  <div id="bedroomContent"></div>
+                </div>
+                <div id="brTrendView" style="display:none;">
+                  <div style="height:220px;position:relative;">
+                    <canvas id="bedroomTrendChart"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employment -->
+          <div id="employmentSection" style="display:none;padding:24px;border-top:1px solid var(--border-light);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">Top Industries by Employment</div>
+              <div id="empViewToggle" style="display:flex;background:var(--border-light);border-radius:6px;overflow:hidden;">
+                <button onclick="toggleEmpView('list')" id="empViewList" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:transparent;color:var(--text-muted);">List</button>
+                <button onclick="toggleEmpView('chart')" id="empViewChart" style="padding:4px 12px;font-family:var(--font-ui);font-size:10px;font-weight:700;border:none;cursor:pointer;background:var(--text-dark);color:#fff;">Trend</button>
+              </div>
+            </div>
+            <div id="employmentSubtitle" class="mi-subtitle"></div>
+            <div id="empListView" style="display:none;">
+              <ul id="industryList" class="mi-industry-list"></ul>
+            </div>
+            <div id="empChartView">
+              <div style="height:300px;position:relative;">
+                <canvas id="industryTrendChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- Source -->
+          <div style="padding:12px 24px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <a id="censusSourceLink" href="https://data.census.gov" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">via US Census Bureau ↗</a>
+            <a id="blsSourceLink" href="https://data.bls.gov/cew/apps/data_views/data_views.htm" target="_blank" rel="noopener" class="mi-source" style="text-decoration:none;cursor:pointer;">Bureau of Labor Statistics ↗</a>
+            <span id="dataRecencyNote" style="font-family:var(--font-ui);font-size:10px;color:var(--text-muted);margin-left:auto;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nearby Assets -->
+      <div class="section" id="nearbySection" style="display:none;">
+        <div class="section-label">Nearby Assets</div>
+        <div class="section-card">
+          <div id="nearbyMapWrap" style="position:relative;height:400px;">
+            <div id="nearbyMap" style="width:100%;height:100%;"></div>
+          </div>
+          <div id="nearbyTableView" style="border-top:1px solid var(--border-light);"></div>
+          <div id="nearbyList" style="display:none;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== AUTH ==========
+(function enforceAuth() {
+  var user = JSON.parse(localStorage.getItem('gycUser') || 'null');
+  if (!user || !user.token || user.token === 'local-session') {
+    localStorage.removeItem('gycUser');
+    window.location.href = 'deal-login.html';
+  }
+})();
+
+
+// ========== HELPERS ==========
+function esc(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+function escAttr(str) {
+  return esc(str).replace(/"/g, '&quot;');
+}
+
+function currency(val) {
+  if (val == null) return '--';
+  if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+  if (val >= 1000) return '$' + Math.round(val).toLocaleString();
+  return '$' + val;
+}
+
+function pct(val) {
+  if (val == null) return '--';
+  if (val > 1) return val.toFixed(1) + '%';
+  return (val * 100).toFixed(1) + '%';
+}
+
+function multiple(val) {
+  if (val == null) return '--';
+  return val.toFixed(1) + 'x';
+}
+
+function fmtDate(str) {
+  if (!str) return '--';
+  var d = new Date(str);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function statusColor(status) {
+  if (!status) return 'green';
+  var s = status.toLowerCase();
+  if (s.includes('open') || s.includes('active') || s.includes('evergreen')) return 'green';
+  if (s.includes('closed') || s.includes('fully funded') || s.includes('completed')) return 'orange';
+  return 'green';
+}
+
+function emptyState(icon, title, desc) {
+  return '<div class="empty-state">' +
+    '<div class="empty-state-icon">' + icon + '</div>' +
+    '<div class="empty-state-title">' + esc(title) + '</div>' +
+    '<div class="empty-state-desc">' + esc(desc) + '</div>' +
+    '</div>';
+}
+
+// ========== DATA FETCHING ==========
+var PROD_API = 'https://dealflow.growyourcashflow.io/api/deals';
+
+async function fetchAllDeals() {
+  // Try session cache first
+  var cached = sessionStorage.getItem('gycDealsCache');
+  var cacheTime = sessionStorage.getItem('gycDealsCacheTime');
+  var CACHE_TTL = 5 * 60 * 1000;
+
+  if (cached && cacheTime && (Date.now() - parseInt(cacheTime)) < CACHE_TTL) {
+    try { return JSON.parse(cached); } catch(e) {}
+  }
+
+  // Try local API first, fall back to production
+  // Include 506(b) deals since the asset page is accessed by authenticated users
+  var urls = ['/api/deals?include506b=true', PROD_API + '?include506b=true'];
+  for (var i = 0; i < urls.length; i++) {
+    try {
+      var resp = await fetch(urls[i]);
+      if (!resp.ok) continue;
+      var data = await resp.json();
+      if (data && data.deals) {
+        sessionStorage.setItem('gycDealsCache', JSON.stringify(data.deals));
+        sessionStorage.setItem('gycDealsCacheTime', String(Date.now()));
+        return data.deals;
+      }
+    } catch(e) {
+      continue;
+    }
+  }
+  console.warn('Failed to fetch deals from any source');
+  return [];
+}
+
+// Extract a street address from a deal name like "Nu Partners – 6317 Shanda Dr, Raleigh, NC 27609"
+function extractAddress(dealName) {
+  if (!dealName) return '';
+  // Match patterns like "123 Street Name" within the deal name
+  var m = dealName.match(/(\d{2,5}\s+[A-Za-z][\w\s]+(?:Dr|St|Ave|Blvd|Rd|Ln|Way|Ct|Cir|Pl|Pkwy|Loop)[^,]*(?:,\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5})?)/i);
+  return m ? m[1].trim() : '';
+}
+
+// Extract state abbreviation from deal name or location
+function extractState(text) {
+  if (!text) return '';
+  var m = text.match(/\b([A-Z]{2})\s*\d{5}\b/) || text.match(/,\s*([A-Z]{2})\b/);
+  return m ? m[1] : '';
+}
+
+function findMatchingDeals(allDeals, propertyName, propertyAddress) {
+  if (!allDeals.length) return [];
+
+  var nameNorm = (propertyName || '').toLowerCase().trim();
+  var addrNorm = (propertyAddress || '').toLowerCase().trim();
+
+  // Also try to extract an address from the property name
+  var extractedAddr = extractAddress(propertyName).toLowerCase();
+
+  return allDeals.filter(function(d) {
+    var dName = (d.investmentName || '').toLowerCase();
+    var dAddr = (d.address || '').toLowerCase();
+    var dExtracted = extractAddress(d.investmentName).toLowerCase();
+
+    // Match by explicit address field
+    if (addrNorm && dAddr && dAddr === addrNorm) return true;
+    // Match by extracted address from name (e.g. "6317 Shanda Dr")
+    if (extractedAddr && dExtracted && extractedAddr === dExtracted) return true;
+    // Match by name containing property name or vice versa
+    if (nameNorm && dName.includes(nameNorm)) return true;
+    if (nameNorm && nameNorm.includes(dName) && dName.length > 8) return true;
+    // Match by street number + street name overlap
+    if (extractedAddr && dExtracted && extractedAddr.length > 5) {
+      var streetNum = extractedAddr.match(/^\d+/);
+      if (streetNum && dExtracted.startsWith(streetNum[0])) return true;
+    }
+    return false;
+  });
+}
+
+function findNearbyDeals(allDeals, location, assetClass, excludeIds, state) {
+  if (!allDeals.length) return [];
+
+  var locNorm = (location || '').toLowerCase();
+  var stateNorm = (state || '').toUpperCase();
+  var exclude = new Set(excludeIds || []);
+
+  // Find deals in same geography (by state from location, address, or deal name)
+  var nearby = allDeals.filter(function(d) {
+    if (exclude.has(d.id)) return false;
+    // Check state match via location fields
+    var dLoc = (d.investingGeography || d.location || '').toLowerCase();
+    if (locNorm && dLoc) {
+      var locParts = locNorm.split(',').map(function(s) { return s.trim(); });
+      var dParts = dLoc.split(',').map(function(s) { return s.trim(); });
+      if (locParts.length > 1 && dParts.length > 1 && locParts[locParts.length - 1] === dParts[dParts.length - 1]) return true;
+    }
+    // Check state match via address in deal name
+    if (stateNorm) {
+      var dState = extractState(d.investmentName) || extractState(d.investingGeography || d.location);
+      if (dState === stateNorm) return true;
+    }
+    return false;
+  });
+
+  // Sort: same asset class first, then by date
+  nearby.sort(function(a, b) {
+    var aMatch = (a.assetClass || '') === assetClass ? 1 : 0;
+    var bMatch = (b.assetClass || '') === assetClass ? 1 : 0;
+    if (aMatch !== bMatch) return bMatch - aMatch;
+    return new Date(b.addedDate || 0) - new Date(a.addedDate || 0);
+  });
+
+  return nearby.slice(0, 6);
+}
+
+// ========== RENTCAST ENRICHMENT ==========
+async function enrichWithRentCast(address) {
+  if (!address || address.length < 10) return null;
+  try {
+    var resp = await fetch('/api/property?address=' + encodeURIComponent(address));
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    if (data.success && data.properties && data.properties.length > 0) {
+      return data.properties[0];
+    }
+  } catch(e) {
+    console.log('RentCast enrichment failed:', e);
+  }
+  return null;
+}
+
+// ========== RENDER ==========
+function renderHero(propertyName, address, assetClass, location, status, deals) {
+  document.title = propertyName + ' - Asset Detail - GYC Dealflow';
+  document.getElementById('mobileTitle').textContent = propertyName;
+  document.getElementById('breadcrumbName').textContent = propertyName;
+
+  document.getElementById('heroAssetType').textContent = assetClass || 'Property';
+  document.getElementById('heroName').textContent = propertyName;
+
+  // Address with Google Maps link
+  var addrText = address || location || '';
+  var addrEl = document.getElementById('heroAddress');
+  if (addrText) {
+    var gmapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addrText);
+    addrEl.innerHTML = esc(addrText) + ' <a class="hero-google-maps-link" href="' + escAttr(gmapsUrl) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--blue);text-decoration:none;padding:3px 10px;background:var(--blue-bg);border-radius:20px;vertical-align:middle;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>View on Google Maps</a>';
+  } else {
+    addrEl.textContent = '';
+  }
+
+  // Tags
+  var tagsHtml = '';
+  if (assetClass) tagsHtml += '<span class="tag tag-green">' + esc(assetClass) + '</span>';
+  if (location) tagsHtml += '<span class="tag tag-blue">' + esc(location) + '</span>';
+  if (status) {
+    var sc = statusColor(status);
+    tagsHtml += '<span class="tag tag-' + sc + '">' + esc(status) + '</span>';
+  }
+  document.getElementById('heroTags').innerHTML = tagsHtml;
+
+  // Stats
+  var activeDeal = deals.find(function(d) {
+    var s = (d.status || '').toLowerCase();
+    return s.includes('open') || s.includes('active') || s.includes('evergreen');
+  });
+
+  var dates = deals.map(function(d) { return d.addedDate; }).filter(Boolean).sort();
+  var firstSeen = dates.length ? dates[0] : null;
+  var lastSeen = dates.length ? dates[dates.length - 1] : null;
+
+  // Get unique operators across all deals
+  var operators = [];
+  var opSet = {};
+  deals.forEach(function(d) {
+    var mc = d.managementCompany;
+    if (mc && !opSet[mc]) { opSet[mc] = true; operators.push(mc); }
+  });
+
+  // Purchase price for hero stat
+  var ppDeal = deals.find(function(d) { return d.purchasePrice; });
+  var ppValue = ppDeal ? currency(ppDeal.purchasePrice) : null;
+
+  // Year built and units from deal data
+  var yearBuilt = null;
+  var unitCount = null;
+  deals.forEach(function(d) {
+    if (d.yearBuilt && !yearBuilt) yearBuilt = d.yearBuilt;
+    if (d.unitCount && !unitCount) unitCount = d.unitCount;
+  });
+
+  var stats = [];
+  if (unitCount) stats.push({ value: Number(unitCount).toLocaleString(), label: 'Units' });
+  stats.push({ value: yearBuilt || 'N/A', label: 'Year Built' });
+  stats.push({ value: operators.length || '--', label: operators.length === 1 ? 'Owner' : 'Owners' });
+  if (lastSeen) stats.push({ value: fmtDate(lastSeen), label: 'Latest Transaction' });
+
+  document.getElementById('heroStats').innerHTML = stats.map(function(s) {
+    return '<div class="hero-stat"><div class="hero-stat-value">' + esc(String(s.value)) + '</div><div class="hero-stat-label">' + esc(s.label) + '</div></div>';
+  }).join('');
+}
+
+function renderDeals(deals) {
+  var el = document.getElementById('dealsSection');
+
+  if (!deals.length) {
+    el.innerHTML = emptyState(
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="5" rx="1"/><rect x="4" y="10" width="16" height="5" rx="1"/><rect x="4" y="17" width="16" height="5" rx="1"/></svg>',
+      'No deals linked yet',
+      'As we track more deals at this address, they\'ll appear here with full metrics and sponsor details.'
+    );
+    return;
+  }
+
+  var sorted = deals.slice().sort(function(a, b) {
+    return new Date(b.addedDate || 0) - new Date(a.addedDate || 0);
+  });
+
+  el.innerHTML = '<div class="deal-grid">' + sorted.map(function(d) {
+    var sc = statusColor(d.status);
+    var href = 'deal.html?id=' + encodeURIComponent(d.id);
+    return '<a class="deal-card" href="' + href + '">' +
+      '<div class="deal-card-top">' +
+        '<div class="deal-card-name">' + esc(d.investmentName) + '</div>' +
+        '<span class="deal-card-status tag-' + sc + '">' + esc(d.status || 'Open to Invest') + '</span>' +
+      '</div>' +
+      '<div class="deal-card-sponsor">' + esc(d.managementCompany || '') + '</div>' +
+      '<div class="deal-card-metrics">' +
+        '<div><div class="deal-metric-label">Target IRR</div><div class="deal-metric-value">' + pct(d.targetIRR) + '</div></div>' +
+        '<div><div class="deal-metric-label">Equity Multiple</div><div class="deal-metric-value">' + multiple(d.equityMultiple) + '</div></div>' +
+        '<div><div class="deal-metric-label">Min Investment</div><div class="deal-metric-value">' + currency(d.investmentMinimum) + '</div></div>' +
+      '</div>' +
+      '<div class="deal-card-footer">' +
+        '<span class="deal-card-type">' + esc(d.dealType || '') + (d.strategy ? ' &middot; ' + esc(d.strategy) : '') + '</span>' +
+        '<span class="deal-card-date">' + fmtDate(d.addedDate) + '</span>' +
+      '</div>' +
+    '</a>';
+  }).join('') + '</div>';
+}
+
+function statusToEvent(status) {
+  if (!status) return { label: 'Acquired', cls: 'new-offering' };
+  var s = status.toLowerCase();
+  if (s.includes('closed') || s.includes('fully subscribed')) return { label: 'Acquired', cls: 'closed' };
+  if (s.includes('open') || s.includes('active')) return { label: 'Raising', cls: 'new-offering' };
+  if (s.includes('evergreen')) return { label: 'Active', cls: 'open' };
+  if (s.includes('sold') || s.includes('exited')) return { label: 'Sold', cls: 'sold' };
+  if (s.includes('refinanc')) return { label: 'Refinanced', cls: 'refinanced' };
+  if (s.includes('listed')) return { label: 'Listed for Sale', cls: 'listed' };
+  if (s.includes('acquired') || s.includes('purchas')) return { label: 'Acquired', cls: 'acquired' };
+  return { label: status, cls: 'closed' };
+}
+
+function renderPriceHistory(deals, unitCount) {
+  var section = document.getElementById('priceHistorySection');
+  var tableEl = document.getElementById('priceTableContent');
+
+  // Sort deals chronologically (newest first for table)
+  var sorted = deals
+    .filter(function(d) { return d.addedDate; })
+    .slice()
+    .sort(function(a, b) { return new Date(b.addedDate) - new Date(a.addedDate); });
+
+  if (!sorted.length) return;
+
+  section.style.display = 'block';
+
+  // --- Price History Table ---
+  var docIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+  // For % change calculation, sort oldest-first
+  var chronological = sorted.slice().reverse();
+
+  var rows = sorted.map(function(deal) {
+    var ev = statusToEvent(deal.status);
+    var date = new Date(deal.addedDate);
+    var dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    // Use purchase price (actual building cost) when available, fall back to offering size
+    var price = deal.purchasePrice || deal.offeringSize;
+    var priceLabel = deal.purchasePrice ? 'Purchase' : 'Raise';
+
+    // Calculate % change relative to previous (chronologically earlier) transaction
+    var pctChange = null;
+    if (price) {
+      var idx = chronological.findIndex(function(d) { return d.id === deal.id; });
+      if (idx > 0) {
+        var prev = chronological[idx - 1];
+        var prevPrice = prev.purchasePrice || prev.offeringSize;
+        if (prevPrice) {
+          pctChange = ((price - prevPrice) / prevPrice * 100);
+        }
+      }
+    }
+
+    var perUnit = (price && unitCount && unitCount > 0) ? price / unitCount : null;
+
+    var pctHtml = '&mdash;';
+    if (pctChange !== null) {
+      var cls = pctChange >= 0 ? 'positive' : 'negative';
+      var sign = pctChange >= 0 ? '+' : '';
+      pctHtml = '<span class="price-change ' + cls + '">' + sign + pctChange.toFixed(1) + '%</span>';
+    }
+
+    var deckHtml = '';
+    if (deal.deckUrl) {
+      deckHtml += '<a href="' + escAttr(deal.deckUrl) + '" target="_blank" rel="noopener" class="deck-link">' + docIcon + 'Deck</a>';
+    }
+    if (deal.ppmUrl) {
+      deckHtml += (deckHtml ? ' ' : '') + '<a href="' + escAttr(deal.ppmUrl) + '" target="_blank" rel="noopener" class="deck-link">' + docIcon + 'PPM</a>';
+    }
+
+    var dealHref = 'deal.html?id=' + encodeURIComponent(deal.id);
+    var operatorHtml = deal.managementCompany
+      ? '<a href="' + dealHref + '" class="price-operator">' + esc(deal.managementCompany) + '</a>'
+      : '&mdash;';
+
+    return '<tr style="cursor:pointer;" onclick="window.location.href=\'' + dealHref + '\'">' +
+      '<td><span class="price-date">' + dateStr + '</span></td>' +
+      '<td><span class="event-tag ' + ev.cls + '">' + ev.label + '</span></td>' +
+      '<td>' + (price ? '<div class="price-amount">' + currency(price) + '</div>' + (perUnit ? '<div class="price-per-unit">$' + Math.round(perUnit).toLocaleString() + '/unit</div>' : '') + (deal.purchasePrice && deal.offeringSize ? '<div class="price-per-unit" style="color:var(--text-muted);font-size:11px;">Raise: ' + currency(deal.offeringSize) + '</div>' : '') : '&mdash;') + '</td>' +
+      '<td>' + pctHtml + '</td>' +
+      '<td>' + operatorHtml + '</td>' +
+      '<td class="col-deck">' + (deckHtml || '&mdash;') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  tableEl.innerHTML =
+    '<table class="price-table">' +
+      '<thead><tr>' +
+        '<th>Date</th>' +
+        '<th>Event</th>' +
+        '<th>Purchase Price</th>' +
+        '<th>% Change</th>' +
+        '<th>Buyer / Operator</th>' +
+        '<th class="col-deck">Deck / PPM</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+
+  // --- Valuation Chart (separate section) ---
+  var chartSection = document.getElementById('valuationChartSection');
+  var points = chronological.filter(function(d) { return d.purchasePrice || d.offeringSize; });
+
+  if (points.length < 2) {
+    chartSection.style.display = 'none';
+    return;
+  }
+
+  chartSection.style.display = 'block';
+
+  var labels = points.map(function(d) {
+    return new Date(d.addedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  });
+  var values = points.map(function(d) { return d.purchasePrice || d.offeringSize; });
+
+  var first = values[0];
+  var last = values[values.length - 1];
+  var totalPct = ((last - first) / first * 100).toFixed(1);
+  var sign = totalPct > 0 ? '+' : '';
+  var cls = totalPct >= 0 ? 'positive' : 'negative';
+  document.getElementById('chartSubtitle').innerHTML =
+    '<span class="' + cls + '">' + sign + totalPct + '%</span> since ' +
+    labels[0] + ' (' + currency(first) + ' &rarr; ' + currency(last) + ')';
+
+  var canvas = document.getElementById('valuationChart');
+  // Destroy previous chart instance if re-rendering
+  if (canvas._chartInstance) canvas._chartInstance.destroy();
+  var ctx = canvas.getContext('2d');
+  canvas._chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        borderColor: '#51BE7B',
+        backgroundColor: 'rgba(81,190,123,0.06)',
+        fill: true,
+        tension: 0.35,
+        borderWidth: 3,
+        pointRadius: 6,
+        pointHoverRadius: 9,
+        pointBackgroundColor: function(context) {
+          // Last point is green, others are gray
+          return context.dataIndex === values.length - 1 ? '#51BE7B' : '#8A9AA0';
+        },
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0A1E21',
+          titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 13, weight: '600' },
+          bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(ctx) { return currency(ctx.parsed.y); }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+        },
+        y: {
+          grid: { color: '#EDF1F2' },
+          ticks: {
+            font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+            color: '#8A9AA0',
+            callback: function(val) { return currency(val); }
+          }
+        }
+      }
+    }
+  });
+}
+
+function extractPropertyDetails(deals) {
+  // Mine deal strategy text for property details
+  var details = {};
+  deals.forEach(function(d) {
+    var text = (d.investmentStrategy || '') + ' ' + (d.investmentName || '');
+    // Units
+    if (!details.units) {
+      var m = text.match(/(\d{2,4})[\s-]*(?:unit|apt|apartment)/i);
+      if (m) details.units = parseInt(m[1]);
+    }
+    // City, State
+    if (!details.city) {
+      var m = text.match(/\bin\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?),\s*([A-Z]{2})\b/);
+      if (m) { details.city = m[1]; details.state = m[2]; }
+    }
+    // Occupancy
+    if (!details.occupancy) {
+      var m = text.match(/(\d{1,3})%\s*(?:occupan|occupied|leased)/i);
+      if (m) details.occupancy = parseInt(m[1]);
+    }
+    // Property type from strategy
+    if (!details.propertyType) {
+      if (/\b(?:condo|condominium)\b/i.test(text)) details.propertyType = 'Condominium';
+      else if (/\b(?:townhome|townhouse)\b/i.test(text)) details.propertyType = 'Townhome';
+      else if (/\b(?:garden[\s-]?style)\b/i.test(text)) details.propertyType = 'Garden Style';
+      else if (/\b(?:mid[\s-]?rise)\b/i.test(text)) details.propertyType = 'Mid-Rise';
+      else if (/\b(?:high[\s-]?rise)\b/i.test(text)) details.propertyType = 'High-Rise';
+    }
+    // Value-add indicator
+    if (/value[\s-]?add/i.test(text)) details.strategy = 'Value-Add';
+    else if (/core[\s-]?plus/i.test(text)) details.strategy = 'Core Plus';
+    else if (/opportunistic/i.test(text)) details.strategy = 'Opportunistic';
+    else if (/stabilized/i.test(text)) details.strategy = 'Stabilized';
+    // Deal fields
+    if (!details.holdPeriod && d.holdPeriod) details.holdPeriod = d.holdPeriod;
+    if (!details.offeringType && d.offeringType) details.offeringType = d.offeringType;
+  });
+  return details;
+}
+
+function renderAssetOverview(deals, propertyDetails, propertyName, assetClass, location) {
+  var section = document.getElementById('assetOverviewSection');
+  var el = document.getElementById('assetOverviewContent');
+  var pd = propertyDetails || {};
+
+  var d0 = deals[0] || {};
+  var units = d0.unitCount || pd.units;
+  var yrBuilt = d0.yearBuilt;
+  var sqft = d0.squareFootage;
+  var occ = d0.occupancyPct ? Math.round(d0.occupancyPct * 100) : pd.occupancy;
+  var propType = d0.propertyType || pd.propertyType;
+  var strat = d0.strategy || pd.strategy;
+
+  // Get unique operators
+  var opSet = {};
+  var operators = [];
+  deals.forEach(function(d) {
+    var mc = d.managementCompany;
+    if (mc && !opSet[mc]) { opSet[mc] = true; operators.push(mc); }
+  });
+
+  // Build natural language summary
+  var parts = [];
+  var name = propertyName || 'This property';
+
+  // Opening sentence
+  var opening = name;
+  if (assetClass) opening += ' is a ' + assetClass.toLowerCase() + ' property';
+  else opening += ' is a property';
+  if (location) opening += ' located in ' + location;
+  opening += '.';
+  parts.push(opening);
+
+  // Details sentence
+  var details = [];
+  if (units) details.push(Number(units).toLocaleString() + ' units');
+  if (sqft) details.push(Number(sqft).toLocaleString() + ' square feet');
+  if (yrBuilt) details.push('built in ' + yrBuilt);
+  if (details.length) {
+    parts.push('The property has ' + details.join(', ') + '.');
+  }
+
+  // Occupancy
+  if (occ) {
+    parts.push('Current occupancy is ' + occ + '%.');
+  }
+
+  // Strategy
+  if (strat) {
+    parts.push('The current investment strategy is ' + strat.toLowerCase() + '.');
+  }
+
+  // Ownership history
+  if (operators.length === 1) {
+    parts.push('It is currently owned by ' + operators[0] + '.');
+  } else if (operators.length > 1) {
+    parts.push('It has had ' + operators.length + ' operators in our database: ' + operators.join(', ') + '.');
+  }
+
+  // Deal count
+  if (deals.length > 1) {
+    var dates = deals.map(function(d) { return d.addedDate; }).filter(Boolean).sort();
+    if (dates.length >= 2) {
+      var firstYear = new Date(dates[0]).getFullYear();
+      var lastYear = new Date(dates[dates.length - 1]).getFullYear();
+      parts.push('We\'ve tracked ' + deals.length + ' transactions on this asset from ' + firstYear + ' to ' + lastYear + '.');
+    }
+  }
+
+  if (parts.length <= 1) return; // Not enough data for a meaningful summary
+
+  section.style.display = 'block';
+
+  var html = '<div style="padding:24px;font-family:var(--font-body);font-size:15px;line-height:1.7;color:var(--text-secondary);">' +
+    '<p style="margin:0;">' + esc(parts.join(' ')) + '</p>' +
+    '</div>';
+
+  el.innerHTML = html;
+}
+
+function renderOperatorComparison(deals) {
+  var section = document.getElementById('operatorCompSection');
+  var el = document.getElementById('operatorCompContent');
+
+  // Need 2+ deals to compare
+  if (deals.length < 2) return;
+
+  // Sort by date (oldest first)
+  var sorted = deals.slice().sort(function(a, b) {
+    return new Date(a.addedDate || 0) - new Date(b.addedDate || 0);
+  });
+
+  section.style.display = 'block';
+
+  // Build comparison rows
+  var rows = [
+    { label: 'Operator', key: 'managementCompany', fmt: function(d) {
+      var html = '<div class="op-comp-value">' + esc(d.managementCompany || '--') + '</div>';
+      if (d.mcType) html += '<div class="op-comp-sub">' + esc(d.mcType) + '</div>';
+      return html;
+    }},
+    { label: 'Purchase Price', key: 'purchasePrice', fmt: function(d) {
+      return d.purchasePrice ? '<div class="op-comp-value">' + currency(d.purchasePrice) + '</div>' : '--';
+    }},
+    { label: 'Equity Raise', key: 'offeringSize', fmt: function(d) {
+      return d.offeringSize ? '<div class="op-comp-value">' + currency(d.offeringSize) + '</div>' : '--';
+    }},
+    { label: 'Target IRR', key: 'targetIRR', fmt: function(d) {
+      return d.targetIRR ? '<div class="op-comp-value">' + pct(d.targetIRR) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'Equity Multiple', key: 'equityMultiple', fmt: function(d) {
+      return d.equityMultiple ? '<div class="op-comp-value">' + multiple(d.equityMultiple) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'Preferred Return', key: 'preferredReturn', fmt: function(d) {
+      return d.preferredReturn ? '<div class="op-comp-value">' + pct(d.preferredReturn) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'LP/GP Split', key: 'lpGpSplit', fmt: function(d) {
+      return d.lpGpSplit && /\d+\s*\/\s*\d+/.test(d.lpGpSplit) ? '<div class="op-comp-value">' + esc(d.lpGpSplit) + '</div>' : '--';
+    }},
+    { label: 'Min Investment', key: 'investmentMinimum', fmt: function(d) {
+      return d.investmentMinimum ? '<div class="op-comp-value">' + currency(d.investmentMinimum) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Cash-on-Cash', key: 'cashOnCash', fmt: function(d) {
+      return d.cashOnCash ? '<div class="op-comp-value">' + pct(d.cashOnCash) + '</div>' : '--';
+    }, compare: 'higher'},
+    { label: 'Hold Period', key: 'holdPeriod', fmt: function(d) {
+      return d.holdPeriod ? '<div class="op-comp-value">' + d.holdPeriod + ' Years</div>' : '--';
+    }},
+    { label: 'Offering Type', key: 'offeringType', fmt: function(d) {
+      return d.offeringType ? '<div class="op-comp-value">' + esc(d.offeringType) + '</div>' : '--';
+    }},
+    { label: 'Status', key: 'status', fmt: function(d) {
+      var ev = statusToEvent(d.status);
+      return '<span class="event-tag ' + ev.cls + '">' + ev.label + '</span>';
+    }},
+    { label: 'Acquisition Fee', key: 'acquisitionFeePct', fmt: function(d) {
+      return d.acquisitionFeePct ? '<div class="op-comp-value">' + pct(d.acquisitionFeePct) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Asset Mgmt Fee', key: 'assetMgmtFeePct', fmt: function(d) {
+      return d.assetMgmtFeePct ? '<div class="op-comp-value">' + pct(d.assetMgmtFeePct) + ' / yr</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Property Mgmt Fee', key: 'propertyMgmtFeePct', fmt: function(d) {
+      return d.propertyMgmtFeePct ? '<div class="op-comp-value">' + pct(d.propertyMgmtFeePct) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Disposition Fee', key: 'dispositionFeePct', fmt: function(d) {
+      var fee = d.dispositionFeePct || d.capitalEventFeePct;
+      return fee ? '<div class="op-comp-value">' + pct(fee) + '</div>' : '--';
+    }, compare: 'lower'},
+    { label: 'Fees', key: 'fees', fmt: function(d) {
+      if (!d.fees || !d.fees.length) return '--';
+      return '<div class="op-comp-fees">' + d.fees.map(function(f) {
+        return '<div class="op-comp-fee-item">' + esc(f) + '</div>';
+      }).join('') + '</div>';
+    }},
+    { label: 'Website', key: 'mcWebsite', fmt: function(d) {
+      if (!d.mcWebsite) return '--';
+      var domain = d.mcWebsite.replace(/https?:\/\/(?:www\.)?/, '').replace(/\/$/, '');
+      return '<a href="' + escAttr(d.mcWebsite) + '" target="_blank" rel="noopener" class="op-comp-link">' + esc(domain) + '</a>';
+    }},
+    { label: 'Deck', key: 'deckUrl', fmt: function(d) {
+      if (!d.deckUrl) return '--';
+      return '<a href="' + escAttr(d.deckUrl) + '" target="_blank" rel="noopener" class="op-comp-link">View Deck</a>';
+    }}
+  ];
+
+  // Filter out rows where ALL deals have no data
+  rows = rows.filter(function(row) {
+    return sorted.some(function(d) {
+      var v = d[row.key];
+      if (Array.isArray(v)) return v.length > 0;
+      return v != null && v !== '' && v !== 0;
+    });
+  });
+
+  var html = '<table class="op-comp-table"><thead><tr><th>Metric</th>' +
+    sorted.map(function(d) {
+      return '<th>' + esc(d.managementCompany || 'Operator') + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+
+  rows.forEach(function(row) {
+    html += '<tr><td>' + row.label + '</td>';
+    sorted.forEach(function(d) {
+      html += '<td>' + row.fmt(d) + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderPropertyRecords(rc, deals) {
+  document.getElementById('recordsSection').style.display = 'block';
+  var content = document.getElementById('recordsContent');
+  var unitCount = rc ? rc.unitCount : null;
+  var html = '';
+  var source = rc ? 'RentCast' : 'Deal Data';
+
+  // ── Acquisition / Sale highlight ──
+  var salePrice = rc ? rc.lastSalePrice : null;
+  var saleDate = rc ? rc.lastSaleDate : null;
+  if (salePrice) {
+    var perUnit = unitCount ? Math.round(salePrice / unitCount) : null;
+    html += '<div style="padding:24px 24px 0;"><div style="padding:20px 24px;background:linear-gradient(135deg,var(--teal-midnight),var(--teal-deep));border-radius:var(--radius);color:#fff;">' +
+      '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;opacity:0.6;margin-bottom:8px;">Acquisition Price</div>' +
+      '<div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">' +
+        '<div style="font-family:var(--font-ui);font-size:28px;font-weight:800;">$' + salePrice.toLocaleString() + '</div>' +
+        (perUnit ? '<div style="font-size:14px;opacity:0.7;">$' + perUnit.toLocaleString() + ' / unit</div>' : '') +
+      '</div>' +
+      (saleDate ? '<div style="font-size:12px;opacity:0.5;margin-top:6px;">Recorded ' + fmtDate(saleDate) + '</div>' : '') +
+    '</div></div>';
+  }
+
+  // ── Property details grid ──
+  var items = [];
+  if (rc) {
+    if (rc.propertyType) items.push({ l: 'Property Type', v: rc.propertyType });
+    if (rc.unitCount) items.push({ l: 'Units', v: rc.unitCount });
+    if (rc.squareFootage) items.push({ l: 'Square Footage', v: rc.squareFootage.toLocaleString() + ' sqft' });
+    if (rc.lotSize) items.push({ l: 'Lot Size', v: rc.lotSize.toLocaleString() + ' sqft' });
+    if (rc.yearBuilt) items.push({ l: 'Year Built', v: rc.yearBuilt });
+    if (rc.floorCount) items.push({ l: 'Floors', v: rc.floorCount });
+    if (!salePrice && rc.lastSaleDate) items.push({ l: 'Last Sale', v: fmtDate(rc.lastSaleDate) });
+    if (!salePrice && rc.lastSalePrice) items.push({ l: 'Last Sale Price', v: '$' + rc.lastSalePrice.toLocaleString() });
+    // Per-unit values when available
+    if (rc.lastSalePrice && unitCount) {
+      var sqftPerUnit = rc.squareFootage ? Math.round(rc.squareFootage / unitCount) : null;
+      if (sqftPerUnit) items.push({ l: 'Avg sqft / Unit', v: sqftPerUnit.toLocaleString() + ' sqft' });
+    }
+  }
+  if (items.length) {
+    html += '<div class="records-grid">' +
+      items.map(function(d) {
+        return '<div class="record-item"><div class="record-label">' + d.l + '</div><div class="record-value">' + d.v + '</div></div>';
+      }).join('') +
+    '</div>';
+  }
+
+  // ── Tax assessments ──
+  if (rc && rc.taxAssessments) {
+    var years = Object.keys(rc.taxAssessments).sort().reverse().slice(0, 5);
+    if (years.length) {
+      html += '<div style="padding:0 24px 24px;"><div style="font-family:var(--font-ui);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Tax Assessment History</div>' +
+        '<div style="overflow-x:auto;"><table class="tax-table"><thead><tr>' +
+        '<th>Year</th><th>Total Value</th>' + (unitCount ? '<th>Per Unit</th>' : '') + '<th>Land</th><th>Improvements</th><th>Tax</th>' +
+        '</tr></thead><tbody>' +
+        years.map(function(yr) {
+          var a = rc.taxAssessments[yr];
+          var tax = rc.propertyTaxes && rc.propertyTaxes[yr] ? rc.propertyTaxes[yr].total : null;
+          return '<tr>' +
+            '<td style="font-weight:600;">' + yr + '</td>' +
+            '<td>$' + (a.value || 0).toLocaleString() + '</td>' +
+            (unitCount ? '<td style="color:var(--blue);font-weight:600;">$' + Math.round((a.value || 0) / unitCount).toLocaleString() + '</td>' : '') +
+            '<td>$' + (a.land || 0).toLocaleString() + '</td>' +
+            '<td>$' + ((a.improvements || (a.value - a.land)) || 0).toLocaleString() + '</td>' +
+            '<td>' + (tax ? '$' + tax.toLocaleString() : '--') + '</td>' +
+          '</tr>';
+        }).join('') +
+        '</tbody></table></div></div>';
+    }
+  }
+
+  // ── Owner info ──
+  if (rc && rc.owner && rc.owner.names && rc.owner.names.length) {
+    html += '<div style="padding:0 24px 24px;"><div style="padding:16px;background:var(--bg-cream);border-radius:var(--radius-sm);">' +
+      '<div style="font-family:var(--font-ui);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:4px;">Owner of Record</div>' +
+      '<div style="font-family:var(--font-ui);font-size:14px;font-weight:700;color:var(--text-dark);">' + esc(rc.owner.names.join(', ')) + '</div>' +
+      (rc.owner.type ? '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">' + esc(rc.owner.type) + '</div>' : '') +
+    '</div></div>';
+  }
+
+  if (!html) {
+    html = emptyState(
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+      'No property records found',
+      'Property details from county records will appear here when available.'
+    );
+  }
+
+  // Source badge
+  html = '<div style="padding:16px 24px 0;"><span style="font-family:var(--font-ui);font-size:9px;font-weight:700;padding:3px 10px;border-radius:100px;background:rgba(37,99,235,0.08);color:var(--blue);text-transform:uppercase;letter-spacing:0.5px;">via ' + source + '</span></div>' + html;
+
+  content.innerHTML = html;
+
+  // Update map with real coordinates
+  if (rc && rc.latitude && rc.longitude) {
+    renderMap(rc.latitude, rc.longitude, rc.addressLine1 || '');
+  }
+}
+
+function shortLabel(deal) {
+  return deal.investmentName || deal.address || '';
+}
+
+async function renderNearby(nearbyDeals, currentCoords, currentName) {
+  if (!nearbyDeals.length) return;
+
+  document.getElementById('nearbySection').style.display = 'block';
+
+  // Hide the list element — labels are on the map now
+  document.getElementById('nearbyList').style.display = 'none';
+
+  // Initialize the nearby map
+  var mapEl = document.getElementById('nearbyMap');
+  try {
+    var nearbyMap = L.map(mapEl);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(nearbyMap);
+
+    var markers = [];
+
+    // Add current asset marker (green, larger) with permanent label
+    if (currentCoords) {
+      var greenIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:16px;height:16px;background:#51BE7B;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+      var m = L.marker([currentCoords.lat, currentCoords.lng], { icon: greenIcon }).addTo(nearbyMap);
+      m.bindTooltip('<span style="font-weight:700;">' + esc(shortLabel({ investmentName: currentName, investingGeography: '' })) + '</span>', {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -12],
+        className: 'map-label map-label-current'
+      });
+      markers.push(m);
+    }
+
+    // Extract addresses from nearby deals and geocode them
+    for (var i = 0; i < nearbyDeals.length; i++) {
+      var deal = nearbyDeals[i];
+      var addr = deal.address || '';
+      if (!addr || addr.length < 10) {
+        addr = extractAddress(deal.investmentName) || deal.investingGeography || '';
+      }
+      if (!addr || addr.length < 5) continue;
+
+      (function(d, a, idx) {
+        setTimeout(function() {
+          geocodeAddress(a).then(function(coords) {
+            if (!coords) return;
+            var href = 'deal.html?id=' + encodeURIComponent(d.id);
+            var blueIcon = L.divIcon({
+              className: '',
+              html: '<div style="width:12px;height:12px;background:#2563EB;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);"></div>',
+              iconSize: [12, 12],
+              iconAnchor: [6, 6]
+            });
+            var mk = L.marker([coords.lat, coords.lng], { icon: blueIcon }).addTo(nearbyMap);
+            // Permanent visible label
+            mk.bindTooltip(esc(shortLabel(d)), {
+              permanent: true,
+              direction: 'top',
+              offset: [0, -10],
+              className: 'map-label map-label-nearby'
+            });
+            // Click to navigate to deal
+            mk.on('click', function() { window.location.href = href; });
+            markers.push(mk);
+            // Fit bounds to include all markers
+            if (markers.length > 1) {
+              var group = L.featureGroup(markers);
+              nearbyMap.fitBounds(group.getBounds().pad(0.15));
+            }
+          });
+        }, idx * 1100);
+      })(deal, addr, i);
+    }
+
+    // Initial view
+    if (currentCoords) {
+      nearbyMap.setView([currentCoords.lat, currentCoords.lng], 10);
+    }
+
+  } catch(e) {
+    console.warn('Nearby map failed:', e);
+  }
+
+  // Build nearby table
+  var thStyle = 'padding:12px 16px;text-align:left;font-family:var(--font-ui);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;';
+  var tableHtml = '<table class="nearby-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">' +
+    '<colgroup><col class="col-irr" style="width:80px;"><col style="width:120px;"><col><col class="col-deal"><col class="col-operator" style="width:160px;"></colgroup>' +
+    '<thead><tr style="border-bottom:2px solid var(--border);">' +
+    '<th class="col-irr" style="' + thStyle + 'text-align:right;padding-left:20px;">Target IRR</th>' +
+    '<th style="' + thStyle + 'white-space:nowrap;">Asset Class</th>' +
+    '<th style="' + thStyle + '">Asset</th>' +
+    '<th class="col-deal" style="' + thStyle + '">Deal</th>' +
+    '<th class="col-operator" style="' + thStyle + 'padding-right:20px;">Operator</th>' +
+    '</tr></thead><tbody>';
+
+  var linkStyle = 'text-decoration:none;font-weight:600;';
+
+  nearbyDeals.forEach(function(d) {
+    var dealHref = 'deal.html?id=' + encodeURIComponent(d.id);
+    var assetHref = 'asset.html?id=' + encodeURIComponent(d.id);
+    // Operator link
+    var opHtml = '—';
+    if (d.managementCompany) {
+      var opHref = 'index.html#operators&search=' + encodeURIComponent(d.managementCompany);
+      opHtml = '<a href="' + escAttr(opHref) + '" onclick="event.stopPropagation()" style="' + linkStyle + 'color:var(--blue);font-family:var(--font-body);font-size:13px;">' + esc(d.managementCompany) + '</a>';
+    }
+    // Extract clean asset name (property name without address)
+    var assetName = d.investmentName || '';
+    var sepM = assetName.match(/^(.+?)\s*[–\-\/]\s*\d{2,5}\s+/);
+    if (sepM) assetName = sepM[1].trim();
+
+    tableHtml += '<tr style="border-bottom:1px solid var(--border-light);" onmouseover="this.style.background=\'var(--bg-cream)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<td class="col-irr" style="padding:14px 16px;text-align:right;padding-left:20px;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--green);">' + (d.targetIRR ? pct(d.targetIRR) : '—') + '</td>' +
+      '<td style="padding:14px 16px;"><span style="font-family:var(--font-ui);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);white-space:nowrap;">' + esc(d.assetClass || '—') + '</span></td>' +
+      '<td style="padding:14px 16px;"><a href="' + escAttr(assetHref) + '" style="' + linkStyle + 'color:var(--blue);font-family:var(--font-ui);font-size:13px;">' + esc(assetName) + '</a></td>' +
+      '<td class="col-deal" style="padding:14px 16px;"><a href="' + escAttr(dealHref) + '" style="' + linkStyle + 'color:var(--blue);font-family:var(--font-ui);font-size:13px;">' + esc(d.investmentName) + '</a></td>' +
+      '<td class="col-operator" style="padding:14px 16px;padding-right:20px;">' + opHtml + '</td>' +
+      '</tr>';
+  });
+
+  tableHtml += '</tbody></table>';
+  document.getElementById('nearbyTableView').innerHTML = tableHtml;
+}
+
+function toggleNearbyView(view) {
+  var mapEl = document.getElementById('nearbyMapView');
+  var tableEl = document.getElementById('nearbyTableView');
+  var mapBtn = document.getElementById('nearbyViewMap');
+  var tableBtn = document.getElementById('nearbyViewTable');
+  if (view === 'table') {
+    mapEl.style.display = 'none';
+    tableEl.style.display = 'block';
+    mapBtn.style.background = 'transparent'; mapBtn.style.color = 'var(--text-muted)';
+    tableBtn.style.background = 'var(--text-dark)'; tableBtn.style.color = '#fff';
+  } else {
+    mapEl.style.display = 'block';
+    tableEl.style.display = 'none';
+    mapBtn.style.background = 'var(--text-dark)'; mapBtn.style.color = '#fff';
+    tableBtn.style.background = 'transparent'; tableBtn.style.color = 'var(--text-muted)';
+  }
+}
+
+async function geocodeAddress(address) {
+  try {
+    var res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(address));
+    var data = await res.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  } catch(e) { console.warn('Geocode failed:', e); }
+  return null;
+}
+
+function renderMap(lat, lng, label) {
+  if (!lat || !lng) return;
+  var mapEl = document.getElementById('propertyMap');
+  var placeholder = document.getElementById('mapPlaceholder');
+  // Hide placeholder
+  if (placeholder) placeholder.style.display = 'none';
+  // Destroy existing map if any
+  if (mapEl._leaflet_id) {
+    mapEl._leaflet_id = null;
+    mapEl.innerHTML = '';
+  }
+  try {
+    var map = L.map(mapEl).setView([lat, lng], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 18
+    }).addTo(map);
+    L.marker([lat, lng]).addTo(map);
+  } catch(e) {
+    console.warn('Map failed:', e);
+  }
+}
+
+// ========== MARKET INTELLIGENCE ==========
+async function fetchMarketData(zip, stateAbbr, countyFips, lat, lng) {
+  var params = [];
+  if (zip) params.push('zip=' + encodeURIComponent(zip));
+  if (countyFips) params.push('fips=' + encodeURIComponent(countyFips));
+  if (stateAbbr) params.push('stateAbbr=' + encodeURIComponent(stateAbbr));
+  if (lat) params.push('lat=' + encodeURIComponent(lat));
+  if (lng) params.push('lng=' + encodeURIComponent(lng));
+  if (!params.length) return null;
+
+  try {
+    var resp = await fetch('/api/market-data?' + params.join('&'));
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    return data.success ? data : null;
+  } catch (e) {
+    console.log('Market data fetch failed:', e);
+    return null;
+  }
+}
+
+function renderMarketIntelligence(data, assetClass) {
+  if (!data || (!data.population || !data.population.length)) return;
+
+  var section = document.getElementById('marketIntelSection');
+  section.style.display = 'block';
+
+  var pop = data.population.filter(function(d) { return d.population > 0; });
+  var income = data.population.filter(function(d) { return d.medianIncome > 0; });
+
+  // ── Summary Stats ──
+  if (pop.length >= 2) {
+    var statsEl = document.getElementById('marketStats');
+    var latestPop = pop[pop.length - 1];
+    var latestIncome = income.length ? income[income.length - 1] : null;
+    var trend = data.populationTrend;
+
+    var b = data.benchmarks || {};
+    var stateB = b.state || {};
+    var natB = b.national || {};
+
+    function fmtK(n) { return n >= 1000000 ? (n/1000000).toFixed(1) + 'M' : n >= 1000 ? (n/1000).toFixed(0) + 'K' : n.toLocaleString(); }
+
+    var statsHtml = '';
+
+    // Population with benchmark context
+    var popSub = '';
+    if (trend) {
+      var ctx = [];
+      function coloredPct(val) {
+        var c = val >= 0 ? 'var(--green)' : 'var(--red)';
+        var s = val >= 0 ? '+' : '';
+        return '<span style="color:' + c + ';font-weight:700;">' + s + val + '%</span>';
+      }
+      if (stateB.popGrowthPct !== null && stateB.popGrowthPct !== undefined) {
+        var stName = (stateB.name || '').replace(/,.*/, '');
+        ctx.push(stName + ' ' + coloredPct(stateB.popGrowthPct));
+      }
+      if (natB.popGrowthPct !== null && natB.popGrowthPct !== undefined) {
+        ctx.push('US ' + coloredPct(natB.popGrowthPct));
+      }
+      if (ctx.length) {
+        popSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + ctx.join(' <span style="opacity:0.4;">·</span> ') + ' over same period</div>';
+      }
+    }
+    statsHtml += '<div class="mi-stat"><div class="mi-stat-value">' + latestPop.population.toLocaleString() + '</div><div class="mi-stat-label">Population (' + latestPop.year + ')</div>' + popSub + '</div>';
+
+    // Income with benchmark values
+    if (latestIncome) {
+      var incSub = '';
+      var benchmarks = [];
+      var localInc = latestIncome.medianIncome;
+      if (stateB.medianIncome) {
+        var stColor = localInc >= stateB.medianIncome ? 'var(--green)' : 'var(--red)';
+        benchmarks.push((stateB.name || '').replace(/,.*/, '') + ': <span style="color:' + stColor + ';font-weight:700;">$' + fmtK(stateB.medianIncome) + '</span>');
+      }
+      if (natB.medianIncome) {
+        var natColor = localInc >= natB.medianIncome ? 'var(--green)' : 'var(--red)';
+        benchmarks.push('US: <span style="color:' + natColor + ';font-weight:700;">$' + fmtK(natB.medianIncome) + '</span>');
+      }
+      if (benchmarks.length) {
+        incSub = '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">' + benchmarks.join(' <span style="opacity:0.4;">·</span> ') + '</div>';
+      }
+      statsHtml += '<div class="mi-stat"><div class="mi-stat-value">$' + latestIncome.medianIncome.toLocaleString() + '</div><div class="mi-stat-label">Median Income (' + latestIncome.year + ')</div>' + incSub + '</div>';
+    }
+    statsEl.innerHTML = statsHtml;
+    statsEl.style.display = 'grid';
+  }
+
+  // ── Population Chart ──
+  if (pop.length >= 3) {
+    document.getElementById('marketCharts').style.display = 'grid';
+
+    var labels = pop.map(function(d) { return d.year; });
+    var values = pop.map(function(d) { return d.population; });
+    var trend = data.populationTrend;
+
+    // Trend badge
+    if (trend) {
+      var badgeCls = trend.declining ? 'negative' : (trend.annualGrowth > 0.5 ? 'positive' : 'neutral');
+      var arrowSvg = trend.declining
+        ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>'
+        : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
+      document.getElementById('popTrendBadge').innerHTML = '<span class="mi-trend-badge ' + badgeCls + '">' + arrowSvg + (trend.pctChange > 0 ? '+' : '') + trend.pctChange + '% since ' + trend.startYear + '</span>';
+    }
+
+    var areaName = pop[0].name || '';
+    var cleanAreaName = areaName.replace(/^ZCTA5\s*/, 'ZIP ');
+    document.getElementById('popChartSubtitle').textContent = cleanAreaName ? cleanAreaName + ' (' + pop[0].year + '–' + pop[pop.length - 1].year + ')' : '';
+
+    var lineColor = trend && trend.declining ? '#D04040' : '#51BE7B';
+    var fillColor = trend && trend.declining ? 'rgba(208,64,64,0.06)' : 'rgba(81,190,123,0.06)';
+
+    var ctx = document.getElementById('populationChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          borderColor: lineColor,
+          backgroundColor: fillColor,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: lineColor,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0A1E21',
+            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+            bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(ctx) { return ctx.parsed.y.toLocaleString() + ' residents'; }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+          },
+          y: {
+            grid: { color: '#EDF1F2' },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+              color: '#8A9AA0',
+              callback: function(val) {
+                if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+                if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+                return val;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Income Chart ──
+  if (income.length >= 3) {
+    var incLabels = income.map(function(d) { return d.year; });
+    var incValues = income.map(function(d) { return d.medianIncome; });
+
+    var firstInc = incValues[0];
+    var lastInc = incValues[incValues.length - 1];
+    var incChange = Math.round(((lastInc - firstInc) / firstInc) * 1000) / 10;
+    var incDeclining = lastInc < firstInc;
+
+    var incBadgeCls = incDeclining ? 'negative' : 'positive';
+    var incArrow = incDeclining
+      ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>'
+      : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>';
+    document.getElementById('incomeTrendBadge').innerHTML = '<span class="mi-trend-badge ' + incBadgeCls + '">' + incArrow + (incChange > 0 ? '+' : '') + incChange + '% since ' + income[0].year + '</span>';
+    document.getElementById('incomeChartSubtitle').textContent = cleanAreaName + ' · $' + fmtK(firstInc) + ' → $' + fmtK(lastInc);
+
+    var incLineColor = incDeclining ? '#D04040' : '#2563EB';
+    var incFillColor = incDeclining ? 'rgba(208,64,64,0.06)' : 'rgba(37,99,235,0.06)';
+
+    var incCtx = document.getElementById('incomeChart').getContext('2d');
+    new Chart(incCtx, {
+      type: 'line',
+      data: {
+        labels: incLabels,
+        datasets: [{
+          data: incValues,
+          borderColor: incLineColor,
+          backgroundColor: incFillColor,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: incLineColor,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0A1E21',
+            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+            bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(ctx) { return '$' + ctx.parsed.y.toLocaleString(); }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+          },
+          y: {
+            grid: { color: '#EDF1F2' },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+              color: '#8A9AA0',
+              callback: function(val) { return '$' + (val / 1000).toFixed(0) + 'K'; }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Age Distribution Pyramid ──
+  if (data.ageDistribution && data.ageDistribution.length) {
+    document.getElementById('agePyramidSection').style.display = 'block';
+    var areaName = (pop.length && pop[0].name) ? pop[0].name : '';
+    document.getElementById('agePyramidSubtitle').textContent = cleanAreaName + ' · 2023 ACS 5-Year Estimates';
+
+    var ageReversed = data.ageDistribution.slice().reverse(); // 85+ at top, Under 5 at bottom
+    var ageLabels = ageReversed.map(function(g) { return g.label; });
+    var maleData = ageReversed.map(function(g) { return -g.male; }); // Negative for left side
+    var femaleData = ageReversed.map(function(g) { return g.female; });
+
+    var maxVal = Math.max.apply(null, ageReversed.map(function(g) { return Math.max(g.male, g.female); }));
+
+    var pyramidCtx = document.getElementById('agePyramidChart').getContext('2d');
+    new Chart(pyramidCtx, {
+      type: 'bar',
+      data: {
+        labels: ageLabels,
+        datasets: [
+          {
+            label: 'Male',
+            data: maleData,
+            backgroundColor: '#38bdf8',
+            borderRadius: 2,
+            barPercentage: 0.85,
+            categoryPercentage: 0.9
+          },
+          {
+            label: 'Female',
+            data: femaleData,
+            backgroundColor: '#fbbf24',
+            borderRadius: 2,
+            barPercentage: 0.85,
+            categoryPercentage: 0.9
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0A1E21',
+            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: '600' },
+            bodyFont: { family: "'Source Sans 3', sans-serif", size: 13 },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(ctx) {
+                return ctx.dataset.label + ': ' + Math.abs(ctx.parsed.x).toLocaleString();
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: false,
+            grid: { color: '#EDF1F2' },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' },
+              color: '#8A9AA0',
+              callback: function(val) {
+                var v = Math.abs(val);
+                if (v >= 1000) return (v / 1000).toFixed(0) + 'K';
+                return v;
+              }
+            },
+            min: -maxVal * 1.1,
+            max: maxVal * 1.1
+          },
+          y: {
+            stacked: false,
+            grid: { display: false },
+            ticks: {
+              font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' },
+              color: '#607179'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // ── Housing Data (multifamily only) ──
+  var isMultifamily = assetClass && (assetClass.toLowerCase().includes('multi') || assetClass.toLowerCase().includes('apartment') || assetClass.toLowerCase().includes('residential'));
+  if (isMultifamily && data.housing) {
+    var h = data.housing;
+    document.getElementById('housingSection').style.display = 'block';
+
+    // Vacancy badge
+    var vacPct = h.vacancyRate;
+    var vacCls = vacPct > 10 ? 'negative' : (vacPct > 7 ? 'neutral' : 'positive');
+    document.getElementById('vacancyBadge').innerHTML = '<span class="mi-trend-badge ' + vacCls + '">' + vacPct + '% vacancy</span>';
+    document.getElementById('housingOccSubtitle').textContent = h.totalUnits.toLocaleString() + ' total housing units in area';
+
+    // Occupancy time series chart
+    if (h.timeSeries && h.timeSeries.length >= 2) {
+      var occLabels = h.timeSeries.map(function(d) { return d.year; });
+      var occRates = h.timeSeries.map(function(d) { return d.occupancyRate; });
+      var occMin = Math.min.apply(null, occRates);
+      var occYMin = Math.max(0, Math.floor(occMin - 3)); // 3pts below lowest
+      var vacRates = h.timeSeries.map(function(d) { return d.vacancyRate; });
+
+      var occCtx = document.getElementById('occupancyChart').getContext('2d');
+      new Chart(occCtx, {
+        type: 'line',
+        data: {
+          labels: occLabels,
+          datasets: [
+            {
+              label: 'Occupancy Rate',
+              data: occRates,
+              borderColor: '#51BE7B',
+              backgroundColor: 'rgba(81,190,123,0.06)',
+              fill: true,
+              tension: 0.35,
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#51BE7B',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0A1E21',
+              titleFont: { family: "'Plus Jakarta Sans'", size: 12, weight: '600' },
+              bodyFont: { family: "'Source Sans 3'", size: 13 },
+              padding: 10,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(ctx) { return 'Occupancy: ' + ctx.parsed.y + '%'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' }
+            },
+            y: {
+              grid: { color: '#EDF1F2' },
+              min: occYMin,
+              max: 100,
+              ticks: {
+                font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' },
+                color: '#8A9AA0',
+                callback: function(val) { return val + '%'; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Bedroom mix
+    if (h.bedrooms && h.bedrooms.length) {
+      document.getElementById('bedroomSubtitle').textContent = '2023 ACS 5-Year Estimates';
+      var maxBrPct = Math.max.apply(null, h.bedrooms.map(function(b) { return b.pct; }));
+      var brHtml = '';
+      h.bedrooms.forEach(function(br) {
+        var barW = maxBrPct > 0 ? Math.round((br.pct / maxBrPct) * 100) : 0;
+        brHtml += '<div style="margin-bottom:10px;">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
+            '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-dark);">' + esc(br.label) + '</span>' +
+            '<span style="font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--text-secondary);">' + br.pct + '%</span>' +
+          '</div>' +
+          '<div style="height:20px;background:var(--border-light);border-radius:4px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + barW + '%;background:var(--blue);border-radius:4px;transition:width 0.5s;"></div>' +
+          '</div>' +
+        '</div>';
+      });
+      document.getElementById('bedroomContent').innerHTML = brHtml;
+    }
+
+    // Bedroom trend stacked bar chart
+    if (h.bedroomTimeSeries && h.bedroomTimeSeries.length >= 3) {
+      document.getElementById('brViewToggle').style.display = 'flex';
+      var brYears = h.bedroomTimeSeries.map(function(d) { return d.year; });
+      var brTrendCtx = document.getElementById('bedroomTrendChart').getContext('2d');
+      new Chart(brTrendCtx, {
+        type: 'bar',
+        data: {
+          labels: brYears,
+          datasets: [
+            { label: 'Studio', data: h.bedroomTimeSeries.map(function(d) { return d.noBr; }), backgroundColor: '#94a3b8', borderRadius: 2 },
+            { label: '1 BR', data: h.bedroomTimeSeries.map(function(d) { return d.oneBr; }), backgroundColor: '#38bdf8', borderRadius: 2 },
+            { label: '2 BR', data: h.bedroomTimeSeries.map(function(d) { return d.twoBr; }), backgroundColor: '#2563EB', borderRadius: 2 },
+            { label: '3 BR', data: h.bedroomTimeSeries.map(function(d) { return d.threeBr; }), backgroundColor: '#51BE7B', borderRadius: 2 },
+            { label: '4+ BR', data: h.bedroomTimeSeries.map(function(d) { return d.fourPlusBr; }), backgroundColor: '#f59e0b', borderRadius: 2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans'", size: 9, weight: '600' }, boxWidth: 10, padding: 8 } },
+            tooltip: {
+              backgroundColor: '#0A1E21', padding: 10, cornerRadius: 8,
+              callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + '%'; } }
+            }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' }, color: '#8A9AA0' } },
+            y: { stacked: true, max: 100, grid: { color: '#EDF1F2' }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 10, weight: '500' }, color: '#8A9AA0', callback: function(v) { return v + '%'; } } }
+          }
+        }
+      });
+    }
+  }
+
+  // ── Employment ──
+  if (data.employment && data.employment.topIndustries && data.employment.topIndustries.length) {
+    var empSection = document.getElementById('employmentSection');
+    empSection.style.display = 'block';
+
+    var industries = data.employment.topIndustries
+      .filter(function(i) { return !i.industry.includes('Total') && !i.industry.includes('Unclassified'); })
+      .slice(0, 8);
+
+    if (!industries.length) { empSection.style.display = 'none'; return; }
+
+    var maxEmpl = industries[0].employment;
+    var countyLabel = (data.query && data.query.countyName) ? data.query.countyName + ', ' + (data.query.stateAbbr || '') + ' · ' : '';
+    document.getElementById('employmentSubtitle').textContent = countyLabel + data.employment.year + ' annual averages' + (data.employment.totalEmployment ? ' · ' + data.employment.totalEmployment.toLocaleString() + ' total jobs' : '');
+
+    var listHtml = '';
+    for (var i = 0; i < industries.length; i++) {
+      var ind = industries[i];
+      var barPct = Math.max(8, Math.round((ind.employment / maxEmpl) * 100));
+      var payStr = ind.avgAnnualPay ? '$' + Math.round(ind.avgAnnualPay / 1000) + 'K avg' : '';
+      var yoyHtml = '';
+      if (ind.yoyPct !== null && ind.yoyPct !== undefined) {
+        var yoyColor = ind.yoyPct >= 0 ? 'var(--green)' : 'var(--red)';
+        var yoySign = ind.yoyPct >= 0 ? '+' : '';
+        yoyHtml = '<span style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:' + yoyColor + ';min-width:45px;text-align:right;">' + yoySign + ind.yoyPct + '%</span>';
+      }
+      listHtml += '<li class="mi-industry-item">' +
+        '<span class="mi-industry-rank">' + (i + 1) + '</span>' +
+        '<span class="mi-industry-name">' + esc(ind.industry) + (payStr ? '<div style="font-size:10px;color:var(--text-muted);font-weight:500;margin-top:1px;">' + payStr + '</div>' : '') + '</span>' +
+        '<span class="mi-industry-bar-wrap"><span class="mi-industry-bar" style="width:' + barPct + '%;"></span></span>' +
+        '<span class="mi-industry-count">' + ind.employment.toLocaleString() + '</span>' +
+        yoyHtml +
+        '</li>';
+    }
+    document.getElementById('industryList').innerHTML = listHtml;
+
+    // Build trend chart if time series data available
+    if (data.employment.timeSeries && data.employment.years && data.employment.years.length >= 2) {
+      document.getElementById('empViewToggle').style.display = 'flex';
+      var trendColors = ['#51BE7B','#2563EB','#f59e0b','#a855f7','#ef4444','#06b6d4','#f97316','#6366f1'];
+      var datasets = [];
+      var idx = 0;
+      for (var indName in data.employment.timeSeries) {
+        var series = data.employment.timeSeries[indName];
+        var color = trendColors[idx % trendColors.length];
+        datasets.push({
+          label: indName,
+          data: series.map(function(s) { return s.employment; }),
+          borderColor: color,
+          backgroundColor: color + '10',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: color,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1
+        });
+        idx++;
+      }
+      var trendCtx = document.getElementById('industryTrendChart').getContext('2d');
+      window._industryTrendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: { labels: data.employment.years, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { font: { family: "'Plus Jakarta Sans'", size: 9, weight: '600' }, boxWidth: 10, padding: 8 } },
+            tooltip: {
+              backgroundColor: '#0A1E21',
+              titleFont: { family: "'Plus Jakarta Sans'", size: 12, weight: '600' },
+              bodyFont: { family: "'Source Sans 3'", size: 11 },
+              padding: 10, cornerRadius: 8,
+              callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + (ctx.parsed.y ? ctx.parsed.y.toLocaleString() : '—'); } }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0' } },
+            y: { grid: { color: '#EDF1F2' }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 11, weight: '500' }, color: '#8A9AA0', callback: function(v) { return v >= 1000 ? (v/1000).toFixed(0)+'K' : v; } } }
+          }
+        }
+      });
+    }
+  }
+
+  // ── Risk Flags ──
+  var risks = data.risks || [];
+  // Add positive signal if population is growing
+  if (data.populationTrend && !data.populationTrend.declining && data.populationTrend.annualGrowth > 0.5) {
+    risks.push({
+      type: 'population_growth',
+      severity: 'positive',
+      message: 'Strong population growth',
+      detail: '+' + data.populationTrend.pctChange + '% over ' + (data.populationTrend.endYear - data.populationTrend.startYear) + ' years (' + data.populationTrend.annualGrowth + '%/yr)'
+    });
+  }
+
+  if (risks.length) {
+    var risksEl = document.getElementById('marketRisks');
+    risksEl.style.display = 'block';
+
+    var warnIcon = '<svg class="mi-risk-icon warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    var dangerIcon = '<svg class="mi-risk-icon danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    var positiveIcon = '<svg class="mi-risk-icon positive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+
+    var html = '';
+    risks.forEach(function(r) {
+      var icon = r.severity === 'danger' ? dangerIcon : (r.severity === 'positive' ? positiveIcon : warnIcon);
+      html += '<div class="mi-risk-card ' + r.severity + '">' +
+        icon +
+        '<div><div class="mi-risk-title">' + esc(r.message) + '</div>' +
+        '<div class="mi-risk-detail">' + esc(r.detail) + '</div></div>' +
+        '</div>';
+    });
+    risksEl.innerHTML = html;
+  }
+
+  // ── Deep-link source badges ──
+  var q = data.query || {};
+  if (q.zip) {
+    // Census data.census.gov deep link: search by ZCTA
+    document.getElementById('censusSourceLink').href = 'https://data.census.gov/profile/' + q.zip + '?g=860XX00US' + q.zip + '#populations-and-people';
+  }
+  if (q.fips && q.fips.length === 5) {
+    // BLS QCEW deep link: county-level employment data
+    // Link to QCEW single-area annual data view (supersector level, private ownership)
+    document.getElementById('blsSourceLink').href = 'https://data.bls.gov/cew/apps/table_maker/v4/table_maker.htm#type=2&st=' + q.fips.substring(0,2) + '&area=' + q.fips + '&ind=10&own=5&rtr=A&year=2024&supp=0';
+    if (q.countyName) {
+      document.getElementById('blsSourceLink').textContent = q.countyName + ' Employment ↗';
+    }
+  }
+
+  // Data recency note
+  var latestYear = pop.length ? pop[pop.length - 1].year : null;
+  var currentYear = new Date().getFullYear();
+  if (latestYear && latestYear < currentYear) {
+    document.getElementById('dataRecencyNote').textContent = 'Census data available through ' + latestYear + '. Updated annually.';
+  }
+}
+
+// ========== BEDROOM VIEW TOGGLE ==========
+function toggleBrView(view) {
+  var barsEl = document.getElementById('brBarsView');
+  var trendEl = document.getElementById('brTrendView');
+  var barsBtn = document.getElementById('brViewBars');
+  var trendBtn = document.getElementById('brViewTrend');
+  if (view === 'trend') {
+    barsEl.style.display = 'none'; trendEl.style.display = 'block';
+    barsBtn.style.background = 'transparent'; barsBtn.style.color = 'var(--text-muted)';
+    trendBtn.style.background = 'var(--text-dark)'; trendBtn.style.color = '#fff';
+  } else {
+    barsEl.style.display = 'block'; trendEl.style.display = 'none';
+    barsBtn.style.background = 'var(--text-dark)'; barsBtn.style.color = '#fff';
+    trendBtn.style.background = 'transparent'; trendBtn.style.color = 'var(--text-muted)';
+  }
+}
+
+// ========== EMPLOYMENT VIEW TOGGLE ==========
+function toggleEmpView(view) {
+  var listEl = document.getElementById('empListView');
+  var chartEl = document.getElementById('empChartView');
+  var listBtn = document.getElementById('empViewList');
+  var chartBtn = document.getElementById('empViewChart');
+  if (view === 'chart') {
+    listEl.style.display = 'none';
+    chartEl.style.display = 'block';
+    listBtn.style.background = 'transparent'; listBtn.style.color = 'var(--text-muted)';
+    chartBtn.style.background = 'var(--text-dark)'; chartBtn.style.color = '#fff';
+  } else {
+    listEl.style.display = 'block';
+    chartEl.style.display = 'none';
+    listBtn.style.background = 'var(--text-dark)'; listBtn.style.color = '#fff';
+    chartBtn.style.background = 'transparent'; chartBtn.style.color = 'var(--text-muted)';
+  }
+}
+
+// ========== INIT ==========
+async function init() {
+  var params = new URLSearchParams(window.location.search);
+  var dealId = params.get('id') || '';
+  var addressParam = params.get('address') || '';
+  var nameParam = params.get('name') || '';
+
+  // Fetch all deals from the database
+  var allDeals = await fetchAllDeals();
+
+  // Find the anchor deal (if coming from a deal link)
+  var anchorDeal = null;
+  if (dealId) {
+    anchorDeal = allDeals.find(function(d) { return d.id === dealId; });
+  }
+
+  // Determine property identity
+  var dealName = anchorDeal ? anchorDeal.investmentName : '';
+  var propertyAddress = addressParam || (anchorDeal ? anchorDeal.address : '') || '';
+
+  // Try to extract a real address from the deal name if address field is empty
+  if (!propertyAddress && dealName) {
+    propertyAddress = extractAddress(dealName);
+  }
+
+  // Build a clean property name — use the name part before the address separator
+  var propertyName = nameParam || dealName || addressParam || 'Unknown Property';
+  if (propertyName.length > 20) {
+    // Split on separator (–, -, /) and check if address is after it
+    var sepMatch = propertyName.match(/^(.+?)\s*[–\-\/]\s*(\d{2,5}\s+.+)/);
+    if (sepMatch) {
+      // Part before separator is the property/deal name, part after is the address
+      propertyName = sepMatch[1].trim();
+      if (!propertyAddress) propertyAddress = sepMatch[2].trim();
+    }
+  }
+
+  var assetClass = anchorDeal ? anchorDeal.assetClass : '';
+  var location = anchorDeal ? (anchorDeal.investingGeography || anchorDeal.location) : '';
+
+  // Extract state from address or deal name for nearby matching
+  var state = extractState(propertyAddress) || extractState(dealName) || extractState(location);
+  if (!location && state) {
+    // Build location from address parts
+    var addrParts = (propertyAddress || dealName).match(/,\s*([A-Za-z\s]+),\s*[A-Z]{2}/);
+    location = addrParts ? addrParts[1].trim() + ', ' + state : state;
+  }
+
+  // Find all deals at this property
+  var matchingDeals = findMatchingDeals(allDeals, propertyName, propertyAddress);
+
+  // If we have an anchor deal but it wasn't in the matches, add it
+  if (anchorDeal && !matchingDeals.find(function(d) { return d.id === anchorDeal.id; })) {
+    matchingDeals.unshift(anchorDeal);
+  }
+
+  // If still no matching deals but we have an anchor, just show that one
+  if (!matchingDeals.length && anchorDeal) {
+    matchingDeals = [anchorDeal];
+  }
+
+  // Derive status from deals
+  var hasActive = matchingDeals.some(function(d) {
+    var s = (d.status || '').toLowerCase();
+    return s.includes('open') || s.includes('active') || s.includes('evergreen');
+  });
+  var status = hasActive ? 'Active' : (matchingDeals.length ? 'Closed' : '');
+
+  // If no asset class from anchor deal, try to get from matching deals
+  if (!assetClass && matchingDeals.length) assetClass = matchingDeals[0].assetClass || '';
+  if (!location && matchingDeals.length) location = matchingDeals[0].investingGeography || matchingDeals[0].location || '';
+
+  // Extract property details from deal strategy text
+  var propertyDetails = extractPropertyDetails(matchingDeals);
+
+  // If no address but we extracted a city from strategy, use it for geocoding and location
+  if (!propertyAddress && propertyDetails.city) {
+    propertyAddress = propertyDetails.city + ', ' + (propertyDetails.state || '');
+  }
+  if ((!location || location === 'USA') && propertyDetails.city) {
+    location = propertyDetails.city + ', ' + (propertyDetails.state || '');
+  }
+  if (!state && propertyDetails.state) {
+    state = propertyDetails.state;
+  }
+
+  // Render
+  renderHero(propertyName, propertyAddress, assetClass, location, status, matchingDeals);
+  renderPriceHistory(matchingDeals, null);
+  renderAssetOverview(matchingDeals, propertyDetails, propertyName, assetClass, location);
+  renderOperatorComparison(matchingDeals);
+  // Deal economics removed — belongs on deal page only
+
+  // Show content
+  document.getElementById('loadingSkeleton').style.display = 'none';
+  document.getElementById('loadedContent').style.display = 'block';
+
+  // Find nearby deals
+  var matchIds = matchingDeals.map(function(d) { return d.id; });
+  var nearby = findNearbyDeals(allDeals, location, assetClass, matchIds, state);
+
+  // Geocode address for hero map + nearby map
+  var currentCoords = null;
+  if (propertyAddress && propertyAddress.length > 5) {
+    currentCoords = await geocodeAddress(propertyAddress);
+    if (currentCoords) renderMap(currentCoords.lat, currentCoords.lng, propertyAddress);
+  }
+
+  // Render nearby assets map (needs current coords)
+  renderNearby(nearby, currentCoords, propertyName);
+
+  // Extract zip from address for immediate market data fetch
+  var miZip = null;
+  if (propertyAddress) {
+    var zipMatch = propertyAddress.match(/\b(\d{5})\b/);
+    if (zipMatch) miZip = zipMatch[1];
+  }
+  var miLat = currentCoords ? currentCoords.lat : null;
+  var miLng = currentCoords ? currentCoords.lng : null;
+
+  // Market Intelligence (from cache or Census/BLS APIs)
+  if (miZip || (miLat && miLng)) {
+    fetchMarketData(miZip, state, null, miLat, miLng).then(function(marketData) {
+      if (marketData) renderMarketIntelligence(marketData, assetClass);
+    });
+  }
+}
+
+init();
+</script>
+</body>
+</html>

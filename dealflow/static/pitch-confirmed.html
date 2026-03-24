@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch Booked — GYC Dealflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #51BE7B;
+  --primary-hover: #45A86C;
+  --bg-cream: #FAF9F5;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0A1E21;
+  --bg-sidebar-hover: #14333A;
+  --bg-sidebar-active: #1F5159;
+  --text-dark: #141413;
+  --text-secondary: #607179;
+  --text-muted: #8A9AA0;
+  --text-sidebar: rgba(255,255,255,0.55);
+  --text-sidebar-active: #FFFFFF;
+  --border: #DDE5E8;
+  --border-light: #EDF1F2;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-width: 240px;
+  --green: #51BE7B;
+  --green-bg: #E7F5F0;
+  --teal-deep: #1F5159;
+  --teal-midnight: #0A1E21;
+  --accent-green: #40E47F;
+  --mint-bg: #E7F5F0;
+  --off-white: #FAF9F5;
+  --transition: 0.2s ease;
+  --font-headline: 'DM Serif Display', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-cream);
+  color: var(--text-dark);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar styles loaded via sidebar.js */
+.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-width); background: var(--bg-sidebar); display: flex; flex-direction: column; z-index: 100; transition: transform 0.3s ease; }
+.sidebar-logo { padding: 20px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.sidebar-logo-icon { width: 36px; height: 36px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-weight: 700; color: #fff; font-size: 12px; }
+.sidebar-logo-text { font-family: var(--font-headline); font-size: 18px; color: #fff; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section-label { padding: 16px 24px 8px; font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.3); }
+.nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 24px; color: var(--text-sidebar); cursor: pointer; transition: all var(--transition); font-family: var(--font-ui); font-size: 13px; font-weight: 500; position: relative; text-decoration: none; }
+.nav-item:hover { background: var(--bg-sidebar-hover); color: #fff; }
+.nav-item.active { background: var(--bg-sidebar-active); color: var(--text-sidebar-active); }
+.nav-item.active::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: var(--primary); border-radius: 0 2px 2px 0; }
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+.nav-badge { margin-left: auto; background: var(--primary); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.sidebar-user { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px; }
+.sidebar-user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--teal-deep); display: flex; align-items: center; justify-content: center; color: var(--accent-green); font-family: var(--font-ui); font-weight: 700; font-size: 12px; }
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-user-role { font-family: var(--font-ui); font-size: 11px; color: var(--text-sidebar); }
+.sidebar-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.06); }
+.theme-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-sidebar); font-size: 13px; font-weight: 500; }
+.toggle-track { width: 40px; height: 22px; background: #444; border-radius: 11px; position: relative; }
+.toggle-track.on { background: var(--teal-deep); }
+.toggle-thumb { width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform var(--transition); }
+.toggle-track.on .toggle-thumb { transform: translateX(18px); }
+
+.main { margin-left: var(--sidebar-width); min-height: 100vh; }
+.mobile-topbar { display: none; position: sticky; top: 0; height: 56px; background: var(--bg-cream); border-bottom: 1px solid var(--border); align-items: center; padding: 0 20px; gap: 12px; z-index: 50; }
+.mobile-topbar-title { font-family: var(--font-ui); font-size: 15px; font-weight: 600; }
+.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; color: var(--text-dark); padding: 4px; }
+.mobile-menu-btn svg { width: 24px; height: 24px; }
+.content-wrap { max-width: 800px; padding: 32px 40px 64px; margin: 0 auto; }
+.breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+.breadcrumb a { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--primary); text-decoration: none; }
+.breadcrumb-sep { font-size: 12px; color: var(--text-muted); }
+.breadcrumb-current { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+/* ====== CONFIRMATION HERO ====== */
+.confirm-hero {
+  text-align: center;
+  padding: 48px 32px;
+  margin-bottom: 32px;
+}
+.confirm-check {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--green-bg);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.confirm-check svg {
+  width: 36px; height: 36px;
+  color: var(--primary);
+}
+.confirm-hero h1 {
+  font-family: var(--font-headline);
+  font-size: 32px;
+  color: var(--teal-deep);
+  margin-bottom: 8px;
+}
+.confirm-hero p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* ====== DATE PICKER ====== */
+.date-section {
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow-lg);
+}
+.date-section h2 {
+  font-family: var(--font-headline);
+  font-size: 24px;
+  color: var(--teal-deep);
+  margin-bottom: 4px;
+  text-align: center;
+}
+.date-section-sub {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+.date-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.date-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 2px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-card);
+}
+.date-option:hover {
+  border-color: var(--primary);
+  background: var(--green-bg);
+}
+.date-option.selected {
+  border-color: var(--primary);
+  background: var(--green-bg);
+}
+.date-option-cal {
+  width: 48px; height: 48px;
+  background: var(--off-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.date-option.selected .date-option-cal {
+  background: var(--teal-deep);
+  border-color: var(--teal-deep);
+}
+.date-option-cal-month {
+  font-family: var(--font-ui);
+  font-size: 9px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.date-option.selected .date-option-cal-month { color: rgba(255,255,255,0.6); }
+.date-option-cal-day {
+  font-family: var(--font-headline);
+  font-size: 20px;
+  color: var(--teal-deep);
+  line-height: 1;
+}
+.date-option.selected .date-option-cal-day { color: #fff; }
+.date-option-info h4 {
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 700;
+  color: var(--text-dark);
+}
+.date-option-info span {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.date-confirm-btn {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px;
+  font-family: var(--font-ui);
+  font-size: 16px; font-weight: 700;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.date-confirm-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+.date-confirm-btn:disabled {
+  background: var(--border);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ====== SUCCESS STATE ====== */
+.booking-success {
+  display: none;
+  text-align: center;
+  padding: 32px;
+  background: var(--green-bg);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  margin-bottom: 32px;
+}
+.booking-success h3 {
+  font-family: var(--font-headline);
+  font-size: 22px;
+  color: var(--teal-deep);
+  margin-bottom: 8px;
+}
+.booking-success p {
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+.booked-date {
+  font-family: var(--font-ui);
+  font-size: 18px; font-weight: 700;
+  color: var(--teal-deep);
+  margin: 12px 0;
+}
+
+/* ====== PREP CHECKLIST ====== */
+.prep-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.prep-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+.prep-title {
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--primary);
+}
+.prep-body { padding: 24px; }
+.prep-list {
+  list-style: none;
+}
+.prep-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+.prep-list li:last-child { border-bottom: none; }
+.prep-list-icon {
+  width: 32px; height: 32px;
+  background: var(--green-bg);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.prep-list-icon svg { width: 16px; height: 16px; }
+.prep-list-text h4 {
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.prep-list-text p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ====== TIMELINE ====== */
+.timeline {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.timeline-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-light);
+}
+.timeline-title {
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--primary);
+}
+.timeline-body { padding: 24px; }
+.timeline-steps {
+  list-style: none;
+  position: relative;
+}
+.timeline-steps::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--border-light);
+}
+.timeline-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  position: relative;
+}
+.timeline-dot {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--green-bg);
+  border: 2px solid var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 700;
+  color: var(--primary);
+  z-index: 1;
+}
+.timeline-step-text h4 {
+  font-family: var(--font-ui);
+  font-size: 14px; font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 2px;
+}
+.timeline-step-text p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-topbar { display: flex; }
+  .main { margin-left: 0; }
+  .content-wrap { padding: 20px 16px 48px; }
+  .date-grid { grid-template-columns: 1fr; }
+  .confirm-hero { padding: 32px 16px; }
+  .confirm-hero h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-root"></div>
+<script>
+(function(){var s=document.createElement('script');s.src='js/sidebar.js?v='+Date.now();s.dataset.page='gpdashboard';document.currentScript.parentNode.insertBefore(s,document.currentScript);})();
+</script>
+
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="mobile-topbar-title">Pitch Confirmed</div>
+</div>
+
+<div class="main">
+  <div class="content-wrap">
+
+    <div class="breadcrumb">
+      <a href="gp-dashboard.html">GP Dashboard</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="book-pitch.html">Book Your Pitch</a>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-current">Confirmed</span>
+    </div>
+
+    <!-- Confirmation Hero -->
+    <div class="confirm-hero">
+      <div class="confirm-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h1>Payment Received!</h1>
+      <p>Your $1,000 pitch slot is secured. Now pick your Thursday and we'll handle the rest.</p>
+    </div>
+
+    <!-- Date Selection -->
+    <div class="date-section" id="dateSection">
+      <h2>Pick Your Thursday</h2>
+      <p class="date-section-sub">1:00 PM ET &bull; 90-minute session &bull; One operator per week</p>
+      <div class="date-grid" id="dateGrid"></div>
+      <button class="date-confirm-btn" id="confirmDateBtn" disabled onclick="submitBooking()">Select a date above</button>
+    </div>
+
+    <!-- Booking Success (shown after date selection) -->
+    <div class="booking-success" id="bookingSuccess">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="width:40px;height:40px;margin-bottom:12px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <h3>You're booked!</h3>
+      <div class="booked-date" id="bookedDateText"></div>
+      <p>Check your inbox — we just sent you a confirmation email with everything you need to prepare.</p>
+      <p style="margin-top:8px;color:var(--text-secondary);">Pascal will reach out within 24 hours to confirm your date and schedule your 15-minute prep call.</p>
+      <a href="#" id="gcalBtn" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 24px;background:var(--primary);color:#fff;border-radius:var(--radius-sm);text-decoration:none;font-family:var(--font-ui);font-size:14px;font-weight:700;transition:background 0.2s;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Add to Google Calendar
+      </a>
+    </div>
+
+    <!-- What Happens Next -->
+    <div class="timeline">
+      <div class="timeline-header">
+        <div class="timeline-title">What Happens Next</div>
+      </div>
+      <div class="timeline-body">
+        <ul class="timeline-steps">
+          <li class="timeline-step">
+            <div class="timeline-dot">1</div>
+            <div class="timeline-step-text">
+              <h4>Confirmation Email</h4>
+              <p>You'll receive a confirmation email with your selected date and a calendar invite within 24 hours.</p>
+            </div>
+          </li>
+          <li class="timeline-step">
+            <div class="timeline-dot">2</div>
+            <div class="timeline-step-text">
+              <h4>Prep Call Scheduled</h4>
+              <p>Pascal will reach out to schedule your 15-minute prep call to review your deck and set expectations.</p>
+            </div>
+          </li>
+          <li class="timeline-step">
+            <div class="timeline-dot">3</div>
+            <div class="timeline-step-text">
+              <h4>Investor Invitations Sent</h4>
+              <p>One week before your presentation, every LP whose buy box matches your deal receives a personal invitation.</p>
+            </div>
+          </li>
+          <li class="timeline-step">
+            <div class="timeline-dot">4</div>
+            <div class="timeline-step-text">
+              <h4>Go Live</h4>
+              <p>Present on your Thursday. We handle Zoom hosting, introductions, and moderation. You focus on your pitch.</p>
+            </div>
+          </li>
+          <li class="timeline-step">
+            <div class="timeline-dot">5</div>
+            <div class="timeline-step-text">
+              <h4>Post-Event Report + Intros</h4>
+              <p>Within 48 hours you get your investor interest report, analytics, and warm introductions to high-intent LPs.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Prep Checklist -->
+    <div class="prep-section">
+      <div class="prep-header">
+        <div class="prep-title">Prepare for Your Pitch</div>
+      </div>
+      <div class="prep-body">
+        <ul class="prep-list">
+          <li>
+            <div class="prep-list-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+            <div class="prep-list-text">
+              <h4>Finalize Your Deck</h4>
+              <p>Prepare a 30-40 slide deck covering your deal thesis, financials, team, and track record. We'll review it together on the prep call.</p>
+            </div>
+          </li>
+          <li>
+            <div class="prep-list-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div class="prep-list-text">
+              <h4>Update Your Deal Page</h4>
+              <p>Make sure your deal listing on the platform is current — investors will check it before and after the webinar.</p>
+            </div>
+          </li>
+          <li>
+            <div class="prep-list-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div class="prep-list-text">
+              <h4>Block 90 Minutes</h4>
+              <p>Your session runs 1:00–2:30 PM ET. Plan for 45 minutes of presentation and 45 minutes of live Q&amp;A.</p>
+            </div>
+          </li>
+          <li>
+            <div class="prep-list-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <div class="prep-list-text">
+              <h4>Know Your Numbers</h4>
+              <p>Investors will ask about returns, fees, minimums, and track record. Come prepared with specifics — this is where trust gets built.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:16px 0;">
+      <a href="gp-dashboard.html" style="font-family:var(--font-ui);font-size:14px;font-weight:600;color:var(--primary);text-decoration:none;">&#8592; Back to GP Dashboard</a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  var user = JSON.parse(localStorage.getItem('gycUser') || 'null') || {};
+  var selectedDate = null;
+
+  // Generate next 6 Thursdays (skip any less than 2 weeks out)
+  function getUpcomingThursdays(count) {
+    var dates = [];
+    var d = new Date();
+    // Move to next Thursday
+    d.setDate(d.getDate() + ((4 - d.getDay() + 7) % 7 || 7));
+    // Skip if less than 14 days out
+    var minDate = new Date();
+    minDate.setDate(minDate.getDate() + 14);
+
+    while (dates.length < count) {
+      if (d >= minDate) {
+        dates.push(new Date(d));
+      }
+      d.setDate(d.getDate() + 7);
+    }
+    return dates;
+  }
+
+  var thursdays = getUpcomingThursdays(6);
+  var grid = document.getElementById('dateGrid');
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  thursdays.forEach(function(date) {
+    var el = document.createElement('div');
+    el.className = 'date-option';
+    el.dataset.date = date.toISOString();
+
+    var monthName = date.toLocaleDateString('en-US', { month: 'long' });
+    var dayNum = date.getDate();
+    var fullDate = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+    el.innerHTML =
+      '<div class="date-option-cal">' +
+        '<span class="date-option-cal-month">' + months[date.getMonth()] + '</span>' +
+        '<span class="date-option-cal-day">' + dayNum + '</span>' +
+      '</div>' +
+      '<div class="date-option-info">' +
+        '<h4>' + fullDate + '</h4>' +
+        '<span>1:00 PM – 2:30 PM ET</span>' +
+      '</div>';
+
+    el.addEventListener('click', function() {
+      document.querySelectorAll('.date-option').forEach(function(o) { o.classList.remove('selected'); });
+      el.classList.add('selected');
+      selectedDate = date;
+      var btn = document.getElementById('confirmDateBtn');
+      btn.disabled = false;
+      btn.textContent = 'Confirm ' + fullDate + ' →';
+    });
+
+    grid.appendChild(el);
+  });
+
+  window.submitBooking = function() {
+    if (!selectedDate) return;
+
+    var btn = document.getElementById('confirmDateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Booking...';
+
+    var name = user.name || 'Unknown';
+    var email = user.email || 'unknown';
+
+    fetch('/api/pitch-booking', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (user.token || '')
+      },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        selectedDate: selectedDate.toISOString()
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // Show success state
+      document.getElementById('dateSection').style.display = 'none';
+      var success = document.getElementById('bookingSuccess');
+      success.style.display = 'block';
+      document.getElementById('bookedDateText').textContent =
+        selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) +
+        ' at 1:00 PM ET';
+      // Set Google Calendar link
+      if (data.gcalLink) {
+        document.getElementById('gcalBtn').href = data.gcalLink;
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = 'Something went wrong — try again';
+    });
+  };
+})();
+</script>
+
+</body>
+</html>
