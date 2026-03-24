@@ -6,6 +6,35 @@
 
 	const isFree = $derived($userTier === 'free' && !$isAdmin);
 
+	// Route map: page key → SvelteKit route
+	const routes = {
+		dashboard: '/app/dashboard',
+		deals: '/app/deals',
+		'market-intel': '/app/market-intel',
+		operators: '/app/operators',
+		resources: '/app/resources',
+		academy: '/app/academy',
+		'income-fund': '/app/income-fund',
+		settings: '/app/settings',
+		admin: '/app/admin',
+		'case-studies': '/app/case-studies',
+		'admin-manage': '/app/admin/manage',
+		outreach: '/app/admin/outreach',
+		portfolio: '/app/portfolio',
+		goals: '/app/goals',
+		plan: '/app/plan',
+		'tax-prep': '/app/tax-prep',
+		assets: '/app/assets',
+		'find-gp': '/app/find-gp',
+		saved: '/app/saved',
+		'deal-flow-stats': '/app/deal-flow-stats',
+		more: '/app/more'
+	};
+
+	function href(pageKey) {
+		return routes[pageKey] || `/app/${pageKey}`;
+	}
+
 	// Navigation items
 	const navSections = $derived([
 		{
@@ -17,9 +46,9 @@
 		{
 			label: 'Research',
 			items: [
-				{ page: 'marketintel', icon: 'marketIntel', label: 'Market Intel', paidOnly: true },
+				{ page: 'market-intel', icon: 'marketIntel', label: 'Market Intel', paidOnly: true },
 				{ page: 'deals', icon: 'deals', label: 'Deal Flow', badge: true },
-				{ page: 'managers', icon: 'operators', label: 'Operators' },
+				{ page: 'operators', icon: 'operators', label: 'Operators' },
 				{ page: 'resources', icon: 'resources', label: 'Resources', paidOnly: true }
 			]
 		},
@@ -27,7 +56,7 @@
 			label: 'Support',
 			items: [
 				{ page: 'academy', icon: 'academy', label: 'Cash Flow Academy' },
-				{ page: 'incomefund', icon: 'incomefund', label: 'GYC Income Fund' }
+				{ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' }
 			]
 		}
 	]);
@@ -37,13 +66,13 @@
 	];
 
 	const adminItems = [
-		{ page: 'admindash', icon: 'schema', label: 'Admin Dashboard' },
-		{ page: 'casestudies', icon: 'casestudies', label: 'Member Success' },
+		{ page: 'admin', icon: 'schema', label: 'Admin Dashboard' },
+		{ page: 'case-studies', icon: 'casestudies', label: 'Member Success' },
 		{ page: 'admin-manage', icon: 'manage', label: 'Manage Data' }
 	];
 
 	function isActive(itemPage) {
-		const dashSubPages = ['buybox', 'portfolio', 'taxprep'];
+		const dashSubPages = ['portfolio', 'goals', 'plan', 'tax-prep'];
 		if (itemPage === currentPage) return true;
 		if (itemPage === 'dashboard' && dashSubPages.includes(currentPage)) return true;
 		return false;
@@ -84,7 +113,7 @@
 				<a
 					class="nav-item"
 					class:active={isActive(item.page)}
-					href="/index.html#{item.page}"
+					href={href(item.page)}
 					onclick={closeMobile}
 				>
 					<span class="nav-icon">{@html icons[item.icon]}</span>
@@ -104,7 +133,7 @@
 			<a
 				class="nav-item"
 				class:active={isActive(item.page)}
-				href="/index.html#{item.page}"
+				href={href(item.page)}
 				onclick={closeMobile}
 			>
 				<span class="nav-icon">{@html icons[item.icon]}</span>
@@ -118,7 +147,7 @@
 				<a
 					class="nav-item"
 					class:active={isActive(item.page)}
-					href="/index.html#{item.page}"
+					href={href(item.page)}
 					onclick={closeMobile}
 				>
 					<span class="nav-icon">{@html icons[item.icon]}</span>
