@@ -103,7 +103,7 @@
 	const decisionsMade = $derived(($stageCounts.passed || 0) + ($stageCounts.invested || 0));
 
 	// Daily deal view counter for free users
-	const DAILY_LIMIT = 10;
+	const DAILY_LIMIT = 20;
 	const isFreeUser = $derived(!$isAdmin && $userTier !== 'academy' && $userTier !== 'paid');
 	const dailyDealCount = $derived.by(() => {
 		if (!browser) return 0;

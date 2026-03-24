@@ -1,13 +1,10 @@
 <script>
-	import { dealStages, stageLabel, STAGE_META } from '$lib/stores/deals.js';
+	import { dealStages } from '$lib/stores/deals.js';
 
 	let { deal } = $props();
 
 	const stage = $derived($dealStages[deal.id] || 'browse');
-	const isInPipeline = $derived(stage !== 'browse');
-	const meta = $derived(STAGE_META[stage]);
 
-	// Format helpers
 	function fmtPct(val) {
 		if (!val) return '—';
 		const n = typeof val === 'string' ? parseFloat(val) : val;
@@ -17,7 +14,7 @@
 
 	function fmtMoney(val) {
 		if (!val) return '—';
-		const n = typeof val === 'string' ? parseFloat(val.replace(/[$,]/g, '')) : val;
+		const n = typeof val === 'string' ? parseFloat(String(val).replace(/[$,]/g, '')) : val;
 		if (isNaN(n)) return '—';
 		if (n >= 1e9) return '$' + (n / 1e9).toFixed(1) + 'B';
 		if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
@@ -29,61 +26,105 @@
 		if (!val) return '—';
 		const n = typeof val === 'string' ? parseFloat(val) : val;
 		if (isNaN(n)) return '—';
-		return n.toFixed(1) + 'x';
+		return n.toFixed(2) + 'x';
 	}
 
 	function formatHold(val) {
-		if (!val) return '—';
-		if (typeof val === 'string' && val.toLowerCase().includes('open')) return 'Open-ended';
+		if (val === undefined || val === null || val === '') return '—';
+		if (typeof val === 'string' && val.toLowerCase().includes('open')) return 'Open';
+		const n = typeof val === 'string' ? parseFloat(val) : val;
+		if (!isNaN(n)) {
+			if (n < 1) return `${Math.round(n * 12)} Mos`;
+			return `${n} ${n === 1 ? 'Yr' : 'Yrs'}`;
+		}
 		return val;
 	}
 
-	function formatDist(deal) {
-		return deal.distributionFrequency || deal.distributions || '—';
+	function formatDist(inputDeal) {
+		return inputDeal.distributionFrequency || inputDeal.distributions || '—';
 	}
 
-	const fundingPct = $derived(deal.pctFunded ? Math.min(deal.pctFunded, 100) : 0);
-	const hasFunding = $derived(!!(deal.totalAmountSold && deal.offeringSize && deal.pctFunded));
+	function getManagerTier(inputDeal) {
+		const size = inputDeal.fundAUM || inputDeal.offeringSize || inputDeal.aum || inputDeal.managementCompanyAUM;
+		if (!size) return { range: '—' };
+		if (size >= 1000000000) return { range: '$1B+' };
+		if (size >= 100000000) return { range: '$100M-$1B' };
+		if (size >= 50000000) return { range: '$50M-$100M' };
+		return { range: '<$50M' };
+	}
 
-	// Asset class hero colors
+	function getStrategySummary(inputDeal) {
+		const text = inputDeal.investmentStrategy || inputDeal.summary || inputDeal.description || inputDeal.teaser || '';
+		if (!text) return '';
+		const firstSentence = text.split(/(?<=[.!?])\s+/)[0];
+		const clean = (firstSentence || text).trim();
+		if (clean.length <= 140) return clean;
+		return clean.slice(0, 137).replace(/[,;:\s]+$/, '') + '...';
+	}
+
+	function handleAction(event, action) {
+		event.stopPropagation();
+		if (!action.next || action.disabled) return;
+		dealStages.setStage(deal.id, action.next);
+	}
+
+	function getActions(stageKey) {
+		switch (stageKey) {
+			case 'saved':
+				return [
+					{ label: 'Skip', next: 'passed', icon: 'x', danger: true },
+					{ label: 'Ready to Connect', next: 'diligence', icon: 'check', primary: true }
+				];
+			case 'diligence':
+				return [
+					{ label: 'Skip', next: 'passed', icon: 'x', danger: true },
+					{ label: "I've Talked to the Operator", next: 'decision', icon: 'check', primary: true }
+				];
+			case 'decision':
+				return [
+					{ label: 'Back to Connect', next: 'diligence', icon: 'back' },
+					{ label: "I've Wired the Money", next: 'invested', icon: 'money', primary: true }
+				];
+			case 'invested':
+				return [
+					{ label: 'Tracking', icon: 'tracking', status: true, full: true, disabled: true }
+				];
+			case 'passed':
+				return [
+					{ label: 'Reconsider', next: 'saved', icon: 'refresh', primary: true, full: true }
+				];
+			default:
+				return [
+					{ label: 'Skip', next: 'passed', icon: 'x', danger: true },
+					{ label: 'Save', next: 'saved', icon: 'bookmark', primary: true }
+				];
+		}
+	}
+
 	const assetHeroes = {
-		'Private Credit': { gradient: 'linear-gradient(135deg, #1e3a5f, #2d5a8c)', icon: '🏦' },
-		'Multifamily': { gradient: 'linear-gradient(135deg, #2d5a3d, #4a8c6a)', icon: '🏢' },
-		'Industrial': { gradient: 'linear-gradient(135deg, #5a3d2d, #8c6a4a)', icon: '🏭' },
-		'Self Storage': { gradient: 'linear-gradient(135deg, #3d2d5a, #6a4a8c)', icon: '📦' },
-		'Build-to-Rent': { gradient: 'linear-gradient(135deg, #5a2d3d, #8c4a6a)', icon: '🏘️' },
+		'Private Credit': { gradient: 'linear-gradient(135deg, #1a365d 0%, #2563eb 100%)', icon: '🏦' },
+		'Multifamily': { gradient: 'linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)', icon: '🏢' },
+		'Multi-Family': { gradient: 'linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)', icon: '🏢' },
+		'Industrial': { gradient: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)', icon: '🏭' },
+		'Self Storage': { gradient: 'linear-gradient(135deg, #5b4a1e 0%, #8b7535 100%)', icon: '📦' },
+		'Hotels/Hospitality': { gradient: 'linear-gradient(135deg, #4a235a 0%, #7d3c98 100%)', icon: '🏨' },
+		'Lending': { gradient: 'linear-gradient(135deg, #1a365d 0%, #2563eb 100%)', icon: '💵' }
 	};
-	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #1a2332, #2d3a4c)', icon: '🏠' });
-	const heroImg = $derived(deal.propertyImageUrl || '');
 
-	// Status badges
-	const now = new Date();
-	const isNew = $derived.by(() => {
-		const created = deal.createdAt || deal.created_at || deal.createdTime || deal.addedDate;
-		if (!created) return false;
-		return (now - new Date(created)) < 14 * 24 * 60 * 60 * 1000;
-	});
-	const isUpdated = $derived.by(() => {
-		const updated = deal.updatedAt || deal.updated_at || deal.lastModified;
-		if (!updated) return false;
-		const diff = now - new Date(updated);
-		return diff < 7 * 24 * 60 * 60 * 1000 && diff > 0;
-	});
-	const isClosingSoon = $derived.by(() => {
-		if (!deal.close_date && !deal.closeDate) return false;
-		const close = new Date(deal.close_date || deal.closeDate);
-		const diff = close - now;
-		return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
-	});
-	const isVerified = $derived(!!deal.verified);
-	const hasNoDeck = $derived(!deal.deckUrl);
+	const hero = $derived(assetHeroes[deal.assetClass] || { gradient: 'linear-gradient(135deg, #0A1E21 0%, #1F5159 100%)', icon: '🏠' });
+	const heroImg = $derived(deal.propertyImageUrl || deal.imageUrl || '');
+	const managerTier = $derived(getManagerTier(deal));
+	const strategySummary = $derived(getStrategySummary(deal));
+	const fundingPct = $derived(deal.pctFunded ? Math.min(Number(deal.pctFunded), 100) : 0);
+	const hasFunding = $derived(!!(deal.totalAmountSold && deal.offeringSize && deal.pctFunded));
+	const hasNoDeck = $derived(!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl));
+	const actions = $derived(getActions(stage));
 </script>
 
 <div class="deal-card">
-	<!-- Hero -->
 	<div
 		class="card-hero"
-		style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}"
+		style="background:{heroImg ? `linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.5) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}"
 	>
 		<div class="hero-badges">
 			<span class="badge">{deal.assetClass || 'Real Estate'}</span>
@@ -94,27 +135,15 @@
 			{#if deal.financials === 'Audited'}
 				<span class="badge audit">Audited</span>
 			{/if}
-		</div>
-		<div class="status-badges">
-			{#if isNew}
-				<span class="pill pill-new">New</span>
-			{/if}
-			{#if isUpdated}
-				<span class="pill pill-updated">Updated</span>
-			{/if}
-			{#if isClosingSoon}
-				<span class="pill pill-closing">Closing Soon</span>
-			{/if}
-			{#if isVerified}
-				<span class="pill pill-verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg> Verified</span>
-			{/if}
 			{#if hasNoDeck}
-				<span class="pill pill-nodeck">No Deck</span>
+				<span class="no-deck-bubble">No Deck</span>
 			{/if}
 		</div>
+
 		{#if !heroImg}
 			<div class="hero-icon">{hero.icon}</div>
 		{/if}
+
 		{#if deal.targetIRR}
 			<div class="hero-irr">
 				<span class="irr-value">{fmtPct(deal.targetIRR)}</span>
@@ -123,7 +152,6 @@
 		{/if}
 	</div>
 
-	<!-- Body -->
 	<a href="/deal/{deal.id}" class="card-body">
 		<div class="card-title">{deal.investmentName}</div>
 		<div class="card-manager">
@@ -132,8 +160,10 @@
 				&middot; {deal.location}
 			{/if}
 		</div>
+		{#if strategySummary}
+			<div class="card-summary">{strategySummary}</div>
+		{/if}
 
-		<!-- Metrics grid -->
 		<div class="metrics">
 			<div class="metric">
 				<div class="metric-label">Pref Return</div>
@@ -159,9 +189,16 @@
 				<div class="metric-label">Equity Mult.</div>
 				<div class="metric-value">{fmtMultiple(deal.equityMultiple)}</div>
 			</div>
+			<div class="metric">
+				<div class="metric-label">Manager AUM</div>
+				<div class="metric-value">{managerTier.range}</div>
+			</div>
+			<div class="metric">
+				<div class="metric-label">Founded</div>
+				<div class="metric-value">{deal.mcFoundingYear || '—'}</div>
+			</div>
 		</div>
 
-		<!-- Funding bar -->
 		{#if hasFunding}
 			<div class="funding-bar">
 				<div class="funding-labels">
@@ -174,7 +211,10 @@
 			</div>
 		{:else}
 			<div class="funding-bar no-data">
-				<div class="funding-labels"><span>SEC filing data not available</span></div>
+				<div class="funding-labels">
+					<span>SEC filing data not available</span>
+					<span></span>
+				</div>
 				<div class="funding-track">
 					<div class="funding-fill empty"></div>
 				</div>
@@ -182,110 +222,130 @@
 		{/if}
 	</a>
 
-	<!-- Stage badge -->
-	{#if isInPipeline}
-		<div class="stage-badge" style="background:{meta.color}">
-			{stageLabel(stage)}
-		</div>
-	{/if}
+	<div class="card-footer">
+		{#each actions as action}
+			<button
+				class="card-btn"
+				class:btn-primary={action.primary}
+				class:btn-danger={action.danger}
+				class:btn-status={action.status}
+				class:btn-full={action.full}
+				disabled={action.disabled}
+				onclick={(event) => handleAction(event, action)}
+			>
+				{#if action.icon === 'x'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="18" y1="6" x2="6" y2="18"></line>
+						<line x1="6" y1="6" x2="18" y2="18"></line>
+					</svg>
+				{:else if action.icon === 'bookmark'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+					</svg>
+				{:else if action.icon === 'check'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M9 11l3 3L22 4"></path>
+						<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+					</svg>
+				{:else if action.icon === 'back'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<polyline points="15 18 9 12 15 6"></polyline>
+					</svg>
+				{:else if action.icon === 'money' || action.icon === 'tracking'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+						<polyline points="22 4 12 14.01 9 11.01"></polyline>
+					</svg>
+				{:else if action.icon === 'refresh'}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<polyline points="1 4 1 10 7 10"></polyline>
+						<path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+					</svg>
+				{/if}
+				{action.label}
+			</button>
+		{/each}
+	</div>
 </div>
 
 <style>
 	.deal-card {
 		background: var(--bg-card);
+		border-radius: var(--radius);
 		border: 1px solid var(--border);
-		border-radius: var(--radius, 12px);
-		box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04));
+		box-shadow: var(--shadow-card);
 		overflow: hidden;
 		cursor: pointer;
 		transition: all 0.25s ease;
 		display: flex;
 		flex-direction: column;
 		position: relative;
-		animation: fadeInUp 0.3s ease forwards;
+		min-height: 100%;
 	}
-	@keyframes fadeInUp {
-		from { opacity: 0; transform: translateY(10px); }
-		to { opacity: 1; transform: translateY(0); }
-	}
+
 	.deal-card:hover {
-		box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04));
+		box-shadow: var(--shadow-card-hover);
 		transform: translateY(-2px);
 		border-color: #D4C9AD;
 	}
 
 	.card-hero {
 		position: relative;
-		padding: 14px 18px;
-		min-height: 200px;
+		padding: 14px 18px 8px;
+		height: 200px;
 		box-sizing: border-box;
+		overflow: hidden;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		overflow: hidden;
 	}
 
 	.hero-badges {
 		display: flex;
-		flex-wrap: wrap;
 		gap: 6px;
+		flex-wrap: wrap;
 		position: relative;
 		z-index: 1;
 	}
+
 	.badge {
 		display: inline-flex;
 		align-items: center;
-		background: rgba(255,255,255,0.12);
-		border: 1px solid rgba(255,255,255,0.12);
-		color: rgba(255,255,255,0.85);
+		padding: 3px 10px;
+		border-radius: 20px;
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
-		padding: 3px 10px;
-		border-radius: 20px;
-	}
-	.badge.audit {
-		background: rgba(81,190,123,0.2);
-		color: #7DEFA5;
-		border-color: rgba(81,190,123,0.14);
+		background: rgba(255, 255, 255, 0.12);
+		color: rgba(255, 255, 255, 0.85);
 	}
 
-	.status-badges {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 6px;
-		margin-top: 6px;
+	.badge.audit {
+		background: rgba(81, 190, 123, 0.25);
+		color: #7DEFA5;
 	}
-	.pill {
-		font-family: var(--font-ui);
-		font-size: 9px;
+
+	.no-deck-bubble {
+		background: #fbbf24;
+		color: #78350f;
+		font-size: 10px;
 		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
 		padding: 2px 8px;
 		border-radius: 10px;
-		display: inline-flex;
-		align-items: center;
-		gap: 3px;
-		line-height: 1.4;
-		border: 1px solid transparent;
+		letter-spacing: 0.3px;
+		font-family: var(--font-ui);
+		text-transform: none;
 	}
-	.pill-new { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.22); color: #b8f7cf; }
-	.pill-updated { background: rgba(59,130,246,0.16); border-color: rgba(59,130,246,0.25); color: #d5e5ff; }
-	.pill-closing { background: rgba(249,115,22,0.18); border-color: rgba(249,115,22,0.26); color: #ffd7bb; }
-	.pill-verified { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.22); color: #b8f7cf; }
-	.pill-nodeck { background: rgba(251,191,36,0.2); border-color: rgba(251,191,36,0.24); color: #fff0bf; }
 
 	.hero-icon {
 		font-size: 56px;
 		position: absolute;
-		right: -6px;
-		bottom: -10px;
-		left: auto;
-		opacity: 0.2;
-		filter: grayscale(1) brightness(1.7);
+		right: -4px;
+		bottom: -12px;
+		opacity: 0.18;
+		filter: grayscale(1) brightness(1.6);
 		pointer-events: none;
 	}
 
@@ -294,9 +354,9 @@
 		z-index: 1;
 		display: flex;
 		flex-direction: column;
-		margin-top: auto;
-		padding-top: 16px;
+		align-self: flex-start;
 	}
+
 	.irr-value {
 		display: block;
 		font-family: var(--font-ui);
@@ -306,23 +366,23 @@
 		letter-spacing: -0.5px;
 		line-height: 1;
 	}
+
 	.irr-label {
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 600;
-		color: rgba(255,255,255,0.55);
+		color: rgba(255, 255, 255, 0.55);
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		margin-top: 2px;
 	}
 
 	.card-body {
-		display: flex;
-		flex-direction: column;
 		padding: 0;
 		text-decoration: none;
 		color: inherit;
-		cursor: pointer;
+		display: flex;
+		flex-direction: column;
 		flex: 1;
 	}
 
@@ -331,10 +391,10 @@
 		font-size: 15px;
 		font-weight: 700;
 		color: var(--text-dark);
-		margin-bottom: 3px;
+		margin-bottom: 2px;
 		line-height: 1.3;
 		letter-spacing: -0.2px;
-		padding: 14px 18px 0;
+		padding: 12px 16px 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
@@ -347,26 +407,43 @@
 		font-size: 12px;
 		color: var(--text-muted);
 		font-weight: 500;
-		margin-bottom: 6px;
-		padding: 0 18px;
+		margin-bottom: 4px;
+		padding: 0 16px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
+	.card-summary {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-secondary);
+		line-height: 1.4;
+		padding: 0 16px;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		min-height: calc(2 * 1.4em);
+	}
+
 	.metrics {
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 10px 14px;
-		padding: 12px 18px 8px;
-		margin-bottom: 0;
-		flex: 1;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0;
+		border-top: 1px solid var(--border);
+		margin-top: 10px;
 	}
+
 	.metric {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
+		padding: 8px 10px;
+		border-right: 1px solid var(--border);
+		border-bottom: 1px solid var(--border);
 	}
+
+	.metric:nth-child(4n) { border-right: none; }
+	.metric:nth-last-child(-n + 4) { border-bottom: none; }
+
 	.metric-label {
 		font-family: var(--font-ui);
 		font-size: 9px;
@@ -374,78 +451,152 @@
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
-		margin-bottom: 0;
 	}
+
 	.metric-value {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 12px;
 		font-weight: 700;
 		color: var(--text-dark);
+		margin-top: 2px;
 	}
+
 	.metric-value.highlight {
 		color: var(--primary);
 	}
 
 	.funding-bar {
-		padding: 6px 18px 14px;
+		padding: 8px 14px 10px;
 		margin-top: auto;
 	}
+
 	.funding-labels {
 		display: flex;
 		justify-content: space-between;
 		font-family: var(--font-ui);
-		font-size: 9px;
+		font-size: 10px;
 		color: var(--text-muted);
-		margin-bottom: 5px;
-		gap: 10px;
+		margin-bottom: 4px;
+		gap: 12px;
 	}
+
 	.funding-labels span:first-child {
-		color: var(--text-secondary);
+		color: var(--primary);
 		font-weight: 600;
 	}
+
 	.funding-track {
-		height: 4px;
-		background: var(--border-light);
-		border-radius: 999px;
+		height: 5px;
+		background: var(--border);
+		border-radius: 3px;
 		overflow: hidden;
 	}
+
 	.funding-fill {
 		height: 100%;
-		background: linear-gradient(90deg, var(--primary), #3bba78);
-		border-radius: 999px;
-		transition: width 0.3s ease;
+		border-radius: 3px;
+		background: var(--primary);
 	}
+
 	.funding-fill.empty {
 		width: 100%;
 		background: var(--border);
 	}
-	.funding-bar.no-data .funding-labels {
-		opacity: 0.5;
-	}
+
 	.funding-bar.no-data .funding-labels span:first-child {
 		color: var(--text-muted);
 		font-weight: 500;
 		font-style: italic;
 	}
 
-	.stage-badge {
-		position: absolute;
-		top: 10px;
-		right: 10px;
-		padding: 4px 10px;
-		border-radius: 20px;
-		font-family: var(--font-ui);
-		font-size: 9px;
-		font-weight: 700;
-		color: #fff;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		z-index: 2;
+	.card-footer {
+		padding: 12px 18px 16px;
+		display: flex;
+		gap: 8px;
+		border-top: 1px solid var(--border-light);
+		margin-top: auto;
 	}
 
-	@media (max-width: 1100px) {
+	.card-btn {
+		flex: 1;
+		padding: 9px 16px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition: all var(--transition);
+		text-align: center;
+		border: 1px solid var(--border);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		background: transparent;
+		color: var(--text-secondary);
+	}
+
+	.card-btn:hover:not(:disabled) {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.card-btn svg {
+		width: 14px;
+		height: 14px;
+		flex-shrink: 0;
+	}
+
+	.btn-primary {
+		background: var(--primary);
+		color: #fff;
+		border-color: var(--primary);
+	}
+
+	.btn-primary:hover:not(:disabled) {
+		background: var(--primary-hover);
+		border-color: var(--primary-hover);
+		color: #fff;
+	}
+
+	.btn-danger {
+		color: #e57373;
+		border-color: rgba(229, 115, 115, 0.3);
+	}
+
+	.btn-danger:hover:not(:disabled) {
+		color: #e57373;
+		border-color: rgba(229, 115, 115, 0.55);
+		background: rgba(229, 115, 115, 0.05);
+	}
+
+	.btn-status {
+		border: none;
+		background: transparent;
+		color: var(--green);
+		cursor: default;
+	}
+
+	.btn-status:hover:not(:disabled) {
+		border: none;
+		background: transparent;
+		color: var(--green);
+	}
+
+	.btn-full { flex: 1 1 100%; }
+
+	.card-btn:disabled {
+		opacity: 1;
+	}
+
+	@media (max-width: 1200px) {
 		.metrics {
-			grid-template-columns: 1fr 1fr;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
+
+		.metric:nth-child(2n) { border-right: none; }
+		.metric:nth-last-child(-n + 2) { border-bottom: none; }
 	}
 </style>

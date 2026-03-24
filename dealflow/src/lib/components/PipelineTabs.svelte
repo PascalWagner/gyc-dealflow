@@ -17,13 +17,7 @@
 			onclick={() => switchTab(stage)}
 		>
 			{STAGE_META[stage].label}
-			{#if (counts[stage] || 0) > 0}
-				<span class="tab-count">{counts[stage]}</span>
-			{/if}
 		</button>
-		{#if stage !== PIPELINE_STAGES[PIPELINE_STAGES.length - 1]}
-			<span class="tab-arrow">›</span>
-		{/if}
 	{/each}
 
 	<span class="tab-divider"></span>
@@ -35,9 +29,6 @@
 			onclick={() => switchTab(stage)}
 		>
 			{STAGE_META[stage].label}
-			{#if (counts[stage] || 0) > 0}
-				<span class="tab-count">{counts[stage]}</span>
-			{/if}
 		</button>
 	{/each}
 </div>
@@ -78,9 +69,9 @@
 	.pipeline-tabs {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: 2px;
 		background: var(--bg-card);
-		border-radius: 8px;
+		border-radius: 10px;
 		padding: 3px;
 		border: 1px solid var(--border);
 		max-width: 100%;
@@ -91,17 +82,17 @@
 	.pipeline-tabs::-webkit-scrollbar { display: none; }
 
 	.pipeline-tab {
-		padding: 6px 12px;
+		padding: 7px 14px;
 		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 600;
+		font-size: 10px;
+		font-weight: 700;
 		color: var(--text-secondary);
 		cursor: pointer;
-		border-radius: 6px;
+		border-radius: 7px;
 		transition: all var(--transition);
 		border: none;
 		background: none;
-		letter-spacing: 0.3px;
+		letter-spacing: 0.45px;
 		text-transform: uppercase;
 		white-space: nowrap;
 		display: inline-flex;
@@ -113,22 +104,13 @@
 	.pipeline-tab:hover { color: var(--text-dark); }
 	.pipeline-tab.active { background: var(--primary); color: #fff; }
 
-	.tab-arrow,
-	.tab-divider { display: none; }
-
-	.tab-count {
-		background: rgba(81,190,123,0.1);
-		color: var(--primary);
-		padding: 1px 6px;
-		border-radius: 999px;
-		font-size: 10px;
-		font-weight: 700;
-		margin-left: 0;
-		line-height: 1.4;
-	}
-	.pipeline-tab.active .tab-count {
-		background: rgba(255,255,255,0.22);
-		color: #fff;
+	.tab-divider {
+		display: block;
+		width: 1px;
+		height: 18px;
+		background: var(--border);
+		margin: 0 8px;
+		flex-shrink: 0;
 	}
 
 	/* Mobile pills */

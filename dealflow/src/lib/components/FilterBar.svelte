@@ -202,7 +202,7 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 16px 0 12px;
+		padding: 16px 0;
 		flex-wrap: wrap;
 		border-bottom: 1px solid var(--border-light);
 		background: transparent;
@@ -265,9 +265,9 @@
 
 	.search-wrap {
 		position: relative;
-		flex: 1 1 220px;
-		min-width: 220px;
-		max-width: 380px;
+		flex: 1 1 320px;
+		min-width: 240px;
+		max-width: none;
 	}
 
 	.filter-input {
@@ -291,12 +291,8 @@
 	.filter-bar-stats {
 		display: flex;
 		align-items: center;
-		gap: 18px;
-		order: 10;
-		flex-basis: 100%;
-		margin-left: 0;
-		padding-top: 10px;
-		border-top: 1px solid var(--border-light);
+		gap: 12px;
+		margin-left: auto;
 		font-family: var(--font-ui);
 		font-size: 12px;
 		color: var(--text-muted);
@@ -322,7 +318,7 @@
 		align-items: center;
 		gap: 5px;
 		white-space: nowrap;
-		margin-left: auto;
+		margin-left: 2px;
 	}
 
 	.filter-panel {
@@ -408,6 +404,16 @@
 	.clear-btn:hover {
 		border-color: var(--red, #e74c3c);
 		color: var(--red, #e74c3c);
+	}
+
+	@media (max-width: 980px) {
+		.filter-bar-stats {
+			order: 10;
+			flex-basis: 100%;
+			margin-left: 0;
+			padding-top: 8px;
+			border-top: 1px solid var(--border-light);
+		}
 	}
 
 	@media (max-width: 768px) {
