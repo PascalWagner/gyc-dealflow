@@ -638,6 +638,34 @@
 		border-top: 1px solid var(--border-light);
 		margin-top: 16px;
 	}
+	:global(.dash-hero .goal-progress-label) {
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1.2px;
+		margin-bottom: 20px;
+	}
+	:global(.dash-hero .goal-progress-bar) {
+		height: 12px;
+		background: var(--border-light);
+		border-radius: 6px;
+		margin-bottom: 12px;
+	}
+	:global(.dash-hero .goal-progress-fill) {
+		border-radius: 6px;
+	}
+	:global(.dash-hero .goal-progress-value) {
+		font-size: 22px;
+		font-weight: 800;
+		justify-content: flex-start;
+		align-items: baseline;
+		gap: 10px;
+		flex-wrap: wrap;
+		line-height: 1.1;
+	}
+	:global(.dash-hero .goal-progress-pct) {
+		font-size: 14px;
+		font-weight: 700;
+	}
 
 	/* ── Goal CTA (no onboarding) ── */
 	.goal-cta {
@@ -684,12 +712,12 @@
 		border: 1px solid var(--border);
 		border-left: 3px solid var(--primary);
 		border-radius: var(--radius);
-		padding: 20px 24px;
+		padding: 18px 22px;
 		margin-bottom: 24px;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 16px;
+		gap: 14px;
 		flex-wrap: wrap;
 		box-shadow: var(--shadow-card);
 	}
@@ -705,11 +733,17 @@
 	}
 	.coaching-msg {
 		font-family: var(--font-body);
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--text-dark);
-		line-height: 1.5;
+		line-height: 1.55;
 	}
-	.coaching-btn { flex-shrink: 0; white-space: nowrap; text-decoration: none; }
+	.coaching-btn {
+		flex-shrink: 0;
+		white-space: nowrap;
+		text-decoration: none;
+		padding: 8px 18px;
+		font-size: 11px;
+	}
 
 	.btn-primary {
 		padding: 10px 22px;
@@ -729,14 +763,14 @@
 	.momentum-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 12px;
+		gap: 10px;
 		margin-bottom: 28px;
 	}
 	.metric-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 16px 14px;
+		padding: 14px 12px;
 		text-align: center;
 		box-shadow: var(--shadow-card);
 	}
@@ -753,10 +787,11 @@
 		font-family: var(--font-headline);
 		font-size: 22px;
 		color: var(--text-dark);
+		line-height: 1;
 	}
 	.daily-limit-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 	.daily-deals-card { border-color: var(--primary); border-width: 1px 1px 1px 3px; }
-	.daily-bar-wrap { height: 3px; background: var(--border-light); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+	.daily-bar-wrap { height: 4px; background: var(--border-light); border-radius: 999px; margin-top: 10px; overflow: hidden; }
 	.daily-bar-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.3s ease; }
 
 	/* ── Action Items ── */

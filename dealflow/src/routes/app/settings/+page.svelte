@@ -490,6 +490,8 @@
 	.settings-page { padding: 32px; max-width: 900px; }
 	.settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 	.settings-tab { padding: 12px 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition, 0.2s); white-space: nowrap; }
+	.settings-tabs .settings-tab:nth-child(2),
+	.settings-tabs .settings-tab:nth-child(3) { display: none; }
 	.settings-tab:hover { color: var(--text-dark); }
 	.settings-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 	.settings-panel { }
@@ -504,6 +506,7 @@
 	.private-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
 
 	.avatar-row { display: flex; align-items: center; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
+	.settings-card:has(.avatar-row) { display: none; }
 	.avatar-preview { width: 80px; height: 80px; border-radius: 50%; background: var(--bg-cream); border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 24px; font-weight: 700; color: var(--text-muted); overflow: hidden; flex-shrink: 0; }
 	.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 	.avatar-initials { }

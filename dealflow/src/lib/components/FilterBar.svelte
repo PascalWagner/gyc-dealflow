@@ -202,9 +202,10 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 16px 0;
+		padding: 16px 0 12px;
 		flex-wrap: wrap;
 		border-bottom: 1px solid var(--border-light);
+		background: transparent;
 	}
 
 	.buybox-toggle {
@@ -231,25 +232,25 @@
 	}
 
 	.filters-toggle {
-		padding: 6px 14px;
-		background: transparent;
+		padding: 8px 14px;
+		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		font-family: var(--font-ui);
-		font-weight: 700;
-		font-size: 11px;
+		font-weight: 500;
+		font-size: 12px;
 		cursor: pointer;
 		display: flex;
 		align-items: center;
-		gap: 5px;
+		gap: 6px;
 		white-space: nowrap;
-		color: var(--text-secondary);
+		color: var(--text-dark);
 		transition: all 0.15s;
 	}
 	.filters-toggle.active {
 		background: var(--bg-card);
 		border-color: var(--primary);
-		color: var(--text-dark);
+		color: var(--primary);
 	}
 
 	.filter-count-badge {
@@ -264,14 +265,15 @@
 
 	.search-wrap {
 		position: relative;
-		flex: 1;
-		min-width: 160px;
+		flex: 1 1 220px;
+		min-width: 220px;
+		max-width: 380px;
 	}
 
 	.filter-input {
 		width: 100%;
 		box-sizing: border-box;
-		padding: 7px 12px;
+		padding: 8px 36px 8px 14px;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		font-family: var(--font-ui);
@@ -280,14 +282,21 @@
 		color: var(--text-dark);
 		outline: none;
 		transition: border-color 0.15s;
+		background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='7' stroke='%23999' stroke-width='2'/%3E%3Cpath d='M16 16L20 20' stroke='%23999' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
 	}
 	.filter-input:focus { border-color: var(--primary); }
 
 	.filter-bar-stats {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		margin-left: auto;
+		gap: 18px;
+		order: 10;
+		flex-basis: 100%;
+		margin-left: 0;
+		padding-top: 10px;
+		border-top: 1px solid var(--border-light);
 		font-family: var(--font-ui);
 		font-size: 12px;
 		color: var(--text-muted);
@@ -313,14 +322,14 @@
 		align-items: center;
 		gap: 5px;
 		white-space: nowrap;
+		margin-left: auto;
 	}
 
 	.filter-panel {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-top: none;
-		padding: 14px 0;
-		margin: -1px 0 0 0;
+		background: transparent;
+		border: none;
+		padding: 10px 0 0;
+		margin: 0;
 	}
 
 	.filter-panel-grid {
@@ -344,8 +353,8 @@
 		letter-spacing: 0.5px;
 	}
 	.filter-field select {
-		min-width: 120px;
-		padding: 7px 10px;
+		min-width: 140px;
+		padding: 8px 32px 8px 14px;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		font-family: var(--font-ui);
@@ -353,6 +362,11 @@
 		background: var(--bg-card);
 		color: var(--text-dark);
 		cursor: pointer;
+		appearance: none;
+		-webkit-appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 12px center;
 	}
 
 	.archived-toggle {
@@ -379,21 +393,21 @@
 
 	.clear-wrap { margin-left: auto; }
 	.clear-btn {
-		padding: 7px 14px;
-		background: var(--bg-card);
+		padding: 8px 14px;
+		background: transparent;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		font-family: var(--font-ui);
 		font-weight: 600;
 		font-size: 12px;
 		cursor: pointer;
-		color: var(--red, #e74c3c);
+		color: var(--text-secondary);
 		white-space: nowrap;
 		transition: all 0.15s;
 	}
 	.clear-btn:hover {
-		background: rgba(231, 76, 60, 0.06);
 		border-color: var(--red, #e74c3c);
+		color: var(--red, #e74c3c);
 	}
 
 	@media (max-width: 768px) {

@@ -83,7 +83,12 @@
 		border-radius: 8px;
 		padding: 3px;
 		border: 1px solid var(--border);
+		max-width: 100%;
+		overflow-x: auto;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
 	}
+	.pipeline-tabs::-webkit-scrollbar { display: none; }
 
 	.pipeline-tab {
 		padding: 6px 12px;
@@ -99,33 +104,31 @@
 		letter-spacing: 0.3px;
 		text-transform: uppercase;
 		white-space: nowrap;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		flex-shrink: 0;
 	}
 
 	.pipeline-tab:hover { color: var(--text-dark); }
 	.pipeline-tab.active { background: var(--primary); color: #fff; }
 
-	.tab-arrow {
-		color: var(--text-muted);
-		font-size: 10px;
-		padding: 0 2px;
-		opacity: 0.4;
-	}
-
-	.tab-divider {
-		width: 1px;
-		height: 20px;
-		background: var(--border);
-		margin: 0 4px;
-		flex-shrink: 0;
-		align-self: center;
-	}
+	.tab-arrow,
+	.tab-divider { display: none; }
 
 	.tab-count {
-		background: rgba(255,255,255,0.25);
+		background: rgba(81,190,123,0.1);
+		color: var(--primary);
 		padding: 1px 6px;
-		border-radius: 10px;
+		border-radius: 999px;
 		font-size: 10px;
-		margin-left: 2px;
+		font-weight: 700;
+		margin-left: 0;
+		line-height: 1.4;
+	}
+	.pipeline-tab.active .tab-count {
+		background: rgba(255,255,255,0.22);
+		color: #fff;
 	}
 
 	/* Mobile pills */

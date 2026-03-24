@@ -388,7 +388,7 @@
 	<button class="mobile-menu-btn" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
-	<div class="topbar-title">Dashboard</div>
+	<div class="topbar-title">My Portfolio</div>
 	<div class="dash-tabs">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
 		<a href="/app/portfolio" class="dash-tab active">Portfolio</a>
@@ -748,10 +748,12 @@
 	.btn-add:hover { background: var(--primary-hover); }
 
 	/* ── Content Area ── */
-	.content-area { padding: 24px 32px 48px; max-width: 1200px; }
+	.content-area { padding: 24px; max-width: 1200px; }
+	.dash-tabs { display: none; }
 
 	/* ── Summary Stat Cards ── */
 	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+	.summary-grid .stat-card:nth-child(5) { display: none; }
 	.stat-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
@@ -811,14 +813,11 @@
 		border-left: 4px solid var(--orange);
 		border-radius: var(--radius-sm);
 		padding: 14px 16px;
-		display: flex;
-		align-items: flex-start;
-		gap: 10px;
 		font-family: var(--font-body);
 		font-size: 14px;
 		color: var(--text-dark);
 	}
-	.risk-badge-icon { flex-shrink: 0; width: 20px; height: 20px; }
+	.risk-badge-icon { display: none; }
 	.risk-badge-icon svg { width: 20px; height: 20px; }
 	.risk-badge-content { flex: 1; }
 	.risk-badge-text { font-family: var(--font-ui); font-size: 13px; font-weight: 700; line-height: 1.4; }
@@ -828,22 +827,19 @@
 		border: 1px solid var(--border);
 		border-left: 4px solid var(--red, #D04040);
 	}
-	.risk-badge.badge-danger .risk-badge-icon { color: var(--red, #D04040); }
-	.risk-badge.badge-danger .risk-badge-text { color: var(--red, #D04040); }
+	.risk-badge.badge-danger .risk-badge-text { color: var(--text-dark); }
 	.risk-badge.badge-warn {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-left: 4px solid var(--orange);
 	}
-	.risk-badge.badge-warn .risk-badge-icon { color: var(--orange); }
-	.risk-badge.badge-warn .risk-badge-text { color: var(--orange); }
+	.risk-badge.badge-warn .risk-badge-text { color: var(--text-dark); }
 	.risk-badge.badge-ok {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-left: 4px solid var(--green);
 	}
-	.risk-badge.badge-ok .risk-badge-icon { color: var(--green); }
-	.risk-badge.badge-ok .risk-badge-text { color: var(--green); }
+	.risk-badge.badge-ok .risk-badge-text { color: var(--text-dark); }
 
 	/* ── Timeline Chart ── */
 	.timeline-card { margin-bottom: 24px; }

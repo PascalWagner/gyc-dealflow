@@ -217,7 +217,7 @@
 	.card-hero {
 		position: relative;
 		padding: 14px 18px;
-		height: 200px;
+		min-height: 200px;
 		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
@@ -235,11 +235,9 @@
 	.badge {
 		display: inline-flex;
 		align-items: center;
-		background: rgba(0,0,0,0.45);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
-		border: 1px solid rgba(255,255,255,0.15);
-		color: #fff;
+		background: rgba(255,255,255,0.12);
+		border: 1px solid rgba(255,255,255,0.12);
+		color: rgba(255,255,255,0.85);
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 700;
@@ -249,16 +247,16 @@
 		border-radius: 20px;
 	}
 	.badge.audit {
-		background: rgba(81,190,123,0.25);
+		background: rgba(81,190,123,0.2);
 		color: #7DEFA5;
-		border-color: transparent;
+		border-color: rgba(81,190,123,0.14);
 	}
 
 	.status-badges {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 4px;
-		margin-top: 4px;
+		gap: 6px;
+		margin-top: 6px;
 	}
 	.pill {
 		font-family: var(--font-ui);
@@ -266,25 +264,29 @@
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.3px;
-		padding: 2px 7px;
+		padding: 2px 8px;
 		border-radius: 10px;
 		display: inline-flex;
 		align-items: center;
 		gap: 3px;
 		line-height: 1.4;
+		border: 1px solid transparent;
 	}
-	.pill-new { background: #22c55e; color: #fff; }
-	.pill-updated { background: #3b82f6; color: #fff; }
-	.pill-closing { background: #f97316; color: #fff; }
-	.pill-verified { background: #22c55e; color: #fff; }
-	.pill-nodeck { background: #fbbf24; color: #78350f; }
+	.pill-new { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.22); color: #b8f7cf; }
+	.pill-updated { background: rgba(59,130,246,0.16); border-color: rgba(59,130,246,0.25); color: #d5e5ff; }
+	.pill-closing { background: rgba(249,115,22,0.18); border-color: rgba(249,115,22,0.26); color: #ffd7bb; }
+	.pill-verified { background: rgba(74,222,128,0.14); border-color: rgba(74,222,128,0.22); color: #b8f7cf; }
+	.pill-nodeck { background: rgba(251,191,36,0.2); border-color: rgba(251,191,36,0.24); color: #fff0bf; }
 
 	.hero-icon {
-		font-size: 32px;
+		font-size: 56px;
 		position: absolute;
-		bottom: 12px;
-		left: 18px;
-		opacity: 0.6;
+		right: -6px;
+		bottom: -10px;
+		left: auto;
+		opacity: 0.2;
+		filter: grayscale(1) brightness(1.7);
+		pointer-events: none;
 	}
 
 	.hero-irr {
@@ -303,17 +305,15 @@
 		color: #fff;
 		letter-spacing: -0.5px;
 		line-height: 1;
-		text-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
 	}
 	.irr-label {
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 600;
-		color: rgba(255,255,255,0.75);
+		color: rgba(255,255,255,0.55);
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		margin-top: 2px;
-		text-shadow: 0 1px 4px rgba(0,0,0,0.4);
 	}
 
 	.card-body {
@@ -331,10 +331,10 @@
 		font-size: 15px;
 		font-weight: 700;
 		color: var(--text-dark);
-		margin-bottom: 2px;
+		margin-bottom: 3px;
 		line-height: 1.3;
 		letter-spacing: -0.2px;
-		padding: 12px 16px 0;
+		padding: 14px 18px 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
@@ -347,8 +347,8 @@
 		font-size: 12px;
 		color: var(--text-muted);
 		font-weight: 500;
-		margin-bottom: 4px;
-		padding: 0 16px;
+		margin-bottom: 6px;
+		padding: 0 18px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -356,9 +356,9 @@
 
 	.metrics {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 12px 16px;
-		padding: 14px 18px;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px 14px;
+		padding: 12px 18px 8px;
 		margin-bottom: 0;
 		flex: 1;
 	}
@@ -369,7 +369,7 @@
 	}
 	.metric-label {
 		font-family: var(--font-ui);
-		font-size: 10px;
+		font-size: 9px;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
@@ -378,7 +378,7 @@
 	}
 	.metric-value {
 		font-family: var(--font-ui);
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 700;
 		color: var(--text-dark);
 	}
@@ -387,31 +387,32 @@
 	}
 
 	.funding-bar {
-		padding: 8px 14px 10px;
+		padding: 6px 18px 14px;
 		margin-top: auto;
 	}
 	.funding-labels {
 		display: flex;
 		justify-content: space-between;
 		font-family: var(--font-ui);
-		font-size: 10px;
+		font-size: 9px;
 		color: var(--text-muted);
-		margin-bottom: 4px;
+		margin-bottom: 5px;
+		gap: 10px;
 	}
 	.funding-labels span:first-child {
-		color: var(--primary);
+		color: var(--text-secondary);
 		font-weight: 600;
 	}
 	.funding-track {
-		height: 5px;
-		background: var(--border);
-		border-radius: 3px;
+		height: 4px;
+		background: var(--border-light);
+		border-radius: 999px;
 		overflow: hidden;
 	}
 	.funding-fill {
 		height: 100%;
-		background: var(--primary);
-		border-radius: 3px;
+		background: linear-gradient(90deg, var(--primary), #3bba78);
+		border-radius: 999px;
 		transition: width 0.3s ease;
 	}
 	.funding-fill.empty {
@@ -440,5 +441,11 @@
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 		z-index: 2;
+	}
+
+	@media (max-width: 1100px) {
+		.metrics {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 </style>
