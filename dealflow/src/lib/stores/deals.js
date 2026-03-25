@@ -2,10 +2,19 @@ import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { getStoredSessionToken } from '$lib/stores/auth.js';
 
+function safeJsonParse(value, fallback) {
+	try {
+		return JSON.parse(value);
+	} catch {
+		return fallback;
+	}
+}
+
 // ===== Pipeline Stages =====
 export const PIPELINE_STAGES = ['browse', 'saved', 'diligence', 'decision'];
 export const OUTCOME_STAGES = ['invested', 'passed'];
 export const ALL_STAGES = [...PIPELINE_STAGES, ...OUTCOME_STAGES];
+export const MAX_DECISION_COMPARE = 3;
 
 export const STAGE_META = {
 	browse:    { label: 'Filter',   color: 'var(--primary)',  icon: '🔍' },
@@ -33,6 +42,44 @@ export function normalizeStage(stage) {
 
 export function stageLabel(stage) {
 	return STAGE_META[normalizeStage(stage)]?.label || 'Filter';
+}
+
+const DECISION_COMPARE_STORAGE_KEY = 'gycDecisionCompareDeals';
+const LEGACY_COMPARE_STORAGE_KEY = 'gycCompareDeals';
+
+function normalizeDecisionCompareIds(value) {
+	const ids = [];
+	const seen = new Set();
+
+	for (const item of Array.isArray(value) ? value : []) {
+		const nextId = String(typeof item === 'string' ? item : item?.id || '').trim();
+		if (!nextId || seen.has(nextId)) continue;
+		seen.add(nextId);
+		ids.push(nextId);
+		if (ids.length >= MAX_DECISION_COMPARE) break;
+	}
+
+	return ids;
+}
+
+function readCachedDecisionCompareIds() {
+	if (!browser) return [];
+
+	const current = localStorage.getItem(DECISION_COMPARE_STORAGE_KEY);
+	if (current !== null) {
+		return normalizeDecisionCompareIds(safeJsonParse(current, []));
+	}
+
+	const migrated = normalizeDecisionCompareIds(safeJsonParse(localStorage.getItem(LEGACY_COMPARE_STORAGE_KEY) || '[]', []));
+	if (migrated.length) {
+		localStorage.setItem(DECISION_COMPARE_STORAGE_KEY, JSON.stringify(migrated));
+	}
+	return migrated;
+}
+
+function persistDecisionCompareIds(value) {
+	if (!browser) return;
+	localStorage.setItem(DECISION_COMPARE_STORAGE_KEY, JSON.stringify(normalizeDecisionCompareIds(value)));
 }
 
 // ===== Deals Store =====
@@ -94,6 +141,54 @@ function createStagesStore() {
 }
 
 export const dealStages = createStagesStore();
+
+function createDecisionCompareStore() {
+	const initial = browser ? readCachedDecisionCompareIds() : [];
+	const { subscribe, set } = writable(initial);
+
+	function replace(value) {
+		const normalized = normalizeDecisionCompareIds(value);
+		persistDecisionCompareIds(normalized);
+		set(normalized);
+		return normalized;
+	}
+
+	let currentIds = initial;
+	subscribe((value) => {
+		currentIds = value;
+	});
+
+	return {
+		subscribe,
+		set(value) {
+			return replace(value);
+		},
+		clear() {
+			return replace([]);
+		},
+		add(dealId) {
+			const nextId = String(dealId || '').trim();
+			if (!nextId) return { ok: false, reason: 'invalid', ids: currentIds };
+			if (currentIds.includes(nextId)) return { ok: false, reason: 'exists', ids: currentIds };
+			if (currentIds.length >= MAX_DECISION_COMPARE) return { ok: false, reason: 'max', ids: currentIds };
+			return { ok: true, ids: replace([...currentIds, nextId]) };
+		},
+		remove(dealId) {
+			return { ok: true, ids: replace(currentIds.filter((id) => id !== dealId)) };
+		},
+		toggle(dealId) {
+			const nextId = String(dealId || '').trim();
+			if (currentIds.includes(nextId)) {
+				return { ok: true, selected: false, ids: replace(currentIds.filter((id) => id !== nextId)) };
+			}
+			if (!nextId) return { ok: false, reason: 'invalid', selected: false, ids: currentIds };
+			if (currentIds.length >= MAX_DECISION_COMPARE) return { ok: false, reason: 'max', selected: false, ids: currentIds };
+			return { ok: true, selected: true, ids: replace([...currentIds, nextId]) };
+		}
+	};
+}
+
+export const decisionCompareIds = createDecisionCompareStore();
 
 // ===== Stage Counts =====
 export const stageCounts = derived([deals, dealStages], ([$deals, $stages]) => {

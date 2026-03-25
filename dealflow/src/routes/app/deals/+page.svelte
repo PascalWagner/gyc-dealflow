@@ -7,7 +7,16 @@
 	import DealMap from '$lib/components/DealMap.svelte';
 	import CompareView from '$lib/components/CompareView.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
-	import { deals, dealStages, stageCounts, fetchDeals, dealsLoading, STAGE_META } from '$lib/stores/deals.js';
+	import {
+		deals,
+		dealStages,
+		decisionCompareIds,
+		stageCounts,
+		fetchDeals,
+		dealsLoading,
+		MAX_DECISION_COMPARE,
+		STAGE_META
+	} from '$lib/stores/deals.js';
 	import { getStoredSessionUser, isAdmin, userTier } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 
@@ -16,6 +25,7 @@
 	let isMobile = $state(false);
 	let buyBox = $state(null);
 	let filterAnchor = $state(null);
+	let decisionSelectionInitialized = $state(false);
 
 	// Daily deal limit for free users
 	let dailyDealCount = $state(0);
@@ -72,6 +82,7 @@
 	let sortBy = $state('newest');
 	let showArchived = $state(false);
 	let buyBoxApplied = $state(false);
+	const UI_STAGE_TABS = new Set(['browse', 'saved', 'diligence', 'decision', 'invested', 'passed']);
 
 	const BUY_BOX_DEAL_TYPES = new Set(['fund', 'syndication', 'reit', '1031 exchange', 'joint venture', 'note/debt', 'other']);
 
@@ -159,12 +170,13 @@
 	}
 
 	// Whether any filter is active (for empty state messaging)
-		const hasActiveFilters = $derived(
-			!!search || !!assetClass || !!dealType || !!strategy || !!status || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
-		);
+	const hasActiveFilters = $derived(
+		!!search || !!assetClass || !!dealType || !!strategy || !!status || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
+	);
 
 	function switchTab(tab) {
 		currentTab = tab;
+		syncTabInUrl(tab);
 		// Reset to grid on tab switch (unless on Filter)
 		if (tab !== 'browse' && viewMode === 'map') viewMode = 'grid';
 	}
@@ -283,6 +295,21 @@
 		return result;
 	});
 
+	const decisionCompareSet = $derived(new Set($decisionCompareIds));
+	const selectedDecisionDeals = $derived.by(() => {
+		if (currentTab !== 'decision') return [];
+		const dealsById = new Map(filteredDeals.map((deal) => [deal.id, deal]));
+		return $decisionCompareIds.map((dealId) => dealsById.get(dealId)).filter(Boolean);
+	});
+	const decisionCompareRemaining = $derived(Math.max(0, MAX_DECISION_COMPARE - selectedDecisionDeals.length));
+	const decisionShelfDeals = $derived.by(() => {
+		if (currentTab !== 'decision') return [];
+		return [
+			...selectedDecisionDeals,
+			...filteredDeals.filter((deal) => !decisionCompareSet.has(deal.id))
+		];
+	});
+
 	// Stage description messages
 	const stageDescriptions = {
 		browse: { title: 'Filter', text: 'Browse vetted opportunities. Swipe right to save a deal or left to skip it.', color: 'var(--primary)' },
@@ -307,7 +334,49 @@
 		sortBy = 'newest'; showArchived = false; buyBoxApplied = false;
 	}
 
+	function handleDecisionCompareToggle(dealId) {
+		decisionCompareIds.toggle(dealId);
+	}
+
+	function applyLocationFilters() {
+		if (!browser) return;
+		const params = new URLSearchParams(window.location.search);
+		const requestedTab = String(params.get('tab') || '').trim().toLowerCase();
+		if (UI_STAGE_TABS.has(requestedTab)) currentTab = requestedTab;
+	}
+
+	function syncTabInUrl(tab) {
+		if (!browser) return;
+		const params = new URLSearchParams(window.location.search);
+		if (tab === 'browse') params.delete('tab');
+		else params.set('tab', tab);
+		const nextSearch = params.toString();
+		window.history.replaceState({}, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`);
+	}
+
+	$effect(() => {
+		if (!browser || currentTab !== 'decision') return;
+
+		const validIds = filteredDeals.map((deal) => deal.id);
+		const nextIds = $decisionCompareIds
+			.filter((dealId) => validIds.includes(dealId))
+			.slice(0, MAX_DECISION_COMPARE);
+
+		if (!decisionSelectionInitialized) {
+			decisionSelectionInitialized = true;
+			if (nextIds.length === 0 && validIds.length > 0) {
+				decisionCompareIds.set(validIds.slice(0, MAX_DECISION_COMPARE));
+				return;
+			}
+		}
+
+		if (nextIds.length !== $decisionCompareIds.length) {
+			decisionCompareIds.set(nextIds);
+		}
+	});
+
 	onMount(() => {
+		applyLocationFilters();
 		fetchDeals();
 		loadBuyBox();
 		applyBuyBoxFromLocation();
@@ -411,9 +480,59 @@
 				{/each}
 			</div>
 		</div>
-	{:else if currentTab === 'decision' && filteredDeals.length >= 2}
-		<!-- Compare view on Decide tab -->
-		<CompareView deals={filteredDeals} onstagechange={(dealId, nextStage) => dealStages.setStage(dealId, nextStage)} />
+	{:else if currentTab === 'decision' && filteredDeals.length > 0}
+		<div class="decision-compare-page">
+			<CompareView
+				deals={selectedDecisionDeals}
+				maxDeals={MAX_DECISION_COMPARE}
+				onremove={(dealId) => decisionCompareIds.remove(dealId)}
+				onstagechange={(dealId, nextStage) => dealStages.setStage(dealId, nextStage)}
+			/>
+
+			<div class="decision-selector">
+				<div class="decision-selector-head">
+					<div>
+						<div class="decision-selector-title">Choose Up To {MAX_DECISION_COMPARE} Finalists</div>
+						<div class="decision-selector-desc">
+							{#if selectedDecisionDeals.length === 0}
+								Add deals from the cards below to start your side-by-side comparison.
+							{:else if decisionCompareRemaining > 0}
+								Add {decisionCompareRemaining} more deal{decisionCompareRemaining === 1 ? '' : 's'} from the cards below.
+							{:else}
+								Swap deals in and out from the cards below to pressure-test your finalists.
+							{/if}
+						</div>
+					</div>
+
+					<div class="decision-selector-meta">
+						<span class="decision-selector-count">{selectedDecisionDeals.length}/{MAX_DECISION_COMPARE} selected</span>
+						{#if selectedDecisionDeals.length > 0}
+							<button class="decision-clear-btn" onclick={() => decisionCompareIds.clear()}>Clear</button>
+						{/if}
+					</div>
+				</div>
+
+				<div class="deals-grid decision-deals-grid">
+					{#each decisionShelfDeals as deal (deal.id)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<div
+							class="decision-card"
+							class:is-selected={decisionCompareSet.has(deal.id)}
+							onclick={() => trackDealView(deal.id)}
+						>
+							<DealCard
+								{deal}
+								compareSelectable={true}
+								compareSelected={decisionCompareSet.has(deal.id)}
+								compareDisabled={!decisionCompareSet.has(deal.id) && selectedDecisionDeals.length >= MAX_DECISION_COMPARE}
+								oncomparetoggle={handleDecisionCompareToggle}
+							/>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
 	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
@@ -618,6 +737,89 @@
 		transition: width 0.5s ease, background 0.3s ease;
 	}
 
+	.decision-compare-page {
+		display: grid;
+		gap: 22px;
+	}
+
+	.decision-selector {
+		padding: 18px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		box-shadow: var(--shadow-card);
+	}
+
+	.decision-selector-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 18px;
+	}
+
+	.decision-selector-title {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 800;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: var(--text-dark);
+	}
+
+	.decision-selector-desc {
+		margin-top: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+
+	.decision-selector-meta {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-shrink: 0;
+	}
+
+	.decision-selector-count {
+		padding: 6px 10px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.12);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+
+	.decision-clear-btn {
+		border: none;
+		background: none;
+		padding: 0;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+
+	.decision-clear-btn:hover {
+		color: var(--text-dark);
+	}
+
+	.decision-deals-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.decision-card {
+		border-radius: var(--radius);
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.decision-card.is-selected {
+		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.24);
+	}
+
 	.deals-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
@@ -719,6 +921,10 @@
 	@media (max-width: 1100px) {
 		.deals-grid,
 		.skeleton-grid { grid-template-columns: repeat(2, 1fr); }
+
+		.decision-deals-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 	}
 
 	@media (min-width: 769px) and (max-width: 1024px) {
@@ -731,6 +937,10 @@
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 			gap: 16px;
 		}
+
+		.decision-selector {
+			padding: 16px;
+		}
 	}
 
 	@media (max-width: 768px) {
@@ -741,9 +951,18 @@
 		:global(.pipeline-pills.mobile-only) { margin-top: 12px; }
 		.deals-grid,
 		.skeleton-grid { grid-template-columns: 1fr; }
+		.decision-deals-grid { grid-template-columns: 1fr; }
 		.desktop-only { display: none; }
 		.stage-copy { display: block; }
 		.stage-desc { display: block; margin-top: 6px; }
 		.daily-views { display: none; }
+		.decision-selector-head {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.decision-selector-meta {
+			justify-content: space-between;
+		}
 	}
 </style>

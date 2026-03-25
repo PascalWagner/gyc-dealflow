@@ -1,7 +1,17 @@
 <script>
 	import { dealStages, STAGE_META, normalizeStage, stageLabel } from '$lib/stores/deals.js';
 
-	let { deals = [], allDeals = [], onclose = () => {}, onremove = () => {}, onstagechange = () => {} } = $props();
+	let {
+		deals = [],
+		allDeals = [],
+		maxDeals = 3,
+		showCloseButton = false,
+		onclose = () => {},
+		onremove = () => {},
+		onstagechange = () => {}
+	} = $props();
+
+	const visibleDeals = $derived(deals.slice(0, maxDeals));
 
 	function fmtPct(val) {
 		if (val == null || val === '') return '\u2014';
@@ -88,7 +98,7 @@
 	}
 </script>
 
-{#if deals.length < 2}
+{#if visibleDeals.length < 2}
 	<div class="compare-empty">
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
 			<line x1="12" y1="2" x2="12" y2="22"/>
@@ -97,14 +107,21 @@
 		</svg>
 		<div class="empty-title">Compare deals side by side</div>
 		<div class="empty-sub">
-			{deals.length === 0 ? 'Add at least 2 deals to get started.' : 'Add one more deal to start comparing.'}
+			{visibleDeals.length === 0
+				? `Pick 2 to ${maxDeals} finalists from the cards below to get started.`
+				: 'Add one more deal from the cards below to start comparing.'}
 		</div>
 	</div>
 {:else}
 	<div class="compare-overlay">
 		<div class="compare-header">
-			<div class="compare-title">Deal Comparison</div>
-			<button class="close-btn" onclick={onclose}>&times; Close</button>
+			<div>
+				<div class="compare-title">Deal Comparison</div>
+				<div class="compare-subtitle">{visibleDeals.length}/{maxDeals} selected</div>
+			</div>
+			{#if showCloseButton}
+				<button class="close-btn" onclick={onclose}>&times; Close</button>
+			{/if}
 		</div>
 
 		<div class="compare-table-wrap">
@@ -112,9 +129,9 @@
 				<thead>
 					<tr>
 						<th class="col-label"></th>
-						{#each deals as deal}
+						{#each visibleDeals as deal}
 							<th class="col-deal">
-								<button class="remove-btn" onclick={() => onremove(deal.id)} title="Remove">&times;</button>
+								<button class="remove-btn" onclick={() => onremove(deal.id)} title="Remove from compare">&times;</button>
 								<div class="deal-badge">{deal.assetClass || 'Deal'}</div>
 								<div class="deal-name">{deal.investmentName}</div>
 								<div class="deal-mgr">{deal.managementCompany || ''}</div>
@@ -124,12 +141,12 @@
 				</thead>
 				<tbody>
 					<!-- Returns -->
-					<tr class="section-row"><td colspan={deals.length + 1}>Returns</td></tr>
+					<tr class="section-row"><td colspan={visibleDeals.length + 1}>Returns</td></tr>
 					{#each RETURNS_ROWS as row}
-						{@const info = getBest(deals.map(d => d[row.key]), row.higher)}
+						{@const info = getBest(visibleDeals.map((deal) => deal[row.key]), row.higher)}
 						<tr>
 							<td class="col-label">{row.label}</td>
-							{#each deals as deal, i}
+							{#each visibleDeals as deal, i}
 								<td class="col-deal" class:best-val={info.uniqueBest && info.nums[i] === info.best}>
 									{formatVal(deal[row.key], row.format)}
 								</td>
@@ -138,12 +155,12 @@
 					{/each}
 
 					<!-- Terms -->
-					<tr class="section-row"><td colspan={deals.length + 1}>Terms</td></tr>
+					<tr class="section-row"><td colspan={visibleDeals.length + 1}>Terms</td></tr>
 					{#each TERMS_ROWS as row}
-						{@const info = getBest(deals.map(d => d[row.key]), row.higher)}
+						{@const info = getBest(visibleDeals.map((deal) => deal[row.key]), row.higher)}
 						<tr>
 							<td class="col-label">{row.label}</td>
-							{#each deals as deal, i}
+							{#each visibleDeals as deal, i}
 								<td class="col-deal" class:best-val={info.uniqueBest && info.nums[i] === info.best}>
 									{formatVal(deal[row.key], row.format)}
 								</td>
@@ -152,21 +169,21 @@
 					{/each}
 
 					<!-- Structure & Sponsor -->
-					<tr class="section-row"><td colspan={deals.length + 1}>Structure & Sponsor</td></tr>
+					<tr class="section-row"><td colspan={visibleDeals.length + 1}>Structure & Sponsor</td></tr>
 					{#each TEXT_ROWS as row}
 						<tr>
 							<td class="col-label">{row.label}</td>
-							{#each deals as deal}
+							{#each visibleDeals as deal}
 								<td class="col-deal">{deal[row.key] || '\u2014'}</td>
 							{/each}
 						</tr>
 					{/each}
 
 					<!-- Actions -->
-					<tr class="section-row"><td colspan={deals.length + 1}>Actions</td></tr>
+					<tr class="section-row"><td colspan={visibleDeals.length + 1}>Actions</td></tr>
 					<tr>
 						<td class="col-label">Stage</td>
-						{#each deals as deal}
+						{#each visibleDeals as deal}
 							<td class="col-deal">
 								<a href="/deal/{deal.id}" class="action-btn primary">Open Deal</a>
 								{#if getNextAction(deal.id)}
@@ -222,6 +239,13 @@
 		font-family: var(--font-headline);
 		font-size: 24px;
 		color: var(--text-dark);
+	}
+	.compare-subtitle {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		margin-top: 4px;
 	}
 	.close-btn {
 		padding: 8px 16px;

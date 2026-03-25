@@ -4,7 +4,15 @@
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
-	import { dealStages, STAGE_META, PIPELINE_STAGES, normalizeStage, stageLabel } from '$lib/stores/deals.js';
+	import {
+		dealStages,
+		decisionCompareIds,
+		STAGE_META,
+		PIPELINE_STAGES,
+		MAX_DECISION_COMPARE,
+		normalizeStage,
+		stageLabel
+	} from '$lib/stores/deals.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -401,29 +409,25 @@
 	}
 
 	// ===== Deal Comparison =====
-	let compareCount = $state(0);
-
-	function loadCompareCount() {
-		if (!browser) return;
-		const list = JSON.parse(localStorage.getItem('gycCompareDeals') || '[]');
-		compareCount = list.length;
-	}
+	const compareCount = $derived($decisionCompareIds.length);
 
 	function addToCompare() {
 		if (!browser || !deal) return;
-		let list = JSON.parse(localStorage.getItem('gycCompareDeals') || '[]');
-		if (list.some(d => d.id === deal.id)) {
+		if (currentStage !== 'decision') {
+			showShareToast('Move this deal to Decide before adding it to comparison.');
+			return;
+		}
+
+		const result = decisionCompareIds.add(deal.id);
+		if (result.reason === 'exists') {
 			showShareToast('Already in comparison');
 			return;
 		}
-		if (list.length >= 5) {
-			showShareToast('Max 5 deals in comparison. Remove one first.');
+		if (result.reason === 'max') {
+			showShareToast(`Max ${MAX_DECISION_COMPARE} deals in comparison. Remove one first.`);
 			return;
 		}
-		list.push({ id: deal.id, name: deal.investmentName || deal.name || 'Deal' });
-		localStorage.setItem('gycCompareDeals', JSON.stringify(list));
-		compareCount = list.length;
-		showShareToast(`Added to comparison (${list.length} deal${list.length !== 1 ? 's' : ''})`);
+		showShareToast(`Added to comparison (${result.ids.length} deal${result.ids.length !== 1 ? 's' : ''})`);
 	}
 
 	// ===== Share Actions =====
@@ -1136,9 +1140,6 @@
 		// Load deck-viewed and intro-requested state
 		deckViewed = !!localStorage.getItem('gycDeckViewed_' + deal.id);
 		introRequested = !!localStorage.getItem('gycIntroRequested_' + deal.id);
-
-		// Load compare count
-		loadCompareCount();
 
 		// Auto-select first share class (sorted by highest min investment) on initial load
 		if (deal.shareClasses && deal.shareClasses.length > 0) {

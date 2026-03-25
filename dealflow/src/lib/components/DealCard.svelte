@@ -4,7 +4,13 @@
 	import { notifySuccess, tapLight } from '$lib/utils/haptics.js';
 	import { canShare, shareDeal } from '$lib/utils/share.js';
 
-	let { deal } = $props();
+	let {
+		deal,
+		compareSelectable = false,
+		compareSelected = false,
+		compareDisabled = false,
+		oncomparetoggle = () => {}
+	} = $props();
 
 	const stage = $derived($dealStages[deal.id] || 'browse');
 
@@ -82,6 +88,13 @@
 		event.stopPropagation();
 		tapLight();
 		await shareDeal(deal);
+	}
+
+	function handleCompareToggle(event) {
+		event.stopPropagation();
+		if (compareDisabled) return;
+		tapLight();
+		oncomparetoggle(deal.id);
 	}
 
 	function getActions(stageKey) {
@@ -266,6 +279,27 @@
 	</a>
 
 	<div class="card-footer">
+		{#if compareSelectable}
+			<button
+				class="card-btn compare-btn"
+				class:btn-compare-selected={compareSelected}
+				disabled={compareDisabled}
+				onclick={handleCompareToggle}
+			>
+				{#if compareSelected}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="5" y1="12" x2="19" y2="12"></line>
+					</svg>
+					Remove From Compare
+				{:else}
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="12" y1="5" x2="12" y2="19"></line>
+						<line x1="5" y1="12" x2="19" y2="12"></line>
+					</svg>
+					{compareDisabled ? 'Compare Full' : 'Add To Compare'}
+				{/if}
+			</button>
+		{/if}
 		{#if canShare()}
 			<button class="card-btn share-btn" onclick={handleShare} aria-label="Share deal">
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -580,6 +614,7 @@
 		padding: 10px 14px 12px;
 		display: flex;
 		gap: 6px;
+		flex-wrap: wrap;
 		border-top: 1px solid var(--border-light);
 		margin-top: auto;
 	}
@@ -684,6 +719,27 @@
 	.share-btn {
 		flex: 0 0 36px;
 		padding: 8px;
+	}
+
+	.compare-btn {
+		flex: 1 1 100%;
+	}
+
+	.compare-btn:disabled {
+		opacity: 0.55;
+		cursor: default;
+	}
+
+	.btn-compare-selected {
+		background: rgba(81, 190, 123, 0.12);
+		border-color: rgba(81, 190, 123, 0.34);
+		color: var(--primary);
+	}
+
+	.btn-compare-selected:hover:not(:disabled) {
+		background: rgba(81, 190, 123, 0.18);
+		border-color: rgba(81, 190, 123, 0.46);
+		color: var(--primary);
 	}
 
 	@media (max-width: 1200px) {
