@@ -9,6 +9,7 @@ const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
 export default async function handler(req, res) {
   setCors(res);
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method !== 'GET') {
