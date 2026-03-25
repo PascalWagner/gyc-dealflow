@@ -13,6 +13,37 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+async function findUserIdByEmail(adminClient, email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  const { data: profile, error: profileError } = await adminClient
+    .from('user_profiles')
+    .select('id')
+    .ilike('email', normalizedEmail)
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+  if (profile?.id) return profile.id;
+
+  const perPage = 200;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const users = data?.users || [];
+    const matchedUser = users.find((user) => normalizeEmail(user.email) === normalizedEmail);
+    if (matchedUser?.id) return matchedUser.id;
+
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return null;
+}
+
 const TABLE_MAP = {
   stages: 'user_deal_stages',
   portfolio: 'user_portfolio',
@@ -313,11 +344,8 @@ async function handleAdminGet(req, res) {
   const types = type ? [type] : ['portfolio', 'stages', 'goals', 'taxdocs', 'plan'];
   const adminClient = getAdminClient();
 
-  // Look up user_id by email from auth.users
-  const { data: { users }, error: lookupErr } = await adminClient.auth.admin.listUsers();
-  if (lookupErr) throw lookupErr;
-  const targetUser = (users || []).find(u => normalizeEmail(u.email) === normalizedEmail);
-  if (!targetUser) {
+  const targetUserId = await findUserIdByEmail(adminClient, normalizedEmail);
+  if (!targetUserId) {
     // User hasn't signed up yet — return empty data
     const result = {};
     types.forEach(t => { result[t] = []; });
@@ -331,7 +359,7 @@ async function handleAdminGet(req, res) {
     const { data, error } = await adminClient
       .from(table)
       .select('*')
-      .eq('user_id', targetUser.id);
+      .eq('user_id', targetUserId);
     if (error) throw error;
     result[t] = data || [];
   }
@@ -347,7 +375,8 @@ async function handlePost(req, res, supabase, user) {
     const allowed = [
       'share_portfolio', 'full_name', 'phone', 'location',
       'share_saved', 'share_dd', 'share_invested', 'allow_follows',
-      'share_activity', 'avatar_url'
+      'share_activity', 'avatar_url',
+      'accredited_status', 'investable_capital', 'investment_experience'
     ];
     const fields = {};
     for (const key of allowed) {

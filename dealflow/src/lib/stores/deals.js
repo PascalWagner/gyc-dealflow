@@ -1,5 +1,6 @@
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
+import { getStoredSessionToken } from '$lib/stores/auth.js';
 
 // ===== Pipeline Stages =====
 export const PIPELINE_STAGES = ['browse', 'saved', 'diligence', 'decision'];
@@ -141,13 +142,13 @@ export async function fetchDeals() {
 async function syncStageToBackend(dealId, stage) {
 	if (!browser) return;
 	try {
-		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		if (!stored?.token) return;
+		const token = getStoredSessionToken();
+		if (!token) return;
 		await fetch('/api/userdata', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${stored.token}`
+				'Authorization': `Bearer ${token}`
 			},
 			body: JSON.stringify({
 				type: 'stages',

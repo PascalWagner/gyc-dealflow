@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { user, isLoggedIn } from '$lib/stores/auth.js';
+	import { getStoredSessionUser, user, isLoggedIn } from '$lib/stores/auth.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	// ===== State =====
@@ -749,9 +749,9 @@
 		if (!browser) return;
 
 		// Auth check
-		const u = JSON.parse(localStorage.getItem('gycUser') || 'null');
-		if (!u || !u.token || u.token === 'local-session') {
-			localStorage.removeItem('gycUser');
+		const sessionUser = getStoredSessionUser();
+		if (!sessionUser?.token || sessionUser.token === 'local-session') {
+			user.logout();
 			goto('/login');
 			return;
 		}

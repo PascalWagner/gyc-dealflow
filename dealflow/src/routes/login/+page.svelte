@@ -1,7 +1,7 @@
 	<script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { normalizeSessionUser, user } from '$lib/stores/auth.js';
+	import { setStoredSessionUser } from '$lib/stores/auth.js';
 	import { ADMIN_REAL_USER_KEY } from '$lib/utils/userScopedState.js';
 
 	// ── Reactive state (Svelte 5 runes) ──
@@ -81,7 +81,7 @@
 	// ── Store user data helper ──
 	function storeUser(data) {
 		localStorage.removeItem(ADMIN_REAL_USER_KEY);
-		const userData = normalizeSessionUser({
+		const userData = setStoredSessionUser({
 			email: data.email,
 			name: data.name || data.email?.split('@')[0],
 			token: data.token,
@@ -103,8 +103,6 @@
 			})
 		});
 		if (!userData) return null;
-		localStorage.setItem('gycUser', JSON.stringify(userData));
-		user.set(userData);
 		return userData;
 	}
 

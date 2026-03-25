@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { userToken } from '$lib/stores/auth.js';
+	import { getStoredSessionToken, userToken } from '$lib/stores/auth.js';
 	import {
 		LIBRARY_VIEWS,
 		formatCount,
@@ -46,7 +46,7 @@
 	let searchTimer;
 
 	async function contentFetch(url, options = {}) {
-		const token = $userToken || JSON.parse(localStorage.getItem('gycUser') || '{}').token;
+		const token = $userToken || getStoredSessionToken();
 		const response = await fetch(url, {
 			...options,
 			headers: {

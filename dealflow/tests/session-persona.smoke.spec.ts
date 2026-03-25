@@ -1,0 +1,352 @@
+import { expect, test, type Page } from '@playwright/test';
+
+const ADMIN_EMAIL = 'info@pascalwagner.com';
+const FREE_EMAIL = 'test@test.com';
+const IMPERSONATED_EMAIL = 'academy-user@example.com';
+
+type SessionUser = {
+	email: string;
+	name: string;
+	fullName: string;
+	tier: string;
+	isAdmin: boolean;
+	token: string;
+	refreshToken: string;
+};
+
+type UserBundle = {
+	portfolio: Array<Record<string, unknown>>;
+	stages: Array<Record<string, unknown>>;
+	goals: Array<Record<string, unknown>>;
+	taxdocs: Array<Record<string, unknown>>;
+	plan: Array<Record<string, unknown>>;
+};
+
+const userBundles: Record<string, UserBundle> = {
+	[ADMIN_EMAIL]: {
+		portfolio: [
+			{
+				id: 'admin-portfolio',
+				deal_id: 'deal-admin',
+				investment_name: 'Admin Holdco',
+				sponsor: 'Admin Sponsor',
+				asset_class: 'Industrial',
+				amount_invested: 111111,
+				status: 'Active'
+			}
+		],
+		stages: [],
+		goals: [],
+		taxdocs: [],
+		plan: []
+	},
+	[FREE_EMAIL]: {
+		portfolio: [],
+		stages: [],
+		goals: [],
+		taxdocs: [],
+		plan: []
+	},
+	[IMPERSONATED_EMAIL]: {
+		portfolio: [
+			{
+				id: 'academy-portfolio',
+				deal_id: 'deal-academy',
+				investment_name: 'Academy Holdco',
+				sponsor: 'Academy Sponsor',
+				asset_class: 'Multi Family',
+				amount_invested: 222222,
+				status: 'Active'
+			}
+		],
+		stages: [],
+		goals: [],
+		taxdocs: [],
+		plan: []
+	}
+};
+
+function base64UrlEncode(value: string) {
+	return Buffer.from(value)
+		.toString('base64')
+		.replace(/\+/g, '-')
+		.replace(/\//g, '_')
+		.replace(/=+$/g, '');
+}
+
+function fakeJwt(email: string) {
+	const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+	const payload = base64UrlEncode(JSON.stringify({
+		sub: `user-${email}`,
+		email,
+		role: 'authenticated',
+		exp: Math.floor(Date.now() / 1000) + 60 * 60
+	}));
+	return `${header}.${payload}.signature`;
+}
+
+function makeSessionUser(email: string, overrides: Partial<SessionUser> = {}): SessionUser {
+	const defaultName = email.split('@')[0];
+	const tier = overrides.tier || 'free';
+	return {
+		email,
+		name: overrides.name || defaultName,
+		fullName: overrides.fullName || overrides.name || defaultName,
+		tier,
+		isAdmin: overrides.isAdmin ?? false,
+		token: overrides.token || fakeJwt(email),
+		refreshToken: overrides.refreshToken || `refresh-${email}`,
+		...overrides
+	};
+}
+
+function decodeAuthEmail(authorizationHeader: string | undefined) {
+	if (!authorizationHeader?.startsWith('Bearer ')) return '';
+	const [, token] = authorizationHeader.split(' ');
+	const payload = token.split('.')[1];
+	if (!payload) return '';
+
+	try {
+		const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+		const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+		const parsed = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+		return String(parsed.email || '').toLowerCase();
+	} catch {
+		return '';
+	}
+}
+
+async function installCoreApiMocks(page: Page) {
+	await page.route('**/api/network**', async (route) => {
+		await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+	});
+
+	await page.route('**/api/deals**', async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ deals: [{ id: 'deal-1', investmentName: 'Mock Deal' }] })
+		});
+	});
+
+	await page.route('**/api/users**', async (route) => {
+		const url = new URL(route.request().url());
+		const query = (url.searchParams.get('q') || '').toLowerCase();
+		const contacts = query.length >= 2
+			? [{
+				email: IMPERSONATED_EMAIL,
+				name: 'Academy User',
+				fullName: 'Academy User',
+				tier: 'academy'
+			}]
+			: [];
+
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ success: true, contacts })
+		});
+	});
+
+	await page.route('**/api/buybox**', async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ buyBox: {} })
+		});
+	});
+
+	await page.route('**/api/userdata**', async (route) => {
+		const request = route.request();
+		const url = new URL(request.url());
+		const method = request.method();
+
+		if (method === 'POST') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ ok: true, record: {} })
+			});
+			return;
+		}
+
+		const type = url.searchParams.get('type') || '';
+		if (type === 'notif_prefs') {
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ notif_frequency: 'weekly' })
+			});
+			return;
+		}
+
+		if (url.searchParams.get('admin') === 'true') {
+			const targetEmail = String(url.searchParams.get('email') || '').toLowerCase();
+			const bundle = userBundles[targetEmail] || {
+				portfolio: [],
+				stages: [],
+				goals: [],
+				taxdocs: [],
+				plan: []
+			};
+
+			await route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify(type ? { [type]: bundle[type as keyof UserBundle] || [] } : bundle)
+			});
+			return;
+		}
+
+		const email = decodeAuthEmail(request.headers().authorization);
+		const bundle = userBundles[email] || {
+			portfolio: [],
+			stages: [],
+			goals: [],
+			taxdocs: [],
+			plan: []
+		};
+		const records = bundle[type as keyof UserBundle] || [];
+
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				records,
+				count: records.length,
+				type,
+				fetchedAt: new Date().toISOString()
+			})
+		});
+	});
+}
+
+async function seedSession(page: Page, session: SessionUser, options: { portfolio?: unknown[] } = {}) {
+	await page.goto('/login');
+	await page.evaluate(({ seededSession, portfolio }) => {
+		localStorage.clear();
+		localStorage.setItem('gycUser', JSON.stringify(seededSession));
+		localStorage.setItem('gycPortfolio', JSON.stringify(portfolio || []));
+		localStorage.setItem('gycNotifPrefs', JSON.stringify({
+			frequency: 'weekly',
+			deal_alerts: true,
+			weekly_digest: true
+		}));
+	}, { seededSession: session, portfolio: options.portfolio || [] });
+}
+
+test.describe('session and persona smoke', () => {
+	test.beforeEach(async ({ page }) => {
+		await installCoreApiMocks(page);
+	});
+
+	test('free session boots without redirect and shows free tier', async ({ page }) => {
+		await seedSession(page, makeSessionUser(FREE_EMAIL, {
+			name: 'Free User',
+			fullName: 'Free User',
+			tier: 'free',
+			isAdmin: false
+		}));
+
+		await page.goto('/app/settings');
+
+		await expect(page).toHaveURL(/\/app\/settings$/);
+		await expect(page.locator('.settings-shell-title')).toHaveText('Settings');
+		await expect(page.locator('.user-tier')).toHaveText('Free Plan');
+		await expect(page.locator('.view-as-toggle')).toHaveCount(0);
+	});
+
+	test('admin session boots with academy tier and admin controls', async ({ page }) => {
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}), {
+			portfolio: [{ id: 'admin-local', investmentName: 'Admin Local State' }]
+		});
+
+		await page.goto('/app/settings');
+
+		await expect(page).toHaveURL(/\/app\/settings$/);
+		await expect(page.locator('.settings-shell-title')).toHaveText('Settings');
+		await expect(page.locator('.user-tier')).toHaveText('Academy Member');
+		await expect(page.locator('.view-as-toggle')).toBeVisible();
+		await expect(page.getByText('Admin Dashboard')).toBeVisible();
+	});
+
+	test('impersonation keeps admin and academy scoped state separated', async ({ page }) => {
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}), {
+			portfolio: [{ id: 'admin-local', investmentName: 'Admin Local State' }]
+		});
+
+		await page.goto('/app/settings');
+		await expect(page.locator('.view-as-toggle')).toBeVisible();
+
+		await page.locator('.view-as-toggle').click();
+		await page.locator('.view-as-input').fill('academy');
+		await expect(page.locator('.view-as-result')).toHaveCount(1);
+
+		await page.locator('.view-as-result').click();
+
+		await expect(page.locator('.view-as-impersonating')).toBeVisible();
+		await expect(page.locator('.view-as-email')).toHaveText(IMPERSONATED_EMAIL);
+		await expect(page.locator('.view-as-toggle')).toBeVisible();
+
+		await page.waitForFunction(([adminEmail, impersonatedEmail]) => {
+			const currentUser = JSON.parse(localStorage.getItem('gycUser') || 'null');
+			const currentPortfolio = localStorage.getItem('gycPortfolio') || '';
+			return (
+				currentUser?.email === impersonatedEmail &&
+				currentUser?.isAdmin === false &&
+				typeof localStorage.getItem(`_scopedBundle_${adminEmail}`) === 'string' &&
+				typeof localStorage.getItem(`_scopedBundle_${impersonatedEmail}`) === 'string' &&
+				currentPortfolio.includes('Academy Holdco')
+			);
+		}, [ADMIN_EMAIL.toLowerCase(), IMPERSONATED_EMAIL.toLowerCase()]);
+
+		const impersonationState = await page.evaluate(([adminEmail, impersonatedEmail]) => ({
+			currentUser: JSON.parse(localStorage.getItem('gycUser') || 'null'),
+			adminBundle: localStorage.getItem(`_scopedBundle_${adminEmail}`),
+			academyBundle: localStorage.getItem(`_scopedBundle_${impersonatedEmail}`),
+			adminRealUser: JSON.parse(localStorage.getItem('_gycAdminRealUser') || 'null'),
+			currentPortfolio: localStorage.getItem('gycPortfolio')
+		}), [ADMIN_EMAIL.toLowerCase(), IMPERSONATED_EMAIL.toLowerCase()]);
+
+		expect(impersonationState.currentUser?.email).toBe(IMPERSONATED_EMAIL);
+		expect(impersonationState.currentUser?.isAdmin).toBe(false);
+		expect(impersonationState.adminRealUser?.email).toBe(ADMIN_EMAIL);
+		expect(impersonationState.adminBundle).toContain('Admin Local State');
+		expect(impersonationState.academyBundle).toContain('Academy Holdco');
+		expect(impersonationState.currentPortfolio).toContain('Academy Holdco');
+
+		await page.locator('.view-as-exit').click();
+
+		await page.waitForFunction((adminEmail) => {
+			const currentUser = JSON.parse(localStorage.getItem('gycUser') || 'null');
+			const currentPortfolio = localStorage.getItem('gycPortfolio') || '';
+			return (
+				currentUser?.email === adminEmail &&
+				currentPortfolio.includes('Admin Local State') &&
+				localStorage.getItem('_gycAdminRealUser') === null
+			);
+		}, ADMIN_EMAIL.toLowerCase());
+
+		const restoredState = await page.evaluate(([adminEmail, impersonatedEmail]) => ({
+			currentUser: JSON.parse(localStorage.getItem('gycUser') || 'null'),
+			currentPortfolio: localStorage.getItem('gycPortfolio'),
+			adminBundle: localStorage.getItem(`_scopedBundle_${adminEmail}`),
+			academyBundle: localStorage.getItem(`_scopedBundle_${impersonatedEmail}`)
+		}), [ADMIN_EMAIL.toLowerCase(), IMPERSONATED_EMAIL.toLowerCase()]);
+
+		expect(restoredState.currentUser?.email).toBe(ADMIN_EMAIL);
+		expect(restoredState.currentPortfolio).toContain('Admin Local State');
+		expect(restoredState.adminBundle).toContain('Admin Local State');
+		expect(restoredState.academyBundle).toContain('Academy Holdco');
+	});
+});

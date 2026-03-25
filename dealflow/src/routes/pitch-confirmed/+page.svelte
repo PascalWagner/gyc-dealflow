@@ -1,5 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
+	import { getStoredSessionUser } from '$lib/stores/auth.js';
 
 	let selectedDate = $state(null);
 	let bookingState = $state('idle'); // idle | booking | success | error
@@ -40,7 +41,7 @@
 		bookingState = 'booking';
 		btnText = 'Booking...';
 
-		const user = JSON.parse(localStorage.getItem('gycUser') || 'null') || {};
+		const user = getStoredSessionUser() || {};
 		try {
 			const res = await fetch('/api/pitch-booking', {
 				method: 'POST',

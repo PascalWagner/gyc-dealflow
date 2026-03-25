@@ -1,7 +1,7 @@
-<script>
+	<script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { user, isAdmin, userToken } from '$lib/stores/auth.js';
+	import { canonicalizeUserTier, user, isAdmin, userToken } from '$lib/stores/auth.js';
 
 	let activeTab = $state('operators');
 	const tabs = ['operators', 'deals', 'users', 'submissions', 'intros'];
@@ -223,7 +223,7 @@
 						cols: [
 							d.email || '--',
 							d.full_name || d.fullName || '--',
-							d.tier || 'explorer',
+							canonicalizeUserTier(d.tier, { email: d.email, isAdmin: d.is_admin === true }),
 							formatShortDate(d.created_at || d.createdAt)
 						],
 						id: d.id

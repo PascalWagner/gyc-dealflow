@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { deals, dealStages } from '$lib/stores/deals.js';
 	import GoalProgress from '$lib/components/GoalProgress.svelte';
+	import { getStoredSessionToken } from '$lib/stores/auth.js';
 
 	let investorGoals = $state(null);
 	let portfolio = $state([]);
@@ -44,8 +45,7 @@
 	let saveMsg = $state('');
 
 	function getToken() {
-		if (!browser) return null;
-		return localStorage.getItem('sb_token') || localStorage.getItem('ghlToken') || JSON.parse(localStorage.getItem('gycUser') || '{}').token || null;
+		return browser ? getStoredSessionToken() : null;
 	}
 
 	async function saveGoals() {
@@ -136,24 +136,22 @@
 				});
 				if (resp.ok) {
 					const data = await resp.json();
-					if (data && (data.goals || data.data)) {
-						const apiGoals = data.goals || data.data;
-						if (apiGoals && Object.keys(apiGoals).length > 0) {
-							// Normalize API response to our format
-							const normalized = {
-								type: apiGoals['Goal Type'] || apiGoals.type || 'passive_income',
-								currentIncome: parseFloat(apiGoals['Current Income'] || apiGoals.currentIncome) || 0,
-								targetIncome: parseFloat(apiGoals['Target Income'] || apiGoals.targetIncome) || 100000,
-								capital: apiGoals['Capital Available'] || apiGoals.capital || '$500k - $999k',
-								checkSize: parseFloat(apiGoals.checkSize) || 100000,
-								timeline: parseInt(apiGoals['Timeline'] || apiGoals.timeline) || 5,
-								taxReduction: parseFloat(apiGoals['Tax Reduction'] || apiGoals.taxReduction) || 0,
-								createdAt: apiGoals.createdAt || new Date().toISOString()
-							};
-							investorGoals = normalized;
-							localStorage.setItem('gycGoals', JSON.stringify(normalized));
-							populateFormFromGoals(normalized);
-						}
+					const apiGoals = Array.isArray(data?.records) ? data.records[0] : (data?.goals || data?.data);
+					if (apiGoals && Object.keys(apiGoals).length > 0) {
+						// Normalize API response to our format
+						const normalized = {
+							type: apiGoals['Goal Type'] || apiGoals.type || apiGoals.goal_type || 'passive_income',
+							currentIncome: parseFloat(apiGoals['Current Income'] || apiGoals.currentIncome || apiGoals.current_income) || 0,
+							targetIncome: parseFloat(apiGoals['Target Income'] || apiGoals.targetIncome || apiGoals.target_income) || 100000,
+							capital: apiGoals['Capital Available'] || apiGoals.capital || apiGoals.capital_available || '$500k - $999k',
+							checkSize: parseFloat(apiGoals.checkSize) || 100000,
+							timeline: parseInt(apiGoals['Timeline'] || apiGoals.timeline) || 5,
+							taxReduction: parseFloat(apiGoals['Tax Reduction'] || apiGoals.taxReduction || apiGoals.tax_reduction) || 0,
+							createdAt: apiGoals.createdAt || new Date().toISOString()
+						};
+						investorGoals = normalized;
+						localStorage.setItem('gycGoals', JSON.stringify(normalized));
+						populateFormFromGoals(normalized);
 					}
 				}
 			}

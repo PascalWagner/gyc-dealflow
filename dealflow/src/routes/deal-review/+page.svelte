@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
+	import { getStoredSessionToken } from '$lib/stores/auth.js';
 
 	let currentStep = $state(1);
 	let loading = $state(true);
@@ -36,10 +37,10 @@
 	async function submitReview() {
 		submitting = true;
 		try {
-			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const token = getStoredSessionToken();
 			await fetch('/api/deal-review', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (stored.token || '') },
+				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
 				body: JSON.stringify({ dealId, ...formData })
 			});
 			submitted = true;
@@ -54,9 +55,9 @@
 		dealId = $page.url.searchParams.get('id');
 		if (dealId) {
 			try {
-				const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+				const token = getStoredSessionToken();
 				const res = await fetch(`/api/deals?id=${dealId}`, {
-					headers: stored.token ? { 'Authorization': 'Bearer ' + stored.token } : {}
+					headers: token ? { 'Authorization': 'Bearer ' + token } : {}
 				});
 				if (res.ok) {
 					const deal = await res.json();

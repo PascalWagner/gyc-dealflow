@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { getStoredSessionToken } from '$lib/stores/auth.js';
 
 	let taxDocs = $state([]);
 	let loading = $state(true);
@@ -69,21 +70,19 @@
 	}
 
 	function getToken() {
-		if (!browser) return null;
-		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		return stored?.token || null;
+		return browser ? getStoredSessionToken() : null;
 	}
 
 	async function loadDocs() {
 		const token = getToken();
 		if (!token) { loading = false; return; }
 		try {
-			const res = await fetch('/api/userdata?type=tax_docs', {
+			const res = await fetch('/api/userdata?type=taxdocs', {
 				headers: { 'Authorization': 'Bearer ' + token }
 			});
 			if (res.ok) {
 				const data = await res.json();
-				taxDocs = data.docs || data || [];
+				taxDocs = data.records || data.docs || data || [];
 			}
 		} catch (e) { console.warn('Failed to load tax docs:', e); }
 		finally { loading = false; }
@@ -106,7 +105,7 @@
 		await fetch('/api/userdata', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-			body: JSON.stringify({ type: 'tax_docs', data: doc })
+			body: JSON.stringify({ type: 'taxdocs', data: doc })
 		});
 		showAddModal = false;
 		editId = null;
@@ -125,7 +124,7 @@
 			await fetch('/api/userdata', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-				body: JSON.stringify({ type: 'tax_docs', action: 'delete', id: doc.id })
+				body: JSON.stringify({ type: 'taxdocs', action: 'delete', id: doc.id })
 			});
 		} catch (e) {
 			console.warn('Failed to delete tax doc:', e);
@@ -147,7 +146,7 @@
 				return;
 			}
 			const data = await res.json();
-			const investments = data.docs || data || [];
+			const investments = data.records || data.docs || data || [];
 
 			if (investments.length === 0) {
 				alert('No investments in your portfolio yet. Add investments first, then auto-populate tax docs.');
@@ -177,7 +176,7 @@
 				await fetch('/api/userdata', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-					body: JSON.stringify({ type: 'tax_docs', data: doc })
+					body: JSON.stringify({ type: 'taxdocs', data: doc })
 				});
 				added++;
 			}

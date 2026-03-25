@@ -19,7 +19,7 @@ const PERSONA_OVERRIDES = {
   'test@test.com': { tier: 'free', isAdmin: false },
   'info@pascalwagner.com': { tier: 'academy', isAdmin: true }
 };
-const LOOKUP_PROFILE_FIELDS = 'full_name, onboarding_role, gp_onboarding_complete, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows';
+const LOOKUP_PROFILE_FIELDS = 'full_name, onboarding_role, gp_onboarding_complete, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows, share_portfolio, share_activity, avatar_url, accredited_status, investable_capital, investment_experience';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -56,6 +56,51 @@ function findUserByEmail(users, email) {
   return (users || []).find((user) => normalizeEmail(user.email) === normalizedEmail) || null;
 }
 
+async function findUserProfileByEmail(adminSupabase, email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  const { data, error } = await adminSupabase
+    .from('user_profiles')
+    .select('id, email, full_name')
+    .ilike('email', normalizedEmail)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function findUserRecordByEmail(adminSupabase, email) {
+  const normalizedEmail = normalizeEmail(email);
+  const profile = await findUserProfileByEmail(adminSupabase, normalizedEmail);
+  if (profile?.id) {
+    return {
+      id: profile.id,
+      email: profile.email,
+      user_metadata: {
+        full_name: profile.full_name || ''
+      }
+    };
+  }
+
+  const perPage = 200;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await adminSupabase.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const users = data?.users || [];
+    const matchedUser = findUserByEmail(users, normalizedEmail);
+    if (matchedUser) return matchedUser;
+
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return null;
+}
+
 function buildAuthResponse({
   email,
   name,
@@ -88,10 +133,19 @@ function buildAuthResponse({
     contactId: contactId || null,
     phone: safeProfile.phone || null,
     location: safeProfile.location || null,
+    avatar_url: safeProfile.avatar_url || null,
+    share_activity: safeProfile.share_activity !== false,
+    sharePortfolio:
+      safeProfile.share_activity !== undefined
+        ? safeProfile.share_activity !== false
+        : safeProfile.share_portfolio !== false,
     share_saved: safeProfile.share_saved !== false,
     share_dd: safeProfile.share_dd !== false,
     share_invested: safeProfile.share_invested !== false,
     allow_follows: safeProfile.allow_follows !== false,
+    accredited_status: safeProfile.accredited_status || '',
+    investable_capital: safeProfile.investable_capital || '',
+    investment_experience: safeProfile.investment_experience || '',
     onboardingRole: safeProfile.onboarding_role || null,
     gpOnboardingComplete: safeProfile.gp_onboarding_complete || false,
     academyStart: safeProfile.academy_start || null,
@@ -388,8 +442,7 @@ export default async function handler(req, res) {
     if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
 
     // Check if user exists in Supabase
-    const { data: { users } } = await adminSupabase.auth.admin.listUsers();
-    const user = findUserByEmail(users, normalizedEmail);
+    const user = await findUserRecordByEmail(adminSupabase, normalizedEmail);
 
     // Get tier from GHL
     const ghl = await getGhlTier(normalizedEmail);

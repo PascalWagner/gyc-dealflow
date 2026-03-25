@@ -2,7 +2,7 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import OfflineNotice from '$lib/components/OfflineNotice.svelte';
 	import { page, navigating } from '$app/stores';
-	import { user, isLoggedIn, ensureSessionUserToken, normalizeSessionUser } from '$lib/stores/auth.js';
+	import { user, isLoggedIn, ensureSessionUserToken, getStoredSessionUser } from '$lib/stores/auth.js';
 	import { tapLight } from '$lib/utils/haptics.js';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -55,7 +55,7 @@
 		}, 5000);
 
 		const boot = async () => {
-			const sessionUser = normalizeSessionUser(JSON.parse(localStorage.getItem('gycUser') || 'null'));
+			const sessionUser = getStoredSessionUser();
 			if (sessionUser?.email) {
 				restoreScopedUserState(sessionUser);
 				user.set(sessionUser);

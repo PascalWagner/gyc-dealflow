@@ -1,28 +1,20 @@
 <script>
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import ContentSuiteSidebar from '$lib/components/ContentSuiteSidebar.svelte';
-	import { isAdmin, user } from '$lib/stores/auth.js';
+	import { getStoredSessionUser, isAdmin, user } from '$lib/stores/auth.js';
 
 	let { children } = $props();
 	let ready = $state(false);
 
 	onMount(() => {
-		const stored = browser ? localStorage.getItem('gycUser') : null;
-		if (stored && stored !== 'null') {
-			try {
-				const parsed = JSON.parse(stored);
-				if (parsed?.email) {
-					user.set(parsed);
-				}
-			} catch {
-				// no-op
-			}
+		const sessionUser = getStoredSessionUser();
+		if (sessionUser?.email) {
+			user.set(sessionUser);
 		}
 
-		if (!$isAdmin) {
+		if (!(sessionUser?.isAdmin || $isAdmin)) {
 			const returnPath = $page.url.pathname;
 			goto(`/login?return=${encodeURIComponent(returnPath)}`);
 			return;

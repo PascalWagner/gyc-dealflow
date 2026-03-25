@@ -8,7 +8,7 @@
 	import CompareView from '$lib/components/CompareView.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
 	import { deals, dealStages, stageCounts, fetchDeals, dealsLoading, STAGE_META } from '$lib/stores/deals.js';
-	import { isAdmin, userTier } from '$lib/stores/auth.js';
+	import { getStoredSessionUser, isAdmin, userTier } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 
 	let currentTab = $state('browse');
@@ -22,8 +22,9 @@
 	let showLimitModal = $state(false);
 	let resetTimerLabel = $state('Resets at midnight');
 	const DAILY_LIMIT = 20;
+	const PAID_TIERS = ['academy', 'alumni', 'investor', 'paid', 'founding', 'inner-circle', 'family_office'];
 	const todayKey = $derived(browser ? `gycDailyDeals_${new Date().toISOString().slice(0, 10)}` : '');
-	const isFreeUser = $derived(!$isAdmin && $userTier !== 'academy' && $userTier !== 'paid');
+	const isFreeUser = $derived(!$isAdmin && !PAID_TIERS.includes(String($userTier || '').toLowerCase()));
 	const dealsRemaining = $derived(Math.max(0, DAILY_LIMIT - dailyDealCount));
 	const dailyViewsPct = $derived(Math.round((dealsRemaining / DAILY_LIMIT) * 100));
 	const dailyViewsColor = $derived(dealsRemaining <= 5 ? '#e74c3c' : dealsRemaining <= 10 ? '#f59e0b' : 'var(--primary)');
@@ -140,7 +141,7 @@
 		} catch {}
 
 		try {
-			const storedUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const storedUser = getStoredSessionUser();
 			if (!storedUser?.token || !storedUser?.email) return;
 
 			const res = await fetch('/api/buybox?email=' + encodeURIComponent(storedUser.email), {

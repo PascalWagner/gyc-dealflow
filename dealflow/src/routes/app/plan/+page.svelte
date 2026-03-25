@@ -1,6 +1,14 @@
 <script>
 	import { onMount } from 'svelte';
-	import { user, isLoggedIn, userToken, userTier, isAcademy } from '$lib/stores/auth.js';
+	import {
+		getStoredSessionToken,
+		getStoredSessionUser,
+		isAcademy,
+		isLoggedIn,
+		user,
+		userTier,
+		userToken
+	} from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 
 	let hasPlan = $state(false);
@@ -50,14 +58,11 @@
 	];
 
 	function getToken() {
-		if (!browser) return null;
-		return localStorage.getItem('sb_token') || localStorage.getItem('ghlToken') || JSON.parse(localStorage.getItem('gycUser') || '{}').token || null;
+		return browser ? getStoredSessionToken() : null;
 	}
 
 	function getEmail() {
-		if (!browser) return null;
-		const u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		return u.email || null;
+		return browser ? getStoredSessionUser()?.email || null : null;
 	}
 
 	function toggleAssetClass(ac) {
@@ -227,7 +232,7 @@
 		if (!browser) return;
 		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
 		try {
-			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const stored = getStoredSessionUser();
 			if (!stored?.token) {
 				loading = false;
 				if (shouldOpenWizardFromLocation) openWizard();

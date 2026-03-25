@@ -160,15 +160,20 @@ export async function ensureSessionUserToken(sessionUser) {
 	}
 }
 
+export function getStoredSessionUser() {
+	if (!browser) return null;
+	return normalizeSessionUser(safeJsonParse(localStorage.getItem('gycUser') || 'null', null));
+}
+
+export function getStoredSessionToken() {
+	return getStoredSessionUser()?.token || null;
+}
+
 // ===== User Store =====
 // Shape: { email, token, tier, fullName, id } or null
 function createUserStore() {
 	// Initialize from localStorage if in browser
-	const initial = browser
-		? (() => {
-			return normalizeSessionUser(safeJsonParse(localStorage.getItem('gycUser') || 'null', null));
-		})()
-		: null;
+	const initial = browser ? getStoredSessionUser() : null;
 
 	const { subscribe, set, update } = writable(initial);
 
@@ -199,6 +204,24 @@ function createUserStore() {
 }
 
 export const user = createUserStore();
+
+export function setStoredSessionUser(value) {
+	const normalized = normalizeSessionUser(value);
+	user.set(normalized);
+	return normalized;
+}
+
+export function patchStoredSessionUser(patch) {
+	const current = getStoredSessionUser();
+	const next =
+		typeof patch === 'function'
+			? patch(current)
+			: {
+				...(current || {}),
+				...(patch || {})
+			};
+	return setStoredSessionUser(next);
+}
 
 // ===== Derived Stores =====
 export const isLoggedIn = derived(user, ($user) => !!$user?.email);

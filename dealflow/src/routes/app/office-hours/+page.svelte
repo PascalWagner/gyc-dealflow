@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { isAcademy, isAdmin, userToken } from '$lib/stores/auth.js';
+	import { getStoredSessionToken, isAcademy, isAdmin, userToken } from '$lib/stores/auth.js';
 	import {
 		downloadEventIcs,
 		formatCanonicalDate,
@@ -100,8 +100,7 @@
 		localTimeZone = resolveBrowserTimeZone();
 
 		try {
-			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-			const token = stored.token || $userToken;
+			const token = $userToken || getStoredSessionToken();
 			if (!token) {
 				throw new Error('Missing session token');
 			}
