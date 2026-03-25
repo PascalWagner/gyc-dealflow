@@ -349,7 +349,7 @@
 		return 'v1-' + Math.abs(hash).toString(36);
 	}
 
-	let agreementScrollEl;
+	let agreementScrollEl = $state(null);
 
 	async function saveAgreement() {
 		if (!canSignAgreement) return;
@@ -381,8 +381,8 @@
 	function onDeckDrop(e) { e.preventDefault(); if (e.dataTransfer.files.length) deckFile = e.dataTransfer.files[0]; }
 	function onPpmDrop(e) { e.preventDefault(); if (e.dataTransfer.files.length) ppmFile = e.dataTransfer.files[0]; }
 
-	let deckInputEl;
-	let ppmInputEl;
+	let deckInputEl = $state(null);
+	let ppmInputEl = $state(null);
 
 	async function submitDealUploads() {
 		processing = true;
@@ -680,12 +680,12 @@
 				<div class="step-body">
 					<div class="form-grid">
 						<div class="form-group">
-							<label class="form-label">First Name *</label>
-							<input class="form-input" type="text" bind:value={firstName} placeholder="First name" autocomplete="given-name">
+							<label class="form-label" for="first-name">First Name *</label>
+							<input id="first-name" class="form-input" type="text" bind:value={firstName} placeholder="First name" autocomplete="given-name">
 						</div>
 						<div class="form-group">
-							<label class="form-label">Last Name *</label>
-							<input class="form-input" type="text" bind:value={lastName} placeholder="Last name" autocomplete="family-name">
+							<label class="form-label" for="last-name">Last Name *</label>
+							<input id="last-name" class="form-input" type="text" bind:value={lastName} placeholder="Last name" autocomplete="family-name">
 						</div>
 					</div>
 					<div class="lp-network-optin">
@@ -717,20 +717,20 @@
 				</div>
 				<div class="step-body">
 					<div class="role-cards">
-						<div class="role-card" class:selected={selectedRole === 'lp'} onclick={() => selectRole('lp')}>
+						<button type="button" class="role-card" class:selected={selectedRole === 'lp'} aria-pressed={selectedRole === 'lp'} onclick={() => selectRole('lp')}>
 							<div class="role-card-icon lp-icon">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
 							</div>
 							<div class="role-card-title">I'm an Investor (LP)</div>
 							<div class="role-card-desc">Find and evaluate deals that match my investment goals</div>
-						</div>
-						<div class="role-card" class:selected={selectedRole === 'gp'} onclick={() => selectRole('gp')}>
+						</button>
+						<button type="button" class="role-card" class:selected={selectedRole === 'gp'} aria-pressed={selectedRole === 'gp'} onclick={() => selectRole('gp')}>
 							<div class="role-card-icon gp-icon">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
 							</div>
 							<div class="role-card-title">I'm an Operator / Sponsor (GP)</div>
 							<div class="role-card-desc">Get my deals in front of qualified, accredited investors</div>
-						</div>
+						</button>
 					</div>
 				</div>
 				<div class="step-footer">
@@ -756,18 +756,18 @@
 				</div>
 				<div class="step-body">
 					<div class="goal-cards">
-						<div class="role-card goal-card" class:selected={lpGoal === 'cashflow'} onclick={() => selectGoal('cashflow')}>
+						<button type="button" class="role-card goal-card" class:selected={lpGoal === 'cashflow'} aria-pressed={lpGoal === 'cashflow'} onclick={() => selectGoal('cashflow')}>
 							<div class="goal-emoji">&#128176;</div>
 							<div><div class="role-card-title" style="font-size:16px;">Build Passive Income</div><div class="role-card-desc" style="font-size:13px;">I want predictable monthly/quarterly income from my investments</div></div>
-						</div>
-						<div class="role-card goal-card" class:selected={lpGoal === 'tax'} onclick={() => selectGoal('tax')}>
+						</button>
+						<button type="button" class="role-card goal-card" class:selected={lpGoal === 'tax'} aria-pressed={lpGoal === 'tax'} onclick={() => selectGoal('tax')}>
 							<div class="goal-emoji">&#127974;</div>
 							<div><div class="role-card-title" style="font-size:16px;">Reduce My Tax Bill</div><div class="role-card-desc" style="font-size:13px;">I'm getting crushed on taxes and want to legally offset my income</div></div>
-						</div>
-						<div class="role-card goal-card" class:selected={lpGoal === 'growth'} onclick={() => selectGoal('growth')}>
+						</button>
+						<button type="button" class="role-card goal-card" class:selected={lpGoal === 'growth'} aria-pressed={lpGoal === 'growth'} onclick={() => selectGoal('growth')}>
 							<div class="goal-emoji">&#128640;</div>
 							<div><div class="role-card-title" style="font-size:16px;">Grow My Wealth</div><div class="role-card-desc" style="font-size:13px;">I want to 2x or more &mdash; I'm playing for appreciation</div></div>
-						</div>
+						</button>
 					</div>
 				</div>
 				<div class="step-footer">
@@ -990,29 +990,29 @@
 				<div class="step-body">
 					<div class="form-grid">
 						<div class="form-group full-width" style="position:relative;">
-							<label class="form-label">Company Name *</label>
-							<input class="form-input" type="text" value={companyName} oninput={onCompanySearch} placeholder="Start typing to search..." autocomplete="off">
+							<label class="form-label" for="company-name">Company Name *</label>
+							<input id="company-name" class="form-input" type="text" value={companyName} oninput={onCompanySearch} placeholder="Start typing to search..." autocomplete="off">
 							{#if showCompanyDropdown}
 								<div class="company-dropdown">
-									{#each companyDropdownResults as co, i}
-										<div class="company-result" onclick={() => pickCompany(co)}>
+									{#each companyDropdownResults as co}
+										<button type="button" class="company-result" onclick={() => pickCompany(co)}>
 											<div class="company-result-icon">{(co.operator_name || '??').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)}</div>
 											<div>
 												<div class="company-result-name">{co.operator_name}</div>
 												<div class="company-result-meta">{[co.type, co.asset_classes?.slice(0, 2).join(', ')].filter(Boolean).join(' \u00B7 ')}</div>
 											</div>
-										</div>
+										</button>
 									{/each}
-									<div class="company-create-option" onclick={createNewCompany}>
+									<button type="button" class="company-create-option" onclick={createNewCompany}>
 										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 										Create "{companyName}" as a new company
-									</div>
+									</button>
 								</div>
 							{/if}
 						</div>
 						<div class="form-group">
-							<label class="form-label">Your Role</label>
-							<select class="form-input" bind:value={gpType}>
+							<label class="form-label" for="gp-role">Your Role</label>
+							<select id="gp-role" class="form-input" bind:value={gpType}>
 								<option value="ceo">CEO / Principal</option>
 								<option value="management">Management Team</option>
 								<option value="ir">Investor Relations</option>
@@ -1043,7 +1043,7 @@
 				<div class="step-body">
 					<div class="pill-grid">
 						{#each ASSET_CLASSES as ac}
-							<div class="pill-option" class:selected={selectedAssetClasses.includes(ac)} onclick={() => toggleAssetClass(ac)}>{ac}</div>
+							<button type="button" class="pill-option" class:selected={selectedAssetClasses.includes(ac)} aria-pressed={selectedAssetClasses.includes(ac)} onclick={() => toggleAssetClass(ac)}>{ac}</button>
 						{/each}
 					</div>
 				</div>
@@ -1068,17 +1068,17 @@
 					<div class="step-subtitle">When an LP is interested in your deal, we connect them directly to this person</div>
 				</div>
 				<div class="step-body">
-					<div class="ir-toggle-row" onclick={toggleIrSelf}>
+					<button type="button" class="ir-toggle-row" aria-pressed={irSelf} onclick={toggleIrSelf}>
 						<div class="ir-toggle-check" class:checked={irSelf}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
 						</div>
 						<div class="ir-toggle-label">That's me &mdash; use my contact info</div>
-					</div>
+					</button>
 					<div class="form-grid">
-						<div class="form-group"><label class="form-label">Name *</label><input class="form-input" type="text" bind:value={irContactName} placeholder="Full name"></div>
-						<div class="form-group"><label class="form-label">Email *</label><input class="form-input" type="email" bind:value={irContactEmail} placeholder="ir@yourfirm.com"></div>
-						<div class="form-group"><label class="form-label">LinkedIn URL (optional)</label><input class="form-input" type="url" bind:value={irLinkedin} placeholder="https://linkedin.com/in/..."></div>
-						<div class="form-group"><label class="form-label">Calendly / Booking Link (optional)</label><input class="form-input" type="url" bind:value={bookingUrl} placeholder="https://calendly.com/yourfirm"></div>
+						<div class="form-group"><label class="form-label" for="ir-contact-name">Name *</label><input id="ir-contact-name" class="form-input" type="text" bind:value={irContactName} placeholder="Full name"></div>
+						<div class="form-group"><label class="form-label" for="ir-contact-email">Email *</label><input id="ir-contact-email" class="form-input" type="email" bind:value={irContactEmail} placeholder="ir@yourfirm.com"></div>
+						<div class="form-group"><label class="form-label" for="ir-linkedin">LinkedIn URL (optional)</label><input id="ir-linkedin" class="form-input" type="url" bind:value={irLinkedin} placeholder="https://linkedin.com/in/..."></div>
+						<div class="form-group"><label class="form-label" for="booking-url">Calendly / Booking Link (optional)</label><input id="booking-url" class="form-input" type="url" bind:value={bookingUrl} placeholder="https://calendly.com/yourfirm"></div>
 					</div>
 				</div>
 				<div class="step-footer">
@@ -1105,9 +1105,9 @@
 					<div style="margin-bottom:20px;">
 						<div class="signature-label">What type of offering are you raising?</div>
 						<div class="offering-type-row">
-							<div class="offering-type-option" class:selected={offeringType === '506c'} onclick={() => selectOfferingType('506c')}><div class="ot-label">Reg D 506(c)</div><div class="ot-desc">General solicitation allowed</div></div>
-							<div class="offering-type-option" class:selected={offeringType === '506b'} onclick={() => selectOfferingType('506b')}><div class="ot-label">Reg D 506(b)</div><div class="ot-desc">Pre-existing relationships only</div></div>
-							<div class="offering-type-option" class:selected={offeringType === 'other'} onclick={() => selectOfferingType('other')}><div class="ot-label">Other / Unsure</div><div class="ot-desc">Reg A+, non-US, or not yet determined</div></div>
+							<button type="button" class="offering-type-option" class:selected={offeringType === '506c'} aria-pressed={offeringType === '506c'} onclick={() => selectOfferingType('506c')}><div class="ot-label">Reg D 506(c)</div><div class="ot-desc">General solicitation allowed</div></button>
+							<button type="button" class="offering-type-option" class:selected={offeringType === '506b'} aria-pressed={offeringType === '506b'} onclick={() => selectOfferingType('506b')}><div class="ot-label">Reg D 506(b)</div><div class="ot-desc">Pre-existing relationships only</div></button>
+							<button type="button" class="offering-type-option" class:selected={offeringType === 'other'} aria-pressed={offeringType === 'other'} onclick={() => selectOfferingType('other')}><div class="ot-label">Other / Unsure</div><div class="ot-desc">Reg A+, non-US, or not yet determined</div></button>
 						</div>
 						{#if offeringType === '506b'}
 							<div class="offering-506b-note"><strong>506(b) deals are not publicly marketed.</strong> Your deal will be stored in our database for portfolio tracking but will not appear as a public deal card.</div>
@@ -1134,28 +1134,28 @@
 						<p>This Agreement remains in effect for as long as you have an active operator account on the Platform.</p>
 					</div>
 					<div class="consent-checks">
-						<div class="consent-row" onclick={() => toggleConsent('tos')}>
+						<button type="button" class="consent-row" aria-pressed={consents.tos} onclick={() => toggleConsent('tos')}>
 							<div class="consent-box" class:checked={consents.tos}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
 							<div class="consent-text">I have read and agree to the <strong>Platform Terms of Service</strong> and the terms of this Operator Listing Agreement.</div>
-						</div>
-						<div class="consent-row" onclick={() => toggleConsent('listing')}>
+						</button>
+						<button type="button" class="consent-row" aria-pressed={consents.listing} onclick={() => toggleConsent('listing')}>
 							<div class="consent-box" class:checked={consents.listing}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
 							<div class="consent-text">I authorize GYC to <strong>display, distribute, and promote my deal</strong> to investors on the Platform.</div>
-						</div>
-						<div class="consent-row" onclick={() => toggleConsent('accuracy')}>
+						</button>
+						<button type="button" class="consent-row" aria-pressed={consents.accuracy} onclick={() => toggleConsent('accuracy')}>
 							<div class="consent-box" class:checked={consents.accuracy}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
 							<div class="consent-text">I represent that all information I provide is <strong>accurate and not misleading</strong>.</div>
-						</div>
-						<div class="consent-row" onclick={() => toggleConsent('recording')}>
+						</button>
+						<button type="button" class="consent-row" aria-pressed={consents.recording} onclick={() => toggleConsent('recording')}>
 							<div class="consent-box" class:checked={consents.recording}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
 							<div class="consent-text">I consent to <strong>recording and distribution</strong> of any live presentation events I participate in.</div>
-						</div>
+						</button>
 					</div>
 					<div class="signature-section">
 						<div class="signature-label">Electronic Signature</div>
 						<div class="form-grid">
-							<div class="form-group"><label class="form-label">Full Legal Name *</label><input class="form-input" type="text" bind:value={sigName} placeholder="Type your full name as signature"></div>
-							<div class="form-group"><label class="form-label">Title</label><input class="form-input" type="text" bind:value={sigTitle} placeholder="e.g. Managing Partner"></div>
+							<div class="form-group"><label class="form-label" for="sig-name">Full Legal Name *</label><input id="sig-name" class="form-input" type="text" bind:value={sigName} placeholder="Type your full name as signature"></div>
+							<div class="form-group"><label class="form-label" for="sig-title">Title</label><input id="sig-title" class="form-input" type="text" bind:value={sigTitle} placeholder="e.g. Managing Partner"></div>
 						</div>
 					</div>
 				</div>
@@ -1181,18 +1181,18 @@
 				</div>
 				<div class="step-body">
 					{#if !processing}
-						<div class="drop-zone active" onclick={() => deckInputEl?.click()} ondragover={(e) => e.preventDefault()} ondrop={onDeckDrop}>
+						<label class="drop-zone active" for="deck-upload" ondragover={(e) => e.preventDefault()} ondrop={onDeckDrop}>
 							<div class="drop-zone-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
 							<div class="drop-zone-text">{deckFile ? deckFile.name : 'Drag & drop your pitch deck'}</div>
 							<div class="drop-zone-hint">{deckFile ? (deckFile.size / 1024 / 1024).toFixed(1) + ' MB' : 'PDF only, up to 25MB'}</div>
-							<input type="file" accept=".pdf" style="display:none" bind:this={deckInputEl} onchange={(e) => deckFile = e.target.files[0]}>
-						</div>
-						<div class="drop-zone active" style="margin-top:12px;" onclick={() => ppmInputEl?.click()} ondragover={(e) => e.preventDefault()} ondrop={onPpmDrop}>
+						</label>
+						<input id="deck-upload" type="file" accept=".pdf" style="display:none" bind:this={deckInputEl} onchange={(e) => deckFile = e.target.files[0]}>
+						<label class="drop-zone active" style="margin-top:12px;" for="ppm-upload" ondragover={(e) => e.preventDefault()} ondrop={onPpmDrop}>
 							<div class="drop-zone-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
 							<div class="drop-zone-text">{ppmFile ? ppmFile.name : 'Drag & drop your PPM'}</div>
 							<div class="drop-zone-hint">{ppmFile ? (ppmFile.size / 1024 / 1024).toFixed(1) + ' MB' : 'PDF only, up to 25MB'}</div>
-							<input type="file" accept=".pdf" style="display:none" bind:this={ppmInputEl} onchange={(e) => ppmFile = e.target.files[0]}>
-						</div>
+						</label>
+						<input id="ppm-upload" type="file" accept=".pdf" style="display:none" bind:this={ppmInputEl} onchange={(e) => ppmFile = e.target.files[0]}>
 						<div class="upload-note"><strong>PDF format required.</strong> If you have a link, slides, or brochure, please save or print it as a PDF before uploading.</div>
 					{:else}
 						<div class="processing-state">
@@ -1437,7 +1437,7 @@
 
 	/* ====== ROLE FORK ====== */
 	.role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 8px 0; }
-	.role-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 32px 24px; text-align: center; cursor: pointer; transition: all 0.25s ease; position: relative; }
+	.role-card { width: 100%; border: 2px solid var(--border); border-radius: var(--radius); padding: 32px 24px; text-align: center; cursor: pointer; transition: all 0.25s ease; position: relative; background: var(--bg-card); appearance: none; font: inherit; }
 	.role-card:hover { border-color: var(--primary); box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
 	.role-card.selected { border-color: var(--primary); background: var(--green-bg); }
 	.role-card-icon { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
@@ -1487,7 +1487,7 @@
 
 	/* ====== PILL OPTIONS ====== */
 	.pill-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-	.pill-option { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all var(--transition); user-select: none; background: none; }
+	.pill-option { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all var(--transition); user-select: none; background: none; appearance: none; }
 	.pill-option:hover { border-color: var(--primary); color: var(--primary); }
 	.pill-option.selected { border-color: var(--primary); background: var(--green-bg); color: var(--primary); }
 
@@ -1558,18 +1558,18 @@
 
 	/* ====== COMPANY TYPEAHEAD ====== */
 	.company-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--bg-card); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 50; max-height: 240px; overflow-y: auto; }
-	.company-result { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; transition: background var(--transition); border-bottom: 1px solid var(--border-light); }
+	.company-result { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; cursor: pointer; transition: background var(--transition); border: none; border-bottom: 1px solid var(--border-light); background: none; text-align: left; font: inherit; }
 	.company-result:last-child { border-bottom: none; }
 	.company-result:hover { background: var(--green-bg); }
 	.company-result-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--green-bg); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: var(--font-ui); font-weight: 800; font-size: 13px; }
 	.company-result-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
 	.company-result-meta { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); font-weight: 500; }
-	.company-create-option { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; transition: background var(--transition); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--primary); }
+	.company-create-option { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 16px; cursor: pointer; transition: background var(--transition); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--primary); border: none; background: none; text-align: left; }
 	.company-create-option:hover { background: var(--green-bg); }
 	.company-create-option svg { width: 16px; height: 16px; flex-shrink: 0; }
 
 	/* ====== IR CONTACT ====== */
-	.ir-toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
+	.ir-toggle-row { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 16px; cursor: pointer; border: none; background: none; padding: 0; text-align: left; }
 	.ir-toggle-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all var(--transition); flex-shrink: 0; }
 	.ir-toggle-check.checked { border-color: var(--primary); background: var(--primary); }
 	.ir-toggle-check svg { width: 12px; height: 12px; color: #fff; display: none; }
@@ -1581,11 +1581,9 @@
 	.agreement-scroll h3 { font-family: var(--font-ui); font-size: 15px; font-weight: 800; color: var(--text-dark); margin: 20px 0 8px; letter-spacing: -0.2px; }
 	.agreement-scroll h3:first-child { margin-top: 0; }
 	.agreement-scroll p { margin-bottom: 10px; }
-	.agreement-scroll ul { margin: 0 0 12px 20px; padding: 0; }
-	.agreement-scroll li { margin-bottom: 4px; }
 	.agreement-scroll strong { color: var(--text-dark); }
 	.consent-checks { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-	.consent-row { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+	.consent-row { display: flex; align-items: flex-start; gap: 12px; width: 100%; cursor: pointer; border: none; background: none; padding: 0; text-align: left; }
 	.consent-box { width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all var(--transition); margin-top: 1px; }
 	.consent-box.checked { border-color: var(--primary); background: var(--primary); }
 	.consent-box svg { width: 13px; height: 13px; color: #fff; display: none; }
@@ -1595,7 +1593,7 @@
 	.signature-section { background: var(--off-white); border: 1px solid var(--border-light); border-radius: var(--radius-sm); padding: 20px 24px; }
 	.signature-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); margin-bottom: 12px; }
 	.offering-type-row { display: flex; gap: 12px; margin-bottom: 16px; }
-	.offering-type-option { flex: 1; border: 2px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; cursor: pointer; transition: all var(--transition); text-align: center; }
+	.offering-type-option { flex: 1; border: 2px solid var(--border); border-radius: var(--radius-sm); padding: 12px 16px; cursor: pointer; transition: all var(--transition); text-align: center; background: var(--bg-card); appearance: none; font: inherit; }
 	.offering-type-option:hover { border-color: var(--primary); }
 	.offering-type-option.selected { border-color: var(--primary); background: var(--green-bg); }
 	.ot-label { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
@@ -1608,10 +1606,9 @@
 	.upload-card:hover { border-color: var(--primary); border-style: solid; background: var(--green-bg); }
 	.upload-card.primary-option { border-color: var(--primary); border-style: solid; background: var(--green-bg); }
 	.upload-card-icon { width: 48px; height: 48px; border-radius: 50%; background: var(--green-bg); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
-	.upload-card-icon svg { width: 22px; height: 22px; }
 	.upload-card-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 	.upload-card-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
-	.drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.25s ease; }
+	.drop-zone { display: block; width: 100%; box-sizing: border-box; border: 2px dashed var(--border); border-radius: var(--radius); padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.25s ease; }
 	.drop-zone.active { border-color: var(--primary); background: var(--green-bg); }
 	.drop-zone.dragging { border-color: var(--accent-green); background: var(--green-bg); transform: scale(1.01); }
 	.drop-zone-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--green-bg); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
@@ -1620,6 +1617,18 @@
 	.drop-zone-hint { font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); }
 	.upload-note { margin-top: 16px; padding: 12px 16px; background: var(--off-white); border-radius: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 	.upload-note strong { color: var(--text-secondary); }
+
+	.role-card:focus-visible,
+	.pill-option:focus-visible,
+	.company-result:focus-visible,
+	.company-create-option:focus-visible,
+	.ir-toggle-row:focus-visible,
+	.offering-type-option:focus-visible,
+	.consent-row:focus-visible,
+	.drop-zone:focus-visible {
+		outline: 2px solid var(--primary);
+		outline-offset: 2px;
+	}
 
 	/* ====== PROCESSING STATE ====== */
 	.processing-state { text-align: center; padding: 48px 24px; }

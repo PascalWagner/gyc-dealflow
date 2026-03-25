@@ -3,15 +3,24 @@
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
+	import { getStoredSessionUser, user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
 	import { dealStages, STAGE_META, PIPELINE_STAGES, normalizeStage, stageLabel } from '$lib/stores/deals.js';
 
 	let { data } = $props();
+	function getInitialDeal() {
+		return data?.deal ?? null;
+	}
+	function getInitialError() {
+		return data?.error ?? null;
+	}
+	const initialDeal = getInitialDeal();
+	const initialError = getInitialError();
+	const academyHref = '/app/academy';
 
 	// ===== Reactive State =====
-	let deal = $state(data.deal);
-	let loading = $state(!data.deal);
-	let error = $state(data.error || null);
+	let deal = $state(initialDeal);
+	let loading = $state(!initialDeal);
+	let error = $state(initialError);
 	let activeTab = $state('overview');
 	let ddAnswers = $state({});
 	let ddAccordionOpen = $state({});
@@ -78,7 +87,10 @@
 	let inviteMessage = $state('');
 	let inviteCode = $state(null);
 	let inviteUrl = $state('');
-	const inviteUserName = $derived(browser ? (JSON.parse(localStorage.getItem('gycUser') || '{}').name || 'Someone') : 'Someone');
+	function currentSessionUser() {
+		return browser ? (getStoredSessionUser() || {}) : {};
+	}
+	const inviteUserName = $derived(currentSessionUser().name || 'Someone');
 	const inviteEmailSubject = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal with you: ' + (deal.investmentName || deal.name || '')) : '');
 	const inviteEmailBody = $derived(deal ? encodeURIComponent(inviteUserName + ' thinks you might be interested in this deal:\n\n' + (deal.investmentName || deal.name || '') + '\n\n' + inviteUrl + '\n\nView the full deal details on GYC Dealflow.') : '');
 	const inviteSmsBody = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal: ' + (deal.investmentName || deal.name || '') + ' - ' + inviteUrl) : '');
@@ -187,9 +199,9 @@
 
 	async function loadQuestions() { if (!deal) return; qaLoading = true; try { const r = await fetch(`/api/deal-qa?dealId=${encodeURIComponent(deal.id)}`); if (r.ok) { const d = await r.json(); questions = d.questions || []; } } catch {} qaLoading = false; }
 
-	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (!$isLoggedIn) { window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`; return; } qaSubmitting = true; try { const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {}; const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
+	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (!$isLoggedIn) { window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`; return; } qaSubmitting = true; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
 
-	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {}; const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'Pascal' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
+	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'Pascal' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
 
 	async function upvoteQuestion(qid) { if (!$isLoggedIn || !browser) return; const up = JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]'); if (up.includes(qid)) return; up.push(qid); localStorage.setItem('gycQAUpvoted', JSON.stringify(up)); try { await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upvote', recordId: qid }) }); await loadQuestions(); } catch {} }
 
@@ -453,7 +465,7 @@
 		inviteMessage = '';
 		inviteCode = null;
 
-		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		const stored = currentSessionUser();
 		const userName = stored.name || stored.firstName || (stored.email ? stored.email.split('@')[0] : 'Someone');
 		const baseUrl = `${window.location.origin}/deal/${deal.id}`;
 
@@ -595,7 +607,7 @@
 			}
 		}
 		try {
-			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+			const stored = currentSessionUser();
 			const resp = await fetch('/api/deal-confirm-enrichment', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -620,7 +632,7 @@
 			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
 			return;
 		}
-		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		const stored = currentSessionUser();
 		claimName = stored.name || '';
 		claimEmail = stored.email || '';
 		claimCompany = deal.managementCompany || '';
@@ -634,7 +646,7 @@
 		if (!deal || claimSubmitting) return;
 		claimSubmitting = true;
 		try {
-			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const stored = currentSessionUser();
 			const r = await fetch('/api/deal-claim', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
@@ -900,7 +912,7 @@
 		}
 		// Sync to backend
 		try {
-			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+			const stored = currentSessionUser();
 			if (stored?.token) {
 				fetch('/api/ddchecklist', {
 					method: 'POST',
@@ -947,7 +959,7 @@
 		if (!deal || introSending) return;
 		introSending = true;
 		try {
-			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+			const stored = currentSessionUser();
 			const sponsors = deal.sponsors || [];
 			const op = sponsors.find(s => s.role === 'operator');
 			const opName = op ? op.name : (deal.managementCompany || '');
@@ -1002,7 +1014,7 @@
 		if (!isPaid) { window.location.href = '/app/academy'; return; }
 		if (!deal) { alert('Deal data not available.'); return; }
 		const d = deal;
-		const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
+		const stored = currentSessionUser();
 		const bb = buyBox || {};
 		const rpU = (stored.name || stored.firstName || 'Investor').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 		const rpD = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1112,13 +1124,7 @@
 		} catch { ddAnswers = {}; }
 
 		// Load social proof
-		const storedUser = (() => {
-			try {
-				return JSON.parse(localStorage.getItem('gycUser') || '{}');
-			} catch {
-				return {};
-			}
-		})();
+		const storedUser = currentSessionUser();
 		const token = storedUser.token || '';
 		const userEmail = storedUser.email || '';
 		const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -1417,7 +1423,17 @@
 									Share Deal
 								</button>
 								{#if shareDropdownOpen}
-									<div class="share-dropdown active" onclick={(e) => e.stopPropagation()}>
+									<div
+										class="share-dropdown active"
+										role="menu"
+										tabindex="-1"
+										aria-label="Share deal options"
+										onclick={(e) => e.stopPropagation()}
+										onkeydown={(e) => {
+											if (e.key === 'Escape') shareDropdownOpen = false;
+											e.stopPropagation();
+										}}
+									>
 										<button class="share-dropdown-item share-invite" onclick={openInviteModal}>
 											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
 											<span class="share-invite-text">Invite a co-investor</span>
@@ -1562,9 +1578,9 @@
 								<div class="metric-card"><div class="metric-label">Fund AUM</div><div class="metric-value">{fmt(deal.fundAUM, 'money')}</div></div>
 							{/if}
 						{:else}
-							<div class="metric-card metric-locked" onclick={() => window.location.href = '/app/deals#academy'}>
+							<a class="metric-card metric-locked metric-locked-link" href={academyHref}>
 								<span class="metric-label">+ More Metrics</span>
-							</div>
+							</a>
 						{/if}
 					</div>
 				{/if}
@@ -1802,7 +1818,7 @@
 										</div>
 										<div class="gate-title">Unlock Due Diligence Checklist</div>
 										<div class="gate-text">Academy members get a {checklist.sections.length}-section interactive DD checklist with auto-filled answers for every deal.</div>
-										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
 									</div>
 								</div>
 							{/if}
@@ -1887,7 +1903,7 @@
 										</div>
 										<div class="gate-title">Unlock Cash Flow Projections</div>
 										<div class="gate-text">See year-by-year projected distributions, capital returns, and cash-on-cash analysis for this deal.</div>
-										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
 									</div>
 								</div>
 							{/if}
@@ -1988,7 +2004,7 @@
 										</div>
 										<div class="gate-title">Unlock Peer Comparison</div>
 										<div class="gate-text">See how this deal's metrics compare to {peerComparison.peerCount} similar {peerComparison.peerLabel} deals.</div>
-										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
 									</div>
 								</div>
 							{/if}
@@ -2041,7 +2057,7 @@
 										</div>
 										<div class="gate-title">Unlock Stress Test Calculator</div>
 										<div class="gate-text">Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.</div>
-										<a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a>
+										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
 									</div>
 								</div>
 							{/if}
@@ -2176,13 +2192,13 @@
 				{/if}
 
 				<!-- ==================== DEAL FIT SUMMARY ==================== -->
-				{#if dealFit}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div><div class="section-body deal-fit-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="gate-title">Unlock Deal Fit Summary</div><div class="gate-text">See how this deal matches common investor benchmarks.</div><a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}><div class="fit-verdict" style="--verdict-color:{dealFit.verdictColor}"><div class="fit-verdict-icon">{#if dealFit.score >= 3}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>{:else if dealFit.score >= -1}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{:else}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>{/if}</div><div><div class="fit-verdict-text">{dealFit.verdict}</div><div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div></div></div>{#if dealFit.fits.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-good">What Works</div>{#each dealFit.fits as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span>{item}</span></div>{/each}</div>{/if}{#if dealFit.warnings.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-warn">Watch Out For</div>{#each dealFit.warnings as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>{item}</span></div>{/each}</div>{/if}</div></div></div>{/if}
+				{#if dealFit}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div><div class="section-body deal-fit-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="gate-title">Unlock Deal Fit Summary</div><div class="gate-text">See how this deal matches common investor benchmarks.</div><a href={academyHref} class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}><div class="fit-verdict" style="--verdict-color:{dealFit.verdictColor}"><div class="fit-verdict-icon">{#if dealFit.score >= 3}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>{:else if dealFit.score >= -1}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{:else}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>{/if}</div><div><div class="fit-verdict-text">{dealFit.verdict}</div><div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div></div></div>{#if dealFit.fits.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-good">What Works</div>{#each dealFit.fits as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span>{item}</span></div>{/each}</div>{/if}{#if dealFit.warnings.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-warn">Watch Out For</div>{#each dealFit.warnings as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>{item}</span></div>{/each}</div>{/if}</div></div></div>{/if}
 
 				<!-- ==================== BACKGROUND CHECK ==================== -->
-				{#if deal.managementCompanyId}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Background Check</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div><div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="gate-title">Unlock Background Check</div><div class="gate-text">Academy members get SEC EDGAR, FINRA, IAPD, and OFAC screening.</div><a href="/app/deals#academy" class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}>{#if bgCheckLoading}<div class="bg-loading">Loading background check data...</div>{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}</div></div></div>{/if}
+				{#if deal.managementCompanyId}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Background Check</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div><div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="gate-title">Unlock Background Check</div><div class="gate-text">Academy members get SEC EDGAR, FINRA, IAPD, and OFAC screening.</div><a href={academyHref} class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}>{#if bgCheckLoading}<div class="bg-loading">Loading background check data...</div>{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}</div></div></div>{/if}
 
 				<!-- ==================== INVESTOR Q&A ==================== -->
-				<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div><div class="section-body"><div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>{#if qaLoading}<div class="qa-loading">Loading questions...</div>{:else if questions.length === 0}<div class="qa-empty">No questions yet. Be the first to ask!</div>{:else}<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)}><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>{/if}</div></div>
+				<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div><div class="section-body"><div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>{#if qaLoading}<div class="qa-loading">Loading questions...</div>{:else if questions.length === 0}<div class="qa-empty">No questions yet. Be the first to ask!</div>{:else}<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)} aria-label="Upvote question" title="Upvote question"><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>{/if}</div></div>
 
 				<!-- ==================== GP INSIGHTS (admin only) ==================== -->
 				{#if $isAdmin && deal.managementCompany}<div class="section gp-insights-section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights -- Investor Pipeline</span><span class="gp-admin-badge">ADMIN</span></div><div class="section-body">{#if gpInsightsLoading}<div class="gp-loading">Loading investor pipeline...</div>{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.saved || 0}</div><div class="gp-funnel-label">Saved</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.reviewing || 0}</div><div class="gp-funnel-label">Reviewing</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connecting || 0}</div><div class="gp-funnel-label">Connecting</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}<div class="gp-share-card"><div class="gp-share-label">Share with Investors</div><div class="gp-share-desc">Send this link to the operator so they can share their deal page.</div><div class="gp-share-row"><input class="gp-share-input" type="text" readonly value={browser ? `${window.location.origin}/deal/${deal.id}` : `/deal/${deal.id}`} /><button class="gp-share-copy" onclick={() => { if (browser) navigator.clipboard.writeText(`${window.location.origin}/deal/${deal.id}`); }}>Copy</button></div></div></div></div>{/if}
@@ -2359,8 +2375,8 @@
 					We'll connect you with {opName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
 				</div>
 				<div class="modal-field">
-					<label class="modal-label">Preferred Contact Method</label>
-					<div class="modal-radio-group">
+					<div class="modal-label">Preferred Contact Method</div>
+					<div class="modal-radio-group" role="radiogroup" aria-label="Preferred Contact Method">
 						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="email" /> Email</label>
 						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="phone" /> Phone</label>
 						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="video" /> Video Call</label>
@@ -2368,13 +2384,13 @@
 				</div>
 				{#if introMethod === 'phone'}
 					<div class="modal-field">
-						<label class="modal-label">Phone Number (optional)</label>
-						<input type="tel" class="modal-input" placeholder="(555) 123-4567" bind:value={introPhone} />
+						<label class="modal-label" for="intro-phone">Phone Number (optional)</label>
+						<input id="intro-phone" type="tel" class="modal-input" placeholder="(555) 123-4567" bind:value={introPhone} />
 					</div>
 				{/if}
 				<div class="modal-field">
-					<label class="modal-label">Message to Operator (optional)</label>
-					<textarea class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
+					<label class="modal-label" for="intro-message">Message to Operator (optional)</label>
+					<textarea id="intro-message" class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
 				</div>
 				<div class="modal-actions">
 					<button class="modal-btn-secondary" onclick={() => showIntroModal = false}>Cancel</button>
@@ -2408,12 +2424,12 @@
 				<button class="modal-btn-primary invite-copy-btn" onclick={copyInviteLink}>Copy Link</button>
 			</div>
 			<div class="modal-field" style="margin-top:16px;">
-				<label class="modal-label">Email a friend directly (optional)</label>
-				<input type="email" class="modal-input" placeholder="friend@example.com" bind:value={inviteEmail} />
+				<label class="modal-label" for="invite-email">Email a friend directly (optional)</label>
+				<input id="invite-email" type="email" class="modal-input" placeholder="friend@example.com" bind:value={inviteEmail} />
 			</div>
 			<div class="modal-field">
-				<label class="modal-label">Personal message (optional)</label>
-				<textarea class="modal-textarea" rows="2" placeholder="Hey, check out this deal..." bind:value={inviteMessage}></textarea>
+				<label class="modal-label" for="invite-message">Personal message (optional)</label>
+				<textarea id="invite-message" class="modal-textarea" rows="2" placeholder="Hey, check out this deal..." bind:value={inviteMessage}></textarea>
 			</div>
 			<div class="invite-share-row">
 				<a href="mailto:{inviteEmail}?subject={inviteEmailSubject}&body={inviteEmailBody}" class="invite-share-btn">
@@ -2458,8 +2474,8 @@
 					{#if claimCompany}<div class="claim-user-company">{claimCompany}</div>{/if}
 				</div>
 				<div class="modal-field">
-					<label class="modal-label">Your Role</label>
-					<select class="modal-select" bind:value={claimRole} required>
+					<label class="modal-label" for="claim-role">Your Role</label>
+					<select id="claim-role" class="modal-select" bind:value={claimRole} required>
 						<option value="">Select your role...</option>
 						<option value="founder">Founder / CEO</option>
 						<option value="ir">IR / Investor Relations</option>
@@ -2549,7 +2565,7 @@
 								<label class="enrich-checkbox">
 									<input type="checkbox" bind:checked={enrichChecked[key]} />
 								</label>
-								<label class="enrich-field-label">{ENRICHMENT_FIELD_LABELS[key]}</label>
+								<span class="enrich-field-label">{ENRICHMENT_FIELD_LABELS[key]}</span>
 								<span class="enrich-field-value">{formatEnrichmentValue(key, value)}</span>
 							</div>
 						{/each}
@@ -2648,7 +2664,6 @@
 	.sp-avatars { display: flex; flex-shrink: 0; }
 	.sp-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #252b3b; background: linear-gradient(135deg, #51BE7B 0%, #2d8a54 100%); color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-left: -8px; position: relative; overflow: hidden; }
 	.sp-avatar:first-child { margin-left: 0; }
-	.sp-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 	.sp-count { background: rgba(255,255,255,0.15); font-size: 9px; font-weight: 700; letter-spacing: -0.3px; }
 	.sp-text { line-height: 1.4; }
 	.sp-text strong { color: #fff; font-weight: 700; }
@@ -2656,7 +2671,6 @@
 
 	/* Hero operator photo */
 	.hero-operator-photo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-weight: 800; color: rgba(255,255,255,0.9); font-size: 26px; letter-spacing: -0.5px; border: 2px solid rgba(255,255,255,0.15); }
-	.hero-operator-photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 	.hero-operator-name { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: #fff; }
 	.hero-operator-title-text { font-family: var(--font-ui); font-size: 11px; color: rgba(255,255,255,0.55); }
 
@@ -2664,8 +2678,6 @@
 	.hero-deck-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 22px; background: var(--accent-green); color: #0a1628; font-family: var(--font-ui); font-size: 13px; font-weight: 700; border-radius: 10px; text-decoration: none; cursor: pointer; transition: background 0.15s, transform 0.1s; white-space: nowrap; border: none; }
 	.hero-deck-btn:hover { background: #34d399; transform: translateY(-1px); }
 	.hero-deck-btn.hero-deck-locked { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); cursor: default; border: 1px solid rgba(255,255,255,0.12); }
-	.hero-deck-btn.hero-deck-locked[onclick] { cursor: pointer; }
-	.hero-deck-btn.hero-deck-locked[onclick]:hover { background: rgba(255,255,255,0.14); }
 	.hero-intro-btn { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; width: 100%; padding: 12px 18px; }
 	.hero-intro-btn:hover { background: rgba(255,255,255,0.18); }
 	.hero-share-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; color: rgba(255,255,255,0.5); font-family: var(--font-ui); font-size: 11px; font-weight: 600; border: none; cursor: pointer; letter-spacing: 0.3px; text-transform: uppercase; }
@@ -2715,6 +2727,7 @@
 	.metric-value { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.4px; }
 	.metric-value.highlight { color: var(--primary); }
 	.metric-locked { display: flex; align-items: center; justify-content: center; min-height: 52px; cursor: pointer; border-style: dashed; background: rgba(59,130,246,0.04); border-color: rgba(59,130,246,0.2); }
+	.metric-locked-link { text-decoration: none; }
 	.metric-locked .metric-label { color: #3b82f6; font-size: 11px; margin: 0; }
 
 	/* ===== Two Column Grid ===== */
@@ -3066,7 +3079,6 @@
 		.hero-type-icon svg { width: 80px; height: 80px; }
 		.deal-tags { flex-wrap: wrap; gap: 6px !important; }
 		.deal-tag { font-size: 11px !important; padding: 3px 10px !important; }
-		.share-class-table th, .share-class-table td { padding: 8px 10px; font-size: 12px; }
 		.material-tile { padding: 8px 12px; font-size: 12px; }
 		.dd-accordion-header { padding: 12px 14px; }
 		.dd-accordion-body { padding: 0 14px 14px; }
@@ -3302,7 +3314,6 @@
 	.academy-gate-inline .gate-btn { display: inline-block; padding: 10px 24px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-family: var(--font-ui); font-weight: 700; font-size: 13px; cursor: pointer; text-decoration: none; }
 	.academy-gate-inline .gate-btn:hover { background: #2563eb; }
 	.academy-gate-inline .gate-features { display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); }
-	.academy-gate-inline .gate-features span { display: flex; align-items: center; gap: 4px; }
 
 	/* ===== GP Insights ===== */
 	.gp-insights-section { border-color: rgba(59,130,246,0.2); }
@@ -3738,9 +3749,6 @@
 	.summary-row { display: flex; gap: 12px; margin-bottom: 12px; }
 	.summary-label { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); min-width: 140px; flex-shrink: 0; }
 	.summary-value { font-family: var(--font-body); font-size: 14px; color: var(--text-dark); }
-	.fees-list { list-style: none; padding: 0; }
-	.fees-list li { font-family: var(--font-body); font-size: 14px; color: var(--text-dark); padding: 4px 0; padding-left: 16px; position: relative; }
-	.fees-list li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
 
 	/* ===== Geography / Map ===== */
 	.map-container { height: 340px; border-radius: var(--radius-sm); overflow: hidden; margin-top: 16px; border: 1px solid var(--border); }
@@ -3759,18 +3767,6 @@
 	.offering-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
 	.offering-available { color: var(--primary); }
 	.offering-missing { color: var(--text-muted); }
-
-	/* ===== Share Class Table ===== */
-	.share-class-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; }
-	.share-class-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 14px; min-width: 400px; }
-	.share-class-table th { text-align: center; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); padding: 12px 16px; border-bottom: 2px solid var(--border); }
-	.share-class-table th:first-child { text-align: left; color: var(--text-muted); font-weight: 600; }
-	.share-class-table td { text-align: center; padding: 10px 16px; border-bottom: 1px solid var(--border-light); color: var(--text-dark); }
-	.share-class-table td:first-child { text-align: left; color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; }
-	.share-class-table tr:last-child td { border-bottom: none; }
-	.share-class-table td .value-highlight { font-weight: 700; color: var(--primary); }
-	.share-class-table th.sc-active { background: rgba(81,190,123,0.08); border-bottom-color: var(--primary); }
-	.share-class-table td.sc-active { background: rgba(81,190,123,0.04); }
 
 	/* ===== Returns Chart ===== */
 	.returns-chart-section { margin-bottom: 24px; }

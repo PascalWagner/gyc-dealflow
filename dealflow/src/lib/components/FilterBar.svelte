@@ -237,8 +237,9 @@
 			<div class="filter-panel-grid">
 				{#each FILTER_SELECTS as filterDef}
 					<div class="filter-field">
-						<label>{filterDef.label}</label>
+						<label for={`filter-${filterDef.field}`}>{filterDef.label}</label>
 						<select
+							id={`filter-${filterDef.field}`}
 							value={valueFor(filterDef.field)}
 							onchange={(e) => emit(filterDef.field, e.target.value, true)}
 						>
