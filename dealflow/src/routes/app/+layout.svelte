@@ -7,7 +7,6 @@
 	import { browser } from '$app/environment';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { untrack } from 'svelte';
 	import {
 		hydrateUserScopedData,
 		inferAdminEmailForSession,
@@ -21,49 +20,16 @@
 	afterNavigate(() => {
 		if (pageTransitionEl) {
 			pageTransitionEl.style.animation = 'none';
-			// Force reflow to restart animation
 			pageTransitionEl.offsetHeight;
 			pageTransitionEl.style.animation = '';
 		}
 	});
 
-	// Navigation progress bar state
-	let navProgress = $state(0);
-	let navVisible = $state(false);
-	let progressInterval = null; // plain let — not reactive, just bookkeeping
+	// Auth state
 	let authChecked = $state(false);
-	let authTimeout = null; // plain let — not reactive
+	let authTimeout = null;
 	let redirecting = $state(false);
 	let sessionReady = $state(false);
-
-	// Start progress bar when navigating begins
-	// Only $navigating should be tracked as a dependency
-	$effect(() => {
-		if ($navigating) {
-			navVisible = true;
-			navProgress = 15;
-			if (progressInterval) clearInterval(progressInterval);
-			progressInterval = setInterval(() => {
-				untrack(() => {
-					navProgress = Math.min(navProgress + (90 - navProgress) * 0.1, 90);
-				});
-			}, 100);
-		} else {
-			if (progressInterval) {
-				clearInterval(progressInterval);
-				progressInterval = null;
-			}
-			untrack(() => {
-				if (navVisible) {
-					navProgress = 100;
-					setTimeout(() => {
-						navVisible = false;
-						navProgress = 0;
-					}, 300);
-				}
-			});
-		}
-	});
 
 	// Derive current page from URL for sidebar highlighting
 	// e.g. /app/deals → 'deals', /app/market-intel → 'market-intel', /app/admin/manage → 'admin-manage'
@@ -122,8 +88,8 @@
 	});
 </script>
 
-{#if navVisible}
-	<div class="nav-progress-bar" style="width: {navProgress}%"></div>
+{#if $navigating}
+	<div class="nav-progress-bar"></div>
 {/if}
 
 {#if $isLoggedIn && sessionReady}
@@ -175,10 +141,19 @@
 		top: 0;
 		left: 0;
 		height: 3px;
+		width: 100%;
 		background: linear-gradient(90deg, var(--primary, #51BE7B), #2ECC71);
 		z-index: 9999;
-		transition: width 0.15s ease-out;
 		box-shadow: 0 0 8px rgba(81, 190, 123, 0.4);
+		animation: navProgress 2s ease-out forwards;
+	}
+
+	@keyframes navProgress {
+		0% { width: 0%; }
+		20% { width: 30%; }
+		50% { width: 60%; }
+		80% { width: 85%; }
+		100% { width: 95%; }
 	}
 
 	.page-transition {
