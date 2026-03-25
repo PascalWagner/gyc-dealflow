@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { getStoredSessionToken, isAcademy, isAdmin, userToken } from '$lib/stores/auth.js';
+	import CompanionGate from '$lib/components/CompanionGate.svelte';
+	import { getStoredSessionToken, isMember, userToken } from '$lib/stores/auth.js';
 	import {
 		downloadEventIcs,
 		formatCanonicalDate,
@@ -9,6 +10,7 @@
 		formatLocalDateTimeRange,
 		resolveBrowserTimeZone
 	} from '$lib/utils/memberEvents.js';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	const ET_TIMEZONE = 'America/New_York';
 
@@ -20,11 +22,12 @@
 	let localTimeZone = $state(null);
 	let sourceLabel = $state('Google Calendar');
 	let activeMonthIndex = $state(0);
+	const nativeCompanionMode = browser && isNativeApp();
 
 	const replayLibraryUrl = '/app/resources?category=Office%20Hours';
 	const calendarDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-	const canAccess = $derived($isAdmin || $isAcademy);
+	const canAccess = $derived($isMember);
 	const timezoneSummary = $derived.by(() => {
 		if (!localTimeZone) return 'Local timezone unavailable. Eastern Time is the canonical schedule reference.';
 		return `Showing your local time in ${localTimeZone}. Eastern Time remains the canonical schedule reference.`;
@@ -270,16 +273,24 @@
 		</div>
 	{:else if forbidden && !canAccess}
 		<div class="gate-card">
-			<div class="gate-pill">Academy access required</div>
-			<h2>Office Hours is reserved for Cashflow Academy members.</h2>
-			<p>
-				Join the weekly live session to get deal feedback, portfolio guidance, and direct answers from
-				Pascal in real time.
-			</p>
-			<div class="gate-actions">
-				<a class="primary-btn" href="/app/academy">See Academy Access</a>
-				<a class="secondary-btn" href={replayLibraryUrl}>View Replay Library</a>
-			</div>
+			{#if nativeCompanionMode}
+				<CompanionGate
+					title="Available to existing members"
+					message="Weekly Office Hours, replays, and live session access remain available to existing members on the web."
+					note="Enrollment and billing are not offered in the iOS app."
+				/>
+			{:else}
+				<div class="gate-pill">Academy access required</div>
+				<h2>Office Hours is reserved for Cashflow Academy members.</h2>
+				<p>
+					Join the weekly live session to get deal feedback, portfolio guidance, and direct answers from
+					Pascal in real time.
+				</p>
+				<div class="gate-actions">
+					<a class="primary-btn" href="/app/academy">See Academy Access</a>
+					<a class="secondary-btn" href={replayLibraryUrl}>View Replay Library</a>
+				</div>
+			{/if}
 		</div>
 	{:else if error}
 		<div class="gate-card">
@@ -292,247 +303,86 @@
 			</div>
 		</div>
 	{:else}
-		<div class="office-hours-grid">
-			<div class="column-stack">
-				<section class="schedule-card featured-card">
-					<div class="card-header">
-						<div>
-							<div class="card-label">Next Session</div>
-							<h2>{nextSession?.title || 'No session scheduled'}</h2>
-							<p class="card-copy">
-								Your next live office-hours window, with local time first and Eastern kept as the
-								canonical reference.
-							</p>
+		<div class="office-hours-grid simple-office-hours-grid">
+			<section class="schedule-card featured-card next-window-card">
+				<div class="card-label">Next Live Window</div>
+
+				{#if nextSession}
+					<div class="featured-stage refined-stage">
+						<div class="featured-time-panel">
+							<div class="featured-panel-label">Your Local Time</div>
+							<div class="time-local display-time">
+								{localTime(nextSession) || 'Local time unavailable. Use ET below.'}
+							</div>
+							<div class="time-et accent-time">
+								{canonicalDate(nextSession)} • {canonicalTime(nextSession)}
+							</div>
 						</div>
-						{#if nextSession?.status === 'rescheduled'}
-							<div class="status-pill status-moved">Moved</div>
+
+						<div class="featured-date-pill refined-date-pill">
+							<div class="featured-date-month">{monthShort(nextSession)}</div>
+							<div class="featured-date-day">{dayNumber(nextSession)}</div>
+							<div class="featured-date-weekday">{weekdayShort(nextSession)}</div>
+						</div>
+					</div>
+
+					<p class="session-description session-description-wide">
+						{nextSession.description || 'Open office hours for Cashflow Academy members. Bring live deal questions, portfolio decisions, and anything you want to pressure-test during the hour.'}
+					</p>
+
+					<div class="action-row">
+						<a class="primary-btn" href={nextSession.googleCalendarUrl} target="_blank" rel="noreferrer"
+							>Add to Google Calendar</a
+						>
+						<button class="secondary-btn button-reset" onclick={() => downloadEventIcs(nextSession)}
+							>Download ICS</button
+						>
+						{#if nextSession.joinUrl}
+							<a class="secondary-btn" href={nextSession.joinUrl} target="_blank" rel="noreferrer"
+								>Join Session</a
+							>
 						{/if}
 					</div>
 
-					{#if nextSession}
-						<div class="featured-stage">
-							<div class="featured-time-panel">
-								<div class="featured-panel-label">Next live window</div>
-								<div class="time-local">
-									{localTime(nextSession) || 'Local time unavailable. Use ET below.'}
-								</div>
-								<div class="time-et">{canonicalDate(nextSession)} • {canonicalTime(nextSession)}</div>
-								<div class="time-note">{timezoneSummary}</div>
-							</div>
-
-							<div class="featured-date-pill">
-								<div class="featured-date-month">{monthShort(nextSession)}</div>
-								<div class="featured-date-day">{dayNumber(nextSession)}</div>
-								<div class="featured-date-weekday">{weekdayShort(nextSession)}</div>
-							</div>
+					<div class="detail-grid">
+						<div class="detail-card">
+							<div class="detail-label">Source</div>
+							<div class="detail-value">{sourceLabel}</div>
 						</div>
-
-						<p class="session-description">{nextSession.description}</p>
-
-						<div class="source-note">
-							Source of truth: {sourceLabel}. If a Thursday session moves, this page reflects the
-							scheduled instance instead of assuming the recurring slot.
-						</div>
-
-						<div class="action-row">
-							<a class="primary-btn" href={nextSession.googleCalendarUrl} target="_blank" rel="noreferrer"
-								>Add to Google Calendar</a
-							>
-							<button class="secondary-btn button-reset" onclick={() => downloadEventIcs(nextSession)}
-								>Download ICS</button
-							>
-							{#if nextSession.joinUrl}
-								<a class="secondary-btn" href={nextSession.joinUrl} target="_blank" rel="noreferrer"
-									>Join Session</a
-								>
-							{/if}
-						</div>
-					{:else}
-						<p class="session-description">No upcoming session is scheduled yet.</p>
-					{/if}
-				</section>
-
-				<section class="schedule-card agenda-card">
-					<div class="card-header">
-						<div>
-							<div class="card-label">Upcoming Sessions</div>
-							<h2>Confirmed schedule</h2>
-							<p class="card-copy">
-								The next few live sessions at a glance. Use the month view to the right to scan future
-								dates by weekday and month.
-							</p>
-						</div>
-						<a class="header-link" href={replayLibraryUrl}>Replay Library</a>
-					</div>
-
-					{#if visibleUpcomingSessions.length === 0}
-						<div class="empty-state">No upcoming office hours are available yet.</div>
-					{:else}
-						<div class="session-list refined-list">
-							{#each visibleUpcomingSessions as event}
-								<article class="session-row refined-row">
-									<div class="session-stamp">
-										<div class="session-stamp-month">{monthShort(event)}</div>
-										<div class="session-stamp-day">{dayNumber(event)}</div>
-										<div class="session-stamp-weekday">{weekdayShort(event)}</div>
-									</div>
-
-									<div class="session-main">
-										<div class="session-topline">
-											<h3>{canonicalDate(event)}</h3>
-											{#if event.status === 'rescheduled'}
-												<div class="status-pill status-moved">Moved</div>
-											{/if}
-										</div>
-										<div class="session-local">
-											{localTime(event) || 'Local time unavailable. Use ET below.'}
-										</div>
-										<div class="session-et">{canonicalTime(event)}</div>
-									</div>
-
-									<div class="session-actions">
-										<a href={event.googleCalendarUrl} target="_blank" rel="noreferrer">Google</a>
-										<button class="text-btn" onclick={() => downloadEventIcs(event)}>ICS</button>
-										{#if event.joinUrl}
-											<a href={event.joinUrl} target="_blank" rel="noreferrer">Join</a>
-										{/if}
-									</div>
-								</article>
-							{/each}
-						</div>
-
-						{#if events.length > visibleUpcomingSessions.length}
-							<div class="session-footnote">
-								More confirmed dates are available in the month view. Later months stay in the calendar
-								instead of stretching this list indefinitely.
-							</div>
-						{/if}
-					{/if}
-				</section>
-			</div>
-
-			<section class="schedule-card calendar-card">
-				<div class="card-header calendar-card-header">
-					<div>
-						<div class="card-label">Monthly View</div>
-						<h2>Office Hours calendar</h2>
-						<p class="calendar-copy">
-							A calmer month view for planning. You can scan the weekday cadence, flip between months,
-							and see moved sessions without the page turning into a giant scheduling tool. {calendarSummary}
-						</p>
-					</div>
-
-					{#if activeCalendarMonth}
-						<div class="calendar-controls">
-							<button
-								class="calendar-nav-btn"
-								onclick={previousMonth}
-								disabled={activeMonthIndex === 0}
-								aria-label="Previous month"
-							>
-								&larr;
-							</button>
-							<div class="calendar-month-label">{activeCalendarMonth.label}</div>
-							<button
-								class="calendar-nav-btn"
-								onclick={nextMonth}
-								disabled={activeMonthIndex >= calendarMonths.length - 1}
-								aria-label="Next month"
-							>
-								&rarr;
-							</button>
-						</div>
-					{/if}
-				</div>
-
-				{#if activeCalendarMonth}
-					<div class="calendar-surface">
-						<div class="calendar-weekdays">
-							{#each calendarDayLabels as dayLabel}
-								<div>{dayLabel}</div>
-							{/each}
-						</div>
-
-						<div class="calendar-grid">
-							{#each activeCalendarMonth.weeks as week}
-								{#each week as day}
-									<div
-										class="calendar-day"
-										class:calendar-day-outside={!day.isCurrentMonth}
-										class:calendar-day-today={day.isToday}
-										class:calendar-day-has-events={day.events.length > 0}
-									>
-										<div class="calendar-day-top">
-											<div class="calendar-day-number">{day.dayNumber}</div>
-											{#if day.events.length > 0}
-												<div class="calendar-day-count">{day.events.length}</div>
-											{/if}
-										</div>
-
-										{#if day.events.length > 0}
-											<div class="calendar-day-events">
-												{#each day.events as event}
-													<div class="calendar-event-pill">
-														<div class="calendar-event-title">Office Hours</div>
-														<div class="calendar-event-meta">
-															<span>{calendarTime(event)}</span>
-															{#if event.status === 'rescheduled'}
-																<span class="calendar-event-status">Moved</span>
-															{/if}
-														</div>
-													</div>
-												{/each}
-											</div>
-										{/if}
-									</div>
-								{/each}
-							{/each}
-						</div>
-					</div>
-
-					<div class="calendar-agenda">
-						<div class="calendar-agenda-header">
-							<div>
-								<div class="calendar-agenda-label">{activeCalendarMonth.label}</div>
-								<div class="calendar-agenda-summary">{activeMonthSummary}</div>
-							</div>
-							<a class="header-link" href={replayLibraryUrl}>Replay Library</a>
-						</div>
-
-						<div class="month-session-list">
-							{#each activeMonthEvents as event}
-								<article class="month-session-row">
-									<div class="month-session-date">
-										<div class="month-session-weekday">{weekdayShort(event)}</div>
-										<div class="month-session-monthday">{monthDay(event)}</div>
-									</div>
-
-									<div class="month-session-main">
-										<div class="month-session-time">
-											{localTime(event) || 'Local time unavailable. Use ET below.'}
-										</div>
-										<div class="month-session-et">{canonicalTime(event)}</div>
-									</div>
-
-									<div class="month-session-actions">
-										<a href={event.googleCalendarUrl} target="_blank" rel="noreferrer">Google</a>
-										<button class="text-btn" onclick={() => downloadEventIcs(event)}>ICS</button>
-										{#if event.joinUrl}
-											<a href={event.joinUrl} target="_blank" rel="noreferrer">Join</a>
-										{/if}
-									</div>
-								</article>
-							{/each}
-						</div>
-
-						<div class="calendar-footnote">
-							Session dates come from the live Office Hours calendar. If a Thursday session moves, this
-							month view reflects the moved date instead of assuming the old recurring slot.
+						<div class="detail-card detail-card-wide">
+							<div class="detail-label">Time Reference</div>
+							<div class="detail-value">{timezoneSummary}</div>
 						</div>
 					</div>
 				{:else}
-					<div class="empty-state">No monthly calendar is available yet.</div>
+					<div class="empty-state">No upcoming session is scheduled yet.</div>
 				{/if}
+			</section>
+
+			<section class="schedule-card rhythm-card">
+				<div class="card-label">Session Rhythm</div>
+				<h2 class="rhythm-title">Keep the cadence in view.</h2>
+				<p class="card-copy">
+					This page no longer tries to be a full calendar app. The next few confirmed dates are enough for planning, and any moved session shows up here once it changes live.
+				</p>
+
+				{#if visibleUpcomingSessions.length === 0}
+					<div class="empty-state">No upcoming office hours are available yet.</div>
+				{:else}
+					<div class="rhythm-list">
+						{#each visibleUpcomingSessions.slice(0, 5) as event}
+							<article class="rhythm-row" class:rhythm-row-active={event.id === nextSession?.id}>
+								<div class="rhythm-copy">
+									<div class="rhythm-date-line">{monthDay(event)} • {weekdayShort(event)}</div>
+									<div class="rhythm-local-line">{calendarTime(event)} Local</div>
+								</div>
+								<div class="rhythm-time-line">{canonicalTime(event)} ET</div>
+							</article>
+						{/each}
+					</div>
+				{/if}
+
+				<a class="hero-link replay-link" href={replayLibraryUrl}>Browse replay library</a>
 			</section>
 		</div>
 	{/if}
@@ -1187,6 +1037,188 @@
 		animation: shimmer 1.2s infinite linear;
 	}
 
+	.office-hours-hero {
+		background: transparent;
+		border-radius: 0;
+		padding: 18px 0 8px;
+		color: var(--text-dark);
+		margin-bottom: 18px;
+		box-shadow: none;
+	}
+
+	.page-eyebrow {
+		display: none;
+	}
+
+	h1 {
+		font-size: 52px;
+		line-height: 0.95;
+		margin-bottom: 12px;
+	}
+
+	.hero-copy {
+		max-width: 720px;
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
+
+	.hero-actions {
+		align-items: flex-end;
+		gap: 10px;
+	}
+
+	.hero-badge {
+		background: rgba(81, 190, 123, 0.12);
+		color: var(--primary);
+	}
+
+	.hero-link {
+		color: var(--primary);
+	}
+
+	.simple-office-hours-grid {
+		align-items: stretch;
+	}
+
+	.next-window-card,
+	.rhythm-card {
+		background:
+			radial-gradient(circle at top right, rgba(81, 190, 123, 0.08), transparent 34%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(247, 251, 248, 0.98));
+	}
+
+	.rhythm-card {
+		display: grid;
+		align-content: start;
+	}
+
+	.refined-stage {
+		margin-top: 10px;
+		margin-bottom: 16px;
+	}
+
+	.display-time {
+		font-size: 30px;
+		line-height: 1.05;
+		max-width: 520px;
+	}
+
+	.accent-time {
+		color: var(--primary);
+		font-weight: 700;
+	}
+
+	.refined-date-pill {
+		background: linear-gradient(180deg, #173d44 0%, #15363d 100%);
+		color: #fff;
+		box-shadow: 0 18px 34px rgba(21, 54, 61, 0.22);
+	}
+
+	.session-description-wide {
+		max-width: 100%;
+		margin-top: 6px;
+	}
+
+	.detail-grid {
+		display: grid;
+		grid-template-columns: 160px minmax(0, 1fr);
+		gap: 14px;
+		margin-top: 18px;
+	}
+
+	.detail-card {
+		border: 1px solid rgba(15, 23, 42, 0.08);
+		border-radius: 18px;
+		background: rgba(255, 255, 255, 0.92);
+		padding: 14px 16px;
+	}
+
+	.detail-card-wide {
+		min-width: 0;
+	}
+
+	.detail-label {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+		margin-bottom: 8px;
+	}
+
+	.detail-value {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		line-height: 1.55;
+		color: var(--text-dark);
+	}
+
+	.rhythm-title {
+		font-family: var(--font-ui);
+		font-size: 18px;
+		font-weight: 800;
+		line-height: 1.15;
+		margin: 0 0 10px;
+	}
+
+	.rhythm-list {
+		display: grid;
+		gap: 12px;
+		margin: 8px 0 18px;
+	}
+
+	.rhythm-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 16px 18px;
+		border-radius: 18px;
+		border: 1px solid rgba(15, 23, 42, 0.08);
+		background: rgba(255, 255, 255, 0.9);
+	}
+
+	.rhythm-row-active {
+		background: linear-gradient(180deg, rgba(246, 251, 247, 0.98), rgba(255, 255, 255, 0.98));
+		border-color: rgba(81, 190, 123, 0.28);
+		box-shadow: inset 0 0 0 1px rgba(81, 190, 123, 0.08);
+	}
+
+	.rhythm-copy {
+		min-width: 0;
+	}
+
+	.rhythm-date-line {
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+
+	.rhythm-local-line {
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-secondary);
+		margin-top: 4px;
+	}
+
+	.rhythm-time-line {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--primary);
+		text-align: right;
+		white-space: nowrap;
+	}
+
+	.replay-link {
+		font-size: 14px;
+		font-weight: 700;
+	}
+
 	@keyframes shimmer {
 		from {
 			background-position: 200% 0;
@@ -1272,6 +1304,19 @@
 			min-width: 0;
 			flex: 1;
 		}
+
+		.detail-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.rhythm-row {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.rhythm-time-line {
+			text-align: left;
+		}
 	}
 
 	@media (max-width: 640px) {
@@ -1280,11 +1325,15 @@
 		}
 
 		h1 {
-			font-size: 30px;
+			font-size: 38px;
 		}
 
 		h2 {
 			font-size: 24px;
+		}
+
+		.display-time {
+			font-size: 22px;
 		}
 
 		.calendar-surface {

@@ -8,40 +8,67 @@
 	import CompareView from '$lib/components/CompareView.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
 	import {
-		deals,
 		dealStages,
 		decisionCompareIds,
 		stageCounts,
-		fetchDeals,
-		dealsLoading,
+		memberDeals,
+		memberDealsLoading,
+		memberDealsLoadingMore,
+		memberDealsError,
+		memberDealsMeta,
+		fetchMemberDeals,
+		loadMoreMemberDeals,
 		MAX_DECISION_COMPARE,
 		STAGE_META
 	} from '$lib/stores/deals.js';
-	import { getStoredSessionUser, isAdmin, userTier } from '$lib/stores/auth.js';
+	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
+	import { getUiStage } from '$lib/utils/dealflow-contract.js';
+	import {
+		currentAdminRealUser,
+		readUserScopedJson,
+		writeUserScopedJson
+	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
-	let currentTab = $state('browse');
-	let viewMode = $state('grid'); // grid | list | map
+	let currentTab = $state('filter');
+	let viewMode = $state('grid');
 	let isMobile = $state(false);
 	let buyBox = $state(null);
 	let filterAnchor = $state(null);
-	let decisionSelectionInitialized = $state(false);
+	let filtersReady = $state(false);
 
-	// Daily deal limit for free users
 	let dailyDealCount = $state(0);
 	let showLimitModal = $state(false);
 	let resetTimerLabel = $state('Resets at midnight');
 	const DAILY_LIMIT = 20;
-	const PAID_TIERS = ['academy', 'alumni', 'investor', 'paid', 'founding', 'inner-circle', 'family_office'];
+	const nativeCompanionMode = browser && isNativeApp();
 	const todayKey = $derived(browser ? `gycDailyDeals_${new Date().toISOString().slice(0, 10)}` : '');
-	const isFreeUser = $derived(!$isAdmin && !PAID_TIERS.includes(String($userTier || '').toLowerCase()));
+	const isFreeUser = $derived($accessTier === 'free');
 	const dealsRemaining = $derived(Math.max(0, DAILY_LIMIT - dailyDealCount));
 	const dailyViewsPct = $derived(Math.round((dealsRemaining / DAILY_LIMIT) * 100));
 	const dailyViewsColor = $derived(dealsRemaining <= 5 ? '#e74c3c' : dealsRemaining <= 10 ? '#f59e0b' : 'var(--primary)');
 
+	let search = $state('');
+	let assetClass = $state('');
+	let dealType = $state('');
+	let strategy = $state('');
+	let status = $state('');
+	let maxInvest = $state('');
+	let maxLockup = $state('');
+	let distributions = $state('');
+	let minIRR = $state('');
+	let sortBy = $state('newest');
+	let showArchived = $state(false);
+	let buyBoxApplied = $state(false);
+	let decisionSelectionInitialized = $state(false);
+
+	const BUY_BOX_DEAL_TYPES = new Set(['fund', 'syndication', 'reit', '1031 exchange', 'joint venture', 'note/debt', 'other']);
+	const UI_STAGE_TABS = new Set(['filter', 'review', 'connect', 'decide', 'invested', 'skipped']);
+
 	function loadDailyCount() {
 		if (!browser) return;
-		const stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
+		const stored = readUserScopedJson(todayKey, []);
 		dailyDealCount = stored.length;
 	}
 
@@ -58,33 +85,16 @@
 
 	function trackDealView(dealId) {
 		if (!browser || !isFreeUser) return;
-		let stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
+		let stored = readUserScopedJson(todayKey, []);
 		if (!stored.includes(dealId)) {
 			stored.push(dealId);
-			localStorage.setItem(todayKey, JSON.stringify(stored));
+			writeUserScopedJson(todayKey, stored);
 			dailyDealCount = stored.length;
 		}
 		if (dailyDealCount >= DAILY_LIMIT) {
 			showLimitModal = true;
 		}
 	}
-
-	// Filter state
-	let search = $state('');
-	let assetClass = $state('');
-	let dealType = $state('');
-	let strategy = $state('');
-	let status = $state('');
-	let maxInvest = $state('');
-	let maxLockup = $state('');
-	let distributions = $state('');
-	let minIRR = $state('');
-	let sortBy = $state('newest');
-	let showArchived = $state(false);
-	let buyBoxApplied = $state(false);
-	const UI_STAGE_TABS = new Set(['browse', 'saved', 'diligence', 'decision', 'invested', 'passed']);
-
-	const BUY_BOX_DEAL_TYPES = new Set(['fund', 'syndication', 'reit', '1031 exchange', 'joint venture', 'note/debt', 'other']);
 
 	function normalizeMatchValue(value) {
 		return String(value || '').trim().toLowerCase();
@@ -119,12 +129,20 @@
 		return { dealTypes, strategies };
 	}
 
-	function applyBuyBoxFromLocation() {
+	function applyLocationFilters() {
 		if (!browser) return;
 
 		const params = new URLSearchParams(window.location.search);
 		const hash = window.location.hash.replace('#', '').toLowerCase();
 		const wantsBuyBox = ['1', 'true', 'yes'].includes((params.get('buybox') || '').toLowerCase()) || hash === 'buybox';
+		const company = params.get('company');
+		const q = params.get('q');
+		const requestedTab = String(params.get('tab') || '').trim().toLowerCase();
+
+		if (UI_STAGE_TABS.has(requestedTab)) currentTab = requestedTab;
+
+		if (company && !search) search = company;
+		if (q && !search) search = q;
 
 		if (!wantsBuyBox) return;
 
@@ -132,8 +150,8 @@
 
 		if (hash === 'buybox') {
 			params.set('buybox', '1');
-			const search = params.toString();
-			window.history.replaceState({}, '', `${window.location.pathname}${search ? `?${search}` : ''}`);
+			const nextSearch = params.toString();
+			window.history.replaceState({}, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}`);
 		}
 
 		requestAnimationFrame(() => {
@@ -141,11 +159,21 @@
 		});
 	}
 
+	function syncTabInUrl(tab) {
+		if (!browser) return;
+		const params = new URLSearchParams(window.location.search);
+		if (tab === 'filter') params.delete('tab');
+		else params.set('tab', tab);
+		const nextSearch = params.toString();
+		const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+		window.history.replaceState({}, '', nextUrl);
+	}
+
 	async function loadBuyBox() {
 		if (!browser) return;
 
 		try {
-			const storedBuyBox = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+			const storedBuyBox = readUserScopedJson('gycBuyBoxWizard', {});
 			if (storedBuyBox && Object.keys(storedBuyBox).length > 0) {
 				buyBox = storedBuyBox;
 			}
@@ -154,9 +182,14 @@
 		try {
 			const storedUser = getStoredSessionUser();
 			if (!storedUser?.token || !storedUser?.email) return;
+			const realUser = currentAdminRealUser();
+			const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== storedUser.email.toLowerCase();
+			const buyBoxUrl = new URL('/api/buybox', window.location.origin);
+			buyBoxUrl.searchParams.set('email', storedUser.email);
+			if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
 
-			const res = await fetch('/api/buybox?email=' + encodeURIComponent(storedUser.email), {
-				headers: { 'Authorization': 'Bearer ' + storedUser.token }
+			const res = await fetch(buyBoxUrl.pathname + buyBoxUrl.search, {
+				headers: { Authorization: 'Bearer ' + storedUser.token }
 			});
 
 			if (!res.ok) return;
@@ -169,193 +202,188 @@
 		} catch {}
 	}
 
-	// Whether any filter is active (for empty state messaging)
-	const hasActiveFilters = $derived(
-		!!search || !!assetClass || !!dealType || !!strategy || !!status || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
-	);
+	function applyBuyBoxFilters(dealsList) {
+		if (!buyBoxApplied || !buyBox) return dealsList;
+
+		let result = dealsList;
+		const assetPreferences = (Array.isArray(buyBox.assetClasses) ? buyBox.assetClasses : [])
+			.map(normalizeMatchValue)
+			.filter(Boolean);
+		const buyBoxCheckSize = getBuyBoxCheckSize(buyBox);
+		const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
+		const buyBoxDistribution = normalizeMatchValue(buyBox.distributions);
+		const buyBoxMinIrr = Number(buyBox.minIRR || 0);
+		const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
+
+		if (assetPreferences.length) {
+			result = result.filter((deal) => {
+				const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+					.map(normalizeMatchValue)
+					.filter(Boolean);
+				return assetPreferences.some((assetClassPreference) => dealAssetClasses.includes(assetClassPreference));
+			});
+		}
+
+		if (buyBoxStrategies.length || buyBoxDealTypes.length) {
+			result = result.filter((deal) => {
+				const dealStrategy = normalizeMatchValue(deal.strategy);
+				const normalizedDealType = normalizeMatchValue(deal.dealType);
+				const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+					.map(normalizeMatchValue)
+					.filter(Boolean);
+				const strategyMatch = buyBoxStrategies.length
+					? buyBoxStrategies.some((preference) => dealStrategy === preference || dealAssetClasses.includes(preference))
+					: false;
+				const dealTypeMatch = buyBoxDealTypes.length ? buyBoxDealTypes.includes(normalizedDealType) : false;
+
+				if (buyBoxStrategies.length && buyBoxDealTypes.length) return strategyMatch || dealTypeMatch;
+				return buyBoxStrategies.length ? strategyMatch : dealTypeMatch;
+			});
+		}
+
+		if (buyBoxCheckSize > 0) {
+			result = result.filter((deal) => {
+				const dealMinimum = Number(deal.investmentMinimum || deal.minimumInvestment || 0);
+				return dealMinimum > 0 ? dealMinimum <= buyBoxCheckSize : true;
+			});
+		}
+
+		if (buyBoxMaxLockup > 0) {
+			result = result.filter((deal) => {
+				const holdPeriod = parseFloat(deal.holdPeriod);
+				return Number.isFinite(holdPeriod) ? holdPeriod <= buyBoxMaxLockup : true;
+			});
+		}
+
+		if (buyBoxMinIrr > 0) {
+			const normalizedMinIrr = buyBoxMinIrr <= 1 ? buyBoxMinIrr * 100 : buyBoxMinIrr;
+			result = result.filter((deal) => {
+				const dealTargetIrr = Number(deal.targetIRR || 0);
+				if (!dealTargetIrr) return false;
+				const normalizedDealIrr = dealTargetIrr <= 1 ? dealTargetIrr * 100 : dealTargetIrr;
+				return normalizedDealIrr >= normalizedMinIrr;
+			});
+		}
+
+		if (buyBoxDistribution) {
+			result = result.filter((deal) => {
+				const dealDistribution = normalizeMatchValue(deal.distributions || deal.distributionFrequency);
+				return dealDistribution ? dealDistribution === buyBoxDistribution : true;
+			});
+		}
+
+		return result;
+	}
+
+	function getEffectiveBrowseFilters() {
+		if (!buyBoxApplied || !buyBox) {
+			return { search, assetClass, dealType, strategy, status, maxInvest, maxLockup, distributions, minIRR };
+		}
+
+		const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
+		const buyBoxDistribution = String(buyBox.distributions || '').trim();
+		const buyBoxCheckSize = getBuyBoxCheckSize(buyBox);
+		const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
+		const buyBoxMinIrr = Number(buyBox.minIRR || 0);
+		const buyBoxAssetClasses = Array.isArray(buyBox.assetClasses) ? buyBox.assetClasses.filter(Boolean) : [];
+
+		return {
+			search,
+			assetClass: assetClass || (buyBoxAssetClasses.length === 1 ? buyBoxAssetClasses[0] : ''),
+			dealType: dealType || (buyBoxDealTypes.length === 1 ? buyBox.dealTypes?.[0] || '' : ''),
+			strategy: strategy || (buyBoxStrategies.length === 1 ? buyBox.strategies?.[0] || '' : ''),
+			status,
+			maxInvest: maxInvest || (buyBoxCheckSize > 0 ? String(buyBoxCheckSize) : ''),
+			maxLockup: maxLockup || (buyBoxMaxLockup > 0 ? String(buyBoxMaxLockup) : ''),
+			distributions: distributions || buyBoxDistribution,
+			minIRR: minIRR || (buyBoxMinIrr > 0 ? String(buyBoxMinIrr <= 1 ? buyBoxMinIrr : buyBoxMinIrr / 100) : '')
+		};
+	}
 
 	function switchTab(tab) {
 		currentTab = tab;
 		syncTabInUrl(tab);
-		// Reset to grid on tab switch (unless on Filter)
-		if (tab !== 'browse' && viewMode === 'map') viewMode = 'grid';
+		if (tab !== 'filter' && viewMode === 'map') viewMode = 'grid';
 	}
 
 	function switchView(mode) {
 		viewMode = mode;
 	}
 
-	// Filter deals by current tab
-	const tabDeals = $derived(
-		($deals || []).filter(deal => {
-			const stage = $dealStages[deal.id] || 'browse';
-			if (currentTab === 'browse') return !$dealStages[deal.id];
-			if (currentTab === 'saved') return stage === 'saved';
-			return stage === currentTab;
-		})
+	const hasActiveFilters = $derived(
+		!!search || !!assetClass || !!dealType || !!strategy || !!status || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
 	);
 
-	// Apply filters
-	const filteredDeals = $derived.by(() => {
-		let result = tabDeals;
-		const q = search.toLowerCase().trim();
-		if (q) {
-			result = result.filter(d => {
-				const searchable = [d.name, d.investmentName, d.managementCompany, d.operator, ...(Array.isArray(d.assetClass) ? d.assetClass : [d.assetClass])].filter(Boolean).join(' ').toLowerCase();
-				return searchable.includes(q);
-			});
+	const stageDealIds = $derived.by(() => {
+		const grouped = { review: [], connect: [], decide: [], invested: [], skipped: [] };
+		for (const [dealId, stage] of Object.entries($dealStages || {})) {
+			const uiStage = getUiStage(stage);
+			if (grouped[uiStage]) grouped[uiStage].push(dealId);
 		}
-			if (assetClass) result = result.filter(d => {
-				const classes = Array.isArray(d.assetClass) ? d.assetClass : [d.assetClass];
-				return classes.some(c => c === assetClass);
-			});
-			if (dealType) result = result.filter(d => d.dealType === dealType);
-			if (strategy) result = result.filter(d => d.strategy === strategy);
-			if (status) result = result.filter(d => String(d.status || '').toLowerCase() === status.toLowerCase());
-			if (maxInvest) result = result.filter(d => (d.investmentMinimum || d.minimumInvestment) && (d.investmentMinimum || d.minimumInvestment) <= parseInt(maxInvest));
-			if (maxLockup) result = result.filter(d => d.holdPeriod && parseInt(d.holdPeriod) <= parseInt(maxLockup));
-			if (minIRR) result = result.filter(d => d.targetIRR && d.targetIRR >= parseFloat(minIRR) / 100);
-			if (!showArchived) result = result.filter(d => !d.archived);
-
-			if (buyBoxApplied && buyBox) {
-				const assetPreferences = (Array.isArray(buyBox.assetClasses) ? buyBox.assetClasses : [])
-					.map(normalizeMatchValue)
-					.filter(Boolean);
-				const buyBoxCheckSize = getBuyBoxCheckSize(buyBox);
-				const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
-				const buyBoxDistribution = normalizeMatchValue(buyBox.distributions);
-				const buyBoxMinIrr = Number(buyBox.minIRR || 0);
-				const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
-
-				if (assetPreferences.length) {
-					result = result.filter((deal) => {
-						const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
-							.map(normalizeMatchValue)
-							.filter(Boolean);
-						return assetPreferences.some((assetClassPreference) => dealAssetClasses.includes(assetClassPreference));
-					});
-				}
-
-				if (buyBoxStrategies.length || buyBoxDealTypes.length) {
-					result = result.filter((deal) => {
-						const dealStrategy = normalizeMatchValue(deal.strategy);
-						const dealType = normalizeMatchValue(deal.dealType);
-						const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
-							.map(normalizeMatchValue)
-							.filter(Boolean);
-						const strategyMatch = buyBoxStrategies.length
-							? buyBoxStrategies.some((preference) => dealStrategy === preference || dealAssetClasses.includes(preference))
-							: false;
-						const dealTypeMatch = buyBoxDealTypes.length ? buyBoxDealTypes.includes(dealType) : false;
-
-						if (buyBoxStrategies.length && buyBoxDealTypes.length) return strategyMatch || dealTypeMatch;
-						return buyBoxStrategies.length ? strategyMatch : dealTypeMatch;
-					});
-				}
-
-				if (buyBoxCheckSize > 0) {
-					result = result.filter((deal) => {
-						const dealMinimum = Number(deal.investmentMinimum || deal.minimumInvestment || 0);
-						return dealMinimum > 0 ? dealMinimum <= buyBoxCheckSize : true;
-					});
-				}
-
-				if (buyBoxMaxLockup > 0) {
-					result = result.filter((deal) => {
-						const holdPeriod = parseFloat(deal.holdPeriod);
-						return Number.isFinite(holdPeriod) ? holdPeriod <= buyBoxMaxLockup : true;
-					});
-				}
-
-				if (buyBoxMinIrr > 0) {
-					const normalizedMinIrr = buyBoxMinIrr <= 1 ? buyBoxMinIrr * 100 : buyBoxMinIrr;
-					result = result.filter((deal) => {
-						const dealTargetIrr = Number(deal.targetIRR || 0);
-						if (!dealTargetIrr) return false;
-						const normalizedDealIrr = dealTargetIrr <= 1 ? dealTargetIrr * 100 : dealTargetIrr;
-						return normalizedDealIrr >= normalizedMinIrr;
-					});
-				}
-
-				if (buyBoxDistribution) {
-					result = result.filter((deal) => {
-						const dealDistribution = normalizeMatchValue(deal.distributions || deal.distributionFrequency);
-						return dealDistribution ? dealDistribution === buyBoxDistribution : true;
-					});
-				}
-			}
-
-			// Sort
-			if (sortBy === 'newest') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
-			else if (sortBy === 'best_match') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
-			else if (sortBy === 'irr') result = [...result].sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
-			else if (sortBy === 'min-invest' || sortBy === 'min_invest') result = [...result].sort((a, b) => ((a.investmentMinimum || a.minimumInvestment || 999999) - (b.investmentMinimum || b.minimumInvestment || 999999)));
-			else if (sortBy === 'name' || sortBy === 'az') result = [...result].sort((a, b) => (a.investmentName || a.name || '').localeCompare(b.investmentName || b.name || ''));
-
-		return result;
+		return grouped;
 	});
 
+	const currentTabIds = $derived(currentTab === 'filter' ? [] : (stageDealIds[currentTab] || []));
+	const excludedBrowseIds = $derived(Object.keys($dealStages || {}));
+	const effectiveFilters = $derived(getEffectiveBrowseFilters());
+
+	const filteredDeals = $derived.by(() => applyBuyBoxFilters($memberDeals || []));
 	const decisionCompareSet = $derived(new Set($decisionCompareIds));
 	const selectedDecisionDeals = $derived.by(() => {
-		if (currentTab !== 'decision') return [];
+		if (currentTab !== 'decide') return [];
 		const dealsById = new Map(filteredDeals.map((deal) => [deal.id, deal]));
 		return $decisionCompareIds.map((dealId) => dealsById.get(dealId)).filter(Boolean);
 	});
 	const decisionCompareRemaining = $derived(Math.max(0, MAX_DECISION_COMPARE - selectedDecisionDeals.length));
 	const decisionShelfDeals = $derived.by(() => {
-		if (currentTab !== 'decision') return [];
+		if (currentTab !== 'decide') return [];
 		return [
 			...selectedDecisionDeals,
 			...filteredDeals.filter((deal) => !decisionCompareSet.has(deal.id))
 		];
 	});
-
-	// Stage description messages
-	const stageDescriptions = {
-		browse: { title: 'Filter', text: 'Browse vetted opportunities. Swipe right to save a deal or left to skip it.', color: 'var(--primary)' },
-		saved: { title: 'Review', text: 'Read the deck, explore the deal page, and work through the checklist. Understand this deal before reaching out.', color: '#3b82f6' },
-		diligence: { title: 'Connect', text: "Time to talk to the operator. Request an intro and we'll connect you via email. Ask your questions, fill in the gaps.", color: '#f97316' },
-		decision: { title: 'Decide', text: 'Compare deals side by side. Ready to commit? Wire the money and mark it as Invested.', color: '#a855f7' },
-		invested: { title: 'Invested', text: "Deals you've committed capital to. Track distributions, K-1s, and hold periods.", color: '#059669' },
-		passed: { title: 'Skipped', text: "Deals you decided weren't right for you. You can always reconsider later.", color: 'var(--text-muted)' }
-	};
-	const currentStageContent = $derived(stageDescriptions[currentTab] || stageDescriptions.browse);
-
-	// Avg IRR for filter bar
+	const totalMatchingDeals = $derived($memberDealsMeta.total || filteredDeals.length);
 	const avgIRR = $derived.by(() => {
-		const withIRR = tabDeals.filter(d => d.targetIRR);
+		const withIRR = filteredDeals.filter((deal) => deal.targetIRR);
 		if (withIRR.length === 0) return '0';
-		return (withIRR.reduce((s, d) => s + d.targetIRR, 0) / withIRR.length * 100).toFixed(1);
+		return (withIRR.reduce((sum, deal) => sum + deal.targetIRR, 0) / withIRR.length * 100).toFixed(1);
 	});
 
+	const stageDescriptions = {
+		filter: { title: 'Filter', text: 'Browse vetted opportunities. Move a deal to Review when it deserves more attention, or skip it if it does not fit.', color: 'var(--primary)' },
+		review: { title: 'Review', text: 'Read the deck, explore the deal page, and work through the checklist. Understand this deal before reaching out.', color: '#3b82f6' },
+		connect: { title: 'Connect', text: "Time to talk to the operator. Request an intro and we'll connect you via email. Ask your questions, fill in the gaps.", color: '#f97316' },
+		decide: { title: 'Decide', text: 'Compare deals side by side. Ready to commit? Wire the money and mark it as Invested.', color: '#a855f7' },
+		invested: { title: 'Invested', text: "Deals you've committed capital to. Track distributions, K-1s, and hold periods.", color: '#059669' },
+		skipped: { title: 'Skipped', text: "Deals you decided weren't right for you. You can always reconsider later.", color: 'var(--text-muted)' }
+	};
+	const currentStageContent = $derived(stageDescriptions[currentTab] || stageDescriptions.filter);
+
 	function clearFilters() {
-		search = ''; assetClass = ''; dealType = ''; strategy = ''; status = '';
-		maxInvest = ''; maxLockup = ''; distributions = ''; minIRR = '';
-		sortBy = 'newest'; showArchived = false; buyBoxApplied = false;
+		search = '';
+		assetClass = '';
+		dealType = '';
+		strategy = '';
+		status = '';
+		maxInvest = '';
+		maxLockup = '';
+		distributions = '';
+		minIRR = '';
+		sortBy = 'newest';
+		showArchived = false;
+		buyBoxApplied = false;
 	}
 
 	function handleDecisionCompareToggle(dealId) {
 		decisionCompareIds.toggle(dealId);
 	}
 
-	function applyLocationFilters() {
-		if (!browser) return;
-		const params = new URLSearchParams(window.location.search);
-		const requestedTab = String(params.get('tab') || '').trim().toLowerCase();
-		if (UI_STAGE_TABS.has(requestedTab)) currentTab = requestedTab;
-	}
-
-	function syncTabInUrl(tab) {
-		if (!browser) return;
-		const params = new URLSearchParams(window.location.search);
-		if (tab === 'browse') params.delete('tab');
-		else params.set('tab', tab);
-		const nextSearch = params.toString();
-		window.history.replaceState({}, '', `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`);
+	async function loadMoreDeals() {
+		await loadMoreMemberDeals().catch(() => {});
 	}
 
 	$effect(() => {
-		if (!browser || currentTab !== 'decision') return;
+		if (!browser || currentTab !== 'decide') return;
 
 		const validIds = filteredDeals.map((deal) => deal.id);
 		const nextIds = $decisionCompareIds
@@ -375,13 +403,40 @@
 		}
 	});
 
+	$effect(() => {
+		if (!browser || !filtersReady) return;
+
+		const request = {
+			scope: currentTab === 'filter' ? 'browse' : 'ids',
+			ids: currentTab === 'filter' ? [] : currentTabIds,
+			excludeIds: currentTab === 'filter' ? excludedBrowseIds : [],
+			search: effectiveFilters.search,
+			assetClass: effectiveFilters.assetClass,
+			dealType: effectiveFilters.dealType,
+			strategy: effectiveFilters.strategy,
+			status: effectiveFilters.status,
+			maxInvest: effectiveFilters.maxInvest,
+			maxLockup: effectiveFilters.maxLockup,
+			distributions: effectiveFilters.distributions,
+			minIRR: effectiveFilters.minIRR,
+			sortBy,
+			showArchived
+		};
+
+		const timer = window.setTimeout(() => {
+			fetchMemberDeals(request).catch(() => {});
+		}, search.trim() ? 150 : 0);
+
+		return () => window.clearTimeout(timer);
+	});
+
 	onMount(() => {
-		applyLocationFilters();
-		fetchDeals();
 		loadBuyBox();
-		applyBuyBoxFromLocation();
+		applyLocationFilters();
 		loadDailyCount();
 		updateResetTimer();
+		filtersReady = true;
+
 		if (browser) {
 			isMobile = window.innerWidth <= 768;
 			const handler = () => { isMobile = window.innerWidth <= 768; };
@@ -422,7 +477,7 @@
 		<FilterBar
 			{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
 			{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
-			totalDeals={filteredDeals.length} avgIRR={avgIRR}
+			totalDeals={totalMatchingDeals} avgIRR={avgIRR}
 			isAdmin={$isAdmin}
 			onadddeal={() => {
 				if (browser) window.location.href = '/app/admin/manage';
@@ -436,16 +491,16 @@
 				else if (key === 'maxInvest') maxInvest = val;
 				else if (key === 'maxLockup') maxLockup = val;
 				else if (key === 'distributions') distributions = val;
-			else if (key === 'minIRR') minIRR = val;
-			else if (key === 'sortBy') sortBy = val;
-			else if (key === 'showArchived') showArchived = val;
-		}}
-		onclear={clearFilters}
-		ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
-	/>
+				else if (key === 'minIRR') minIRR = val;
+				else if (key === 'sortBy') sortBy = val;
+				else if (key === 'showArchived') showArchived = val;
+			}}
+			onclear={clearFilters}
+			ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
+		/>
 	</div>
 
-	{#if !(isMobile && currentTab === 'browse')}
+	{#if !(isMobile && currentTab === 'filter')}
 		<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
 			<div class="stage-copy">
 				<span class="stage-title">{currentStageContent.title}</span>
@@ -454,7 +509,7 @@
 		</div>
 	{/if}
 
-	{#if isFreeUser && !(isMobile && currentTab === 'browse')}
+	{#if isFreeUser && !(isMobile && currentTab === 'filter')}
 		<div class="daily-views">
 			<div class="daily-views-head">
 				<span class="daily-views-text">{dealsRemaining}/{DAILY_LIMIT} deal views left today</span>
@@ -467,7 +522,7 @@
 	{/if}
 
 	<!-- Content -->
-	{#if $dealsLoading}
+	{#if $memberDealsLoading}
 		<div class="loading-state">
 			<div class="skeleton-grid">
 				{#each Array(6) as _}
@@ -480,7 +535,14 @@
 				{/each}
 			</div>
 		</div>
-	{:else if currentTab === 'decision' && filteredDeals.length > 0}
+	{:else if $memberDealsError}
+		<div class="empty-state">
+			<div class="empty-icon">⚠️</div>
+			<div class="empty-title">Couldn’t load deals</div>
+			<div class="empty-desc">{$memberDealsError}</div>
+			<button class="btn-browse" onclick={() => fetchMemberDeals($memberDealsMeta.filters || {}).catch(() => {})}>Try Again</button>
+		</div>
+	{:else if currentTab === 'decide' && filteredDeals.length > 0}
 		<div class="decision-compare-page">
 			<CompareView
 				deals={selectedDecisionDeals}
@@ -536,42 +598,42 @@
 	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
-			{#if hasActiveFilters && currentTab === 'browse'}
+			{#if hasActiveFilters && currentTab === 'filter'}
 				<div class="empty-title">No deals match your filters</div>
 				<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
 				<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
-			{:else if currentTab === 'browse'}
+			{:else if currentTab === 'filter'}
 				<div class="empty-title">No deals available</div>
 				<div class="empty-desc">New deals are added regularly. Check back soon.</div>
-			{:else if currentTab === 'saved'}
+			{:else if currentTab === 'review'}
 				<div class="empty-title">No deals in Review yet</div>
-				<div class="empty-desc">Save deals from Filter to start reviewing. Read the deck, work the checklist, and understand the deal before talking to anyone.</div>
-				<button class="btn-browse" onclick={() => switchTab('browse')}>Go to Filter</button>
-			{:else if currentTab === 'diligence'}
+				<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+				<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+			{:else if currentTab === 'connect'}
 				<div class="empty-title">No deals in Connect yet</div>
 				<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
-				<button class="btn-browse" onclick={() => switchTab('saved')}>Go to Review</button>
-			{:else if currentTab === 'decision'}
+				<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+			{:else if currentTab === 'decide'}
 				<div class="empty-title">No deals in Decide yet</div>
 				<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
-				<button class="btn-browse" onclick={() => switchTab('diligence')}>Go to Connect</button>
+				<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
 			{:else if currentTab === 'invested'}
 				<div class="empty-title">No investments yet</div>
 				<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
-			{:else if currentTab === 'passed'}
+			{:else if currentTab === 'skipped'}
 				<div class="empty-title">No skipped deals</div>
 				<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
 			{:else}
 				<div class="empty-title">Nothing here yet</div>
 				<div class="empty-desc">Start browsing deals to build your pipeline.</div>
-				<button class="btn-browse" onclick={() => switchTab('browse')}>Browse Deals</button>
+				<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 			{/if}
 		</div>
 	{:else if viewMode === 'list' && !isMobile}
 		<DealTable deals={filteredDeals} onopen={(dealId) => { trackDealView(dealId); if (browser) window.location.href = `/deal/${dealId}`; }} />
 	{:else if viewMode === 'map' && !isMobile}
 		<DealMap deals={filteredDeals} />
-	{:else if isMobile && currentTab === 'browse'}
+	{:else if isMobile && currentTab === 'filter'}
 		<SwipeFeed deals={filteredDeals} />
 	{:else}
 		<div class="deals-grid">
@@ -584,6 +646,14 @@
 			{/each}
 		</div>
 	{/if}
+
+	{#if !$memberDealsLoading && !$memberDealsError && $memberDealsMeta.hasMore}
+		<div class="load-more-row">
+			<button class="load-more-btn" onclick={loadMoreDeals} disabled={$memberDealsLoadingMore}>
+				{$memberDealsLoadingMore ? 'Loading more deals...' : `Load More Deals (${filteredDeals.length}/${totalMatchingDeals})`}
+			</button>
+		</div>
+	{/if}
 </div>
 
 <!-- Daily Limit Modal -->
@@ -594,8 +664,16 @@
 		<div class="limit-modal" onclick={(e) => e.stopPropagation()}>
 			<div class="limit-icon">🔒</div>
 			<h2 class="limit-title">You've reached your daily limit</h2>
-			<p class="limit-desc">Free members can view {DAILY_LIMIT} deals per day. Upgrade to Academy for unlimited access to all deals, due diligence tools, and operator introductions.</p>
-			<a href="/app/academy" class="limit-btn">Upgrade to Academy</a>
+			<p class="limit-desc">
+				{#if nativeCompanionMode}
+					Free users can view {DAILY_LIMIT} deals per day in the iOS app. Expanded deal access is available to existing members in their web account.
+				{:else}
+					Free members can view {DAILY_LIMIT} deals per day. Upgrade to Academy for unlimited access to all deals, due diligence tools, and operator introductions.
+				{/if}
+			</p>
+			{#if !nativeCompanionMode}
+				<a href="/app/academy" class="limit-btn">Upgrade to Academy</a>
+			{/if}
 			<button class="limit-dismiss" onclick={() => showLimitModal = false}>Maybe later</button>
 		</div>
 	</div>
@@ -632,7 +710,7 @@
 
 	:global(.pipeline-tabs.desktop-only) {
 		min-width: 0;
-		flex: 1 1 520px;
+		flex: 0 1 auto;
 	}
 
 	.deals-filters {
@@ -859,6 +937,35 @@
 		text-align: center;
 		padding: 80px 32px;
 		grid-column: 1 / -1;
+	}
+
+	.load-more-row {
+		display: flex;
+		justify-content: center;
+		padding: 24px 0 8px;
+	}
+
+	.load-more-btn {
+		padding: 12px 20px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-card);
+		color: var(--text-dark);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.load-more-btn:hover:not(:disabled) {
+		border-color: var(--primary);
+		color: var(--primary);
+	}
+
+	.load-more-btn:disabled {
+		cursor: wait;
+		opacity: 0.7;
 	}
 
 	.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }

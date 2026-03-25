@@ -1,12 +1,12 @@
 <script>
 	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { user, isLoggedIn, isAdmin, isAcademy, userTier } from '$lib/stores/auth.js';
+	import { isAdmin, isLoggedIn, isMember, user } from '$lib/stores/auth.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { browser } from '$app/environment';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
-	const ADMIN_EMAILS = ['pascal@growyourcashflow.com','pascalwagner@gmail.com','pascal.wagner@growyourcashflow.com','info@pascalwagner.com','pascal@growyourcashflow.io'];
 	const SPONSOR_API_URL = '/api/sponsor';
 
 	const BG_CHECK_SOURCES = [
@@ -23,19 +23,10 @@
 	let bgResult = $state(null);
 	let bgLoading = $state(false);
 	let sidebarOpen = $state(false);
+	const nativeCompanionMode = browser && isNativeApp();
 
-	let isPaid = $derived.by(() => {
-		const u = $user;
-		if (!u) return false;
-		const tier = u.tier || 'free';
-		const isAdm = u.email && ADMIN_EMAILS.includes(u.email.toLowerCase());
-		return tier !== 'free' || isAdm;
-	});
-
-	let isAdminUser = $derived.by(() => {
-		const u = $user;
-		return u && u.email && ADMIN_EMAILS.includes(u.email.toLowerCase());
-	});
+	let isPaid = $derived($isMember || $isAdmin);
+	let isAdminUser = $derived($isAdmin);
 
 	function pct(val) {
 		if (val == null) return '--';
@@ -239,16 +230,18 @@
 	async function triggerBgCheck() {
 		bgLoading = true;
 		try {
+			const headers = {
+				'Content-Type': 'application/json',
+				...($user?.token ? { Authorization: `Bearer ${$user.token}` } : {})
+			};
 			const resp = await fetch('/api/background-check', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers,
 				body: JSON.stringify({
 					action: 'run',
 					personName: sponsor.ceo || sponsor.name,
 					companyName: sponsor.name,
-					managementCompanyId: sponsor.id,
-					userEmail: $user?.email || '',
-					userTier: $user?.tier || 'free'
+					managementCompanyId: sponsor.id
 				})
 			});
 			if (!resp.ok) {
@@ -272,7 +265,9 @@
 	async function loadBgReport(s) {
 		if (!isPaid()) return;
 		try {
-			const resp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(s.id));
+			const resp = await fetch('/api/background-check?managementCompanyId=' + encodeURIComponent(s.id), {
+				headers: $user?.token ? { Authorization: `Bearer ${$user.token}` } : {}
+			});
 			if (resp.ok) {
 				const data = await resp.json();
 				if (data.results?.length > 0) {
@@ -318,6 +313,15 @@
 	});
 
 	function toggleSidebar() { sidebarOpen = !sidebarOpen; }
+	function openPersonProfile(name) {
+		goto('/person?name=' + encodeURIComponent(name));
+	}
+	function handlePersonCardKeydown(event, name) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			openPersonProfile(name);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -327,10 +331,16 @@
 <div class="page-layout">
 	<Sidebar currentPage="sponsor" />
 
-	<div class="sidebar-overlay" class:open={sidebarOpen} onclick={() => sidebarOpen = false}></div>
+	<button
+		type="button"
+		class="sidebar-overlay"
+		class:open={sidebarOpen}
+		aria-label="Close sidebar"
+		onclick={() => sidebarOpen = false}
+	></button>
 
 	<div class="mobile-topbar">
-		<button class="mobile-menu-btn" onclick={toggleSidebar}>
+		<button class="mobile-menu-btn" type="button" aria-label="Toggle sidebar" onclick={toggleSidebar}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 		</button>
 		<div class="mobile-topbar-title">{sponsor?.name || 'Sponsor Profile'}</div>
@@ -467,9 +477,17 @@
 									<div class="portfolio-gate-icon">
 										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 									</div>
-									<div class="portfolio-gate-title">Portfolio Data — Academy Only</div>
-									<div class="portfolio-gate-sub">See this operator's full portfolio, property details, and performance metrics.</div>
-									<a href="/app/academy" class="portfolio-gate-btn">Join Academy &rarr;</a>
+									<div class="portfolio-gate-title">{nativeCompanionMode ? 'Portfolio data is available to existing members on the web' : 'Portfolio Data — Academy Only'}</div>
+									<div class="portfolio-gate-sub">
+										{#if nativeCompanionMode}
+											This operator's full portfolio, property details, and performance metrics stay available to existing members on the web.
+										{:else}
+											See this operator's full portfolio, property details, and performance metrics.
+										{/if}
+									</div>
+									{#if !nativeCompanionMode}
+										<a href="/app/academy" class="portfolio-gate-btn">Join Academy &rarr;</a>
+									{/if}
 								</div>
 							{:else}
 								{@const pd = portfolioData()}
@@ -533,7 +551,15 @@
 						<div class="people-grid">
 							{#if sponsor.ceo}
 								{@const regStatus = getCeoRegStatus(bgResult)}
-								<div class="person-card" style="cursor:pointer;" onclick={() => goto('/person?name=' + encodeURIComponent(sponsor.ceo))}>
+								<div
+									class="person-card"
+									style="cursor:pointer;"
+									role="button"
+									tabindex="0"
+									aria-label={`Open profile for ${sponsor.ceo}`}
+									onclick={() => openPersonProfile(sponsor.ceo)}
+									onkeydown={(event) => handlePersonCardKeydown(event, sponsor.ceo)}
+								>
 									{#if sponsor.ceoPhoto}
 										<img class="person-avatar-img" src={sponsor.ceoPhoto} alt={sponsor.ceo} />
 									{:else}
@@ -572,7 +598,15 @@
 							{/if}
 							{#if sponsor.teamMembers?.length}
 								{#each sponsor.teamMembers as member}
-									<div class="person-card" style="cursor:pointer;" onclick={() => goto('/person?name=' + encodeURIComponent(member.name))}>
+									<div
+										class="person-card"
+										style="cursor:pointer;"
+										role="button"
+										tabindex="0"
+										aria-label={`Open profile for ${member.name}`}
+										onclick={() => openPersonProfile(member.name)}
+										onkeydown={(event) => handlePersonCardKeydown(event, member.name)}
+									>
 										{#if member.photo}
 											<img class="person-avatar-img" src={member.photo} alt={member.name} />
 										{:else}
@@ -662,9 +696,17 @@
 								{/each}
 							</div>
 							<div class="bg-report-gate">
-								<div class="bg-report-gate-title">Automated Background Checks</div>
-								<div class="bg-report-gate-sub">Academy members get automated public records searches across 5 government databases for every sponsor.</div>
-								<button class="bg-report-run-btn" onclick={() => window.open('/app/academy', '_blank')}>Join Cashflow Academy &rarr;</button>
+								<div class="bg-report-gate-title">{nativeCompanionMode ? 'Background checks stay available to existing members on the web' : 'Automated Background Checks'}</div>
+								<div class="bg-report-gate-sub">
+									{#if nativeCompanionMode}
+										Automated searches across public government databases remain available to existing members in their web account.
+									{:else}
+										Academy members get automated public records searches across 5 government databases for every sponsor.
+									{/if}
+								</div>
+								{#if !nativeCompanionMode}
+									<button class="bg-report-run-btn" onclick={() => window.open('/app/academy', '_blank')}>Join Cashflow Academy &rarr;</button>
+								{/if}
 							</div>
 						{:else if bgResult}
 							<!-- Has results -->
@@ -826,7 +868,16 @@
 	.mobile-topbar { display: none; position: sticky; top: 0; height: 56px; background: var(--bg-cream); border-bottom: 1px solid var(--border); align-items: center; padding: 0 20px; gap: 12px; z-index: 50; }
 	.mobile-topbar-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.mobile-deals-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
-	.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
+	.sidebar-overlay {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.5);
+		z-index: 99;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+	}
 	.sidebar-overlay.open { display: block; }
 
 	/* Skeleton */

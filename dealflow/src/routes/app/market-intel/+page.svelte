@@ -1,16 +1,19 @@
-<script>
-	import { onMount, onDestroy } from 'svelte';
-	import { deals, fetchDeals } from '$lib/stores/deals.js';
-	import { userTier, isAdmin, isAcademy } from '$lib/stores/auth.js';
+	<script>
+	import { browser } from '$app/environment';
+	import { onMount, onDestroy, tick } from 'svelte';
+	import { accessTier } from '$lib/stores/auth.js';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let activeTab = $state('sec');
 	let charts = $state({});
 	let secData = $state(null);
+	let analyticsDeals = $state([]);
 	let Chart;
+	const nativeCompanionMode = browser && isNativeApp();
 
-	const isFree = $derived($userTier === 'free' && !$isAdmin);
-	const totalDeals = $derived($deals.length);
-	const activeDeals = $derived($deals.filter(d => !d.isStale));
+	const showGate = $derived(['public', 'free'].includes($accessTier));
+	const totalDeals = $derived(analyticsDeals.length);
+	const activeDeals = $derived(analyticsDeals.filter(d => !d.isStale));
 
 	const totalCapital = $derived.by(() => {
 		let cap = 0;
@@ -83,7 +86,7 @@
 	}
 
 	const debtFunds = $derived(
-		$deals.filter(d => d.instrument === 'Debt' || d.strategy === 'Lending').map((f, i) => ({
+		analyticsDeals.filter(d => d.instrument === 'Debt' || d.strategy === 'Lending').map((f, i) => ({
 			...f,
 			_yieldData: generateMonthlyData((f.targetIRR || 0.09) * 100, 12, 0.3),
 			_ltvData: generateMonthlyData((f.avgLoanLTV || 0.65) * 100, 12, 2),
@@ -150,6 +153,20 @@
 		Chart = mod.default || mod.Chart;
 	}
 
+	async function loadMarketIntelData() {
+		try {
+			const response = await fetch('/api/market-intel');
+			if (!response.ok) throw new Error(`Market intel load failed: ${response.status}`);
+			const payload = await response.json();
+			analyticsDeals = payload?.deals || [];
+			secData = payload?.secData || null;
+		} catch (error) {
+			console.warn('Market intel data not available:', error.message);
+			analyticsDeals = [];
+			secData = null;
+		}
+	}
+
 	async function renderSECCharts() {
 		if (!secData || !Chart) return;
 		const qs = secData.quarters || [];
@@ -162,7 +179,7 @@
 			elements: { point: { radius: 3, hoverRadius: 5 }, line: { tension: 0.3 } }
 		};
 
-		await new Promise(r => setTimeout(r, 50));
+		await tick();
 
 		const c1 = document.getElementById('secNewFilingsChart');
 		if (c1) charts.secNewFilings = new Chart(c1, { type: 'line', data: { labels, datasets: [{ label: 'New Filings', data: qs.map(q => q.new_filings), borderColor: '#3B9DDD', backgroundColor: '#3B9DDD22', fill: true, borderWidth: 2 }] }, options: lineOpts });
@@ -194,7 +211,7 @@
 
 	async function renderDealInsightCharts() {
 		if (!Chart || !activeDeals.length) return;
-		await new Promise(r => setTimeout(r, 50));
+		await tick();
 		const ds = activeDeals;
 		const primary = '#51BE7B';
 		const primaryLight = '#51BE7B44';
@@ -348,7 +365,7 @@
 
 	async function renderDebtChart() {
 		if (!Chart) return;
-		await new Promise(r => setTimeout(r, 50));
+		await tick();
 		if (charts.debtFund?.destroy) charts.debtFund.destroy();
 		const ctx = document.getElementById('debtFundChart');
 		if (!ctx) return;
@@ -370,13 +387,13 @@
 	}
 
 	async function renderDealFlowCharts() {
-		if (!Chart || !$deals.length) return;
-		await new Promise(r => setTimeout(r, 50));
+		if (!Chart || !analyticsDeals.length) return;
+		await tick();
 		const now = new Date();
 		const twelveMonthsAgo = new Date(now);
 		twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-		const dealsWithDates = $deals.map(d => {
+		const dealsWithDates = analyticsDeals.map(d => {
 			const dateStr = d.addedDate || d.createdTime || '';
 			const date = dateStr ? new Date(dateStr) : null;
 			return { ...d, parsedDate: date };
@@ -520,7 +537,7 @@
 		const thirtyDaysAgo = new Date(now);
 		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-		const dealsWithDates = $deals.map(d => {
+		const dealsWithDates = analyticsDeals.map(d => {
 			const dateStr = d.addedDate || d.createdTime || '';
 			const date = dateStr ? new Date(dateStr) : null;
 			return { ...d, parsedDate: date };
@@ -576,7 +593,7 @@
 		});
 
 		return {
-			totalDeals: $deals.length,
+			totalDeals: analyticsDeals.length,
 			recentCount: recentDeals.length,
 			avgPerMonth,
 			streak,
@@ -592,10 +609,6 @@
 		activeTab = tab;
 		if (tab === 'sec' && !tabsRendered.sec) {
 			tabsRendered.sec = true;
-			try {
-				const res = await fetch('/data/sec-market-data.json');
-				secData = await res.json();
-			} catch (e) { console.warn('SEC data not available:', e.message); }
 			await renderSECCharts();
 		}
 		if (tab === 'deals' && !tabsRendered.deals) {
@@ -613,7 +626,7 @@
 	}
 
 	onMount(async () => {
-		await Promise.all([fetchDeals(), loadChartJs()]);
+		await Promise.all([loadMarketIntelData(), loadChartJs()]);
 		switchTab('sec');
 	});
 
@@ -633,17 +646,24 @@
 		{/each}
 	</div>
 
-	<!-- Gate overlay for free users -->
-	{#if isFree}
+	{#snippet miGate()}
 		<div class="mi-gate-overlay">
 			<div class="mi-gate-card">
 				<div class="mi-gate-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
-				<h2>Unlock Full Market Intelligence</h2>
-				<p>Get SEC filing trends, asset class benchmarks, deal flow analytics, and more with Academy membership.</p>
-				<a href="/app/academy">Join Academy &rarr;</a>
+				<h2>{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Full Market Intelligence'}</h2>
+				<p>
+					{#if nativeCompanionMode}
+						Full SEC filing trends, asset class benchmarks, and deal flow analytics remain available to existing members in their web account.
+					{:else}
+						Get SEC filing trends, asset class benchmarks, deal flow analytics, and more with Academy membership.
+					{/if}
+				</p>
+				{#if !nativeCompanionMode}
+					<a href="/app/academy">Join Academy &rarr;</a>
+				{/if}
 			</div>
 		</div>
-	{/if}
+	{/snippet}
 
 	<!-- SEC Tab -->
 	{#if activeTab === 'sec'}
@@ -653,28 +673,35 @@
 				<h2>SEC Form D Filings -- All Private Placements</h2>
 			</div>
 			<p class="mi-section-desc">Every Regulation D filing since 2008 -- this is the entire U.S. private placement market, not just our database.</p>
-			<div class="stat-cards">
-				<div class="stat-card"><div class="stat-label">Total Form D Filings</div><div class="stat-value">{secStats?.totalFilings || '--'}</div><div class="stat-sub">Since Q3 2008</div></div>
-				<div class="stat-card"><div class="stat-label">Capital Raised</div><div class="stat-value">{secStats?.totalCapital || '--'}</div><div class="stat-sub">Total amount sold</div></div>
-				<div class="stat-card"><div class="stat-label">506(b) Share</div><div class="stat-value">{secStats?.pct506b || '--'}</div><div class="stat-sub">Latest quarter</div></div>
-				<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{secStats?.medianMin || '--'}</div><div class="stat-sub">Across all filings</div></div>
-				<div class="stat-card"><div class="stat-label">Real Estate Filings</div><div class="stat-value">{secStats?.reFilings || '--'}</div><div class="stat-sub">RE + Commercial + Residential</div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>New Form D Filings Per Quarter</h3><p>The pace of new private offerings entering the U.S. market</p><div class="chart-wrap"><canvas id="secNewFilingsChart"></canvas></div></div>
-				<div class="chart-card"><h3>Capital Raised Per Quarter</h3><p>Total dollars flowing into private placements each quarter</p><div class="chart-wrap"><canvas id="secCapitalChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>506(b) vs 506(c) -- Market Share</h3><p>Is the market shifting toward publicly-marketed offerings?</p><div class="chart-wrap"><canvas id="sec506TrendChart"></canvas></div></div>
-				<div class="chart-card"><h3>Equity vs Debt Offerings</h3><p>The rise of debt strategies across the entire market</p><div class="chart-wrap"><canvas id="secEquityDebtChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Top Industries by Filing Volume</h3><p>Where private capital is concentrating</p><div class="chart-wrap tall"><canvas id="secIndustryChart"></canvas></div></div>
-				<div class="chart-card"><h3>Real Estate Filings Over Time</h3><p>RE private placement activity vs the broader market</p><div class="chart-wrap"><canvas id="secREChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Median Minimum Investment</h3><p>How accessible is the private market getting?</p><div class="chart-wrap"><canvas id="secMinInvChart"></canvas></div></div>
-				<div class="chart-card"><h3>Non-Accredited Investor Access</h3><p>% of filings accepting non-accredited investors</p><div class="chart-wrap"><canvas id="secNonAccreditedChart"></canvas></div></div>
+			<div class="mi-gated-shell" class:gated={showGate}>
+				{#if showGate}
+					{@render miGate()}
+				{/if}
+				<div class="mi-gated-content" class:blurred={showGate}>
+					<div class="stat-cards">
+						<div class="stat-card"><div class="stat-label">Total Form D Filings</div><div class="stat-value">{secStats?.totalFilings || '--'}</div><div class="stat-sub">Since Q3 2008</div></div>
+						<div class="stat-card"><div class="stat-label">Capital Raised</div><div class="stat-value">{secStats?.totalCapital || '--'}</div><div class="stat-sub">Total amount sold</div></div>
+						<div class="stat-card"><div class="stat-label">506(b) Share</div><div class="stat-value">{secStats?.pct506b || '--'}</div><div class="stat-sub">Latest quarter</div></div>
+						<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{secStats?.medianMin || '--'}</div><div class="stat-sub">Across all filings</div></div>
+						<div class="stat-card"><div class="stat-label">Real Estate Filings</div><div class="stat-value">{secStats?.reFilings || '--'}</div><div class="stat-sub">RE + Commercial + Residential</div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>New Form D Filings Per Quarter</h3><p>The pace of new private offerings entering the U.S. market</p><div class="chart-wrap"><canvas id="secNewFilingsChart"></canvas></div></div>
+						<div class="chart-card"><h3>Capital Raised Per Quarter</h3><p>Total dollars flowing into private placements each quarter</p><div class="chart-wrap"><canvas id="secCapitalChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>506(b) vs 506(c) -- Market Share</h3><p>Is the market shifting toward publicly-marketed offerings?</p><div class="chart-wrap"><canvas id="sec506TrendChart"></canvas></div></div>
+						<div class="chart-card"><h3>Equity vs Debt Offerings</h3><p>The rise of debt strategies across the entire market</p><div class="chart-wrap"><canvas id="secEquityDebtChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Top Industries by Filing Volume</h3><p>Where private capital is concentrating</p><div class="chart-wrap tall"><canvas id="secIndustryChart"></canvas></div></div>
+						<div class="chart-card"><h3>Real Estate Filings Over Time</h3><p>RE private placement activity vs the broader market</p><div class="chart-wrap"><canvas id="secREChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Median Minimum Investment</h3><p>How accessible is the private market getting?</p><div class="chart-wrap"><canvas id="secMinInvChart"></canvas></div></div>
+						<div class="chart-card"><h3>Non-Accredited Investor Access</h3><p>% of filings accepting non-accredited investors</p><div class="chart-wrap"><canvas id="secNonAccreditedChart"></canvas></div></div>
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -687,78 +714,85 @@
 				<h2>Deal-Level Insights From Reviewed Offerings</h2>
 			</div>
 			<p class="mi-section-desc">Data the SEC doesn't track -- actual target returns, pref returns, fee structures, and LP/GP splits from term sheets we've reviewed.</p>
-			<div class="stat-cards">
-				<div class="stat-card"><div class="stat-label">Median Target IRR</div><div class="stat-value">{dealInsightStats?.medIRR || '--'}</div><div class="stat-sub">Range: {dealInsightStats?.irrRange}</div></div>
-				<div class="stat-card"><div class="stat-label">Median Pref Return</div><div class="stat-value">{dealInsightStats?.medPref || '--'}</div><div class="stat-sub">{dealInsightStats?.prefCount} deals report a pref</div></div>
-				<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{dealInsightStats?.medMin || '--'}</div><div class="stat-sub">{dealInsightStats?.minCount} deals with minimums</div></div>
-				<div class="stat-card"><div class="stat-label">Most Common Split</div><div class="stat-value">{dealInsightStats?.topSplit || '--'}</div><div class="stat-sub">{dealInsightStats?.splitNote}</div></div>
-				<div class="stat-card"><div class="stat-label">Audited Financials</div><div class="stat-value">{dealInsightStats?.auditPct || '--'}</div><div class="stat-sub">{dealInsightStats?.auditNote}</div></div>
-			</div>
-
-			<!-- Distribution Charts -->
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Target IRR Distribution</h3><p>What sponsors are promising across {activeDeals.filter(d => d.targetIRR && d.targetIRR > 0).length} deals</p><div class="chart-wrap"><canvas id="miIRRChart"></canvas></div></div>
-				<div class="chart-card"><h3>Deals by Asset Class</h3><p>Multi-Family dominates but alternatives are growing</p><div class="chart-wrap"><canvas id="miAssetClassChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Avg Target IRR by Asset Class</h3><p>Higher returns come with higher risk</p><div class="chart-wrap tall"><canvas id="miIRRByAssetChart"></canvas></div></div>
-				<div class="chart-card"><h3>LP/GP Profit Splits</h3><p>70/30 has overtaken 80/20 as the new standard</p><div class="chart-wrap tall"><canvas id="miSplitChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Minimum Investment Tiers</h3><p>Most deals require $50K-$100K to get in</p><div class="chart-wrap"><canvas id="miMinChart"></canvas></div></div>
-				<div class="chart-card"><h3>Distribution Frequency</h3><p>How often sponsors pay you back</p><div class="chart-wrap"><canvas id="miDistChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Financial Audit Status</h3><p>Only a small fraction of sponsors get audited</p><div class="chart-wrap"><canvas id="miAuditChart"></canvas></div></div>
-				<div class="chart-card"><h3>506(b) vs 506(c) Offerings</h3><p>Can the deal legally advertise to you?</p><div class="chart-wrap"><canvas id="mi506Chart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Investment Strategy</h3><p>Lending and Value-Add dominate the market</p><div class="chart-wrap"><canvas id="miStrategyChart"></canvas></div></div>
-				<div class="chart-card"><h3>Hold Period Distribution</h3><p>How long your money is locked up</p><div class="chart-wrap"><canvas id="miHoldChart"></canvas></div></div>
-			</div>
-
-			<!-- Trend Charts Section -->
-			<div class="trend-section-header">
-				<h2>Trends Over Time</h2>
-				<p>How deal terms and market dynamics are shifting quarter by quarter.</p>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>New Offerings Per Quarter</h3><p>How fast the deal pipeline is growing</p><div class="chart-wrap"><canvas id="miNewDealsChart"></canvas></div></div>
-				<div class="chart-card"><h3>Cumulative Capital Raised</h3><p>Total capital tracked in the database over time</p><div class="chart-wrap"><canvas id="miCumCapitalChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Average Target IRR Over Time</h3><p>Are sponsors lowering their promises?</p><div class="chart-wrap"><canvas id="miIRRTrendChart"></canvas></div></div>
-				<div class="chart-card"><h3>Average Pref Return Over Time</h3><p>Preferred return trends across the market</p><div class="chart-wrap"><canvas id="miPrefTrendChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Average Minimum Investment</h3><p>Are deals getting more or less accessible?</p><div class="chart-wrap"><canvas id="miMinTrendChart"></canvas></div></div>
-				<div class="chart-card"><h3>Average Offering Size</h3><p>How large are deals getting?</p><div class="chart-wrap"><canvas id="miOfferSizeTrendChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Multi-Family Market Share</h3><p>Is the multifamily dominance increasing or waning?</p><div class="chart-wrap"><canvas id="miMFShareChart"></canvas></div></div>
-				<div class="chart-card"><h3>506(b) Share Over Time</h3><p>Percentage of 506(b) filings in our database</p><div class="chart-wrap"><canvas id="mi506TrendDealChart"></canvas></div></div>
-			</div>
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Lending vs Equity Deals</h3><p>The rise of private lending in real estate</p><div class="chart-wrap"><canvas id="miLendVsEquityChart"></canvas></div></div>
-				<div class="chart-card"><h3>Audit Rate Over Time</h3><p>Are more sponsors getting audited?</p><div class="chart-wrap"><canvas id="miAuditTrendChart"></canvas></div></div>
-			</div>
-
-			<!-- Key Insights -->
-			{#if keyInsights.length}
-				<div class="insights-section">
-					<h2>Key Insights</h2>
-					<div class="insights-grid">
-						{#each keyInsights as insight}
-							<div class="insight-card">
-								<div class="insight-title">{insight.title}</div>
-								<div class="insight-body">{insight.body}</div>
-							</div>
-						{/each}
+			<div class="mi-gated-shell" class:gated={showGate}>
+				{#if showGate}
+					{@render miGate()}
+				{/if}
+				<div class="mi-gated-content" class:blurred={showGate}>
+					<div class="stat-cards">
+						<div class="stat-card"><div class="stat-label">Median Target IRR</div><div class="stat-value">{dealInsightStats?.medIRR || '--'}</div><div class="stat-sub">Range: {dealInsightStats?.irrRange}</div></div>
+						<div class="stat-card"><div class="stat-label">Median Pref Return</div><div class="stat-value">{dealInsightStats?.medPref || '--'}</div><div class="stat-sub">{dealInsightStats?.prefCount} deals report a pref</div></div>
+						<div class="stat-card"><div class="stat-label">Median Minimum</div><div class="stat-value">{dealInsightStats?.medMin || '--'}</div><div class="stat-sub">{dealInsightStats?.minCount} deals with minimums</div></div>
+						<div class="stat-card"><div class="stat-label">Most Common Split</div><div class="stat-value">{dealInsightStats?.topSplit || '--'}</div><div class="stat-sub">{dealInsightStats?.splitNote}</div></div>
+						<div class="stat-card"><div class="stat-label">Audited Financials</div><div class="stat-value">{dealInsightStats?.auditPct || '--'}</div><div class="stat-sub">{dealInsightStats?.auditNote}</div></div>
 					</div>
-				</div>
-			{/if}
 
-			<div class="mi-disclaimer">Data sourced from GYC deal database. This is market research, not investment advice. Past performance does not guarantee future results.</div>
+					<!-- Distribution Charts -->
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Target IRR Distribution</h3><p>What sponsors are promising across {activeDeals.filter(d => d.targetIRR && d.targetIRR > 0).length} deals</p><div class="chart-wrap"><canvas id="miIRRChart"></canvas></div></div>
+						<div class="chart-card"><h3>Deals by Asset Class</h3><p>Multi-Family dominates but alternatives are growing</p><div class="chart-wrap"><canvas id="miAssetClassChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Avg Target IRR by Asset Class</h3><p>Higher returns come with higher risk</p><div class="chart-wrap tall"><canvas id="miIRRByAssetChart"></canvas></div></div>
+						<div class="chart-card"><h3>LP/GP Profit Splits</h3><p>70/30 has overtaken 80/20 as the new standard</p><div class="chart-wrap tall"><canvas id="miSplitChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Minimum Investment Tiers</h3><p>Most deals require $50K-$100K to get in</p><div class="chart-wrap"><canvas id="miMinChart"></canvas></div></div>
+						<div class="chart-card"><h3>Distribution Frequency</h3><p>How often sponsors pay you back</p><div class="chart-wrap"><canvas id="miDistChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Financial Audit Status</h3><p>Only a small fraction of sponsors get audited</p><div class="chart-wrap"><canvas id="miAuditChart"></canvas></div></div>
+						<div class="chart-card"><h3>506(b) vs 506(c) Offerings</h3><p>Can the deal legally advertise to you?</p><div class="chart-wrap"><canvas id="mi506Chart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Investment Strategy</h3><p>Lending and Value-Add dominate the market</p><div class="chart-wrap"><canvas id="miStrategyChart"></canvas></div></div>
+						<div class="chart-card"><h3>Hold Period Distribution</h3><p>How long your money is locked up</p><div class="chart-wrap"><canvas id="miHoldChart"></canvas></div></div>
+					</div>
+
+					<!-- Trend Charts Section -->
+					<div class="trend-section-header">
+						<h2>Trends Over Time</h2>
+						<p>How deal terms and market dynamics are shifting quarter by quarter.</p>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>New Offerings Per Quarter</h3><p>How fast the deal pipeline is growing</p><div class="chart-wrap"><canvas id="miNewDealsChart"></canvas></div></div>
+						<div class="chart-card"><h3>Cumulative Capital Raised</h3><p>Total capital tracked in the database over time</p><div class="chart-wrap"><canvas id="miCumCapitalChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Average Target IRR Over Time</h3><p>Are sponsors lowering their promises?</p><div class="chart-wrap"><canvas id="miIRRTrendChart"></canvas></div></div>
+						<div class="chart-card"><h3>Average Pref Return Over Time</h3><p>Preferred return trends across the market</p><div class="chart-wrap"><canvas id="miPrefTrendChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Average Minimum Investment</h3><p>Are deals getting more or less accessible?</p><div class="chart-wrap"><canvas id="miMinTrendChart"></canvas></div></div>
+						<div class="chart-card"><h3>Average Offering Size</h3><p>How large are deals getting?</p><div class="chart-wrap"><canvas id="miOfferSizeTrendChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Multi-Family Market Share</h3><p>Is the multifamily dominance increasing or waning?</p><div class="chart-wrap"><canvas id="miMFShareChart"></canvas></div></div>
+						<div class="chart-card"><h3>506(b) Share Over Time</h3><p>Percentage of 506(b) filings in our database</p><div class="chart-wrap"><canvas id="mi506TrendDealChart"></canvas></div></div>
+					</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Lending vs Equity Deals</h3><p>The rise of private lending in real estate</p><div class="chart-wrap"><canvas id="miLendVsEquityChart"></canvas></div></div>
+						<div class="chart-card"><h3>Audit Rate Over Time</h3><p>Are more sponsors getting audited?</p><div class="chart-wrap"><canvas id="miAuditTrendChart"></canvas></div></div>
+					</div>
+
+					<!-- Key Insights -->
+					{#if keyInsights.length}
+						<div class="insights-section">
+							<h2>Key Insights</h2>
+							<div class="insights-grid">
+								{#each keyInsights as insight}
+									<div class="insight-card">
+										<div class="insight-title">{insight.title}</div>
+										<div class="insight-body">{insight.body}</div>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+					<div class="mi-disclaimer">Data sourced from GYC deal database. This is market research, not investment advice. Past performance does not guarantee future results.</div>
+				</div>
+			</div>
 		</div>
 	{/if}
 
@@ -767,71 +801,77 @@
 		<div class="mi-section">
 			<h2 class="df-title">Deal Flow Stats</h2>
 			<p class="mi-section-desc">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>
+			<div class="mi-gated-shell" class:gated={showGate}>
+				{#if showGate}
+					{@render miGate()}
+				{/if}
+				<div class="mi-gated-content" class:blurred={showGate}>
+					<div class="stat-cards">
+						<div class="stat-card" style="text-align:center;"><div class="stat-label">Total Deals</div><div class="stat-value">{dealFlowStats.totalDeals}</div></div>
+						<div class="stat-card" style="text-align:center;"><div class="stat-label">Last 30 Days</div><div class="stat-value" style="color:#2C6E49;">{dealFlowStats.recentCount}</div></div>
+						<div class="stat-card" style="text-align:center;"><div class="stat-label">Avg / Month</div><div class="stat-value">{dealFlowStats.avgPerMonth}</div></div>
+						<div class="stat-card" style="text-align:center;"><div class="stat-label">Week Streak</div><div class="stat-value" style="color:#D68C45;">{dealFlowStats.streak}</div><div class="stat-sub">consecutive weeks</div></div>
+					</div>
 
-			<div class="stat-cards">
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Total Deals</div><div class="stat-value">{dealFlowStats.totalDeals}</div></div>
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Last 30 Days</div><div class="stat-value" style="color:#2C6E49;">{dealFlowStats.recentCount}</div></div>
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Avg / Month</div><div class="stat-value">{dealFlowStats.avgPerMonth}</div></div>
-				<div class="stat-card" style="text-align:center;"><div class="stat-label">Week Streak</div><div class="stat-value" style="color:#D68C45;">{dealFlowStats.streak}</div><div class="stat-sub">consecutive weeks</div></div>
-			</div>
+					<div class="chart-card" style="margin-bottom:24px;">
+						<h3>New Deals Added Per Month</h3>
+						<p>Last 12 months of deal sourcing activity</p>
+						<div class="chart-wrap"><canvas id="dealFlowBarChart"></canvas></div>
+					</div>
 
-			<div class="chart-card" style="margin-bottom:24px;">
-				<h3>New Deals Added Per Month</h3>
-				<p>Last 12 months of deal sourcing activity</p>
-				<div class="chart-wrap"><canvas id="dealFlowBarChart"></canvas></div>
-			</div>
+					<div class="chart-grid-2">
+						<div class="chart-card"><h3>Deal Sources</h3><p>Where deals are found</p><div class="chart-wrap" style="height:240px;"><canvas id="dealSourcePieChart"></canvas></div></div>
+						<div class="chart-card"><h3>Asset Classes</h3><p>Investment categories in the database</p><div class="chart-wrap" style="height:240px;"><canvas id="dealAssetPieChart"></canvas></div></div>
+					</div>
 
-			<div class="chart-grid-2">
-				<div class="chart-card"><h3>Deal Sources</h3><p>Where deals are found</p><div class="chart-wrap" style="height:240px;"><canvas id="dealSourcePieChart"></canvas></div></div>
-				<div class="chart-card"><h3>Asset Classes</h3><p>Investment categories in the database</p><div class="chart-wrap" style="height:240px;"><canvas id="dealAssetPieChart"></canvas></div></div>
-			</div>
-
-			<div class="df-bottom-grid">
-				<!-- Deal Types -->
-				<div class="chart-card">
-					<h3>Deal Types</h3>
-					{#each dealFlowStats.dealTypes as [type, count]}
-						<div class="df-type-row">
-							<span class="df-type-name">{type}</span>
-							<span class="df-type-count">{count} ({Math.round(count / (dealFlowStats.totalDeals || 1) * 100)}%)</span>
+					<div class="df-bottom-grid">
+						<!-- Deal Types -->
+						<div class="chart-card">
+							<h3>Deal Types</h3>
+							{#each dealFlowStats.dealTypes as [type, count]}
+								<div class="df-type-row">
+									<span class="df-type-name">{type}</span>
+									<span class="df-type-count">{count} ({Math.round(count / (dealFlowStats.totalDeals || 1) * 100)}%)</span>
+								</div>
+							{/each}
 						</div>
-					{/each}
-				</div>
 
-				<!-- Recent Deals -->
-				<div class="chart-card">
-					<h3>Recently Added Deals</h3>
-					<div class="df-recent-table-wrap">
-						<table class="df-recent-table">
-							<thead>
-								<tr>
-									<th>Deal</th>
-									<th>Type</th>
-									<th>Asset Class</th>
-									<th style="text-align:right;">Added</th>
-								</tr>
-							</thead>
-							<tbody>
-								{#each dealFlowStats.recentDeals as d}
-									<tr>
-										<td class="df-deal-name">{d.name || d.investmentName || '--'}</td>
-										<td>{d.dealType || '--'}</td>
-										<td>{Array.isArray(d.assetClass) ? (d.assetClass[0] || '--') : (d.assetClass || '--')}</td>
-										<td style="text-align:right;color:var(--text-muted);">{d.parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
-									</tr>
-								{:else}
-									<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">No recent deals</td></tr>
-								{/each}
-							</tbody>
-						</table>
+						<!-- Recent Deals -->
+						<div class="chart-card">
+							<h3>Recently Added Deals</h3>
+							<div class="df-recent-table-wrap">
+								<table class="df-recent-table">
+									<thead>
+										<tr>
+											<th>Deal</th>
+											<th>Type</th>
+											<th>Asset Class</th>
+											<th style="text-align:right;">Added</th>
+										</tr>
+									</thead>
+									<tbody>
+										{#each dealFlowStats.recentDeals as d}
+											<tr>
+												<td class="df-deal-name">{d.name || d.investmentName || '--'}</td>
+												<td>{d.dealType || '--'}</td>
+												<td>{Array.isArray(d.assetClass) ? (d.assetClass[0] || '--') : (d.assetClass || '--')}</td>
+												<td style="text-align:right;color:var(--text-muted);">{d.parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</td>
+											</tr>
+										{:else}
+											<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">No recent deals</td></tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+
+					<!-- Value prop footer -->
+					<div class="df-footer">
+						<div class="df-footer-title">This database can't be rebuilt overnight.</div>
+						<div class="df-footer-desc">With {dealFlowStats.totalDeals} deals tracked, {dealFlowStats.assetClassCount} asset classes, and new opportunities sourced weekly -- this is the most comprehensive private placement database available to LP investors.</div>
 					</div>
 				</div>
-			</div>
-
-			<!-- Value prop footer -->
-			<div class="df-footer">
-				<div class="df-footer-title">This database can't be rebuilt overnight.</div>
-				<div class="df-footer-desc">With {dealFlowStats.totalDeals} deals tracked, {dealFlowStats.assetClassCount} asset classes, and new opportunities sourced weekly -- this is the most comprehensive private placement database available to LP investors.</div>
 			</div>
 		</div>
 	{/if}
@@ -840,62 +880,69 @@
 	{#if activeTab === 'debtfunds'}
 		<div class="mi-section">
 			<p class="mi-section-desc">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</p>
-			<div class="debt-filters">
-				<div class="filter-group"><label>Financials</label><select bind:value={debtFinancials} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Audited">Audited</option><option value="Unaudited">Unaudited</option></select></div>
-				<div class="filter-group"><label>AUM Size</label><select bind:value={debtAUM} onchange={() => renderDebtChart()}><option value="all">All</option><option value="small">Small (&lt;$100M)</option><option value="mid">Mid ($100M-$1B)</option><option value="institutional">Institutional ($1B+)</option></select></div>
-				<div class="filter-group"><label>Debt Position</label><select bind:value={debtPosition} onchange={() => renderDebtChart()}><option value="all">All</option><option value="1st">1st Position</option><option value="2nd">2nd Position</option><option value="Mezzanine">Mezzanine</option></select></div>
-				<div class="filter-group"><label>Distributions</label><select bind:value={debtDistribution} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option></select></div>
-				<div class="filter-group"><label>Min Investment</label><select bind:value={debtMinimum} onchange={() => renderDebtChart()}><option value="all">All</option><option value="25000">Under $25K</option><option value="50000">Under $50K</option><option value="100000">Under $100K</option></select></div>
-				<div class="filter-group"><label>2025 Return</label><select bind:value={debtYield} onchange={() => renderDebtChart()}><option value="all">All</option><option value="8">8%+</option><option value="9">9%+</option><option value="10">10%+</option></select></div>
-				<div class="filter-group" style="flex:1;min-width:140px;"><label>Search</label><input type="text" bind:value={debtSearch} oninput={() => renderDebtChart()} placeholder="Search funds..."></div>
-				<button class="btn-clear" onclick={clearDebtFilters}>Clear Filters</button>
-			</div>
-			<div class="stat-cards">
-				<div class="stat-card"><div class="stat-label">Total Debt Funds</div><div class="stat-value" style="color:var(--primary);">{debtStats.count} <span style="color:var(--text-muted);font-size:18px;">/ {debtStats.total}</span></div></div>
-				<div class="stat-card"><div class="stat-label">Average Yield</div><div class="stat-value" style="color:#51BE7B;">{debtStats.avgYield}%</div></div>
-				<div class="stat-card"><div class="stat-label">Average LTV</div><div class="stat-value" style="color:#E67E22;">{debtStats.avgLTV}%</div></div>
-				<div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value" style="color:#3B82F6;">{debtStats.totalAUM}</div></div>
-			</div>
-			<div class="chart-card" style="margin-bottom:24px;">
-				<div class="debt-chart-header">
-					<h3>Fund Comparison</h3>
-					<div class="debt-metric-toggles">
-						{#each [['yield','Yield'],['leverage','Leverage'],['ltv','Loan-to-Value'],['delinquency','Delinquency Rate']] as [key, label]}
-							<button class:active={debtChartMetric === key} onclick={() => { debtChartMetric = key; renderDebtChart(); }}>{label}</button>
-						{/each}
+			<div class="mi-gated-shell" class:gated={showGate}>
+				{#if showGate}
+					{@render miGate()}
+				{/if}
+				<div class="mi-gated-content" class:blurred={showGate}>
+					<div class="debt-filters">
+						<div class="filter-group"><label for="debt-financials">Financials</label><select id="debt-financials" bind:value={debtFinancials} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Audited">Audited</option><option value="Unaudited">Unaudited</option></select></div>
+						<div class="filter-group"><label for="debt-aum">AUM Size</label><select id="debt-aum" bind:value={debtAUM} onchange={() => renderDebtChart()}><option value="all">All</option><option value="small">Small (&lt;$100M)</option><option value="mid">Mid ($100M-$1B)</option><option value="institutional">Institutional ($1B+)</option></select></div>
+						<div class="filter-group"><label for="debt-position">Debt Position</label><select id="debt-position" bind:value={debtPosition} onchange={() => renderDebtChart()}><option value="all">All</option><option value="1st">1st Position</option><option value="2nd">2nd Position</option><option value="Mezzanine">Mezzanine</option></select></div>
+						<div class="filter-group"><label for="debt-distribution">Distributions</label><select id="debt-distribution" bind:value={debtDistribution} onchange={() => renderDebtChart()}><option value="all">All</option><option value="Monthly">Monthly</option><option value="Quarterly">Quarterly</option></select></div>
+						<div class="filter-group"><label for="debt-minimum">Min Investment</label><select id="debt-minimum" bind:value={debtMinimum} onchange={() => renderDebtChart()}><option value="all">All</option><option value="25000">Under $25K</option><option value="50000">Under $50K</option><option value="100000">Under $100K</option></select></div>
+						<div class="filter-group"><label for="debt-yield">2025 Return</label><select id="debt-yield" bind:value={debtYield} onchange={() => renderDebtChart()}><option value="all">All</option><option value="8">8%+</option><option value="9">9%+</option><option value="10">10%+</option></select></div>
+						<div class="filter-group" style="flex:1;min-width:140px;"><label for="debt-search">Search</label><input id="debt-search" type="text" bind:value={debtSearch} oninput={() => renderDebtChart()} placeholder="Search funds..."></div>
+						<button class="btn-clear" onclick={clearDebtFilters}>Clear Filters</button>
+					</div>
+					<div class="stat-cards">
+						<div class="stat-card"><div class="stat-label">Total Debt Funds</div><div class="stat-value" style="color:var(--primary);">{debtStats.count} <span style="color:var(--text-muted);font-size:18px;">/ {debtStats.total}</span></div></div>
+						<div class="stat-card"><div class="stat-label">Average Yield</div><div class="stat-value" style="color:#51BE7B;">{debtStats.avgYield}%</div></div>
+						<div class="stat-card"><div class="stat-label">Average LTV</div><div class="stat-value" style="color:#E67E22;">{debtStats.avgLTV}%</div></div>
+						<div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value" style="color:#3B82F6;">{debtStats.totalAUM}</div></div>
+					</div>
+					<div class="chart-card" style="margin-bottom:24px;">
+						<div class="debt-chart-header">
+							<h3>Fund Comparison</h3>
+							<div class="debt-metric-toggles">
+								{#each [['yield','Yield'],['leverage','Leverage'],['ltv','Loan-to-Value'],['delinquency','Delinquency Rate']] as [key, label]}
+									<button class:active={debtChartMetric === key} onclick={() => { debtChartMetric = key; renderDebtChart(); }}>{label}</button>
+								{/each}
+							</div>
+						</div>
+						<div class="chart-wrap" style="height:360px;"><canvas id="debtFundChart"></canvas></div>
+						<div class="debt-chart-note">Compare reported fund trends by yield, leverage, loan-to-value, and delinquency using the selectors above.</div>
+					</div>
+					<div class="debt-table-wrap">
+						<table class="debt-table">
+							<thead>
+								<tr>
+									<th onclick={() => { if (debtSortCol === 'investmentName') debtSortAsc = !debtSortAsc; else { debtSortCol = 'investmentName'; debtSortAsc = true; } }}>Fund Name</th>
+									<th>Debt Position</th>
+									<th>AUM</th>
+									<th>Financials</th>
+									<th>2025</th><th>2024</th><th>2023</th><th>2022</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each filteredDebtFunds.sort((a, b) => { let va = a[debtSortCol] || '', vb = b[debtSortCol] || ''; if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase(); return debtSortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }) as fund (fund.id)}
+									<tr class:highlighted={highlightedDebtFunds.has(fund.id)} onclick={() => { if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id); else highlightedDebtFunds.add(fund.id); highlightedDebtFunds = new Set(highlightedDebtFunds); renderDebtChart(); }}>
+										<td class="name-cell"><a href="/app/deals?id={fund.id}" onclick={(e) => e.stopPropagation()}>{fund.investmentName}</a></td>
+										<td>{fund.debtPosition || '--'}</td>
+										<td>{fmtAUM(fund.fundAUM)}</td>
+										<td><span class="fin-badge" class:audited={fund.financials === 'Audited'} class:unaudited={fund.financials === 'Unaudited'}>{fund.financials || '--'}</span></td>
+										<td class="return-cell">{fmtReturn(fund._return2025)}</td>
+										<td class="return-cell">{fmtReturn(fund._return2024)}</td>
+										<td class="return-cell">{fmtReturn(fund._return2023)}</td>
+										<td class="return-cell">{fmtReturn(fund._return2022)}</td>
+									</tr>
+								{:else}
+									<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No funds match your filters.</td></tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 				</div>
-				<div class="chart-wrap" style="height:360px;"><canvas id="debtFundChart"></canvas></div>
-				<div class="debt-chart-note">Compare reported fund trends by yield, leverage, loan-to-value, and delinquency using the selectors above.</div>
-			</div>
-			<div class="debt-table-wrap">
-				<table class="debt-table">
-					<thead>
-						<tr>
-							<th onclick={() => { if (debtSortCol === 'investmentName') debtSortAsc = !debtSortAsc; else { debtSortCol = 'investmentName'; debtSortAsc = true; } }}>Fund Name</th>
-							<th>Debt Position</th>
-							<th>AUM</th>
-							<th>Financials</th>
-							<th>2025</th><th>2024</th><th>2023</th><th>2022</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each filteredDebtFunds.sort((a, b) => { let va = a[debtSortCol] || '', vb = b[debtSortCol] || ''; if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase(); return debtSortAsc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1); }) as fund (fund.id)}
-							<tr class:highlighted={highlightedDebtFunds.has(fund.id)} onclick={() => { if (highlightedDebtFunds.has(fund.id)) highlightedDebtFunds.delete(fund.id); else highlightedDebtFunds.add(fund.id); highlightedDebtFunds = new Set(highlightedDebtFunds); renderDebtChart(); }}>
-								<td class="name-cell"><a href="/app/deals?id={fund.id}" onclick={(e) => e.stopPropagation()}>{fund.investmentName}</a></td>
-								<td>{fund.debtPosition || '--'}</td>
-								<td>{fmtAUM(fund.fundAUM)}</td>
-								<td><span class="fin-badge" class:audited={fund.financials === 'Audited'} class:unaudited={fund.financials === 'Unaudited'}>{fund.financials || '--'}</span></td>
-								<td class="return-cell">{fmtReturn(fund._return2025)}</td>
-								<td class="return-cell">{fmtReturn(fund._return2024)}</td>
-								<td class="return-cell">{fmtReturn(fund._return2023)}</td>
-								<td class="return-cell">{fmtReturn(fund._return2022)}</td>
-							</tr>
-						{:else}
-							<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">No funds match your filters.</td></tr>
-						{/each}
-					</tbody>
-				</table>
 			</div>
 		</div>
 	{/if}
@@ -905,7 +952,7 @@
 	.mi-page { max-width: 1200px; padding: 24px; }
 	.mi-header h1 { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin: 0 0 8px 0; }
 	.mi-header p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin: 0; max-width: 680px; }
-	.mi-tab-bar { display: flex; gap: 4px; margin: 24px 0 28px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; overflow-x: auto; }
+	.mi-tab-bar { display: flex; gap: 4px; margin: 24px 0 28px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; width: fit-content; max-width: 100%; overflow-x: auto; }
 	.mi-tab-btn { flex: 0 0 auto; padding: 10px 14px; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-secondary); white-space: nowrap; }
 	.mi-tab-btn.active { background: var(--primary); color: #fff; }
 	.mi-section { margin-bottom: 32px; }
@@ -915,6 +962,9 @@
 	.mi-badge { font-family: var(--font-ui); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; color: #fff; }
 	.mi-badge.blue { background: #3B9DDD; }
 	.mi-badge.green { background: var(--primary); }
+	.mi-gated-shell { position: relative; border-radius: 20px; }
+	.mi-gated-shell.gated { overflow: hidden; isolation: isolate; }
+	.mi-gated-content.blurred { filter: blur(15px); -webkit-filter: blur(15px); pointer-events: none; user-select: none; transform: scale(1.01); transform-origin: top center; }
 	.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
 	.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
 	.stat-label { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -927,8 +977,9 @@
 	.chart-wrap { height: 280px; }
 	.chart-wrap.tall { height: 320px; }
 	.mi-disclaimer { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); text-align: center; margin: 32px 0; }
-	.mi-gate-overlay { position: relative; z-index: 10; text-align: center; padding: 60px 20px; }
-	.mi-gate-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 40px 32px; max-width: 480px; margin: 0 auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+	.mi-gate-overlay { position: absolute; inset: 0; z-index: 10; display: flex; align-items: flex-start; justify-content: center; padding: clamp(52px, 8vw, 88px) 20px 24px; border-radius: inherit; }
+	.mi-gate-overlay::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgba(248, 244, 236, 0.12) 0%, rgba(248, 244, 236, 0.32) 100%); }
+	.mi-gate-card { position: relative; background: rgba(255,255,255,0.92); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.8); border-radius: 16px; padding: 40px 32px; max-width: 480px; margin: 0 auto; box-shadow: 0 18px 44px rgba(24, 34, 28, 0.14); pointer-events: auto; }
 	.mi-gate-icon { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #4ade80); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
 	.mi-gate-card h2 { font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; }
 	.mi-gate-card p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; }
@@ -968,7 +1019,6 @@
 	.filter-group label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 	.filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); }
 	.btn-clear { align-self: center; padding: 6px 14px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
-	.btn-primary { display: inline-block; padding: 12px 24px; background: var(--primary); color: #fff; border-radius: 8px; font-family: var(--font-ui); font-size: 14px; font-weight: 700; text-decoration: none; }
 	.debt-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
 	.debt-metric-toggles { display: flex; gap: 8px; }
 	.debt-metric-toggles button { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
@@ -1018,5 +1068,8 @@
 		.stat-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
 		.stat-value { font-size: 22px; }
 		.stat-card { padding: 14px; }
+		.mi-gate-overlay { padding-top: 32px; }
+		.mi-gate-card { padding: 28px 22px; }
+		.mi-gate-card h2 { font-size: 18px; }
 	}
 </style>

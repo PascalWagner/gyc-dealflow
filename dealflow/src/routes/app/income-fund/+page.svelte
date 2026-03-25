@@ -1,3 +1,11 @@
+<script>
+	import { browser } from '$app/environment';
+	import WebOnlyNotice from '$lib/components/WebOnlyNotice.svelte';
+	import { isNativeApp } from '$lib/utils/platform.js';
+
+	const nativeCompanionMode = browser && isNativeApp();
+</script>
+
 <svelte:head>
 	<title>GYC Income Fund | GYC</title>
 </svelte:head>
@@ -28,13 +36,27 @@
 	<div class="cta-card">
 		<div class="cta-circle"></div>
 		<div class="cta-content">
-			<div class="cta-heading">Want the full picture?</div>
-			<div class="cta-body">The complete data room has everything: fee waterfall, tax treatment, K-1 walkthrough, investment process, risk analysis, fund-by-fund due diligence, and financial statements.</div>
-			<div class="cta-buttons">
-				<a href="https://growyourcashflow.io/income-fund" target="_blank" rel="noopener" class="btn-primary">View Full Data Room &rarr;</a>
-				<a href="https://growyourcashflow.io/introcall" target="_blank" rel="noopener" class="btn-outline">&#9742; Book a Call</a>
+			<div class="cta-heading">{nativeCompanionMode ? 'Continue your review on the web' : 'Want the full picture?'}</div>
+			<div class="cta-body">
+				{#if nativeCompanionMode}
+					Fund documents, investor onboarding, and follow-up scheduling are handled on the web for existing investors.
+				{:else}
+					The complete data room has everything: fee waterfall, tax treatment, K-1 walkthrough, investment process, risk analysis, fund-by-fund due diligence, and financial statements.
+				{/if}
 			</div>
-			<div class="cta-email">Or email <a href="mailto:pascal@growyourcashflow.io">pascal@growyourcashflow.io</a></div>
+			{#if nativeCompanionMode}
+				<WebOnlyNotice
+					title="Continue on the web"
+					message="Fund documents, investor onboarding, and follow-up scheduling are completed on the web."
+					href="https://growyourcashflow.io/income-fund"
+				/>
+			{:else}
+				<div class="cta-buttons">
+					<a href="https://growyourcashflow.io/income-fund" target="_blank" rel="noopener" class="btn-primary">View Full Data Room &rarr;</a>
+					<a href="https://growyourcashflow.io/introcall" target="_blank" rel="noopener" class="btn-outline">&#9742; Book a Call</a>
+				</div>
+				<div class="cta-email">Or email <a href="mailto:pascal@growyourcashflow.io">pascal@growyourcashflow.io</a></div>
+			{/if}
 		</div>
 	</div>
 

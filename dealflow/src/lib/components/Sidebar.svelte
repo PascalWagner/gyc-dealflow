@@ -1,19 +1,20 @@
 	<script>
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 	import {
-		canonicalizeUserTier,
+		accessTier,
 		getStoredSessionToken,
 		getStoredSessionUser,
 		isAdmin,
+		isGP,
 		isLoggedIn,
 		setStoredSessionUser,
-		user,
-		userTier
+		user
 	} from '$lib/stores/auth.js';
+	import { formatSessionAccessLabel } from '$lib/auth/access-model.js';
 	import { browser } from '$app/environment';
-	import { deals, fetchDeals } from '$lib/stores/deals.js';
+	import { deals } from '$lib/stores/deals.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
+	import { isNativeApp } from '$lib/utils/platform.js';
 	import {
 		ADMIN_REAL_USER_KEY,
 		currentAdminRealUser,
@@ -25,12 +26,14 @@
 	let { currentPage = '' } = $props();
 
 	let isDark = $state(false);
+	let isImpersonating = $state(false);
+
+	function syncImpersonationState(sessionUser = null) {
+		const realUser = inferAdminRealUser(sessionUser || $user);
+		isImpersonating = !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
+	}
 
 	onMount(() => {
-		if (!get(deals).length) {
-			fetchDeals();
-		}
-
 		const saved = localStorage.getItem('gyc-theme') || localStorage.getItem('gycTheme');
 		if (saved === 'dark') {
 			isDark = true;
@@ -47,6 +50,17 @@
 				document.documentElement.classList.add('dark');
 			}
 		}
+
+		syncImpersonationState(getStoredSessionUser());
+		const impersonationTimers = [50, 250, 750].map((delay) =>
+			window.setTimeout(() => syncImpersonationState(getStoredSessionUser()), delay)
+		);
+
+		return () => {
+			for (const timer of impersonationTimers) {
+				clearTimeout(timer);
+			}
+		};
 	});
 
 	function toggleTheme() {
@@ -65,17 +79,10 @@
 		}
 	}
 
-	const normalizedTier = $derived.by(() => {
-		const tier = String($userTier || '').toLowerCase();
-		if (['academy', 'alumni', 'investor', 'paid', 'founding', 'inner-circle'].includes(tier)) {
-			return 'academy';
-		}
-		if (tier === 'family_office') {
-			return 'family_office';
-		}
-		return 'free';
-	});
-	const isFree = $derived(normalizedTier === 'free' && !$isAdmin);
+	const isFree = $derived($accessTier === 'free');
+	const nativeCompanionMode = browser && isNativeApp();
+	const canShowMemberHub = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
+	const canShowOfficeHours = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
 
 	// Route map: page key → SvelteKit route
 	const routes = {
@@ -108,30 +115,43 @@
 	}
 
 	// Navigation items
-	const navSections = $derived([
-		{
-			label: 'Home',
-			items: [
-				{ page: 'dashboard', icon: 'dashboard', label: 'Dashboard' }
-			]
-		},
-		{
-			label: 'Research',
-			items: [
-				{ page: 'market-intel', icon: 'marketIntel', label: 'Market Intel', paidOnly: true },
-				{ page: 'deals', icon: 'deals', label: 'Deal Flow', badge: true },
-				{ page: 'operators', icon: 'operators', label: 'Operators' }
-			]
-		},
-		{
-			label: 'Support',
-			items: [
-				{ page: 'academy', icon: 'academy', label: 'Cash Flow Academy' },
-				{ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' },
-				{ page: 'office-hours', icon: 'officehours', label: 'Thursdays Live' }
-			]
+	const navSections = $derived.by(() => {
+		const supportItems = [{ page: 'resources', icon: 'academy', label: 'Resources' }];
+		if (canShowMemberHub) {
+			supportItems.unshift({
+				page: 'academy',
+				icon: 'academy',
+				label: nativeCompanionMode ? 'Member Hub' : 'Cash Flow Academy'
+			});
 		}
-	]);
+		if (canShowOfficeHours) {
+			supportItems.push({ page: 'office-hours', icon: 'officehours', label: 'Office Hours' });
+		}
+		if (!nativeCompanionMode) {
+			supportItems.push({ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' });
+		}
+
+		return [
+			{
+				label: 'Home',
+				items: [
+					{ page: 'dashboard', icon: 'dashboard', label: 'Dashboard' }
+				]
+			},
+			{
+				label: 'Research',
+				items: [
+					{ page: 'market-intel', icon: 'marketIntel', label: 'Market Intel', paidOnly: true },
+					{ page: 'deals', icon: 'deals', label: 'Deal Flow', badge: true },
+					{ page: 'operators', icon: 'operators', label: 'Operators' }
+				]
+			},
+			{
+				label: 'Support',
+				items: supportItems
+			}
+		];
+	});
 
 	const adminItems = [
 		{ page: 'admin', icon: 'schema', label: 'Admin Dashboard' },
@@ -140,10 +160,12 @@
 	];
 
 	// User display info
-	const userName = $derived($user?.name || $user?.fullName || $user?.email?.split('@')[0] || '');
-	const userEmail = $derived($user?.email || '');
+	const realAdminUser = $derived.by(() => inferAdminRealUser($user));
+	const footerUser = $derived.by(() => (isImpersonating && realAdminUser ? realAdminUser : ($user || {})));
+	const userName = $derived(footerUser?.name || footerUser?.fullName || footerUser?.email?.split('@')[0] || '');
+	const userEmail = $derived(footerUser?.email || '');
 	const userInitials = $derived.by(() => {
-		const fallback = ($user?.email || '').charAt(0).toUpperCase();
+		const fallback = (footerUser?.email || '').charAt(0).toUpperCase();
 		const raw = userName || '';
 		if (!raw) return fallback || '?';
 		return raw
@@ -153,20 +175,9 @@
 			.map((part) => part.charAt(0).toUpperCase())
 			.join('') || fallback || '?';
 	});
-	const tierLabel = $derived({
-		free: 'Free Plan',
-		academy: 'Academy Member',
-		founding: 'Founding',
-		'inner-circle': 'Inner Circle',
-		alumni: 'Alumni',
-		investor: 'Investor',
-		family_office: 'Family Office'
-	}[$userTier] || $userTier || 'Free');
-	const tierClass = $derived(normalizedTier === 'free' ? 'tier-free' : 'tier-paid');
+	const accessLabel = $derived(formatSessionAccessLabel(footerUser || {}));
+	const accessClass = $derived(formatSessionAccessLabel(footerUser || {}) === 'Free' ? 'access-free' : 'access-paid');
 	const dealFlowCount = $derived($deals.length || 0);
-
-	// Check if user is a GP (has management company)
-	const isGP = $derived(!!($user?.managementCompanyId || $user?.isGP));
 
 	// Feedback
 	let showFeedback = $state(false);
@@ -206,34 +217,156 @@
 		mobileOpen = false;
 	}
 
+	function decodeTokenEmail(token) {
+		if (!browser || typeof token !== 'string') return '';
+		const [, payload] = token.split('.');
+		if (!payload) return '';
+		try {
+			const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+			const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+			const parsed = JSON.parse(atob(padded));
+			return String(parsed?.email || '').trim().toLowerCase();
+		} catch {
+			return '';
+		}
+	}
+
+	function inferAdminRealUser(sessionUser) {
+		if (!browser) return null;
+		const activeUser = sessionUser || getStoredSessionUser();
+		const sessionEmail = String(activeUser?.email || '').trim().toLowerCase();
+		const storedRealUser = currentAdminRealUser();
+		const storedRealEmail = String(storedRealUser?.email || '').trim().toLowerCase();
+		if (storedRealEmail && storedRealEmail !== sessionEmail) {
+			return storedRealUser;
+		}
+
+		const tokenEmail = decodeTokenEmail(activeUser?.token || '');
+		if (!tokenEmail || tokenEmail === sessionEmail) {
+			return null;
+		}
+
+		return {
+			sessionVersion: activeUser?.sessionVersion || 3,
+			email: tokenEmail,
+			name: tokenEmail.split('@')[0],
+			fullName: tokenEmail.split('@')[0],
+			accessTier: 'admin',
+			roleFlags: {
+				lp: true,
+				gp: false,
+				admin: true
+			},
+			capabilities: {
+				memberContent: true,
+				backgroundChecks: true,
+				gpDashboard: true,
+				gpCompanySettings: true,
+				adminTools: true,
+				impersonateUsers: true
+			},
+			isAdmin: true,
+			token: activeUser?.token || '',
+			refreshToken: activeUser?.refreshToken || ''
+		};
+	}
+
 	// View As (admin impersonation)
 	let showViewAsDropdown = $state(false);
 	let viewAsSearch = $state('');
 	let viewAsResults = $state([]);
 	let viewAsUser = $state(null);
-
-	const isImpersonating = $derived.by(() => {
-		if (!browser) return false;
-		const realUser = currentAdminRealUser();
-		return !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
+	$effect(() => {
+		syncImpersonationState($user);
 	});
-	const isAdminShell = $derived($isAdmin && ['admin', 'case-studies', 'admin-manage', 'outreach'].includes(currentPage));
-	const impersonatedName = $derived($isImpersonating ? userName : '');
-	const impersonatedEmail = $derived($isImpersonating ? userEmail : '');
+	const impersonatedName = $derived(isImpersonating ? ($user?.name || $user?.fullName || $user?.email?.split('@')[0] || '') : '');
+	const impersonatedEmail = $derived(isImpersonating ? ($user?.email || '') : '');
+	const impersonatedAccessLabel = $derived(isImpersonating ? formatSessionAccessLabel($user || {}) : '');
+
+	async function lookupSessionUser(email, token) {
+		const res = await fetch('/api/auth', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				...(token ? { Authorization: `Bearer ${token}` } : {})
+			},
+			body: JSON.stringify({ action: 'lookup', email })
+		});
+		if (!res.ok) {
+			throw new Error(`Lookup failed (${res.status})`);
+		}
+		return res.json();
+	}
+
+	function persistAdminViewContext(currentUser) {
+		if (!currentUser?.email) return;
+		// Keep the real admin session separate so impersonation can always unwind
+		// back to the original user without guessing from UI state.
+		if (!localStorage.getItem(ADMIN_REAL_USER_KEY)) {
+			localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(currentUser));
+		}
+		saveUserScopedData(currentUser.email);
+	}
+
+	function buildImpersonatedSession(issuedSession, currentUser, targetUser) {
+		const nextAccessTier = issuedSession.accessTier === 'admin' ? 'member' : issuedSession.accessTier || 'member';
+		const issuedEmailName = issuedSession?.email?.split('@')[0] || '';
+		const issuedName = String(issuedSession?.name || '').trim();
+		const issuedFullName = String(issuedSession?.fullName || '').trim();
+		const shouldPreferTargetName = (!!targetUser?.name || !!targetUser?.fullName) && (
+			!issuedName ||
+			issuedName.toLowerCase() === issuedEmailName.toLowerCase() ||
+			issuedFullName.toLowerCase() === issuedEmailName.toLowerCase()
+		);
+		// Impersonation must never inherit admin authority from a lookup payload.
+		return {
+			...issuedSession,
+			name:
+				(shouldPreferTargetName ? (targetUser?.name || targetUser?.fullName) : '') ||
+				issuedSession.name ||
+				issuedSession.fullName ||
+				targetUser?.name ||
+				targetUser?.email?.split('@')[0] ||
+				'',
+			fullName:
+				(shouldPreferTargetName ? (targetUser?.fullName || targetUser?.name) : '') ||
+				issuedSession.fullName ||
+				issuedSession.name ||
+				targetUser?.fullName ||
+				targetUser?.name ||
+				'',
+			token: currentUser.token,
+			refreshToken: currentUser.refreshToken || '',
+			isAdmin: false,
+			accessTier: nextAccessTier,
+			roleFlags: {
+				...(issuedSession.roleFlags || {}),
+				admin: false
+			},
+			capabilities: {
+				...(issuedSession.capabilities || {}),
+				adminTools: false,
+				impersonateUsers: false
+			}
+		};
+	}
 
 	async function searchViewAsUsers(query) {
 		viewAsSearch = query;
 		if (!query || query.length < 2) { viewAsResults = []; return; }
 		try {
-			const realUser = currentAdminRealUser();
 			const currentUser = getStoredSessionUser();
+			const realUser = inferAdminRealUser(currentUser);
 			const adminEmail = (realUser?.email || currentUser?.email || '').trim();
-			if (!adminEmail) {
+			const adminToken = (realUser?.token || currentUser?.token || '').trim();
+			if (!adminToken) {
 				viewAsResults = [];
 				return;
 			}
 
-			const res = await fetch(`/api/users?q=${encodeURIComponent(query)}&admin=${encodeURIComponent(adminEmail)}`);
+			const res = await fetch(`/api/users?q=${encodeURIComponent(query)}`, {
+				headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : {}
+			});
 			if (res.ok) {
 				const data = await res.json();
 				const contacts = Array.isArray(data?.contacts)
@@ -247,10 +380,7 @@
 					.filter((contact) => contact?.email && contact.email.toLowerCase() !== adminEmail.toLowerCase())
 					.map((contact) => ({
 						...contact,
-						tier: canonicalizeUserTier(contact?.tier, {
-							email: contact?.email,
-							isAdmin: contact?.isAdmin === true
-						})
+						accessLabel: formatSessionAccessLabel(contact)
 					}))
 					.slice(0, 8);
 			} else {
@@ -263,22 +393,19 @@
 		if (!browser) return;
 		const currentUser = getStoredSessionUser();
 		if (!currentUser?.email || !currentUser?.token) return;
-		if (!localStorage.getItem(ADMIN_REAL_USER_KEY)) {
-			localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(currentUser));
-			saveUserScopedData(currentUser.email);
-		} else if (currentUser.email) {
-			saveUserScopedData(currentUser.email);
-		}
+		persistAdminViewContext(currentUser);
 
 		loadUserScopedData(targetUser.email);
-		const impersonatedUser = setStoredSessionUser({
-			...targetUser,
-			name: targetUser.name || targetUser.fullName || targetUser.email?.split('@')[0] || '',
-			fullName: targetUser.fullName || targetUser.name || '',
-			token: currentUser.token,
-			refreshToken: currentUser.refreshToken || '',
-			isAdmin: false
-		});
+		let issuedSession = null;
+		try {
+			issuedSession = await lookupSessionUser(targetUser.email, currentUser.token);
+		} catch (error) {
+			console.warn('View-as lookup failed:', error);
+			return;
+		}
+		const impersonatedUser = setStoredSessionUser(
+			buildImpersonatedSession(issuedSession, currentUser, targetUser)
+		);
 		if (!impersonatedUser?.email || !impersonatedUser?.token) return;
 		await hydrateUserScopedData({
 			email: impersonatedUser.email,
@@ -297,7 +424,7 @@
 		if (currentUser?.email) {
 			saveUserScopedData(currentUser.email);
 		}
-		const realUser = currentAdminRealUser();
+		const realUser = inferAdminRealUser(currentUser);
 		localStorage.removeItem(ADMIN_REAL_USER_KEY);
 		if (realUser?.email) {
 			setStoredSessionUser(realUser);
@@ -328,76 +455,60 @@
 		<div class="sidebar-logo-text">Grow Your Cashflow</div>
 	</div>
 
-	<nav class="sidebar-nav" class:admin-shell={isAdminShell}>
-		{#if isAdminShell}
-			<div class="admin-nav-block">
-				<div class="nav-section-label">Admin</div>
-				{#each adminItems as item}
-					<a
-						class="nav-item admin-nav-item"
-						class:active={isActive(item.page)}
-						href={href(item.page)}
-						onclick={closeMobile}
-					>
-						<span class="nav-icon">{@html icons[item.icon]}</span>
-						{item.label}
-					</a>
-				{/each}
-			</div>
-
-			<div class="nav-spacer"></div>
-		{:else}
-			{#each navSections as section}
-				<div class="nav-section-label">{section.label}</div>
-				{#each section.items as item}
-					<a
-						class="nav-item"
-						class:active={isActive(item.page)}
-						href={href(item.page)}
-						onclick={closeMobile}
-					>
-						<span class="nav-icon">{@html icons[item.icon]}</span>
-						{item.label}
-						{#if item.badge && dealFlowCount > 0}
-							<span class="nav-badge">{dealFlowCount}</span>
-						{/if}
-						{#if item.paidOnly && isFree}
-							<svg class="nav-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-								<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-							</svg>
-						{/if}
-					</a>
-				{/each}
-			{/each}
-
-			{#if isGP || $isAdmin}
-				<div class="nav-section-label">GP Portal</div>
-				<a class="nav-item" class:active={currentPage === 'gp-dashboard'} href="/gp-dashboard" onclick={closeMobile}>
-					<span class="nav-icon">{@html icons.gpdashboard}</span>
-					GP Dashboard
+	<nav class="sidebar-nav">
+		{#each navSections as section}
+			<div class="nav-section-label">{section.label}</div>
+			{#each section.items as item}
+				<a
+					class="nav-item"
+					class:active={isActive(item.page)}
+					href={href(item.page)}
+					data-sveltekit-reload
+					onclick={closeMobile}
+				>
+					<span class="nav-icon">{@html icons[item.icon]}</span>
+					{item.label}
+					{#if item.badge && dealFlowCount > 0}
+						<span class="nav-badge">{dealFlowCount}</span>
+					{/if}
+					{#if item.paidOnly && isFree}
+						<svg class="nav-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+						</svg>
+					{/if}
 				</a>
-			{/if}
+			{/each}
+		{/each}
 
-			<div class="nav-spacer"></div>
-
-			{#if $isAdmin}
-				<div class="nav-section-label">Admin</div>
-				{#each adminItems as item}
-					<a
-						class="nav-item"
-						class:active={isActive(item.page)}
-						href={href(item.page)}
-						onclick={closeMobile}
-					>
-						<span class="nav-icon">{@html icons[item.icon]}</span>
-						{item.label}
-					</a>
-				{/each}
-			{/if}
+		{#if $isGP || $isAdmin}
+			<div class="nav-section-label">GP Portal</div>
+			<a class="nav-item" class:active={currentPage === 'gp-dashboard'} href="/gp-dashboard" data-sveltekit-reload onclick={closeMobile}>
+				<span class="nav-icon">{@html icons.gpdashboard}</span>
+				GP Dashboard
+			</a>
 		{/if}
 
 		{#if $isAdmin}
-			<div class="view-as-section" class:admin-view-as={isAdminShell}>
+			<div class="nav-section-label">Admin</div>
+			{#each adminItems as item}
+				<a
+					class="nav-item"
+					class:active={isActive(item.page)}
+					href={href(item.page)}
+					data-sveltekit-reload
+					onclick={closeMobile}
+				>
+					<span class="nav-icon">{@html icons[item.icon]}</span>
+					{item.label}
+				</a>
+			{/each}
+		{/if}
+
+			<div class="nav-spacer"></div>
+		</nav>
+
+		{#if $isAdmin || isImpersonating}
+			<div class="view-as-section">
 				{#if isImpersonating}
 					<div class="view-as-impersonating">
 						<div class="view-as-header">
@@ -406,9 +517,12 @@
 						</div>
 						<div class="view-as-name">{impersonatedName}</div>
 						<div class="view-as-email">{impersonatedEmail}</div>
+						{#if impersonatedAccessLabel}
+							<div class="view-as-email">{impersonatedAccessLabel}</div>
+						{/if}
 						<button class="view-as-exit" onclick={exitViewAs}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="15 18 9 12 15 6"/></svg>
-							Back to My Account
+							Go Back to Account
 						</button>
 					</div>
 				{/if}
@@ -431,9 +545,9 @@
 									<div class="view-as-result-name">{u.name || u.email?.split('@')[0] || 'Unknown'}</div>
 									<div class="view-as-result-meta">
 										<div class="view-as-result-email">{u.email}</div>
-										{#if u.tier}
-											<span class="view-as-result-tier" class:tier-paid={u.tier !== 'free'}>
-												{u.tier === 'academy' ? 'Academy' : u.tier}
+										{#if u.accessLabel}
+											<span class="view-as-result-access" class:access-paid={u.accessTier !== 'free'}>
+												{u.accessLabel}
 											</span>
 										{/if}
 									</div>
@@ -447,9 +561,8 @@
 				{/if}
 			</div>
 		{/if}
-	</nav>
 
-	<div class="sidebar-footer">
+		<div class="sidebar-footer">
 		<button class="sidebar-feedback" onclick={() => showFeedback = !showFeedback}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
 				<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
@@ -493,11 +606,11 @@
 
 	<!-- User profile at bottom -->
 	{#if $isLoggedIn && userName}
-		<a class="sidebar-user" href="/app/settings" onclick={closeMobile}>
+		<a class="sidebar-user" href="/app/settings" data-sveltekit-reload onclick={closeMobile}>
 			<div class="user-avatar">{userInitials}</div>
 			<div class="user-info">
 				<div class="user-name">{userName}</div>
-				<div class="user-tier {tierClass}">{tierLabel}</div>
+				<div class="user-access {accessClass}">{accessLabel}</div>
 			</div>
 			<span class="user-settings-icon" aria-hidden="true">{@html icons.settingsGear}</span>
 		</a>
@@ -560,14 +673,6 @@
 		display: flex;
 		flex-direction: column;
 	}
-	.sidebar-nav.admin-shell {
-		padding-top: 18px;
-	}
-	.admin-nav-block {
-		display: flex;
-		flex-direction: column;
-	}
-
 	.nav-section-label {
 		padding: 14px 24px 6px;
 		font-family: var(--font-ui);
@@ -603,12 +708,6 @@
 		background: var(--primary, #51BE7B);
 		border-radius: 0 2px 2px 0;
 	}
-	.admin-nav-item {
-		padding-top: 10px;
-		padding-bottom: 10px;
-		font-size: 14px;
-	}
-
 	.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; }
 	.nav-icon :global(svg) { width: 18px; height: 18px; }
 
@@ -757,9 +856,9 @@
 	.sidebar-user { text-decoration: none; cursor: pointer; transition: background 0.15s; }
 	.sidebar-user:hover { background: var(--bg-sidebar-hover); }
 	.user-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.user-tier { font-family: var(--font-ui); font-size: 10px; font-weight: 600; letter-spacing: 0.2px; margin-top: 2px; }
-	.tier-free { color: rgba(255,255,255,0.4); }
-	.tier-paid { color: var(--accent-green, #40E47F); }
+	.user-access { font-family: var(--font-ui); font-size: 10px; font-weight: 600; letter-spacing: 0.2px; margin-top: 2px; }
+	.access-free { color: rgba(255,255,255,0.4); }
+	.access-paid { color: var(--accent-green, #40E47F); }
 	.user-settings-icon {
 		display: inline-flex;
 		align-items: center;
@@ -808,11 +907,7 @@
 	.feedback-submit:disabled { opacity: 0.5; }
 
 	/* View As */
-	.view-as-section { padding: 4px 16px 8px; }
-	.admin-view-as {
-		padding-top: 14px;
-		border-top: 1px solid rgba(255,255,255,0.06);
-	}
+	.view-as-section { padding: 4px 16px 8px; position: relative; }
 	.view-as-impersonating {
 		background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
 		border-radius: 8px; padding: 8px 10px; margin-bottom: 4px;
@@ -852,7 +947,7 @@
 	.view-as-result-name { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark, #141413); }
 	.view-as-result-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 	.view-as-result-email { font-size: 10px; color: var(--text-muted, #8A9AA0); }
-	.view-as-result-tier {
+	.view-as-result-access {
 		flex-shrink: 0;
 		padding: 2px 8px;
 		border-radius: 999px;
@@ -863,7 +958,7 @@
 		background: rgba(138,154,160,0.12);
 		color: var(--text-muted, #8A9AA0);
 	}
-	.view-as-result-tier.tier-paid {
+	.view-as-result-access.access-paid {
 		background: rgba(81,190,123,0.12);
 		color: var(--primary);
 	}

@@ -3,7 +3,14 @@
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { getStoredSessionUser, user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
+	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember } from '$lib/stores/auth.js';
+	import {
+		currentAdminRealUser,
+		readUserScopedJson,
+		readUserScopedString,
+		writeUserScopedJson,
+		writeUserScopedString
+	} from '$lib/utils/userScopedState.js';
 	import {
 		dealStages,
 		decisionCompareIds,
@@ -13,6 +20,8 @@
 		normalizeStage,
 		stageLabel
 	} from '$lib/stores/deals.js';
+	import { getUiStage, normalizeStageCounts } from '$lib/utils/dealflow-contract.js';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let { data } = $props();
 	function getInitialDeal() {
@@ -21,9 +30,14 @@
 	function getInitialError() {
 		return data?.error ?? null;
 	}
+	function getInitialComparables() {
+		return data?.comparables ?? null;
+	}
 	const initialDeal = getInitialDeal();
 	const initialError = getInitialError();
+	const initialComparables = getInitialComparables();
 	const academyHref = '/app/academy';
+	const nativeCompanionMode = browser && isNativeApp();
 
 	// ===== Reactive State =====
 	let deal = $state(initialDeal);
@@ -34,9 +48,9 @@
 	let ddAccordionOpen = $state({});
 	let shareDropdownOpen = $state(false);
 	let socialProof = $state(null);
-	let similarDeals = $state([]);
+	let similarDeals = $state(initialComparables?.similarDeals || []);
+	let peerComparison = $state(initialComparables?.peerComparison || null);
 	let peerStats = $state(null);
-	let allDeals = $state([]);
 
 	// Stress Test sliders
 	let stInvestment = $state(0);
@@ -50,12 +64,18 @@
 	let cfView = $state('table');
 	let bgCheck = $state(null);
 	let bgCheckLoading = $state(false);
+	let bgCheckLoaded = $state(false);
+	let bgCheckError = $state(false);
 	let questions = $state([]);
 	let qaLoading = $state(false);
+	let qaLoaded = $state(false);
+	let qaError = $state(false);
 	let newQuestion = $state('');
 	let qaSubmitting = $state(false);
 	let gpInsights = $state(null);
 	let gpInsightsLoading = $state(false);
+	let gpInsightsLoaded = $state(false);
+	let gpInsightsError = $state(false);
 	let buyBox = $state(null);
 	let deckViewed = $state(false);
 	let introRequested = $state(false);
@@ -79,8 +99,6 @@
 	// Intro Request Modal
 	let showIntroModal = $state(false);
 	let introMessage = $state('');
-	let introMethod = $state('email');
-	let introPhone = $state('');
 	let introSending = $state(false);
 	let introSuccess = $state(false);
 
@@ -88,6 +106,13 @@
 	let dealMap = $state(null);
 	let dealMapLoading = $state(false);
 	let dealMapError = $state(false);
+	let dealMapLoaded = $state(false);
+
+	// Visibility triggers for deferred sections
+	let qaSectionVisible = $state(false);
+	let bgCheckSectionVisible = $state(false);
+	let gpInsightsSectionVisible = $state(false);
+	let dealMapSectionVisible = $state(false);
 
 	// Invite Co-Investors Modal
 	let showInviteModal = $state(false);
@@ -97,6 +122,21 @@
 	let inviteUrl = $state('');
 	function currentSessionUser() {
 		return browser ? (getStoredSessionUser() || {}) : {};
+	}
+	function scopedDealKey(prefix) {
+		return deal?.id ? `${prefix}_${deal.id}` : prefix;
+	}
+	function readScopedDealJson(prefix, fallback) {
+		return readUserScopedJson(scopedDealKey(prefix), fallback);
+	}
+	function readScopedDealString(prefix, fallback = '') {
+		return readUserScopedString(scopedDealKey(prefix), fallback);
+	}
+	function writeScopedDealJson(prefix, value) {
+		writeUserScopedJson(scopedDealKey(prefix), value);
+	}
+	function writeScopedDealString(prefix, value) {
+		writeUserScopedString(scopedDealKey(prefix), value);
 	}
 	const inviteUserName = $derived(currentSessionUser().name || 'Someone');
 	const inviteEmailSubject = $derived(deal ? encodeURIComponent(inviteUserName + ' shared a deal with you: ' + (deal.investmentName || deal.name || '')) : '');
@@ -114,18 +154,19 @@
 
 	// ===== Derived =====
 	const dealId = $derived($page.params.id);
-	const isPaid = $derived($isAcademy || $isAdmin);
-	const currentStage = $derived(deal ? ($dealStages[deal.id] || 'browse') : 'browse');
+	const isPaid = $derived($isMember);
+	const currentStage = $derived(deal ? getUiStage($dealStages[deal.id] || 'filter') : 'filter');
+	const socialProofCounts = $derived.by(() => normalizeStageCounts(socialProof || {}));
 
 	const stages = [
-		{ key: 'browse', label: 'Filter', num: '1' },
-		{ key: 'saved', label: 'Review', num: '2' },
-		{ key: 'diligence', label: 'Connect', num: '3' },
-		{ key: 'decision', label: 'Decide', num: '4' },
+		{ key: 'filter', label: 'Filter', num: '1' },
+		{ key: 'review', label: 'Review', num: '2' },
+		{ key: 'connect', label: 'Connect', num: '3' },
+		{ key: 'decide', label: 'Decide', num: '4' },
 		{ key: 'invested', label: 'Invested', num: '5' }
 	];
-	const stageOrder = { browse: 0, saved: 1, diligence: 2, decision: 3, invested: 4 };
-	const currentStageIdx = $derived(currentStage === 'passed' ? -1 : (stageOrder[currentStage] ?? 0));
+	const stageOrder = { filter: 0, review: 1, connect: 2, decide: 3, invested: 4 };
+	const currentStageIdx = $derived(currentStage === 'skipped' ? -1 : (stageOrder[currentStage] ?? 0));
 
 	const isCredit = $derived(deal ? isCreditFund(deal) : false);
 	const heroClass = $derived(isCredit ? 'hero-lending' : 'hero-equity');
@@ -205,15 +246,186 @@
 
 	function getRelativeTime(ds) { if (!ds) return ''; const d = Date.now() - new Date(ds).getTime(), m = Math.floor(d/60000); if (m<1) return 'just now'; if (m<60) return m+'m ago'; const h = Math.floor(m/60); if (h<24) return h+'h ago'; const dy = Math.floor(h/24); if (dy<30) return dy+'d ago'; return Math.floor(dy/30)+'mo ago'; }
 
-	async function loadQuestions() { if (!deal) return; qaLoading = true; try { const r = await fetch(`/api/deal-qa?dealId=${encodeURIComponent(deal.id)}`); if (r.ok) { const d = await r.json(); questions = d.questions || []; } } catch {} qaLoading = false; }
+	function loadWhenVisible(node, setVisible) {
+		if (!browser || typeof IntersectionObserver === 'undefined') {
+			setVisible(true);
+			return { destroy() {} };
+		}
+		let triggered = false;
+		const trigger = () => {
+			if (triggered) return;
+			triggered = true;
+			setVisible(true);
+		};
+		const observer = new IntersectionObserver((entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) {
+				observer.disconnect();
+				trigger();
+			}
+		}, { rootMargin: '180px 0px' });
+		observer.observe(node);
+		return { destroy() { observer.disconnect(); } };
+	}
+
+	function setQaSectionVisible(value) {
+		qaSectionVisible = value;
+	}
+
+	function setBgCheckSectionVisible(value) {
+		bgCheckSectionVisible = value;
+	}
+
+	function setGpInsightsSectionVisible(value) {
+		gpInsightsSectionVisible = value;
+	}
+
+	function setDealMapSectionVisible(value) {
+		dealMapSectionVisible = value;
+	}
+
+	async function loadQuestions(force = false) {
+		if (!deal || qaLoading || (qaLoaded && !force)) return;
+		qaLoading = true;
+		qaError = false;
+		try {
+			const r = await fetch(`/api/deal-qa?dealId=${encodeURIComponent(deal.id)}`);
+			if (r.ok) {
+				const d = await r.json();
+				questions = d.questions || [];
+			} else {
+				qaError = true;
+			}
+		} catch {
+			qaError = true;
+		} finally {
+			qaLoaded = true;
+			qaLoading = false;
+		}
+	}
+
+	async function loadBackgroundCheck(force = false) {
+		if (!deal?.managementCompanyId || bgCheckLoading || (bgCheckLoaded && !force)) return;
+		if (!isPaid && !$isAdmin) return;
+		bgCheckLoading = true;
+		bgCheckError = false;
+		try {
+			const headers = getStoredSessionUser()?.token ? { 'Authorization': `Bearer ${getStoredSessionUser().token}` } : {};
+			const resp = await fetch(`/api/background-check?managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers });
+			if (resp.ok) {
+				const data = await resp.json();
+				bgCheck = data?.results?.[0] || null;
+			} else {
+				bgCheckError = true;
+			}
+		} catch {
+			bgCheckError = true;
+		} finally {
+			bgCheckLoaded = true;
+			bgCheckLoading = false;
+		}
+	}
+
+	async function loadGpInsights(force = false) {
+		if (!deal?.managementCompanyId || gpInsightsLoading || (gpInsightsLoaded && !force)) return;
+		if (!$isAdmin) return;
+		gpInsightsLoading = true;
+		gpInsightsError = false;
+		try {
+			const headers = getStoredSessionUser()?.token ? { 'Authorization': `Bearer ${getStoredSessionUser().token}` } : {};
+			const resp = await fetch(`/api/sponsor-analytics?dealId=${encodeURIComponent(deal.id)}&managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers });
+			if (resp.ok) {
+				gpInsights = await resp.json();
+			} else {
+				gpInsightsError = true;
+			}
+		} catch {
+			gpInsightsError = true;
+		} finally {
+			gpInsightsLoaded = true;
+			gpInsightsLoading = false;
+		}
+	}
+
+	async function loadDealMap(force = false) {
+		if (!deal || dealMapLoading || (dealMapLoaded && !force)) return;
+		if (!isPaid) return;
+		const locationStr = deal.propertyAddress || deal.address || (deal.city && deal.state ? `${deal.city}, ${deal.state}` : null) || deal.location;
+		if (!locationStr) {
+			dealMapError = true;
+			dealMapLoaded = true;
+			return;
+		}
+		dealMapLoading = true;
+		dealMapError = false;
+		try {
+			if (!document.querySelector('link[href*="leaflet.css"]')) {
+				const link = document.createElement('link');
+				link.rel = 'stylesheet';
+				link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+				document.head.appendChild(link);
+			}
+			const leaflet = await import('https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js');
+			const L = leaflet.default || leaflet;
+			const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(locationStr) + '&limit=1');
+			const data = await resp.json();
+			if (data && data.length > 0) {
+				const lat = parseFloat(data[0].lat);
+				const lon = parseFloat(data[0].lon);
+				dealMapLoading = false;
+				await tick();
+				const el = document.getElementById('dealLocationMap');
+				if (!el) return;
+				dealMap = L.map(el).setView([lat, lon], 13);
+				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+					attribution: '&copy; OpenStreetMap contributors',
+					maxZoom: 18
+				}).addTo(dealMap);
+				L.marker([lat, lon]).addTo(dealMap)
+					.bindPopup(`<strong>${deal.investmentName || deal.name || 'Property'}</strong><br>${locationStr}`)
+					.openPopup();
+			} else {
+				dealMapError = true;
+				dealMapLoading = false;
+			}
+		} catch (e) {
+			console.warn('Deal map geocoding failed:', e);
+			dealMapError = true;
+			dealMapLoading = false;
+		} finally {
+			dealMapLoaded = true;
+		}
+	}
+
+	$effect(() => {
+		if (qaSectionVisible) void loadQuestions();
+	});
+
+	$effect(() => {
+		if (bgCheckSectionVisible) void loadBackgroundCheck();
+	});
+
+	$effect(() => {
+		if (gpInsightsSectionVisible) void loadGpInsights();
+	});
+
+	$effect(() => {
+		if (dealMapSectionVisible) void loadDealMap();
+	});
 
 	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (!$isLoggedIn) { window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`; return; } qaSubmitting = true; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
 
 	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'Pascal' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
 
-	async function upvoteQuestion(qid) { if (!$isLoggedIn || !browser) return; const up = JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]'); if (up.includes(qid)) return; up.push(qid); localStorage.setItem('gycQAUpvoted', JSON.stringify(up)); try { await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upvote', recordId: qid }) }); await loadQuestions(); } catch {} }
+	async function upvoteQuestion(qid) {
+		if (!$isLoggedIn || !browser) return;
+		const up = readUserScopedJson('gycQAUpvoted', []);
+		if (up.includes(qid)) return;
+		up.push(qid);
+		writeUserScopedJson('gycQAUpvoted', up);
+		try { await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'upvote', recordId: qid }) }); await loadQuestions(); } catch {}
+	}
 
-	function hasUpvoted(qid) { if (!browser) return false; return JSON.parse(localStorage.getItem('gycQAUpvoted') || '[]').includes(qid); }
+	function hasUpvoted(qid) { if (!browser) return false; return readUserScopedJson('gycQAUpvoted', []).includes(qid); }
 
 	// ===== Cash Flow Projection (derived) =====
 	const cfYieldRate = $derived.by(() => { if (!deal) return 0; let r = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0; if (r > 1) r = r / 100; return r; });
@@ -231,8 +443,6 @@
 	const stBaseHold = $derived(deal?.holdPeriod || 5);
 	const stResults = $derived.by(() => { if (!deal||isCredit) return null; const inv = stInvestment||deal?.investmentMinimum||50000; const rg = stRentGrowth/100; const ec = stExitCap/100; const vc = stVacancy/100; const ir = stInterest/100; const h = stHold; const bc = stBaseCoC; let noi = inv*(bc>0?bc:0.08); let td = 0; for (let y=1;y<=h;y++){const yn=noi*Math.pow(1+rg,y-1)*(1-vc);const ds=inv*0.65*ir;const cf=yn-ds*0.3;td+=Math.max(cf,0);} const en=noi*Math.pow(1+rg,h)*(1-vc);const sp=ec>0?en/ec:0;const tr=td+sp;const em=inv>0?tr/inv:0;const irr=h>0&&inv>0?(Math.pow(Math.max(tr/inv,0.01),1/h)-1):0;return{annualCF:h>0?td/h:0,totalDist:td,saleProceeds:sp,totalReturn:tr,irr,em}; });
 	const stScenarios = $derived.by(() => { if (!deal||isCredit) return null; const bi = stBaseIRR; const be = stBaseEM; return { bear:{irr:bi*0.55,em:be*0.65}, base:{irr:bi,em:be}, bull:{irr:bi*1.35,em:be*1.3} }; });
-	// ===== Peer Comparison derived =====
-	const peerComparison = $derived.by(() => { if (!deal||!allDeals.length) return null; const peers = allDeals.filter(d => { if (d.id===deal.id) return false; if (isCredit) return isCreditFund(d); return d.assetClass&&deal.assetClass&&d.assetClass===deal.assetClass; }); if (peers.length<2) return null; function av(f){const v=peers.map(d=>d[f]).filter(v=>v!=null&&v>0);return v.length>0?v.reduce((a,b)=>a+b,0)/v.length:null;} const ms=[{label:'Target IRR',field:'targetIRR',format:'pct',hb:true},{label:'Pref Return',field:'preferredReturn',format:'pct',hb:true},{label:'Equity Multiple',field:'equityMultiple',format:'multiple',hb:true},{label:'Min Investment',field:'investmentMinimum',format:'money',hb:false},{label:'Hold Period',field:'holdPeriod',format:'years',hb:false}]; const rows=ms.map(m=>{const dv=deal[m.field];const pa=av(m.field);let vd='No Data',vc='neutral';if(dv&&pa){const n=typeof dv==='number'?dv:parseFloat(dv);if(m.hb){if(n>pa*1.02){vd='Above Average';vc='good';}else if(n<pa*0.98){vd='Below Average';vc='bad';}else{vd='At Market';vc='neutral';}}else{if(n<pa*0.98){vd='Better than Avg';vc='good';}else if(n>pa*1.02){vd='Above Average';vc='bad';}else{vd='At Market';vc='neutral';}}}return{...m,dealVal:dv,peerAvg:pa,verdict:vd,verdictClass:vc};}); return{rows,peerCount:peers.length,peerLabel:isCredit?'Lending':(deal.assetClass||'Similar')}; });
 
 	// ===== Formatters =====
 	function fmt(val, type) {
@@ -413,7 +623,7 @@
 
 	function addToCompare() {
 		if (!browser || !deal) return;
-		if (currentStage !== 'decision') {
+		if (currentStage !== 'decide') {
 			showShareToast('Move this deal to Decide before adding it to comparison.');
 			return;
 		}
@@ -504,7 +714,7 @@
 
 	function trackDeckView() {
 		if (!deal || !browser) return;
-		localStorage.setItem('gycDeckViewed_' + deal.id, 'true');
+		writeScopedDealString('gycDeckViewed', 'true');
 		deckViewed = true;
 	}
 
@@ -894,7 +1104,7 @@
 
 	function skipDeal() {
 		if (!deal) return;
-		dealStages.setStage(deal.id, 'passed');
+		dealStages.setStage(deal.id, 'skipped');
 	}
 
 	function setStage(stageKey) {
@@ -912,7 +1122,7 @@
 		}
 		ddAnswers = updated;
 		if (browser) {
-			localStorage.setItem('gycDDChecklist_' + deal.id, JSON.stringify(updated));
+			writeScopedDealJson('gycDDChecklist', updated);
 		}
 		// Sync to backend
 		try {
@@ -938,22 +1148,20 @@
 			return;
 		}
 		// Check if already requested
-		if (browser && localStorage.getItem('gycIntroRequested_' + deal.id)) {
+		if (browser && readScopedDealString('gycIntroRequested')) {
 			showShareToast("You've already requested an intro for this deal.");
 			return;
 		}
 		// Rate limit: 3 intros per day
 		if (browser) {
 			const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
-			const todayCount = parseInt(localStorage.getItem(todayKey) || '0', 10);
+			const todayCount = parseInt(readUserScopedString(todayKey, '0'), 10);
 			if (todayCount >= 3) {
 				showShareToast("You've reached the daily limit of 3 introduction requests. Try again tomorrow.");
 				return;
 			}
 		}
 		introMessage = '';
-		introMethod = 'email';
-		introPhone = '';
 		introSending = false;
 		introSuccess = false;
 		showIntroModal = true;
@@ -978,31 +1186,29 @@
 					operatorName: opName,
 					operatorCeo: opCeo,
 					managementCompanyId: deal.managementCompanyId || '',
-					message: introMessage,
-					contactMethod: introMethod,
-					phone: introPhone
+					message: introMessage
 				})
 			});
 			const data = await r.json();
 			if (data.success) {
-				// Store in localStorage for dedup
+				// Store in scoped browser state for dedup
 				if (browser) {
-					localStorage.setItem('gycIntroRequested_' + deal.id, Date.now().toString());
+					writeScopedDealString('gycIntroRequested', Date.now().toString());
 					const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
-					localStorage.setItem(todayKey, (parseInt(localStorage.getItem(todayKey) || '0', 10) + 1).toString());
+					writeUserScopedString(todayKey, (parseInt(readUserScopedString(todayKey, '0'), 10) + 1).toString());
 					// Store in gycIntroRequests array
 					try {
-						let intros = JSON.parse(localStorage.getItem('gycIntroRequests') || '[]');
+						let intros = readUserScopedJson('gycIntroRequests', []);
 						if (!Array.isArray(intros)) intros = [];
 						intros.push({ dealId: deal.id, deal: deal.investmentName, company: opName, userEmail: stored.email || '', timestamp: Date.now() });
-						localStorage.setItem('gycIntroRequests', JSON.stringify(intros));
+						writeUserScopedJson('gycIntroRequests', intros);
 					} catch {}
 				}
 				introRequested = true;
 				introSuccess = true;
 				// Advance stage to Connect
 				if (currentStageIdx < 2) {
-					dealStages.setStage(deal.id, 'diligence');
+					dealStages.setStage(deal.id, 'connect');
 				}
 			} else {
 				showShareToast('Something went wrong. Please try again.');
@@ -1015,7 +1221,14 @@
 
 	// ===== Investment Report PDF =====
 	function generateReport() {
-		if (!isPaid) { window.location.href = '/app/academy'; return; }
+		if (!isPaid) {
+			if (nativeCompanionMode) {
+				showShareToast('Investment reports are available to existing members on the web.');
+				return;
+			}
+			window.location.href = '/app/academy';
+			return;
+		}
 		if (!deal) { alert('Deal data not available.'); return; }
 		const d = deal;
 		const stored = currentSessionUser();
@@ -1119,27 +1332,42 @@
 	}
 
 	// ===== Lifecycle =====
-	onMount(() => {
-		if (!deal) return;
-		// Load DD answers from localStorage
-		try {
-			const stored = JSON.parse(localStorage.getItem('gycDDChecklist_' + deal.id) || '{}');
-			ddAnswers = stored;
-		} catch { ddAnswers = {}; }
-
-		// Load social proof
+	onMount(async () => {
 		const storedUser = currentSessionUser();
 		const token = storedUser.token || '';
 		const userEmail = storedUser.email || '';
 		const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+		if (!deal && token && dealId) {
+			try {
+				const resp = await fetch(`/api/deals?id=${encodeURIComponent(dealId)}`, { headers });
+				if (resp.ok) {
+					const data = await resp.json();
+					if (data?.deal) {
+						deal = data.deal;
+						error = null;
+						loading = false;
+					}
+				}
+			} catch {}
+		}
+
+		if (!deal) return;
+		// Load DD answers from scoped browser state
+		try {
+			const stored = readScopedDealJson('gycDDChecklist', {});
+			ddAnswers = stored;
+		} catch { ddAnswers = {}; }
+
+		// Load social proof
 		fetch(`/api/deal-stats?dealId=${encodeURIComponent(deal.id)}`, { headers })
 			.then(r => r.ok ? r.json() : null)
 			.then(stats => { if (stats) socialProof = stats; })
 			.catch(() => {});
 
 		// Load deck-viewed and intro-requested state
-		deckViewed = !!localStorage.getItem('gycDeckViewed_' + deal.id);
-		introRequested = !!localStorage.getItem('gycIntroRequested_' + deal.id);
+		deckViewed = !!readScopedDealString('gycDeckViewed');
+		introRequested = !!readScopedDealString('gycIntroRequested');
 
 		// Auto-select first share class (sorted by highest min investment) on initial load
 		if (deal.shareClasses && deal.shareClasses.length > 0) {
@@ -1153,15 +1381,19 @@
 			activeShareClass = bestIdx;
 		}
 
-		// Load buy box from localStorage (saved by buy box wizard)
+		// Load buy box from scoped browser state (saved by buy box wizard)
 		try {
-			const bbRaw = localStorage.getItem('gycBuyBoxWizard');
-			if (bbRaw) buyBox = JSON.parse(bbRaw);
+			buyBox = readUserScopedJson('gycBuyBoxWizard', null);
 		} catch {}
 
 		// Also try fetching buy box from API
 		if (token && userEmail) {
-			fetch('/api/buybox?email=' + encodeURIComponent(userEmail), { headers })
+			const realUser = currentAdminRealUser();
+			const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== userEmail.toLowerCase();
+			const buyBoxUrl = new URL('/api/buybox', window.location.origin);
+			buyBoxUrl.searchParams.set('email', userEmail);
+			if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
+			fetch(buyBoxUrl.pathname + buyBoxUrl.search, { headers })
 				.then(r => r.ok ? r.json() : null)
 				.then(data => {
 					const nextBuyBox = data?.buyBox || data;
@@ -1170,113 +1402,13 @@
 				.catch(() => {});
 		}
 
-		// Load Q&A
-		loadQuestions();
-
-		// Load background check
-		if (deal.managementCompanyId) {
-			bgCheckLoading = true;
-			fetch(`/api/background-check?managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers })
-				.then(r => r.ok ? r.json() : null)
-				.then(data => { if (data?.results?.[0]) bgCheck = data.results[0]; })
-				.catch(() => {})
-				.finally(() => { bgCheckLoading = false; });
-		}
-
-		// Load GP Insights (admin only)
-		if ($isAdmin && deal.managementCompanyId) {
-			gpInsightsLoading = true;
-			fetch(`/api/sponsor-analytics?dealId=${encodeURIComponent(deal.id)}&managementCompanyId=${encodeURIComponent(deal.managementCompanyId)}`, { headers })
-				.then(r => r.ok ? r.json() : null)
-				.then(data => { if (data) gpInsights = data; })
-				.catch(() => {})
-				.finally(() => { gpInsightsLoading = false; });
-		}
-
 		// Initialize stress test sliders from deal data
 		stInvestment = deal.investmentMinimum || 50000;
 		stHold = deal.holdPeriod || 5;
 
-		// Load all deals for peer comparison and similar deals
-		fetch('/api/deals', { headers })
-			.then(r => r.ok ? r.json() : null)
-			.then(data => {
-				if (data?.deals) {
-					allDeals = data.deals;
-					// Build similar deals list
-					const scored = data.deals
-						.filter(d => d.id !== deal.id && d.investmentName)
-						.map(d => {
-							let score = 0;
-							const dealIsCredit = isCreditFund(deal);
-							if (dealIsCredit && isCreditFund(d)) score += 5;
-							else if (d.assetClass && d.assetClass === deal.assetClass) score += 3;
-							if (d.dealType && d.dealType === deal.dealType) score += 2;
-							if (!dealIsCredit && d.strategy && d.strategy === deal.strategy) score += 2;
-							const dYield = deal.preferredReturn || deal.cashOnCash || deal.targetIRR || 0;
-							const pYield = d.preferredReturn || d.cashOnCash || d.targetIRR || 0;
-							if (dYield > 0 && pYield > 0 && Math.abs(dYield - pYield) < 0.03) score += 1;
-							if (deal.investmentMinimum && d.investmentMinimum) { const ratio = d.investmentMinimum / deal.investmentMinimum; if (ratio >= 0.5 && ratio <= 2) score += 1; }
-							return { deal: d, score };
-						})
-						.filter(s => s.score >= 3)
-						.sort((a, b) => b.score - a.score)
-						.slice(0, 8);
-					similarDeals = scored.map(s => s.deal);
-				}
-			})
-			.catch(() => {});
-
 		// Set document title
 		document.title = `${deal.investmentName} - GYC Dealflow`;
-
-		// Initialize property location map
-		initDealMap();
 	});
-
-	async function initDealMap() {
-		if (!deal) return;
-		const locationStr = deal.propertyAddress || deal.address || (deal.city && deal.state ? `${deal.city}, ${deal.state}` : null) || deal.location;
-		if (!locationStr) { dealMapError = true; return; }
-		dealMapLoading = true;
-		try {
-			// Dynamically load Leaflet CSS
-			if (!document.querySelector('link[href*="leaflet.css"]')) {
-				const link = document.createElement('link');
-				link.rel = 'stylesheet';
-				link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-				document.head.appendChild(link);
-			}
-			const leaflet = await import('https://unpkg.com/leaflet@1.9.4/dist/leaflet-src.esm.js');
-			const L = leaflet.default || leaflet;
-			// Geocode with Nominatim
-			const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(locationStr) + '&limit=1');
-			const data = await resp.json();
-			if (data && data.length > 0) {
-				const lat = parseFloat(data[0].lat);
-				const lon = parseFloat(data[0].lon);
-				dealMapLoading = false;
-				await tick(); // ensure map div is in DOM
-				const el = document.getElementById('dealLocationMap');
-				if (!el) return;
-				dealMap = L.map(el).setView([lat, lon], 13);
-				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-					attribution: '&copy; OpenStreetMap contributors',
-					maxZoom: 18
-				}).addTo(dealMap);
-				L.marker([lat, lon]).addTo(dealMap)
-					.bindPopup(`<strong>${deal.investmentName || deal.name || 'Property'}</strong><br>${locationStr}`)
-					.openPopup();
-			} else {
-				dealMapError = true;
-				dealMapLoading = false;
-			}
-		} catch (e) {
-			console.warn('Deal map geocoding failed:', e);
-			dealMapError = true;
-			dealMapLoading = false;
-		}
-	}
 
 	// Close share dropdown on outside click
 	function handleOutsideClick(e) {
@@ -1386,19 +1518,22 @@
 
 							<!-- Social Proof -->
 							{#if socialProof}
-								{@const total = (socialProof.interested || 0) + (socialProof.saved || 0) + (socialProof.duediligence || 0) + (socialProof.vetting || 0) + (socialProof.portfolio || 0) + (socialProof.invested || 0)}
+								{@const reviewing = socialProofCounts.reviewing || 0}
+								{@const invested = socialProofCounts.invested || 0}
+								{@const total = reviewing + invested}
 								{#if total > 0}
 									<div class="hero-social-proof">
 										<div class="sp-avatars">
-											{#each (socialProof.namedInvestors || []).concat(socialProof.namedWatchers || []).slice(0, 5) as name, i}
-												<div class="sp-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]}" title={name}>{name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}</div>
+											{#each Array(Math.min(total, 5)) as _, i}
+												<div class="sp-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]}">LP</div>
 											{/each}
 											{#if total > 5}
 												<div class="sp-avatar sp-count">+{total - 5}</div>
 											{/if}
 										</div>
 										<div class="sp-text">
-											<strong>{total}</strong> <span class="sp-dim">GYC member{total !== 1 ? 's are' : ' is'} reviewing this deal</span>
+											<strong>{total}</strong>
+											<span class="sp-dim">GYC member{total !== 1 ? 's are' : ' is'} active on this deal</span>
 										</div>
 									</div>
 								{/if}
@@ -1407,52 +1542,58 @@
 
 						<!-- Hero Right: CTA buttons -->
 						<div class="hero-right">
-							{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
-								<button class="hero-deck-btn" onclick={openDeckViewer}>
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-									View Investment Deck
-								</button>
-							{/if}
-							<button class="hero-deck-btn hero-intro-btn" onclick={requestIntroduction}>
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-								Request Introduction
-							</button>
-							<!-- Share -->
-							<div class="share-wrapper">
-								<button class="hero-share-btn" onclick={(e) => { e.stopPropagation(); shareDropdownOpen = !shareDropdownOpen; }}>
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-									Share Deal
-								</button>
-								{#if shareDropdownOpen}
-									<div
-										class="share-dropdown active"
-										role="menu"
-										tabindex="-1"
-										aria-label="Share deal options"
-										onclick={(e) => e.stopPropagation()}
-										onkeydown={(e) => {
-											if (e.key === 'Escape') shareDropdownOpen = false;
-											e.stopPropagation();
-										}}
-									>
-										<button class="share-dropdown-item share-invite" onclick={openInviteModal}>
-											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-											<span class="share-invite-text">Invite a co-investor</span>
-										</button>
-										<button class="share-dropdown-item" onclick={copyDealLink}>
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-											Copy link
-										</button>
-										<button class="share-dropdown-item" onclick={shareDealEmail}>
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-											Email to a friend
-										</button>
-										<button class="share-dropdown-item" onclick={shareDealText}>
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-											Text message
-										</button>
+							<div class="hero-action-stack">
+								{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
+									<button class="hero-deck-btn" onclick={openDeckViewer}>
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+										View Investment Deck
+									</button>
+								{:else}
+									<div class="hero-deck-btn hero-deck-locked" aria-hidden="true">
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+										View Investment Deck
 									</div>
 								{/if}
+								<button class="hero-deck-btn hero-intro-btn" onclick={requestIntroduction}>
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+									Request Introduction
+								</button>
+								<div class="share-wrapper">
+									<button class="hero-share-btn" onclick={(e) => { e.stopPropagation(); shareDropdownOpen = !shareDropdownOpen; }}>
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+										Share Deal
+									</button>
+									{#if shareDropdownOpen}
+										<div
+											class="share-dropdown active"
+											role="menu"
+											tabindex="-1"
+											aria-label="Share deal options"
+											onclick={(e) => e.stopPropagation()}
+											onkeydown={(e) => {
+												if (e.key === 'Escape') shareDropdownOpen = false;
+												e.stopPropagation();
+											}}
+										>
+											<button class="share-dropdown-item share-invite" onclick={openInviteModal}>
+												<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+												<span class="share-invite-text">Invite a co-investor</span>
+											</button>
+											<button class="share-dropdown-item" onclick={copyDealLink}>
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+												Copy link
+											</button>
+											<button class="share-dropdown-item" onclick={shareDealEmail}>
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+												Email to a friend
+											</button>
+											<button class="share-dropdown-item" onclick={shareDealText}>
+												<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+												Text message
+											</button>
+										</div>
+									{/if}
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1479,7 +1620,7 @@
 							class="journey-step"
 							class:active={currentStage === stage.key}
 							class:completed={currentStageIdx > i}
-							class:passed={currentStage === 'passed' && i === 0}
+							class:skipped={currentStage === 'skipped' && i === 0}
 							onclick={() => setStage(stage.key)}
 						>
 							<div class="step-dot">
@@ -1495,18 +1636,18 @@
 				</div>
 
 				<!-- ==================== DECK VIEWED PROMPT ==================== -->
-				{#if currentStage === 'saved' && deckViewed}
+				{#if currentStage === 'review' && deckViewed}
 					<div class="deck-viewed-prompt">
 						<div class="deck-viewed-left">
 							<span class="deck-viewed-title">You've reviewed the deck.</span>
 							<span class="deck-viewed-sub">Interested in this deal?</span>
 						</div>
-						<button class="btn-advance btn-sm" onclick={() => setStage('diligence')}>Ready to Connect &rarr;</button>
+						<button class="btn-advance btn-sm" onclick={() => setStage('connect')}>Ready to Connect &rarr;</button>
 					</div>
 				{/if}
 
 				<!-- ==================== INTRO NUDGE ==================== -->
-				{#if currentStage === 'decision' && !introRequested}
+				{#if currentStage === 'decide' && !introRequested}
 					<div class="intro-nudge-banner">
 						<div class="intro-nudge-icon">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1533,16 +1674,6 @@
 					</div>
 				{/if}
 
-				<!-- ==================== DATA COMPLETENESS ==================== -->
-				<div class="data-completeness">
-					<span class="data-completeness-label">Data Quality</span>
-					<div class="data-completeness-bar">
-						<div class="data-completeness-fill {completeness >= 70 ? 'high' : completeness >= 40 ? 'medium' : 'low'}" style="width:{completeness}%"></div>
-					</div>
-					<span class="data-completeness-pct">{completeness}%</span>
-					<span class="data-completeness-hint">{completeness >= 70 ? 'Well documented' : completeness >= 40 ? 'Partial data' : 'Limited data'}</span>
-				</div>
-
 				<!-- ==================== SHARE CLASS TABS ==================== -->
 				{#if hasShareClasses}
 					<div class="sc-toggle-bar">
@@ -1553,36 +1684,6 @@
 								onclick={() => switchShareClass(origIdx)}
 							>{sc.label}</button>
 						{/each}
-					</div>
-				{/if}
-
-				<!-- ==================== KEY METRICS STRIP ==================== -->
-				{#if displayTargetIRR || displayMinInvestment}
-					<div class="metrics-strip">
-						{#if displayTargetIRR}
-							<div class="metric-card"><div class="metric-label">{isCredit ? 'Target Yield' : 'Target IRR'}</div><div class="metric-value highlight">{fmt(displayTargetIRR, 'pct')}</div></div>
-						{/if}
-						{#if displayMinInvestment}
-							<div class="metric-card"><div class="metric-label">Min Investment</div><div class="metric-value">{fmt(displayMinInvestment, 'money')}</div></div>
-						{/if}
-						{#if isPaid}
-							{#if !isCredit && displayEquityMultiple}
-								<div class="metric-card"><div class="metric-label">Equity Multiple</div><div class="metric-value">{fmt(displayEquityMultiple, 'multiple')}</div></div>
-							{/if}
-							{#if displayPrefReturn}
-								<div class="metric-card"><div class="metric-label">Pref Return</div><div class="metric-value">{fmt(displayPrefReturn, 'pct')}</div></div>
-							{/if}
-							{#if deal.holdPeriod}
-								<div class="metric-card"><div class="metric-label">{isCredit ? 'Lockup' : 'Hold Period'}</div><div class="metric-value">{formatHold(deal.holdPeriod)}</div></div>
-							{/if}
-							{#if isCredit && deal.fundAUM}
-								<div class="metric-card"><div class="metric-label">Fund AUM</div><div class="metric-value">{fmt(deal.fundAUM, 'money')}</div></div>
-							{/if}
-						{:else}
-							<a class="metric-card metric-locked metric-locked-link" href={academyHref}>
-								<span class="metric-label">+ More Metrics</span>
-							</a>
-						{/if}
 					</div>
 				{/if}
 
@@ -1698,14 +1799,19 @@
 						{/if}
 
 						<!-- Property Location Map -->
-						<div class="section">
+						<div class="section" use:loadWhenVisible={setDealMapSectionVisible}>
 							<div class="section-header">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
 								<span class="section-title">Property Location</span>
 							</div>
 							<div class="section-body">
 								{#if isPaid}
-									{#if dealMapLoading}
+									{#if !dealMapLoaded}
+										<div class="deal-map-placeholder">
+											<div class="deal-map-spinner"></div>
+											<span>Map loads when you scroll here.</span>
+										</div>
+									{:else if dealMapLoading}
 										<div class="deal-map-placeholder">
 											<div class="deal-map-spinner"></div>
 											<span>Loading map...</span>
@@ -1714,6 +1820,7 @@
 										<div class="deal-map-placeholder">
 											<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="32" height="32"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
 											<span style="color:var(--text-muted);font-size:13px;">Location not available</span>
+											<button class="btn-upgrade-map" onclick={() => loadDealMap(true)}>Try again</button>
 										</div>
 									{:else}
 										<div id="dealLocationMap" class="deal-map-container"></div>
@@ -1721,8 +1828,12 @@
 								{:else}
 									<div class="deal-map-placeholder">
 										<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="24" height="24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-										<span style="color:var(--text-muted);font-size:13px;">Property map available for Academy members</span>
-										<a href="/app/academy" class="btn-upgrade-map">Unlock with Academy</a>
+										<span style="color:var(--text-muted);font-size:13px;">
+											{nativeCompanionMode ? 'Property maps remain available to existing members on the web.' : 'Property map available for Academy members'}
+										</span>
+										{#if !nativeCompanionMode}
+											<a href="/app/academy" class="btn-upgrade-map">Unlock with Academy</a>
+										{/if}
 									</div>
 								{/if}
 							</div>
@@ -1756,7 +1867,7 @@
 									{:else}
 										<div class="doc-item doc-locked">
 											<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-											PPM (Academy Only)
+											{nativeCompanionMode ? 'PPM available to existing members on the web' : 'PPM (Academy Only)'}
 										</div>
 									{/if}
 								{/if}
@@ -1817,9 +1928,17 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">Unlock Due Diligence Checklist</div>
-										<div class="gate-text">Academy members get a {checklist.sections.length}-section interactive DD checklist with auto-filled answers for every deal.</div>
-										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Due Diligence Checklist'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												The {checklist.sections.length}-section interactive due diligence checklist remains available to existing members in their web account.
+											{:else}
+												Academy members get a {checklist.sections.length}-section interactive DD checklist with auto-filled answers for every deal.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
 									</div>
 								</div>
 							{/if}
@@ -1902,9 +2021,17 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">Unlock Cash Flow Projections</div>
-										<div class="gate-text">See year-by-year projected distributions, capital returns, and cash-on-cash analysis for this deal.</div>
-										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Cash Flow Projections'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Year-by-year projected distributions, capital returns, and cash-on-cash analysis remain available to existing members on the web.
+											{:else}
+												See year-by-year projected distributions, capital returns, and cash-on-cash analysis for this deal.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
 									</div>
 								</div>
 							{/if}
@@ -2003,9 +2130,17 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">Unlock Peer Comparison</div>
-										<div class="gate-text">See how this deal's metrics compare to {peerComparison.peerCount} similar {peerComparison.peerLabel} deals.</div>
-										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Peer Comparison'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Peer comparisons against {peerComparison.peerCount} similar {peerComparison.peerLabel} deals remain available to existing members on the web.
+											{:else}
+												See how this deal's metrics compare to {peerComparison.peerCount} similar {peerComparison.peerLabel} deals.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
 									</div>
 								</div>
 							{/if}
@@ -2056,9 +2191,17 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">Unlock Stress Test Calculator</div>
-										<div class="gate-text">Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.</div>
-										<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Stress Test Calculator'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Scenario modeling for rent growth, cap rates, vacancy, and interest rates remains available to existing members on the web.
+											{:else}
+												Model bear, base, and bull scenarios with adjustable rent growth, cap rates, vacancy, and interest rates.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
 									</div>
 								</div>
 							{/if}
@@ -2193,21 +2336,165 @@
 				{/if}
 
 				<!-- ==================== DEAL FIT SUMMARY ==================== -->
-				{#if dealFit}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span class="section-title">Deal Fit Summary</span></div><div class="section-body deal-fit-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><div class="gate-title">Unlock Deal Fit Summary</div><div class="gate-text">See how this deal matches common investor benchmarks.</div><a href={academyHref} class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}><div class="fit-verdict" style="--verdict-color:{dealFit.verdictColor}"><div class="fit-verdict-icon">{#if dealFit.score >= 3}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>{:else if dealFit.score >= -1}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{:else}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>{/if}</div><div><div class="fit-verdict-text">{dealFit.verdict}</div><div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div></div></div>{#if dealFit.fits.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-good">What Works</div>{#each dealFit.fits as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span>{item}</span></div>{/each}</div>{/if}{#if dealFit.warnings.length > 0}<div class="fit-list-section"><div class="fit-list-label fit-label-warn">Watch Out For</div>{#each dealFit.warnings as item}<div class="fit-list-item"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>{item}</span></div>{/each}</div>{/if}</div></div></div>{/if}
+				{#if dealFit}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+							<span class="section-title">Deal Fit Summary</span>
+						</div>
+						<div class="section-body deal-fit-body" class:gated={!isPaid && !$isAdmin}>
+							{#if !isPaid && !$isAdmin}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+										</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Deal Fit Summary'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Deal fit scoring against common investor benchmarks remains available to existing members on the web.
+											{:else}
+												See how this deal matches common investor benchmarks.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid && !$isAdmin}>
+								<div class="fit-verdict" style="--verdict-color:{dealFit.verdictColor}">
+									<div class="fit-verdict-icon">
+										{#if dealFit.score >= 3}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+										{:else if dealFit.score >= -1}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+										{:else}
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+										{/if}
+									</div>
+									<div>
+										<div class="fit-verdict-text">{dealFit.verdict}</div>
+										<div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div>
+									</div>
+								</div>
+								{#if dealFit.fits.length > 0}
+									<div class="fit-list-section">
+										<div class="fit-list-label fit-label-good">What Works</div>
+										{#each dealFit.fits as item}
+											<div class="fit-list-item">
+												<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+												<span>{item}</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+								{#if dealFit.warnings.length > 0}
+									<div class="fit-list-section">
+										<div class="fit-list-label fit-label-warn">Watch Out For</div>
+										{#each dealFit.warnings as item}
+											<div class="fit-list-item">
+												<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+												<span>{item}</span>
+											</div>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
 
 				<!-- ==================== BACKGROUND CHECK ==================== -->
-				{#if deal.managementCompanyId}<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Background Check</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div><div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>{#if !isPaid && !$isAdmin}<div class="gate-overlay"><div class="gate-content"><div class="gate-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="gate-title">Unlock Background Check</div><div class="gate-text">Academy members get SEC EDGAR, FINRA, IAPD, and OFAC screening.</div><a href={academyHref} class="gate-cta">Join Academy &rarr;</a></div></div>{/if}<div class:blurred={!isPaid && !$isAdmin}>{#if bgCheckLoading}<div class="bg-loading">Loading background check data...</div>{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}</div></div></div>{/if}
+				{#if deal.managementCompanyId}
+					<div class="section" use:loadWhenVisible={setBgCheckSectionVisible}>
+						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Background Check</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div>
+						<div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>
+							{#if !isPaid && !$isAdmin}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+										</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Background Check'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												SEC EDGAR, FINRA, IAPD, and OFAC screening remains available to existing members on the web.
+											{:else}
+												Academy members get SEC EDGAR, FINRA, IAPD, and OFAC screening.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid && !$isAdmin}>
+								{#if !bgCheckLoaded && !bgCheckLoading}
+									<div class="bg-empty"><div class="bg-empty-text">Background check loads when you scroll here.</div></div>
+								{:else if bgCheckLoading}
+									<div class="bg-loading">Loading background check data...</div>
+								{:else if bgCheckError}
+									<div class="bg-empty">
+										<div class="bg-empty-text">Couldn’t load background check.</div>
+										<button class="bg-run-cta" onclick={() => loadBackgroundCheck(true)}>Try Again</button>
+									</div>
+								{:else if bgCheck}{@const sources = [{ label: 'SEC EDGAR', status: bgCheck.sec_status, detail: `${bgCheck.sec_filings_count || 0} filing(s)`, url: bgCheck.sec_url },{ label: 'FINRA BrokerCheck', status: bgCheck.finra_status, detail: bgCheck.finra_found ? (bgCheck.finra_disclosures > 0 ? `${bgCheck.finra_disclosures} disclosure(s)` : 'No disclosures') : 'Not registered', url: 'https://brokercheck.finra.org/' },{ label: 'IAPD', status: bgCheck.iapd_status, detail: bgCheck.iapd_found ? (bgCheck.iapd_disclosures > 0 ? `${bgCheck.iapd_disclosures} disclosure(s)` : 'Clean') : 'Not found', url: 'https://adviserinfo.sec.gov/' },{ label: 'OFAC', status: bgCheck.ofac_status, detail: bgCheck.ofac_found ? 'Match found' : 'Clear', url: 'https://sanctionssearch.ofac.treas.gov/' },{ label: 'Courts', status: bgCheck.court_status, detail: `${bgCheck.court_cases_count || 0} case(s)`, url: null }]}<div class="bg-sources">{#each sources as src}<div class="bg-source-badge {bgStatusClass(src.status)}"><span class="bg-source-label">{src.label}</span><span class="bg-source-detail">{src.detail}</span>{#if src.url}<a href={src.url} target="_blank" rel="noopener" class="bg-source-link" title="Verify externally"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>{/if}</div>{/each}</div>{#if bgCheck.flags && bgCheck.flags.length > 0}<div class="bg-flags">{#each bgCheck.flags as flag}<div class="bg-flag-item"><strong>{flag.source}:</strong> {flag.message}</div>{/each}</div>{/if}<div class="bg-footer"><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-full-report">View Full Report &rarr;</a>{#if bgCheck.run_at}<span class="bg-run-date">Checked: {new Date(bgCheck.run_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>{/if}</div>{:else}<div class="bg-empty"><div class="bg-empty-text">No background check has been run yet.</div><a href="/sponsor?company={encodeURIComponent(deal.managementCompany || '')}#bgReportSection" class="bg-run-cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Run Background Check</a></div>{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
 
 				<!-- ==================== INVESTOR Q&A ==================== -->
-				<div class="section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div><div class="section-body"><div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>{#if qaLoading}<div class="qa-loading">Loading questions...</div>{:else if questions.length === 0}<div class="qa-empty">No questions yet. Be the first to ask!</div>{:else}<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)} aria-label="Upvote question" title="Upvote question"><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>{/if}</div></div>
+				<div class="section" use:loadWhenVisible={setQaSectionVisible}>
+					<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div>
+					<div class="section-body">
+						<div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>
+						{#if !qaLoaded && !qaLoading}
+							<div class="qa-empty qa-empty-deferred">Questions load when this section comes into view.</div>
+						{:else if qaLoading}
+							<div class="qa-loading">Loading questions...</div>
+						{:else if qaError}
+							<div class="qa-empty">
+								Couldn't load questions.
+								<div style="margin-top:10px;">
+									<button class="qa-submit-btn" onclick={() => loadQuestions(true)}>Try Again</button>
+								</div>
+							</div>
+						{:else if questions.length === 0}
+							<div class="qa-empty">No questions yet. Be the first to ask!</div>
+						{:else}
+							<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)} aria-label="Upvote question" title="Upvote question"><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>
+						{/if}
+					</div>
+				</div>
 
 				<!-- ==================== GP INSIGHTS (admin only) ==================== -->
-				{#if $isAdmin && deal.managementCompany}<div class="section gp-insights-section"><div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights -- Investor Pipeline</span><span class="gp-admin-badge">ADMIN</span></div><div class="section-body">{#if gpInsightsLoading}<div class="gp-loading">Loading investor pipeline...</div>{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.saved || 0}</div><div class="gp-funnel-label">Saved</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.reviewing || 0}</div><div class="gp-funnel-label">Reviewing</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connecting || 0}</div><div class="gp-funnel-label">Connecting</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}<div class="gp-share-card"><div class="gp-share-label">Share with Investors</div><div class="gp-share-desc">Send this link to the operator so they can share their deal page.</div><div class="gp-share-row"><input class="gp-share-input" type="text" readonly value={browser ? `${window.location.origin}/deal/${deal.id}` : `/deal/${deal.id}`} /><button class="gp-share-copy" onclick={() => { if (browser) navigator.clipboard.writeText(`${window.location.origin}/deal/${deal.id}`); }}>Copy</button></div></div></div></div>{/if}
+				{#if $isAdmin && deal.managementCompany}
+					<div class="section gp-insights-section" use:loadWhenVisible={setGpInsightsSectionVisible}>
+						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights -- Investor Pipeline</span><span class="gp-admin-badge">ADMIN</span></div>
+						<div class="section-body">
+							{#if !gpInsightsLoaded && !gpInsightsLoading}
+								<div class="gp-empty">Investor pipeline loads when you scroll here.</div>
+							{:else if gpInsightsLoading}
+								<div class="gp-loading">Loading investor pipeline...</div>
+							{:else if gpInsightsError}
+								<div class="gp-empty">
+									Couldn't load investor pipeline.
+									<div style="margin-top:10px;">
+										<button class="gp-share-copy" onclick={() => loadGpInsights(true)}>Try Again</button>
+									</div>
+								</div>
+							{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.review || 0}</div><div class="gp-funnel-label">Review</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connect || 0}</div><div class="gp-funnel-label">Connect</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.decide || 0}</div><div class="gp-funnel-label">Decide</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}<div class="gp-share-card"><div class="gp-share-label">Share with Investors</div><div class="gp-share-desc">Send this link to the operator so they can share their deal page.</div><div class="gp-share-row"><input class="gp-share-input" type="text" readonly value={browser ? `${window.location.origin}/deal/${deal.id}` : `/deal/${deal.id}`} /><button class="gp-share-copy" onclick={() => { if (browser) navigator.clipboard.writeText(`${window.location.origin}/deal/${deal.id}`); }}>Copy</button></div></div></div>
+					</div>
+				{/if}
 
 				<!-- ==================== COMMUNITY ==================== -->
 				{#if socialProof}
-					{@const reviewing = (socialProof.interested || 0) + (socialProof.saved || 0) + (socialProof.duediligence || 0) + (socialProof.vetting || 0)}
-					{@const invested = (socialProof.portfolio || 0) + (socialProof.invested || 0)}
+					{@const reviewing = socialProofCounts.reviewing || 0}
+					{@const invested = socialProofCounts.invested || 0}
 					{#if reviewing > 0 || invested > 0}
 						<div class="section">
 							<div class="section-header">
@@ -2216,20 +2503,17 @@
 							</div>
 							<div class="section-body">
 								{#if reviewing > 0}
-									{@const names = (socialProof.namedInvestors || []).concat(socialProof.namedWatchers || []).slice(0, 5)}
 									<div class="community-stat-row">
-										{#if names.length > 0}
-											<div class="community-avatar-stack">
-												{#each names as name, i}
-													<div class="community-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]};z-index:{5-i}" title={name}>
-														{name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2)}
-													</div>
-												{/each}
-												{#if reviewing > names.length}
-													<div class="community-avatar community-avatar-more" style="z-index:0">+{reviewing - names.length}</div>
-												{/if}
-											</div>
-										{/if}
+										<div class="community-avatar-stack">
+											{#each Array(Math.min(reviewing, 5)) as _, i}
+												<div class="community-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]};z-index:{5-i}">
+													LP
+												</div>
+											{/each}
+											{#if reviewing > 5}
+												<div class="community-avatar community-avatar-more" style="z-index:0">+{reviewing - 5}</div>
+											{/if}
+										</div>
 										<div class="community-stat">
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
 											{reviewing} investor{reviewing === 1 ? '' : 's'} reviewing this deal
@@ -2252,17 +2536,17 @@
 
 			<!-- ==================== STICKY ACTION BAR ==================== -->
 			<div class="sticky-action-bar">
-				{#if currentStage === 'browse' || !currentStage}
+				{#if currentStage === 'filter' || !currentStage}
 					<button class="btn-pass" onclick={skipDeal}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						Skip
 					</button>
 					<span class="stage-label">Stage: <strong>Filter</strong></span>
-					<button class="btn-advance" onclick={() => setStage('saved')}>
+					<button class="btn-advance" onclick={() => setStage('review')}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-						Save Deal
+						Start Review
 					</button>
-				{:else if currentStage === 'saved'}
+				{:else if currentStage === 'review'}
 					<button class="btn-pass" onclick={skipDeal}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						Skip
@@ -2273,21 +2557,21 @@
 							View Investment Deck &rarr;
 						</button>
 					{:else}
-						<button class="btn-advance" onclick={() => setStage('diligence')}>
+						<button class="btn-advance" onclick={() => setStage('connect')}>
 							Ready to Connect &rarr;
 						</button>
 					{/if}
-				{:else if currentStage === 'diligence'}
+				{:else if currentStage === 'connect'}
 					<button class="btn-pass" onclick={skipDeal}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						Skip
 					</button>
 					<span class="stage-label">Stage: <strong>Connect</strong></span>
-					<button class="btn-advance" onclick={() => setStage('decision')}>
+					<button class="btn-advance" onclick={() => setStage('decide')}>
 						Decide &rarr;
 					</button>
-				{:else if currentStage === 'decision'}
-					<button class="btn-pass" onclick={() => setStage('diligence')}>
+				{:else if currentStage === 'decide'}
+					<button class="btn-pass" onclick={() => setStage('connect')}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
 						Back to Connect
 					</button>
@@ -2306,9 +2590,9 @@
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
 						Generate Investment Report
 					</button>
-				{:else if currentStage === 'passed'}
-					<span class="stage-label">Stage: <strong>Passed</strong></span>
-					<button class="btn-advance" onclick={() => setStage('saved')}>
+				{:else if currentStage === 'skipped'}
+					<span class="stage-label">Stage: <strong>Skipped</strong></span>
+					<button class="btn-advance" onclick={() => setStage('review')}>
 						Reconsider Deal &rarr;
 					</button>
 				{/if}
@@ -2331,7 +2615,7 @@
 
 <!-- ==================== FLOATING COMPARE BADGE ==================== -->
 {#if compareCount > 0}
-	<a href="/app/deals?tab=decision" class="floating-compare-badge">
+	<a href="/app/deals?tab=decide" class="floating-compare-badge">
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 		Compare ({compareCount})
 	</a>
@@ -2375,20 +2659,6 @@
 				<div class="modal-body-text">
 					We'll connect you with {opName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
 				</div>
-				<div class="modal-field">
-					<div class="modal-label">Preferred Contact Method</div>
-					<div class="modal-radio-group" role="radiogroup" aria-label="Preferred Contact Method">
-						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="email" /> Email</label>
-						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="phone" /> Phone</label>
-						<label class="modal-radio"><input type="radio" bind:group={introMethod} value="video" /> Video Call</label>
-					</div>
-				</div>
-				{#if introMethod === 'phone'}
-					<div class="modal-field">
-						<label class="modal-label" for="intro-phone">Phone Number (optional)</label>
-						<input id="intro-phone" type="tel" class="modal-input" placeholder="(555) 123-4567" bind:value={introPhone} />
-					</div>
-				{/if}
 				<div class="modal-field">
 					<label class="modal-label" for="intro-message">Message to Operator (optional)</label>
 					<textarea id="intro-message" class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
@@ -2705,8 +2975,8 @@
 	.journey-step.active { color: var(--primary); background: rgba(81,190,123,0.08); }
 	.journey-step.completed .step-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
 	.journey-step.completed { color: var(--text-dark); }
-	.journey-step.passed .step-dot { background: #D04040; border-color: #D04040; color: #fff; }
-	.journey-step.passed { color: #D04040; }
+	.journey-step.skipped .step-dot { background: #D04040; border-color: #D04040; color: #fff; }
+	.journey-step.skipped { color: #D04040; }
 	.journey-connector { flex: 1; min-width: 12px; max-width: 34px; height: 2px; background: var(--border); align-self: center; margin-top: -12px; }
 	.journey-connector.done { background: var(--primary); }
 

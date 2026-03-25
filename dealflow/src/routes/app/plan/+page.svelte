@@ -1,14 +1,18 @@
 <script>
 	import { onMount } from 'svelte';
-	import { deals, fetchDeals } from '$lib/stores/deals.js';
+	import CompanionGate from '$lib/components/CompanionGate.svelte';
 	import {
 		getStoredSessionUser,
-		isAcademy,
-		isAdmin,
-		userTier
+		isMember
 	} from '$lib/stores/auth.js';
-	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
+	import {
+		currentAdminRealUser,
+		getUserScopedCacheSnapshot,
+		writeUserScopedJson,
+		writeUserScopedString
+	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let hasPlan = $state(false);
 	let loading = $state(true);
@@ -20,8 +24,10 @@
 	let shouldOpenWizardFromLocation = false;
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
+	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
+	const nativeCompanionMode = browser && isNativeApp();
 
-	const canViewAnalytics = $derived($isAdmin || $userTier !== 'free' || $isAcademy);
+	const canViewAnalytics = $derived($isMember);
 
 	let wizardStep = $state(0);
 	let wizardData = $state({
@@ -324,7 +330,7 @@
 
 	function openWizard() {
 		if (browser) {
-			const stored = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+			const { buyBoxWizard: stored } = getUserScopedCacheSnapshot();
 			if (stored && Object.keys(stored).length > 0) {
 				wizardData.goal = stored._branch || stored.goal || 'cashflow';
 				wizardData.targetAmount = Number(stored.targetAmount || stored.targetIncome || stored.targetTaxSavings || stored.targetGrowth || 0);
@@ -340,14 +346,14 @@
 	function closeWizard() {
 		showWizard = false;
 		if (browser) {
-			localStorage.setItem('gycBuyBoxWizard', JSON.stringify({
+			writeUserScopedJson('gycBuyBoxWizard', {
 				_branch: wizardData.goal,
 				goal: wizardData.goal,
 				targetAmount: wizardData.targetAmount,
 				investableCapital: wizardData.investableCapital,
 				assetClasses: wizardData.assetClasses,
 				dealTypes: wizardData.dealTypes
-			}));
+			});
 		}
 	}
 
@@ -367,8 +373,8 @@
 		};
 
 		if (browser) {
-			localStorage.setItem('gycBuyBoxWizard', JSON.stringify(payload));
-			localStorage.setItem('gycBuyBoxComplete', 'true');
+			writeUserScopedJson('gycBuyBoxWizard', payload);
+			writeUserScopedString('gycBuyBoxComplete', 'true');
 		}
 
 		try {
@@ -459,75 +465,99 @@
 	);
 	const totalMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.dealCount, 0));
 	const totalNewMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.newThisMonth, 0));
-	const wantsLendingSnapshot = $derived.by(() =>
-		selectedStrategies.some((strategy) => isLendingLike(strategy))
-	);
-	const reportRelevantAssets = $derived.by(() => {
-		const assets = [...selectedAssets];
-		if (wantsLendingSnapshot && !assets.some((asset) => isLendingLike(asset))) {
-			assets.push('Lending');
-		}
-		return [...new Set(assets)].slice(0, 5);
-	});
-	const reportMatchingDeals = $derived.by(() => {
-		const catalog = ($deals || []).filter((deal) => !['closed', 'inactive', 'archived'].includes(String(deal?.status || '').toLowerCase()));
-		if (catalog.length === 0) return [];
-		return catalog.filter((deal) => reportRelevantAssets.some((asset) => assetChoiceMatchesDeal(asset, deal)));
-	});
-	const reportSnapshotRows = $derived.by(() => {
-		const fallbackRows = snapshotRows.map((row) => ({
-			label: row.label,
-			color: row.color,
+		const wantsLendingSnapshot = $derived.by(() =>
+			selectedStrategies.some((strategy) => isLendingLike(strategy))
+		);
+		const reportRelevantAssets = $derived.by(() => {
+			const assets = [...selectedAssets];
+			if (wantsLendingSnapshot && !assets.some((asset) => isLendingLike(asset))) {
+				assets.push('Lending');
+			}
+			return [...new Set(assets)].slice(0, 5);
+		});
+		const reportSnapshotRows = $derived.by(() => {
+			const fallbackRows = snapshotRows.map((row) => ({
+				label: row.label,
+				color: row.color,
 			icon: row.icon,
 			count: row.dealCount,
 			irrMin: row.irrMin,
 			irrMax: row.irrMax,
 			avgCoC: row.cashYield,
-			avgMinimum: plannedCheckSize ? Math.round(plannedCheckSize * 1.35) : 0,
-			affordableCount: plannedCheckSize ? Math.max(1, Math.round(row.dealCount * 0.45)) : null
-		}));
-		if (reportMatchingDeals.length === 0) return fallbackRows;
+				avgMinimum: plannedCheckSize ? Math.round(plannedCheckSize * 1.35) : 0,
+				affordableCount: plannedCheckSize ? Math.max(1, Math.round(row.dealCount * 0.45)) : null
+			}));
+			const snapshotByAsset = new Map(
+				(marketSnapshot.rows || []).map((row) => [normalizeAssetKey(row.assetClass), row])
+			);
+			if (snapshotByAsset.size === 0) return fallbackRows;
 
-		const rows = reportRelevantAssets.map((asset) => {
-			const profile = getAssetProfile(asset);
-			const classDeals = reportMatchingDeals.filter((deal) => assetChoiceMatchesDeal(asset, deal));
-			if (classDeals.length === 0) return null;
+			const rows = reportRelevantAssets.map((asset) => {
+				const profile = getAssetProfile(asset);
+				const snapshot = snapshotByAsset.get(normalizeAssetKey(asset));
+				if (!snapshot) return null;
 
-			const irrValues = classDeals.map((deal) => percentNumber(deal?.targetIRR)).filter(Boolean);
-			const cocValues = classDeals.map((deal) => percentNumber(deal?.cashOnCash || deal?.cash_yield || deal?.preferredReturn)).filter(Boolean);
-			const minimums = classDeals.map((deal) => dealMinimum(deal)).filter(Boolean);
+				return {
+					label: profile.label,
+					color: profile.color,
+					icon: profile.icon,
+					count: snapshot.count || 0,
+					irrMin: snapshot.irrMin ?? profile.irrMin,
+					irrMax: snapshot.irrMax ?? profile.irrMax,
+					avgCoC: snapshot.avgCoC ?? profile.cashYield,
+					avgMinimum: snapshot.avgMinimum || 0,
+					affordableCount: snapshot.affordableCount ?? null
+				};
+			}).filter(Boolean);
 
-			return {
-				label: profile.label,
-				color: profile.color,
-				icon: profile.icon,
-				count: classDeals.length,
-				irrMin: irrValues.length ? Math.min(...irrValues) : profile.irrMin,
-				irrMax: irrValues.length ? Math.max(...irrValues) : profile.irrMax,
-				avgCoC: cocValues.length ? average(cocValues) : profile.cashYield,
-				avgMinimum: minimums.length ? Math.round(average(minimums)) : 0,
-				affordableCount: plannedCheckSize
-					? classDeals.filter((deal) => {
-						const minimum = dealMinimum(deal);
-						return minimum > 0 && minimum <= plannedCheckSize;
-					}).length
-					: null
+			return rows.length ? rows : fallbackRows;
+		});
+		const reportMatchTotal = $derived.by(() =>
+			marketSnapshot.loaded ? marketSnapshot.total : totalMatches
+		);
+		const reportNewThisMonth = $derived.by(() =>
+			marketSnapshot.loaded ? marketSnapshot.newThisMonth : totalNewMatches
+		);
+
+		$effect(() => {
+			if (!browser) return;
+			const assets = reportRelevantAssets;
+			const checkSize = plannedCheckSize;
+			let cancelled = false;
+
+			if (assets.length === 0) {
+				marketSnapshot = { rows: [], total: 0, newThisMonth: 0, loaded: true };
+				return;
+			}
+
+			const params = new URLSearchParams();
+			params.set('asset_classes', assets.join(','));
+			if (checkSize) params.set('check_size', String(checkSize));
+
+			void (async () => {
+				try {
+					const response = await fetch(`/api/plan-market-snapshot?${params.toString()}`);
+					if (!response.ok) throw new Error('snapshot failed');
+					const data = await response.json();
+					if (!cancelled) {
+						marketSnapshot = {
+							rows: data?.rows || [],
+							total: data?.total || 0,
+							newThisMonth: data?.newThisMonth || 0,
+							loaded: true
+						};
+					}
+				} catch {
+					if (!cancelled) {
+						marketSnapshot = { rows: [], total: 0, newThisMonth: 0, loaded: false };
+					}
+				}
+			})();
+
+			return () => {
+				cancelled = true;
 			};
-		}).filter(Boolean);
-
-		return rows.length ? rows : fallbackRows;
-	});
-	const reportMatchTotal = $derived.by(() =>
-		reportSnapshotRows.reduce((sum, row) => sum + (row.count || 0), 0) || totalMatches
-	);
-	const reportNewThisMonth = $derived.by(() => {
-		if (reportMatchingDeals.length === 0) return totalNewMatches;
-		const now = new Date();
-		return reportMatchingDeals.filter((deal) => {
-			const added = new Date(deal?.addedDate || deal?.added_at || deal?.publishedAt || '');
-			return !Number.isNaN(added.getTime()) && added.getMonth() === now.getMonth() && added.getFullYear() === now.getFullYear();
-		}).length;
-	});
+		});
 
 	const projection = $derived.by(() => {
 		const preferredAssets = selectedAssets.length ? selectedAssets : [...goalDefaults.cashflow];
@@ -755,10 +785,10 @@
 	onMount(async () => {
 		if (!browser) return;
 		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
-		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+		const snapshot = getUserScopedCacheSnapshot();
+		portfolio = snapshot.portfolio;
 		reportUser = getStoredSessionUser();
-		portfolioPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
-		fetchDeals().catch(() => {});
+		portfolioPlan = snapshot.portfolioPlan;
 
 		try {
 			const stored = getStoredSessionUser();
@@ -772,10 +802,14 @@
 			const buyBoxUrl = new URL('/api/buybox', window.location.origin);
 			buyBoxUrl.searchParams.set('email', stored.email);
 			if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
+			const controller = new AbortController();
+			const timeout = window.setTimeout(() => controller.abort(), 8000);
 
 			const response = await fetch(buyBoxUrl.pathname + buyBoxUrl.search, {
-				headers: { Authorization: `Bearer ${stored.token}` }
+				headers: { Authorization: `Bearer ${stored.token}` },
+				signal: controller.signal
 			});
+			window.clearTimeout(timeout);
 
 			if (response.ok) {
 				const data = await response.json();
@@ -808,9 +842,9 @@
 	</button>
 	<div class="topbar-title">Dashboard</div>
 	<nav class="dash-tabs" aria-label="Dashboard sections">
-		<a href="/app/dashboard" class="dash-tab">Overview</a>
-		<a href="/app/portfolio" class="dash-tab">Portfolio</a>
-		<a href="/app/plan" class="dash-tab active">My Plan</a>
+		<a href="/app/dashboard" class="dash-tab" data-sveltekit-reload>Overview</a>
+		<a href="/app/portfolio" class="dash-tab" data-sveltekit-reload>Portfolio</a>
+		<a href="/app/plan" class="dash-tab active" data-sveltekit-reload>My Plan</a>
 	</nav>
 </div>
 
@@ -1066,11 +1100,27 @@
 				</section>
 			{:else}
 				<section class="plan-card locked-card">
-					<div class="locked-title">Advanced plan analytics are for members and admins</div>
-					<div class="locked-copy">Free users can still build and edit a plan, but the market snapshot, projection bars, and year-by-year deployment schedule stay locked until upgrade.</div>
+					<div class="locked-title">
+						{nativeCompanionMode ? 'Advanced plan analytics stay on the web' : 'Advanced plan analytics are for members and admins'}
+					</div>
+					<div class="locked-copy">
+						{#if nativeCompanionMode}
+							Free users can still build and edit a plan in the iOS app. Market snapshots, projection bars, and deployment schedules remain available to existing members on the web.
+						{:else}
+							Free users can still build and edit a plan, but the market snapshot, projection bars, and year-by-year deployment schedule stay locked until upgrade.
+						{/if}
+					</div>
 					<div class="locked-actions">
 						<button class="btn-cta secondary" onclick={openWizard}>Update Plan</button>
-						<a href="/app/academy" class="btn-cta">Unlock Full Plan</a>
+						{#if nativeCompanionMode}
+							<CompanionGate
+								compact={true}
+								title="Available to existing members"
+								message="Advanced projections and market snapshots stay available to existing members on the web."
+							/>
+						{:else}
+							<a href="/app/academy" class="btn-cta">Unlock Full Plan</a>
+						{/if}
 					</div>
 				</section>
 			{/if}

@@ -1,7 +1,11 @@
 <script>
+	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
+	import WebOnlyNotice from '$lib/components/WebOnlyNotice.svelte';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let lpCount = $state('1,100+');
+	const nativeCompanionMode = browser && isNativeApp();
 
 	onMount(async () => {
 		try {
@@ -40,10 +44,12 @@
 					<h1>Pitch Your Deal to Qualified Accredited Investors</h1>
 					<p class="pitch-hero-desc">Get a dedicated 90-minute session — 45 minutes to present your deal, followed by 45 minutes of live Q&amp;A. Directly marketed to investors whose buy box matches your deal.</p>
 				</div>
-				<div class="pitch-hero-price">
-					<span class="pitch-hero-price-amount">$1,000</span>
-					<span class="pitch-hero-price-label">per pitch slot</span>
-				</div>
+				{#if !nativeCompanionMode}
+					<div class="pitch-hero-price">
+						<span class="pitch-hero-price-amount">$1,000</span>
+						<span class="pitch-hero-price-label">per pitch slot</span>
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -103,8 +109,14 @@
 				<div class="steps-row">
 					<div class="step-item">
 						<div class="step-num">1</div>
-						<h3>Book &amp; Pay</h3>
-						<p>Secure your pitch slot with a one-time $1,000 payment. Pick your preferred Thursday.</p>
+						<h3>{nativeCompanionMode ? 'Continue on Web' : 'Book &amp; Pay'}</h3>
+						<p>
+							{#if nativeCompanionMode}
+								Scheduling, contracting, and payment for your pitch slot are completed on the web.
+							{:else}
+								Secure your pitch slot with a one-time $1,000 payment. Pick your preferred Thursday.
+							{/if}
+						</p>
 					</div>
 					<div class="step-item">
 						<div class="step-num">2</div>
@@ -147,11 +159,25 @@
 		<!-- Payment Section -->
 		<div class="payment-section">
 			<div class="payment-section-header">
-				<h2>Reserve Your Slot</h2>
-				<p>Every Thursday at 1:00 PM ET &bull; One operator per week &bull; Pick your date after checkout</p>
+				<h2>{nativeCompanionMode ? 'Continue on the web' : 'Reserve Your Slot'}</h2>
+				<p>
+					{#if nativeCompanionMode}
+						Every Thursday at 1:00 PM ET. Scheduling, contracting, and payment are handled on the web.
+					{:else}
+						Every Thursday at 1:00 PM ET &bull; One operator per week &bull; Pick your date after checkout
+					{/if}
+				</p>
 			</div>
-			<iframe src="https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8" class="payment-embed" title="Payment" scrolling="no"></iframe>
-			<p class="cta-fine">One-time $1,000 payment &bull; No recurring fees &bull; Includes everything above</p>
+			{#if nativeCompanionMode}
+				<WebOnlyNotice
+					title="Continue on the web"
+					message="Scheduling, contracting, and payment for GP pitch slots are completed on the web."
+					href="https://growyourcashflow.io/book-pitch"
+				/>
+			{:else}
+				<iframe src="https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8" class="payment-embed" title="Payment" scrolling="no"></iframe>
+				<p class="cta-fine">One-time $1,000 payment &bull; No recurring fees &bull; Includes everything above</p>
+			{/if}
 		</div>
 
 		<!-- FAQ -->

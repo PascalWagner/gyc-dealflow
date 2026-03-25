@@ -1,14 +1,25 @@
 <script>
 	import { onMount } from 'svelte';
 	import {
+		accessTier,
 		getStoredSessionToken,
 		getStoredSessionUser,
 		patchStoredSessionUser,
-		user,
-		userTier
+		roleFlags,
+		user
 	} from '$lib/stores/auth.js';
+	import { formatAccessTierLabel } from '$lib/auth/access-model.js';
+	import { normalizePrivacyProfile } from '$lib/utils/dealflow-contract.js';
+	import {
+		applyAdminImpersonationToPayload,
+		applyAdminImpersonationToUrl,
+		readUserScopedJson,
+		writeUserScopedJson
+	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import CompanionGate from '$lib/components/CompanionGate.svelte';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	let activeTab = $state('profile');
 
@@ -38,11 +49,11 @@
 	let weeklyDigest = $state(true);
 	let notifSaved = $state(false);
 
-	const membershipTiers = [
+	const accessPlans = [
 		{
 			key: 'free',
 			name: 'Free',
-			price: 'Free forever',
+			price: 'Included',
 			description: 'Browse every live deal, view decks, and stay on top of the weekly digest.',
 			features: [
 				'Browse all live deals',
@@ -53,10 +64,10 @@
 			]
 		},
 		{
-			key: 'academy',
-			name: 'Academy',
-			price: '$5,000 first year',
-			description: 'Full deal analysis, GP introductions, office hours, and help building your plan.',
+			key: 'member',
+			name: 'Member',
+			price: 'Member access',
+			description: 'Full deal analysis, background checks, office hours, and planning tools.',
 			features: [
 				'Everything in Free',
 				'Full deal data and comparisons',
@@ -69,40 +80,28 @@
 			]
 		},
 		{
-			key: 'family-office',
-			name: 'Family Office',
-			price: '$25,000 per year',
-			description: 'A higher-touch partnership for serious deployers building a full portfolio.',
+			key: 'admin',
+			name: 'Admin',
+			price: 'Internal only',
+			description: 'Platform operator access for support, impersonation, and management workflows.',
 			features: [
-				'Everything in Academy',
-				'Custom deployment plan',
-				'Dedicated 1:1 calls',
-				'Co-underwriting support',
-				'Direct GP access',
-				'Tax and entity structuring guidance'
+				'Everything in Member',
+				'User impersonation',
+				'Admin dashboards and management tools',
+				'GP and member troubleshooting',
+				'Platform operations access'
 			]
 		}
 	];
 
-	const normalizedTier = $derived.by(() => {
-		const tier = String($userTier || '').toLowerCase();
-		if (['academy', 'alumni', 'investor', 'paid', 'founding', 'inner-circle'].includes(tier)) {
-			return 'academy';
-		}
-		if (tier === 'family_office') {
-			return 'family-office';
-		}
-		return 'free';
-	});
-
-	const membershipLabel = $derived.by(() => {
-		if (normalizedTier === 'academy') {
-			return $userTier === 'alumni' ? 'Academy Alumni' : 'Academy Member';
-		}
-		if (normalizedTier === 'family-office') {
-			return 'Family Office';
-		}
-		return 'Free';
+	const currentAccessTier = $derived($accessTier === 'public' ? 'free' : $accessTier || 'free');
+	const membershipLabel = $derived(formatAccessTierLabel(currentAccessTier));
+	const roleSummary = $derived.by(() => {
+		const activeRoles = [];
+		if ($roleFlags?.lp) activeRoles.push('LP');
+		if ($roleFlags?.gp) activeRoles.push('GP');
+		if ($roleFlags?.admin) activeRoles.push('Admin');
+		return activeRoles.join(' · ') || 'LP';
 	});
 
 	const membershipUser = $derived.by(() => ({
@@ -133,6 +132,7 @@
 			: 'Card';
 		return `${brand} ending in ${membershipUser.cardLast4}`;
 	});
+	const nativeCompanionMode = browser && isNativeApp();
 
 	function getToken() {
 		return browser ? getStoredSessionToken() : null;
@@ -148,6 +148,7 @@
 	function loadProfile() {
 		if (!browser) return;
 		const u = getStoredSessionUser() || {};
+		const privacy = normalizePrivacyProfile(u);
 		firstName = u.firstName || u.name?.split(' ')[0] || '';
 		lastName = u.lastName || u.name?.split(' ').slice(1).join(' ') || '';
 		email = u.email || '';
@@ -155,13 +156,7 @@
 		location = u.location || '';
 		avatarUrl = u.avatar_url || '';
 		avatarInitials = getInitials(u);
-		if (u.share_activity !== undefined) {
-			shareActivity = u.share_activity !== false;
-		} else if (u.sharePortfolio !== undefined) {
-			shareActivity = u.sharePortfolio !== false;
-		} else {
-			shareActivity = true;
-		}
+		shareActivity = privacy.share_activity;
 		accreditedStatus = u.accredited_status || '';
 		investableCapital = u.investable_capital || '$250K - $1M';
 		investmentExperience = u.investment_experience || '4-10 LP investments';
@@ -173,7 +168,7 @@
 		const resp = await fetch('/api/userdata', {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-			body: JSON.stringify({ type: 'profile', data: fields })
+			body: JSON.stringify(applyAdminImpersonationToPayload({ type: 'profile', data: fields }))
 		});
 		if (!resp.ok) {
 			console.warn('Profile sync returned', resp.status);
@@ -236,7 +231,10 @@
 				await fetch('/api/userdata', {
 					method: 'POST',
 					headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'autoRenew', data: { autoRenew: nextValue } })
+					body: JSON.stringify(applyAdminImpersonationToPayload({
+						type: 'autoRenew',
+						data: { autoRenew: nextValue }
+					}))
 				});
 			}
 		} catch (error) {
@@ -255,7 +253,7 @@
 	async function saveNotifPrefs() {
 		const prefs = { frequency: notifFreq, deal_alerts: dealAlerts, weekly_digest: weeklyDigest };
 		if (browser) {
-			localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
+			writeUserScopedJson('gycNotifPrefs', prefs);
 		}
 		try {
 			const token = getToken();
@@ -263,7 +261,10 @@
 				await fetch('/api/userdata', {
 					method: 'POST',
 					headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'notif_prefs', data: { frequency: notifFreq } })
+					body: JSON.stringify(applyAdminImpersonationToPayload({
+						type: 'notif_prefs',
+						data: { frequency: notifFreq }
+					}))
 				});
 			}
 		} catch (e) {
@@ -295,7 +296,9 @@
 		try {
 			const token = getToken();
 			if (token) {
-				const resp = await fetch('/api/userdata?type=notif_prefs', {
+				const notifPrefsUrl = applyAdminImpersonationToUrl(new URL('/api/userdata', window.location.origin));
+				notifPrefsUrl.searchParams.set('type', 'notif_prefs');
+				const resp = await fetch(notifPrefsUrl.pathname + notifPrefsUrl.search, {
 					headers: { Authorization: `Bearer ${token}` }
 				});
 				if (resp.ok) {
@@ -306,7 +309,7 @@
 		} catch {
 			// Use local fallback.
 		}
-		const local = browser ? JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}') : {};
+		const local = browser ? readUserScopedJson('gycNotifPrefs', {}) : {};
 		if (local.frequency && prefs.frequency === 'weekly') prefs.frequency = local.frequency;
 		if (local.deal_alerts !== undefined) prefs.deal_alerts = local.deal_alerts;
 		if (local.weekly_digest !== undefined) prefs.weekly_digest = local.weekly_digest;
@@ -334,11 +337,11 @@
 	let reviewCount = $derived.by(() => {
 		if (!browser) return 0;
 		try {
-			const stages = JSON.parse(localStorage.getItem('gycDealStages') || '{}');
+			const stages = readUserScopedJson('gycDealStages', {});
 			let count = 0;
 			for (const k in stages) {
 				const s = stages[k];
-				if (s && s !== 'browse' && s !== 'passed') count++;
+				if (s && s !== 'filter' && s !== 'skipped') count++;
 			}
 			return count;
 		} catch {
@@ -433,16 +436,16 @@
 	<!-- Membership Tab -->
 	{#if activeTab === 'plan'}
 		<div class="settings-panel">
-			<div class="settings-page-title">Your Membership</div>
-			<div class="settings-page-desc">See what's included in your current plan and what the next level unlocks.</div>
+			<div class="settings-page-title">Your Access</div>
+			<div class="settings-page-desc">See your current access tier, the role flags on your account, and what each product boundary unlocks.</div>
 
 			<div class="settings-card membership-status-card">
 				<div class="membership-status-row">
-					<div class="tier-badge" class:tier-badge-free={normalizedTier === 'free'}>
+					<div class="tier-badge" class:tier-badge-free={currentAccessTier === 'free'}>
 						<span class="tier-dot"></span>
 						{membershipLabel}
 					</div>
-					<div class="membership-note">Your access follows the legacy Free vs Academy structure across the app shell.</div>
+					<div class="membership-note">Access tiers control public, free, member, and admin boundaries. Role flags control LP, GP, and admin capabilities separately.</div>
 				</div>
 				{#if membershipStart || membershipEnd}
 					<div class="membership-dates">
@@ -456,68 +459,90 @@
 				{/if}
 			</div>
 
-			<div class="plan-grid">
-				{#each membershipTiers as tier}
-					<section class="plan-card" class:current={tier.key === normalizedTier}>
-						{#if tier.key === normalizedTier}
-							<div class="plan-current">Current Plan</div>
-						{/if}
-						<div class="plan-name" class:plan-name-academy={tier.key === 'academy'}>{tier.name}</div>
-						<div class="plan-price">{tier.price}</div>
-						<div class="plan-desc">{tier.description}</div>
-						<div class="plan-features">
-							{#each tier.features as feature}
-								<div class="plan-feature">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
-									<span>{feature}</span>
-								</div>
-							{/each}
-						</div>
-						{#if tier.key === normalizedTier}
-							<div class="plan-action current-action">Current Plan</div>
-						{:else if tier.key === 'academy'}
-							<a href="/app/academy" class="plan-action primary-action">Join Academy</a>
-						{:else}
-							<a href="https://growyourcashflow.io/introcall" target="_blank" rel="noopener" class="plan-action secondary-action">Book a Call</a>
-						{/if}
-					</section>
-				{/each}
-			</div>
-
-			{#if normalizedTier === 'academy'}
-				<div class="settings-card membership-note-card">
-					<div class="membership-note-header">
-						<span>After your first year</span>
-						<span class="membership-note-pill">Alumni</span>
-					</div>
-					<div class="settings-card-desc" style="margin-bottom:0;">Stay connected at the lower alumni rate and keep access to deal data, GP introductions, office hours, and the investor community.</div>
+			{#if nativeCompanionMode}
+				<div class="settings-card membership-native-card">
+					<div class="settings-card-title">Access in the iOS app</div>
+					<div class="settings-card-desc">This app shows the access already attached to your account. Enrollment, upgrades, and billing changes are handled on the web.</div>
+					<CompanionGate
+						compact={true}
+						title="Account access is managed on the web"
+						message="Existing members can sign in and use their account in the iOS app. Pricing, checkout, and billing changes are not offered here."
+						note="Current access stays active across your devices."
+					/>
+				</div>
+			{:else}
+				<div class="plan-grid">
+					{#each accessPlans as plan}
+						<section class="plan-card" class:current={plan.key === currentAccessTier}>
+							{#if plan.key === currentAccessTier}
+								<div class="plan-current">Current Plan</div>
+							{/if}
+							<div class="plan-name">{plan.name}</div>
+							<div class="plan-price">{plan.price}</div>
+							<div class="plan-desc">{plan.description}</div>
+							<div class="plan-features">
+								{#each plan.features as feature}
+									<div class="plan-feature">
+										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+										<span>{feature}</span>
+									</div>
+								{/each}
+							</div>
+							{#if plan.key === currentAccessTier}
+								<div class="plan-action current-action">Current Plan</div>
+							{:else if plan.key === 'member'}
+								<a href="/app/academy" class="plan-action primary-action">Upgrade to Member</a>
+							{:else if plan.key === 'admin'}
+								<div class="plan-action secondary-action">Internal Access</div>
+							{:else}
+								<a href="https://growyourcashflow.io/introcall" target="_blank" rel="noopener" class="plan-action secondary-action">Talk to Us</a>
+							{/if}
+						</section>
+					{/each}
 				</div>
 			{/if}
 
-			{#if normalizedTier !== 'free'}
+			<div class="settings-card membership-note-card">
+				<div class="membership-note-header">
+					<span>Role Flags</span>
+					<span class="membership-note-pill">{roleSummary}</span>
+				</div>
+				<div class="settings-card-desc" style="margin-bottom:0;">GP is a role flag, not a membership tier. GP and admin features are granted through capabilities on top of the shared access tier model.</div>
+			</div>
+
+			{#if currentAccessTier === 'member'}
 				<div class="settings-card billing-card">
 					<div class="settings-card-title">Billing</div>
-					<div class="billing-row">
-						<div>
-							<div class="billing-label">Payment Method</div>
-							<div class="billing-value">{billingCardLabel}</div>
+					{#if nativeCompanionMode}
+						<div class="billing-row no-border">
+							<div>
+								<div class="billing-label">Billing Status</div>
+								<div class="billing-value">Membership billing is managed on the web.</div>
+							</div>
 						</div>
-						<button class="billing-btn" onclick={openBillingPortal}>{membershipUser.cardLast4 ? 'Update' : 'Add Card'}</button>
-					</div>
-					<div class="billing-row no-border">
-						<div>
-							<div class="billing-label">Auto-Renew Membership</div>
-							<div class="billing-value">Automatically renew this membership when the current term ends.</div>
+					{:else}
+						<div class="billing-row">
+							<div>
+								<div class="billing-label">Payment Method</div>
+								<div class="billing-value">{billingCardLabel}</div>
+							</div>
+							<button class="billing-btn" onclick={openBillingPortal}>{membershipUser.cardLast4 ? 'Update' : 'Add Card'}</button>
 						</div>
-						<div class="billing-toggle-wrap">
-							<button class="toggle-track" class:on={autoRenewEnabled} aria-label="Toggle auto-renew membership" aria-pressed={autoRenewEnabled} disabled={autoRenewSaving} onclick={() => toggleAutoRenew(!autoRenewEnabled)}>
-								<div class="toggle-thumb"></div>
-							</button>
-							{#if autoRenewSaving}
-								<span class="billing-saving">Saving...</span>
-							{/if}
+						<div class="billing-row no-border">
+							<div>
+								<div class="billing-label">Auto-Renew Membership</div>
+								<div class="billing-value">Automatically renew this membership when the current term ends.</div>
+							</div>
+							<div class="billing-toggle-wrap">
+								<button class="toggle-track" class:on={autoRenewEnabled} aria-label="Toggle auto-renew membership" aria-pressed={autoRenewEnabled} disabled={autoRenewSaving} onclick={() => toggleAutoRenew(!autoRenewEnabled)}>
+									<div class="toggle-thumb"></div>
+								</button>
+								{#if autoRenewSaving}
+									<span class="billing-saving">Saving...</span>
+								{/if}
+							</div>
 						</div>
-					</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -756,7 +781,15 @@
 		color: var(--text-dark);
 		letter-spacing: -0.3px;
 	}
-	.settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 28px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.settings-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0;
+		width: 100%;
+		border-bottom: 2px solid var(--border-light);
+		margin-bottom: 28px;
+		overflow: hidden;
+	}
 	.settings-tab { padding: 12px 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition, 0.2s); white-space: nowrap; }
 	.settings-tab:hover { color: var(--text-dark); }
 	.settings-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
@@ -837,7 +870,6 @@
 		white-space: nowrap;
 	}
 	.plan-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-secondary); }
-	.plan-name-academy { color: var(--primary); }
 	.plan-price { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
 	.plan-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.55; min-height: 58px; }
 	.plan-features { display: grid; gap: 7px; flex: 1; }
@@ -963,7 +995,5 @@
 		.plan-grid { grid-template-columns: 1fr; }
 		.membership-dates { gap: 10px; }
 		.billing-row { align-items: flex-start; }
-		.settings-tabs { scrollbar-width: none; }
-		.settings-tabs::-webkit-scrollbar { display: none; }
 	}
 </style>

@@ -1,32 +1,50 @@
 <script>
-	import { isAdmin, userTier } from '$lib/stores/auth.js';
+	import { accessTier, isAdmin, isGP } from '$lib/stores/auth.js';
+	import { browser } from '$app/environment';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
-	const isGP = $derived($userTier === 'gp');
+	const nativeCompanionMode = browser && isNativeApp();
+	const canShowMemberHub = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
+	const canShowOfficeHours = $derived(!nativeCompanionMode || ['member', 'admin'].includes($accessTier));
 
-	const sections = [
-		{
-			label: 'My Dashboard',
-			items: [
-				{ href: '/app/portfolio', label: 'Portfolio', icon: '📊' },
-				{ href: '/app/plan', label: 'My Plan', icon: '🎯' },
-				{ href: '/app/tax-prep', label: 'Tax Prep', icon: '📄' }
-			]
-		},
-		{
-			label: 'Support',
-			items: [
-				{ href: '/app/academy', label: 'Cash Flow Academy', icon: '📚' },
-				{ href: '/app/office-hours', label: 'Office Hours', icon: '🕛' },
-				{ href: '/app/income-fund', label: 'GYC Income Fund', icon: '💰' }
-			]
-		},
-		{
-			label: 'Account',
-			items: [
-				{ href: '/app/settings', label: 'Settings', icon: '⚙️' }
-			]
+	const sections = $derived.by(() => {
+		const supportItems = [];
+		if (canShowMemberHub) {
+			supportItems.push({
+				href: '/app/academy',
+				label: nativeCompanionMode ? 'Member Hub' : 'Cash Flow Academy',
+				icon: '📚'
+			});
 		}
-	];
+		supportItems.push({ href: '/app/resources', label: 'Resources', icon: '🎬' });
+		if (canShowOfficeHours) {
+			supportItems.push({ href: '/app/office-hours', label: 'Office Hours', icon: '🕛' });
+		}
+		if (!nativeCompanionMode) {
+			supportItems.push({ href: '/app/income-fund', label: 'GYC Income Fund', icon: '💰' });
+		}
+
+		return [
+			{
+				label: 'My Dashboard',
+				items: [
+					{ href: '/app/portfolio', label: 'Portfolio', icon: '📊' },
+					{ href: '/app/plan', label: 'My Plan', icon: '🎯' },
+					{ href: '/app/tax-prep', label: 'Tax Prep', icon: '📄' }
+				]
+			},
+			{
+				label: 'Support',
+				items: supportItems
+			},
+			{
+				label: 'Account',
+				items: [
+					{ href: '/app/settings', label: 'Settings', icon: '⚙️' }
+				]
+			}
+		];
+	});
 </script>
 
 <svelte:head><title>More | GYC</title></svelte:head>
@@ -45,7 +63,7 @@
 		{/each}
 	{/each}
 
-	{#if isGP}
+	{#if $isGP}
 		<div class="section-label">GP Portal</div>
 		<a href="/gp-dashboard" class="menu-item">
 			<span class="menu-icon">📈</span>

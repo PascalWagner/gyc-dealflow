@@ -2,8 +2,11 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, tick } from 'svelte';
-	import { user, isLoggedIn } from '$lib/stores/auth.js';
+	import { accessTier, user, isLoggedIn } from '$lib/stores/auth.js';
+	import WebOnlyNotice from '$lib/components/WebOnlyNotice.svelte';
+	import { currentAdminRealUser, readUserScopedJson, writeUserScopedJson } from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
+	import { isNativeApp } from '$lib/utils/platform.js';
 
 	// ===== State =====
 	let currentStep = $state('step0');
@@ -53,6 +56,7 @@
 	let dealSkipped = $state(false);
 	let presentationInterest = $state(null);
 	let processing = $state(false);
+	const nativeCompanionMode = browser && isNativeApp();
 
 	// Network stats
 	let networkStats = $state(null);
@@ -111,9 +115,9 @@
 		const u = { ...$user, name: firstName + ' ' + lastName, firstName, lastName, sharePortfolio: lpNetworkOptIn };
 		user.set(u);
 
-		const wzData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+		const wzData = readUserScopedJson('gycBuyBoxWizard', {});
 		wzData.sharePortfolio = lpNetworkOptIn;
-		localStorage.setItem('gycBuyBoxWizard', JSON.stringify(wzData));
+		writeUserScopedJson('gycBuyBoxWizard', wzData);
 
 		goToStep('step1');
 	}
@@ -162,10 +166,10 @@
 	function parseDollar(s) { return parseInt(String(s).replace(/[^0-9]/g, ''), 10) || 0; }
 
 	let baselineInputValue = $state('$0');
+	const hasMemberAccess = $derived($accessTier === 'member' || $accessTier === 'admin');
 
 	function lpDealsRedirect() {
-		const tier = ($user?.tier || 'free').toLowerCase();
-		return tier !== 'free' ? '/app/deals?buybox=1' : '/app/deals';
+		return hasMemberAccess ? '/app/deals?buybox=1' : '/app/deals';
 	}
 
 	function selectBaselinePreset(val) {
@@ -202,13 +206,13 @@
 	});
 
 	let completionBtnText = $derived.by(() => {
-		const tier = ($user?.tier || 'free').toLowerCase();
-		return tier !== 'free' ? 'Build My Investment Plan' : 'Start Browsing Deals';
+		return hasMemberAccess ? 'Build My Investment Plan' : 'Start Browsing Deals';
 	});
 
 	let completionSubtitle = $derived.by(() => {
-		const tier = ($user?.tier || 'free').toLowerCase();
-		return tier !== 'free' ? "Next up: we'll build your personalized investment plan." : "We've personalized your deal feed based on your answers.";
+		return hasMemberAccess
+			? "Next up: we'll build your personalized investment plan."
+			: "We've personalized your deal feed based on your answers.";
 	});
 
 	function showLpComplete() {
@@ -217,10 +221,12 @@
 
 	function completeLpOnboarding() {
 		const wizardData = { goal: lpGoal, _branch: lpGoal, lpDealsCount: lpDealsCount || 0, baselineIncome };
+		const realUser = currentAdminRealUser();
+		const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
 
 		fetch('/api/buybox', {
 			method: 'POST', headers,
-			body: JSON.stringify({ email: $user.email, wizardData })
+			body: JSON.stringify({ email: $user.email, wizardData, ...(isAdminImpersonation ? { admin: true } : {}) })
 		}).catch(e => console.warn('LP onboarding save error:', e));
 
 		fetch('/api/gp-onboarding', {
@@ -231,9 +237,9 @@
 		const u = { ...$user, onboardingComplete: true };
 		user.set(u);
 
-		const existingBB = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+		const existingBB = readUserScopedJson('gycBuyBoxWizard', {});
 		Object.assign(existingBB, { goal: lpGoal, _branch: lpGoal, lpDealsCount: lpDealsCount || 0, baselineIncome });
-		localStorage.setItem('gycBuyBoxWizard', JSON.stringify(existingBB));
+		writeUserScopedJson('gycBuyBoxWizard', existingBB);
 
 		goto(lpDealsRedirect());
 	}
@@ -1290,16 +1296,24 @@
 		{#if currentStep === 'step9'}
 			<div class="step active">
 				<div class="step-header">
-					<div class="step-counter">Reserve Your Slot</div>
-					<div class="step-title">Book your Thursday presentation</div>
-					<div class="step-subtitle">Get in front of {displayTotalLPs.toLocaleString()}+ investors in a single 90-minute session</div>
+					<div class="step-counter">{nativeCompanionMode ? 'Continue on the Web' : 'Reserve Your Slot'}</div>
+					<div class="step-title">{nativeCompanionMode ? 'Presentation scheduling happens on the web' : 'Book your Thursday presentation'}</div>
+					<div class="step-subtitle">
+						{#if nativeCompanionMode}
+							Review the program here, then continue scheduling and contracting on the web.
+						{:else}
+							Get in front of {displayTotalLPs.toLocaleString()}+ investors in a single 90-minute session
+						{/if}
+					</div>
 				</div>
 				<div class="step-body">
 					<div class="upsell-card">
 						<div class="upsell-header">
 							<div class="upsell-label">Operator Sponsorship</div>
-							<div class="upsell-price">$1,000</div>
-							<div class="upsell-price-sub">one-time &mdash; per presentation slot</div>
+							{#if !nativeCompanionMode}
+								<div class="upsell-price">$1,000</div>
+								<div class="upsell-price-sub">one-time &mdash; per presentation slot</div>
+							{/if}
 						</div>
 							<div class="upsell-body">
 								<ul class="upsell-includes">
@@ -1326,10 +1340,18 @@
 										<div class="youtube-proof-text">Our top operator presentation has <strong>1,500+ views</strong> on YouTube. The average hits 500+ views within 90 days. Your pitch keeps reaching new investors for months.</div>
 									</div>
 								</div>
-								<button class="upsell-cta" onclick={() => window.open('https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8', '_blank')}>
-									Reserve My Slot &mdash; $1,000
-								</button>
-								<div class="upsell-guarantee">Secure checkout via GoHighLevel. Cancel anytime before your presentation date.</div>
+								{#if nativeCompanionMode}
+									<WebOnlyNotice
+										title="Continue on the web"
+										message="Scheduling, contracting, and payment for presentation slots are completed on the web."
+										href="https://growyourcashflow.io/book-pitch"
+									/>
+								{:else}
+									<button class="upsell-cta" onclick={() => window.open('https://link.fastpaydirect.com/payment-link/66e09581d780e54a43941ac8', '_blank')}>
+										Reserve My Slot &mdash; $1,000
+									</button>
+									<div class="upsell-guarantee">Secure checkout via GoHighLevel. Cancel anytime before your presentation date.</div>
+								{/if}
 						</div>
 					</div>
 				</div>

@@ -1,11 +1,31 @@
 <script>
+	import { browser } from '$app/environment';
+	import CompanionGate from '$lib/components/CompanionGate.svelte';
+	import { isAdmin, isMember } from '$lib/stores/auth.js';
+	import { isNativeApp } from '$lib/utils/platform.js';
+
 	let activeTab = $state(0);
 	let openFaq = $state(-1);
 	let showMore = $state(false);
+	const nativeCompanionMode = browser && isNativeApp();
 
 	function toggleFaq(i) { openFaq = openFaq === i ? -1 : i; }
 
 	const tabs = ['Deal Intelligence', 'Tools & DD', 'GP Access', 'Pascal & Community'];
+	const memberHubCards = [
+		{ title: 'Resources', copy: 'Replay library, office hours recordings, and member lessons.', href: '/app/resources' },
+		{ title: 'Office Hours', copy: 'Live weekly sessions, calendar access, and replays.', href: '/app/office-hours' },
+		{ title: 'My Plan', copy: 'Deployment goals, portfolio roadmap, and next-step planning.', href: '/app/plan' },
+		{ title: 'Market Intel', copy: 'Market benchmarks, filing trends, and deal analytics.', href: '/app/market-intel' },
+		{ title: 'Deal Flow', copy: 'Browse deals, save opportunities, and compare options.', href: '/app/deals' },
+		{ title: 'Portfolio', copy: 'Track current holdings and monitor income progress.', href: '/app/portfolio' }
+	];
+	const nativePreviewCards = [
+		{ title: 'Resource Library', copy: 'Office hours replays, lessons, and deal reviews.' },
+		{ title: 'Office Hours', copy: 'Weekly live sessions and follow-up notes.' },
+		{ title: 'Deal Research Tools', copy: 'Checklists, operator research, and peer comparisons.' },
+		{ title: 'Investment Plan', copy: 'Target income planning and portfolio roadmaps.' }
+	];
 
 	const faqs = [
 		{ q: 'How much time does this take per week?', a: 'Most members spend 2-3 hours per week. Office hours are one hour on Thursdays. The rest is reviewing deals at your own pace using the platform.' },
@@ -19,6 +39,58 @@
 
 <svelte:head><title>Cashflow Academy | GYC</title></svelte:head>
 
+{#if nativeCompanionMode}
+	<div class="academy-native">
+		<section class="native-hero">
+			<div class="native-hero-badge">Member Access</div>
+			<h1>{$isMember || $isAdmin ? 'Your Cashflow Academy hub' : 'Cashflow Academy member area'}</h1>
+			<p>
+				{$isMember || $isAdmin
+					? 'Use the iOS app to access your member tools, research, and planning workspace.'
+					: 'Explore what existing members use across research, office hours, and planning. Enrollment and billing stay on the web.'}
+			</p>
+		</section>
+
+		{#if $isMember || $isAdmin}
+			<section class="native-section">
+				<div class="native-section-header">
+					<h2>Member Hub</h2>
+					<p>Quick access to the tools already attached to your account.</p>
+				</div>
+				<div class="hub-grid">
+					{#each memberHubCards as card}
+						<a class="hub-card" href={card.href}>
+							<div class="hub-card-title">{card.title}</div>
+							<div class="hub-card-copy">{card.copy}</div>
+							<div class="hub-card-link">Open &rarr;</div>
+						</a>
+					{/each}
+				</div>
+			</section>
+		{:else}
+			<section class="native-section">
+				<div class="native-section-header">
+					<h2>What members access</h2>
+					<p>See the shape of the member experience without turning the iOS app into a checkout flow.</p>
+				</div>
+				<div class="preview-grid">
+					{#each nativePreviewCards as card}
+						<div class="preview-card">
+							<div class="preview-card-title">{card.title}</div>
+							<div class="preview-card-copy">{card.copy}</div>
+							<div class="preview-card-mask"></div>
+						</div>
+					{/each}
+				</div>
+				<CompanionGate
+					title="Available to existing members"
+					message="This area is available to existing Cashflow Academy members on the web."
+					note="Enrollment and billing are not offered in the iOS app."
+				/>
+			</section>
+		{/if}
+	</div>
+{:else}
 <div class="academy-page">
 	<!-- HERO -->
 	<div class="hero">
@@ -277,8 +349,128 @@
 
 	<div class="disclaimer">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities.</div>
 </div>
+{/if}
 
 <style>
+	.academy-native {
+		max-width: 960px;
+		padding: 0 24px 56px;
+	}
+
+	.native-hero {
+		margin-bottom: 24px;
+		padding: 36px 32px;
+		border-radius: 18px;
+		background: linear-gradient(135deg, #0A1E21 0%, #1a3a42 100%);
+		color: #fff;
+	}
+
+	.native-hero-badge {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--primary);
+		margin-bottom: 10px;
+	}
+
+	.native-hero h1 {
+		font-family: var(--font-headline);
+		font-size: 32px;
+		line-height: 1.15;
+		margin: 0 0 12px;
+	}
+
+	.native-hero p {
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.78);
+		max-width: 42rem;
+		margin: 0;
+	}
+
+	.native-section {
+		display: grid;
+		gap: 20px;
+	}
+
+	.native-section-header h2 {
+		font-family: var(--font-headline);
+		font-size: 24px;
+		color: var(--text-dark);
+		margin: 0 0 8px;
+	}
+
+	.native-section-header p {
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		margin: 0;
+	}
+
+	.hub-grid,
+	.preview-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 16px;
+	}
+
+	.hub-card,
+	.preview-card {
+		position: relative;
+		overflow: hidden;
+		padding: 22px 20px;
+		border-radius: 16px;
+		border: 1px solid var(--border-light);
+		background: var(--bg-card);
+		box-shadow: 0 8px 24px rgba(10, 30, 33, 0.06);
+	}
+
+	.hub-card {
+		text-decoration: none;
+	}
+
+	.hub-card-title,
+	.preview-card-title {
+		font-family: var(--font-ui);
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 8px;
+	}
+
+	.hub-card-copy,
+	.preview-card-copy {
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		max-width: 28rem;
+	}
+
+	.hub-card-link {
+		margin-top: 14px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+
+	.preview-card {
+		min-height: 148px;
+	}
+
+	.preview-card-mask {
+		position: absolute;
+		inset: auto 0 0;
+		height: 72px;
+		background: linear-gradient(180deg, rgba(250, 249, 245, 0), rgba(250, 249, 245, 0.96) 60%, rgba(250, 249, 245, 1));
+		backdrop-filter: blur(6px);
+	}
+
 	.academy-page { max-width: 960px; padding: 0 24px 60px; }
 
 	/* Hero */
@@ -425,6 +617,8 @@
 	.disclaimer { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-align: center; opacity: 0.5; line-height: 1.6; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
+		.academy-native { max-width: 900px; padding: 0 24px 48px; }
+		.native-hero { padding: 34px 28px; }
 		.academy-page { max-width: 900px; padding: 0 24px 48px; }
 		.hero { padding: 40px 28px; }
 		.hero-stats { gap: 24px; }
@@ -433,6 +627,10 @@
 	}
 
 	@media (max-width: 768px) {
+		.academy-native { padding: 0 16px 40px; }
+		.native-hero { padding: 30px 20px; }
+		.native-hero h1 { font-size: 26px; }
+		.hub-grid, .preview-grid { grid-template-columns: 1fr; }
 		.academy-page { padding: 0 16px 40px; }
 		.hero { padding: 32px 20px; }
 		.hero h1 { font-size: 24px; }
