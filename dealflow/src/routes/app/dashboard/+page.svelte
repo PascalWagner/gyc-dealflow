@@ -135,15 +135,15 @@
 	const nextSlotMatchCount = $derived.by(() => {
 		if (!nextPlanSlot || !$deals.length) return 0;
 		return $deals.filter((deal) => {
-			const stage = $dealStages[deal.id] || 'browse';
-			return stage !== 'passed' && slotMatchesDeal(nextPlanSlot, deal);
+			const stage = $dealStages[deal.id] || 'filter';
+			return stage !== 'skipped' && slotMatchesDeal(nextPlanSlot, deal);
 		}).length;
 	});
 
 	const actionItems = $derived.by(() => {
 		const items = [];
-		const saved = $stageCounts.saved || 0;
-		const diligence = $stageCounts.diligence || 0;
+		const review = $stageCounts.review || 0;
+		const connect = $stageCounts.connect || 0;
 		const investedDealIds = Object.entries($dealStages)
 			.filter(([, stage]) => stage === 'invested')
 			.map(([id]) => id);
@@ -169,17 +169,17 @@
 			});
 		}
 
-		if (saved > 0) {
+		if (review > 0) {
 			items.push({
 				icon: 'bookmark',
-				text: `You have <strong>${saved} deal${saved !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
+				text: `You have <strong>${review} deal${review !== 1 ? 's' : ''} to review</strong> — pick one and work through the checklist`,
 				link: 'Review Deals', page: 'deals'
 			});
 		}
-		if (diligence > 0) {
+		if (connect > 0) {
 			items.push({
 				icon: 'connect',
-				text: `<strong>${diligence} deal${diligence !== 1 ? 's' : ''} ready to connect</strong> — request an intro with the operator`,
+				text: `<strong>${connect} deal${connect !== 1 ? 's' : ''} ready to connect</strong> — request an intro with the operator`,
 				link: 'Connect Now', page: 'deals'
 			});
 		}
@@ -359,7 +359,7 @@
 			</div>
 		{/if}
 
-		<div class="dashboard-stack">
+		<div class="dashboard-stack" data-dashboard-version="overview-cleanup-2">
 			{#if actionItems.length > 0}
 				<div class="action-card">
 					<div class="action-header">Action Items</div>
