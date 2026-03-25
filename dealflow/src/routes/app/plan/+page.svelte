@@ -1,11 +1,13 @@
 <script>
 	import { onMount } from 'svelte';
+	import { deals, fetchDeals } from '$lib/stores/deals.js';
 	import {
 		getStoredSessionUser,
 		isAcademy,
 		isAdmin,
 		userTier
 	} from '$lib/stores/auth.js';
+	import { currentAdminRealUser } from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 
 	let hasPlan = $state(false);
@@ -16,6 +18,8 @@
 	let saving = $state(false);
 	let saveMsg = $state('');
 	let shouldOpenWizardFromLocation = false;
+	let reportUser = $state(null);
+	let portfolioPlan = $state(null);
 
 	const canViewAnalytics = $derived($isAdmin || $userTier !== 'free' || $isAcademy);
 
@@ -173,6 +177,82 @@
 		return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
 	}
 
+	function percentNumber(value) {
+		const amount = Number(value || 0);
+		if (!Number.isFinite(amount) || amount <= 0) return 0;
+		return amount <= 1 ? amount * 100 : amount;
+	}
+
+	function average(values = []) {
+		const valid = values.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0);
+		if (valid.length === 0) return 0;
+		return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+	}
+
+	function formatLongDate(value) {
+		const date = value instanceof Date ? value : new Date(value);
+		if (Number.isNaN(date.getTime())) return '';
+		return new Intl.DateTimeFormat('en-US', {
+			month: 'long',
+			day: 'numeric',
+			year: 'numeric'
+		}).format(date);
+	}
+
+	function formatMonthYear(value) {
+		const date = value instanceof Date ? value : new Date(value);
+		if (Number.isNaN(date.getTime())) return '—';
+		return new Intl.DateTimeFormat('en-US', {
+			month: 'short',
+			year: 'numeric'
+		}).format(date);
+	}
+
+	function firstDefined(...values) {
+		return values.find((value) => value !== null && value !== undefined && value !== '');
+	}
+
+	function dealMinimum(deal) {
+		return Number(
+			firstDefined(
+				deal?.investmentMinimum,
+				deal?.investment_minimum,
+				deal?.minimumInvestment,
+				deal?.minimum_investment,
+				deal?.minimum
+			) || 0
+		);
+	}
+
+	function isLendingLike(value) {
+		const normalized = normalizeAssetKey(value);
+		return ['lending', 'debt', 'credit', 'privatedebtcredit'].some((token) => normalized.includes(token));
+	}
+
+	function assetChoiceMatchesDeal(asset, deal) {
+		const choice = normalizeAssetKey(asset);
+		const assetClass = normalizeAssetKey(deal?.assetClass || deal?.asset_class || '');
+		const strategy = normalizeAssetKey(deal?.strategy || deal?.dealType || deal?.deal_type || '');
+		if (!choice) return false;
+		if (isLendingLike(choice)) {
+			return isLendingLike(assetClass) || isLendingLike(strategy);
+		}
+		return assetClass === choice;
+	}
+
+	function investmentAnnualIncomeEstimate(investment) {
+		const amount = Number(investment?.amountInvested || 0);
+		if (!amount) return 0;
+		const target = percentNumber(investment?.targetIRR);
+		if (target > 0) return Math.round(amount * (target / 100));
+		const profile = getAssetProfile(investment?.assetClass || 'Other');
+		return Math.round(amount * ((profile.cashYield || 0) / 100));
+	}
+
+	function currentYearNumber() {
+		return new Date().getFullYear();
+	}
+
 	function getTargetLabel() {
 		if (wizardData.goal === 'cashflow') return 'Target Annual Passive Income ($)';
 		if (wizardData.goal === 'growth') return 'Target Portfolio Value ($)';
@@ -293,10 +373,19 @@
 
 		try {
 			if (stored?.email && stored?.token) {
+				const realUser = currentAdminRealUser();
+				const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== stored.email.toLowerCase();
 				const response = await fetch('/api/buybox', {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ email: stored.email, wizardData: payload })
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: `Bearer ${stored.token}`
+					},
+					body: JSON.stringify({
+						email: stored.email,
+						wizardData: payload,
+						...(isAdminImpersonation ? { admin: true } : {})
+					})
 				});
 				saveMsg = response.ok ? 'Plan saved' : 'Saved locally (sync pending)';
 			} else {
@@ -331,6 +420,11 @@
 		if (!raw) return defaultAnnualTarget(goalKey);
 		return raw;
 	});
+	const reportUserName = $derived.by(() => reportUser?.fullName || reportUser?.name || reportUser?.email || 'Grow Your Cashflow Member');
+	const preparedOn = $derived(formatLongDate(new Date()));
+	const plannedCheckSize = $derived.by(() =>
+		Number(portfolioPlan?.check_size || portfolioPlan?.checkSize || estimateCheckSize(plan?.investableCapital || wizardData.investableCapital) || 0)
+	);
 	const currentInvestedTotal = $derived(portfolio.reduce((sum, investment) => sum + (parseFloat(investment.amountInvested) || 0), 0));
 	const currentInvestmentCount = $derived(portfolio.length);
 	const targetBadge = $derived.by(() => {
@@ -365,6 +459,75 @@
 	);
 	const totalMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.dealCount, 0));
 	const totalNewMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.newThisMonth, 0));
+	const wantsLendingSnapshot = $derived.by(() =>
+		selectedStrategies.some((strategy) => isLendingLike(strategy))
+	);
+	const reportRelevantAssets = $derived.by(() => {
+		const assets = [...selectedAssets];
+		if (wantsLendingSnapshot && !assets.some((asset) => isLendingLike(asset))) {
+			assets.push('Lending');
+		}
+		return [...new Set(assets)].slice(0, 5);
+	});
+	const reportMatchingDeals = $derived.by(() => {
+		const catalog = ($deals || []).filter((deal) => !['closed', 'inactive', 'archived'].includes(String(deal?.status || '').toLowerCase()));
+		if (catalog.length === 0) return [];
+		return catalog.filter((deal) => reportRelevantAssets.some((asset) => assetChoiceMatchesDeal(asset, deal)));
+	});
+	const reportSnapshotRows = $derived.by(() => {
+		const fallbackRows = snapshotRows.map((row) => ({
+			label: row.label,
+			color: row.color,
+			icon: row.icon,
+			count: row.dealCount,
+			irrMin: row.irrMin,
+			irrMax: row.irrMax,
+			avgCoC: row.cashYield,
+			avgMinimum: plannedCheckSize ? Math.round(plannedCheckSize * 1.35) : 0,
+			affordableCount: plannedCheckSize ? Math.max(1, Math.round(row.dealCount * 0.45)) : null
+		}));
+		if (reportMatchingDeals.length === 0) return fallbackRows;
+
+		const rows = reportRelevantAssets.map((asset) => {
+			const profile = getAssetProfile(asset);
+			const classDeals = reportMatchingDeals.filter((deal) => assetChoiceMatchesDeal(asset, deal));
+			if (classDeals.length === 0) return null;
+
+			const irrValues = classDeals.map((deal) => percentNumber(deal?.targetIRR)).filter(Boolean);
+			const cocValues = classDeals.map((deal) => percentNumber(deal?.cashOnCash || deal?.cash_yield || deal?.preferredReturn)).filter(Boolean);
+			const minimums = classDeals.map((deal) => dealMinimum(deal)).filter(Boolean);
+
+			return {
+				label: profile.label,
+				color: profile.color,
+				icon: profile.icon,
+				count: classDeals.length,
+				irrMin: irrValues.length ? Math.min(...irrValues) : profile.irrMin,
+				irrMax: irrValues.length ? Math.max(...irrValues) : profile.irrMax,
+				avgCoC: cocValues.length ? average(cocValues) : profile.cashYield,
+				avgMinimum: minimums.length ? Math.round(average(minimums)) : 0,
+				affordableCount: plannedCheckSize
+					? classDeals.filter((deal) => {
+						const minimum = dealMinimum(deal);
+						return minimum > 0 && minimum <= plannedCheckSize;
+					}).length
+					: null
+			};
+		}).filter(Boolean);
+
+		return rows.length ? rows : fallbackRows;
+	});
+	const reportMatchTotal = $derived.by(() =>
+		reportSnapshotRows.reduce((sum, row) => sum + (row.count || 0), 0) || totalMatches
+	);
+	const reportNewThisMonth = $derived.by(() => {
+		if (reportMatchingDeals.length === 0) return totalNewMatches;
+		const now = new Date();
+		return reportMatchingDeals.filter((deal) => {
+			const added = new Date(deal?.addedDate || deal?.added_at || deal?.publishedAt || '');
+			return !Number.isNaN(added.getTime()) && added.getMonth() === now.getMonth() && added.getFullYear() === now.getFullYear();
+		}).length;
+	});
 
 	const projection = $derived.by(() => {
 		const preferredAssets = selectedAssets.length ? selectedAssets : [...goalDefaults.cashflow];
@@ -451,11 +614,151 @@
 		if (!projection.finalShare || projection.finalShare.share < 45) return null;
 		return `${Math.round(projection.finalShare.share)}% in ${projection.finalShare.label} plan targets 45% or less. Consider diversifying.`;
 	});
+	const printAssetClasses = $derived.by(() => titleCaseList(reportRelevantAssets.map((asset) => getAssetProfile(asset).label)));
+	const printStrategies = $derived.by(() =>
+		titleCaseList((selectedStrategies.length ? selectedStrategies : ['Lending / Credit', 'Buy & Hold', 'Distressed']).slice(0, 5))
+	);
+	const printLockup = $derived.by(() => {
+		const years = Number(portfolioPlan?.timeline || portfolioPlan?.target_hold_years || 0);
+		if (years >= 5) return `${Math.round(years)}+ years`;
+		if (years > 0) return `${years} years`;
+		const avgYears = average(snapshotRows.map((row) => row.lockup));
+		if (!avgYears) return 'Flexible';
+		return avgYears >= 5 ? `${Math.round(avgYears)}+ years` : `${avgYears.toFixed(avgYears % 1 === 0 ? 0 : 1)} years`;
+	});
+	const printDistributions = $derived.by(() => {
+		if (goalKey === 'cashflow') return 'Quarterly';
+		if (goalKey === 'tax') return 'Offset focused';
+		return 'Long-term';
+	});
+	const activeInvestmentsForPrint = $derived.by(() =>
+		[...portfolio]
+			.filter((investment) => !['exited', 'sold'].includes(String(investment?.status || '').toLowerCase()))
+			.sort((a, b) => {
+				const aDate = a?.dateInvested ? new Date(a.dateInvested).getTime() : 0;
+				const bDate = b?.dateInvested ? new Date(b.dateInvested).getTime() : 0;
+				return aDate - bDate;
+			})
+	);
+	const exitedInvestmentsForPrint = $derived.by(() =>
+		[...portfolio]
+			.filter((investment) => ['exited', 'sold'].includes(String(investment?.status || '').toLowerCase()))
+			.sort((a, b) => {
+				const aDate = a?.dateInvested ? new Date(a.dateInvested).getTime() : 0;
+				const bDate = b?.dateInvested ? new Date(b.dateInvested).getTime() : 0;
+				return aDate - bDate;
+			})
+	);
+	const printCurrentIncome = $derived.by(() => {
+		const filledSlots = Array.isArray(portfolioPlan?.slots)
+			? portfolioPlan.slots.filter((slot) => slot?.filled_by || slot?.filled_name || slot?.filledName)
+			: [];
+		if (filledSlots.length) {
+			return filledSlots.reduce((sum, slot) => {
+				const checkSize = Number(slot?.check_size || slot?.checkSize || plannedCheckSize || 0);
+				const estIncome = Number(slot?.est_income || slot?.estIncome || 0);
+				const fallbackIncome = Math.round(checkSize * (percentNumber(slot?.target_coc || slot?.targetCoC || average(reportSnapshotRows.map((row) => row.avgCoC))) / 100));
+				return sum + (estIncome || fallbackIncome);
+			}, 0);
+		}
+		return activeInvestmentsForPrint.reduce((sum, investment) => sum + investmentAnnualIncomeEstimate(investment), 0);
+	});
+	const printProgressPct = $derived.by(() =>
+		annualTargetAmount > 0 ? Math.min(100, Math.round((printCurrentIncome / annualTargetAmount) * 100)) : 0
+	);
+	const currentInvestmentsSummary = $derived.by(() =>
+		`${portfolio.length} total positions · ${currency(currentInvestedTotal)} deployed · ${activeInvestmentsForPrint.length} active · ${exitedInvestmentsForPrint.length} exited`
+	);
+	const printSchedule = $derived.by(() => {
+		const targetIncome = annualTargetAmount;
+		const fallbackYield = average(reportSnapshotRows.map((row) => row.avgCoC)) || average(selectedAssets.map((asset) => getAssetProfile(asset).cashYield)) || 10;
+		const legacySlots = Array.isArray(portfolioPlan?.slots) ? portfolioPlan.slots : [];
+
+		if (legacySlots.length) {
+			const normalizedSlots = legacySlots.map((slot, index) => {
+				const assetClass = slot?.asset_class || slot?.assetClass || reportRelevantAssets[index % reportRelevantAssets.length] || 'Lending';
+				const checkSize = Number(slot?.check_size || slot?.checkSize || plannedCheckSize || 0);
+				const yieldPct = percentNumber(slot?.target_coc || slot?.targetCoC || fallbackYield);
+				const estIncome = Number(slot?.est_income || slot?.estIncome || Math.round(checkSize * (yieldPct / 100)));
+				return {
+					id: slot?.id || `${assetClass}-${index}`,
+					name: slot?.filled_name || slot?.filledName || 'Open slot',
+					assetClass,
+					checkSize,
+					yieldPct,
+					estIncome,
+					year: Number(slot?.year) || currentYearNumber() + index,
+					filled: Boolean(slot?.filled_by || slot?.filled_name || slot?.filledName)
+				};
+			}).sort((a, b) => a.year - b.year);
+
+			let cumulativeIncome = 0;
+			const years = [];
+			for (const year of [...new Set(normalizedSlots.map((slot) => slot.year))]) {
+				const slots = normalizedSlots.filter((slot) => slot.year === year);
+				cumulativeIncome += slots.reduce((sum, slot) => sum + slot.estIncome, 0);
+				years.push({
+					index: years.length + 1,
+					year,
+					slots,
+					cumulativeIncome,
+					progressPct: targetIncome > 0 ? Math.min(100, Math.round((cumulativeIncome / targetIncome) * 100)) : 0
+				});
+			}
+
+			const totalCapital = Number(portfolioPlan?.total_capital || portfolioPlan?.totalCapital || normalizedSlots.reduce((sum, slot) => sum + slot.checkSize, 0));
+			const totalIncome = years[years.length - 1]?.cumulativeIncome || 0;
+			const blendedYieldPct = percentNumber(portfolioPlan?.blended_coc || portfolioPlan?.blendedCoC || fallbackYield);
+
+			return {
+				years,
+				totalCapital,
+				totalSlots: normalizedSlots.length,
+				totalYears: years.length,
+				totalIncome,
+				targetIncome,
+				blendedYieldPct,
+				avgCheckSize: normalizedSlots.length ? Math.round(totalCapital / normalizedSlots.length) : plannedCheckSize
+			};
+		}
+
+		const years = projection.years.map((item) => ({
+			index: item.index,
+			year: item.year,
+			slots: [{
+				id: `projection-${item.index}`,
+				name: 'Open slot',
+				assetClass: item.profile.label,
+				checkSize: item.checkSize,
+				yieldPct: item.profile.cashYield,
+				estIncome: item.income,
+				filled: false
+			}],
+			cumulativeIncome: item.cumulativeIncome,
+			progressPct: item.progressPct
+		}));
+		const totalCapital = projection.years.reduce((sum, item) => sum + item.checkSize, 0);
+		const totalIncome = years[years.length - 1]?.cumulativeIncome || 0;
+
+		return {
+			years,
+			totalCapital,
+			totalSlots: projection.years.length,
+			totalYears: years.length,
+			totalIncome,
+			targetIncome,
+			blendedYieldPct: fallbackYield,
+			avgCheckSize: projection.checkSize
+		};
+	});
 
 	onMount(async () => {
 		if (!browser) return;
 		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
 		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+		reportUser = getStoredSessionUser();
+		portfolioPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+		fetchDeals().catch(() => {});
 
 		try {
 			const stored = getStoredSessionUser();
@@ -464,8 +767,13 @@
 				if (shouldOpenWizardFromLocation) openWizard();
 				return;
 			}
+			const realUser = currentAdminRealUser();
+			const isAdminImpersonation = !!realUser?.email && realUser.email.toLowerCase() !== stored.email.toLowerCase();
+			const buyBoxUrl = new URL('/api/buybox', window.location.origin);
+			buyBoxUrl.searchParams.set('email', stored.email);
+			if (isAdminImpersonation) buyBoxUrl.searchParams.set('admin', 'true');
 
-			const response = await fetch(`/api/buybox?email=${encodeURIComponent(stored.email)}`, {
+			const response = await fetch(buyBoxUrl.pathname + buyBoxUrl.search, {
 				headers: { Authorization: `Bearer ${stored.token}` }
 			});
 
@@ -767,6 +1075,205 @@
 				</section>
 			{/if}
 		</div>
+
+		<div class="print-plan" aria-hidden="true">
+			<section class="print-page">
+				<header class="print-header">
+					<div>
+						<div class="print-brand">Grow Your Cashflow</div>
+						<div class="print-subbrand">Personal Investment Plan</div>
+					</div>
+					<div class="print-prepared">
+						<div class="print-user">{reportUserName}</div>
+						<div class="print-date">Prepared {preparedOn}</div>
+					</div>
+				</header>
+
+				<section class="print-hero">
+					<div class="print-pill">{targetBadge}</div>
+					<h1 class="print-title">{targetHeadline}</h1>
+					<div class="print-progress">
+						<div class="print-progress-bar">
+							<span style={`width:${printProgressPct}%`}></span>
+						</div>
+						<div class="print-progress-meta">
+							<span>{currency(printCurrentIncome)}/yr earned</span>
+							<span>{printProgressPct}% of {currency(annualTargetAmount)}/yr</span>
+						</div>
+					</div>
+				</section>
+
+				<section class="print-card">
+					<div class="print-kicker">Investment Thesis</div>
+					<p class="print-copy">{planThesis}</p>
+				</section>
+
+				<div class="print-meta-row">
+					<div class="print-meta-pill"><strong>Asset Classes:</strong> {printAssetClasses}</div>
+					<div class="print-meta-pill"><strong>Strategies:</strong> {printStrategies}</div>
+					<div class="print-meta-pill"><strong>Check Size:</strong> {currency(plannedCheckSize)}</div>
+					<div class="print-meta-pill"><strong>Lockup:</strong> {printLockup}</div>
+					<div class="print-meta-pill"><strong>Distributions:</strong> {printDistributions}</div>
+				</div>
+
+				{#if canViewAnalytics}
+					<section class="print-section">
+						<div class="print-section-title">Market Snapshot - {reportMatchTotal} Matching Deals</div>
+						<div class="print-section-copy">
+							{reportMatchTotal} active offerings match your criteria on the Grow Your Cashflow platform as of {preparedOn}.
+						</div>
+						<table class="print-table">
+							<thead>
+								<tr>
+									<th>Asset Class</th>
+									<th>IRR Range</th>
+									<th>Avg CoC</th>
+									<th>Avg Min</th>
+									<th>Affordable</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each reportSnapshotRows as row}
+									<tr>
+										<td>
+											<div class="print-asset">
+												<span class="print-asset-icon" style={`background:${row.color}`}>{row.icon}</span>
+												<div>
+													<div class="print-asset-name">{row.label}</div>
+													<div class="print-asset-meta">{row.count} deals</div>
+												</div>
+											</div>
+										</td>
+										<td>{percent(row.irrMin)} - {percent(row.irrMax)}</td>
+										<td>{percent(row.avgCoC)}</td>
+										<td>{row.avgMinimum ? currency(row.avgMinimum) : '—'}</td>
+										<td>{row.affordableCount ?? '—'}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</section>
+				{:else}
+					<section class="print-card print-lock-card">
+						<div class="print-kicker">Upgrade Required</div>
+						<p class="print-copy">Market snapshot and deployment schedule print views are only included for member and admin accounts.</p>
+					</section>
+				{/if}
+			</section>
+
+			{#if portfolio.length}
+				<section class="print-page">
+					<div class="print-section-title">Current Investments</div>
+					<div class="print-section-copy">{currentInvestmentsSummary}</div>
+
+					{#if activeInvestmentsForPrint.length}
+						<div class="print-subsection-title">Active Investments</div>
+						<table class="print-table">
+							<thead>
+								<tr>
+									<th>Deal</th>
+									<th>Operator</th>
+									<th>Asset Class</th>
+									<th>Invested</th>
+									<th>Date</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each activeInvestmentsForPrint as investment}
+									<tr>
+										<td>{investment.investmentName || 'Unnamed investment'}</td>
+										<td>{investment.sponsor || '—'}</td>
+										<td>{investment.assetClass || '—'}</td>
+										<td>{currency(investment.amountInvested)}</td>
+										<td>{formatMonthYear(investment.dateInvested)}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{/if}
+
+					{#if exitedInvestmentsForPrint.length}
+						<div class="print-subsection-title">Exited Investments</div>
+						<table class="print-table">
+							<thead>
+								<tr>
+									<th>Deal</th>
+									<th>Operator</th>
+									<th>Asset Class</th>
+									<th>Invested</th>
+									<th>Date</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each exitedInvestmentsForPrint as investment}
+									<tr class="muted">
+										<td>{investment.investmentName || 'Unnamed investment'}</td>
+										<td>{investment.sponsor || '—'}</td>
+										<td>{investment.assetClass || '—'}</td>
+										<td>{currency(investment.amountInvested)}</td>
+										<td>{formatMonthYear(investment.dateInvested)}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					{/if}
+				</section>
+			{/if}
+
+			{#if canViewAnalytics && printSchedule.years.length}
+				<section class="print-page">
+					<div class="print-section-title">Deployment Schedule</div>
+					<div class="print-section-copy">
+						Deploy {currency(printSchedule.totalCapital)} across {printSchedule.totalSlots} investments over {printSchedule.totalYears} years -> {currency(printSchedule.targetIncome)}/yr at {Math.round(printSchedule.blendedYieldPct)}% blended yield.
+					</div>
+
+					<table class="print-table print-schedule-table">
+						<thead>
+							<tr>
+								<th>Investment</th>
+								<th>Asset Class</th>
+								<th>Check Size</th>
+								<th>Est. Income</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each printSchedule.years as year}
+								<tr class="print-year-row">
+									<td colspan="3">Year {year.index} ({year.year})</td>
+									<td>{currency(year.cumulativeIncome)}/yr · {year.progressPct}%</td>
+								</tr>
+								{#each year.slots as slot}
+									<tr>
+										<td>{slot.name}</td>
+										<td>{slot.assetClass}</td>
+										<td>{currency(slot.checkSize)}</td>
+										<td>{currency(slot.estIncome)}/yr{slot.yieldPct ? ` (${Math.round(slot.yieldPct)}%)` : ''}</td>
+									</tr>
+								{/each}
+							{/each}
+						</tbody>
+						<tfoot>
+							<tr>
+								<td>Total</td>
+								<td>{printSchedule.totalSlots} investments</td>
+								<td>{currency(printSchedule.totalCapital)}</td>
+								<td>{currency(printSchedule.totalIncome)}/yr</td>
+							</tr>
+						</tfoot>
+					</table>
+
+					<div class="print-disclaimer">
+						Disclaimer: This plan is for informational purposes only and does not constitute investment advice or an offer to sell securities. Projected returns are based on current listings and may change. Past performance does not guarantee future results. Consult a qualified financial advisor before making investment decisions. All investments involve risk, including loss of principal.
+					</div>
+
+					<footer class="print-footer">
+						<div>growyourcashflow.com</div>
+						<div>Confidential - Prepared for {reportUserName}</div>
+						<div>{preparedOn}</div>
+					</footer>
+				</section>
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -830,6 +1337,9 @@
 	.plan-page {
 		padding: 24px;
 		max-width: 1240px;
+	}
+	.print-plan {
+		display: none;
 	}
 	.plan-stack {
 		display: flex;
@@ -1449,6 +1959,237 @@
 		cursor: not-allowed;
 	}
 
+	.print-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 24px;
+		padding-bottom: 14px;
+		border-bottom: 2px solid rgba(15, 23, 42, 0.9);
+	}
+	.print-brand {
+		font-family: var(--font-headline);
+		font-size: 28px;
+		font-weight: 400;
+		color: var(--text-dark);
+	}
+	.print-subbrand {
+		margin-top: 4px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-muted);
+	}
+	.print-prepared {
+		text-align: right;
+	}
+	.print-user {
+		font-family: var(--font-ui);
+		font-size: 18px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.print-date {
+		margin-top: 4px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.print-hero {
+		padding-top: 22px;
+	}
+	.print-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 12px;
+		border-radius: 999px;
+		border: 1px solid rgba(81, 190, 123, 0.3);
+		background: rgba(81, 190, 123, 0.12);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--primary);
+	}
+	.print-title {
+		margin: 14px 0 0;
+		font-family: var(--font-headline);
+		font-size: 26px;
+		font-weight: 700;
+		line-height: 1.2;
+		color: var(--text-dark);
+	}
+	.print-progress {
+		margin-top: 18px;
+	}
+	.print-progress-bar {
+		height: 10px;
+		border-radius: 999px;
+		background: #edf2f4;
+		overflow: hidden;
+	}
+	.print-progress-bar span {
+		display: block;
+		height: 100%;
+		min-width: 0;
+		border-radius: inherit;
+		background: var(--primary);
+	}
+	.print-progress-meta {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		margin-top: 8px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.print-card,
+	.print-section {
+		margin-top: 20px;
+	}
+	.print-card {
+		padding: 18px 20px;
+		border: 1px solid var(--border-light);
+		border-radius: 14px;
+		background: rgba(248, 246, 241, 0.65);
+	}
+	.print-lock-card {
+		background: #fff;
+	}
+	.print-kicker,
+	.print-section-title,
+	.print-subsection-title {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.9px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.print-section-title {
+		color: #8f9aa3;
+	}
+	.print-subsection-title {
+		margin-top: 18px;
+		margin-bottom: 10px;
+	}
+	.print-copy,
+	.print-section-copy {
+		margin: 12px 0 0;
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.75;
+		color: var(--text-secondary);
+	}
+	.print-meta-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-top: 18px;
+	}
+	.print-meta-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 8px 12px;
+		border: 1px solid var(--border-light);
+		border-radius: 999px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-secondary);
+		background: #fff;
+	}
+	.print-meta-pill strong {
+		color: var(--text-dark);
+	}
+	.print-table {
+		width: 100%;
+		margin-top: 14px;
+		border-collapse: collapse;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-dark);
+	}
+	.print-table th,
+	.print-table td {
+		padding: 10px 8px;
+		text-align: left;
+		border-bottom: 1px solid var(--border-light);
+		vertical-align: top;
+	}
+	.print-table th {
+		font-size: 10px;
+		font-weight: 800;
+		letter-spacing: 0.8px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.print-asset {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.print-asset-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		border-radius: 9px;
+		color: #fff;
+		font-size: 10px;
+		font-weight: 800;
+	}
+	.print-asset-name {
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.print-asset-meta {
+		margin-top: 2px;
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+	.print-table tr.muted td {
+		color: #a1acb3;
+	}
+	.print-year-row td {
+		padding-top: 14px;
+		font-weight: 700;
+		background: rgba(248, 246, 241, 0.65);
+		color: var(--text-dark);
+	}
+	.print-schedule-table tfoot td {
+		padding-top: 14px;
+		font-weight: 800;
+		border-top: 2px solid rgba(15, 23, 42, 0.9);
+		border-bottom: none;
+	}
+	.print-disclaimer {
+		margin-top: 18px;
+		font-family: var(--font-body);
+		font-size: 10.5px;
+		line-height: 1.55;
+		color: var(--text-muted);
+	}
+	.print-footer {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		gap: 12px;
+		margin-top: 16px;
+		padding-top: 10px;
+		border-top: 1px solid var(--border-light);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		color: var(--text-muted);
+	}
+	.print-footer div:last-child {
+		text-align: right;
+	}
+
 	@media (max-width: 1024px) {
 		.plan-page {
 			padding: 20px;
@@ -1527,6 +2268,52 @@
 		.browse-btn,
 		.btn-cta {
 			width: 100%;
+		}
+	}
+
+	@media print {
+		:global(body) {
+			background: #fff !important;
+			-webkit-print-color-adjust: exact;
+			print-color-adjust: exact;
+		}
+		:global(.main) {
+			margin-left: 0 !important;
+		}
+		.topbar,
+		.save-toast,
+		.loading-skeleton,
+		.wizard-overlay,
+		.empty-state,
+		.plan-stack {
+			display: none !important;
+		}
+		.plan-page {
+			max-width: none;
+			padding: 0;
+		}
+		.print-plan {
+			display: block;
+		}
+		.print-page {
+			break-after: page;
+			page-break-after: always;
+			padding: 0;
+		}
+		.print-page:last-child {
+			break-after: auto;
+			page-break-after: auto;
+		}
+		.print-card,
+		.print-section,
+		.print-table,
+		.print-table tr,
+		.print-footer {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		@page {
+			margin: 0.6in;
 		}
 	}
 </style>
