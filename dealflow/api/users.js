@@ -122,6 +122,29 @@ export default async function handler(req, res) {
       return enriched;
     }
 
+    async function searchGhlQuery(query, includeLocationId = false) {
+      const params = new URLSearchParams({
+        query,
+        limit: '20'
+      });
+      if (includeLocationId && GHL_LOCATION_ID) {
+        params.set('locationId', GHL_LOCATION_ID);
+      }
+
+      const url = `https://rest.gohighlevel.com/v1/contacts/?${params.toString()}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${GHL_API_KEY}` }
+      });
+
+      let contacts = [];
+      if (response.ok) {
+        const data = await response.json();
+        contacts = dedupeContacts(mapContacts(data.contacts));
+      }
+
+      return { url, status: response.status, contacts };
+    }
+
     async function lookupExactGhlContact(email) {
       try {
         const lookupUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`;
@@ -193,28 +216,17 @@ export default async function handler(req, res) {
     }
 
     // Method 1: GHL v1 contacts search by query
-    const searchUrl = `https://rest.gohighlevel.com/v1/contacts/?query=${encodeURIComponent(normalizedQuery)}&limit=20`;
-    const resp = await fetch(searchUrl, {
-      headers: { Authorization: `Bearer ${GHL_API_KEY}` }
-    });
-    let debugInfo = { method1_url: searchUrl, method1_status: resp.status };
-
-    if (resp.ok) {
-      const data = await resp.json();
-      contacts = dedupeContacts(mapContacts(data.contacts));
-      debugInfo.method1_count = contacts.length;
-    }
+    const method1 = await searchGhlQuery(normalizedQuery);
+    let debugInfo = { method1_url: method1.url, method1_status: method1.status };
+    contacts = method1.contacts;
+    debugInfo.method1_count = contacts.length;
 
     // Method 2: If no results, try with locationId param
     if (contacts.length === 0 && GHL_LOCATION_ID) {
-      const url2 = `https://rest.gohighlevel.com/v1/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(normalizedQuery)}&limit=20`;
-      const resp2 = await fetch(url2, { headers: { Authorization: `Bearer ${GHL_API_KEY}` } });
-      debugInfo.method2_status = resp2.status;
-      if (resp2.ok) {
-        const data2 = await resp2.json();
-        contacts = dedupeContacts(mapContacts(data2.contacts));
-        debugInfo.method2_count = contacts.length;
-      }
+      const method2 = await searchGhlQuery(normalizedQuery, true);
+      debugInfo.method2_status = method2.status;
+      contacts = method2.contacts;
+      debugInfo.method2_count = contacts.length;
     }
 
     // Method 3: If still no results and query looks like email, try lookup
@@ -228,7 +240,35 @@ export default async function handler(req, res) {
       }
     }
 
-    // Method 4: When GHL query search misses short fragments, fall back to a
+    // Method 4: For short email/name prefixes that GHL won't match directly,
+    // expand one extra character and retry. Example: `endo` -> `endoo`.
+    if (
+      contacts.length === 0 &&
+      normalizedQuery.length >= 3 &&
+      normalizedQuery.length <= 4 &&
+      /^[a-z0-9._-]+$/.test(normalizedQuery)
+    ) {
+      const suffixes = 'abcdefghijklmnopqrstuvwxyz0123456789._-';
+      const expandedMatches = [];
+
+      for (const suffix of suffixes) {
+        const variant = `${normalizedQuery}${suffix}`;
+        const variantResult = await searchGhlQuery(variant);
+        if (variantResult.contacts.length > 0) {
+          expandedMatches.push(...variantResult.contacts);
+        } else if (GHL_LOCATION_ID) {
+          const variantLocation = await searchGhlQuery(variant, true);
+          expandedMatches.push(...variantLocation.contacts);
+        }
+
+        if (expandedMatches.length >= 20) break;
+      }
+
+      contacts = dedupeContacts(expandedMatches).filter(matchesQuery).slice(0, 20);
+      debugInfo.method4_prefix_count = contacts.length;
+    }
+
+    // Method 5: When GHL query search misses short fragments, fall back to a
     // broader contact fetch and filter locally across email/name/tags.
     if (contacts.length === 0) {
       const broadUrls = [
@@ -238,12 +278,12 @@ export default async function handler(req, res) {
 
       for (const [index, url] of broadUrls.entries()) {
         const broadResp = await fetch(url, { headers: { Authorization: `Bearer ${GHL_API_KEY}` } });
-        debugInfo[`method${4 + index}_status`] = broadResp.status;
+        debugInfo[`method${5 + index}_status`] = broadResp.status;
         if (!broadResp.ok) continue;
 
         const broadData = await broadResp.json();
         const filtered = dedupeContacts(mapContacts(broadData.contacts).filter(matchesQuery));
-        debugInfo[`method${4 + index}_count`] = filtered.length;
+        debugInfo[`method${5 + index}_count`] = filtered.length;
         if (filtered.length > 0) {
           contacts = filtered.slice(0, 20);
           break;
@@ -256,7 +296,7 @@ export default async function handler(req, res) {
       contacts = await enrichContacts(contacts);
     }
 
-    // Method 6: Supabase profile fallback — catch users whose GHL contact creation failed
+    // Method 7: Supabase profile fallback — catch users whose GHL contact creation failed
     if (contacts.length === 0) {
       const supabase = getAdminClient();
       const { data: profiles } = await supabase
@@ -282,17 +322,17 @@ export default async function handler(req, res) {
           };
         });
         contacts = supabaseContacts;
-        debugInfo.method6_supabase_count = contacts.length;
+        debugInfo.method7_supabase_count = contacts.length;
       }
     }
 
-    // Method 7: Auth-user fallback — catch real app users even when GHL query search
+    // Method 8: Auth-user fallback — catch real app users even when GHL query search
     // misses short email fragments and no user_profile row exists yet.
     if (contacts.length === 0) {
       const authContacts = await searchAuthUsersByFragment(normalizedQuery);
       if (authContacts.length) {
         contacts = authContacts;
-        debugInfo.method7_auth_count = contacts.length;
+        debugInfo.method8_auth_count = contacts.length;
       }
     }
 
