@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
+	import { getStoredSessionToken } from '$lib/stores/auth.js';
 
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
@@ -14,6 +15,10 @@
 	let dealSearchLoading = $state(false);
 	let taxYearFilter = $state('all');
 	let taxDocsOpen = $state(false);
+	let showTaxDocModal = $state(false);
+	let editingTaxDocId = $state('');
+	let taxDocCustomInvestment = $state(false);
+	let taxDocInvestmentSelection = $state('');
 
 	// Modal form data
 	let modalData = $state({
@@ -21,6 +26,21 @@
 		dateInvested: '', status: 'Active', targetIRR: '', distributionsReceived: '',
 		equityMultiple: '', investingEntity: '', entityInvestedInto: '',
 		holdPeriod: '', notes: '', dealId: ''
+	});
+	let taxDocForm = $state({
+		taxYear: new Date().getFullYear() - 1,
+		investmentName: '',
+		investingEntity: '',
+		entityInvestedInto: '',
+		formType: 'K-1',
+		uploadStatus: 'Pending',
+		dateReceived: '',
+		fileUrl: '',
+		portalUrl: '',
+		contactName: '',
+		contactEmail: '',
+		contactPhone: '',
+		notes: ''
 	});
 
 	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
@@ -43,6 +63,9 @@
 	});
 	const assetClasses = $derived(new Set(portfolio.map(i => i.assetClass).filter(Boolean)));
 	const sponsors = $derived(new Set(portfolio.map(i => i.sponsor).filter(Boolean)));
+	const portfolioInvestmentOptions = $derived(
+		[...new Set(portfolio.map((investment) => investment.investmentName).filter(Boolean))]
+	);
 
 	const allocationMap = $derived.by(() => {
 		const map = {};
@@ -156,9 +179,7 @@
 	const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
 
 	function getToken() {
-		if (!browser) return null;
-		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		return stored?.token || localStorage.getItem('sb_token') || localStorage.getItem('ghlToken') || null;
+		return browser ? getStoredSessionToken() : null;
 	}
 
 	function normalizePortfolioRecord(record = {}) {
@@ -182,6 +203,33 @@
 		};
 	}
 
+	function normalizeTaxStatus(status) {
+		const value = String(status || '').trim().toLowerCase();
+		if (value === 'received') return 'Received';
+		if (value === 'n/a' || value === 'na') return 'N/A';
+		return 'Pending';
+	}
+
+	function normalizeTaxDoc(record = {}) {
+		return {
+			id: record.id || `tax_${Math.random().toString(36).slice(2, 9)}`,
+			_recordId: record._recordId || record.id || '',
+			taxYear: record.taxYear || record.tax_year || new Date().getFullYear() - 1,
+			investmentName: record.investmentName || record.investment_name || '',
+			investingEntity: record.investingEntity || record.investing_entity || '',
+			entityInvestedInto: record.entityInvestedInto || record.entity_invested_into || '',
+			formType: record.formType || record.form_type || 'K-1',
+			uploadStatus: normalizeTaxStatus(record.uploadStatus || record.upload_status || record.status),
+			dateReceived: record.dateReceived || record.date_received || '',
+			fileUrl: record.fileUrl || record.file_url || '',
+			portalUrl: record.portalUrl || record.portal_url || '',
+			contactName: record.contactName || record.contact_name || record.contact || '',
+			contactEmail: record.contactEmail || record.contact_email || record.email || '',
+			contactPhone: record.contactPhone || record.contact_phone || record.phone || '',
+			notes: record.notes || ''
+		};
+	}
+
 	function savePortfolioLocal(nextPortfolio) {
 		portfolio = [...nextPortfolio];
 		if (browser) {
@@ -190,7 +238,7 @@
 	}
 
 	function saveTaxDocsLocal(nextDocs) {
-		taxDocuments = [...nextDocs];
+		taxDocuments = nextDocs.map((doc) => normalizeTaxDoc(doc));
 		if (browser) {
 			localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocuments));
 		}
@@ -212,6 +260,25 @@
 			'Investing Entity': investment.investingEntity || '',
 			'Entity Invested Into': investment.entityInvestedInto || '',
 			Notes: investment.notes || ''
+		};
+	}
+
+	function buildTaxDocPayload(doc) {
+		return {
+			_recordId: doc._recordId || undefined,
+			'Tax Year': Number(doc.taxYear) || '',
+			'Investment Name': doc.investmentName || '',
+			'Investing Entity': doc.investingEntity || '',
+			'Entity Invested Into': doc.entityInvestedInto || '',
+			'Form Type': doc.formType || 'K-1',
+			'Upload Status': doc.uploadStatus || 'Pending',
+			'Date Received': doc.dateReceived || '',
+			'File URL': doc.fileUrl || '',
+			'Portal URL': doc.portalUrl || '',
+			'Contact': doc.contactName || '',
+			'Contact Email': doc.contactEmail || '',
+			'Contact Phone': doc.contactPhone || '',
+			Notes: doc.notes || ''
 		};
 	}
 
@@ -252,33 +319,93 @@
 		}
 	}
 
+	async function syncTaxDocRecord(doc) {
+		const token = getToken();
+		if (!token) return normalizeTaxDoc(doc);
+		const response = await fetch('/api/userdata', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				type: 'taxdocs',
+				data: buildTaxDocPayload(doc)
+			})
+		});
+		if (!response.ok) {
+			throw new Error(`Tax doc sync failed: ${response.status}`);
+		}
+		const result = await response.json();
+		return normalizeTaxDoc({
+			...doc,
+			...(result.record || {})
+		});
+	}
+
+	async function deleteTaxDocRecord(doc) {
+		const token = getToken();
+		if (!token || !doc?._recordId) return;
+		const response = await fetch('/api/userdata', {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				type: 'taxdocs',
+				recordId: doc._recordId
+			})
+		});
+		if (!response.ok) {
+			throw new Error(`Tax doc delete failed: ${response.status}`);
+		}
+	}
+
 	async function loadPortfolioData() {
 		if (!browser) return;
 		const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]').map((item) => normalizePortfolioRecord(item));
-		const localTaxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+		const localTaxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]').map((item) => normalizeTaxDoc(item));
 		savePortfolioLocal(localPortfolio);
 		saveTaxDocsLocal(localTaxDocs);
-		taxDocsOpen = localTaxDocs.length > 0;
 		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
 
 		const token = getToken();
-		if (!token) return;
+		let effectiveTaxDocs = localTaxDocs;
+		if (!token) {
+			const month = new Date().getMonth();
+			taxDocsOpen = window.location.hash === '#tax-documents'
+				|| (month >= 0 && month <= 3 && effectiveTaxDocs.some((doc) => doc.uploadStatus === 'Pending'));
+			return;
+		}
 
 		try {
-			const response = await fetch('/api/userdata?type=portfolio', {
-				headers: { Authorization: `Bearer ${token}` }
-			});
-			if (!response.ok) return;
-			const data = await response.json();
-			const remotePortfolio = Array.isArray(data?.records)
-				? data.records.map((item) => normalizePortfolioRecord(item))
+			const [portfolioResponse, taxDocsResponse] = await Promise.all([
+				fetch('/api/userdata?type=portfolio', {
+					headers: { Authorization: `Bearer ${token}` }
+				}),
+				fetch('/api/userdata?type=taxdocs', {
+					headers: { Authorization: `Bearer ${token}` }
+				})
+			]);
+
+			const portfolioData = portfolioResponse.ok ? await portfolioResponse.json() : { records: [] };
+			const normalizedRemotePortfolio = Array.isArray(portfolioData?.records)
+				? portfolioData.records.map((item) => normalizePortfolioRecord(item))
 				: [];
-			if (remotePortfolio.length > 0 || localPortfolio.length === 0) {
-				savePortfolioLocal(remotePortfolio);
+			if (normalizedRemotePortfolio.length > 0 || localPortfolio.length === 0) {
+				savePortfolioLocal(normalizedRemotePortfolio);
+			}
+
+			const taxDocsData = taxDocsResponse.ok ? await taxDocsResponse.json() : { records: [] };
+			const remoteTaxDocs = Array.isArray(taxDocsData?.records)
+				? taxDocsData.records.map((item) => normalizeTaxDoc(item))
+				: [];
+			if (remoteTaxDocs.length > 0 || localTaxDocs.length === 0) {
+				saveTaxDocsLocal(remoteTaxDocs);
+				effectiveTaxDocs = remoteTaxDocs;
 			}
 		} catch (error) {
 			console.warn('Portfolio sync load failed:', error);
 		}
+
+		const month = new Date().getMonth();
+		taxDocsOpen = window.location.hash === '#tax-documents'
+			|| (month >= 0 && month <= 3 && effectiveTaxDocs.some((doc) => doc.uploadStatus === 'Pending'));
 	}
 
 	function openDealSearchModal() {
@@ -347,6 +474,7 @@
 		if (!modalData.investmentName.trim()) { alert('Please enter an investment name.'); return; }
 		let draftInvestment;
 		let nextPortfolio = [...portfolio];
+		let autoCreatedTaxDoc = null;
 		if (editingId) {
 			const idx = portfolio.findIndex(i => i.id === editingId);
 			if (idx < 0) return;
@@ -364,7 +492,7 @@
 				const year = new Date().getFullYear();
 				const alreadyExists = taxDocs.some(t => t.investmentName === draftInvestment.investmentName && t.taxYear == year);
 				if (!alreadyExists) {
-					taxDocs.push({
+					autoCreatedTaxDoc = normalizeTaxDoc({
 						id: 'tax_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
 						taxYear: year,
 						investmentName: draftInvestment.investmentName,
@@ -372,8 +500,13 @@
 						entityInvestedInto: draftInvestment.entityInvestedInto || '',
 						formType: 'K-1',
 						uploadStatus: 'Pending',
-						dateReceived: '', portalUrl: '', contact: '', notes: '', fileUrl: ''
+						dateReceived: '',
+						portalUrl: '',
+						contactName: '',
+						notes: '',
+						fileUrl: ''
 					});
+					taxDocs.push(autoCreatedTaxDoc);
 					saveTaxDocsLocal(taxDocs);
 					taxDocsOpen = true;
 				}
@@ -385,6 +518,14 @@
 			savePortfolioLocal(nextPortfolio.map((investment) => investment.id === draftInvestment.id ? synced : investment));
 		} catch (error) {
 			console.warn('Portfolio save sync failed:', error);
+		}
+		if (autoCreatedTaxDoc) {
+			try {
+				const syncedTaxDoc = await syncTaxDocRecord(autoCreatedTaxDoc);
+				saveTaxDocsLocal(taxDocuments.map((doc) => doc.id === autoCreatedTaxDoc.id ? syncedTaxDoc : doc));
+			} catch (error) {
+				console.warn('Auto-created tax doc sync failed:', error);
+			}
 		}
 		showAddModal = false;
 	}
@@ -398,6 +539,131 @@
 		} catch (error) {
 			console.warn('Portfolio delete sync failed:', error);
 		}
+	}
+
+	function openTaxDocModal(id = '') {
+		const existing = id ? taxDocuments.find((doc) => doc.id === id) : null;
+		const nextDoc = normalizeTaxDoc(existing || {
+			taxYear: new Date().getFullYear() - 1,
+			formType: 'K-1',
+			uploadStatus: 'Pending'
+		});
+		editingTaxDocId = existing?.id || '';
+		taxDocForm = { ...nextDoc };
+		taxDocCustomInvestment = !!(nextDoc.investmentName && !portfolioInvestmentOptions.includes(nextDoc.investmentName));
+		taxDocInvestmentSelection = taxDocCustomInvestment ? '__custom' : (nextDoc.investmentName || '');
+		showTaxDocModal = true;
+		taxDocsOpen = true;
+	}
+
+	function closeTaxDocModal() {
+		showTaxDocModal = false;
+		editingTaxDocId = '';
+		taxDocCustomInvestment = false;
+		taxDocInvestmentSelection = '';
+	}
+
+	function syncTaxInvestmentSelection() {
+		taxDocCustomInvestment = taxDocInvestmentSelection === '__custom';
+		if (!taxDocCustomInvestment) {
+			taxDocForm.investmentName = taxDocInvestmentSelection;
+		} else if (portfolioInvestmentOptions.includes(taxDocForm.investmentName)) {
+			taxDocForm.investmentName = '';
+		}
+	}
+
+	async function saveTaxDoc() {
+		const investmentName = taxDocCustomInvestment
+			? taxDocForm.investmentName.trim()
+			: (taxDocInvestmentSelection || taxDocForm.investmentName || '').trim();
+		if (!investmentName) {
+			alert('Please choose or enter an investment name.');
+			return;
+		}
+
+		const draftDoc = normalizeTaxDoc({
+			...taxDocForm,
+			id: editingTaxDocId || `tax_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+			investmentName
+		});
+
+		let nextDocs = [...taxDocuments];
+		if (editingTaxDocId) {
+			const index = nextDocs.findIndex((doc) => doc.id === editingTaxDocId);
+			if (index < 0) return;
+			nextDocs[index] = draftDoc;
+		} else {
+			nextDocs = [...nextDocs, draftDoc];
+		}
+
+		saveTaxDocsLocal(nextDocs);
+		try {
+			const synced = await syncTaxDocRecord(draftDoc);
+			saveTaxDocsLocal(nextDocs.map((doc) => doc.id === draftDoc.id ? synced : doc));
+		} catch (error) {
+			console.warn('Tax doc save sync failed:', error);
+		}
+		closeTaxDocModal();
+	}
+
+	async function deleteTaxDoc(id) {
+		if (!confirm('Delete this tax document?')) return;
+		const existingDoc = taxDocuments.find((doc) => doc.id === id);
+		saveTaxDocsLocal(taxDocuments.filter((doc) => doc.id !== id));
+		try {
+			await deleteTaxDocRecord(existingDoc);
+		} catch (error) {
+			console.warn('Tax doc delete sync failed:', error);
+		}
+	}
+
+	async function autoPopulateTaxDocs(year) {
+		if (portfolio.length === 0) {
+			alert('No investments in your portfolio yet. Add investments first, then auto-populate tax docs.');
+			return;
+		}
+
+		const targetYear = Number(year) || (taxYearFilter !== 'all' ? Number(taxYearFilter) : new Date().getFullYear() - 1);
+		const existingNames = new Set(
+			taxDocuments
+				.filter((doc) => String(doc.taxYear) === String(targetYear))
+				.map((doc) => doc.investmentName)
+		);
+		const newDocs = portfolio
+			.filter((investment) => investment.investmentName && !existingNames.has(investment.investmentName))
+			.map((investment) => normalizeTaxDoc({
+				id: `tax_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+				taxYear: targetYear,
+				investmentName: investment.investmentName,
+				investingEntity: investment.investingEntity || '',
+				entityInvestedInto: investment.entityInvestedInto || '',
+				formType: String(investment.assetClass || '').toLowerCase() === 'lending' ? '1099-INT' : 'K-1',
+				uploadStatus: 'Pending',
+				notes: 'Auto-populated from portfolio'
+			}));
+
+		if (newDocs.length === 0) {
+			alert(`All portfolio investments already have tax documents for ${targetYear}.`);
+			taxDocsOpen = true;
+			return;
+		}
+
+		const nextDocs = [...taxDocuments, ...newDocs];
+		saveTaxDocsLocal(nextDocs);
+		taxDocsOpen = true;
+		let syncedDocs = [...nextDocs];
+
+		for (const doc of newDocs) {
+			try {
+				const synced = await syncTaxDocRecord(doc);
+				syncedDocs = syncedDocs.map((item) => item.id === doc.id ? synced : item);
+				saveTaxDocsLocal(syncedDocs);
+			} catch (error) {
+				console.warn('Tax doc auto-populate sync failed:', error);
+			}
+		}
+
+		alert(`Added ${newDocs.length} tax document${newDocs.length === 1 ? '' : 's'} for tax year ${targetYear}.`);
 	}
 
 	function handlePPMUpload(file) {
@@ -423,7 +689,7 @@
 	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
-	<div class="topbar-title">Dashboard</div>
+	<div class="topbar-title">Portfolio</div>
 	<div class="dash-tabs">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
 		<a href="/app/portfolio" class="dash-tab active">Portfolio</a>
@@ -648,7 +914,7 @@
 			</div>
 		{/if}
 
-		<div class="tax-shell">
+		<div class="tax-shell" id="tax-documents">
 			<button class="tax-shell-toggle" type="button" aria-expanded={taxDocsOpen} onclick={() => taxDocsOpen = !taxDocsOpen}>
 				<div class="tax-shell-toggle-copy">
 					<div class="tax-shell-title">Tax Documents</div>
@@ -665,19 +931,41 @@
 								<option value={year}>{year}</option>
 							{/each}
 						</select>
-						<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
-						<a href="/app/tax-prep" class="tax-action-btn">+ Add</a>
+						<button type="button" class="tax-action-btn secondary" onclick={() => autoPopulateTaxDocs()}>Auto-Populate from Portfolio</button>
+						<button type="button" class="tax-action-btn" onclick={() => openTaxDocModal()}>+ Add</button>
 					</div>
 					{#if taxDocuments.length === 0}
 						<div class="tax-empty-state">
 							<div class="tax-empty-title">No tax documents yet</div>
 							<div class="tax-empty-copy">Auto-populate from portfolio or add documents manually to track upcoming K-1s and 1099s.</div>
 							<div class="tax-empty-actions">
-								<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
-								<a href="/app/tax-prep" class="tax-action-btn">+ Add Manually</a>
+								<button type="button" class="tax-action-btn secondary" onclick={() => autoPopulateTaxDocs()}>Auto-Populate from Portfolio</button>
+								<button type="button" class="tax-action-btn" onclick={() => openTaxDocModal()}>+ Add Manually</button>
 							</div>
 						</div>
 					{:else}
+						<div class="tax-summary-grid">
+							<div class="tax-summary-card">
+								<div class="tax-summary-label">Total Documents</div>
+								<div class="tax-summary-value">{visibleTaxDocuments.length}</div>
+							</div>
+							<div class="tax-summary-card">
+								<div class="tax-summary-label">Received</div>
+								<div class="tax-summary-value success">{visibleTaxDocuments.filter((doc) => doc.uploadStatus === 'Received').length}</div>
+							</div>
+						<div class="tax-summary-card">
+							<div class="tax-summary-label">Pending</div>
+							<div class="tax-summary-value warn">{visibleTaxDocuments.filter((doc) => doc.uploadStatus === 'Pending').length}</div>
+						</div>
+						<div class="tax-summary-card">
+							<div class="tax-summary-label">N/A</div>
+							<div class="tax-summary-value muted">{visibleTaxDocuments.filter((doc) => doc.uploadStatus === 'N/A').length}</div>
+						</div>
+						<div class="tax-summary-card">
+							<div class="tax-summary-label">Completion</div>
+							<div class="tax-summary-value">{visibleTaxDocuments.length > 0 ? Math.round((visibleTaxDocuments.filter((doc) => doc.uploadStatus === 'Received').length / visibleTaxDocuments.length) * 100) : 0}%</div>
+						</div>
+						</div>
 						<div class="tax-table-wrap">
 							<table class="tax-table">
 								<thead>
@@ -705,9 +993,13 @@
 											</td>
 											<td>{doc.dateReceived || '—'}</td>
 											<td>
-												<a class="tax-row-link" href={doc.fileUrl || doc.portalUrl || '/app/tax-prep'} target={doc.fileUrl || doc.portalUrl ? '_blank' : undefined} rel={doc.fileUrl || doc.portalUrl ? 'noopener' : undefined}>
-													{doc.fileUrl || doc.portalUrl ? 'View' : 'Manage'}
-												</a>
+												<div class="tax-inline-actions">
+													{#if doc.fileUrl || doc.portalUrl}
+														<a class="tax-row-link" href={doc.fileUrl || doc.portalUrl} target="_blank" rel="noopener">View</a>
+													{/if}
+													<button type="button" class="tax-inline-btn" onclick={() => openTaxDocModal(doc.id)}>Edit</button>
+													<button type="button" class="tax-inline-btn muted" onclick={() => deleteTaxDoc(doc.id)}>Delete</button>
+												</div>
 											</td>
 										</tr>
 									{/each}
@@ -839,6 +1131,112 @@
 				<div style="flex:1"></div>
 				<button class="btn-cancel" onclick={() => showAddModal = false}>Cancel</button>
 				<button class="btn-primary" onclick={saveInvestment}>{editingId ? 'Save Changes' : 'Add Investment'}</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if showTaxDocModal}
+	<div
+		class="modal-overlay"
+		role="button"
+		tabindex="0"
+		aria-label="Close tax document modal"
+		onclick={(e) => { if (e.target === e.currentTarget) closeTaxDocModal(); }}
+		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
+			if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				closeTaxDocModal();
+			}
+		}}
+	>
+		<div class="modal-card">
+			<div class="modal-top">
+				<div class="modal-title">{editingTaxDocId ? 'Edit' : 'Add'} Tax Document</div>
+				<button class="modal-close" aria-label="Close tax document modal" onclick={closeTaxDocModal}>&times;</button>
+			</div>
+			<div class="modal-grid">
+				<div class="modal-field">
+					<label for="taxDocYear">Tax Year</label>
+					<input id="taxDocYear" type="number" bind:value={taxDocForm.taxYear}>
+				</div>
+				<div class="modal-field">
+					<label for="taxDocFormType">Form Type</label>
+					<select id="taxDocFormType" bind:value={taxDocForm.formType}>
+						<option>K-1</option>
+						<option>1099-DIV</option>
+						<option>1099-INT</option>
+						<option>1099-B</option>
+						<option>1099-MISC</option>
+						<option>Other</option>
+					</select>
+				</div>
+				<div class="modal-field full-width">
+					<label for="taxDocInvestmentSelect">Investment Name</label>
+					<select id="taxDocInvestmentSelect" bind:value={taxDocInvestmentSelection} onchange={syncTaxInvestmentSelection}>
+						<option value="">-- Select or type below --</option>
+						{#each portfolioInvestmentOptions as investmentName}
+							<option value={investmentName}>{investmentName}</option>
+						{/each}
+						<option value="__custom">Other (type below)</option>
+					</select>
+					{#if taxDocCustomInvestment}
+						<input id="taxDocInvestmentCustom" bind:value={taxDocForm.investmentName} placeholder="Custom investment name" style="margin-top:6px;">
+					{/if}
+				</div>
+				<div class="modal-field">
+					<label for="taxDocInvestingEntity">Investing Entity</label>
+					<input id="taxDocInvestingEntity" bind:value={taxDocForm.investingEntity}>
+				</div>
+				<div class="modal-field">
+					<label for="taxDocEntityInvestedInto">Entity Invested Into</label>
+					<input id="taxDocEntityInvestedInto" bind:value={taxDocForm.entityInvestedInto}>
+				</div>
+				<div class="modal-field">
+					<label for="taxDocUploadStatus">Upload Status</label>
+					<select id="taxDocUploadStatus" bind:value={taxDocForm.uploadStatus}>
+						<option>Received</option>
+						<option>Pending</option>
+						<option>N/A</option>
+					</select>
+				</div>
+				<div class="modal-field">
+					<label for="taxDocDateReceived">Date Received</label>
+					<input id="taxDocDateReceived" type="date" bind:value={taxDocForm.dateReceived}>
+				</div>
+				<div class="modal-field full-width">
+					<label for="taxDocFileUrl">File URL</label>
+					<input id="taxDocFileUrl" bind:value={taxDocForm.fileUrl} placeholder="Link to uploaded document">
+				</div>
+				<div class="modal-field full-width">
+					<label for="taxDocPortalUrl">Sponsor Portal URL</label>
+					<input id="taxDocPortalUrl" bind:value={taxDocForm.portalUrl} placeholder="Link to sponsor portal">
+				</div>
+				<div class="modal-field">
+					<label for="taxDocContactName">Contact Name</label>
+					<input id="taxDocContactName" bind:value={taxDocForm.contactName}>
+				</div>
+				<div class="modal-field">
+					<label for="taxDocContactEmail">Email</label>
+					<input id="taxDocContactEmail" type="email" bind:value={taxDocForm.contactEmail}>
+				</div>
+				<div class="modal-field">
+					<label for="taxDocContactPhone">Phone</label>
+					<input id="taxDocContactPhone" bind:value={taxDocForm.contactPhone}>
+				</div>
+				<div class="modal-field full-width">
+					<label for="taxDocNotes">Notes</label>
+					<textarea id="taxDocNotes" bind:value={taxDocForm.notes} rows="3"></textarea>
+				</div>
+			</div>
+			<div class="modal-actions">
+				{#if editingTaxDocId}
+					<button class="btn-danger" onclick={() => { const taxDocId = editingTaxDocId; closeTaxDocModal(); deleteTaxDoc(taxDocId); }}>Delete</button>
+				{/if}
+				<div style="flex:1"></div>
+				<button class="btn-cancel" onclick={closeTaxDocModal}>Cancel</button>
+				<button class="btn-primary" onclick={saveTaxDoc}>{editingTaxDocId ? 'Save Changes' : 'Add Document'}</button>
 			</div>
 		</div>
 	</div>
@@ -1368,11 +1766,42 @@
 		font-weight: 700;
 		text-decoration: none;
 		white-space: nowrap;
+		cursor: pointer;
 	}
 	.tax-action-btn.secondary {
 		background: transparent;
 		color: var(--primary);
 	}
+	.tax-summary-grid {
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 10px;
+		padding: 0 18px 18px;
+	}
+	.tax-summary-card {
+		border: 1px solid var(--border-light);
+		border-radius: var(--radius-sm);
+		background: var(--bg-cream);
+		padding: 14px;
+	}
+	.tax-summary-label {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+	}
+	.tax-summary-value {
+		margin-top: 6px;
+		font-family: var(--font-ui);
+		font-size: 22px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.tax-summary-value.success { color: var(--primary); }
+	.tax-summary-value.warn { color: #f59e0b; }
+	.tax-summary-value.muted { color: var(--text-muted); }
 	.tax-empty-state {
 		padding: 20px 18px 24px;
 		text-align: center;
@@ -1443,6 +1872,28 @@
 		font-weight: 700;
 		color: var(--primary);
 		text-decoration: none;
+	}
+	.tax-inline-actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.tax-inline-btn {
+		padding: 0;
+		border: none;
+		background: none;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--primary);
+		cursor: pointer;
+	}
+	.tax-inline-btn.muted {
+		color: var(--text-muted);
+	}
+	.tax-inline-btn:hover,
+	.tax-row-link:hover {
+		text-decoration: underline;
 	}
 
 	/* ── Delete Button ── */
@@ -1723,5 +2174,11 @@
 		.chartjs-timeline-wrap { height: 200px; }
 		.tax-shell-actions { justify-content: flex-start; }
 		.tax-filter-select, .tax-action-btn { width: 100%; }
+		.tax-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+		.tax-inline-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
 	}
 </style>

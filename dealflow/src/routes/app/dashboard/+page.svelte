@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { user, isLoggedIn, isAdmin, userTier } from '$lib/stores/auth.js';
-	import { deals, dealStages, stageCounts, STAGE_META } from '$lib/stores/deals.js';
+	import { user } from '$lib/stores/auth.js';
+	import { deals, dealStages, stageCounts } from '$lib/stores/deals.js';
 	import GoalProgress from '$lib/components/GoalProgress.svelte';
 
 	const ALLOCATION_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
@@ -17,7 +17,6 @@
 
 	// Derived
 	const branch = $derived(wizardData._branch || '');
-	const buyBoxComplete = $derived(browser && localStorage.getItem('gycBuyBoxComplete') === 'true');
 	const hasOnboarding = $derived(!!branch || (goals && goals.targetIncome > 0));
 
 	const totalInvested = $derived(portfolio.reduce((s, i) => s + (parseFloat(i.amountInvested) || 0), 0));
@@ -119,105 +118,7 @@
 	const nextPlanSlot = $derived.by(() => (planSlots || []).find(slot => !slot.filled_by) || null);
 	const planCheckSize = $derived(portfolioPlan?.check_size || nextPlanSlot?.check_size || wizardData.checkSize || 100000);
 
-	// Momentum metrics
 	const dealsReviewed = $derived(Object.keys($dealStages).length);
-	const inPipeline = $derived(($stageCounts.saved || 0) + ($stageCounts.diligence || 0));
-	const decisionsMade = $derived(($stageCounts.passed || 0) + ($stageCounts.invested || 0));
-
-	// Daily deal view counter for free users
-	const DAILY_LIMIT = 20;
-	const isFreeUser = $derived(!$isAdmin && $userTier !== 'academy' && $userTier !== 'paid');
-	const dailyDealCount = $derived.by(() => {
-		if (!browser) return 0;
-		const todayKey = `gycDailyDeals_${new Date().toISOString().slice(0, 10)}`;
-		const stored = JSON.parse(localStorage.getItem(todayKey) || '[]');
-		return stored.length;
-	});
-
-	// Milestone tracker — compute activation milestones from deal stages + portfolio
-	const milestones = $derived.by(() => {
-		const stages = $dealStages || {};
-		const stageEntries = Object.entries(stages);
-		const hasSaved = stageEntries.some(([, s]) => s === 'saved' || s === 'diligence' || s === 'decision' || s === 'invested');
-		const hasDiligence = stageEntries.some(([, s]) => s === 'diligence' || s === 'decision' || s === 'invested');
-		const hasDecision = stageEntries.some(([, s]) => s === 'decision' || s === 'invested');
-		const hasInvested = stageEntries.some(([, s]) => s === 'invested') || portfolio.length > 0;
-
-		// Check if user has viewed a deck (stored in localStorage)
-		let hasDeckView = false;
-		if (browser) {
-			const deckViews = JSON.parse(localStorage.getItem('gycDeckViews') || '[]');
-			hasDeckView = deckViews.length > 0 || stageEntries.length > 0;
-		}
-
-		return [
-			{ key: 'save', label: 'First Deal Saved', desc: 'Save a deal to your pipeline', done: hasSaved, icon: 'bookmark' },
-			{ key: 'deck', label: 'First Deck Viewed', desc: 'Review a deal pitch deck', done: hasDeckView, icon: 'doc' },
-			{ key: 'dd', label: 'First DD Started', desc: 'Begin due diligence on a deal', done: hasDiligence, icon: 'check' },
-			{ key: 'invest', label: 'First Investment', desc: 'Record your first investment', done: hasInvested, icon: 'star' }
-		];
-	});
-
-	const milestoneProgress = $derived.by(() => {
-		const ms = milestones;
-		const done = ms.filter(m => m.done).length;
-		return Math.round((done / ms.length) * 100);
-	});
-
-	// Recent activity feed — derived from dealStages + deals list
-	const recentActivity = $derived.by(() => {
-		const stageEntries = Object.entries($dealStages);
-		if (stageEntries.length === 0) return [];
-		const dealsMap = {};
-		($deals || []).forEach(d => { dealsMap[d.id] = d; });
-
-		const actionVerbs = {
-			saved: 'saved for review',
-			diligence: 'moved to Connect',
-			decision: 'moved to Decide',
-			invested: 'marked as invested',
-			passed: 'skipped'
-		};
-
-		const activities = stageEntries
-			.map(([dealId, stage]) => {
-				const deal = dealsMap[dealId];
-				if (!deal) return null;
-				return {
-					dealId,
-					dealName: deal.name || deal.investmentName || 'Unknown Deal',
-					stage,
-					verb: actionVerbs[stage] || `moved to ${stage}`,
-					timestamp: deal.stageUpdatedAt || deal.addedDate || deal.createdTime || null
-				};
-			})
-			.filter(Boolean)
-			.sort((a, b) => {
-				if (!a.timestamp && !b.timestamp) return 0;
-				if (!a.timestamp) return 1;
-				if (!b.timestamp) return -1;
-				return new Date(b.timestamp) - new Date(a.timestamp);
-			})
-			.slice(0, 8);
-
-		return activities;
-	});
-
-	// Quick actions — context-aware buttons
-	const quickActions = $derived.by(() => {
-		const actions = [];
-		actions.push({ label: 'Browse Deals', href: '/app/deals', icon: 'search' });
-		const saved = $stageCounts.saved || 0;
-		if (saved > 0) {
-			actions.push({ label: `Continue Review (${saved})`, href: '/app/deals', icon: 'clipboard', tab: 'saved' });
-		}
-		if (portfolio.length > 0) {
-			actions.push({ label: 'View Portfolio', href: '/app/portfolio', icon: 'briefcase' });
-		} else {
-			actions.push({ label: 'View Portfolio', href: '/app/portfolio', icon: 'briefcase' });
-		}
-		return actions;
-	});
 
 	// Allocation for pie chart
 	const allocationMap = $derived.by(() => {
@@ -239,16 +140,6 @@
 	});
 	const allocationEntries = $derived.by(() => Object.entries(allocationMap).sort(([, a], [, b]) => b - a));
 	const previewInvestments = $derived.by(() => portfolio.slice(0, 4));
-	const viewsLeftToday = $derived(Math.max(0, DAILY_LIMIT - dailyDealCount));
-	const daysActive = $derived.by(() => {
-		if (!browser) return 1;
-		const createdAt = $user?.createdAt || localStorage.getItem('gycFirstActivity');
-		if (!createdAt) return dealsReviewed > 0 ? Math.max(1, dealsReviewed) : 1;
-		const diff = Date.now() - new Date(createdAt).getTime();
-		return Math.max(1, Math.ceil(diff / 86400000));
-	});
-	const nextMilestone = $derived.by(() => milestones.find((milestone) => !milestone.done) || null);
-
 	// Action items
 	function assetKey(value) {
 		return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -327,7 +218,9 @@
 					items.push({
 						icon: 'tax',
 						text: `<strong>${pending.length} K-1${pending.length > 1 ? 's' : ''} still pending</strong> for ${taxYear} tax year`,
-						link: 'Tax Prep', page: 'tax-prep'
+						link: 'Open Tax Docs',
+						page: 'portfolio',
+						href: '/app/portfolio#tax-documents'
 					});
 				}
 			}
@@ -350,56 +243,10 @@
 		return raw ? raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() : '';
 	});
 
-	// Coaching message
-	const coachMsg = $derived.by(() => {
-		const name = firstName;
-		if (!buyBoxComplete && !branch) {
-			return { msg: "Let's start by setting up your investor profile — it takes 2 minutes and helps us find deals that match your goals.", cta: 'Get Started', page: '' };
-		}
-		if ($stageCounts.saved > 0 && ($stageCounts.diligence || 0) === 0) {
-			return { msg: `You've saved ${$stageCounts.saved} deal${$stageCounts.saved !== 1 ? 's' : ''} — great start! Pick your strongest one and work through the review checklist.`, cta: 'Review Deals', page: 'deals' };
-		}
-		if (($stageCounts.diligence || 0) > 0) {
-			return { msg: `You have ${$stageCounts.diligence} deal${$stageCounts.diligence !== 1 ? 's' : ''} ready to connect. Request an intro with the operator.`, cta: 'Connect Now', page: 'deals' };
-		}
-		if (activeInvestments > 0 && hasGoals) {
-			return { msg: `You're ${goalProgress}% to your income goal with ${activeInvestments} active investment${activeInvestments !== 1 ? 's' : ''}. Keep the momentum going.`, cta: 'View Portfolio', page: 'portfolio' };
-		}
-		if (name) {
-			return { msg: `Welcome back, ${name}. Here's your investing overview.`, cta: '', page: '' };
-		}
-		return { msg: '', cta: '', page: '' };
-	});
-
 	function parseDollar(s) {
 		if (typeof s === 'number') return s;
 		if (!s) return 0;
 		return parseInt(String(s).replace(/[$,\s]/g, ''), 10) || 0;
-	}
-
-	function formatTimeAgo(dateStr) {
-		if (!dateStr) return '';
-		const now = new Date();
-		const date = new Date(dateStr);
-		const diffMs = now - date;
-		const diffMins = Math.floor(diffMs / 60000);
-		if (diffMins < 1) return 'just now';
-		if (diffMins < 60) return `${diffMins}m ago`;
-		const diffHours = Math.floor(diffMins / 60);
-		if (diffHours < 24) return `${diffHours}h ago`;
-		const diffDays = Math.floor(diffHours / 24);
-		if (diffDays < 7) return `${diffDays}d ago`;
-		const diffWeeks = Math.floor(diffDays / 7);
-		if (diffWeeks < 4) return `${diffWeeks}w ago`;
-		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-	}
-
-	function quickActionHref(action) {
-		return action.tab ? `${action.href}#${action.tab}` : action.href;
-	}
-
-	function activityStageLabel(stage) {
-		return STAGE_META[stage]?.label || 'Updated';
 	}
 
 	function allocationColor(index) {
@@ -411,21 +258,6 @@
 		if (status === 'Distributing') return '#3b82f6';
 		if (status === 'Pending') return '#f59e0b';
 		return 'var(--text-muted)';
-	}
-
-	function milestoneAction(milestone) {
-		if (!milestone) return null;
-		if (milestone.key === 'save') return { label: 'Browse Deals', href: '/app/deals' };
-		if (milestone.key === 'deck') return { label: 'Review Deals', href: '/app/deals' };
-		if (milestone.key === 'dd') return { label: 'Connect Now', href: '/app/deals' };
-		if (milestone.key === 'invest') return { label: 'View Portfolio', href: '/app/portfolio' };
-		return { label: 'Explore Deals', href: '/app/deals' };
-	}
-
-	function milestoneStatusLabel(milestone) {
-		if (!milestone) return '';
-		if (milestone.done) return 'Done';
-		return 'Next';
 	}
 
 	function fmtDollar(n) {
@@ -470,10 +302,10 @@
 				<div class="dashboard-onboarding-icon">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
 				</div>
-				<div class="dashboard-onboarding-title">{firstName ? `${firstName}, let's find your perfect deals.` : "Let's find your perfect deals."}</div>
-				<div class="dashboard-onboarding-copy">Tell us what you're looking for in a couple of minutes, then we'll shape the app around your next investment.</div>
+				<div class="dashboard-onboarding-title">{firstName ? `${firstName}, set up your investment plan.` : 'Set up your investment plan.'}</div>
+				<div class="dashboard-onboarding-copy">Get your preferences in place in a couple of minutes so the dashboard, deal flow, and portfolio all reflect what you are actually trying to buy.</div>
 				<div class="dashboard-onboarding-actions">
-					<button class="btn-primary" onclick={openWizard}>Set Up My Investor Profile →</button>
+					<button class="btn-primary" onclick={openWizard}>Get Started →</button>
 					<a href="/app/deals" class="dashboard-onboarding-link">Browse deals first</a>
 				</div>
 			</div>
@@ -561,7 +393,7 @@
 				<div class="action-card">
 					<div class="action-header">Action Items</div>
 					{#each actionItems as item}
-						<a href="/app/{item.page}" class="action-row">
+						<a href={item.href || `/app/${item.page}`} class="action-row">
 							<div class="action-icon" class:warn={item.icon === 'card' || item.icon === 'tax'}>
 								{#if item.icon === 'plan'}
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>

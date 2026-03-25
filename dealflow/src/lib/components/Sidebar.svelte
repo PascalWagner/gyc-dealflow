@@ -1,12 +1,22 @@
-<script>
+	<script>
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
-	import { user, isLoggedIn, isAdmin, userTier } from '$lib/stores/auth.js';
+	import {
+		canonicalizeUserTier,
+		getStoredSessionToken,
+		getStoredSessionUser,
+		isAdmin,
+		isLoggedIn,
+		setStoredSessionUser,
+		user,
+		userTier
+	} from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
 	import {
 		ADMIN_REAL_USER_KEY,
+		currentAdminRealUser,
 		hydrateUserScopedData,
 		loadUserScopedData,
 		saveUserScopedData
@@ -21,7 +31,7 @@
 			fetchDeals();
 		}
 
-		const saved = localStorage.getItem('gyc-theme');
+		const saved = localStorage.getItem('gyc-theme') || localStorage.getItem('gycTheme');
 		if (saved === 'dark') {
 			isDark = true;
 			document.documentElement.classList.add('dark');
@@ -46,10 +56,12 @@
 			document.documentElement.classList.add('dark');
 			document.documentElement.classList.remove('light');
 			localStorage.setItem('gyc-theme', 'dark');
+			localStorage.setItem('gycTheme', 'dark');
 		} else {
 			document.documentElement.classList.remove('dark');
 			document.documentElement.classList.add('light');
 			localStorage.setItem('gyc-theme', 'light');
+			localStorage.setItem('gycTheme', 'light');
 		}
 	}
 
@@ -116,7 +128,7 @@
 			label: 'Support',
 			items: [
 				{ page: 'academy', icon: 'academy', label: 'Cash Flow Academy' },
-				{ page: 'office-hours', icon: 'officehours', label: 'Office Hours', paidOnly: true },
+				{ page: 'office-hours', icon: 'officehours', label: 'Thursdays Live', paidOnly: true },
 				{ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' }
 			]
 		}
@@ -145,7 +157,6 @@
 	});
 	const tierLabel = $derived({
 		free: 'Free Plan',
-		explorer: 'Free Plan',
 		academy: 'Academy Member',
 		founding: 'Founding',
 		'inner-circle': 'Inner Circle',
@@ -169,10 +180,12 @@
 		if (!feedbackText.trim()) return;
 		feedbackSending = true;
 		try {
-			const stored = browser ? JSON.parse(localStorage.getItem('gycUser') || '{}') : {};
 			await fetch('/api/feedback', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (stored.token || '') },
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: 'Bearer ' + (getStoredSessionToken() || '')
+				},
 				body: JSON.stringify({ rating: feedbackRating, text: feedbackText, page: currentPage })
 			});
 			feedbackText = '';
@@ -201,23 +214,20 @@
 	let viewAsResults = $state([]);
 	let viewAsUser = $state(null);
 
-	const isImpersonating = $derived(browser ? !!localStorage.getItem(ADMIN_REAL_USER_KEY) : false);
-	const impersonatedName = $derived.by(() => {
-		if (!browser) return '';
-		const u = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		return u?.name || u?.email?.split('@')[0] || '';
+	const isImpersonating = $derived.by(() => {
+		if (!browser) return false;
+		const realUser = currentAdminRealUser();
+		return !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
 	});
-	const impersonatedEmail = $derived.by(() => {
-		if (!browser) return '';
-		return JSON.parse(localStorage.getItem('gycUser') || '{}')?.email || '';
-	});
+	const impersonatedName = $derived($isImpersonating ? userName : '');
+	const impersonatedEmail = $derived($isImpersonating ? userEmail : '');
 
 	async function searchViewAsUsers(query) {
 		viewAsSearch = query;
 		if (!query || query.length < 2) { viewAsResults = []; return; }
 		try {
-			const realUser = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || 'null');
-			const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			const realUser = currentAdminRealUser();
+			const currentUser = getStoredSessionUser();
 			const adminEmail = (realUser?.email || currentUser?.email || '').trim();
 			if (!adminEmail) {
 				viewAsResults = [];
@@ -236,6 +246,13 @@
 							: [];
 				viewAsResults = contacts
 					.filter((contact) => contact?.email && contact.email.toLowerCase() !== adminEmail.toLowerCase())
+					.map((contact) => ({
+						...contact,
+						tier: canonicalizeUserTier(contact?.tier, {
+							email: contact?.email,
+							isAdmin: contact?.isAdmin === true
+						})
+					}))
 					.slice(0, 8);
 			} else {
 				viewAsResults = [];
@@ -245,7 +262,8 @@
 
 	async function viewAs(targetUser) {
 		if (!browser) return;
-		const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		const currentUser = getStoredSessionUser();
+		if (!currentUser?.email || !currentUser?.token) return;
 		if (!localStorage.getItem(ADMIN_REAL_USER_KEY)) {
 			localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(currentUser));
 			saveUserScopedData(currentUser.email);
@@ -254,16 +272,18 @@
 		}
 
 		loadUserScopedData(targetUser.email);
-		localStorage.setItem('gycUser', JSON.stringify({
+		const impersonatedUser = setStoredSessionUser({
 			...targetUser,
 			name: targetUser.name || targetUser.fullName || targetUser.email?.split('@')[0] || '',
 			fullName: targetUser.fullName || targetUser.name || '',
 			token: currentUser.token,
+			refreshToken: currentUser.refreshToken || '',
 			isAdmin: false
-		}));
+		});
+		if (!impersonatedUser?.email || !impersonatedUser?.token) return;
 		await hydrateUserScopedData({
-			email: targetUser.email,
-			token: currentUser.token,
+			email: impersonatedUser.email,
+			token: impersonatedUser.token,
 			adminEmail: currentUser.email
 		}).catch(() => {});
 		showViewAsDropdown = false;
@@ -274,16 +294,16 @@
 
 	function exitViewAs() {
 		if (!browser) return;
-		const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
-		if (currentUser.email) {
+		const currentUser = getStoredSessionUser();
+		if (currentUser?.email) {
 			saveUserScopedData(currentUser.email);
 		}
-		const realUser = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || '{}');
-		if (realUser.email) {
-			localStorage.setItem('gycUser', JSON.stringify(realUser));
+		const realUser = currentAdminRealUser();
+		localStorage.removeItem(ADMIN_REAL_USER_KEY);
+		if (realUser?.email) {
+			setStoredSessionUser(realUser);
 			loadUserScopedData(realUser.email);
 		}
-		localStorage.removeItem(ADMIN_REAL_USER_KEY);
 		window.location.reload();
 	}
 </script>
@@ -404,7 +424,9 @@
 									<div class="view-as-result-meta">
 										<div class="view-as-result-email">{u.email}</div>
 										{#if u.tier}
-											<span class="view-as-result-tier" class:tier-paid={u.tier !== 'free'}>{u.tier === 'academy' ? 'Academy' : u.tier}</span>
+											<span class="view-as-result-tier" class:tier-paid={u.tier !== 'free'}>
+												{u.tier === 'academy' ? 'Academy' : u.tier}
+											</span>
 										{/if}
 									</div>
 								</button>
