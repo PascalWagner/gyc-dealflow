@@ -119,6 +119,21 @@
 	const planCheckSize = $derived(portfolioPlan?.check_size || nextPlanSlot?.check_size || wizardData.checkSize || 100000);
 
 	const dealsReviewed = $derived(Object.keys($dealStages).length);
+	const inPipeline = $derived(($stageCounts.saved || 0) + ($stageCounts.diligence || 0));
+	const decisionsMade = $derived(($stageCounts.passed || 0) + ($stageCounts.invested || 0));
+	const daysActive = $derived.by(() => {
+		if (!browser) return 1;
+		const createdAt = $user?.createdAt || localStorage.getItem('gycFirstActivity');
+		if (!createdAt) return dealsReviewed > 0 ? Math.max(1, dealsReviewed) : 1;
+		const diff = Date.now() - new Date(createdAt).getTime();
+		return Math.max(1, Math.ceil(diff / 86400000));
+	});
+	const dashboardMetrics = $derived([
+		{ label: 'Deals Reviewed', value: dealsReviewed },
+		{ label: 'In Pipeline', value: inPipeline },
+		{ label: 'Decisions Made', value: decisionsMade },
+		{ label: 'Days Active', value: daysActive }
+	]);
 
 	// Allocation for pie chart
 	const allocationMap = $derived.by(() => {
@@ -387,6 +402,15 @@
 				<a href="/app/plan" class="btn-primary plan-cta-btn">Build My Plan →</a>
 			</div>
 		{/if}
+
+		<div class="dashboard-metrics-grid">
+			{#each dashboardMetrics as metric}
+				<div class="dashboard-metric-card">
+					<div class="dashboard-metric-label">{metric.label}</div>
+					<div class="dashboard-metric-value">{metric.value}</div>
+				</div>
+			{/each}
+		</div>
 
 		<div class="dashboard-stack">
 			{#if actionItems.length > 0}
@@ -828,6 +852,34 @@
 		text-decoration: none;
 	}
 
+	.dashboard-metrics-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 12px;
+		margin-bottom: 18px;
+	}
+	.dashboard-metric-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 14px 16px;
+		text-align: center;
+	}
+	.dashboard-metric-label {
+		font-family: var(--font-ui);
+		font-size: 9px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.6px;
+		color: var(--text-muted);
+		margin-bottom: 4px;
+	}
+	.dashboard-metric-value {
+		font-family: var(--font-headline);
+		font-size: 18px;
+		color: var(--text-secondary);
+	}
+
 	.dashboard-stack {
 		display: flex;
 		flex-direction: column;
@@ -1050,6 +1102,9 @@
 		.portfolio-preview-layout {
 			grid-template-columns: 240px minmax(0, 1fr);
 		}
+		.dashboard-metrics-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
 	}
 
 	/* ── Mobile Responsive ── */
@@ -1087,6 +1142,9 @@
 		}
 		.portfolio-preview-layout {
 			grid-template-columns: 1fr;
+		}
+		.dashboard-metrics-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 		.portfolio-preview-row {
 			grid-template-columns: 1fr;

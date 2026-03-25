@@ -689,7 +689,7 @@
 	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
-	<div class="topbar-title">Portfolio</div>
+	<div class="topbar-title">Dashboard</div>
 	<div class="dash-tabs">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
 		<a href="/app/portfolio" class="dash-tab active">Portfolio</a>
@@ -1587,37 +1587,6 @@
 	}
 	.btn-pending-add:hover { background: var(--primary-hover); }
 
-	/* ── Empty State ── */
-	.empty-charts {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 24px;
-		margin-bottom: 24px;
-		opacity: 0.35;
-		pointer-events: none;
-	}
-	.empty-chart-box {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 24px;
-		min-height: 180px;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-	.chart-title {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 16px;
-		align-self: flex-start;
-	}
-	.risk-bars { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-	.risk-bar { background: var(--border); height: 10px; border-radius: 4px; }
-
 	/* ── Import / Empty Card ── */
 	.import-section {
 		max-width: 520px;
@@ -2162,7 +2131,6 @@
 		.topbar > button:not(.mobile-menu-btn) { display: none !important; }
 		.topbar-spacer { display: none; }
 		.charts-row { grid-template-columns: 1fr; }
-		.empty-charts { grid-template-columns: 1fr; }
 		.modal-grid { grid-template-columns: 1fr; }
 		.content-area { padding: 16px; padding-bottom: 16px; }
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }

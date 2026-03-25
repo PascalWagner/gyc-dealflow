@@ -120,16 +120,15 @@
 			items: [
 				{ page: 'market-intel', icon: 'marketIntel', label: 'Market Intel', paidOnly: true },
 				{ page: 'deals', icon: 'deals', label: 'Deal Flow', badge: true },
-				{ page: 'operators', icon: 'operators', label: 'Operators' },
-				{ page: 'resources', icon: 'resources', label: 'Resources', paidOnly: true }
+				{ page: 'operators', icon: 'operators', label: 'Operators' }
 			]
 		},
 		{
 			label: 'Support',
 			items: [
 				{ page: 'academy', icon: 'academy', label: 'Cash Flow Academy' },
-				{ page: 'office-hours', icon: 'officehours', label: 'Thursdays Live', paidOnly: true },
-				{ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' }
+				{ page: 'income-fund', icon: 'incomefund', label: 'GYC Income Fund' },
+				{ page: 'office-hours', icon: 'officehours', label: 'Thursdays Live' }
 			]
 		}
 	]);
