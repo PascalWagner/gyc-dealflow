@@ -299,8 +299,6 @@
 			</a>
 		{/if}
 
-		<div class="nav-spacer"></div>
-
 		<!-- Admin -->
 		{#if $isAdmin}
 			<div class="nav-section-label">Admin</div>

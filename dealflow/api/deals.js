@@ -114,27 +114,10 @@ export default async function handler(req, res) {
 
     // Run deals + sponsors queries in parallel (was sequential — ~2x faster)
     const [dealsResult, sponsorsResult] = await Promise.all([
-      // Deals: select only columns the frontend actually uses (not SELECT *)
       supabase
         .from('opportunities')
         .select(`
-          id, deal_number, investment_name, asset_class, deal_type,
-          target_irr, equity_multiple, preferred_return, investment_minimum,
-          lp_gp_split, hold_period_years, added_date, status, offering_type,
-          offering_size, purchase_price, investing_geography, investment_strategy,
-          distributions, financials, available_to, sponsor_in_deal_pct, fees,
-          first_yr_depreciation, strategy, instrument, cash_on_cash, debt_position,
-          fund_aum, loan_count, avg_loan_ltv, location, property_address,
-          deck_url, ppm_url, sub_agreement_url, parent_deal_id, share_class_label,
-          vertical_integration, case_study, is_506b, issuer_entity, gp_entity,
-          sponsor_entity, unit_count, year_built, square_footage, occupancy_pct,
-          property_type, sec_cik, sec_entity_name, date_of_first_sale,
-          total_amount_sold, total_investors, updated_at,
-          acquisition_loan, loan_to_value, loan_rate, loan_term_years,
-          loan_io_years, capex_budget, closing_costs,
-          acquisition_fee_pct, asset_mgmt_fee_pct, property_mgmt_fee_pct,
-          capital_event_fee_pct, disposition_fee_pct, construction_mgmt_fee_pct,
-          waterfall_details,
+          *,
           management_company:management_companies (
             id, operator_name, ceo, website, linkedin_ceo,
             invest_clearly_profile, founding_year, type, asset_classes,
