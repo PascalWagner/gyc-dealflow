@@ -7,6 +7,7 @@
 	import { browser } from '$app/environment';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { untrack } from 'svelte';
 
 	let { children } = $props();
 
@@ -24,32 +25,37 @@
 	// Navigation progress bar state
 	let navProgress = $state(0);
 	let navVisible = $state(false);
-	let progressInterval = $state(null);
+	let progressInterval = null; // plain let — not reactive, just bookkeeping
 	let authChecked = $state(false);
-	let authTimeout = $state(null);
+	let authTimeout = null; // plain let — not reactive
 	let redirecting = $state(false);
 
 	// Start progress bar when navigating begins
+	// Only $navigating should be tracked as a dependency
 	$effect(() => {
 		if ($navigating) {
 			navVisible = true;
 			navProgress = 15;
 			if (progressInterval) clearInterval(progressInterval);
 			progressInterval = setInterval(() => {
-				navProgress = Math.min(navProgress + (90 - navProgress) * 0.1, 90);
+				untrack(() => {
+					navProgress = Math.min(navProgress + (90 - navProgress) * 0.1, 90);
+				});
 			}, 100);
 		} else {
 			if (progressInterval) {
 				clearInterval(progressInterval);
 				progressInterval = null;
 			}
-			if (navVisible) {
-				navProgress = 100;
-				setTimeout(() => {
-					navVisible = false;
-					navProgress = 0;
-				}, 300);
-			}
+			untrack(() => {
+				if (navVisible) {
+					navProgress = 100;
+					setTimeout(() => {
+						navVisible = false;
+						navProgress = 0;
+					}, 300);
+				}
+			});
 		}
 	});
 
