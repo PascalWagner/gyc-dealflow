@@ -6,6 +6,7 @@
 		assetClass = '',
 		dealType = '',
 		strategy = '',
+		status = '',
 		maxInvest = '',
 		maxLockup = '',
 		distributions = '',
@@ -22,13 +23,119 @@
 		isAdmin = false
 	} = $props();
 
-	let filterPanelOpen = $state(false);
+	let filterPanelOpen = $state(true);
 
 	const activeFilterCount = $derived(
-		[assetClass, dealType, strategy, maxInvest, maxLockup, distributions, minIRR].filter(Boolean).length
-		+ (sortBy !== 'newest' ? 1 : 0)
-		+ (showArchived ? 1 : 0)
+		[assetClass, dealType, strategy, status, maxInvest, maxLockup, distributions, minIRR].filter(Boolean).length
+			+ (sortBy !== 'newest' ? 1 : 0)
+			+ (showArchived ? 1 : 0)
 	);
+
+	const FILTER_SELECTS = [
+		{
+			field: 'assetClass',
+			label: 'Asset Class',
+			options: [
+				['', 'Asset Class'],
+				['Multi-Family', 'Multi-Family'],
+				['Industrial', 'Industrial'],
+				['Self Storage', 'Self Storage'],
+				['Hotels/Hospitality', 'Hotels / Hospitality'],
+				['Lending', 'Lending'],
+				['RV/Mobile Home Parks', 'RV / Mobile Home Parks'],
+				['Business / Other', 'Business / Other'],
+				['Mixed-Use', 'Mixed-Use'],
+				['Short Term Rental', 'Short Term Rental']
+			]
+		},
+		{
+			field: 'dealType',
+			label: 'Deal Type',
+			options: [
+				['', 'Deal Type'],
+				['Fund', 'Fund'],
+				['Syndication', 'Syndication']
+			]
+		},
+		{
+			field: 'strategy',
+			label: 'Strategy',
+			options: [
+				['', 'Strategy'],
+				['Lending', 'Lending'],
+				['Buy & Hold', 'Buy & Hold'],
+				['Value-Add', 'Value-Add'],
+				['Distressed', 'Distressed'],
+				['Development', 'Development']
+			]
+		},
+		{
+			field: 'status',
+			label: 'Status',
+			options: [
+				['', 'Status'],
+				['Open to invest', 'Open to invest'],
+				['Evergreen', 'Evergreen']
+			]
+		},
+		{
+			field: 'maxInvest',
+			label: 'Max Investment Min.',
+			options: [
+				['', 'Max Investment Min.'],
+				['25000', '$25K or less'],
+				['50000', '$50K or less'],
+				['100000', '$100K or less'],
+				['250000', '$250K or less']
+			]
+		},
+		{
+			field: 'maxLockup',
+			label: 'Max Lockup',
+			options: [
+				['', 'Max Lockup'],
+				['1', '1 year or less'],
+				['3', '3 years or less'],
+				['5', '5 years or less'],
+				['7', '7 years or less'],
+				['10', '10 years or less']
+			]
+		},
+		{
+			field: 'distributions',
+			label: 'Distributions',
+			options: [
+				['', 'Distributions'],
+				['Monthly', 'Monthly'],
+				['Quarterly', 'Quarterly'],
+				['Annual', 'Annual']
+			]
+		},
+		{
+			field: 'minIRR',
+			label: 'Min Target IRR',
+			options: [
+				['', 'Min Target IRR'],
+				['0.06', '6%+'],
+				['0.08', '8%+'],
+				['0.10', '10%+'],
+				['0.12', '12%+'],
+				['0.15', '15%+'],
+				['0.20', '20%+']
+			]
+		},
+		{
+			field: 'sortBy',
+			label: 'Sort By',
+			options: [
+				['newest', 'Sort: Newest'],
+				['best_match', 'Sort: Best Match'],
+				['irr', 'Sort: Highest IRR'],
+				['min_invest', 'Sort: Lowest Min Investment'],
+				['az', 'Sort: A-Z Name']
+			]
+		}
+	];
 
 	function emit(field, value, withHaptic = false) {
 		if (withHaptic) selectionChanged();
@@ -37,185 +144,141 @@
 
 	function clearAll() {
 		selectionChanged();
-		filterPanelOpen = false;
+		filterPanelOpen = true;
 		onclear();
+	}
+
+	function valueFor(field) {
+		switch (field) {
+			case 'assetClass':
+				return assetClass;
+			case 'dealType':
+				return dealType;
+			case 'strategy':
+				return strategy;
+			case 'status':
+				return status;
+			case 'maxInvest':
+				return maxInvest;
+			case 'maxLockup':
+				return maxLockup;
+			case 'distributions':
+				return distributions;
+			case 'minIRR':
+				return minIRR;
+			case 'sortBy':
+				return sortBy;
+			default:
+				return '';
+		}
 	}
 </script>
 
-<div class="filter-bar">
-	<button
-		class="buybox-toggle"
-		class:active={buyBoxApplied}
-		onclick={() => {
-			selectionChanged();
-			ontoggleBuyBox();
-		}}
-	>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
-		Apply My Plan
-	</button>
-
-	<button
-		class="filters-toggle"
-		class:active={filterPanelOpen}
-		onclick={() => {
-			selectionChanged();
-			filterPanelOpen = !filterPanelOpen;
-		}}
-	>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-		Filters
-		{#if activeFilterCount > 0}
-			<span class="filter-count-badge">{activeFilterCount}</span>
-		{/if}
-	</button>
-
-	<div class="search-wrap">
-		<input
-			type="text"
-			class="filter-input"
-			placeholder="Search deals, operators, people..."
-			value={search}
-			oninput={(e) => emit('search', e.target.value)}
-			autocomplete="off"
+<div class="filter-shell">
+	<div class="filter-bar">
+		<button
+			class="buybox-toggle"
+			class:active={buyBoxApplied}
+			onclick={() => {
+				selectionChanged();
+				ontoggleBuyBox();
+			}}
 		>
-	</div>
-
-	<div class="filter-bar-stats">
-		<span class="fbs-item"><strong>{totalDeals}</strong> deals</span>
-		<span class="fbs-dot">&middot;</span>
-		<span class="fbs-item"><strong>{avgIRR}%</strong> avg IRR</span>
-	</div>
-
-	{#if isAdmin}
-		<button class="add-deal-btn" onclick={onadddeal}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-			Add Deal
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+			Apply My Plan
 		</button>
+
+		<a class="buybox-update-btn" href="/app/plan">
+			Update Plan?
+		</a>
+
+		<button
+			class="filters-toggle"
+			class:active={filterPanelOpen}
+			onclick={() => {
+				selectionChanged();
+				filterPanelOpen = !filterPanelOpen;
+			}}
+		>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+			Filters
+			{#if activeFilterCount > 0}
+				<span class="filter-count-badge">{activeFilterCount}</span>
+			{/if}
+		</button>
+
+		<div class="search-wrap">
+			<input
+				type="text"
+				class="filter-input"
+				placeholder="Search deals, operators, people..."
+				value={search}
+				oninput={(e) => emit('search', e.target.value)}
+				autocomplete="off"
+			>
+		</div>
+
+		<div class="filter-bar-stats">
+			<span class="fbs-item"><strong>{totalDeals}</strong> deals</span>
+			<span class="fbs-dot">&middot;</span>
+			<span class="fbs-item"><strong>{avgIRR}%</strong> avg IRR</span>
+		</div>
+
+		{#if isAdmin}
+			<button class="add-deal-btn" onclick={onadddeal}>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+				Add Deal
+			</button>
+		{/if}
+	</div>
+
+	{#if filterPanelOpen}
+		<div class="filter-panel">
+			<div class="filter-panel-grid">
+				{#each FILTER_SELECTS as filterDef}
+					<div class="filter-field">
+						<label>{filterDef.label}</label>
+						<select
+							value={valueFor(filterDef.field)}
+							onchange={(e) => emit(filterDef.field, e.target.value, true)}
+						>
+							{#each filterDef.options as [value, label]}
+								<option value={value}>{label}</option>
+							{/each}
+						</select>
+					</div>
+				{/each}
+
+				<label class="archived-toggle">
+					<input
+						type="checkbox"
+						checked={showArchived}
+						onchange={(e) => emit('showArchived', e.target.checked, true)}
+					>
+					Show archived
+				</label>
+
+				<div class="clear-wrap">
+					<button class="clear-btn" onclick={clearAll}>Clear All Filters</button>
+				</div>
+			</div>
+		</div>
 	{/if}
 </div>
 
-{#if filterPanelOpen}
-	<div class="filter-panel">
-		<div class="filter-panel-grid">
-			<div class="filter-field">
-				<label>Asset Class</label>
-				<select value={assetClass} onchange={(e) => emit('assetClass', e.target.value, true)}>
-					<option value="">All</option>
-					<option value="Multi-Family">Multi-Family</option>
-					<option value="Industrial">Industrial</option>
-					<option value="Self Storage">Self Storage</option>
-					<option value="Hotels/Hospitality">Hotels / Hospitality</option>
-					<option value="Lending">Lending</option>
-					<option value="RV/Mobile Home Parks">RV / Mobile Home Parks</option>
-					<option value="Business / Other">Business / Other</option>
-					<option value="Mixed-Use">Mixed-Use</option>
-					<option value="Short Term Rental">Short Term Rental</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Deal Type</label>
-				<select value={dealType} onchange={(e) => emit('dealType', e.target.value, true)}>
-					<option value="">All</option>
-					<option value="Fund">Fund</option>
-					<option value="Syndication">Syndication</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Strategy</label>
-				<select value={strategy} onchange={(e) => emit('strategy', e.target.value, true)}>
-					<option value="">All</option>
-					<option value="Lending">Lending</option>
-					<option value="Buy & Hold">Buy & Hold</option>
-					<option value="Value-Add">Value-Add</option>
-					<option value="Distressed">Distressed</option>
-					<option value="Development">Development</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Max Investment Min.</label>
-				<select value={maxInvest} onchange={(e) => emit('maxInvest', e.target.value, true)}>
-					<option value="">Any</option>
-					<option value="25000">$25K or less</option>
-					<option value="50000">$50K or less</option>
-					<option value="100000">$100K or less</option>
-					<option value="250000">$250K or less</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Max Lockup</label>
-				<select value={maxLockup} onchange={(e) => emit('maxLockup', e.target.value, true)}>
-					<option value="">Any</option>
-					<option value="1">1 year or less</option>
-					<option value="3">3 years or less</option>
-					<option value="5">5 years or less</option>
-					<option value="7">7 years or less</option>
-					<option value="10">10 years or less</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Distributions</label>
-				<select value={distributions} onchange={(e) => emit('distributions', e.target.value, true)}>
-					<option value="">Any</option>
-					<option value="Monthly">Monthly</option>
-					<option value="Quarterly">Quarterly</option>
-					<option value="Annual">Annual</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Min Target IRR</label>
-				<select value={minIRR} onchange={(e) => emit('minIRR', e.target.value, true)}>
-					<option value="">Any</option>
-					<option value="0.06">6%+</option>
-					<option value="0.08">8%+</option>
-					<option value="0.10">10%+</option>
-					<option value="0.12">12%+</option>
-					<option value="0.15">15%+</option>
-					<option value="0.20">20%+</option>
-				</select>
-			</div>
-
-			<div class="filter-field">
-				<label>Sort By</label>
-				<select value={sortBy} onchange={(e) => emit('sortBy', e.target.value, true)}>
-					<option value="newest">Newest</option>
-					<option value="irr">Highest IRR</option>
-					<option value="min_invest">Lowest Min Investment</option>
-					<option value="az">A-Z Name</option>
-				</select>
-			</div>
-
-			<label class="archived-toggle">
-				<input
-					type="checkbox"
-					checked={showArchived}
-					onchange={(e) => emit('showArchived', e.target.checked, true)}
-				>
-				Show archived
-			</label>
-
-			<div class="clear-wrap">
-				<button class="clear-btn" onclick={clearAll}>Clear All Filters</button>
-			</div>
-		</div>
-	</div>
-{/if}
-
 <style>
+	.filter-shell {
+		border-bottom: 1px solid var(--border-light);
+		background: var(--bg-cream);
+		margin-bottom: 12px;
+	}
+
 	.filter-bar {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 16px 0;
+		padding: 16px 0 14px;
 		flex-wrap: wrap;
-		border-bottom: 1px solid var(--border-light);
-		background: var(--bg-cream);
 	}
 
 	.buybox-toggle {
@@ -241,6 +304,27 @@
 		border-color: var(--green, var(--primary));
 	}
 
+	.buybox-update-btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 14px;
+		border: 1px solid var(--green, var(--primary));
+		border-radius: var(--radius-sm);
+		background: transparent;
+		color: var(--green, var(--primary));
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all var(--transition, 0.15s);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.buybox-update-btn:hover {
+		background: var(--green, var(--primary));
+		color: #fff;
+	}
+
 	.filters-toggle {
 		padding: 6px 14px;
 		background: transparent;
@@ -257,10 +341,7 @@
 		color: var(--text-secondary);
 		transition: all 0.15s;
 	}
-	.filters-toggle:hover {
-		border-color: var(--primary);
-		color: var(--primary);
-	}
+	.filters-toggle:hover { border-color: var(--primary); color: var(--primary); }
 	.filters-toggle.active {
 		background: rgba(81, 190, 123, 0.08);
 		border-color: var(--primary);
@@ -279,7 +360,7 @@
 
 	.search-wrap {
 		position: relative;
-		flex: 1 1 320px;
+		flex: 1 1 280px;
 		min-width: 160px;
 		max-width: none;
 	}
@@ -332,15 +413,14 @@
 		align-items: center;
 		gap: 5px;
 		white-space: nowrap;
-		margin-left: 2px;
 	}
 
 	.filter-panel {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-top: none;
-		padding: 14px 24px;
-		margin: -1px 0 0;
+		border-radius: var(--radius);
+		padding: 14px 16px 16px;
+		margin: 0 0 18px;
 	}
 
 	.filter-panel-grid {
@@ -421,7 +501,12 @@
 		color: var(--red, #e74c3c);
 	}
 
-	@media (max-width: 980px) {
+	@media (max-width: 1100px) {
+		.search-wrap {
+			flex-basis: 100%;
+			order: 9;
+		}
+
 		.filter-bar-stats {
 			order: 10;
 			flex-basis: 100%;
@@ -432,7 +517,6 @@
 	}
 
 	@media (max-width: 768px) {
-		.filter-bar { display: none; }
-		.filter-panel { display: none; }
+		.filter-shell { display: none; }
 	}
 </style>

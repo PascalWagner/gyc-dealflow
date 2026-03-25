@@ -279,16 +279,6 @@
 						<input type="text" class="profile-input" bind:value={location} placeholder="City, State" />
 					</div>
 				</div>
-				<div class="profile-field accreditation-field">
-					<div class="profile-label">Accredited Investor Status</div>
-					<select class="profile-input" bind:value={accreditedStatus}>
-						<option value="">-- Select --</option>
-						<option value="accredited">Accredited Investor</option>
-						<option value="qualified_purchaser">Qualified Purchaser</option>
-						<option value="not_accredited">Not Yet Accredited</option>
-						<option value="prefer_not_to_say">Prefer Not to Say</option>
-					</select>
-				</div>
 			</div>
 
 			<div class="settings-save-bar">
@@ -535,8 +525,6 @@
 	.profile-input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 14px; color: var(--text-dark); background: var(--bg-card); box-sizing: border-box; }
 	.profile-input:focus { outline: none; border-color: var(--primary); }
 	.profile-input[readonly] { background: var(--bg-cream); color: var(--text-muted); }
-	.accreditation-field { display: none; }
-
 	.settings-save-bar { display: flex; gap: 12px; align-items: center; padding: 20px 0; border-top: 1px solid var(--border-light); margin-top: 24px; }
 	.settings-save-bar .btn-cta-primary { width: auto; padding: 12px 32px; }
 	.save-msg { font-family: var(--font-ui); font-size: 13px; color: var(--primary); font-weight: 600; }

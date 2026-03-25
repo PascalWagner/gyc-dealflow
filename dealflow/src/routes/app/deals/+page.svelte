@@ -61,6 +61,7 @@
 	let assetClass = $state('');
 	let dealType = $state('');
 	let strategy = $state('');
+	let status = $state('');
 	let maxInvest = $state('');
 	let maxLockup = $state('');
 	let distributions = $state('');
@@ -70,9 +71,9 @@
 	let buyBoxApplied = $state(false);
 
 	// Whether any filter is active (for empty state messaging)
-	const hasActiveFilters = $derived(
-		!!search || !!assetClass || !!dealType || !!strategy || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
-	);
+		const hasActiveFilters = $derived(
+			!!search || !!assetClass || !!dealType || !!strategy || !!status || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
+		);
 
 	function switchTab(tab) {
 		currentTab = tab;
@@ -104,22 +105,24 @@
 				return searchable.includes(q);
 			});
 		}
-		if (assetClass) result = result.filter(d => {
-			const classes = Array.isArray(d.assetClass) ? d.assetClass : [d.assetClass];
-			return classes.some(c => c === assetClass);
-		});
-		if (dealType) result = result.filter(d => d.dealType === dealType);
-		if (strategy) result = result.filter(d => d.strategy === strategy);
-		if (maxInvest) result = result.filter(d => (d.investmentMinimum || d.minimumInvestment) && (d.investmentMinimum || d.minimumInvestment) <= parseInt(maxInvest));
-		if (maxLockup) result = result.filter(d => d.holdPeriod && parseInt(d.holdPeriod) <= parseInt(maxLockup));
-		if (minIRR) result = result.filter(d => d.targetIRR && d.targetIRR >= parseFloat(minIRR) / 100);
-		if (!showArchived) result = result.filter(d => !d.archived);
+			if (assetClass) result = result.filter(d => {
+				const classes = Array.isArray(d.assetClass) ? d.assetClass : [d.assetClass];
+				return classes.some(c => c === assetClass);
+			});
+			if (dealType) result = result.filter(d => d.dealType === dealType);
+			if (strategy) result = result.filter(d => d.strategy === strategy);
+			if (status) result = result.filter(d => String(d.status || '').toLowerCase() === status.toLowerCase());
+			if (maxInvest) result = result.filter(d => (d.investmentMinimum || d.minimumInvestment) && (d.investmentMinimum || d.minimumInvestment) <= parseInt(maxInvest));
+			if (maxLockup) result = result.filter(d => d.holdPeriod && parseInt(d.holdPeriod) <= parseInt(maxLockup));
+			if (minIRR) result = result.filter(d => d.targetIRR && d.targetIRR >= parseFloat(minIRR) / 100);
+			if (!showArchived) result = result.filter(d => !d.archived);
 
-		// Sort
-		if (sortBy === 'newest') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
-		else if (sortBy === 'irr') result = [...result].sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
-		else if (sortBy === 'min-invest' || sortBy === 'min_invest') result = [...result].sort((a, b) => ((a.investmentMinimum || a.minimumInvestment || 999999) - (b.investmentMinimum || b.minimumInvestment || 999999)));
-		else if (sortBy === 'name' || sortBy === 'az') result = [...result].sort((a, b) => (a.investmentName || a.name || '').localeCompare(b.investmentName || b.name || ''));
+			// Sort
+			if (sortBy === 'newest') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
+			else if (sortBy === 'best_match') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
+			else if (sortBy === 'irr') result = [...result].sort((a, b) => (b.targetIRR || 0) - (a.targetIRR || 0));
+			else if (sortBy === 'min-invest' || sortBy === 'min_invest') result = [...result].sort((a, b) => ((a.investmentMinimum || a.minimumInvestment || 999999) - (b.investmentMinimum || b.minimumInvestment || 999999)));
+			else if (sortBy === 'name' || sortBy === 'az') result = [...result].sort((a, b) => (a.investmentName || a.name || '').localeCompare(b.investmentName || b.name || ''));
 
 		return result;
 	});
@@ -143,7 +146,7 @@
 	});
 
 	function clearFilters() {
-		search = ''; assetClass = ''; dealType = ''; strategy = '';
+		search = ''; assetClass = ''; dealType = ''; strategy = ''; status = '';
 		maxInvest = ''; maxLockup = ''; distributions = ''; minIRR = '';
 		sortBy = 'newest'; showArchived = false; buyBoxApplied = false;
 	}
@@ -188,19 +191,23 @@
 	</div>
 
 	<!-- Filter Bar -->
-	<FilterBar
-		{search} {assetClass} {dealType} {strategy} {maxInvest} {maxLockup}
-		{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
-		totalDeals={filteredDeals.length} avgIRR={avgIRR}
-		isAdmin={$isAdmin}
-		onchange={({ field: key, value: val }) => {
-			if (key === 'search') search = val;
-			else if (key === 'assetClass') assetClass = val;
-			else if (key === 'dealType') dealType = val;
-			else if (key === 'strategy') strategy = val;
-			else if (key === 'maxInvest') maxInvest = val;
-			else if (key === 'maxLockup') maxLockup = val;
-			else if (key === 'distributions') distributions = val;
+		<FilterBar
+			{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
+			{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
+			totalDeals={filteredDeals.length} avgIRR={avgIRR}
+			isAdmin={$isAdmin}
+			onadddeal={() => {
+				if (browser) window.location.href = '/app/admin/manage';
+			}}
+			onchange={({ field: key, value: val }) => {
+				if (key === 'search') search = val;
+				else if (key === 'assetClass') assetClass = val;
+				else if (key === 'dealType') dealType = val;
+				else if (key === 'strategy') strategy = val;
+				else if (key === 'status') status = val;
+				else if (key === 'maxInvest') maxInvest = val;
+				else if (key === 'maxLockup') maxLockup = val;
+				else if (key === 'distributions') distributions = val;
 			else if (key === 'minIRR') minIRR = val;
 			else if (key === 'sortBy') sortBy = val;
 			else if (key === 'showArchived') showArchived = val;

@@ -11,10 +11,10 @@
 	let showAddModal = $state(false);
 	let showDealSearch = $state(false);
 	let editingId = $state('');
-	let taxSectionOpen = $state(false);
 	let dealSearchQuery = $state('');
 	let dealSearchResults = $state([]);
 	let dealSearchLoading = $state(false);
+	let taxYearFilter = $state('all');
 
 	// Modal form data
 	let modalData = $state({
@@ -130,6 +130,14 @@
 	const PIE_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
 	const sorted = $derived(portfolio);
+	const taxYears = $derived.by(() =>
+		[...new Set(taxDocuments.map((doc) => doc.taxYear).filter(Boolean))].sort((a, b) => Number(b) - Number(a))
+	);
+	const visibleTaxDocuments = $derived.by(() =>
+		taxYearFilter === 'all'
+			? taxDocuments
+			: taxDocuments.filter((doc) => String(doc.taxYear) === String(taxYearFilter))
+	);
 	const investedUnloggedDeals = $derived.by(() => {
 		const investedIds = Object.entries($dealStages || {})
 			.filter(([, stage]) => stage === 'invested')
@@ -300,18 +308,10 @@
 		</div>
 		<div class="import-section">
 			<div class="import-card">
-				<h3>Track your investments in one place</h3>
-				<p>Import your existing portfolio to see allocation, performance, and progress toward your goals.</p>
-				<div class="upload-zone">
-					<input type="file" accept=".pdf" onchange={(e) => handlePPMUpload(e.target.files[0])}>
-					<div class="upload-icon">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-					</div>
-					<div class="upload-label">Upload a PPM or Subscription Document</div>
-					<div class="upload-hint">We'll extract your investment details automatically. PDF up to 25 MB</div>
-				</div>
-				<div class="divider-text">or</div>
-				<button class="btn-manual" onclick={() => openAddModal()}>+ Add Investment Manually</button>
+				<div class="empty-briefcase">💼</div>
+				<h3>No investments yet</h3>
+				<p>Add your first investment to start tracking allocation, performance, and tax documents in one place.</p>
+				<button class="btn-manual" onclick={() => openDealSearchModal()}>+ Add Investment</button>
 				<div class="browse-link"><a href="/app/deals">Browse deals in the marketplace →</a></div>
 			</div>
 		</div>
@@ -388,7 +388,7 @@
 		<!-- Portfolio Timeline -->
 		{#if timelineData}
 			<div class="chart-card timeline-card">
-				<div class="chart-card-title">Investment Timeline</div>
+				<div class="chart-card-title">Capital Deployed Over Time</div>
 				<div class="chartjs-timeline-wrap">
 					<div class="timeline-grid-lines">
 						<div></div>
@@ -417,7 +417,48 @@
 			<button class="btn-add section-add-btn" onclick={() => openDealSearchModal()}>+ Add Investment</button>
 		</div>
 
-		<div class="inv-list">
+		<div class="inv-table-wrap">
+			<table class="inv-table">
+				<thead>
+					<tr>
+						<th>Investment</th>
+						<th>Sponsor</th>
+						<th>Asset Class</th>
+						<th>Amount</th>
+						<th>Date</th>
+						<th>Status</th>
+						<th>Target IRR</th>
+						<th>Distributions</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each sorted as inv}
+						{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
+						<tr>
+							<td class="inv-table-primary">
+								<div class="inv-cell-name">{inv.investmentName || 'Unnamed'}</div>
+							</td>
+							<td>{inv.sponsor || '—'}</td>
+							<td>{inv.assetClass || '—'}</td>
+							<td class="num">${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</td>
+							<td>{inv.dateInvested || '—'}</td>
+							<td><span class="inv-status" style="--sc:{sc}">{inv.status || 'Unknown'}</span></td>
+							<td class:green={!!inv.targetIRR}>{inv.targetIRR ? `${inv.targetIRR}%` : '—'}</td>
+							<td class:num class:green={parseFloat(inv.distributionsReceived || 0) > 0}>${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</td>
+							<td>
+								<div class="inv-table-actions">
+									<button class="btn-edit" onclick={() => openAddModal(inv.id)}>Edit</button>
+									<button class="btn-delete" onclick={() => deleteInvestment(inv.id)} title="Delete investment">&times;</button>
+								</div>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		<div class="inv-list inv-list-mobile">
 			{#each sorted as inv}
 				{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
 				<div class="inv-card">
@@ -476,36 +517,71 @@
 			</div>
 		{/if}
 
-		<!-- Tax Documents Collapsible -->
-		{#if portfolio.length > 0 || taxDocuments.length > 0}
-			<div class="tax-section">
-				<button class="tax-header" onclick={() => { taxSectionOpen = !taxSectionOpen; }}>
-					<div class="tax-header-left">
-						<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" style="width:18px;height:18px;flex-shrink:0;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-						<span class="tax-title">Tax Documents</span>
-						{#if taxDocuments.length > 0}
-							<span class="tax-subtitle">{taxReceivedCount} of {taxDocuments.length} received</span>
-						{/if}
-					</div>
-					<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="width:16px;height:16px;transition:transform 0.2s;transform:{taxSectionOpen ? 'rotate(180deg)' : 'none'}"><polyline points="6 9 12 15 18 9"/></svg>
-				</button>
-				{#if taxSectionOpen}
-					<div class="tax-content">
-						{#if taxDocuments.length === 0}
-							<div class="tax-empty">
-								<div>No tax documents yet</div>
-								<a href="/app/tax-prep" class="btn-primary" style="margin-top:8px;">Manage Tax Documents</a>
-							</div>
-						{:else}
-							<div class="tax-summary">
-								{taxDocuments.filter(d => d.uploadStatus === 'Received').length} of {taxDocuments.length} received
-							</div>
-							<a href="/app/tax-prep" class="section-link">View All →</a>
-						{/if}
-					</div>
-				{/if}
+		<div class="tax-shell">
+			<div class="tax-shell-top">
+				<div>
+					<div class="tax-shell-title">Tax Documents</div>
+					<div class="tax-shell-desc">Track K-1s, 1099s, and other tax forms for all your investments.</div>
+				</div>
+				<div class="tax-shell-actions">
+					<select class="tax-filter-select" bind:value={taxYearFilter}>
+						<option value="all">All Years</option>
+						{#each taxYears as year}
+							<option value={year}>{year}</option>
+						{/each}
+					</select>
+					<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
+					<a href="/app/tax-prep" class="tax-action-btn">+ Add</a>
+				</div>
 			</div>
-		{/if}
+			{#if taxDocuments.length === 0}
+				<div class="tax-empty-state">
+					<div class="tax-empty-title">No tax documents yet</div>
+					<div class="tax-empty-copy">Auto-populate from portfolio or add documents manually to track upcoming K-1s and 1099s.</div>
+					<div class="tax-empty-actions">
+						<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
+						<a href="/app/tax-prep" class="tax-action-btn">+ Add Manually</a>
+					</div>
+				</div>
+			{:else}
+				<div class="tax-table-wrap">
+					<table class="tax-table">
+						<thead>
+							<tr>
+								<th>Tax Year</th>
+								<th>Investment</th>
+								<th>Investing Entity</th>
+								<th>Entity Invested Into</th>
+								<th>Form Type</th>
+								<th>Status</th>
+								<th>Date Received</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each visibleTaxDocuments as doc}
+								<tr>
+									<td>{doc.taxYear || '—'}</td>
+									<td class="inv-table-primary">{doc.investmentName || '—'}</td>
+									<td>{doc.investingEntity || '—'}</td>
+									<td>{doc.entityInvestedInto || '—'}</td>
+									<td>{doc.formType || '—'}</td>
+									<td>
+										<span class="tax-status" class:received={doc.uploadStatus === 'Received'}>{doc.uploadStatus || 'Pending'}</span>
+									</td>
+									<td>{doc.dateReceived || '—'}</td>
+									<td>
+										<a class="tax-row-link" href={doc.fileUrl || doc.portalUrl || '/app/tax-prep'} target={doc.fileUrl || doc.portalUrl ? '_blank' : undefined} rel={doc.fileUrl || doc.portalUrl ? 'noopener' : undefined}>
+											{doc.fileUrl || doc.portalUrl ? 'View' : 'Manage'}
+										</a>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
 	{/if}
 </div>
 
@@ -630,25 +706,36 @@
 		margin-right: 24px;
 		letter-spacing: -0.3px;
 	}
-	.dash-tabs { display: flex; gap: 0; margin-left: 24px; align-self: stretch; }
+	.dash-tabs {
+		display: flex;
+		gap: 4px;
+		margin-left: 24px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 3px;
+		align-self: center;
+	}
 	.dash-tab {
 		background: none;
 		border: none;
-		border-bottom: 2px solid transparent;
-		padding: 0 16px;
+		padding: 6px 12px;
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 11px;
 		font-weight: 600;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		cursor: pointer;
 		white-space: nowrap;
-		transition: color 0.15s, border-color 0.15s;
+		transition: all 0.15s;
 		text-decoration: none;
 		display: flex;
 		align-items: center;
+		text-transform: uppercase;
+		letter-spacing: 0.3px;
+		border-radius: 6px;
 	}
 	.dash-tab:hover { color: var(--text-dark); }
-	.dash-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+	.dash-tab.active { color: #fff; background: var(--primary); }
 	.topbar-spacer { flex: 1; }
 	.btn-add {
 		padding: 8px 18px;
@@ -822,6 +909,48 @@
 	/* ── Investment List Header ── */
 	.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 	.inv-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
+	.inv-table-wrap {
+		overflow-x: auto;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-card);
+		box-shadow: var(--shadow-card);
+		margin-bottom: 24px;
+	}
+	.inv-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-family: var(--font-ui);
+		font-size: 12px;
+	}
+	.inv-table th {
+		padding: 12px 14px;
+		text-align: left;
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		border-bottom: 1px solid var(--border-light);
+		background: var(--bg-cream);
+		white-space: nowrap;
+	}
+	.inv-table td {
+		padding: 14px;
+		border-bottom: 1px solid var(--border-light);
+		color: var(--text-secondary);
+		vertical-align: middle;
+		white-space: nowrap;
+	}
+	.inv-table tbody tr:last-child td { border-bottom: none; }
+	.inv-table-primary,
+	.inv-cell-name {
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.inv-table td.num { font-variant-numeric: tabular-nums; color: var(--text-dark); }
+	.inv-table td.green { color: var(--primary); font-weight: 700; }
+	.inv-table-actions { display: flex; align-items: center; gap: 8px; }
 	.pending-section-label {
 		margin: 20px 0 8px;
 		font-family: var(--font-ui);
@@ -834,6 +963,7 @@
 
 	/* ── Investment Cards ── */
 	.inv-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+	.inv-list-mobile { display: none; }
 	.inv-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
@@ -942,6 +1072,13 @@
 		border-radius: var(--radius);
 		padding: 32px 28px;
 		text-align: center;
+		box-shadow: var(--shadow-card);
+	}
+	.empty-briefcase {
+		font-size: 40px;
+		line-height: 1;
+		margin-bottom: 14px;
+		opacity: 0.35;
 	}
 	.import-card h3 {
 		font-family: var(--font-ui);
@@ -957,77 +1094,19 @@
 		margin: 0 0 24px;
 		line-height: 1.5;
 	}
-	.upload-zone {
-		border: 2px dashed var(--border);
-		border-radius: var(--radius);
-		padding: 28px 20px;
-		cursor: pointer;
-		transition: border-color 0.2s, background 0.2s;
-		margin-bottom: 16px;
-		position: relative;
-	}
-	.upload-zone:hover {
-		border-color: var(--primary);
-		background: rgba(74,124,89,0.04);
-	}
-	.upload-zone input {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		cursor: pointer;
-	}
-	.upload-icon {
-		width: 40px;
-		height: 40px;
-		margin: 0 auto 12px;
-		color: var(--primary);
-	}
-	.upload-icon svg { width: 40px; height: 40px; }
-	.upload-label {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 4px;
-	}
-	.upload-hint {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-muted);
-		line-height: 1.4;
-	}
-	.divider-text {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		margin: 20px 0;
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-	}
-	.divider-text::before,
-	.divider-text::after {
-		content: '';
-		flex: 1;
-		height: 1px;
-		background: var(--border);
-	}
 	.btn-manual {
 		padding: 10px 24px;
-		background: transparent;
-		color: var(--text-secondary);
-		border: 1px solid var(--border);
+		background: var(--primary);
+		color: #fff;
+		border: 1px solid var(--primary);
 		border-radius: var(--radius-sm);
 		font-family: var(--font-ui);
-		font-weight: 600;
+		font-weight: 700;
 		font-size: 13px;
 		cursor: pointer;
-		transition: border-color 0.2s, color 0.2s;
+		transition: background 0.2s, border-color 0.2s;
 	}
-	.btn-manual:hover { border-color: var(--primary); color: var(--primary); }
+	.btn-manual:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: #fff; }
 	.browse-link {
 		margin-top: 20px;
 		padding-top: 20px;
@@ -1044,38 +1123,142 @@
 	.browse-link a:hover { text-decoration: underline; }
 
 	/* ── Tax Section ── */
-	.tax-section { margin-top: 32px; }
-	.tax-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 14px 20px;
+	.tax-shell {
+		margin-top: 28px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		cursor: pointer;
-		width: 100%;
-		font-family: var(--font-ui);
-		transition: background 0.15s;
+		box-shadow: var(--shadow-card);
+		overflow: hidden;
 	}
-	.tax-header:hover { background: var(--bg-cream); }
-	.tax-header-left { display: flex; align-items: center; gap: 10px; }
-	.tax-title { font-size: 13px; font-weight: 700; color: var(--text-dark); }
-	.tax-subtitle {
+	.tax-shell-top {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 20px 24px;
+		border-bottom: 1px solid var(--border-light);
+	}
+	.tax-shell-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.tax-shell-desc {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-secondary);
+		margin-top: 4px;
+		line-height: 1.5;
+	}
+	.tax-shell-actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	.tax-filter-select {
+		padding: 8px 12px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--bg-card);
 		font-family: var(--font-ui);
 		font-size: 12px;
+		font-weight: 600;
+		color: var(--text-secondary);
+	}
+	.tax-action-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 8px 14px;
+		background: var(--primary);
+		color: #fff;
+		border: 1px solid var(--primary);
+		border-radius: var(--radius-sm);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.tax-action-btn.secondary {
+		background: transparent;
+		color: var(--primary);
+	}
+	.tax-empty-state {
+		padding: 28px 24px;
+		text-align: center;
+	}
+	.tax-empty-title {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.tax-empty-copy {
+		font-family: var(--font-body);
+		font-size: 13px;
+		color: var(--text-secondary);
+		margin-top: 6px;
+		line-height: 1.5;
+	}
+	.tax-empty-actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-top: 18px;
+	}
+	.tax-table-wrap { overflow-x: auto; }
+	.tax-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-family: var(--font-ui);
+		font-size: 12px;
+	}
+	.tax-table th {
+		padding: 12px 14px;
+		text-align: left;
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 		color: var(--text-muted);
+		border-bottom: 1px solid var(--border-light);
+		background: var(--bg-cream);
+		white-space: nowrap;
 	}
-	.tax-content {
-		border: 1px solid var(--border);
-		border-top: none;
-		border-radius: 0 0 var(--radius) var(--radius);
-		background: var(--bg-card);
-		padding: 16px 20px;
+	.tax-table td {
+		padding: 14px;
+		border-bottom: 1px solid var(--border-light);
+		color: var(--text-secondary);
+		white-space: nowrap;
 	}
-	.tax-empty { text-align: center; padding: 16px; font-size: 13px; color: var(--text-muted); }
-	.tax-summary { font-size: 13px; color: var(--text-secondary); }
-	.section-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
+	.tax-table tbody tr:last-child td { border-bottom: none; }
+	.tax-status {
+		display: inline-flex;
+		align-items: center;
+		padding: 4px 10px;
+		border-radius: 999px;
+		background: rgba(245, 158, 11, 0.08);
+		color: #f59e0b;
+		font-size: 11px;
+		font-weight: 700;
+	}
+	.tax-status.received {
+		background: rgba(81, 190, 123, 0.1);
+		color: var(--primary);
+	}
+	.tax-row-link {
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--primary);
+		text-decoration: none;
+	}
 
 	/* ── Delete Button ── */
 	.btn-delete {
@@ -1329,14 +1512,15 @@
 			flex-shrink: 1;
 			min-width: 0;
 			width: 100%;
-			justify-content: stretch;
+			justify-content: flex-start;
+			gap: 3px;
 			order: 1;
 		}
 		.dash-tabs::-webkit-scrollbar { display: none; }
 		.dash-tab {
-			font-size: 13px !important;
-			padding: 10px 0 !important;
-			flex: 1;
+			font-size: 10px !important;
+			padding: 6px 11px !important;
+			flex: 0 0 auto;
 			text-align: center;
 			justify-content: center;
 		}
@@ -1349,8 +1533,13 @@
 		.content-area { padding: 16px; padding-bottom: 16px; }
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
 		.section-add-btn { width: 100%; }
+		.inv-table-wrap { display: none; }
+		.inv-list-mobile { display: flex; }
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }
 		.chartjs-donut-wrap { max-width: 200px; }
 		.chartjs-timeline-wrap { height: 200px; }
+		.tax-shell-top { flex-direction: column; }
+		.tax-shell-actions { justify-content: flex-start; }
+		.tax-filter-select, .tax-action-btn { width: 100%; }
 	}
 </style>

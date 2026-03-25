@@ -71,9 +71,9 @@
 	.pipeline-tabs {
 		display: flex;
 		align-items: center;
-		gap: 2px;
+		gap: 4px;
 		background: var(--bg-card);
-		border-radius: 10px;
+		border-radius: 8px;
 		padding: 3px;
 		border: 1px solid var(--border);
 		max-width: 100%;
@@ -84,22 +84,21 @@
 	.pipeline-tabs::-webkit-scrollbar { display: none; }
 
 	.pipeline-tab {
-		padding: 7px 14px;
+		padding: 6px 12px;
 		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
+		font-size: 11px;
+		font-weight: 600;
 		color: var(--text-secondary);
 		cursor: pointer;
-		border-radius: 7px;
+		border-radius: 6px;
 		transition: all var(--transition);
 		border: none;
 		background: none;
-		letter-spacing: 0.45px;
+		letter-spacing: 0.3px;
 		text-transform: uppercase;
 		white-space: nowrap;
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
 		flex-shrink: 0;
 	}
 
@@ -111,7 +110,7 @@
 		width: 1px;
 		height: 18px;
 		background: var(--border);
-		margin: 0 8px;
+		margin: 0 4px;
 		flex-shrink: 0;
 	}
 

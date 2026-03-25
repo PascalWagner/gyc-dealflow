@@ -464,21 +464,15 @@
 	</div>
 </div>
 
-<div class="content-area">
-	{#if !hasOnboarding && dealsReviewed === 0 && portfolio.length === 0}
-		<!-- First-time user onboarding -->
-		<div class="first-time">
-			<div class="first-time-inner">
-				<div class="first-time-icon">
-					<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-				</div>
-				<h1>{firstName ? `${firstName}, let's find` : "Let's find"}<br>your perfect deals.</h1>
-				<p>Tell us what you're looking for in 2 minutes.<br>We'll match you with deals that fit.</p>
-				<button class="btn-primary" onclick={openWizard}>Set Up My Investor Profile →</button>
-				<div class="first-time-alt">or <a href="/app/deals">browse deals first</a></div>
+	<div class="content-area">
+		{#if !hasOnboarding && dealsReviewed === 0 && portfolio.length === 0}
+			<div class="plan-empty-card standalone">
+				<div class="plan-empty-icon">📋</div>
+				<div class="plan-empty-title">You don't have a plan yet.</div>
+				<div class="plan-empty-copy">Members with a plan deploy an average of $150K in their first 90 days. Takes 3 minutes.</div>
+				<a href="/app/plan" class="btn-primary plan-empty-btn">Build My Plan</a>
 			</div>
-		</div>
-	{:else}
+		{:else}
 		<!-- Hero Progress Card -->
 		{#if hasOnboarding}
 			<div class="dash-hero">
@@ -490,12 +484,14 @@
 				/>
 				<div class="dash-hero-stats">{statsLine}{slotLine}</div>
 			</div>
-		{:else}
-			<div class="goal-cta">
-				<div class="goal-cta-text"><strong>Set up your investment plan in 60 seconds</strong><br>Get personalized deal recommendations matched to your goals.</div>
-				<button class="goal-cta-btn" onclick={openWizard}>Get Started →</button>
-			</div>
-		{/if}
+			{:else}
+				<div class="plan-empty-card">
+					<div class="plan-empty-icon">📋</div>
+					<div class="plan-empty-title">You don't have a plan yet.</div>
+					<div class="plan-empty-copy">Members with a plan deploy an average of $150K in their first 90 days. Takes 3 minutes.</div>
+					<a href="/app/plan" class="btn-primary plan-empty-btn">Build My Plan</a>
+				</div>
+			{/if}
 
 		{#if hasPlan}
 			<div class="blueprint-card">
@@ -619,11 +615,11 @@
 			</div>
 		{/if}
 
-		<div class="dashboard-columns">
-			{#if actionItems.length > 0 || recentActivity.length > 0}
-				<div class="dashboard-main-column">
-					{#if actionItems.length > 0}
-						<div class="action-card">
+			<div class="dashboard-columns">
+				{#if actionItems.length > 0}
+					<div class="dashboard-main-column">
+						{#if actionItems.length > 0}
+							<div class="action-card">
 							<div class="action-header">Action Items</div>
 							{#each actionItems as item}
 								<a href="/app/{item.page}" class="action-row">
@@ -645,69 +641,14 @@
 									<div class="action-text">{@html item.text}</div>
 									<span class="action-link">{item.link} →</span>
 								</a>
-							{/each}
-						</div>
-					{/if}
-
-					{#if recentActivity.length > 0}
-						<div class="dashboard-panel">
-							<div class="dashboard-panel-header">
-								<div class="dashboard-panel-title">Recent Activity</div>
-								<div class="dashboard-panel-meta">{recentActivity.length} updates</div>
-							</div>
-							<div class="activity-list">
-								{#each recentActivity as item}
-									<a href="/deal/{item.dealId}" class="activity-row">
-										<div class="activity-copy">
-											<div class="activity-title">{item.dealName}</div>
-											<div class="activity-desc">{item.verb}</div>
-										</div>
-										<div class="activity-meta">
-											<span class="activity-stage">{activityStageLabel(item.stage)}</span>
-											{#if item.timestamp}
-												<span class="activity-time">{formatTimeAgo(item.timestamp)}</span>
-											{/if}
-										</div>
-									</a>
 								{/each}
 							</div>
-						</div>
-					{/if}
-				</div>
-			{/if}
-
-			<div class="dashboard-side-column">
-				<div class="dashboard-panel">
-					<div class="dashboard-panel-header">
-						<div class="dashboard-panel-title">Quick Actions</div>
-					</div>
-					<div class="quick-actions-grid">
-						{#each quickActions as action}
-							<a href={quickActionHref(action)} class="quick-action-card">
-								<div class="quick-action-icon">
-									{#if action.icon === 'search'}
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-									{:else if action.icon === 'clipboard'}
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path><rect x="9" y="3" width="6" height="4" rx="1"></rect></svg>
-									{:else}
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"></path></svg>
-									{/if}
-								</div>
-								<div class="quick-action-label">{action.label}</div>
-							</a>
-						{/each}
-						{#if hasPlan}
-							<a href="/app/plan" class="quick-action-card">
-								<div class="quick-action-icon">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-								</div>
-								<div class="quick-action-label">View Plan</div>
-							</a>
 						{/if}
 					</div>
-				</div>
+				{/if}
 
-				<div class="dashboard-panel portfolio-preview-card">
+				<div class="dashboard-side-column">
+					<div class="dashboard-panel portfolio-preview-card">
 					<div class="dashboard-panel-header">
 						<div class="dashboard-panel-title">Your Portfolio</div>
 						<a href="/app/portfolio" class="dashboard-panel-link">View Full Portfolio →</a>
@@ -782,44 +723,77 @@
 	}
 
 	/* ── Dashboard Tab Bar ── */
-	.dash-tabs { display: flex; gap: 0; margin-left: 24px; align-self: stretch; }
+	.dash-tabs {
+		display: flex;
+		gap: 4px;
+		margin-left: 24px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 3px;
+		align-self: center;
+	}
 	.dash-tab {
 		background: none;
 		border: none;
-		border-bottom: 2px solid transparent;
-		padding: 0 16px;
+		padding: 6px 12px;
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 11px;
 		font-weight: 600;
-		color: var(--text-muted);
+		color: var(--text-secondary);
 		cursor: pointer;
 		white-space: nowrap;
-		transition: color 0.15s, border-color 0.15s;
+		transition: all 0.15s;
 		text-decoration: none;
 		display: flex;
 		align-items: center;
+		text-transform: uppercase;
+		letter-spacing: 0.3px;
+		border-radius: 6px;
 	}
 	.dash-tab:hover { color: var(--text-dark); }
-	.dash-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+	.dash-tab.active { color: #fff; background: var(--primary); }
 
 	/* ── Content Area ── */
 	.content-area { padding: 24px 32px 48px; max-width: 1200px; }
 
-	/* ── First Time Onboarding ── */
-	.first-time { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 120px); }
-	.first-time-inner { text-align: center; max-width: 480px; }
-	.first-time-icon {
-		width: 72px; height: 72px; border-radius: 20px;
-		background: linear-gradient(135deg, var(--primary), #2563EB);
-		display: flex; align-items: center; justify-content: center;
-		margin: 0 auto 28px;
-		box-shadow: 0 8px 32px rgba(81, 190, 123, 0.25);
+	/* ── Empty Plan Card ── */
+	.plan-empty-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 28px 32px;
+		margin-bottom: 24px;
+		box-shadow: var(--shadow-card);
 	}
-	.first-time-icon svg { width: 32px; height: 32px; }
-	.first-time h1 { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin: 0 0 12px; line-height: 1.3; }
-	.first-time p { font-family: var(--font-body); font-size: 15px; color: var(--text-secondary); line-height: 1.7; margin: 0 0 32px; }
-	.first-time-alt { margin-top: 16px; font-size: 12px; color: var(--text-muted); }
-	.first-time-alt a { color: var(--primary); font-weight: 600; text-decoration: none; }
+	.plan-empty-card.standalone {
+		max-width: 560px;
+		margin: 32px auto 0;
+	}
+	.plan-empty-icon {
+		font-size: 28px;
+		line-height: 1;
+		margin-bottom: 16px;
+	}
+	.plan-empty-title {
+		font-family: var(--font-ui);
+		font-size: 20px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 8px;
+	}
+	.plan-empty-copy {
+		font-family: var(--font-body);
+		font-size: 14px;
+		line-height: 1.6;
+		color: var(--text-secondary);
+		max-width: 520px;
+	}
+	.plan-empty-btn {
+		display: inline-flex;
+		margin-top: 20px;
+		text-decoration: none;
+	}
 
 	/* ── Hero Progress Card ── */
 	.dash-hero {
@@ -867,45 +841,6 @@
 		font-size: 14px;
 		font-weight: 700;
 	}
-
-	/* ── Goal CTA (no onboarding) ── */
-	.goal-cta {
-		background: linear-gradient(135deg, #1F5159, #0A1E21);
-		border-radius: var(--radius);
-		padding: 28px 32px;
-		margin-bottom: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 20px;
-		box-shadow: var(--shadow-card);
-		flex-wrap: wrap;
-	}
-	.goal-cta-text {
-		color: rgba(255,255,255,0.9);
-		font-family: var(--font-body);
-		font-size: 15px;
-		line-height: 1.5;
-	}
-	.goal-cta-text :global(strong) {
-		color: #fff;
-		font-family: var(--font-ui);
-		font-weight: 700;
-	}
-	.goal-cta-btn {
-		padding: 10px 24px;
-		background: var(--primary);
-		color: #fff;
-		border: none;
-		border-radius: var(--radius-sm);
-		font-family: var(--font-ui);
-		font-weight: 700;
-		font-size: 13px;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: background var(--transition);
-	}
-	.goal-cta-btn:hover { background: var(--primary-hover); }
 
 	/* ── Plan Blueprint ── */
 	.plan-cta-card,
@@ -1256,11 +1191,6 @@
 		letter-spacing: 0.5px;
 		color: var(--text-muted);
 	}
-	.dashboard-panel-meta {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		color: var(--text-muted);
-	}
 	.dashboard-panel-link {
 		font-family: var(--font-ui);
 		font-size: 12px;
@@ -1322,109 +1252,6 @@
 		font-weight: 700;
 	}
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
-
-	.quick-actions-grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 12px;
-		padding: 0 18px 18px;
-	}
-	.quick-action-card {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 14px 16px;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		background: var(--bg-page);
-		color: var(--text-dark);
-		text-decoration: none;
-		transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
-	}
-	.quick-action-card:hover {
-		border-color: var(--primary);
-		transform: translateY(-1px);
-		box-shadow: 0 6px 18px rgba(10, 30, 33, 0.06);
-	}
-	.quick-action-icon {
-		width: 36px;
-		height: 36px;
-		border-radius: 50%;
-		background: var(--green-bg);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: var(--primary);
-		flex-shrink: 0;
-	}
-	.quick-action-icon svg {
-		width: 16px;
-		height: 16px;
-	}
-	.quick-action-label {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		line-height: 1.35;
-	}
-
-	.activity-list {
-		padding-bottom: 2px;
-	}
-	.activity-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 14px;
-		padding: 14px 18px;
-		border-top: 1px solid var(--border-light);
-		text-decoration: none;
-		transition: background 0.15s;
-	}
-	.activity-row:hover {
-		background: var(--bg-cream);
-	}
-	.activity-copy {
-		min-width: 0;
-		flex: 1;
-	}
-	.activity-title {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.activity-desc {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-secondary);
-		margin-top: 2px;
-	}
-	.activity-meta {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-		gap: 4px;
-		flex-shrink: 0;
-	}
-	.activity-stage {
-		padding: 3px 8px;
-		border-radius: 10px;
-		background: rgba(81, 190, 123, 0.08);
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--primary);
-	}
-	.activity-time {
-		font-family: var(--font-ui);
-		font-size: 10px;
-		color: var(--text-muted);
-	}
 
 	.portfolio-preview-card {
 		overflow: visible;
@@ -1548,10 +1375,6 @@
 			padding: 28px 24px;
 		}
 
-		.goal-cta {
-			padding: 24px;
-		}
-
 		.momentum-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
@@ -1578,14 +1401,15 @@
 			flex-shrink: 1;
 			min-width: 0;
 			width: 100%;
-			justify-content: stretch;
+			justify-content: flex-start;
 			order: 1;
+			gap: 3px;
 		}
 		.dash-tabs::-webkit-scrollbar { display: none; }
 		.dash-tab {
-			font-size: 13px !important;
-			padding: 10px 0 !important;
-			flex: 1;
+			font-size: 10px !important;
+			padding: 6px 11px !important;
+			flex: 0 0 auto;
 			text-align: center;
 			justify-content: center;
 		}
@@ -1603,21 +1427,12 @@
 		.dashboard-columns {
 			grid-template-columns: 1fr;
 		}
-		.quick-actions-grid {
-			grid-template-columns: 1fr;
-		}
 		.portfolio-preview-layout {
 			grid-template-columns: 1fr;
 		}
 		.portfolio-preview-row {
 			grid-template-columns: 1fr;
 			gap: 6px;
-		}
-		.activity-row {
-			align-items: flex-start;
-		}
-		.activity-meta {
-			align-items: flex-start;
 		}
 		.dash-hero { padding: 24px; }
 		.plan-cta-card,

@@ -2601,7 +2601,7 @@
 	.hero-type-icon svg { width: 120px; height: 120px; stroke: #fff; stroke-width: 1; fill: none; }
 	.deal-header-inner { position: relative; z-index: 1; display: flex; gap: 32px; align-items: center; justify-content: space-between; }
 	.hero-left { flex: 1; min-width: 0; }
-	.hero-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; text-align: center; }
+	.hero-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; gap: 6px; text-align: center; }
 
 	.deal-name { font-family: var(--font-headline); font-size: 32px; color: #fff; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 8px; }
 	.deal-company { font-family: var(--font-ui); font-size: 15px; font-weight: 500; margin-bottom: 16px; color: rgba(255,255,255,0.7); }
@@ -2673,7 +2673,7 @@
 
 	/* ===== Journey Bar ===== */
 	.journey-bar { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 20px; padding: 14px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
-	.journey-step { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 8px; border-radius: 12px; transition: all 0.2s; font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-muted); white-space: nowrap; text-align: center; background: none; border: none; }
+	.journey-step { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: default; padding: 4px 8px; border-radius: 12px; transition: all 0.2s; font-family: var(--font-ui); font-size: 10px; font-weight: 600; color: var(--text-muted); white-space: nowrap; text-align: center; background: none; border: none; }
 	.journey-step:hover { background: var(--bg-cream); color: var(--text-dark); }
 	.step-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-muted); background: var(--bg-page); transition: all 0.2s; flex-shrink: 0; }
 	.journey-step.active .step-dot { background: var(--primary); border-color: var(--primary); color: #fff; }
@@ -2697,8 +2697,8 @@
 	.data-completeness-hint { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 
 	/* ===== Metrics Strip ===== */
-	.metrics-strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
-	.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; text-align: center; box-shadow: var(--shadow-card); }
+	.metrics-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+	.metric-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 16px; text-align: center; box-shadow: var(--shadow-card); }
 	.metric-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 6px; }
 	.metric-value { font-family: var(--font-ui); font-size: 20px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.5px; }
 	.metric-value.highlight { color: var(--primary); }
@@ -2877,7 +2877,7 @@
 	.btn-advance { padding: 10px 24px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
 	.btn-advance:hover { background: #3da86a; transform: translateY(-1px); }
 	.btn-stage-select { padding: 10px 20px; background: var(--bg-page); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; gap: 6px; }
-	.btn-compare { padding: 10px 16px; border: 1px solid var(--border); background: var(--bg-card); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 5px; margin-left: auto; transition: all 0.15s; }
+	.btn-compare { display: none; }
 	.btn-compare:hover { border-color: var(--primary); color: var(--primary); }
 	.floating-compare-badge { position: fixed; bottom: 80px; right: 24px; background: var(--primary); color: #fff; padding: 8px 16px; border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.15s; }
 	.floating-compare-badge:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
@@ -2916,6 +2916,7 @@
 		align-items: center;
 		gap: 16px;
 	}
+	.intro-nudge-banner { display: none; }
 	.intro-nudge-icon {
 		width: 40px; height: 40px; border-radius: 50%;
 		background: rgba(245,158,11,0.12);
