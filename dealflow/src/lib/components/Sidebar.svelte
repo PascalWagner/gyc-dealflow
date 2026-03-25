@@ -1,8 +1,7 @@
 <script>
-	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
-	import { user, isLoggedIn, isAdmin, userTier, isAcademy } from '$lib/stores/auth.js';
+	import { user, isLoggedIn, isAdmin, userTier } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
@@ -54,7 +53,17 @@
 		}
 	}
 
-	const isFree = $derived($userTier === 'free' && !$isAdmin);
+	const normalizedTier = $derived.by(() => {
+		const tier = String($userTier || '').toLowerCase();
+		if (['academy', 'alumni', 'investor', 'paid', 'founding', 'inner-circle'].includes(tier)) {
+			return 'academy';
+		}
+		if (tier === 'family_office') {
+			return 'family_office';
+		}
+		return 'free';
+	});
+	const isFree = $derived(normalizedTier === 'free' && !$isAdmin);
 
 	// Route map: page key → SvelteKit route
 	const routes = {
@@ -123,14 +132,28 @@
 	// User display info
 	const userName = $derived($user?.name || $user?.fullName || $user?.email?.split('@')[0] || '');
 	const userEmail = $derived($user?.email || '');
+	const userInitials = $derived.by(() => {
+		const fallback = ($user?.email || '').charAt(0).toUpperCase();
+		const raw = userName || '';
+		if (!raw) return fallback || '?';
+		return raw
+			.split(' ')
+			.filter(Boolean)
+			.slice(0, 2)
+			.map((part) => part.charAt(0).toUpperCase())
+			.join('') || fallback || '?';
+	});
 	const tierLabel = $derived({
-		free: 'Free',
+		free: 'Free Plan',
+		explorer: 'Free Plan',
 		academy: 'Academy Member',
 		founding: 'Founding',
 		'inner-circle': 'Inner Circle',
-		alumni: 'Alumni'
+		alumni: 'Alumni',
+		investor: 'Investor',
+		family_office: 'Family Office'
 	}[$userTier] || $userTier || 'Free');
-	const tierClass = $derived($userTier === 'free' ? 'tier-free' : 'tier-paid');
+	const tierClass = $derived(normalizedTier === 'free' ? 'tier-free' : 'tier-paid');
 	const dealFlowCount = $derived($deals.length || 0);
 
 	// Check if user is a GP (has management company)
@@ -319,7 +342,18 @@
 			</a>
 		{/if}
 
-		<!-- Admin -->
+			<div class="nav-spacer"></div>
+
+			<a
+				class="nav-item nav-item-account"
+				class:active={isActive('settings')}
+			href={href('settings')}
+			onclick={closeMobile}
+			>
+				<span class="nav-icon">{@html icons.settings}</span>
+				Settings
+			</a>
+			<!-- Admin -->
 		{#if $isAdmin}
 			<div class="nav-section-label">Admin</div>
 			{#each adminItems as item}
@@ -426,26 +460,17 @@
 				<span class="toggle-thumb"></span>
 			</span>
 		</button>
-
-		<a
-			class="footer-link"
-			class:active={isActive('settings')}
-			href={href('settings')}
-			onclick={closeMobile}
-		>
-			<span class="nav-icon">{@html icons.settings}</span>
-			Settings
-		</a>
 	</div>
 
 	<!-- User profile at bottom -->
 	{#if $isLoggedIn && userName}
 		<a class="sidebar-user" href="/app/settings" onclick={closeMobile}>
-			<div class="user-avatar">{userName.charAt(0).toUpperCase()}</div>
+			<div class="user-avatar">{userInitials}</div>
 			<div class="user-info">
 				<div class="user-name">{userName}</div>
 				<div class="user-tier {tierClass}">{tierLabel}</div>
 			</div>
+			<span class="user-settings-icon" aria-hidden="true">{@html icons.settingsGear}</span>
 		</a>
 	{/if}
 </aside>
@@ -466,7 +491,8 @@
 		casestudies: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
 		manage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
 		outreach: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
-		gpdashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+		gpdashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+		settingsGear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;opacity:0.4;flex-shrink:0;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
 	};
 </script>
 
@@ -483,7 +509,7 @@
 	}
 
 	.sidebar-logo {
-		padding: 20px 24px;
+		padding: 18px 24px;
 		display: flex;
 		align-items: center;
 		gap: 12px;
@@ -500,14 +526,14 @@
 
 	.sidebar-nav {
 		flex: 1;
-		padding: 12px 0;
+		padding: 8px 0 10px;
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
 	}
 
 	.nav-section-label {
-		padding: 16px 24px 8px;
+		padding: 14px 24px 6px;
 		font-family: var(--font-ui);
 		font-size: 10px;
 		font-weight: 600;
@@ -520,7 +546,7 @@
 		display: flex;
 		align-items: center;
 		gap: 12px;
-		padding: 10px 16px 10px 24px;
+		padding: 8px 16px 8px 24px;
 		color: var(--text-sidebar);
 		cursor: pointer;
 		transition: all var(--transition);
@@ -548,7 +574,7 @@
 	.nav-lock { margin-left: auto; opacity: 0.35; flex-shrink: 0; }
 	.nav-badge {
 		margin-left: auto;
-		padding: 2px 8px;
+		padding: 1px 8px;
 		border-radius: 999px;
 		background: var(--primary);
 		color: #fff;
@@ -556,19 +582,21 @@
 		font-size: 10px;
 		font-weight: 700;
 		line-height: 1.5;
-		box-shadow: 0 2px 8px rgba(81, 190, 123, 0.22);
+		box-shadow: 0 1px 4px rgba(81, 190, 123, 0.18);
 	}
 
 	.nav-spacer { margin-top: auto; }
+	.nav-item-account {
+		margin-top: 4px;
+	}
 
 	.sidebar-footer {
-		padding: 16px 24px;
+		padding: 14px 24px 12px;
 		border-top: 1px solid rgba(255,255,255,0.06);
 	}
 
 	.sidebar-feedback,
-	.theme-toggle,
-	.footer-link {
+	.theme-toggle {
 		display: flex;
 		align-items: center;
 		gap: 10px;
@@ -586,16 +614,7 @@
 		transition: color var(--transition), opacity var(--transition);
 	}
 	.sidebar-feedback:hover,
-	.theme-toggle:hover,
-	.footer-link:hover {
-		color: #fff;
-		opacity: 1;
-	}
-	.footer-link {
-		margin-top: 8px;
-		text-decoration: none;
-	}
-	.footer-link.active {
+	.theme-toggle:hover {
 		color: #fff;
 		opacity: 1;
 	}
@@ -679,19 +698,19 @@
 	.sidebar-user {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 16px 24px;
+		gap: 12px;
+		padding: 12px 24px 14px;
 		border-top: 1px solid rgba(255,255,255,0.06);
 		color: rgba(255,255,255,0.32);
 	}
 	.user-avatar {
-		width: 34px;
-		height: 34px;
+		width: 36px;
+		height: 36px;
 		border-radius: 50%;
 		background: var(--teal-deep, #1F5159);
 		display: flex; align-items: center; justify-content: center;
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 700;
 		color: var(--accent-green, #40E47F);
 		flex-shrink: 0;
@@ -700,9 +719,15 @@
 	.sidebar-user { text-decoration: none; cursor: pointer; transition: background 0.15s; }
 	.sidebar-user:hover { background: var(--bg-sidebar-hover); }
 	.user-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.user-tier { font-family: var(--font-ui); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+	.user-tier { font-family: var(--font-ui); font-size: 10px; font-weight: 600; letter-spacing: 0.2px; margin-top: 2px; }
 	.tier-free { color: rgba(255,255,255,0.4); }
 	.tier-paid { color: var(--accent-green, #40E47F); }
+	.user-settings-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		color: rgba(255,255,255,0.38);
+	}
 
 	/* Feedback */
 	.feedback-form {

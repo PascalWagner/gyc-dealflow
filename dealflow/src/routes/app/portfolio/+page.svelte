@@ -1,9 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import { user, isAdmin, userTier } from '$lib/stores/auth.js';
 	import { deals, dealStages, fetchDeals } from '$lib/stores/deals.js';
-
 
 	let portfolio = $state([]);
 	let taxDocuments = $state([]);
@@ -15,6 +13,7 @@
 	let dealSearchResults = $state([]);
 	let dealSearchLoading = $state(false);
 	let taxYearFilter = $state('all');
+	let taxDocsOpen = $state(false);
 
 	// Modal form data
 	let modalData = $state({
@@ -148,8 +147,139 @@
 			.filter((deal) => !portfolio.some((investment) => investment.dealId === deal.id));
 	});
 	const taxReceivedCount = $derived(taxDocuments.filter(doc => doc.uploadStatus === 'Received').length);
+	const taxSummaryText = $derived.by(() => {
+		if (taxDocuments.length === 0) return 'No tax documents yet';
+		const pendingCount = taxDocuments.length - taxReceivedCount;
+		return `${taxDocuments.length} tracked · ${taxReceivedCount} received${pendingCount > 0 ? ` · ${pendingCount} pending` : ''}`;
+	});
 
 	const statusColors = { Active: 'var(--primary)', Distributing: '#3b82f6', Exited: 'var(--text-muted)', Pending: '#f59e0b' };
+
+	function getToken() {
+		if (!browser) return null;
+		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		return stored?.token || localStorage.getItem('sb_token') || localStorage.getItem('ghlToken') || null;
+	}
+
+	function normalizePortfolioRecord(record = {}) {
+		return {
+			id: record.id || `inv_${Math.random().toString(36).slice(2, 9)}`,
+			_recordId: record._recordId || record.id || '',
+			dealId: record.dealId || record.deal_id || '',
+			investmentName: record.investmentName || record.investment_name || '',
+			sponsor: record.sponsor || '',
+			assetClass: record.assetClass || record.asset_class || '',
+			amountInvested: record.amountInvested ?? record.amount_invested ?? '',
+			dateInvested: record.dateInvested || record.date_invested || '',
+			status: record.status || 'Active',
+			targetIRR: record.targetIRR ?? record.target_irr ?? '',
+			distributionsReceived: record.distributionsReceived ?? record.distributions_received ?? '',
+			equityMultiple: record.equityMultiple ?? record.equity_multiple ?? '',
+			investingEntity: record.investingEntity || record.investing_entity || '',
+			entityInvestedInto: record.entityInvestedInto || record.entity_invested_into || '',
+			holdPeriod: record.holdPeriod || record.hold_period || '',
+			notes: record.notes || ''
+		};
+	}
+
+	function savePortfolioLocal(nextPortfolio) {
+		portfolio = [...nextPortfolio];
+		if (browser) {
+			localStorage.setItem('gycPortfolio', JSON.stringify(portfolio));
+		}
+	}
+
+	function saveTaxDocsLocal(nextDocs) {
+		taxDocuments = [...nextDocs];
+		if (browser) {
+			localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocuments));
+		}
+	}
+
+	function buildPortfolioPayload(investment) {
+		return {
+			_recordId: investment._recordId || undefined,
+			'Deal ID': investment.dealId || '',
+			'Investment Name': investment.investmentName || '',
+			Sponsor: investment.sponsor || '',
+			'Asset Class': investment.assetClass || '',
+			'Amount Invested': parseFloat(investment.amountInvested) || 0,
+			'Date Invested': investment.dateInvested || '',
+			Status: investment.status || 'Active',
+			'Target IRR': investment.targetIRR !== '' ? parseFloat(investment.targetIRR) || 0 : '',
+			'Distributions Received': parseFloat(investment.distributionsReceived) || 0,
+			'Hold Period': investment.holdPeriod || '',
+			'Investing Entity': investment.investingEntity || '',
+			'Entity Invested Into': investment.entityInvestedInto || '',
+			Notes: investment.notes || ''
+		};
+	}
+
+	async function syncPortfolioRecord(investment) {
+		const token = getToken();
+		if (!token) return normalizePortfolioRecord(investment);
+		const response = await fetch('/api/userdata', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				type: 'portfolio',
+				data: buildPortfolioPayload(investment)
+			})
+		});
+		if (!response.ok) {
+			throw new Error(`Portfolio sync failed: ${response.status}`);
+		}
+		const result = await response.json();
+		return normalizePortfolioRecord({
+			...investment,
+			...(result.record || {})
+		});
+	}
+
+	async function deletePortfolioRecord(investment) {
+		const token = getToken();
+		if (!token || !investment?._recordId) return;
+		const response = await fetch('/api/userdata', {
+			method: 'DELETE',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				type: 'portfolio',
+				recordId: investment._recordId
+			})
+		});
+		if (!response.ok) {
+			throw new Error(`Portfolio delete failed: ${response.status}`);
+		}
+	}
+
+	async function loadPortfolioData() {
+		if (!browser) return;
+		const localPortfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]').map((item) => normalizePortfolioRecord(item));
+		const localTaxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+		savePortfolioLocal(localPortfolio);
+		saveTaxDocsLocal(localTaxDocs);
+		taxDocsOpen = localTaxDocs.length > 0;
+		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+
+		const token = getToken();
+		if (!token) return;
+
+		try {
+			const response = await fetch('/api/userdata?type=portfolio', {
+				headers: { Authorization: `Bearer ${token}` }
+			});
+			if (!response.ok) return;
+			const data = await response.json();
+			const remotePortfolio = Array.isArray(data?.records)
+				? data.records.map((item) => normalizePortfolioRecord(item))
+				: [];
+			if (remotePortfolio.length > 0 || localPortfolio.length === 0) {
+				savePortfolioLocal(remotePortfolio);
+			}
+		} catch (error) {
+			console.warn('Portfolio sync load failed:', error);
+		}
+	}
 
 	function openDealSearchModal() {
 		dealSearchQuery = '';
@@ -213,44 +343,61 @@
 		showAddModal = true;
 	}
 
-	function saveInvestment() {
+	async function saveInvestment() {
 		if (!modalData.investmentName.trim()) { alert('Please enter an investment name.'); return; }
+		let draftInvestment;
+		let nextPortfolio = [...portfolio];
 		if (editingId) {
 			const idx = portfolio.findIndex(i => i.id === editingId);
-			if (idx >= 0) portfolio[idx] = { ...portfolio[idx], ...modalData };
+			if (idx < 0) return;
+			draftInvestment = normalizePortfolioRecord({ ...portfolio[idx], ...modalData, id: editingId });
+			nextPortfolio[idx] = draftInvestment;
 		} else {
-			const newInv = { ...modalData, id: 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5) };
-			portfolio.push(newInv);
+			draftInvestment = normalizePortfolioRecord({
+				...modalData,
+				id: 'inv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+			});
+			nextPortfolio = [...portfolio, draftInvestment];
 			// Auto-add tax document for new investments
 			if (browser) {
-				const taxDocs = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
+				const taxDocs = [...taxDocuments];
 				const year = new Date().getFullYear();
-				const alreadyExists = taxDocs.some(t => t.investmentName === newInv.investmentName && t.taxYear == year);
+				const alreadyExists = taxDocs.some(t => t.investmentName === draftInvestment.investmentName && t.taxYear == year);
 				if (!alreadyExists) {
 					taxDocs.push({
-						id: 'tax_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+						id: 'tax_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
 						taxYear: year,
-						investmentName: newInv.investmentName,
-						investingEntity: newInv.investingEntity || '',
-						entityInvestedInto: newInv.entityInvestedInto || '',
+						investmentName: draftInvestment.investmentName,
+						investingEntity: draftInvestment.investingEntity || '',
+						entityInvestedInto: draftInvestment.entityInvestedInto || '',
 						formType: 'K-1',
 						uploadStatus: 'Pending',
 						dateReceived: '', portalUrl: '', contact: '', notes: '', fileUrl: ''
 					});
-					localStorage.setItem('gycTaxDocs', JSON.stringify(taxDocs));
-					taxDocuments = taxDocs;
+					saveTaxDocsLocal(taxDocs);
+					taxDocsOpen = true;
 				}
 			}
 		}
-		portfolio = [...portfolio];
-		if (browser) localStorage.setItem('gycPortfolio', JSON.stringify(portfolio));
+		savePortfolioLocal(nextPortfolio);
+		try {
+			const synced = await syncPortfolioRecord(draftInvestment);
+			savePortfolioLocal(nextPortfolio.map((investment) => investment.id === draftInvestment.id ? synced : investment));
+		} catch (error) {
+			console.warn('Portfolio save sync failed:', error);
+		}
 		showAddModal = false;
 	}
 
-	function deleteInvestment(id) {
+	async function deleteInvestment(id) {
 		if (!confirm('Delete this investment from your portfolio?')) return;
-		portfolio = portfolio.filter(i => i.id !== id);
-		if (browser) localStorage.setItem('gycPortfolio', JSON.stringify(portfolio));
+		const existingInvestment = portfolio.find((investment) => investment.id === id);
+		savePortfolioLocal(portfolio.filter(i => i.id !== id));
+		try {
+			await deletePortfolioRecord(existingInvestment);
+		} catch (error) {
+			console.warn('Portfolio delete sync failed:', error);
+		}
 	}
 
 	function handlePPMUpload(file) {
@@ -268,9 +415,7 @@
 	onMount(async () => {
 		if (!browser) return;
 		fetchDeals();
-		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
-		taxDocuments = JSON.parse(localStorage.getItem('gycTaxDocs') || '[]');
-		wizardData = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+		await loadPortfolioData();
 	});
 </script>
 
@@ -290,25 +435,11 @@
 
 <div class="content-area">
 	{#if portfolio.length === 0}
-		<!-- Empty state -->
-		<div class="empty-charts">
-			<div class="empty-chart-box">
-				<div class="chart-title">Asset Class Allocation</div>
-				<svg viewBox="0 0 120 120" style="width:100px;height:100px;"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="18" stroke-dasharray="80 235" stroke-dashoffset="0"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--text-muted)" stroke-width="18" stroke-dasharray="120 195" stroke-dashoffset="-80"/><circle cx="60" cy="60" r="50" fill="none" stroke="var(--primary)" stroke-width="18" stroke-dasharray="115 200" stroke-dashoffset="-200"/></svg>
-			</div>
-			<div class="empty-chart-box">
-				<div class="chart-title">Risk Analysis</div>
-				<div class="risk-bars">
-					<div class="risk-bar" style="width:75%"></div>
-					<div class="risk-bar" style="width:55%"></div>
-					<div class="risk-bar" style="width:90%"></div>
-					<div class="risk-bar" style="width:40%"></div>
-				</div>
-			</div>
-		</div>
 		<div class="import-section">
 			<div class="import-card">
-				<div class="empty-briefcase">💼</div>
+				<div class="empty-briefcase">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="42" height="42"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+				</div>
 				<h3>No investments yet</h3>
 				<p>Add your first investment to start tracking allocation, performance, and tax documents in one place.</p>
 				<button class="btn-manual" onclick={() => openDealSearchModal()}>+ Add Investment</button>
@@ -518,67 +649,72 @@
 		{/if}
 
 		<div class="tax-shell">
-			<div class="tax-shell-top">
-				<div>
+			<button class="tax-shell-toggle" type="button" aria-expanded={taxDocsOpen} onclick={() => taxDocsOpen = !taxDocsOpen}>
+				<div class="tax-shell-toggle-copy">
 					<div class="tax-shell-title">Tax Documents</div>
-					<div class="tax-shell-desc">Track K-1s, 1099s, and other tax forms for all your investments.</div>
+					<div class="tax-shell-desc">{taxSummaryText}</div>
 				</div>
-				<div class="tax-shell-actions">
-					<select class="tax-filter-select" bind:value={taxYearFilter}>
-						<option value="all">All Years</option>
-						{#each taxYears as year}
-							<option value={year}>{year}</option>
-						{/each}
-					</select>
-					<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
-					<a href="/app/tax-prep" class="tax-action-btn">+ Add</a>
-				</div>
-			</div>
-			{#if taxDocuments.length === 0}
-				<div class="tax-empty-state">
-					<div class="tax-empty-title">No tax documents yet</div>
-					<div class="tax-empty-copy">Auto-populate from portfolio or add documents manually to track upcoming K-1s and 1099s.</div>
-					<div class="tax-empty-actions">
-						<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
-						<a href="/app/tax-prep" class="tax-action-btn">+ Add Manually</a>
-					</div>
-				</div>
-			{:else}
-				<div class="tax-table-wrap">
-					<table class="tax-table">
-						<thead>
-							<tr>
-								<th>Tax Year</th>
-								<th>Investment</th>
-								<th>Investing Entity</th>
-								<th>Entity Invested Into</th>
-								<th>Form Type</th>
-								<th>Status</th>
-								<th>Date Received</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each visibleTaxDocuments as doc}
-								<tr>
-									<td>{doc.taxYear || '—'}</td>
-									<td class="inv-table-primary">{doc.investmentName || '—'}</td>
-									<td>{doc.investingEntity || '—'}</td>
-									<td>{doc.entityInvestedInto || '—'}</td>
-									<td>{doc.formType || '—'}</td>
-									<td>
-										<span class="tax-status" class:received={doc.uploadStatus === 'Received'}>{doc.uploadStatus || 'Pending'}</span>
-									</td>
-									<td>{doc.dateReceived || '—'}</td>
-									<td>
-										<a class="tax-row-link" href={doc.fileUrl || doc.portalUrl || '/app/tax-prep'} target={doc.fileUrl || doc.portalUrl ? '_blank' : undefined} rel={doc.fileUrl || doc.portalUrl ? 'noopener' : undefined}>
-											{doc.fileUrl || doc.portalUrl ? 'View' : 'Manage'}
-										</a>
-									</td>
-								</tr>
+				<svg class="tax-shell-chevron" class:open={taxDocsOpen} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"/></svg>
+			</button>
+			{#if taxDocsOpen}
+				<div class="tax-shell-body">
+					<div class="tax-shell-actions">
+						<select class="tax-filter-select" bind:value={taxYearFilter}>
+							<option value="all">All Years</option>
+							{#each taxYears as year}
+								<option value={year}>{year}</option>
 							{/each}
-						</tbody>
-					</table>
+						</select>
+						<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
+						<a href="/app/tax-prep" class="tax-action-btn">+ Add</a>
+					</div>
+					{#if taxDocuments.length === 0}
+						<div class="tax-empty-state">
+							<div class="tax-empty-title">No tax documents yet</div>
+							<div class="tax-empty-copy">Auto-populate from portfolio or add documents manually to track upcoming K-1s and 1099s.</div>
+							<div class="tax-empty-actions">
+								<a href="/app/tax-prep" class="tax-action-btn secondary">Auto-Populate from Portfolio</a>
+								<a href="/app/tax-prep" class="tax-action-btn">+ Add Manually</a>
+							</div>
+						</div>
+					{:else}
+						<div class="tax-table-wrap">
+							<table class="tax-table">
+								<thead>
+									<tr>
+										<th>Tax Year</th>
+										<th>Investment</th>
+										<th>Investing Entity</th>
+										<th>Entity Invested Into</th>
+										<th>Form Type</th>
+										<th>Status</th>
+										<th>Date Received</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each visibleTaxDocuments as doc}
+										<tr>
+											<td>{doc.taxYear || '—'}</td>
+											<td class="inv-table-primary">{doc.investmentName || '—'}</td>
+											<td>{doc.investingEntity || '—'}</td>
+											<td>{doc.entityInvestedInto || '—'}</td>
+											<td>{doc.formType || '—'}</td>
+											<td>
+												<span class="tax-status" class:received={doc.uploadStatus === 'Received'}>{doc.uploadStatus || 'Pending'}</span>
+											</td>
+											<td>{doc.dateReceived || '—'}</td>
+											<td>
+												<a class="tax-row-link" href={doc.fileUrl || doc.portalUrl || '/app/tax-prep'} target={doc.fileUrl || doc.portalUrl ? '_blank' : undefined} rel={doc.fileUrl || doc.portalUrl ? 'noopener' : undefined}>
+													{doc.fileUrl || doc.portalUrl ? 'View' : 'Manage'}
+												</a>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -587,11 +723,24 @@
 
 <!-- Deal Search Modal -->
 {#if showDealSearch}
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showDealSearch = false; }}>
+	<div
+		class="modal-overlay"
+		role="button"
+		tabindex="0"
+		aria-label="Close add to portfolio modal"
+		onclick={(e) => { if (e.target === e.currentTarget) showDealSearch = false; }}
+		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
+			if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				showDealSearch = false;
+			}
+		}}
+	>
 		<div class="modal-card" style="max-width:520px;">
 			<div class="modal-top">
 				<div class="modal-title">Add to Portfolio</div>
-				<button class="modal-close" onclick={() => showDealSearch = false}>&times;</button>
+				<button class="modal-close" aria-label="Close add to portfolio modal" onclick={() => showDealSearch = false}>&times;</button>
 			</div>
 			<p class="deal-search-hint">Search for an existing deal or add a custom investment.</p>
 			<input
@@ -635,18 +784,31 @@
 
 <!-- Add/Edit Investment Modal -->
 {#if showAddModal}
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }}>
+	<div
+		class="modal-overlay"
+		role="button"
+		tabindex="0"
+		aria-label="Close investment form modal"
+		onclick={(e) => { if (e.target === e.currentTarget) showAddModal = false; }}
+		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
+			if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				showAddModal = false;
+			}
+		}}
+	>
 		<div class="modal-card">
 			<div class="modal-top">
 				<div class="modal-title">{editingId ? 'Edit' : 'Add'} Investment</div>
-				<button class="modal-close" onclick={() => showAddModal = false}>&times;</button>
+				<button class="modal-close" aria-label="Close investment form modal" onclick={() => showAddModal = false}>&times;</button>
 			</div>
 			<div class="modal-grid">
-				<div class="modal-field"><label>Investment Name *</label><input bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II"></div>
-				<div class="modal-field"><label>Sponsor</label><input bind:value={modalData.sponsor} placeholder="e.g. Acme Capital"></div>
+				<div class="modal-field"><label for="portfolioInvestmentName">Investment Name *</label><input id="portfolioInvestmentName" bind:value={modalData.investmentName} placeholder="e.g. Acme Multi-Family Fund II"></div>
+				<div class="modal-field"><label for="portfolioSponsor">Sponsor</label><input id="portfolioSponsor" bind:value={modalData.sponsor} placeholder="e.g. Acme Capital"></div>
 				<div class="modal-field">
-					<label>Asset Class</label>
-					<select bind:value={modalData.assetClass}>
+					<label for="portfolioAssetClass">Asset Class</label>
+					<select id="portfolioAssetClass" bind:value={modalData.assetClass}>
 						<option value="">Select...</option>
 						<option>Multi Family</option><option>Self Storage</option><option>Industrial</option>
 						<option>Lending</option><option>Short Term Rental</option><option>Hotels/Hospitality</option>
@@ -654,21 +816,21 @@
 						<option>Land</option><option>Car Wash</option><option>Oil & Gas</option><option>Other</option>
 					</select>
 				</div>
-				<div class="modal-field"><label>Amount Invested ($)</label><input type="number" bind:value={modalData.amountInvested} placeholder="50000"></div>
-				<div class="modal-field"><label>Date Invested</label><input type="date" bind:value={modalData.dateInvested}></div>
+				<div class="modal-field"><label for="portfolioAmountInvested">Amount Invested ($)</label><input id="portfolioAmountInvested" type="number" bind:value={modalData.amountInvested} placeholder="50000"></div>
+				<div class="modal-field"><label for="portfolioDateInvested">Date Invested</label><input id="portfolioDateInvested" type="date" bind:value={modalData.dateInvested}></div>
 				<div class="modal-field">
-					<label>Status</label>
-					<select bind:value={modalData.status}>
+					<label for="portfolioStatus">Status</label>
+					<select id="portfolioStatus" bind:value={modalData.status}>
 						<option>Active</option><option>Distributing</option><option>Exited</option><option>Pending</option>
 					</select>
 				</div>
-				<div class="modal-field"><label>Target IRR (%)</label><input type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15"></div>
-				<div class="modal-field"><label>Distributions Received ($)</label><input type="number" bind:value={modalData.distributionsReceived} placeholder="0"></div>
-				<div class="modal-field"><label>Equity Multiple</label><input type="number" step="0.01" bind:value={modalData.equityMultiple} placeholder="1.8"></div>
-				<div class="modal-field"><label>Hold Period (years)</label><input bind:value={modalData.holdPeriod} placeholder="e.g. 5"></div>
-				<div class="modal-field"><label>Investing Entity</label><input bind:value={modalData.investingEntity} placeholder="e.g. My LLC"></div>
-				<div class="modal-field"><label>Entity Invested Into</label><input bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC"></div>
-				<div class="modal-field full-width"><label>Notes</label><textarea bind:value={modalData.notes} rows="2" placeholder="Optional notes about this investment..."></textarea></div>
+				<div class="modal-field"><label for="portfolioTargetIRR">Target IRR (%)</label><input id="portfolioTargetIRR" type="number" step="0.1" bind:value={modalData.targetIRR} placeholder="15"></div>
+				<div class="modal-field"><label for="portfolioDistributionsReceived">Distributions Received ($)</label><input id="portfolioDistributionsReceived" type="number" bind:value={modalData.distributionsReceived} placeholder="0"></div>
+				<div class="modal-field"><label for="portfolioEquityMultiple">Equity Multiple</label><input id="portfolioEquityMultiple" type="number" step="0.01" bind:value={modalData.equityMultiple} placeholder="1.8"></div>
+				<div class="modal-field"><label for="portfolioHoldPeriod">Hold Period (years)</label><input id="portfolioHoldPeriod" bind:value={modalData.holdPeriod} placeholder="e.g. 5"></div>
+				<div class="modal-field"><label for="portfolioInvestingEntity">Investing Entity</label><input id="portfolioInvestingEntity" bind:value={modalData.investingEntity} placeholder="e.g. My LLC"></div>
+				<div class="modal-field"><label for="portfolioEntityInvestedInto">Entity Invested Into</label><input id="portfolioEntityInvestedInto" bind:value={modalData.entityInvestedInto} placeholder="e.g. Acme Fund II LLC"></div>
+				<div class="modal-field full-width"><label for="portfolioNotes">Notes</label><textarea id="portfolioNotes" bind:value={modalData.notes} rows="2" placeholder="Optional notes about this investment..."></textarea></div>
 			</div>
 			<div class="modal-actions">
 				{#if editingId}
@@ -756,16 +918,16 @@
 	}
 
 	/* ── Content Area ── */
-	.content-area { padding: 24px 24px 48px; max-width: 1200px; }
+	.content-area { padding: 24px 24px 40px; max-width: 1200px; }
 
 	/* ── Summary Stat Cards ── */
-	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
 	.summary-grid .stat-card:nth-child(5) { display: none; }
 	.stat-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 24px;
+		padding: 18px;
 		text-align: center;
 	}
 	.stat-label {
@@ -778,19 +940,19 @@
 		letter-spacing: 0.5px;
 	}
 	.stat-value {
-		font-size: 28px;
+		font-size: 24px;
 		font-weight: 800;
 		color: var(--primary);
 		font-family: var(--font-ui);
 	}
 
 	/* ── Charts Row ── */
-	.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+	.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 	.chart-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 24px;
+		padding: 20px;
 	}
 	.chart-card-title {
 		font-family: var(--font-ui);
@@ -860,7 +1022,7 @@
 	.risk-badge.badge-ok .risk-badge-text { color: var(--text-dark); }
 
 	/* ── Timeline Chart ── */
-	.timeline-card { margin-bottom: 24px; }
+	.timeline-card { margin-bottom: 20px; }
 	.chartjs-timeline-wrap {
 		position: relative;
 		height: 260px;
@@ -914,8 +1076,7 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		background: var(--bg-card);
-		box-shadow: var(--shadow-card);
-		margin-bottom: 24px;
+		margin-bottom: 20px;
 	}
 	.inv-table {
 		width: 100%;
@@ -969,11 +1130,10 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		overflow: hidden;
-		box-shadow: var(--shadow-card);
 		display: flex;
 		transition: all 0.25s ease;
 	}
-	.inv-card:hover { box-shadow: var(--shadow-card-hover); }
+	.inv-card:hover { border-color: color-mix(in srgb, var(--primary) 18%, var(--border)); }
 	.inv-card-stripe { width: 6px; flex-shrink: 0; }
 	.inv-card-body { flex: 1; padding: 20px 24px; }
 	.inv-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
@@ -1062,23 +1222,27 @@
 
 	/* ── Import / Empty Card ── */
 	.import-section {
-		max-width: 560px;
+		max-width: 520px;
 		margin: 0 auto;
-		padding: 48px 24px;
+		padding: 40px 24px 24px;
 	}
 	.import-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: 32px 28px;
+		padding: 28px 24px;
 		text-align: center;
-		box-shadow: var(--shadow-card);
 	}
 	.empty-briefcase {
-		font-size: 40px;
-		line-height: 1;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 68px;
+		height: 68px;
+		border-radius: 20px;
+		background: var(--bg-cream);
+		color: var(--text-muted);
 		margin-bottom: 14px;
-		opacity: 0.35;
 	}
 	.import-card h3 {
 		font-family: var(--font-ui);
@@ -1128,16 +1292,44 @@
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		box-shadow: var(--shadow-card);
 		overflow: hidden;
 	}
-	.tax-shell-top {
+	.tax-shell-toggle {
+		width: 100%;
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		justify-content: space-between;
 		gap: 16px;
-		padding: 20px 24px;
-		border-bottom: 1px solid var(--border-light);
+		padding: 14px 18px;
+		background: var(--bg-card);
+		border: none;
+		cursor: pointer;
+		text-align: left;
+	}
+	.tax-shell-toggle:hover {
+		background: var(--bg-cream);
+	}
+	.tax-shell-toggle-copy {
+		min-width: 0;
+	}
+	.tax-shell-chevron {
+		flex-shrink: 0;
+		color: var(--text-muted);
+		transition: transform 0.2s ease;
+	}
+	.tax-shell-chevron.open {
+		transform: rotate(180deg);
+	}
+	.tax-shell-body {
+		border-top: 1px solid var(--border-light);
+	}
+	.tax-shell-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 16px;
+		padding: 16px 18px;
+		flex-wrap: wrap;
 	}
 	.tax-shell-title {
 		font-family: var(--font-ui);
@@ -1151,13 +1343,6 @@
 		color: var(--text-secondary);
 		margin-top: 4px;
 		line-height: 1.5;
-	}
-	.tax-shell-actions {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		flex-wrap: wrap;
-		justify-content: flex-end;
 	}
 	.tax-filter-select {
 		padding: 8px 12px;
@@ -1189,7 +1374,7 @@
 		color: var(--primary);
 	}
 	.tax-empty-state {
-		padding: 28px 24px;
+		padding: 20px 18px 24px;
 		text-align: center;
 	}
 	.tax-empty-title {
@@ -1343,9 +1528,7 @@
 	.modal-overlay {
 		position: fixed;
 		top: 0; left: 0; right: 0; bottom: 0;
-		background: rgba(0,0,0,0.25);
-		backdrop-filter: blur(16px);
-		-webkit-backdrop-filter: blur(16px);
+		background: rgba(0,0,0,0.22);
 		z-index: 9999;
 		display: flex;
 		align-items: center;
@@ -1360,13 +1543,13 @@
 	}
 	.modal-card {
 		background: var(--bg-card);
-		border-radius: 20px;
-		padding: 32px;
+		border-radius: 16px;
+		padding: 28px;
 		max-width: 600px;
 		width: 100%;
 		max-height: 90vh;
 		overflow-y: auto;
-		box-shadow: 0 24px 80px rgba(0,0,0,0.14), 0 8px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03);
+		box-shadow: 0 24px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.03);
 		animation: modalSlideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 	}
 	:global(html.dark) .modal-card { box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); }
@@ -1538,7 +1721,6 @@
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }
 		.chartjs-donut-wrap { max-width: 200px; }
 		.chartjs-timeline-wrap { height: 200px; }
-		.tax-shell-top { flex-direction: column; }
 		.tax-shell-actions { justify-content: flex-start; }
 		.tax-filter-select, .tax-action-btn { width: 100%; }
 	}

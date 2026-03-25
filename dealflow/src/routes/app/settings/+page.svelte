@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { user, userEmail, userTier, isAdmin, supabase } from '$lib/stores/auth.js';
+	import { user, userTier, supabase } from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 
@@ -22,6 +22,8 @@
 
 	// Investor profile
 	let accreditedStatus = $state('');
+	let investableCapital = $state('$250K - $1M');
+	let investmentExperience = $state('4-10 LP investments');
 
 	// Notifications
 	let notifFreq = $state('weekly');
@@ -29,13 +31,78 @@
 	let weeklyDigest = $state(true);
 	let notifSaved = $state(false);
 
-	// Tier display
-	const tierLabels = {
-		explorer: 'Explorer (Free)',
-		academy: 'Academy Member',
-		founding: 'Founding Member',
-		'inner-circle': 'Inner Circle'
-	};
+	const membershipTiers = [
+		{
+			key: 'free',
+			name: 'Free',
+			price: 'Free forever',
+			description: 'Browse every live deal, view decks, and stay on top of the weekly digest.',
+			features: [
+				'Browse all live deals',
+				'View investment decks',
+				'Deal filtering and search',
+				'Weekly deal digest email',
+				'Basic deal overview and thesis'
+			]
+		},
+		{
+			key: 'academy',
+			name: 'Academy',
+			price: '$5,000 first year',
+			description: 'Full deal analysis, GP introductions, office hours, and help building your plan.',
+			features: [
+				'Everything in Free',
+				'Full deal data and comparisons',
+				'Risk analysis and stress tests',
+				'PPM, sub docs, and data room access',
+				'GP introductions and deal reviews',
+				'Weekly office hours',
+				'Investment plan builder',
+				'Private investor community'
+			]
+		},
+		{
+			key: 'family-office',
+			name: 'Family Office',
+			price: '$25,000 per year',
+			description: 'A higher-touch partnership for serious deployers building a full portfolio.',
+			features: [
+				'Everything in Academy',
+				'Custom deployment plan',
+				'Dedicated 1:1 calls',
+				'Co-underwriting support',
+				'Direct GP access',
+				'Tax and entity structuring guidance'
+			]
+		}
+	];
+
+	const normalizedTier = $derived.by(() => {
+		const tier = String($userTier || '').toLowerCase();
+		if (['academy', 'alumni', 'investor', 'paid', 'founding', 'inner-circle'].includes(tier)) {
+			return 'academy';
+		}
+		if (tier === 'family_office') {
+			return 'family-office';
+		}
+		return 'free';
+	});
+
+	const membershipLabel = $derived.by(() => {
+		if (normalizedTier === 'academy') {
+			return $userTier === 'alumni' ? 'Academy Alumni' : 'Academy Member';
+		}
+		if (normalizedTier === 'family-office') {
+			return 'Family Office';
+		}
+		return 'Free';
+	});
+
+	function getToken() {
+		if (!browser) return null;
+		const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		return stored?.token || localStorage.getItem('sb_token') || localStorage.getItem('ghlToken') || null;
+	}
 
 	function getInitials(u) {
 		if (!u) return '?';
@@ -56,10 +123,26 @@
 		avatarInitials = getInitials(u);
 		shareActivity = u.share_activity !== false;
 		accreditedStatus = u.accredited_status || '';
+		investableCapital = u.investable_capital || '$250K - $1M';
+		investmentExperience = u.investment_experience || '4-10 LP investments';
+	}
+
+	async function syncProfile(fields) {
+		const token = getToken();
+		if (!token) return;
+		const resp = await fetch('/api/userdata', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ type: 'profile', data: fields })
+		});
+		if (!resp.ok) {
+			console.warn('Profile sync returned', resp.status);
+		}
 	}
 
 	async function saveProfile() {
 		profileSaving = true;
+		const fullName = `${firstName} ${lastName}`.trim();
 		if (browser) {
 			const u = JSON.parse(localStorage.getItem('gycUser') || '{}');
 			u.firstName = firstName;
@@ -67,25 +150,29 @@
 			u.phone = phone;
 			u.location = location;
 			u.accredited_status = accreditedStatus;
-			u.name = (firstName + ' ' + lastName).trim();
+			u.investable_capital = investableCapital;
+			u.investment_experience = investmentExperience;
+			u.share_activity = shareActivity;
+			u.avatar_url = avatarUrl;
+			u.name = fullName;
 			localStorage.setItem('gycUser', JSON.stringify(u));
 		}
 		try {
-			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
-			if (token) {
-				const resp = await fetch('/api/userdata', {
-					method: 'POST',
-					headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'profile', data: { firstName, lastName, phone, location, accredited_status: accreditedStatus } })
-				});
-				if (!resp.ok) console.warn('Profile save returned', resp.status);
-			}
+			await syncProfile({
+				full_name: fullName,
+				phone,
+				location,
+				share_activity: shareActivity,
+				avatar_url: avatarUrl
+			});
 		} catch (e) {
 			console.warn('Profile save failed:', e);
 		}
 		profileSaving = false;
 		profileSaved = true;
-		setTimeout(() => profileSaved = false, 2000);
+		setTimeout(() => {
+			profileSaved = false;
+		}, 2000);
 	}
 
 	function updateShareActivity(isOn) {
@@ -95,35 +182,30 @@
 			u.share_activity = isOn;
 			localStorage.setItem('gycUser', JSON.stringify(u));
 		}
-		try {
-			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
-			if (token) {
-				fetch('/api/userdata', {
-					method: 'POST',
-					headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'privacy', data: { share_activity: isOn } })
-				});
-			}
-		} catch (e) { /* silent */ }
+		syncProfile({ share_activity: isOn }).catch(() => {});
 	}
 
 	async function saveNotifPrefs() {
 		const prefs = { frequency: notifFreq, deal_alerts: dealAlerts, weekly_digest: weeklyDigest };
-		if (browser) localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
+		if (browser) {
+			localStorage.setItem('gycNotifPrefs', JSON.stringify(prefs));
+		}
 		try {
-			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
+			const token = getToken();
 			if (token) {
 				await fetch('/api/userdata', {
 					method: 'POST',
-					headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-					body: JSON.stringify({ type: 'notif_prefs', data: prefs })
+					headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+					body: JSON.stringify({ type: 'notif_prefs', data: { frequency: notifFreq } })
 				});
 			}
 		} catch (e) {
 			console.warn('Notif prefs save failed:', e);
 		}
 		notifSaved = true;
-		setTimeout(() => notifSaved = false, 2000);
+		setTimeout(() => {
+			notifSaved = false;
+		}, 2000);
 	}
 
 	function setNotifFrequency(freq) {
@@ -144,18 +226,19 @@
 	async function loadNotifPrefs() {
 		let prefs = { frequency: 'weekly', deal_alerts: true, weekly_digest: true };
 		try {
-			const token = browser ? (localStorage.getItem('sb_token') || localStorage.getItem('ghlToken')) : null;
+			const token = getToken();
 			if (token) {
-				const resp = await fetch('/api/userdata?type=notif_prefs', { headers: { 'Authorization': 'Bearer ' + token } });
+				const resp = await fetch('/api/userdata?type=notif_prefs', {
+					headers: { Authorization: `Bearer ${token}` }
+				});
 				if (resp.ok) {
 					const data = await resp.json();
 					if (data.notif_frequency) prefs.frequency = data.notif_frequency;
-					if (data.deal_alerts !== undefined) prefs.deal_alerts = data.deal_alerts;
-					if (data.weekly_digest !== undefined) prefs.weekly_digest = data.weekly_digest;
 				}
 			}
-		} catch (e) { /* use default */ }
-		// Fallback to localStorage
+		} catch {
+			// Use local fallback.
+		}
 		const local = browser ? JSON.parse(localStorage.getItem('gycNotifPrefs') || '{}') : {};
 		if (local.frequency && prefs.frequency === 'weekly') prefs.frequency = local.frequency;
 		if (local.deal_alerts !== undefined) prefs.deal_alerts = local.deal_alerts;
@@ -191,7 +274,6 @@
 		goto('/');
 	}
 
-	// Privacy preview data
 	let reviewCount = $derived.by(() => {
 		if (!browser) return 0;
 		try {
@@ -202,7 +284,9 @@
 				if (s && s !== 'browse' && s !== 'passed') count++;
 			}
 			return count;
-		} catch { return 0; }
+		} catch {
+			return 0;
+		}
 	});
 
 	let displayName = $derived((firstName + ' ' + lastName).trim() || 'Your Name');
@@ -220,8 +304,9 @@
 
 	<div class="settings-tabs">
 		<button class="settings-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>Profile</button>
-		<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>Membership</button>
-		<button class="settings-tab" class:active={activeTab === 'privacy'} onclick={() => activeTab = 'privacy'}>Privacy & Sharing</button>
+		<button class="settings-tab" class:active={activeTab === 'plan'} onclick={() => activeTab = 'plan'}>My Plan</button>
+		<button class="settings-tab" class:active={activeTab === 'investor'} onclick={() => activeTab = 'investor'}>Investor</button>
+		<button class="settings-tab" class:active={activeTab === 'privacy'} onclick={() => activeTab = 'privacy'}>Privacy</button>
 		<button class="settings-tab" class:active={activeTab === 'notifications'} onclick={() => activeTab = 'notifications'}>Notifications</button>
 	</div>
 
@@ -231,10 +316,10 @@
 			<div class="settings-page-title">Your Profile</div>
 			<div class="settings-page-desc">Manage your account information and how others reach you.</div>
 
-			<div class="settings-card" style="margin-bottom:16px;">
-				<div class="settings-card-title">Profile Photo</div>
-				<div class="settings-card-desc">This appears on your profile and next to your deal activity.</div>
-				<div class="avatar-row">
+			<div class="settings-card">
+				<div class="settings-card-title">Personal Information</div>
+				<div class="settings-card-desc">This information is shown to GPs when you request an introduction</div>
+				<div class="avatar-row profile-avatar-row">
 					<div class="avatar-preview">
 						{#if avatarUrl}
 							<img src={avatarUrl} alt="Avatar" />
@@ -248,26 +333,22 @@
 							Choose Photo
 							<input type="file" accept="image/*" onchange={handleAvatarUpload} style="display:none;" />
 						</label>
+						<div class="avatar-help">This appears on your member profile and next to your deal activity.</div>
 					</div>
 				</div>
-			</div>
-
-			<div class="settings-card">
-				<div class="settings-card-title">Personal Information</div>
-				<div class="settings-card-desc">This information is shown to GPs when you request an introduction</div>
 				<div class="profile-row">
 					<div class="profile-field">
 						<div class="profile-label">First Name</div>
-						<input type="text" class="profile-input" bind:value={firstName} placeholder="First name" />
+						<input id="profileFirstName" type="text" class="profile-input" bind:value={firstName} placeholder="First name" />
 					</div>
 					<div class="profile-field">
 						<div class="profile-label">Last Name</div>
-						<input type="text" class="profile-input" bind:value={lastName} placeholder="Last name" />
+						<input id="profileLastName" type="text" class="profile-input" bind:value={lastName} placeholder="Last name" />
 					</div>
 				</div>
 				<div class="profile-field">
 					<div class="profile-label">Email</div>
-					<input type="email" class="profile-input" value={email} readonly />
+					<input id="profileEmail" type="email" class="profile-input" value={email} readonly />
 				</div>
 				<div class="profile-row">
 					<div class="profile-field">
@@ -296,19 +377,94 @@
 	{#if activeTab === 'plan'}
 		<div class="settings-panel">
 			<div class="settings-page-title">Your Membership</div>
-			<div class="settings-page-desc">Manage your plan and see what's included at each tier.</div>
+			<div class="settings-page-desc">See what's included in your current plan and what the next level unlocks.</div>
+
+			<div class="settings-card membership-status-card">
+				<div class="membership-status-row">
+					<div class="tier-badge" class:tier-badge-free={normalizedTier === 'free'}>
+						<span class="tier-dot"></span>
+						{membershipLabel}
+					</div>
+					<div class="membership-note">Your access follows the legacy Free vs Academy structure across the app shell.</div>
+				</div>
+			</div>
+
+			<div class="plan-grid">
+				{#each membershipTiers as tier}
+					<section class="plan-card" class:current={tier.key === normalizedTier}>
+						{#if tier.key === normalizedTier}
+							<div class="plan-current">Current Plan</div>
+						{/if}
+						<div class="plan-name" class:plan-name-academy={tier.key === 'academy'}>{tier.name}</div>
+						<div class="plan-price">{tier.price}</div>
+						<div class="plan-desc">{tier.description}</div>
+						<div class="plan-features">
+							{#each tier.features as feature}
+								<div class="plan-feature">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+									<span>{feature}</span>
+								</div>
+							{/each}
+						</div>
+						{#if tier.key === normalizedTier}
+							<div class="plan-action current-action">Current Plan</div>
+						{:else if tier.key === 'academy'}
+							<a href="/app/academy" class="plan-action primary-action">Join Academy</a>
+						{:else}
+							<a href="https://growyourcashflow.io/introcall" target="_blank" rel="noopener" class="plan-action secondary-action">Book a Call</a>
+						{/if}
+					</section>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	{#if activeTab === 'investor'}
+		<div class="settings-panel">
+			<div class="settings-page-title">Investor Profile</div>
+			<div class="settings-page-desc">Help GPs understand your background and investment capacity when you request introductions.</div>
 
 			<div class="settings-card">
-				<div class="settings-card-title">Current Plan</div>
-				<div class="tier-display">
-					<div class="tier-badge">{tierLabels[$userTier] || $userTier}</div>
-				</div>
-				{#if $userTier === 'explorer'}
-					<div class="upgrade-cta">
-						<p>Upgrade to Academy for full deal intelligence, GP introductions, and hands-on coaching.</p>
-						<a href="/app/academy" class="btn-cta-primary" style="display:inline-flex;width:auto;padding:10px 24px;">View Academy</a>
+				<div class="settings-card-title">Investment Background</div>
+				<div class="settings-card-desc">This mirrors the simpler investor profile card in the sandbox settings flow.</div>
+				<div class="profile-row">
+					<div class="profile-field">
+						<div class="profile-label">Accreditation Status</div>
+						<select class="profile-input" bind:value={accreditedStatus}>
+							<option value="">Select status</option>
+							<option value="Accredited Investor">Accredited Investor</option>
+							<option value="Qualified Purchaser">Qualified Purchaser</option>
+							<option value="Non-Accredited">Non-Accredited</option>
+						</select>
 					</div>
+					<div class="profile-field">
+						<div class="profile-label">Investable Capital</div>
+						<select class="profile-input" bind:value={investableCapital}>
+							<option>$50K - $250K</option>
+							<option>$250K - $1M</option>
+							<option>$1M - $5M</option>
+							<option>$5M+</option>
+						</select>
+					</div>
+				</div>
+				<div class="profile-field">
+					<div class="profile-label">Investment Experience</div>
+					<select class="profile-input" bind:value={investmentExperience}>
+						<option>New to LP investing</option>
+						<option>1-3 LP investments</option>
+						<option>4-10 LP investments</option>
+						<option>10+ LP investments</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="settings-save-bar">
+				{#if profileSaved}
+					<div class="save-msg">Profile saved</div>
 				{/if}
+				<button class="btn-cta-primary" onclick={saveProfile} disabled={profileSaving}>
+					{profileSaving ? 'Saving...' : 'Save Investor Profile'}
+				</button>
 			</div>
 		</div>
 	{/if}
@@ -335,10 +491,10 @@
 			</div>
 
 			<div class="settings-card" style="margin-top:16px;">
-				<div class="settings-card-title">Share My Deal Activity</div>
+				<div class="settings-card-title">Portfolio Visibility</div>
 				<div class="settings-card-desc" style="margin-bottom:16px;">When on, your deal activity counts toward "X LPs are reviewing this deal" on deal pages. Your name and dollar amounts are never shown.</div>
 				<div class="toggle-row">
-					<button class="toggle-track" class:on={shareActivity} aria-label="Toggle deal activity sharing" onclick={() => updateShareActivity(!shareActivity)}>
+					<button class="toggle-track" class:on={shareActivity} aria-label="Toggle deal activity sharing" aria-pressed={shareActivity} onclick={() => updateShareActivity(!shareActivity)}>
 						<div class="toggle-thumb"></div>
 					</button>
 					<div>
@@ -411,7 +567,7 @@
 			<div class="settings-page-desc">Control how and when you receive deal alert emails.</div>
 
 			<div class="notif-card">
-				<div class="notif-title">Email Frequency</div>
+				<div class="notif-title">Deal Alert Frequency</div>
 				<div class="notif-desc">We'll email you new deals that match your buy box. Choose how often.</div>
 				<div class="notif-btns">
 					<button class="notif-freq-btn" class:active={notifFreq === 'realtime'} onclick={() => setNotifFrequency('realtime')}>
@@ -437,7 +593,7 @@
 				<div class="notif-title">Deal Alerts</div>
 				<div class="notif-desc">Get notified when new deals match your buy box criteria.</div>
 				<div class="toggle-row">
-					<button class="toggle-track" class:on={dealAlerts} aria-label="Toggle deal alerts" onclick={toggleDealAlerts}>
+					<button class="toggle-track" class:on={dealAlerts} aria-label="Toggle deal alerts" aria-pressed={dealAlerts} onclick={toggleDealAlerts}>
 						<div class="toggle-thumb"></div>
 					</button>
 					<div>
@@ -451,7 +607,7 @@
 				<div class="notif-title">Weekly Digest</div>
 				<div class="notif-desc">A summary of new deals, market insights, and your portfolio activity.</div>
 				<div class="toggle-row">
-					<button class="toggle-track" class:on={weeklyDigest} aria-label="Toggle weekly digest emails" onclick={toggleWeeklyDigest}>
+					<button class="toggle-track" class:on={weeklyDigest} aria-label="Toggle weekly digest emails" aria-pressed={weeklyDigest} onclick={toggleWeeklyDigest}>
 						<div class="toggle-thumb"></div>
 					</button>
 					<div>
@@ -496,14 +652,14 @@
 		color: var(--text-dark);
 		letter-spacing: -0.3px;
 	}
-	.settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.settings-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border-light); margin-bottom: 28px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 	.settings-tab { padding: 12px 24px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition, 0.2s); white-space: nowrap; }
 	.settings-tab:hover { color: var(--text-dark); }
 	.settings-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 	.settings-panel { }
 	.settings-page-title { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin-bottom: 8px; }
-	.settings-page-desc { font-family: var(--font-body); font-size: 15px; color: var(--text-secondary); margin-bottom: 32px; line-height: 1.6; }
-	.settings-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
+	.settings-page-desc { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; max-width: 680px; }
+	.settings-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
 	.settings-card-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 	.settings-card-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
 	.always-private { background: var(--bg-cream); border: 1px solid var(--border-light); }
@@ -512,9 +668,12 @@
 	.private-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
 
 	.avatar-row { display: flex; align-items: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+	.profile-avatar-row { margin-top: 0; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border-light); }
 	.avatar-preview { width: 52px; height: 52px; border-radius: 50%; background: var(--primary); border: none; display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 17px; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }
 	.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 	.avatar-initials { }
+	.avatar-actions { display: flex; flex-direction: column; gap: 6px; }
+	.avatar-help { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 	.upload-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); cursor: pointer; transition: all 0.15s; }
 	.upload-btn:hover { border-color: var(--primary); }
 
@@ -532,10 +691,82 @@
 	.btn-cta-primary:hover { background: #45A86C; }
 	.btn-cta-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
-	.tier-display { margin-top: 16px; }
-	.tier-badge { display: inline-block; padding: 8px 20px; background: rgba(81,190,123,0.08); border: 1px solid rgba(81,190,123,0.2); border-radius: 8px; font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--primary); }
-	.upgrade-cta { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-light); }
-	.upgrade-cta p { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.6; }
+	.membership-status-card { padding: 18px 20px; }
+	.membership-status-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+	.membership-note { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); line-height: 1.5; max-width: 460px; }
+	.tier-badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; background: rgba(81,190,123,0.08); border: 1px solid rgba(81,190,123,0.2); border-radius: 999px; font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--primary); }
+	.tier-badge-free { background: var(--bg-cream); border-color: var(--border-light); color: var(--text-secondary); }
+	.tier-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+	.plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+	.plan-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 20px 16px 16px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg-card);
+		min-height: 100%;
+	}
+	.plan-card.current { border: 2px solid var(--primary); }
+	.plan-current {
+		position: absolute;
+		top: -10px;
+		left: 50%;
+		transform: translateX(-50%);
+		padding: 3px 10px;
+		border-radius: 999px;
+		background: var(--primary);
+		color: #fff;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+	.plan-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-secondary); }
+	.plan-name-academy { color: var(--primary); }
+	.plan-price { font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
+	.plan-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); line-height: 1.55; min-height: 58px; }
+	.plan-features { display: grid; gap: 7px; flex: 1; }
+	.plan-feature {
+		display: flex;
+		align-items: flex-start;
+		gap: 6px;
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--text-dark);
+		line-height: 1.45;
+	}
+	.plan-feature svg { flex-shrink: 0; color: var(--primary); margin-top: 2px; }
+	.plan-action {
+		display: block;
+		margin-top: 6px;
+		padding: 10px 14px;
+		border-radius: 8px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		text-align: center;
+		text-decoration: none;
+	}
+	.current-action {
+		background: var(--bg-cream);
+		color: var(--text-secondary);
+		border: 1px solid var(--border-light);
+	}
+	.primary-action {
+		background: var(--primary);
+		color: #fff;
+	}
+	.secondary-action {
+		background: transparent;
+		color: var(--text-dark);
+		border: 1px solid var(--border);
+	}
 
 	.toggle-row { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--bg-cream); border: 1px solid var(--border-light); border-radius: var(--radius-sm); }
 	.toggle-track { position: relative; width: 48px; height: 26px; flex-shrink: 0; cursor: pointer; border: none; background: var(--border); border-radius: 13px; transition: background 0.2s; padding: 0; }
@@ -579,6 +810,9 @@
 			margin: 0 auto;
 			padding: 0 24px 32px;
 		}
+		.plan-grid {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 
 	@media (max-width: 768px) {
@@ -590,6 +824,7 @@
 		.settings-shell-title { font-size: 20px; }
 		.profile-row { grid-template-columns: 1fr; }
 		.private-grid { grid-template-columns: 1fr; }
+		.plan-grid { grid-template-columns: 1fr; }
 		.settings-tabs { scrollbar-width: none; }
 		.settings-tabs::-webkit-scrollbar { display: none; }
 	}
