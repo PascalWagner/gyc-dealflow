@@ -249,23 +249,29 @@ export default async function handler(req, res) {
       normalizedQuery.length <= 4 &&
       /^[a-z0-9._-]+$/.test(normalizedQuery)
     ) {
-      const suffixes = 'abcdefghijklmnopqrstuvwxyz0123456789._-';
-      const expandedMatches = [];
+      const suffixes = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      const variants = suffixes.split('').map((suffix) => `${normalizedQuery}${suffix}`);
 
-      for (const suffix of suffixes) {
-        const variant = `${normalizedQuery}${suffix}`;
-        const variantResult = await searchGhlQuery(variant);
-        if (variantResult.contacts.length > 0) {
-          expandedMatches.push(...variantResult.contacts);
-        } else if (GHL_LOCATION_ID) {
-          const variantLocation = await searchGhlQuery(variant, true);
-          expandedMatches.push(...variantLocation.contacts);
-        }
+      const variantResults = await Promise.all(
+        variants.map(async (variant) => {
+          const result = await searchGhlQuery(variant);
+          return result.contacts;
+        })
+      );
 
-        if (expandedMatches.length >= 20) break;
+      let expandedMatches = dedupeContacts(variantResults.flat()).filter(matchesQuery);
+
+      if (expandedMatches.length === 0 && GHL_LOCATION_ID) {
+        const locationResults = await Promise.all(
+          variants.map(async (variant) => {
+            const result = await searchGhlQuery(variant, true);
+            return result.contacts;
+          })
+        );
+        expandedMatches = dedupeContacts(locationResults.flat()).filter(matchesQuery);
       }
 
-      contacts = dedupeContacts(expandedMatches).filter(matchesQuery).slice(0, 20);
+      contacts = expandedMatches.slice(0, 20);
       debugInfo.method4_prefix_count = contacts.length;
     }
 
