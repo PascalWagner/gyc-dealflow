@@ -31,7 +31,7 @@
 			fetchDeals();
 		}
 
-		const saved = localStorage.getItem('gyc-theme') || localStorage.getItem('gycTheme');
+		const saved = localStorage.getItem('gyc-theme');
 		if (saved === 'dark') {
 			isDark = true;
 			document.documentElement.classList.add('dark');
@@ -55,13 +55,11 @@
 		if (isDark) {
 			document.documentElement.classList.add('dark');
 			document.documentElement.classList.remove('light');
-			localStorage.setItem('gyc-theme', 'dark');
-			localStorage.setItem('gycTheme', 'dark');
+				localStorage.setItem('gyc-theme', 'dark');
 		} else {
 			document.documentElement.classList.remove('dark');
 			document.documentElement.classList.add('light');
-			localStorage.setItem('gyc-theme', 'light');
-			localStorage.setItem('gycTheme', 'light');
+				localStorage.setItem('gyc-theme', 'light');
 		}
 	}
 

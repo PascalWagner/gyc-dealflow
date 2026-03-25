@@ -373,7 +373,7 @@ function generateEmailContent(user, matchedDeals, allNewDeals, almostFullDeals =
       <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#F0F9F4;border-radius:10px;"><tr><td style="padding:16px 20px;text-align:center;">
         <div style="font-size:13px;font-weight:700;color:#141413;margin-bottom:4px;">Get better deal matches</div>
         <div style="font-size:12px;color:#607179;margin-bottom:10px;">Tell us what you're looking for and we'll send deals that fit.</div>
-        <a href="${BASE}/#buybox" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Set Up Buy Box \u2192</a>
+	        <a href="${BASE}/app/plan" style="font-weight:700;font-size:13px;color:#51BE7B;text-decoration:none;">Set Up Buy Box \u2192</a>
       </td></tr></table>
     </td></tr>` : ''}
     <!-- Academy tease for free users -->

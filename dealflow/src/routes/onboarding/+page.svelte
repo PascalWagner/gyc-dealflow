@@ -574,7 +574,7 @@
 		}
 
 		// Dark mode
-		const savedTheme = localStorage.getItem('gyc-theme') || localStorage.getItem('gycTheme');
+		const savedTheme = localStorage.getItem('gyc-theme');
 		if (savedTheme === 'dark') {
 			document.documentElement.classList.add('dark');
 		}
