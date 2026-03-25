@@ -7,9 +7,6 @@
 	let maxInvest = $state('');
 	let fullCycleMin = $state('0');
 	let sortBy = $state('deals');
-	let companies = $state([]);
-	let allAssetClasses = $state([]);
-
 	function computeStats(dealList) {
 		let irrs = [], prefs = [], mins = [], activeCount = 0;
 		dealList.forEach(d => {
@@ -25,8 +22,9 @@
 		return { avgIRR: avg(irrs), avgPref: avg(prefs), minInvestment: mins.length ? Math.min(...mins) : 0, activeDeals: activeCount };
 	}
 
-	$effect(() => {
-		if (!$deals.length) return;
+	// Use $derived instead of $effect — avoids effect_update_depth_exceeded
+	const _computed = $derived.by(() => {
+		if (!$deals.length) return { companies: [], assetClasses: [] };
 		const dealsByCompany = {};
 		$deals.forEach(d => {
 			const name = d.managementCompany;
@@ -46,7 +44,6 @@
 			};
 		});
 
-		// Merge GYC_COMPANIES if available
 		if (typeof window !== 'undefined' && window.GYC_COMPANIES) {
 			window.GYC_COMPANIES.forEach(c => {
 				if (!c.name) return;
@@ -64,11 +61,14 @@
 			});
 		}
 
-		companies = Object.values(companyMap);
+		const companyList = Object.values(companyMap);
 		const acs = new Set();
-		companies.forEach(c => c.assetClasses.forEach(ac => { if (ac) acs.add(ac); }));
-		allAssetClasses = [...acs].sort();
+		companyList.forEach(c => c.assetClasses.forEach(ac => { if (ac) acs.add(ac); }));
+		return { companies: companyList, assetClasses: [...acs].sort() };
 	});
+
+	const companies = $derived(_computed.companies);
+	const allAssetClasses = $derived(_computed.assetClasses);
 
 	const filtered = $derived.by(() => {
 		let result = companies.filter(c => {

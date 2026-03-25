@@ -34,7 +34,8 @@
 		return `Month view uses your local date in ${localTimeZone}. Eastern Time remains the canonical schedule reference.`;
 	});
 	const calendarMonths = $derived.by(() => buildCalendarMonths(events));
-	const activeCalendarMonth = $derived.by(() => calendarMonths[activeMonthIndex] || null);
+	const safeMonthIndex = $derived(calendarMonths.length === 0 ? 0 : Math.min(activeMonthIndex, calendarMonths.length - 1));
+	const activeCalendarMonth = $derived.by(() => calendarMonths[safeMonthIndex] || null);
 	const activeMonthEvents = $derived.by(() => activeCalendarMonth?.events || []);
 	const visibleUpcomingSessions = $derived.by(() => events.slice(0, 6));
 	const activeMonthSummary = $derived.by(() => {
@@ -139,15 +140,7 @@
 		loadOfficeHours();
 	});
 
-	$effect(() => {
-		if (calendarMonths.length === 0) {
-			activeMonthIndex = 0;
-			return;
-		}
-		if (activeMonthIndex > calendarMonths.length - 1) {
-			activeMonthIndex = calendarMonths.length - 1;
-		}
-	});
+	// Clamp activeMonthIndex inline in the derived that uses it (no $effect needed)
 
 	function buildCalendarMonths(items) {
 		const monthMap = new Map();
