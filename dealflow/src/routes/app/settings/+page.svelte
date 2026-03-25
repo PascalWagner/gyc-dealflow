@@ -202,6 +202,9 @@
 				full_name: fullName,
 				phone,
 				location,
+				accredited_status: accreditedStatus,
+				investable_capital: investableCapital,
+				investment_experience: investmentExperience,
 				share_activity: shareActivity,
 				avatar_url: avatarUrl
 			});
