@@ -9,6 +9,7 @@
 	let showWizard = $state(false);
 	let saving = $state(false);
 	let saveMsg = $state('');
+	let shouldOpenWizardFromLocation = false;
 
 	const isPaid = $derived($userTier !== 'free' || $isAcademy);
 
@@ -115,6 +116,13 @@
 		showWizard = true;
 	}
 
+	function shouldAutoOpenWizard() {
+		if (!browser) return false;
+		const params = new URLSearchParams(window.location.search);
+		const hash = window.location.hash.replace('#', '').toLowerCase();
+		return ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase()) || hash === 'edit' || hash === 'buybox';
+	}
+
 	function closeWizard() {
 		showWizard = false;
 		// Save progress to localStorage
@@ -217,10 +225,15 @@
 
 	onMount(async () => {
 		if (!browser) return;
+		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
 		try {
 			const stored = JSON.parse(localStorage.getItem('gycUser') || '{}');
-			if (!stored?.token) { loading = false; return; }
-			const res = await fetch('/api/buy-box?email=' + encodeURIComponent(stored.email), {
+			if (!stored?.token) {
+				loading = false;
+				if (shouldOpenWizardFromLocation) openWizard();
+				return;
+			}
+			const res = await fetch('/api/buybox?email=' + encodeURIComponent(stored.email), {
 				headers: { 'Authorization': 'Bearer ' + stored.token }
 			});
 			if (res.ok) {
@@ -240,6 +253,7 @@
 			console.warn('Failed to load plan:', e);
 		} finally {
 			loading = false;
+			if (shouldOpenWizardFromLocation && !showWizard) openWizard();
 		}
 	});
 </script>
@@ -304,8 +318,8 @@
 				{:else if wizardStep === 1}
 					<!-- Step 2: Target Amount -->
 					<div class="wiz-field">
-						<label>{getTargetLabel()}</label>
-						<input type="number" bind:value={wizardData.targetAmount} placeholder="e.g. 10000" />
+						<label for="plan-target-amount">{getTargetLabel()}</label>
+						<input id="plan-target-amount" type="number" bind:value={wizardData.targetAmount} placeholder="e.g. 10000" />
 						{#if getTargetHint()}
 							<div class="wiz-hint">{getTargetHint()}</div>
 						{/if}
@@ -488,7 +502,6 @@
 	.dash-tab:hover { color: var(--text-dark); background: rgba(0,0,0,0.04); }
 	.dash-tab.active { background: var(--primary); color: #fff; }
 
-	.loading { text-align: center; padding: 80px 20px; font-family: var(--font-ui); color: var(--text-muted); }
 	.save-toast { padding: 10px 16px; background: #F0F9F4; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; color: #059669; font-weight: 600; text-align: center; margin-bottom: 16px; }
 
 	.empty-state {

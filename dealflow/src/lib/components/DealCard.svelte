@@ -342,8 +342,8 @@
 
 	.card-hero {
 		position: relative;
-		padding: 14px 18px 8px;
-		height: 200px;
+		padding: 12px 16px 8px;
+		height: 184px;
 		box-sizing: border-box;
 		overflow: hidden;
 		display: flex;
@@ -369,8 +369,11 @@
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
-		background: rgba(255, 255, 255, 0.12);
-		color: rgba(255, 255, 255, 0.85);
+		background: rgba(0, 0, 0, 0.36);
+		color: rgba(255, 255, 255, 0.92);
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		border: 1px solid rgba(255, 255, 255, 0.12);
 	}
 
 	.badge.audit {
@@ -391,11 +394,11 @@
 	}
 
 	.hero-icon {
-		font-size: 56px;
+		font-size: 46px;
 		position: absolute;
 		right: -4px;
 		bottom: -12px;
-		opacity: 0.18;
+		opacity: 0.14;
 		filter: grayscale(1) brightness(1.6);
 		pointer-events: none;
 	}
@@ -439,13 +442,13 @@
 
 	.card-title {
 		font-family: var(--font-ui);
-		font-size: 15px;
+		font-size: 14px;
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-bottom: 2px;
 		line-height: 1.3;
 		letter-spacing: -0.2px;
-		padding: 12px 16px 0;
+		padding: 11px 15px 0;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
@@ -459,7 +462,7 @@
 		color: var(--text-muted);
 		font-weight: 500;
 		margin-bottom: 2px;
-		padding: 0 16px;
+		padding: 0 15px;
 		display: -webkit-box;
 		-webkit-line-clamp: 1;
 		-webkit-box-orient: vertical;
@@ -470,7 +473,7 @@
 		font-family: var(--font-body);
 		font-size: 11px;
 		color: var(--text-muted);
-		padding: 0 16px;
+		padding: 0 15px;
 		margin-bottom: 4px;
 		display: -webkit-box;
 		-webkit-line-clamp: 1;
@@ -483,7 +486,7 @@
 		font-size: 12px;
 		color: var(--text-secondary);
 		line-height: 1.4;
-		padding: 0 16px;
+		padding: 0 15px;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
@@ -496,11 +499,11 @@
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 0;
 		border-top: 1px solid var(--border);
-		margin-top: 10px;
+		margin-top: 8px;
 	}
 
 	.metric {
-		padding: 8px 10px;
+		padding: 7px 9px;
 		border-right: 1px solid var(--border);
 		border-bottom: 1px solid var(--border);
 	}
@@ -510,7 +513,7 @@
 
 	.metric-label {
 		font-family: var(--font-ui);
-		font-size: 9px;
+		font-size: 8px;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
@@ -519,7 +522,7 @@
 
 	.metric-value {
 		font-family: var(--font-ui);
-		font-size: 12px;
+		font-size: 11px;
 		font-weight: 700;
 		color: var(--text-dark);
 		margin-top: 2px;
@@ -530,7 +533,7 @@
 	}
 
 	.funding-bar {
-		padding: 8px 14px 10px;
+		padding: 7px 12px 9px;
 		margin-top: auto;
 	}
 
@@ -574,9 +577,9 @@
 	}
 
 	.card-footer {
-		padding: 12px 18px 16px;
+		padding: 10px 14px 12px;
 		display: flex;
-		gap: 8px;
+		gap: 6px;
 		border-top: 1px solid var(--border-light);
 		margin-top: auto;
 	}
@@ -585,9 +588,9 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		padding: 4px 14px 10px;
+		padding: 6px 12px 8px;
 		font-family: var(--font-body);
-		font-size: 12px;
+		font-size: 11px;
 		color: var(--text-secondary);
 		line-height: 1.4;
 	}
@@ -606,9 +609,9 @@
 
 	.card-btn {
 		flex: 1;
-		padding: 9px 16px;
+		padding: 8px 12px;
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 700;
 		letter-spacing: 0.5px;
 		text-transform: uppercase;
@@ -679,8 +682,8 @@
 	}
 
 	.share-btn {
-		flex: 0 0 42px;
-		padding: 9px;
+		flex: 0 0 36px;
+		padding: 8px;
 	}
 
 	@media (max-width: 1200px) {

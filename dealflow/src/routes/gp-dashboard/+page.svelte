@@ -1091,7 +1091,98 @@
 				</div>
 			</div>
 
-			<!-- 3. Competitive Analysis -->
+			<!-- 3. Investor Activity + Webinar CTA -->
+			<div class="dashboard-grid-3-2">
+				<!-- LEFT: Investor Activity -->
+				<div class="section-card">
+					<div class="section-header">
+						<div class="section-title">Investor Activity</div>
+					</div>
+					<div class="section-body">
+						<div class="analytics-grid">
+							<div class="analytics-metric">
+								<div class="analytics-metric-value">{analytics.totalSaves || 0}</div>
+								<div class="analytics-metric-label">In Review</div>
+							</div>
+							<div class="analytics-metric">
+								<div class="analytics-metric-value">{analytics.totalVetting || 0}</div>
+								<div class="analytics-metric-label">Connecting</div>
+							</div>
+							<div class="analytics-metric">
+								<div class="analytics-metric-value">{analytics.totalInvested || 0}</div>
+								<div class="analytics-metric-label">Invested</div>
+							</div>
+						</div>
+
+						{#if !hasActivity}
+							<div class="activity-empty-nudge">
+								<p>Investor activity will appear here as LPs discover your deals. Complete your action items above to increase visibility.</p>
+							</div>
+						{/if}
+
+						{#if hasActivity}
+							<div class="weekly-chart-wrap">
+								<div class="weekly-chart-title">Investor Activity Over Time</div>
+								<div class="weekly-chart-legend">
+									<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>In Review</span>
+									<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>Connecting</span>
+									<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
+								</div>
+								{#if weeklyChartData}
+									<div class="weekly-chartjs-container">
+										<canvas bind:this={weeklyChartEl}></canvas>
+									</div>
+								{:else}
+									<div class="weekly-chart-empty">No activity yet. As investors discover your deals, you'll see their engagement here.</div>
+								{/if}
+							</div>
+
+							{#if activityItems.length > 0}
+								<div class="recent-activity-list">
+									{#if analytics.highIntentCount > 0}
+										<div class="high-intent-summary">
+											{analytics.highIntentCount} high-intent LP{analytics.highIntentCount !== 1 ? 's' : ''} engaged with your deals this month
+										</div>
+									{/if}
+									{#each activityItems as item}
+										<div class="activity-card-item">
+											<span class="intent-badge {item.tierClass}">{item.tierEmoji} {item.tierLabel}</span>
+											<div class="activity-card-body">
+												<div class="activity-card-deal">{item.dealName}</div>
+												<div class="activity-card-signal">{item.signalParts.join(' \u00B7 ')}</div>
+											</div>
+											<span class="activity-card-time">{item.timeAgo}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						{/if}
+					</div>
+				</div>
+
+				<!-- RIGHT: Webinar CTA -->
+				<div class="section-card webinar-cta-section">
+					<div class="section-header">
+						<div class="section-title">Get In Front of LPs</div>
+					</div>
+					<div class="section-body">
+						<div class="webinar-cta-card">
+							<div class="webinar-cta-title">Pitch to Our Investor Network</div>
+							<div class="webinar-cta-stat">{webinarCtaStat}</div>
+							<div class="webinar-cta-desc">{webinarCtaDesc}</div>
+							<ul class="webinar-cta-features">
+								<li>30-minute dedicated pitch slot</li>
+								<li>Qualified accredited investor audience</li>
+								<li>Recorded &amp; shared with all platform members</li>
+								<li>Q&amp;A session with interested LPs</li>
+							</ul>
+							<a href="/book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $1,000 &rarr;</a>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 4. Competitive Analysis -->
 			<div class="section-card">
 				<div class="section-header">
 					<div class="section-title">Competitive Analysis</div>
@@ -1200,7 +1291,7 @@
 				</div>
 			</div>
 
-			<!-- 4. Market Intelligence -->
+			<!-- 5. Market Intelligence -->
 			<div class="section-card">
 				<div class="section-header">
 					<div class="section-title">Market Intelligence</div>
@@ -1243,254 +1334,10 @@
 								</div>
 							{/each}
 						</div>
-						{#if investorInsights?.topAssetClasses?.length > 0}
-							{@const topAssetMaxValue = maxPct(investorInsights.topAssetClasses)}
-							<div class="market-intel-insights">
-								<div class="insights-sub-title">Most Popular Asset Classes</div>
-								<div class="insights-bar-chart">
-									{#each investorInsights.topAssetClasses as item}
-										<div class="insights-bar-row">
-											<span class="insights-bar-label">{item.name}</span>
-											<div class="insights-bar-track">
-												<div
-													class="insights-bar-fill"
-													class:gp-highlight={item.isGP}
-													style={`width:${widthFromPct(item.pct, topAssetMaxValue)}%;`}
-												>
-													{#if item.isGP}
-														<span class="insights-bar-gp-tag">Your Deals</span>
-													{/if}
-												</div>
-											</div>
-											<span class="insights-bar-pct">{item.pct}%</span>
-										</div>
-									{/each}
-								</div>
-
-								{#if (investorInsights.preferredDistributions?.length > 0) || (investorInsights.topGoals?.length > 1)}
-									<div class="insights-two-col">
-										{#if investorInsights.preferredDistributions?.length > 0}
-											<div>
-												<div class="insights-sub-title">Distribution Preferences</div>
-												<div class="goals-donut-wrap">
-													<div class="goals-donut" style={`background:${buildDonutGradient(investorInsights.preferredDistributions, DIST_COLORS)};`}>
-														<div class="goals-donut-center">
-															<div class="goals-donut-center-value" style="font-size:16px;">{investorInsights.preferredDistributions[0].pct}%</div>
-															<div class="goals-donut-center-label">{investorInsights.preferredDistributions[0].name}</div>
-														</div>
-													</div>
-													<div class="goals-legend">
-														{#each investorInsights.preferredDistributions as item, index}
-															<div class="goals-legend-item">
-																<span class="goals-legend-swatch" style={`background:${DIST_COLORS[index % DIST_COLORS.length]};`}></span>
-																{item.name}
-																<span class="goals-legend-pct">{item.pct}%</span>
-															</div>
-														{/each}
-													</div>
-												</div>
-											</div>
-										{/if}
-
-										{#if investorInsights.topGoals?.length > 1}
-											<div>
-												<div class="insights-sub-title">Investor Goals</div>
-												<div class="goals-donut-wrap">
-													<div class="goals-donut" style={`background:${buildDonutGradient(investorInsights.topGoals, DIST_COLORS)};`}>
-														<div class="goals-donut-center">
-															<div class="goals-donut-center-value">{investorInsights.totalInvestors || 0}</div>
-															<div class="goals-donut-center-label">Investors</div>
-														</div>
-													</div>
-													<div class="goals-legend">
-														{#each investorInsights.topGoals as item, index}
-															<div class="goals-legend-item">
-																<span class="goals-legend-swatch" style={`background:${DIST_COLORS[index % DIST_COLORS.length]};`}></span>
-																{item.name}
-																<span class="goals-legend-pct">{item.pct}%</span>
-															</div>
-														{/each}
-													</div>
-												</div>
-											</div>
-										{/if}
-									</div>
-								{/if}
-
-								<div class="insights-two-col">
-									<div>
-										<div class="insights-sub-title">Max Check Size LPs Will Write</div>
-										{#if (investorInsights.checkSizeDistribution || []).length > 0}
-											<div class="check-size-chart">
-												{#each investorInsights.checkSizeDistribution || [] as item}
-													<div class="check-size-bar-col">
-														<span class="check-size-bar-pct">{item.pct > 0 ? `${item.pct}%` : ''}</span>
-														<div
-															class="check-size-bar"
-															class:is-peak={item.pct === maxPct(investorInsights.checkSizeDistribution || []) && item.pct > 0}
-															style={`height:${checkSizeBarHeight(item.pct, maxPct(investorInsights.checkSizeDistribution || []))}px;`}
-														></div>
-														<span class="check-size-bar-label">{item.label}</span>
-													</div>
-												{/each}
-											</div>
-										{:else}
-											<div class="insights-empty">Not enough data yet</div>
-										{/if}
-									</div>
-
-									<div>
-										<div class="insights-sub-title">Deal Structure Preference</div>
-										{#if investorInsights.topDealTypes?.length > 0}
-											<div class="goals-donut-wrap">
-												<div class="goals-donut" style={`background:${buildDonutGradient(investorInsights.topDealTypes, DEAL_TYPE_COLORS)};`}>
-													<div class="goals-donut-center">
-														<div class="goals-donut-center-value" style="font-size:16px;">{investorInsights.topDealTypes[0].pct}%</div>
-														<div class="goals-donut-center-label">{investorInsights.topDealTypes[0].name}</div>
-													</div>
-												</div>
-												<div class="goals-legend">
-													{#each investorInsights.topDealTypes as item, index}
-														<div class="goals-legend-item">
-															<span class="goals-legend-swatch" style={`background:${DEAL_TYPE_COLORS[index % DEAL_TYPE_COLORS.length]};`}></span>
-															{item.name}
-															<span class="goals-legend-pct">{item.pct}%</span>
-														</div>
-													{/each}
-												</div>
-											</div>
-										{:else}
-											<div class="insights-empty">Not enough data yet</div>
-										{/if}
-									</div>
-								</div>
-
-								{#if (investorInsights.operatorPreferences?.length > 0) || (investorInsights.operatorSizePrefs?.length > 0)}
-									<div class="insights-two-col">
-										{#if investorInsights.operatorPreferences?.length > 0}
-											<div>
-												<div class="insights-sub-title">Preferred Operator Type</div>
-												<div class="insights-bar-chart">
-													{#each investorInsights.operatorPreferences as item}
-														<div class="insights-bar-row">
-															<span class="insights-bar-label">{item.name}</span>
-															<div class="insights-bar-track">
-																<div class="insights-bar-fill" style={`width:${widthFromPct(item.pct, maxPct(investorInsights.operatorPreferences))}%;`}></div>
-															</div>
-															<span class="insights-bar-pct">{item.pct}%</span>
-														</div>
-													{/each}
-												</div>
-											</div>
-										{/if}
-
-										{#if investorInsights.operatorSizePrefs?.length > 0}
-											<div>
-												<div class="insights-sub-title">Preferred Operator Size</div>
-												<div class="insights-bar-chart">
-													{#each investorInsights.operatorSizePrefs as item}
-														<div class="insights-bar-row">
-															<span class="insights-bar-label">{item.name}</span>
-															<div class="insights-bar-track">
-																<div class="insights-bar-fill" style={`width:${widthFromPct(item.pct, maxPct(investorInsights.operatorSizePrefs))}%;`}></div>
-															</div>
-															<span class="insights-bar-pct">{item.pct}%</span>
-														</div>
-													{/each}
-												</div>
-											</div>
-										{/if}
-									</div>
-								{/if}
-
-								<div class="insights-footer">Based on {investorInsights.totalInvestors || 0} investor profiles</div>
-							</div>
-						{:else if investorInsights?.totalInvestors}
+						{#if investorInsights?.totalInvestors}
 							<div class="mi-footer">Based on {investorInsights.totalInvestors} investor profiles</div>
 						{/if}
 					{/if}
-				</div>
-			</div>
-
-			<!-- 5. Investor Activity + Webinar CTA -->
-			<div class="dashboard-grid-3-2">
-				<!-- LEFT: Investor Activity -->
-				<div class="section-card">
-					<div class="section-header">
-						<div class="section-title">Investor Activity</div>
-					</div>
-					<div class="section-body">
-						<div class="analytics-grid">
-							<div class="analytics-metric">
-								<div class="analytics-metric-value">{analytics.totalSaves || 0}</div>
-								<div class="analytics-metric-label">In Review</div>
-							</div>
-							<div class="analytics-metric">
-								<div class="analytics-metric-value">{analytics.totalVetting || 0}</div>
-								<div class="analytics-metric-label">Connecting</div>
-							</div>
-							<div class="analytics-metric">
-								<div class="analytics-metric-value">{analytics.totalInvested || 0}</div>
-								<div class="analytics-metric-label">Invested</div>
-							</div>
-						</div>
-
-						{#if !hasActivity}
-							<div class="activity-empty-nudge">
-								<p>Investor activity will appear here as LPs discover your deals. Complete your action items above to increase visibility.</p>
-							</div>
-						{/if}
-
-						<div class="weekly-chart-wrap">
-							<div class="weekly-chart-title">Investor Activity Over Time</div>
-							<div class="weekly-chart-legend">
-								<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#27ae60;"></span>In Review</span>
-								<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#2563eb;"></span>Connecting</span>
-								<span class="weekly-chart-legend-item"><span class="weekly-chart-legend-swatch" style="background:#1a2332;"></span>Invested</span>
-							</div>
-							{#if hasActivity && weeklyChartData}
-								<div class="weekly-chartjs-container">
-									<canvas bind:this={weeklyChartEl}></canvas>
-								</div>
-							{:else}
-								<div class="weekly-chart-empty">No activity yet. As investors discover your deals, you'll see their engagement here.</div>
-							{/if}
-						</div>
-
-						<div class="recent-activity-hidden">
-							{#each activityItems as item}
-								<div class="activity-card-item">
-									<span class="intent-badge {item.tierClass}">{item.tierEmoji} {item.tierLabel}</span>
-									<div class="activity-card-body">
-										<div class="activity-card-deal">{item.dealName}</div>
-										<div class="activity-card-signal">{item.signalParts.join(' \u00B7 ')}</div>
-									</div>
-									<span class="activity-card-time">{item.timeAgo}</span>
-								</div>
-							{/each}
-						</div>
-					</div>
-				</div>
-
-				<!-- RIGHT: Webinar CTA -->
-				<div class="section-card webinar-cta-section">
-					<div class="section-header">
-						<div class="section-title">Get In Front of LPs</div>
-					</div>
-					<div class="section-body">
-						<div class="webinar-cta-card">
-							<div class="webinar-cta-title">&#127919; Pitch to Our Investor Network</div>
-							<div class="webinar-cta-stat">{webinarCtaStat}</div>
-							<div class="webinar-cta-desc">{webinarCtaDesc}</div>
-							<ul class="webinar-cta-features">
-								<li>30-minute dedicated pitch slot</li>
-								<li>Qualified accredited investor audience</li>
-								<li>Recorded &amp; shared with all platform members</li>
-								<li>Q&amp;A session with interested LPs</li>
-							</ul>
-							<a href="/book-pitch" class="webinar-cta-btn">Book Your Pitch &mdash; $1,000 &rarr;</a>
-						</div>
-					</div>
 				</div>
 			</div>
 
@@ -1670,9 +1517,9 @@
 	/* ====== GP HEADER ====== */
 	.gp-header {
 		background: linear-gradient(145deg, var(--teal-midnight, #0A1E21) 0%, var(--teal-deep, #1F5159) 100%);
-		border-radius: var(--radius, 12px);
-		padding: 36px 40px;
-		margin-bottom: 24px;
+		border-radius: 10px;
+		padding: 28px 32px;
+		margin-bottom: 20px;
 		position: relative;
 		overflow: hidden;
 	}
@@ -1680,21 +1527,21 @@
 		content: '';
 		position: absolute;
 		top: -60%; right: -10%;
-		width: 300px; height: 300px;
-		background: radial-gradient(circle, rgba(81,190,123,0.1) 0%, transparent 70%);
+		width: 220px; height: 220px;
+		background: radial-gradient(circle, rgba(81,190,123,0.08) 0%, transparent 70%);
 		border-radius: 50%;
 		pointer-events: none;
 	}
 	.gp-header-inner {
 		display: flex;
 		align-items: flex-start;
-		gap: 28px;
+		gap: 22px;
 		position: relative;
 		z-index: 1;
 	}
 	.gp-header-avatar {
-		width: 80px; height: 80px;
-		border-radius: var(--radius, 12px);
+		width: 68px; height: 68px;
+		border-radius: 10px;
 		background: var(--primary, #51BE7B);
 		display: flex;
 		align-items: center;
@@ -1702,11 +1549,11 @@
 		font-family: var(--font-ui);
 		font-weight: 800;
 		color: #fff;
-		font-size: 24px;
+		font-size: 22px;
 		flex-shrink: 0;
 		letter-spacing: -0.5px;
 		overflow: hidden;
-		border: 3px solid rgba(255,255,255,0.15);
+		border: 2px solid rgba(255,255,255,0.15);
 	}
 	.gp-header-avatar :global(img) {
 		width: 100%; height: 100%;
@@ -1715,7 +1562,7 @@
 	.gp-header-info { flex: 1; }
 	.gp-header-company {
 		font-family: var(--font-headline);
-		font-size: 32px;
+		font-size: 28px;
 		color: #fff;
 		line-height: 1.2;
 		letter-spacing: -0.5px;
@@ -1731,19 +1578,19 @@
 	.gp-header-meta :global(strong) { color: rgba(255,255,255,0.85); font-weight: 600; }
 	.gp-header-subtitle {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 12px;
 		font-weight: 400;
 		color: rgba(255,255,255,0.4);
-		margin-bottom: 16px;
+		margin-bottom: 12px;
 	}
 	.gp-header-tags { display: flex; gap: 8px; flex-wrap: wrap; }
 	.gp-tag {
 		display: inline-flex;
 		align-items: center;
-		padding: 4px 12px;
+		padding: 4px 10px;
 		border-radius: 20px;
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 10px;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
@@ -1817,16 +1664,16 @@
 	.section-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-radius: var(--radius, 12px);
-		box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04));
-		margin-bottom: 24px;
+		border-radius: 10px;
+		box-shadow: none;
+		margin-bottom: 20px;
 		overflow: hidden;
 	}
 	.section-header {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 20px 28px;
+		padding: 16px 20px;
 		border-bottom: 1px solid var(--border-light);
 	}
 	.section-title {
@@ -1846,7 +1693,7 @@
 		padding: 2px 10px;
 		border-radius: 10px;
 	}
-	.section-body { padding: 24px 28px; }
+	.section-body { padding: 20px; }
 
 	/* ====== ACTION ITEMS ====== */
 	.action-item {
@@ -2210,14 +2057,14 @@
 	.analytics-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 16px;
-		margin-bottom: 20px;
+		gap: 12px;
+		margin-bottom: 18px;
 	}
 	.analytics-metric {
 		background: var(--bg-card);
 		border: 1px solid var(--border-light);
 		border-radius: var(--radius-sm, 8px);
-		padding: 18px 16px;
+		padding: 16px 14px;
 		text-align: center;
 	}
 	.analytics-metric-value {
@@ -2294,7 +2141,7 @@
 	/* ====== WEEKLY CHART ====== */
 	.weekly-chartjs-container { height: 180px; position: relative; }
 	.weekly-chart-wrap {
-		margin: 24px 0 20px;
+		margin: 20px 0 16px;
 	}
 	.weekly-chart-title {
 		font-family: var(--font-ui);
@@ -2418,24 +2265,24 @@
 
 	/* ====== WEBINAR CTA CARD ====== */
 	.webinar-cta-card {
-		margin-top: 28px;
-		margin-bottom: 28px;
-		padding: 28px;
-		background: linear-gradient(135deg, #f0faf4 0%, #e8f4fd 100%);
-		border: 1px solid #c3e6d1;
-		border-left: 4px solid var(--primary);
-		border-radius: var(--radius, 12px);
+		margin-top: 0;
+		margin-bottom: 0;
+		padding: 20px;
+		background: linear-gradient(180deg, #f8fbf9 0%, #f2f7f4 100%);
+		border: 1px solid var(--border-light);
+		border-left: 3px solid var(--primary);
+		border-radius: 10px;
 		position: relative;
 		overflow: hidden;
 	}
 	.webinar-cta-card::before {
 		content: '';
 		position: absolute;
-		top: -40px;
-		right: -40px;
-		width: 120px;
-		height: 120px;
-		background: rgba(81, 190, 123, 0.06);
+		top: -32px;
+		right: -32px;
+		width: 96px;
+		height: 96px;
+		background: rgba(81, 190, 123, 0.04);
 		border-radius: 50%;
 	}
 	.webinar-cta-title {
@@ -2454,7 +2301,7 @@
 	}
 	.webinar-cta-desc {
 		font-family: var(--font-body);
-		font-size: 14px;
+		font-size: 13px;
 		color: var(--text-secondary);
 		line-height: 1.6;
 		margin-bottom: 16px;
@@ -2466,7 +2313,7 @@
 	}
 	.webinar-cta-features li {
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 12px;
 		font-weight: 500;
 		color: var(--text-dark);
 		padding: 4px 0;
@@ -2500,14 +2347,10 @@
 
 	/* Webinar CTA as standalone section-card */
 	.webinar-cta-section .section-header {
-		background: linear-gradient(135deg, #f0faf4 0%, #e8f4fd 100%);
+		background: transparent;
 	}
 	.webinar-cta-section .webinar-cta-card {
 		margin: 0;
-		border: none;
-		border-left: none;
-		border-radius: 0;
-		background: transparent;
 	}
 	.webinar-cta-section .webinar-cta-btn {
 		display: flex;
@@ -2621,12 +2464,6 @@
 		color: var(--text-muted);
 		text-align: center;
 	}
-	.market-intel-insights {
-		margin-top: 28px;
-		padding-top: 20px;
-		border-top: 1px solid var(--border-light);
-	}
-
 	/* ====== INVESTOR INSIGHTS (What Our Investors Want) ====== */
 	.insights-bar-chart {
 		margin-bottom: 20px;
@@ -2876,10 +2713,19 @@
 		flex-shrink: 0;
 		white-space: nowrap;
 	}
-	.recent-activity-hidden {
-		display: none;
+	.recent-activity-list {
+		margin-top: 16px;
 	}
-
+	.high-intent-summary {
+		padding: 10px 12px;
+		margin-bottom: 10px;
+		border-radius: 8px;
+		background: rgba(81,190,123,0.08);
+		color: var(--primary);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+	}
 	/* ====== COMPETITIVE ANALYSIS ====== */
 	.comp-deal-section {
 		margin-bottom: 28px;
@@ -3277,7 +3123,7 @@
 		border-color: var(--border);
 	}
 	:global(html.dark) .webinar-cta-section .section-header {
-		background: linear-gradient(135deg, #0D2E1A 0%, #1A2332 100%);
+		background: transparent;
 	}
 	:global(html.dark) .comp-table th.col-gp {
 		background: var(--green-bg);

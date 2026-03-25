@@ -19,7 +19,13 @@
 			onclick={() => switchTab(stage)}
 		>
 			{STAGE_META[stage].label}
+			{#if (counts[stage] || 0) > 0}
+				<span class="tab-count">{counts[stage]}</span>
+			{/if}
 		</button>
+		{#if stage !== PIPELINE_STAGES[PIPELINE_STAGES.length - 1]}
+			<span class="tab-arrow">›</span>
+		{/if}
 	{/each}
 
 	<span class="tab-divider"></span>
@@ -74,7 +80,7 @@
 		gap: 4px;
 		background: var(--bg-card);
 		border-radius: 8px;
-		padding: 3px;
+		padding: 3px 4px;
 		border: 1px solid var(--border);
 		max-width: 100%;
 		overflow-x: auto;
@@ -84,7 +90,7 @@
 	.pipeline-tabs::-webkit-scrollbar { display: none; }
 
 	.pipeline-tab {
-		padding: 6px 12px;
+		padding: 6px 11px;
 		font-family: var(--font-ui);
 		font-size: 11px;
 		font-weight: 600;
@@ -99,6 +105,7 @@
 		white-space: nowrap;
 		display: inline-flex;
 		align-items: center;
+		gap: 4px;
 		flex-shrink: 0;
 	}
 
@@ -112,6 +119,22 @@
 		background: var(--border);
 		margin: 0 4px;
 		flex-shrink: 0;
+	}
+
+	.tab-arrow {
+		color: var(--text-muted);
+		font-size: 10px;
+		padding: 0 2px;
+		opacity: 0.4;
+		flex-shrink: 0;
+	}
+
+	.tab-count {
+		background: rgba(255,255,255,0.22);
+		padding: 1px 6px;
+		border-radius: 10px;
+		font-size: 10px;
+		line-height: 1.2;
 	}
 
 	/* Mobile pills */

@@ -14,6 +14,8 @@
 	let currentTab = $state('browse');
 	let viewMode = $state('grid'); // grid | list | map
 	let isMobile = $state(false);
+	let buyBox = $state(null);
+	let filterAnchor = $state(null);
 
 	// Daily deal limit for free users
 	let dailyDealCount = $state(0);
@@ -70,6 +72,91 @@
 	let showArchived = $state(false);
 	let buyBoxApplied = $state(false);
 
+	const BUY_BOX_DEAL_TYPES = new Set(['fund', 'syndication', 'reit', '1031 exchange', 'joint venture', 'note/debt', 'other']);
+
+	function normalizeMatchValue(value) {
+		return String(value || '').trim().toLowerCase();
+	}
+
+	function getBuyBoxCheckSize(inputBuyBox) {
+		const directCheckSize = Number(inputBuyBox?.checkSize);
+		if (Number.isFinite(directCheckSize) && directCheckSize > 0) return directCheckSize;
+
+		const investableCapital = String(inputBuyBox?.investableCapital || inputBuyBox?._capitalRange || '').trim();
+		if (!investableCapital.includes('-')) return 0;
+
+		const rangeParts = investableCapital
+			.split('-')
+			.map((part) => parseInt(part, 10))
+			.filter(Number.isFinite);
+
+		return rangeParts[rangeParts.length - 1] || 0;
+	}
+
+	function getBuyBoxSelections(inputBuyBox) {
+		const combinedSelections = [
+			...(Array.isArray(inputBuyBox?.strategies) ? inputBuyBox.strategies : []),
+			...(Array.isArray(inputBuyBox?.dealTypes) ? inputBuyBox.dealTypes : [])
+		]
+			.map(normalizeMatchValue)
+			.filter(Boolean);
+
+		const dealTypes = combinedSelections.filter((value) => BUY_BOX_DEAL_TYPES.has(value));
+		const strategies = combinedSelections.filter((value) => !BUY_BOX_DEAL_TYPES.has(value));
+
+		return { dealTypes, strategies };
+	}
+
+	function applyBuyBoxFromLocation() {
+		if (!browser) return;
+
+		const params = new URLSearchParams(window.location.search);
+		const hash = window.location.hash.replace('#', '').toLowerCase();
+		const wantsBuyBox = ['1', 'true', 'yes'].includes((params.get('buybox') || '').toLowerCase()) || hash === 'buybox';
+
+		if (!wantsBuyBox) return;
+
+		buyBoxApplied = true;
+
+		if (hash === 'buybox') {
+			params.set('buybox', '1');
+			const search = params.toString();
+			window.history.replaceState({}, '', `${window.location.pathname}${search ? `?${search}` : ''}`);
+		}
+
+		requestAnimationFrame(() => {
+			filterAnchor?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		});
+	}
+
+	async function loadBuyBox() {
+		if (!browser) return;
+
+		try {
+			const storedBuyBox = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+			if (storedBuyBox && Object.keys(storedBuyBox).length > 0) {
+				buyBox = storedBuyBox;
+			}
+		} catch {}
+
+		try {
+			const storedUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+			if (!storedUser?.token || !storedUser?.email) return;
+
+			const res = await fetch('/api/buybox?email=' + encodeURIComponent(storedUser.email), {
+				headers: { 'Authorization': 'Bearer ' + storedUser.token }
+			});
+
+			if (!res.ok) return;
+
+			const data = await res.json();
+			const nextBuyBox = data?.buyBox || data;
+			if (nextBuyBox && Object.keys(nextBuyBox).length > 0) {
+				buyBox = nextBuyBox;
+			}
+		} catch {}
+	}
+
 	// Whether any filter is active (for empty state messaging)
 		const hasActiveFilters = $derived(
 			!!search || !!assetClass || !!dealType || !!strategy || !!status || !!maxInvest || !!maxLockup || !!distributions || !!minIRR || sortBy !== 'newest' || showArchived || buyBoxApplied
@@ -117,6 +204,74 @@
 			if (minIRR) result = result.filter(d => d.targetIRR && d.targetIRR >= parseFloat(minIRR) / 100);
 			if (!showArchived) result = result.filter(d => !d.archived);
 
+			if (buyBoxApplied && buyBox) {
+				const assetPreferences = (Array.isArray(buyBox.assetClasses) ? buyBox.assetClasses : [])
+					.map(normalizeMatchValue)
+					.filter(Boolean);
+				const buyBoxCheckSize = getBuyBoxCheckSize(buyBox);
+				const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
+				const buyBoxDistribution = normalizeMatchValue(buyBox.distributions);
+				const buyBoxMinIrr = Number(buyBox.minIRR || 0);
+				const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
+
+				if (assetPreferences.length) {
+					result = result.filter((deal) => {
+						const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+							.map(normalizeMatchValue)
+							.filter(Boolean);
+						return assetPreferences.some((assetClassPreference) => dealAssetClasses.includes(assetClassPreference));
+					});
+				}
+
+				if (buyBoxStrategies.length || buyBoxDealTypes.length) {
+					result = result.filter((deal) => {
+						const dealStrategy = normalizeMatchValue(deal.strategy);
+						const dealType = normalizeMatchValue(deal.dealType);
+						const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+							.map(normalizeMatchValue)
+							.filter(Boolean);
+						const strategyMatch = buyBoxStrategies.length
+							? buyBoxStrategies.some((preference) => dealStrategy === preference || dealAssetClasses.includes(preference))
+							: false;
+						const dealTypeMatch = buyBoxDealTypes.length ? buyBoxDealTypes.includes(dealType) : false;
+
+						if (buyBoxStrategies.length && buyBoxDealTypes.length) return strategyMatch || dealTypeMatch;
+						return buyBoxStrategies.length ? strategyMatch : dealTypeMatch;
+					});
+				}
+
+				if (buyBoxCheckSize > 0) {
+					result = result.filter((deal) => {
+						const dealMinimum = Number(deal.investmentMinimum || deal.minimumInvestment || 0);
+						return dealMinimum > 0 ? dealMinimum <= buyBoxCheckSize : true;
+					});
+				}
+
+				if (buyBoxMaxLockup > 0) {
+					result = result.filter((deal) => {
+						const holdPeriod = parseFloat(deal.holdPeriod);
+						return Number.isFinite(holdPeriod) ? holdPeriod <= buyBoxMaxLockup : true;
+					});
+				}
+
+				if (buyBoxMinIrr > 0) {
+					const normalizedMinIrr = buyBoxMinIrr <= 1 ? buyBoxMinIrr * 100 : buyBoxMinIrr;
+					result = result.filter((deal) => {
+						const dealTargetIrr = Number(deal.targetIRR || 0);
+						if (!dealTargetIrr) return false;
+						const normalizedDealIrr = dealTargetIrr <= 1 ? dealTargetIrr * 100 : dealTargetIrr;
+						return normalizedDealIrr >= normalizedMinIrr;
+					});
+				}
+
+				if (buyBoxDistribution) {
+					result = result.filter((deal) => {
+						const dealDistribution = normalizeMatchValue(deal.distributions || deal.distributionFrequency);
+						return dealDistribution ? dealDistribution === buyBoxDistribution : true;
+					});
+				}
+			}
+
 			// Sort
 			if (sortBy === 'newest') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
 			else if (sortBy === 'best_match') result = [...result].sort((a, b) => new Date(b.addedDate || b.createdTime || 0) - new Date(a.addedDate || a.createdTime || 0));
@@ -153,6 +308,8 @@
 
 	onMount(() => {
 		fetchDeals();
+		loadBuyBox();
+		applyBuyBoxFromLocation();
 		loadDailyCount();
 		updateResetTimer();
 		if (browser) {
@@ -191,6 +348,7 @@
 	</div>
 
 	<!-- Filter Bar -->
+	<div class="deals-filters" bind:this={filterAnchor}>
 		<FilterBar
 			{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
 			{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
@@ -215,6 +373,7 @@
 		onclear={clearFilters}
 		ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
 	/>
+	</div>
 
 	{#if !(isMobile && currentTab === 'browse')}
 		<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
@@ -324,19 +483,20 @@
 
 <style>
 	.deals-page {
-		padding: 0 32px 48px;
+		padding: 0 28px 40px;
 	}
 
 	.deals-header {
-		padding: 18px 0 14px;
+		padding: 14px 0 10px;
 	}
 
 	.header-row {
 		display: flex;
-		align-items: center;
-		gap: 14px;
+		align-items: flex-end;
+		gap: 16px;
 		width: 100%;
 		min-width: 0;
+		flex-wrap: wrap;
 	}
 
 	.deals-title {
@@ -352,7 +512,11 @@
 
 	:global(.pipeline-tabs.desktop-only) {
 		min-width: 0;
-		flex: 0 1 auto;
+		flex: 1 1 520px;
+	}
+
+	.deals-filters {
+		scroll-margin-top: 24px;
 	}
 
 	.view-toggle {
@@ -382,11 +546,11 @@
 	.view-btn.active { background: var(--primary); color: #fff; }
 
 	.stage-banner {
-		padding: 14px 20px;
-		margin: 16px 0;
+		padding: 12px 16px;
+		margin: 12px 0;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
+		border-radius: 10px;
 		border-left: 3px solid var(--primary);
 	}
 
@@ -412,11 +576,11 @@
 	}
 
 	.daily-views {
-		margin-bottom: 16px;
-		padding: 10px 16px;
+		margin-bottom: 14px;
+		padding: 9px 14px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
+		border-radius: 10px;
 		font-family: var(--font-ui);
 	}
 
@@ -456,17 +620,17 @@
 	.deals-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
-		gap: 20px;
+		gap: 18px;
 	}
 
 	.loading-state { padding: 20px 0; }
-	.skeleton-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+	.skeleton-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
 	.skeleton-card {
 		background: var(--bg-card);
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 20px;
+		border-radius: 10px;
+		padding: 18px;
 		box-shadow: var(--shadow-card);
 	}
 
@@ -558,17 +722,13 @@
 
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.deals-page {
-			padding: 0 24px 40px;
-		}
-
-		.header-row {
-			flex-wrap: wrap;
+			padding: 0 22px 36px;
 		}
 
 		.deals-grid,
 		.skeleton-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 18px;
+			gap: 16px;
 		}
 	}
 

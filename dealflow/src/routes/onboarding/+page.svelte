@@ -163,6 +163,11 @@
 
 	let baselineInputValue = $state('$0');
 
+	function lpDealsRedirect() {
+		const tier = ($user?.tier || 'free').toLowerCase();
+		return tier !== 'free' ? '/app/deals?buybox=1' : '/app/deals';
+	}
+
 	function selectBaselinePreset(val) {
 		baselineIncome = val;
 		baselineInputValue = fmtDollar(val);
@@ -230,8 +235,7 @@
 		Object.assign(existingBB, { goal: lpGoal, _branch: lpGoal, lpDealsCount: lpDealsCount || 0, baselineIncome });
 		localStorage.setItem('gycBuyBoxWizard', JSON.stringify(existingBB));
 
-		const tier = ($user?.tier || 'free').toLowerCase();
-		goto(tier !== 'free' ? '/app/deals#buybox' : '/app/deals');
+		goto(lpDealsRedirect());
 	}
 
 	// ===== GP: Company Search =====
@@ -570,7 +574,8 @@
 		}
 
 		// Dark mode
-		if (localStorage.getItem('gycTheme') === 'dark') {
+		const savedTheme = localStorage.getItem('gyc-theme') || localStorage.getItem('gycTheme');
+		if (savedTheme === 'dark') {
 			document.documentElement.classList.add('dark');
 		}
 
@@ -610,7 +615,7 @@
 			const step = data.profile?.onboardingStep || 0;
 
 			if (data.profile?.onboardingComplete) { goto('/gp-dashboard'); return; }
-			if (data.profile?.onboardingRole === 'lp') { goto('/app/deals#buybox'); return; }
+			if (data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
 			if (data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 
 			// DB steps -> UI steps

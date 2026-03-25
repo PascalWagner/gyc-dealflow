@@ -23,7 +23,7 @@
 		isAdmin = false
 	} = $props();
 
-	let filterPanelOpen = $state(true);
+	let filterPanelOpen = $state(false);
 
 	const activeFilterCount = $derived(
 		[assetClass, dealType, strategy, status, maxInvest, maxLockup, distributions, minIRR].filter(Boolean).length
@@ -188,8 +188,8 @@
 			Apply My Plan
 		</button>
 
-		<a class="buybox-update-btn" href="/app/plan">
-			Update Plan?
+		<a class="buybox-update-btn" href="/app/plan?edit=1">
+			Update Plan
 		</a>
 
 		<button
@@ -269,15 +269,15 @@
 <style>
 	.filter-shell {
 		border-bottom: 1px solid var(--border-light);
-		background: var(--bg-cream);
-		margin-bottom: 12px;
+		background: transparent;
+		margin-bottom: 10px;
 	}
 
 	.filter-bar {
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		padding: 16px 0 14px;
+		padding: 14px 0 12px;
 		flex-wrap: wrap;
 	}
 
@@ -307,9 +307,9 @@
 	.buybox-update-btn {
 		display: inline-flex;
 		align-items: center;
-		padding: 6px 14px;
+		padding: 6px 12px;
 		border: 1px solid var(--green, var(--primary));
-		border-radius: var(--radius-sm);
+		border-radius: 999px;
 		background: transparent;
 		color: var(--green, var(--primary));
 		font-family: var(--font-ui);
@@ -343,7 +343,7 @@
 	}
 	.filters-toggle:hover { border-color: var(--primary); color: var(--primary); }
 	.filters-toggle.active {
-		background: rgba(81, 190, 123, 0.08);
+		background: var(--bg-card);
 		border-color: var(--primary);
 		color: var(--primary);
 	}
@@ -416,11 +416,10 @@
 	}
 
 	.filter-panel {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 14px 16px 16px;
-		margin: 0 0 18px;
+		background: transparent;
+		border-top: 1px solid var(--border-light);
+		padding: 12px 0 16px;
+		margin: 0 0 16px;
 	}
 
 	.filter-panel-grid {
