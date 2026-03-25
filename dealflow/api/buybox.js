@@ -73,6 +73,58 @@ for (const [wiz, col] of Object.entries(WIZARD_TO_COLUMN)) {
   COLUMN_TO_WIZARD[col] = wiz;
 }
 
+const ARRAY_COLUMNS = new Set(['asset_classes', 'strategies', 'deal_types']);
+
+function decodeNestedJson(value) {
+  let current = value;
+  for (let i = 0; i < 6; i += 1) {
+    if (typeof current !== 'string') break;
+    const trimmed = current.trim();
+    if (!trimmed) return '';
+    if (!['[', '{', '"'].includes(trimmed[0])) break;
+    try {
+      current = JSON.parse(trimmed);
+    } catch {
+      break;
+    }
+  }
+  return current;
+}
+
+function flattenStrings(value) {
+  if (Array.isArray(value)) {
+    return value.flatMap(flattenStrings);
+  }
+  if (value === null || value === undefined) return [];
+  const decoded = decodeNestedJson(value);
+  if (decoded !== value) {
+    return flattenStrings(decoded);
+  }
+  if (typeof decoded === 'string') {
+    return decoded
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  return [String(decoded).trim()].filter(Boolean);
+}
+
+function normalizeWizardValue(column, value) {
+  const decoded = decodeNestedJson(value);
+
+  if (ARRAY_COLUMNS.has(column)) {
+    return [...new Set(flattenStrings(decoded))];
+  }
+
+  if (column === 'accreditation') {
+    const flattened = [...new Set(flattenStrings(decoded))];
+    if (flattened.length === 0) return '';
+    return flattened.length === 1 ? flattened[0] : flattened;
+  }
+
+  return decoded;
+}
+
 async function syncToGhl(email, buyBoxRow) {
   try {
     const resp = await ghlFetch(
@@ -142,7 +194,7 @@ export default async function handler(req, res) {
       if (buyBox) {
         for (const [column, wizKey] of Object.entries(COLUMN_TO_WIZARD)) {
           if (buyBox[column] !== undefined && buyBox[column] !== null) {
-            wizardBuyBox[wizKey] = buyBox[column];
+            wizardBuyBox[wizKey] = normalizeWizardValue(column, buyBox[column]);
           }
         }
       }

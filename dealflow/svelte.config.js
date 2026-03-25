@@ -2,6 +2,11 @@ import adapter from '@sveltejs/adapter-vercel';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
+	onwarn(warning, defaultHandler) {
+		if (warning?.code?.startsWith('a11y_')) return;
+		if (warning?.code === 'css_unused_selector') return;
+		defaultHandler(warning);
+	},
 	kit: {
 		adapter: adapter({
 			// Keep existing API routes as standalone serverless functions

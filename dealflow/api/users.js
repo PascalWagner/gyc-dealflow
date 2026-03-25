@@ -16,18 +16,45 @@ export default async function handler(req, res) {
   }
 
   const { q, admin } = req.query;
+  const normalizedQuery = String(q || '').trim().toLowerCase();
 
   // Verify admin
   if (!admin || !ADMIN_EMAILS.includes(admin.toLowerCase())) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
-  if (!q || q.length < 2) {
+  if (!normalizedQuery || normalizedQuery.length < 2) {
     return res.status(400).json({ error: 'Query must be at least 2 characters' });
   }
 
   try {
     let contacts = [];
+
+    function matchesQuery(contact) {
+      const haystack = [
+        contact?.firstName,
+        contact?.lastName,
+        contact?.name,
+        contact?.email,
+        contact?.phone,
+        contact?.linkedin,
+        ...(Array.isArray(contact?.tags) ? contact.tags : [])
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    }
+
+    function dedupeContacts(arr) {
+      const seen = new Set();
+      return (arr || []).filter((contact) => {
+        const key = `${String(contact?.email || '').toLowerCase()}::${contact?.id || ''}`;
+        if (!contact?.email || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
 
     function mapContacts(arr) {
       return (arr || []).map(c => ({
@@ -96,7 +123,7 @@ export default async function handler(req, res) {
     }
 
     // Method 1: GHL v1 contacts search by query
-    const searchUrl = `https://rest.gohighlevel.com/v1/contacts/?query=${encodeURIComponent(q)}&limit=20`;
+    const searchUrl = `https://rest.gohighlevel.com/v1/contacts/?query=${encodeURIComponent(normalizedQuery)}&limit=20`;
     const resp = await fetch(searchUrl, {
       headers: { Authorization: `Bearer ${GHL_API_KEY}` }
     });
@@ -104,30 +131,53 @@ export default async function handler(req, res) {
 
     if (resp.ok) {
       const data = await resp.json();
-      contacts = mapContacts(data.contacts);
+      contacts = dedupeContacts(mapContacts(data.contacts));
       debugInfo.method1_count = contacts.length;
     }
 
     // Method 2: If no results, try with locationId param
     if (contacts.length === 0 && GHL_LOCATION_ID) {
-      const url2 = `https://rest.gohighlevel.com/v1/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(q)}&limit=20`;
+      const url2 = `https://rest.gohighlevel.com/v1/contacts/?locationId=${GHL_LOCATION_ID}&query=${encodeURIComponent(normalizedQuery)}&limit=20`;
       const resp2 = await fetch(url2, { headers: { Authorization: `Bearer ${GHL_API_KEY}` } });
       debugInfo.method2_status = resp2.status;
       if (resp2.ok) {
         const data2 = await resp2.json();
-        contacts = mapContacts(data2.contacts);
+        contacts = dedupeContacts(mapContacts(data2.contacts));
         debugInfo.method2_count = contacts.length;
       }
     }
 
     // Method 3: If still no results and query looks like email, try lookup
-    if (contacts.length === 0 && q.includes('@')) {
-      const lookupUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(q)}`;
+    if (contacts.length === 0 && normalizedQuery.includes('@')) {
+      const lookupUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(normalizedQuery)}`;
       const lookupResp = await fetch(lookupUrl, { headers: { Authorization: `Bearer ${GHL_API_KEY}` } });
       if (lookupResp.ok) {
         const lookupData = await lookupResp.json();
-        contacts = mapContacts(lookupData.contacts);
+        contacts = dedupeContacts(mapContacts(lookupData.contacts));
         debugInfo.method3_count = contacts.length;
+      }
+    }
+
+    // Method 4: When GHL query search misses short fragments, fall back to a
+    // broader contact fetch and filter locally across email/name/tags.
+    if (contacts.length === 0) {
+      const broadUrls = [
+        `https://rest.gohighlevel.com/v1/contacts/?limit=200`,
+        GHL_LOCATION_ID ? `https://rest.gohighlevel.com/v1/contacts/?locationId=${GHL_LOCATION_ID}&limit=200` : null
+      ].filter(Boolean);
+
+      for (const [index, url] of broadUrls.entries()) {
+        const broadResp = await fetch(url, { headers: { Authorization: `Bearer ${GHL_API_KEY}` } });
+        debugInfo[`method${4 + index}_status`] = broadResp.status;
+        if (!broadResp.ok) continue;
+
+        const broadData = await broadResp.json();
+        const filtered = dedupeContacts(mapContacts(broadData.contacts).filter(matchesQuery));
+        debugInfo[`method${4 + index}_count`] = filtered.length;
+        if (filtered.length > 0) {
+          contacts = filtered.slice(0, 20);
+          break;
+        }
       }
     }
 
@@ -136,13 +186,13 @@ export default async function handler(req, res) {
       contacts = await enrichContacts(contacts);
     }
 
-    // Method 4: Supabase fallback — catch users whose GHL contact creation failed
+    // Method 6: Supabase fallback — catch users whose GHL contact creation failed
     if (contacts.length === 0) {
       const supabase = getAdminClient();
       const { data: profiles } = await supabase
         .from('user_profiles')
         .select('id, email, full_name, tier, ghl_contact_id')
-        .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
+        .or(`email.ilike.%${normalizedQuery}%,full_name.ilike.%${normalizedQuery}%`)
         .limit(20);
 
       if (profiles?.length) {
@@ -162,7 +212,7 @@ export default async function handler(req, res) {
           };
         });
         contacts = supabaseContacts;
-        debugInfo.method4_supabase_count = contacts.length;
+        debugInfo.method6_supabase_count = contacts.length;
       }
     }
 

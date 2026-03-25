@@ -9,8 +9,8 @@
 	let submitState = $state('idle'); // idle | submitting | success
 	let deckFileName = $state('');
 	let ppmFileName = $state('');
-	let deckFileInput;
-	let ppmFileInput;
+	let deckFileInput = $state();
+	let ppmFileInput = $state();
 
 	const demandData = {
 		'multifamily': { count: '127', label: 'investors actively looking for multifamily deals', detail: "They've completed buy-box exercises targeting multifamily" },

@@ -179,15 +179,15 @@
 				</label>
 				<label class="full-width">
 					<span>Summary</span>
-					<textarea bind:value={form.content_summary} rows="3" placeholder="What this piece was trying to teach or provoke." />
+					<textarea bind:value={form.content_summary} rows="3" placeholder="What this piece was trying to teach or provoke."></textarea>
 				</label>
 				<label class="full-width">
 					<span>Canonical content text</span>
-					<textarea bind:value={form.canonical_content_text} rows="10" placeholder="Paste the clean published text or transcript here." />
+					<textarea bind:value={form.canonical_content_text} rows="10" placeholder="Paste the clean published text or transcript here."></textarea>
 				</label>
 				<label class="full-width">
 					<span>AI retrieval notes</span>
-					<textarea bind:value={form.ai_retrieval_notes} rows="4" placeholder="Why this matters, what it is useful for, and what future prompts should retrieve it for." />
+					<textarea bind:value={form.ai_retrieval_notes} rows="4" placeholder="Why this matters, what it is useful for, and what future prompts should retrieve it for."></textarea>
 				</label>
 			</div>
 		</section>
@@ -260,7 +260,7 @@
 						</label>
 						<label class="full-width">
 							<span>Platform text</span>
-							<textarea bind:value={distribution.platform_text} rows="4" placeholder="Platform-specific copy or shortened variation." />
+							<textarea bind:value={distribution.platform_text} rows="4" placeholder="Platform-specific copy or shortened variation."></textarea>
 						</label>
 						<label><span>Impressions</span><input type="number" bind:value={distribution.impressions} min="0" /></label>
 						<label><span>Views</span><input type="number" bind:value={distribution.views} min="0" /></label>

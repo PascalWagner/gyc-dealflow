@@ -108,13 +108,11 @@
 
 	// ── Magic link callback handler ──
 	onMount(() => {
-		const hash = window.location.hash.substring(1);
-		if (!hash) return;
-
-		const params = new URLSearchParams(hash);
-		const accessToken = params.get('access_token');
-		const refreshToken = params.get('refresh_token');
-		const type = params.get('type');
+		const hashParams = new URLSearchParams(window.location.hash.substring(1));
+		const searchParams = new URLSearchParams(window.location.search);
+		const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+		const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+		const type = hashParams.get('type') || searchParams.get('type');
 		if (!accessToken || type !== 'magiclink') return;
 
 		signingIn = true;
@@ -448,6 +446,7 @@
 						<button
 							class="showcase-dot"
 							class:active={currentSlide === i}
+							aria-label={`Show slide ${i + 1}`}
 							onclick={() => showScreen(i)}
 						></button>
 					{/each}
