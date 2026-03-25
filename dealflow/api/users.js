@@ -122,6 +122,76 @@ export default async function handler(req, res) {
       return enriched;
     }
 
+    async function lookupExactGhlContact(email) {
+      try {
+        const lookupUrl = `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`;
+        const lookupResp = await fetch(lookupUrl, { headers: { Authorization: `Bearer ${GHL_API_KEY}` } });
+        if (!lookupResp.ok) return null;
+        const lookupData = await lookupResp.json();
+        const mapped = dedupeContacts(mapContacts(lookupData.contacts));
+        return mapped[0] || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function searchAuthUsersByFragment(query) {
+      const supabase = getAdminClient();
+      const matches = [];
+      const seenEmails = new Set();
+      const perPage = 200;
+      let page = 1;
+
+      while (page <= 10 && matches.length < 20) {
+        const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (error) throw error;
+
+        const users = data?.users || [];
+        if (!users.length) break;
+
+        for (const authUser of users) {
+          const email = String(authUser?.email || '').trim().toLowerCase();
+          const fullName = String(
+            authUser?.user_metadata?.full_name ||
+              authUser?.user_metadata?.name ||
+              ''
+          ).trim();
+
+          if (!email || seenEmails.has(email)) continue;
+
+          const haystack = `${email} ${fullName}`.toLowerCase();
+          if (!haystack.includes(query)) continue;
+
+          seenEmails.add(email);
+
+          const ghlContact = await lookupExactGhlContact(email);
+          matches.push({
+            id: ghlContact?.id || authUser.id,
+            name: ghlContact?.name || fullName || email,
+            firstName: ghlContact?.firstName || fullName.split(' ')[0] || '',
+            lastName:
+              ghlContact?.lastName || fullName.split(' ').slice(1).join(' ') || '',
+            email,
+            phone: ghlContact?.phone || '',
+            linkedin: ghlContact?.linkedin || '',
+            tags: ghlContact?.tags || [],
+            tier:
+              ghlContact?.tier ||
+              String(authUser?.user_metadata?.tier || '').trim().toLowerCase() ||
+              'free',
+            source: ghlContact ? 'ghl-auth-fallback' : 'auth'
+          });
+
+          if (matches.length >= 20) break;
+        }
+
+        if (users.length < perPage) break;
+        page += 1;
+      }
+
+      return matches;
+    }
+
     // Method 1: GHL v1 contacts search by query
     const searchUrl = `https://rest.gohighlevel.com/v1/contacts/?query=${encodeURIComponent(normalizedQuery)}&limit=20`;
     const resp = await fetch(searchUrl, {
@@ -186,7 +256,7 @@ export default async function handler(req, res) {
       contacts = await enrichContacts(contacts);
     }
 
-    // Method 6: Supabase fallback — catch users whose GHL contact creation failed
+    // Method 6: Supabase profile fallback — catch users whose GHL contact creation failed
     if (contacts.length === 0) {
       const supabase = getAdminClient();
       const { data: profiles } = await supabase
@@ -213,6 +283,16 @@ export default async function handler(req, res) {
         });
         contacts = supabaseContacts;
         debugInfo.method6_supabase_count = contacts.length;
+      }
+    }
+
+    // Method 7: Auth-user fallback — catch real app users even when GHL query search
+    // misses short email fragments and no user_profile row exists yet.
+    if (contacts.length === 0) {
+      const authContacts = await searchAuthUsersByFragment(normalizedQuery);
+      if (authContacts.length) {
+        contacts = authContacts;
+        debugInfo.method7_auth_count = contacts.length;
       }
     }
 
