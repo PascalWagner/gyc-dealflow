@@ -36,6 +36,62 @@ export function getUserClient(accessToken) {
   });
 }
 
+export function decodeJwtPayload(token) {
+  try {
+    const [, payload] = String(token || '').split('.');
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), '=');
+    return JSON.parse(Buffer.from(padded, 'base64').toString());
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveUserFromAccessToken(accessToken) {
+  if (!accessToken) return { user: null, authError: new Error('Missing access token'), usedFallback: false };
+
+  try {
+    const userClient = getUserClient(accessToken);
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (!authError && user) {
+      return { user, authError: null, usedFallback: false };
+    }
+
+    const payload = decodeJwtPayload(accessToken);
+    if (payload?.sub || payload?.email) {
+      return {
+        user: {
+          id: payload.sub || null,
+          email: payload.email || '',
+          app_metadata: payload.app_metadata || {},
+          user_metadata: payload.user_metadata || {}
+        },
+        authError,
+        usedFallback: true
+      };
+    }
+
+    return { user: null, authError, usedFallback: false };
+  } catch (authError) {
+    const payload = decodeJwtPayload(accessToken);
+    if (payload?.sub || payload?.email) {
+      return {
+        user: {
+          id: payload.sub || null,
+          email: payload.email || '',
+          app_metadata: payload.app_metadata || {},
+          user_metadata: payload.user_metadata || {}
+        },
+        authError,
+        usedFallback: true
+      };
+    }
+
+    return { user: null, authError, usedFallback: false };
+  }
+}
+
 // Shared admin email list (single source of truth)
 export const ADMIN_EMAILS = [
   'pascal@growyourcashflow.com',
@@ -87,14 +143,9 @@ export async function verifyAdmin(req) {
   // Fallback: decode the JWT payload to extract email even if expired.
   // The token was originally issued by Supabase, so the email is trustworthy
   // as long as we verify it matches our admin list.
-  try {
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    const email = payload.email;
-    if (email && ADMIN_EMAILS.includes(email)) {
-      return { authorized: true, user: { email, id: payload.sub } };
-    }
-  } catch (e) {
-    // Token is not a valid JWT at all
+  const payload = decodeJwtPayload(token);
+  if (payload?.email && ADMIN_EMAILS.includes(payload.email)) {
+    return { authorized: true, user: { email: payload.email, id: payload.sub } };
   }
 
   return { authorized: false, error: 'Invalid or expired token' };

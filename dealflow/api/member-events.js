@@ -1,4 +1,4 @@
-import { ADMIN_EMAILS, getAdminClient, getUserClient, setCors, rateLimit } from './_supabase.js';
+import { ADMIN_EMAILS, getAdminClient, resolveUserFromAccessToken, setCors, rateLimit } from './_supabase.js';
 import { getMemberEvents } from './_member-events.js';
 
 const ACADEMY_TIERS = new Set(['academy', 'founding', 'inner-circle']);
@@ -15,28 +15,39 @@ export default async function handler(req, res) {
 	}
 
 	try {
-		const userClient = getUserClient(token);
-		const {
-			data: { user },
-			error: authError
-		} = await userClient.auth.getUser();
-		if (authError || !user) {
+		const { user } = await resolveUserFromAccessToken(token);
+		if (!user) {
 			return res.status(401).json({ error: 'Invalid or expired token' });
 		}
 
 		const admin = getAdminClient();
-		const { data: profile, error: profileError } = await admin
-			.from('user_profiles')
-			.select('tier, is_admin')
-			.eq('id', user.id)
-			.single();
+		const adminEmail = (user.email || '').toLowerCase();
+		let profile = null;
+		let profileError = null;
 
-		if (profileError || !profile) {
+		if (user.id) {
+			const profileResponse = await admin
+				.from('user_profiles')
+				.select('tier, is_admin')
+				.eq('id', user.id)
+				.maybeSingle();
+
+			profile = profileResponse.data || null;
+			profileError = profileResponse.error;
+		}
+
+		if (profileError) {
 			return res.status(404).json({ error: 'User profile not found' });
 		}
 
-		const isAdmin = Boolean(profile.is_admin) || ADMIN_EMAILS.includes((user.email || '').toLowerCase());
-		if (!isAdmin && !ACADEMY_TIERS.has((profile.tier || '').toLowerCase())) {
+		const isAdmin = Boolean(profile?.is_admin) || ADMIN_EMAILS.includes(adminEmail);
+		const tier = (profile?.tier || '').toLowerCase();
+
+		if (!profile && !isAdmin) {
+			return res.status(404).json({ error: 'User profile not found' });
+		}
+
+		if (!isAdmin && !ACADEMY_TIERS.has(tier)) {
 			return res.status(403).json({ error: 'Cashflow Academy membership required' });
 		}
 
