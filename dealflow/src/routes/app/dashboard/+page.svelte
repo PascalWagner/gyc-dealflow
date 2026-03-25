@@ -3,9 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { user } from '$lib/stores/auth.js';
-	import { deals, dealStages, stageCounts } from '$lib/stores/deals.js';
-
-	const ALLOCATION_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
 
 	// Local state
 	let portfolio = $state([]);
@@ -134,26 +132,6 @@
 		{ label: 'Days Active', value: daysActive }
 	]);
 
-	// Allocation for pie chart
-	const allocationMap = $derived.by(() => {
-		const map = {};
-		portfolio.forEach(p => {
-			const ac = p.assetClass || 'Other';
-			map[ac] = (map[ac] || 0) + (parseFloat(p.amountInvested) || 0);
-		});
-		return map;
-	});
-
-	const planAllocationMap = $derived.by(() => {
-		if (!planSlots || planSlots.length === 0 || !planSlots[0]?.asset_class) return null;
-		const map = {};
-		planSlots.forEach(s => {
-			map[s.asset_class] = (map[s.asset_class] || 0) + 1;
-		});
-		return map;
-	});
-	const allocationEntries = $derived.by(() => Object.entries(allocationMap).sort(([, a], [, b]) => b - a));
-	const previewInvestments = $derived.by(() => portfolio.slice(0, 4));
 	// Action items
 	function assetKey(value) {
 		return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -263,17 +241,6 @@
 		return parseInt(String(s).replace(/[$,\s]/g, ''), 10) || 0;
 	}
 
-	function allocationColor(index) {
-		return ALLOCATION_COLORS[index % ALLOCATION_COLORS.length];
-	}
-
-	function portfolioStatusColor(status) {
-		if (status === 'Active') return 'var(--primary)';
-		if (status === 'Distributing') return '#3b82f6';
-		if (status === 'Pending') return '#f59e0b';
-		return 'var(--text-muted)';
-	}
-
 	function fmtDollar(n) {
 		if (!n || isNaN(n)) return '$0';
 		if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
@@ -295,6 +262,10 @@
 		goals = JSON.parse(localStorage.getItem('gycGoals') || 'null');
 		distributions = JSON.parse(localStorage.getItem('gycDistributions') || '[]');
 		portfolioPlan = JSON.parse(localStorage.getItem('gycPortfolioPlan') || 'null');
+	});
+
+	onMount(() => {
+		fetchDeals().catch(() => {});
 	});
 </script>
 
@@ -440,45 +411,6 @@
 					{/each}
 				</div>
 			{/if}
-
-			<div class="dashboard-panel portfolio-preview-card">
-				<div class="dashboard-panel-header">
-					<div class="dashboard-panel-title">Your Portfolio</div>
-					<a href="/app/portfolio" class="dashboard-panel-link">View Full Portfolio →</a>
-				</div>
-				{#if previewInvestments.length > 0}
-					<div class="portfolio-preview-layout">
-						<div class="portfolio-allocation-list">
-							<div class="portfolio-allocation-heading">Allocation</div>
-							{#each allocationEntries.slice(0, 4) as [assetClass, amount], index}
-								<div class="portfolio-allocation-row">
-									<span class="portfolio-allocation-dot" style="background:{allocationColor(index)}"></span>
-									<span class="portfolio-allocation-label">{assetClass}</span>
-									<span class="portfolio-allocation-value">{Math.round((amount / totalInvested) * 100)}%</span>
-								</div>
-							{/each}
-						</div>
-						<div class="portfolio-preview-table">
-							{#each previewInvestments as investment}
-								<div class="portfolio-preview-row">
-									<div class="portfolio-preview-copy">
-										<div class="portfolio-preview-name">{investment.investmentName || 'Investment'}</div>
-										<div class="portfolio-preview-sub">{investment.sponsor || 'Unknown sponsor'}{investment.assetClass ? ` · ${investment.assetClass}` : ''}</div>
-									</div>
-									<div class="portfolio-preview-amount">{fmtDollar(parseFloat(investment.amountInvested) || 0)}</div>
-									<span class="portfolio-preview-status" style={`--status-color:${portfolioStatusColor(investment.status)}`}>{investment.status || 'Active'}</span>
-								</div>
-							{/each}
-						</div>
-					</div>
-				{:else}
-					<div class="portfolio-preview-empty">
-						<div class="portfolio-preview-empty-title">No investments yet</div>
-						<div class="portfolio-preview-empty-desc">Add investments to track your portfolio here.</div>
-						<a href="/app/portfolio" class="btn-primary portfolio-preview-empty-btn">+ Add Investment</a>
-					</div>
-				{/if}
-			</div>
 		</div>
 	{/if}
 </div>
@@ -897,35 +829,6 @@
 		flex-direction: column;
 		gap: 18px;
 	}
-	.dashboard-panel {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		overflow: hidden;
-	}
-	.dashboard-panel-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 16px 18px 0;
-		margin-bottom: 12px;
-	}
-	.dashboard-panel-title {
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-	}
-	.dashboard-panel-link {
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 600;
-		color: var(--primary);
-		text-decoration: none;
-	}
 
 	/* ── Action Items ── */
 	.action-card {
@@ -980,124 +883,6 @@
 	}
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 
-	.portfolio-preview-card {
-		overflow: visible;
-	}
-	.portfolio-preview-layout {
-		display: grid;
-		grid-template-columns: 220px minmax(0, 1fr);
-		gap: 20px;
-		padding: 0 18px 18px;
-	}
-	.portfolio-allocation-list {
-		background: var(--bg-page);
-		border: 1px solid var(--border);
-		border-radius: var(--radius-sm);
-		padding: 14px 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-	}
-	.portfolio-allocation-heading {
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		color: var(--text-muted);
-		margin-bottom: 2px;
-	}
-	.portfolio-allocation-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-	}
-	.portfolio-allocation-dot {
-		width: 10px;
-		height: 10px;
-		border-radius: 3px;
-		flex-shrink: 0;
-	}
-	.portfolio-allocation-label {
-		flex: 1;
-		color: var(--text-secondary);
-	}
-	.portfolio-allocation-value {
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.portfolio-preview-table {
-		display: flex;
-		flex-direction: column;
-	}
-	.portfolio-preview-row {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto auto;
-		gap: 12px;
-		align-items: center;
-		padding: 12px 0;
-		border-bottom: 1px solid var(--border-light);
-	}
-	.portfolio-preview-row:last-child {
-		border-bottom: none;
-	}
-	.portfolio-preview-copy {
-		min-width: 0;
-	}
-	.portfolio-preview-name {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.portfolio-preview-sub {
-		font-family: var(--font-body);
-		font-size: 11px;
-		color: var(--text-muted);
-		margin-top: 2px;
-	}
-	.portfolio-preview-amount {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 700;
-		color: var(--text-dark);
-	}
-	.portfolio-preview-status {
-		--status-color: var(--primary);
-		padding: 4px 10px;
-		border-radius: 999px;
-		background: color-mix(in srgb, var(--status-color) 10%, transparent);
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		color: var(--status-color);
-		white-space: nowrap;
-	}
-	.portfolio-preview-empty {
-		padding: 0 18px 18px;
-	}
-	.portfolio-preview-empty-title {
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 700;
-		color: var(--text-dark);
-		margin-bottom: 4px;
-	}
-	.portfolio-preview-empty-desc {
-		font-family: var(--font-body);
-		font-size: 12px;
-		color: var(--text-muted);
-		margin-bottom: 14px;
-	}
-	.portfolio-preview-empty-btn {
-		font-size: 12px;
-	}
-
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.topbar {
 			padding: 0 24px;
@@ -1109,10 +894,6 @@
 
 		.dash-hero {
 			padding: 30px 28px 22px;
-		}
-
-		.portfolio-preview-layout {
-			grid-template-columns: 240px minmax(0, 1fr);
 		}
 		.dashboard-metrics-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1154,15 +935,8 @@
 		.dashboard-onboarding-title {
 			font-size: 24px;
 		}
-		.portfolio-preview-layout {
-			grid-template-columns: 1fr;
-		}
 		.dashboard-metrics-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-		.portfolio-preview-row {
-			grid-template-columns: 1fr;
-			gap: 6px;
 		}
 		.dash-hero { padding: 24px 18px 18px; }
 		.dash-hero-value { font-size: 16px; }
