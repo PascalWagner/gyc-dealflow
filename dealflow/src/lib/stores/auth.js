@@ -2,36 +2,28 @@ import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 import { createClient } from '@supabase/supabase-js';
 import {
+	ACCESS_TIERS,
+	SESSION_VERSION,
+	buildAccessModel,
+	hasCapability,
+	hasRoleFlag,
+	normalizeEmail,
+	normalizeLegacyTier
+} from '$lib/auth/access-model.js';
+import {
 	ADMIN_REAL_USER_KEY,
 	clearUserScopedData,
 	currentAdminRealUser
 } from '$lib/utils/userScopedState.js';
+import { normalizePrivacyProfile } from '$lib/utils/dealflow-contract.js';
 
 // ===== Supabase Client =====
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://nntzqyufmtypfjpusflm.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const ADMIN_EMAILS = [
-	'pascal@growyourcashflow.io',
-	'pascal@growyourcashflow.com',
-	'pascal.wagner@growyourcashflow.com',
-	'pascal@pascalwagner.com',
-	'info@pascalwagner.com',
-	'pascalwagner@gmail.com',
-	'pascal.alexander.wagner@gmail.com'
-];
 
 export const supabase = browser && SUPABASE_ANON_KEY
 	? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 	: null;
-
-function normalizeEmail(email) {
-	return String(email || '').trim().toLowerCase();
-}
-
-function isAdminEmail(email) {
-	const normalizedEmail = normalizeEmail(email);
-	return normalizedEmail ? ADMIN_EMAILS.includes(normalizedEmail) : false;
-}
 
 function safeJsonParse(value, fallback = null) {
 	try {
@@ -70,25 +62,64 @@ function tokenNeedsRefresh(token) {
 	return payload.exp * 1000 <= Date.now() + 60_000;
 }
 
-export function canonicalizeUserTier(tier, { email = '', isAdmin = false } = {}) {
-	if (isAdmin || isAdminEmail(email)) return 'academy';
-	const normalizedTier = String(tier || '').trim().toLowerCase();
-	if (!normalizedTier || normalizedTier === 'explorer') return 'free';
-	return normalizedTier;
+export function canonicalizeUserTier(tier, { isAdmin = false } = {}) {
+	return normalizeLegacyTier(tier, { isAdmin });
+}
+
+function hasCurrentSessionContract(value) {
+	if (!value || typeof value !== 'object') return false;
+	if (Number(value.sessionVersion) !== SESSION_VERSION) return false;
+	if (!ACCESS_TIERS.includes(String(value.accessTier || '').trim().toLowerCase())) return false;
+	if (!value.roleFlags || typeof value.roleFlags !== 'object' || Array.isArray(value.roleFlags)) return false;
+	if (!value.capabilities || typeof value.capabilities !== 'object' || Array.isArray(value.capabilities)) return false;
+	return true;
 }
 
 export function normalizeSessionUser(value) {
 	if (!value || typeof value !== 'object') return null;
+	if (!hasCurrentSessionContract(value)) return null;
 
 	const email = normalizeEmail(value.email);
 	if (!email) return null;
-
-	const realUser = currentAdminRealUser();
-	const realUserEmail = normalizeEmail(realUser?.email);
-	const isImpersonating = !!realUserEmail && realUserEmail !== email;
+	const normalizedPrivacy = normalizePrivacyProfile(value);
 
 	let token = typeof value.token === 'string' ? value.token : '';
 	let refreshToken = typeof value.refreshToken === 'string' ? value.refreshToken : '';
+	const tokenEmail = normalizeEmail(decodeJwtPayload(token)?.email);
+	let realUser = currentAdminRealUser();
+	let realUserEmail = normalizeEmail(realUser?.email);
+
+	if (!realUserEmail && tokenEmail && tokenEmail !== email) {
+		realUser = {
+			sessionVersion: SESSION_VERSION,
+			email: tokenEmail,
+			name: tokenEmail.split('@')[0],
+			fullName: tokenEmail.split('@')[0],
+			accessTier: 'admin',
+			roleFlags: {
+				lp: true,
+				gp: false,
+				admin: true
+			},
+			capabilities: {
+				memberContent: true,
+				backgroundChecks: true,
+				gpDashboard: true,
+				gpCompanySettings: true,
+				adminTools: true,
+				impersonateUsers: true
+			},
+			isAdmin: true,
+			token,
+			refreshToken
+		};
+		realUserEmail = tokenEmail;
+		if (browser) {
+			localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(realUser));
+		}
+	}
+
+	const isImpersonating = !!realUserEmail && realUserEmail !== email;
 
 	if (!refreshToken && isImpersonating && typeof realUser?.refreshToken === 'string') {
 		refreshToken = realUser.refreshToken;
@@ -98,7 +129,12 @@ export function normalizeSessionUser(value) {
 		token = realUser.token;
 	}
 
-	const isAdmin = value.isAdmin === true || isAdminEmail(email);
+	const accessModel = buildAccessModel({
+		...value,
+		email
+	});
+	const isAdmin = accessModel.roleFlags.admin === true;
+	const managementCompany = accessModel.managementCompany;
 	const name =
 		(typeof value.name === 'string' && value.name.trim()) ||
 		(typeof value.fullName === 'string' && value.fullName.trim()) ||
@@ -106,6 +142,8 @@ export function normalizeSessionUser(value) {
 
 	return {
 		...value,
+		...normalizedPrivacy,
+		sessionVersion: SESSION_VERSION,
 		email,
 		name,
 		fullName:
@@ -114,16 +152,16 @@ export function normalizeSessionUser(value) {
 			name,
 		token,
 		refreshToken,
-		tier: canonicalizeUserTier(value.tier, { email, isAdmin }),
+		accessTier: accessModel.accessTier,
+		roleFlags: accessModel.roleFlags,
+		capabilities: accessModel.capabilities,
 		isAdmin,
+		isGP: accessModel.roleFlags.gp === true,
+		managementCompany,
 		tags: Array.isArray(value.tags) ? value.tags : [],
 		contactId: value.contactId || null,
 		phone: value.phone || '',
-		location: value.location || '',
-		share_saved: value.share_saved !== false,
-		share_dd: value.share_dd !== false,
-		share_invested: value.share_invested !== false,
-		allow_follows: value.allow_follows !== false
+		location: value.location || ''
 	};
 }
 
@@ -162,7 +200,16 @@ export async function ensureSessionUserToken(sessionUser) {
 
 export function getStoredSessionUser() {
 	if (!browser) return null;
-	return normalizeSessionUser(safeJsonParse(localStorage.getItem('gycUser') || 'null', null));
+	const raw = localStorage.getItem('gycUser');
+	if (!raw) return null;
+	const parsed = safeJsonParse(raw, null);
+	const normalized = normalizeSessionUser(parsed);
+	if (!normalized && parsed) {
+		localStorage.removeItem('gycUser');
+		localStorage.removeItem(ADMIN_REAL_USER_KEY);
+		clearUserScopedData();
+	}
+	return normalized;
 }
 
 export function getStoredSessionToken() {
@@ -170,7 +217,7 @@ export function getStoredSessionToken() {
 }
 
 // ===== User Store =====
-// Shape: { email, token, tier, fullName, id } or null
+// Shape: backend-issued session contract or null
 function createUserStore() {
 	// Initialize from localStorage if in browser
 	const initial = browser ? getStoredSessionUser() : null;
@@ -229,18 +276,35 @@ export const isGuest = derived(user, ($user) => !$user?.email);
 export const userEmail = derived(user, ($user) => $user?.email || '');
 export const userToken = derived(user, ($user) => $user?.token || '');
 
-export const userTier = derived(user, ($user) => {
-	if (!$user) return 'free';
-	return canonicalizeUserTier($user.tier, { email: $user.email, isAdmin: $user.isAdmin });
-});
+export const accessProfile = derived(user, ($user) => buildAccessModel($user || {}));
 
-export const isAcademy = derived(userTier, ($tier) =>
-	['academy', 'founding', 'inner-circle'].includes($tier)
-);
+export const accessTier = derived(accessProfile, ($profile) => $profile.accessTier);
 
-export const isAdmin = derived(userEmail, ($email) => {
-	return isAdminEmail($email);
-});
+export const roleFlags = derived(accessProfile, ($profile) => $profile.roleFlags);
+
+export const sessionCapabilities = derived(accessProfile, ($profile) => $profile.capabilities);
+
+export const isMember = derived(accessTier, ($tier) => ['member', 'admin'].includes($tier));
+
+export const isAdmin = derived(roleFlags, ($roleFlags) => $roleFlags.admin === true);
+
+export const isGP = derived(roleFlags, ($roleFlags) => $roleFlags.gp === true);
+
+export function getSessionAccessProfile(sessionUser) {
+	return buildAccessModel(sessionUser || {});
+}
+
+export function getSessionManagementCompany(sessionUser) {
+	return buildAccessModel(sessionUser || {}).managementCompany;
+}
+
+export function sessionHasRole(sessionUser, role) {
+	return hasRoleFlag(sessionUser || {}, role);
+}
+
+export function sessionHasCapability(sessionUser, capability) {
+	return hasCapability(sessionUser || {}, capability);
+}
 
 // ===== Auth Actions =====
 export async function login(email) {

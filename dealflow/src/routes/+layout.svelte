@@ -1,7 +1,5 @@
 <script>
 	import '$lib/css/theme.css';
-	import { user, isLoggedIn, isGuest, userTier } from '$lib/stores/auth.js';
-	import { page } from '$app/stores';
 
 	let { children } = $props();
 </script>

@@ -1,8 +1,14 @@
 import { browser } from '$app/environment';
+import { normalizeStage } from '$lib/utils/dealflow-contract.js';
 
 export const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
 
 const SCOPED_BUNDLE_PREFIX = '_scopedBundle_';
+const SCOPED_STORAGE_PREFIX = '__gycScoped__';
+const USER_SCOPED_JSON_KEYS = new Set(['gycDealStages', 'gycDecisionCompareDeals']);
+const LEGACY_SCOPED_JSON_ALIASES = new Map([
+	['gycCompareDeals', 'gycDecisionCompareDeals']
+]);
 let activeHydrationId = 0;
 
 const STATIC_SCOPED_KEYS = [
@@ -22,6 +28,7 @@ const STATIC_SCOPED_KEYS = [
 	'gycQAUpvoted',
 	'gycIntroRequests',
 	'gycCompareDeals',
+	'gycDecisionCompareDeals',
 	'gycNotifPrefs'
 ];
 
@@ -49,8 +56,67 @@ function storage() {
 	return browser ? window.localStorage : null;
 }
 
+export function currentSessionEmail() {
+	if (!browser) return '';
+	const currentUser = safeJsonParse(localStorage.getItem('gycUser'), null);
+	return normalizeEmail(currentUser?.email);
+}
+
+export function isScopedImpersonationActive(email = currentSessionEmail()) {
+	const normalizedEmail = normalizeEmail(email);
+	const realEmail = normalizeEmail(currentAdminRealUser()?.email);
+	return !!realEmail && !!normalizedEmail && realEmail !== normalizedEmail;
+}
+
+export function getScopedImpersonationContext(sessionUser = null) {
+	const sessionEmail = normalizeEmail(sessionUser?.email || currentSessionEmail());
+	const adminEmail = normalizeEmail(currentAdminRealUser()?.email);
+	return {
+		sessionEmail,
+		adminEmail,
+		isImpersonating: !!adminEmail && !!sessionEmail && adminEmail !== sessionEmail
+	};
+}
+
+export function applyAdminImpersonationToUrl(url, { sessionUser = null } = {}) {
+	const context = getScopedImpersonationContext(sessionUser);
+	if (!context.isImpersonating || !context.sessionEmail) return url;
+	url.searchParams.set('admin', 'true');
+	url.searchParams.set('email', context.sessionEmail);
+	return url;
+}
+
+export function applyAdminImpersonationToPayload(payload = {}, { sessionUser = null } = {}) {
+	const context = getScopedImpersonationContext(sessionUser);
+	if (!context.isImpersonating || !context.sessionEmail) return payload;
+	return {
+		...payload,
+		admin: true,
+		email: payload?.email || context.sessionEmail
+	};
+}
+
 function scopedBundleKey(email) {
 	return `${SCOPED_BUNDLE_PREFIX}${normalizeEmail(email)}`;
+}
+
+export function scopedStorageKey(baseKey, email = currentSessionEmail()) {
+	const normalizedEmail = normalizeEmail(email);
+	if (!normalizedEmail) return baseKey;
+	return `${SCOPED_STORAGE_PREFIX}${encodeURIComponent(normalizedEmail)}__${baseKey}`;
+}
+
+function isUserScopedKey(key) {
+	return USER_SCOPED_JSON_KEYS.has(key);
+}
+
+function canonicalScopedKey(key) {
+	return LEGACY_SCOPED_JSON_ALIASES.get(key) || key;
+}
+
+function shouldMigrateLegacyScopedData(email) {
+	const normalizedEmail = normalizeEmail(email);
+	return !!normalizedEmail && normalizedEmail === currentSessionEmail() && !isScopedImpersonationActive(normalizedEmail);
 }
 
 function scopedKeyList() {
@@ -81,9 +147,30 @@ export function saveUserScopedData(email) {
 	if (!storageArea || !normalizedEmail) return;
 	const bundle = {};
 	for (const key of scopedKeyList()) {
+		const canonicalKey = canonicalScopedKey(key);
+		if (isUserScopedKey(canonicalKey)) {
+			const scopedValue = storageArea.getItem(scopedStorageKey(canonicalKey, normalizedEmail));
+			if (scopedValue !== null) {
+				bundle[canonicalKey] = scopedValue;
+				continue;
+			}
+
+			const legacyKeys = canonicalKey === 'gycDecisionCompareDeals'
+				? [canonicalKey, 'gycCompareDeals']
+				: [canonicalKey];
+			for (const legacyKey of legacyKeys) {
+				const legacyValue = storageArea.getItem(legacyKey);
+				if (legacyValue === null) continue;
+				bundle[canonicalKey] = legacyValue;
+				storageArea.setItem(scopedStorageKey(canonicalKey, normalizedEmail), legacyValue);
+				break;
+			}
+			continue;
+		}
+
 		const value = storageArea.getItem(key);
 		if (value !== null) {
-			bundle[key] = value;
+			bundle[canonicalKey] = value;
 		}
 	}
 	storageArea.setItem(scopedBundleKey(normalizedEmail), JSON.stringify(bundle));
@@ -98,7 +185,12 @@ export function loadUserScopedData(email) {
 	if (!saved) return false;
 	const bundle = safeJsonParse(saved, {});
 	for (const [key, value] of Object.entries(bundle)) {
-		storageArea.setItem(key, value);
+		const canonicalKey = canonicalScopedKey(key);
+		if (isUserScopedKey(canonicalKey)) {
+			storageArea.setItem(scopedStorageKey(canonicalKey, normalizedEmail), value);
+		} else {
+			storageArea.setItem(canonicalKey, value);
+		}
 	}
 	return true;
 }
@@ -121,6 +213,88 @@ function persistString(key, value) {
 		return;
 	}
 	storageArea.setItem(key, value);
+}
+
+export function readUserScopedJson(key, fallback = null) {
+	const storageArea = storage();
+	if (!storageArea) return fallback;
+	const parsed = safeJsonParse(storageArea.getItem(key), fallback);
+	return parsed === null ? fallback : parsed;
+}
+
+export function readUserScopedString(key, fallback = '') {
+	const storageArea = storage();
+	if (!storageArea) return fallback;
+	const value = storageArea.getItem(key);
+	return value === null ? fallback : value;
+}
+
+export function writeUserScopedJson(key, value) {
+	persistJson(key, value);
+}
+
+export function writeUserScopedString(key, value) {
+	persistString(key, value);
+}
+
+export function readScopedJson(key, fallback = null, { email = currentSessionEmail(), migrateLegacy = false, legacyKeys = [] } = {}) {
+	const storageArea = storage();
+	if (!storageArea) return fallback;
+
+	const canonicalKey = canonicalScopedKey(key);
+	const scopedValue = storageArea.getItem(scopedStorageKey(canonicalKey, email));
+	if (scopedValue !== null) {
+		const parsed = safeJsonParse(scopedValue, fallback);
+		return parsed === null ? fallback : parsed;
+	}
+
+	if (migrateLegacy && shouldMigrateLegacyScopedData(email)) {
+		const candidates = legacyKeys.length ? legacyKeys : [canonicalKey];
+		for (const legacyKey of candidates) {
+			const legacyValue = storageArea.getItem(legacyKey);
+			if (legacyValue === null) continue;
+			storageArea.setItem(scopedStorageKey(canonicalKey, email), legacyValue);
+			const parsed = safeJsonParse(legacyValue, fallback);
+			return parsed === null ? fallback : parsed;
+		}
+	}
+
+	return fallback;
+}
+
+export function readScopedString(key, fallback = '', options = {}) {
+	const storageArea = storage();
+	if (!storageArea) return fallback;
+	const canonicalKey = canonicalScopedKey(key);
+	const value = storageArea.getItem(scopedStorageKey(canonicalKey, options?.email));
+	return value === null ? fallback : value;
+}
+
+export function writeScopedJson(key, value, { email = currentSessionEmail() } = {}) {
+	persistJson(scopedStorageKey(canonicalScopedKey(key), email), value);
+}
+
+export function writeScopedString(key, value, { email = currentSessionEmail() } = {}) {
+	persistString(scopedStorageKey(canonicalScopedKey(key), email), value);
+}
+
+export function getUserScopedCacheSnapshot() {
+	const sessionEmail = currentSessionEmail();
+	return {
+		portfolio: readUserScopedJson('gycPortfolio', []),
+		stages: readScopedJson('gycDealStages', {}, { email: sessionEmail, migrateLegacy: true }),
+		goals: readUserScopedJson('gycGoals', null),
+		distributions: readUserScopedJson('gycDistributions', []),
+		taxDocs: readUserScopedJson('gycTaxDocs', []),
+		buyBoxWizard: readUserScopedJson('gycBuyBoxWizard', {}),
+		portfolioPlan: readUserScopedJson('gycPortfolioPlan', null),
+		notifPrefs: readUserScopedJson('gycNotifPrefs', null),
+		decisionCompareIds: readScopedJson('gycDecisionCompareDeals', [], {
+			email: sessionEmail,
+			migrateLegacy: true,
+			legacyKeys: ['gycDecisionCompareDeals', 'gycCompareDeals']
+		})
+	};
 }
 
 function mapPortfolio(rows) {
@@ -147,7 +321,7 @@ function mapStages(rows) {
 	const stages = {};
 	for (const row of rows || []) {
 		if (row.deal_id && row.stage) {
-			stages[row.deal_id] = row.stage;
+			stages[row.deal_id] = normalizeStage(row.stage);
 		}
 	}
 	return stages;
@@ -222,10 +396,10 @@ async function fetchAdminBundle(token, email) {
 	});
 }
 
-function applyUserBundle(bundle, buyBox) {
+function applyUserBundle(bundle, buyBox, email) {
 	const storageArea = storage();
 	persistJson('gycPortfolio', mapPortfolio(bundle?.portfolio || []));
-	persistJson('gycDealStages', mapStages(bundle?.stages || []));
+	writeScopedJson('gycDealStages', mapStages(bundle?.stages || []), { email });
 	persistJson('gycGoals', mapGoals(bundle?.goals || []));
 	persistJson('gycTaxDocs', mapTaxDocs(bundle?.taxdocs || []));
 	persistJson('gycPortfolioPlan', mapPlan(bundle?.plan || []));
@@ -267,7 +441,12 @@ export async function hydrateUserScopedData({ email, token, adminEmail } = {}) {
 	}
 
 	try {
-		const buyBoxResponse = await fetchJson(`/api/buybox?email=${encodeURIComponent(normalizedEmail)}`, {
+		const buyBoxUrl = new URL('/api/buybox', window.location.origin);
+		buyBoxUrl.searchParams.set('email', normalizedEmail);
+		if (normalizedAdminEmail && normalizedAdminEmail !== normalizedEmail) {
+			buyBoxUrl.searchParams.set('admin', 'true');
+		}
+		const buyBoxResponse = await fetchJson(buyBoxUrl.pathname + buyBoxUrl.search, {
 			Authorization: `Bearer ${token}`
 		});
 		buyBox = buyBoxResponse?.buyBox || {};
@@ -279,7 +458,7 @@ export async function hydrateUserScopedData({ email, token, adminEmail } = {}) {
 		return { ok: false, reason: 'stale-hydration' };
 	}
 
-	applyUserBundle(bundle, buyBox);
+	applyUserBundle(bundle, buyBox, normalizedEmail);
 	saveUserScopedData(normalizedEmail);
 	return { ok: true, bundle, buyBox };
 }

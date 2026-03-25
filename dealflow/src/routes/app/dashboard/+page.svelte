@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 	import { deals, dealStages, stageCounts, fetchDeals } from '$lib/stores/deals.js';
+	import { user } from '$lib/stores/auth.js';
 
 	// Local state
 	let portfolio = $state([]);
