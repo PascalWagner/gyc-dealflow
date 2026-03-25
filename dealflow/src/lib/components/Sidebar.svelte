@@ -31,7 +31,7 @@
 			fetchDeals();
 		}
 
-		const saved = localStorage.getItem('gyc-theme');
+		const saved = localStorage.getItem('gyc-theme') || localStorage.getItem('gycTheme');
 		if (saved === 'dark') {
 			isDark = true;
 			document.documentElement.classList.add('dark');
@@ -55,11 +55,13 @@
 		if (isDark) {
 			document.documentElement.classList.add('dark');
 			document.documentElement.classList.remove('light');
-				localStorage.setItem('gyc-theme', 'dark');
+			localStorage.setItem('gyc-theme', 'dark');
+			localStorage.setItem('gycTheme', 'dark');
 		} else {
 			document.documentElement.classList.remove('dark');
 			document.documentElement.classList.add('light');
-				localStorage.setItem('gyc-theme', 'light');
+			localStorage.setItem('gyc-theme', 'light');
+			localStorage.setItem('gycTheme', 'light');
 		}
 	}
 
@@ -134,8 +136,7 @@
 	const adminItems = [
 		{ page: 'admin', icon: 'schema', label: 'Admin Dashboard' },
 		{ page: 'case-studies', icon: 'casestudies', label: 'Member Success' },
-		{ page: 'admin-manage', icon: 'manage', label: 'Manage Data' },
-		{ page: 'outreach', icon: 'outreach', label: 'Outreach' }
+		{ page: 'admin-manage', icon: 'manage', label: 'Manage Data' }
 	];
 
 	// User display info
@@ -216,6 +217,7 @@
 		const realUser = currentAdminRealUser();
 		return !!realUser?.email && realUser.email.toLowerCase() !== ($user?.email || '').toLowerCase();
 	});
+	const isAdminShell = $derived($isAdmin && ['admin', 'case-studies', 'admin-manage', 'outreach'].includes(currentPage));
 	const impersonatedName = $derived($isImpersonating ? userName : '');
 	const impersonatedEmail = $derived($isImpersonating ? userEmail : '');
 
@@ -326,58 +328,76 @@
 		<div class="sidebar-logo-text">Grow Your Cashflow</div>
 	</div>
 
-	<nav class="sidebar-nav">
-		{#each navSections as section}
-			<div class="nav-section-label">{section.label}</div>
-			{#each section.items as item}
-				<a
-					class="nav-item"
-					class:active={isActive(item.page)}
-					href={href(item.page)}
-					onclick={closeMobile}
-				>
-					<span class="nav-icon">{@html icons[item.icon]}</span>
-					{item.label}
-					{#if item.badge && dealFlowCount > 0}
-						<span class="nav-badge">{dealFlowCount}</span>
-					{/if}
-					{#if item.paidOnly && isFree}
-						<svg class="nav-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-							<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-						</svg>
-					{/if}
-				</a>
-			{/each}
-		{/each}
+	<nav class="sidebar-nav" class:admin-shell={isAdminShell}>
+		{#if isAdminShell}
+			<div class="admin-nav-block">
+				<div class="nav-section-label">Admin</div>
+				{#each adminItems as item}
+					<a
+						class="nav-item admin-nav-item"
+						class:active={isActive(item.page)}
+						href={href(item.page)}
+						onclick={closeMobile}
+					>
+						<span class="nav-icon">{@html icons[item.icon]}</span>
+						{item.label}
+					</a>
+				{/each}
+			</div>
 
-		<!-- GP Portal -->
-		{#if isGP || $isAdmin}
-			<div class="nav-section-label">GP Portal</div>
-			<a class="nav-item" class:active={currentPage === 'gp-dashboard'} href="/gp-dashboard" onclick={closeMobile}>
-				<span class="nav-icon">{@html icons.gpdashboard}</span>
-				GP Dashboard
-			</a>
-		{/if}
+			<div class="nav-spacer"></div>
+		{:else}
+			{#each navSections as section}
+				<div class="nav-section-label">{section.label}</div>
+				{#each section.items as item}
+					<a
+						class="nav-item"
+						class:active={isActive(item.page)}
+						href={href(item.page)}
+						onclick={closeMobile}
+					>
+						<span class="nav-icon">{@html icons[item.icon]}</span>
+						{item.label}
+						{#if item.badge && dealFlowCount > 0}
+							<span class="nav-badge">{dealFlowCount}</span>
+						{/if}
+						{#if item.paidOnly && isFree}
+							<svg class="nav-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+								<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+							</svg>
+						{/if}
+					</a>
+				{/each}
+			{/each}
+
+			{#if isGP || $isAdmin}
+				<div class="nav-section-label">GP Portal</div>
+				<a class="nav-item" class:active={currentPage === 'gp-dashboard'} href="/gp-dashboard" onclick={closeMobile}>
+					<span class="nav-icon">{@html icons.gpdashboard}</span>
+					GP Dashboard
+				</a>
+			{/if}
 
 			<div class="nav-spacer"></div>
 
-			<!-- Admin -->
-		{#if $isAdmin}
-			<div class="nav-section-label">Admin</div>
-			{#each adminItems as item}
-				<a
-					class="nav-item"
-					class:active={isActive(item.page)}
-					href={href(item.page)}
-					onclick={closeMobile}
-				>
-					<span class="nav-icon">{@html icons[item.icon]}</span>
-					{item.label}
-				</a>
-			{/each}
+			{#if $isAdmin}
+				<div class="nav-section-label">Admin</div>
+				{#each adminItems as item}
+					<a
+						class="nav-item"
+						class:active={isActive(item.page)}
+						href={href(item.page)}
+						onclick={closeMobile}
+					>
+						<span class="nav-icon">{@html icons[item.icon]}</span>
+						{item.label}
+					</a>
+				{/each}
+			{/if}
+		{/if}
 
-			<!-- View As -->
-			<div class="view-as-section">
+		{#if $isAdmin}
+			<div class="view-as-section" class:admin-view-as={isAdminShell}>
 				{#if isImpersonating}
 					<div class="view-as-impersonating">
 						<div class="view-as-header">
@@ -427,7 +447,6 @@
 				{/if}
 			</div>
 		{/if}
-
 	</nav>
 
 	<div class="sidebar-footer">
@@ -541,6 +560,13 @@
 		display: flex;
 		flex-direction: column;
 	}
+	.sidebar-nav.admin-shell {
+		padding-top: 18px;
+	}
+	.admin-nav-block {
+		display: flex;
+		flex-direction: column;
+	}
 
 	.nav-section-label {
 		padding: 14px 24px 6px;
@@ -576,6 +602,11 @@
 		width: 3px;
 		background: var(--primary, #51BE7B);
 		border-radius: 0 2px 2px 0;
+	}
+	.admin-nav-item {
+		padding-top: 10px;
+		padding-bottom: 10px;
+		font-size: 14px;
 	}
 
 	.nav-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; }
@@ -778,6 +809,10 @@
 
 	/* View As */
 	.view-as-section { padding: 4px 16px 8px; }
+	.admin-view-as {
+		padding-top: 14px;
+		border-top: 1px solid rgba(255,255,255,0.06);
+	}
 	.view-as-impersonating {
 		background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
 		border-radius: 8px; padding: 8px 10px; margin-bottom: 4px;

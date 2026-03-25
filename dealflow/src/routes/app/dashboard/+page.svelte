@@ -4,7 +4,6 @@
 	import { browser } from '$app/environment';
 	import { user } from '$lib/stores/auth.js';
 	import { deals, dealStages, stageCounts } from '$lib/stores/deals.js';
-	import GoalProgress from '$lib/components/GoalProgress.svelte';
 
 	const ALLOCATION_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -304,11 +303,11 @@
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
 	<div class="topbar-title">Dashboard</div>
-	<div class="dash-tabs">
+	<nav class="dash-tabs" aria-label="Dashboard sections">
 		<a href="/app/dashboard" class="dash-tab active">Overview</a>
 		<a href="/app/portfolio" class="dash-tab">Portfolio</a>
 		<a href="/app/plan" class="dash-tab">My Plan</a>
-	</div>
+	</nav>
 </div>
 
 	<div class="content-area">
@@ -328,12 +327,14 @@
 		<!-- Hero Progress Card -->
 		{#if hasOnboarding}
 			<div class="dash-hero">
-				<GoalProgress
-					label={goalLabel}
-					current={currentIncome}
-					target={targetIncome || (parseDollar(wizardData.targetCashFlow) || 100000)}
-					{branch}
-				/>
+				<div class="dash-hero-label">{goalLabel}</div>
+				<div class="dash-hero-bar" aria-hidden="true">
+					<div class="dash-hero-fill" style={`width:${goalProgress}%;${goalProgress > 0 ? 'min-width:10px;' : ''}`}></div>
+				</div>
+				<div class="dash-hero-value-row">
+					<div class="dash-hero-value">{goalValueText}</div>
+					<div class="dash-hero-pct">{goalProgress}%</div>
+				</div>
 				<div class="dash-hero-stats">{statsLine}{slotLine}</div>
 			</div>
 			{:else}
@@ -487,13 +488,13 @@
 	.topbar {
 		position: sticky;
 		top: 0;
-		height: var(--topbar-height);
+		min-height: 66px;
 		background: var(--bg-cream);
 		border-bottom: 1px solid var(--border);
 		display: flex;
-		align-items: center;
-		padding: 0 32px;
-		gap: 16px;
+		align-items: stretch;
+		padding: 0 28px;
+		gap: 26px;
 		z-index: 50;
 	}
 	.mobile-menu-btn {
@@ -503,51 +504,48 @@
 		cursor: pointer;
 		color: var(--text-dark);
 		padding: 4px;
+		align-self: center;
 	}
 	.mobile-menu-btn svg { width: 22px; height: 22px; }
 	.topbar-title {
+		display: flex;
+		align-items: center;
 		font-family: var(--font-headline);
-		font-size: 22px;
+		font-size: 20px;
 		font-weight: 400;
 		color: var(--text-dark);
-		margin-right: 24px;
-		letter-spacing: -0.3px;
+		flex-shrink: 0;
+		letter-spacing: -0.2px;
 	}
 
 	/* ── Dashboard Tab Bar ── */
 	.dash-tabs {
 		display: flex;
-		gap: 4px;
-		margin-left: 24px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 3px;
-		align-self: center;
+		align-items: stretch;
+		gap: 2px;
 	}
 	.dash-tab {
-		background: none;
-		border: none;
-		padding: 6px 12px;
+		padding: 0 18px;
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 14px;
 		font-weight: 600;
-		color: var(--text-secondary);
-		cursor: pointer;
+		color: #8a9aa0;
 		white-space: nowrap;
-		transition: all 0.15s;
+		transition: color 0.15s ease, border-color 0.15s ease;
 		text-decoration: none;
 		display: flex;
 		align-items: center;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
-		border-radius: 6px;
+		height: 100%;
+		border-bottom: 3px solid transparent;
 	}
 	.dash-tab:hover { color: var(--text-dark); }
-	.dash-tab.active { color: #fff; background: var(--primary); }
+	.dash-tab.active {
+		color: var(--primary);
+		border-bottom-color: var(--primary);
+	}
 
 	/* ── Content Area ── */
-	.content-area { padding: 24px 24px 40px; max-width: 1200px; }
+	.content-area { padding: 24px 24px 40px; max-width: 1240px; }
 
 	.dashboard-onboarding-card {
 		max-width: 520px;
@@ -633,48 +631,62 @@
 
 	/* ── Hero Progress Card ── */
 	.dash-hero {
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 28px 24px;
+		background: #fff;
+		border: 1px solid #d4dee3;
+		border-radius: 14px;
+		box-shadow: 0 2px 10px rgba(16, 24, 40, 0.05);
+		padding: 34px 36px 24px;
+		margin-bottom: 22px;
+	}
+	.dash-hero-label {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1.6px;
+		text-transform: uppercase;
+		color: #8a9aa0;
 		margin-bottom: 20px;
+	}
+	.dash-hero-bar {
+		height: 12px;
+		background: #e8eef1;
+		border-radius: 999px;
+		overflow: hidden;
+	}
+	.dash-hero-fill {
+		height: 100%;
+		border-radius: 999px;
+		background: linear-gradient(90deg, #4db870, #45b86e);
+		transition: width 0.6s ease;
+	}
+	.dash-hero-value-row {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin-top: 12px;
+	}
+	.dash-hero-value {
+		font-family: var(--font-ui);
+		font-size: 18px;
+		font-weight: 800;
+		line-height: 1.2;
+		color: var(--text-dark);
+	}
+	.dash-hero-pct {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--primary);
 	}
 	.dash-hero-stats {
 		font-family: var(--font-body);
 		font-size: 13px;
-		color: var(--text-muted);
+		color: #8a9aa0;
 		margin-bottom: 0;
-		padding-top: 14px;
-		border-top: 1px solid var(--border-light);
-		margin-top: 16px;
-	}
-	:global(.dash-hero .goal-progress-label) {
-		font-size: 11px;
-		font-weight: 700;
-		letter-spacing: 1.2px;
-		margin-bottom: 20px;
-	}
-	:global(.dash-hero .goal-progress-bar) {
-		height: 12px;
-		background: var(--border-light);
-		border-radius: 6px;
-		margin-bottom: 12px;
-	}
-	:global(.dash-hero .goal-progress-fill) {
-		border-radius: 6px;
-	}
-	:global(.dash-hero .goal-progress-value) {
-		font-size: 22px;
-		font-weight: 800;
-		justify-content: flex-start;
-		align-items: baseline;
-		gap: 10px;
-		flex-wrap: wrap;
-		line-height: 1.1;
-	}
-	:global(.dash-hero .goal-progress-pct) {
-		font-size: 14px;
-		font-weight: 700;
+		padding-top: 18px;
+		border-top: 1px solid #e6ecef;
+		margin-top: 18px;
 	}
 
 	/* ── Plan Blueprint ── */
@@ -1096,7 +1108,7 @@
 		}
 
 		.dash-hero {
-			padding: 28px 24px;
+			padding: 30px 28px 22px;
 		}
 
 		.portfolio-preview-layout {
@@ -1109,28 +1121,30 @@
 
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
-		.topbar { padding: 0 16px; padding-top: env(safe-area-inset-top, 0px); }
+		.topbar {
+			min-height: 0;
+			padding: env(safe-area-inset-top, 0px) 16px 0;
+			flex-wrap: wrap;
+			gap: 0 14px;
+		}
 		.mobile-menu-btn { display: block; }
-		.topbar-title { font-size: 16px; margin-right: 12px; }
+		.topbar-title {
+			height: 52px;
+			font-size: 16px;
+		}
 		.dash-tabs {
-			margin-left: 0;
 			overflow-x: auto;
 			-webkit-overflow-scrolling: touch;
 			scrollbar-width: none;
-			flex-shrink: 1;
-			min-width: 0;
 			width: 100%;
-			justify-content: flex-start;
-			order: 1;
-			gap: 3px;
+			height: 44px;
+			gap: 0;
 		}
 		.dash-tabs::-webkit-scrollbar { display: none; }
 		.dash-tab {
-			font-size: 10px !important;
-			padding: 6px 11px !important;
+			font-size: 13px !important;
+			padding: 0 14px !important;
 			flex: 0 0 auto;
-			text-align: center;
-			justify-content: center;
 		}
 		.content-area { padding: 12px !important; }
 		.dashboard-onboarding-card {
@@ -1150,7 +1164,9 @@
 			grid-template-columns: 1fr;
 			gap: 6px;
 		}
-		.dash-hero { padding: 24px; }
+		.dash-hero { padding: 24px 18px 18px; }
+		.dash-hero-value { font-size: 16px; }
+		.dash-hero-stats { font-size: 12px; }
 		.plan-cta-card,
 		.blueprint-card { padding: 18px 16px; }
 		.blueprint-next { padding: 14px; }

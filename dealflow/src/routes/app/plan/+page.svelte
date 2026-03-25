@@ -1,49 +1,59 @@
 <script>
 	import { onMount } from 'svelte';
 	import {
-		getStoredSessionToken,
 		getStoredSessionUser,
 		isAcademy,
-		isLoggedIn,
-		user,
-		userTier,
-		userToken
+		isAdmin,
+		userTier
 	} from '$lib/stores/auth.js';
 	import { browser } from '$app/environment';
 
 	let hasPlan = $state(false);
 	let loading = $state(true);
 	let plan = $state(null);
+	let portfolio = $state([]);
 	let showWizard = $state(false);
 	let saving = $state(false);
 	let saveMsg = $state('');
 	let shouldOpenWizardFromLocation = false;
 
-	const isPaid = $derived($userTier !== 'free' || $isAcademy);
+	const canViewAnalytics = $derived($isAdmin || $userTier !== 'free' || $isAcademy);
 
-	// Wizard state
 	let wizardStep = $state(0);
 	let wizardData = $state({
 		goal: 'cashflow',
 		targetAmount: 0,
 		investableCapital: '',
 		assetClasses: [],
-		dealTypes: [],
+		dealTypes: []
 	});
 
 	const assetClassOptions = [
-		'Multi-Family', 'Self Storage', 'Industrial', 'RV/Mobile Home Parks',
-		'Oil & Gas / Energy', 'Medical Office', 'Senior Living', 'Hospitality',
-		'Retail', 'Data Centers', 'Single Family', 'Mixed-Use'
+		'Single Family',
+		'Hotels/Hospitality',
+		'Business / Other',
+		'RV/Mobile Home Parks',
+		'Lending',
+		'Self Storage',
+		'Multi-Family',
+		'Retail',
+		'Lease Buy Back',
+		'Oil & Gas'
 	];
 
 	const dealTypeOptions = [
-		'Lending', 'Buy & Hold', 'Value-Add', 'Development',
-		'Distressed', 'Fund', 'REIT', '1031 Exchange'
+		'Lending / Credit',
+		'Buy & Hold',
+		'Distressed',
+		'Value-Add',
+		'Single Family',
+		'Hotels/Hospitality',
+		'Business / Other',
+		'RV/Mobile Home Parks'
 	];
 
 	const goalLabels = {
-		cashflow: 'Generate Passive Income',
+		cashflow: 'Build Passive Income',
 		growth: 'Build Long-Term Wealth',
 		tax: 'Reduce Taxable Income'
 	};
@@ -57,68 +67,172 @@
 		'Review your plan'
 	];
 
-	function getToken() {
-		return browser ? getStoredSessionToken() : null;
+	const capitalOptions = [
+		{ label: 'Under $100K', value: '0-100000' },
+		{ label: '$100K - $250K', value: '100000-250000' },
+		{ label: '$250K - $500K', value: '250000-500000' },
+		{ label: '$500K - $1M', value: '500000-1000000' },
+		{ label: '$1M+', value: '1000000-5000000' }
+	];
+
+	const assetProfiles = {
+		'singlefamily': { label: 'Single Family', color: '#0f7a5b', icon: 'SF', irrMin: 8.1, irrMax: 33.8, cashYield: 12.7, lockup: 2.4, dealCount: 14, newestDays: 8 },
+		'hotelshospitality': { label: 'Hotels/Hospitality', color: '#5b50d6', icon: 'HH', irrMin: 18.0, irrMax: 33.1, cashYield: 12.9, lockup: 5.1, dealCount: 13, newestDays: 30 },
+		'businessother': { label: 'Business / Other', color: '#7b5a46', icon: 'BO', irrMin: 4.0, irrMax: 45.0, cashYield: 16.9, lockup: 3.7, dealCount: 17, newestDays: 5 },
+		'rvmobilehomeparks': { label: 'RV/Mobile Home Parks', color: '#127c4e', icon: 'RV', irrMin: 15.9, irrMax: 45.7, cashYield: 10.5, lockup: 6.0, dealCount: 16, newestDays: 29 },
+		'lending': { label: 'Lending', color: '#2563eb', icon: 'L', irrMin: 6.0, irrMax: 25.0, cashYield: 11.4, lockup: 1.5, dealCount: 106, newestDays: 5 },
+		'selfstorage': { label: 'Self Storage', color: '#3b82f6', icon: 'SS', irrMin: 10.2, irrMax: 24.3, cashYield: 9.2, lockup: 4.2, dealCount: 22, newestDays: 11 },
+		'multifamily': { label: 'Multi-Family', color: '#f59e0b', icon: 'MF', irrMin: 11.8, irrMax: 22.4, cashYield: 8.4, lockup: 4.6, dealCount: 34, newestDays: 9 },
+		'retail': { label: 'Retail', color: '#ef4444', icon: 'RT', irrMin: 9.4, irrMax: 19.5, cashYield: 8.7, lockup: 4.8, dealCount: 9, newestDays: 16 },
+		'leasebuyback': { label: 'Lease Buy Back', color: '#8b5cf6', icon: 'LB', irrMin: 10.1, irrMax: 17.8, cashYield: 10.1, lockup: 3.2, dealCount: 6, newestDays: 22 },
+		'oilgas': { label: 'Oil & Gas', color: '#ec4899', icon: 'OG', irrMin: 14.2, irrMax: 31.0, cashYield: 13.1, lockup: 4.0, dealCount: 7, newestDays: 18 }
+	};
+
+	const goalDefaults = {
+		cashflow: ['Single Family', 'Hotels/Hospitality', 'Business / Other', 'RV/Mobile Home Parks', 'Lending'],
+		growth: ['Multi-Family', 'Self Storage', 'Hotels/Hospitality', 'Retail'],
+		tax: ['Oil & Gas', 'Multi-Family', 'RV/Mobile Home Parks', 'Lending']
+	};
+
+	function normalizeAssetKey(value) {
+		return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 	}
 
-	function getEmail() {
-		return browser ? getStoredSessionUser()?.email || null : null;
+	function getAssetProfile(value) {
+		const normalized = normalizeAssetKey(value);
+		return assetProfiles[normalized] || {
+			label: value || 'Other',
+			color: '#51BE7B',
+			icon: String(value || 'OT').slice(0, 2).toUpperCase(),
+			irrMin: 8,
+			irrMax: 18,
+			cashYield: 9.5,
+			lockup: 4.0,
+			dealCount: 12,
+			newestDays: 14
+		};
 	}
 
-	function toggleAssetClass(ac) {
-		if (wizardData.assetClasses.includes(ac)) {
-			wizardData.assetClasses = wizardData.assetClasses.filter(a => a !== ac);
+	function currency(value) {
+		return `$${Math.round(value || 0).toLocaleString()}`;
+	}
+
+	function compactCurrency(value) {
+		const amount = Number(value) || 0;
+		if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
+		if (amount >= 1000) return `$${Math.round(amount / 1000)}K`;
+		return currency(amount);
+	}
+
+	function percent(value, digits = 1) {
+		return `${Number(value || 0).toFixed(digits)}%`;
+	}
+
+	function formatLockup(value) {
+		return `${Number(value || 0).toFixed(value % 1 === 0 ? 0 : 1)} yrs`;
+	}
+
+	function parseCapitalRange(value) {
+		if (!value) return 0;
+		if (typeof value === 'number') return value;
+		const numbers = String(value)
+			.split('-')
+			.map((part) => parseInt(part.replace(/[^0-9]/g, ''), 10))
+			.filter((part) => Number.isFinite(part));
+		if (numbers.length === 0) return 0;
+		if (numbers.length === 1) return numbers[0];
+		return Math.round((numbers[0] + numbers[1]) / 2);
+	}
+
+	function estimateCheckSize(rangeValue) {
+		const midpoint = parseCapitalRange(rangeValue);
+		if (midpoint >= 1000000) return 250000;
+		if (midpoint >= 500000) return 150000;
+		if (midpoint >= 250000) return 125000;
+		if (midpoint >= 100000) return 100000;
+		if (midpoint > 0) return 50000;
+		return 100000;
+	}
+
+	function targetDisplay(goal, amount) {
+		if (goal === 'growth') return `Build ${currency(amount)} in portfolio value`;
+		if (goal === 'tax') return `Offset ${currency(amount)}/yr in taxable income`;
+		return `Build ${currency(amount)}/yr in passive income`;
+	}
+
+	function defaultAnnualTarget(goal) {
+		if (goal === 'growth') return 1000000;
+		if (goal === 'tax') return 100000;
+		return 100000;
+	}
+
+	function titleCaseList(items = []) {
+		if (!items.length) return '';
+		if (items.length === 1) return items[0];
+		if (items.length === 2) return `${items[0]} and ${items[1]}`;
+		return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+	}
+
+	function getTargetLabel() {
+		if (wizardData.goal === 'cashflow') return 'Target Annual Passive Income ($)';
+		if (wizardData.goal === 'growth') return 'Target Portfolio Value ($)';
+		if (wizardData.goal === 'tax') return 'Annual Taxable Income to Offset ($)';
+		return 'Target Amount ($)';
+	}
+
+	function getTargetHint() {
+		const value = Number(wizardData.targetAmount || 0);
+		if (!value) return '';
+		if (wizardData.goal === 'cashflow') {
+			const needed = Math.round(value / 0.1);
+			return `At roughly 10% cash yield, that usually means building about ${currency(needed)} of deployed capital.`;
+		}
+		if (wizardData.goal === 'growth') {
+			return 'This becomes the target line used in your projection bars and year-by-year plan.';
+		}
+		if (wizardData.goal === 'tax') {
+			return 'Tax-focused plans prioritize depreciation-heavy and offset-friendly deal types.';
+		}
+		return '';
+	}
+
+	function toggleAssetClass(assetClass) {
+		if (wizardData.assetClasses.includes(assetClass)) {
+			wizardData.assetClasses = wizardData.assetClasses.filter((value) => value !== assetClass);
 		} else {
-			wizardData.assetClasses = [...wizardData.assetClasses, ac];
+			wizardData.assetClasses = [...wizardData.assetClasses, assetClass];
 		}
 	}
 
-	function toggleDealType(dt) {
-		if (wizardData.dealTypes.includes(dt)) {
-			wizardData.dealTypes = wizardData.dealTypes.filter(d => d !== dt);
+	function toggleDealType(dealType) {
+		if (wizardData.dealTypes.includes(dealType)) {
+			wizardData.dealTypes = wizardData.dealTypes.filter((value) => value !== dealType);
 		} else {
-			wizardData.dealTypes = [...wizardData.dealTypes, dt];
+			wizardData.dealTypes = [...wizardData.dealTypes, dealType];
 		}
 	}
 
-	function selectGoal(g) {
-		wizardData.goal = g;
-		// Pre-select asset classes and deal types based on goal
-		if (g === 'cashflow') {
-			if (wizardData.assetClasses.length === 0) wizardData.assetClasses = ['Multi-Family', 'Self Storage', 'Industrial'];
-			if (wizardData.dealTypes.length === 0) wizardData.dealTypes = ['Lending', 'Buy & Hold'];
-		} else if (g === 'growth') {
-			if (wizardData.assetClasses.length === 0) wizardData.assetClasses = ['Multi-Family', 'Self Storage', 'Industrial'];
-			if (wizardData.dealTypes.length === 0) wizardData.dealTypes = ['Value-Add', 'Distressed'];
-		} else if (g === 'tax') {
-			if (wizardData.assetClasses.length === 0) wizardData.assetClasses = ['Multi-Family', 'Oil & Gas / Energy', 'RV/Mobile Home Parks'];
-			if (wizardData.dealTypes.length === 0) wizardData.dealTypes = ['Value-Add', 'Development'];
+	function selectGoal(goal) {
+		wizardData.goal = goal;
+		if (wizardData.assetClasses.length === 0) {
+			wizardData.assetClasses = [...(goalDefaults[goal] || goalDefaults.cashflow).slice(0, 4)];
+		}
+		if (wizardData.dealTypes.length === 0) {
+			wizardData.dealTypes = goal === 'cashflow'
+				? ['Lending / Credit', 'Buy & Hold', 'Distressed']
+				: goal === 'growth'
+					? ['Value-Add', 'Buy & Hold', 'Distressed']
+					: ['Lending / Credit', 'Value-Add'];
 		}
 		wizardStep = 1;
 	}
 
 	function nextStep() {
-		if (wizardStep < 5) wizardStep++;
+		if (wizardStep < stepTitles.length - 1) wizardStep += 1;
 	}
 
 	function prevStep() {
-		if (wizardStep > 0) wizardStep--;
-	}
-
-	function openWizard() {
-		// Load any existing wizard data from localStorage
-		if (browser) {
-			const stored = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
-			if (stored && Object.keys(stored).length > 0) {
-				wizardData.goal = stored._branch || stored.goal || 'cashflow';
-				wizardData.targetAmount = parseFloat(stored.targetAmount || stored.targetIncome || stored.targetTaxSavings || stored.targetGrowth || 0);
-				wizardData.investableCapital = stored.investableCapital || stored._capitalRange || '';
-				wizardData.assetClasses = stored.assetClasses || [];
-				wizardData.dealTypes = stored.dealTypes || stored.strategies || [];
-			}
-		}
-		wizardStep = 0;
-		showWizard = true;
+		if (wizardStep > 0) wizardStep -= 1;
 	}
 
 	function shouldAutoOpenWizard() {
@@ -128,9 +242,23 @@
 		return ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase()) || hash === 'edit' || hash === 'buybox';
 	}
 
+	function openWizard() {
+		if (browser) {
+			const stored = JSON.parse(localStorage.getItem('gycBuyBoxWizard') || '{}');
+			if (stored && Object.keys(stored).length > 0) {
+				wizardData.goal = stored._branch || stored.goal || 'cashflow';
+				wizardData.targetAmount = Number(stored.targetAmount || stored.targetIncome || stored.targetTaxSavings || stored.targetGrowth || 0);
+				wizardData.investableCapital = stored.investableCapital || stored._capitalRange || '';
+				wizardData.assetClasses = stored.assetClasses || [];
+				wizardData.dealTypes = stored.dealTypes || stored.strategies || [];
+			}
+		}
+		wizardStep = 0;
+		showWizard = true;
+	}
+
 	function closeWizard() {
 		showWizard = false;
-		// Save progress to localStorage
 		if (browser) {
 			localStorage.setItem('gycBuyBoxWizard', JSON.stringify({
 				_branch: wizardData.goal,
@@ -146,8 +274,8 @@
 	async function savePlan() {
 		saving = true;
 		saveMsg = '';
-		const email = getEmail();
-		const planPayload = {
+		const stored = browser ? getStoredSessionUser() : null;
+		const payload = {
 			goal: goalLabels[wizardData.goal] || wizardData.goal,
 			targetIncome: wizardData.goal === 'cashflow' ? wizardData.targetAmount : undefined,
 			targetGrowth: wizardData.goal === 'growth' ? wizardData.targetAmount : undefined,
@@ -158,79 +286,177 @@
 			_branch: wizardData.goal
 		};
 
-		// Save to localStorage
 		if (browser) {
-			localStorage.setItem('gycBuyBoxWizard', JSON.stringify(planPayload));
+			localStorage.setItem('gycBuyBoxWizard', JSON.stringify(payload));
 			localStorage.setItem('gycBuyBoxComplete', 'true');
 		}
 
-		// Save to API
 		try {
-			if (email) {
-				const resp = await fetch('/api/buybox', {
+			if (stored?.email && stored?.token) {
+				const response = await fetch('/api/buybox', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ email, wizardData: planPayload })
+					body: JSON.stringify({ email: stored.email, wizardData: payload })
 				});
-				if (resp.ok) {
-					saveMsg = 'Plan saved';
-				} else {
-					saveMsg = 'Saved locally (sync pending)';
-				}
+				saveMsg = response.ok ? 'Plan saved' : 'Saved locally (sync pending)';
 			} else {
 				saveMsg = 'Plan saved locally';
 			}
-		} catch (e) {
-			console.warn('Buy box save failed:', e);
+		} catch (error) {
+			console.warn('Buy box save failed:', error);
 			saveMsg = 'Saved locally (sync pending)';
 		}
 
-		plan = {
-			goal: goalLabels[wizardData.goal] || wizardData.goal,
-			targetIncome: wizardData.goal === 'cashflow' ? wizardData.targetAmount : undefined,
-			targetGrowth: wizardData.goal === 'growth' ? wizardData.targetAmount : undefined,
-			targetTaxSavings: wizardData.goal === 'tax' ? wizardData.targetAmount : undefined,
-			investableCapital: wizardData.investableCapital,
-			assetClasses: wizardData.assetClasses,
-			dealTypes: wizardData.dealTypes
-		};
+		plan = payload;
 		hasPlan = true;
 		showWizard = false;
 		saving = false;
-		setTimeout(() => saveMsg = '', 3000);
+		setTimeout(() => {
+			saveMsg = '';
+		}, 3000);
 	}
 
-	function getTargetLabel() {
-		if (wizardData.goal === 'cashflow') return 'Target Monthly Passive Income ($)';
-		if (wizardData.goal === 'growth') return 'Target Portfolio Value in 5 Years ($)';
-		if (wizardData.goal === 'tax') return 'Annual Taxable Income to Offset ($)';
-		return 'Target Amount ($)';
+	function printPlan() {
+		if (browser) window.print();
 	}
 
-	function getTargetHint() {
-		const val = wizardData.targetAmount;
-		if (!val || val <= 0) return '';
-		if (wizardData.goal === 'cashflow') {
-			const annual = val * 12;
-			const needed = Math.round(annual / 0.09);
-			return `That is $${annual.toLocaleString()}/yr. At ~9% avg yield, you will need ~$${needed.toLocaleString()} deployed.`;
+	const goalKey = $derived.by(() => plan?._branch || wizardData.goal || 'cashflow');
+	const selectedAssets = $derived.by(() => {
+		const assets = plan?.assetClasses || wizardData.assetClasses || [];
+		return assets.length ? assets : [...(goalDefaults[goalKey] || goalDefaults.cashflow)];
+	});
+	const selectedStrategies = $derived.by(() => plan?.dealTypes || plan?.strategies || wizardData.dealTypes || []);
+	const annualTargetAmount = $derived.by(() => {
+		const raw = Number(plan?.targetIncome || plan?.targetGrowth || plan?.targetTaxSavings || wizardData.targetAmount || 0);
+		if (!raw) return defaultAnnualTarget(goalKey);
+		return raw;
+	});
+	const currentInvestedTotal = $derived(portfolio.reduce((sum, investment) => sum + (parseFloat(investment.amountInvested) || 0), 0));
+	const currentInvestmentCount = $derived(portfolio.length);
+	const targetBadge = $derived.by(() => {
+		if (goalKey === 'growth') return 'LONG-TERM GROWTH';
+		if (goalKey === 'tax') return 'TAX EFFICIENCY';
+		return 'CASH FLOW';
+	});
+	const targetHeadline = $derived(targetDisplay(goalKey, annualTargetAmount));
+	const targetLabel = $derived.by(() => goalKey === 'growth' ? 'Target' : 'Thesis');
+	const planThesis = $derived.by(() => {
+		const assetsText = titleCaseList(selectedAssets.slice(0, 5).map((asset) => getAssetProfile(asset).label));
+		const strategiesText = titleCaseList(
+			(selectedStrategies.length ? selectedStrategies : ['Lending / Credit', 'Buy & Hold', 'Distressed']).slice(0, 4)
+		);
+		if (goalKey === 'growth') {
+			return `I want to compound capital through ${assetsText}, using ${strategiesText} strategies, with a bias toward durable sponsors, steady reinvestment, and long-term upside.`;
 		}
-		if (wizardData.goal === 'tax') return 'Typical depreciation deals offset 60-80% of your investment in year one.';
-		if (wizardData.goal === 'growth') return 'That is a ~15% annualized return over 5 years.';
-		return '';
-	}
+		if (goalKey === 'tax') {
+			return `I want to target ${assetsText}, using ${strategiesText} structures, with a focus on depreciation, efficient capital placement, and offset-friendly cash flow.`;
+		}
+		return `I invest in ${assetsText}, using ${strategiesText} strategies, writing ${currency(estimateCheckSize(plan?.investableCapital || wizardData.investableCapital))} checks, targeting quarterly or better distributions.`;
+	});
 
-	const capitalOptions = [
-		{ label: 'Under $100K', value: '0-100000' },
-		{ label: '$100K - $250K', value: '100000-250000' },
-		{ label: '$250K - $500K', value: '250000-500000' },
-		{ label: '$500K - $1M', value: '500000-1000000' },
-		{ label: '$1M+', value: '1000000-5000000' }
-	];
+	const snapshotRows = $derived.by(() =>
+		selectedAssets.slice(0, 5).map((asset) => {
+			const profile = getAssetProfile(asset);
+			return {
+				...profile,
+				newThisMonth: Math.max(1, Math.round(profile.dealCount * 0.12))
+			};
+		})
+	);
+	const totalMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.dealCount, 0));
+	const totalNewMatches = $derived(snapshotRows.reduce((sum, row) => sum + row.newThisMonth, 0));
+
+	const projection = $derived.by(() => {
+		const preferredAssets = selectedAssets.length ? selectedAssets : [...goalDefaults.cashflow];
+		const checkSize = estimateCheckSize(plan?.investableCapital || wizardData.investableCapital);
+		const startYear = new Date().getFullYear();
+		let cumulativeIncome = 0;
+		let cumulativeCapital = currentInvestedTotal;
+		const currentAllocations = {};
+		portfolio.forEach((investment) => {
+			const profile = getAssetProfile(investment.assetClass || 'Other');
+			currentAllocations[profile.label] = (currentAllocations[profile.label] || 0) + (parseFloat(investment.amountInvested) || 0);
+		});
+
+		const years = Array.from({ length: 9 }, (_, index) => {
+			const profile = getAssetProfile(preferredAssets[index % preferredAssets.length]);
+			const income = Math.round(checkSize * (profile.cashYield / 100));
+			cumulativeIncome += income;
+			cumulativeCapital += checkSize;
+			return {
+				index: index + 1,
+				year: startYear + index,
+				profile,
+				checkSize,
+				income,
+				cumulativeIncome,
+				cumulativeCapital,
+				matches: profile.dealCount,
+				progressPct: annualTargetAmount > 0 ? Math.min(100, Math.round((cumulativeIncome / annualTargetAmount) * 100)) : 0
+			};
+		});
+
+		const bars = [];
+		const running = { ...currentAllocations };
+		bars.push({
+			label: 'Today',
+			total: currentInvestedTotal,
+			segments: Object.entries(running)
+				.map(([label, amount]) => ({ label, amount, color: getAssetProfile(label).color }))
+				.sort((a, b) => b.amount - a.amount)
+		});
+
+		years.forEach((item) => {
+			running[item.profile.label] = (running[item.profile.label] || 0) + item.checkSize;
+			bars.push({
+				label: `Year ${item.index} (${item.year})`,
+				total: Object.values(running).reduce((sum, value) => sum + value, 0),
+				segments: Object.entries(running)
+					.map(([label, amount]) => ({ label, amount, color: getAssetProfile(label).color }))
+					.sort((a, b) => b.amount - a.amount)
+			});
+		});
+
+		const maxTotal = Math.max(...bars.map((bar) => bar.total), checkSize, 1);
+		const finalBar = bars[bars.length - 1];
+		const finalShare = finalBar.total > 0
+			? finalBar.segments.map((segment) => ({
+				...segment,
+				share: (segment.amount / finalBar.total) * 100
+			})).sort((a, b) => b.share - a.share)[0]
+			: null;
+
+		return {
+			checkSize,
+			years,
+			bars,
+			maxTotal,
+			finalBar,
+			finalShare
+		};
+	});
+
+	const legendItems = $derived.by(() => {
+		const labels = new Set();
+		projection.bars.forEach((bar) => {
+			bar.segments.forEach((segment) => labels.add(segment.label));
+		});
+		return [...labels].map((label) => ({
+			label,
+			color: getAssetProfile(label).color
+		}));
+	});
+
+	const concentrationAlert = $derived.by(() => {
+		if (!projection.finalShare || projection.finalShare.share < 45) return null;
+		return `${Math.round(projection.finalShare.share)}% in ${projection.finalShare.label} plan targets 45% or less. Consider diversifying.`;
+	});
 
 	onMount(async () => {
 		if (!browser) return;
 		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
+		portfolio = JSON.parse(localStorage.getItem('gycPortfolio') || '[]');
+
 		try {
 			const stored = getStoredSessionUser();
 			if (!stored?.token) {
@@ -238,24 +464,25 @@
 				if (shouldOpenWizardFromLocation) openWizard();
 				return;
 			}
-			const res = await fetch('/api/buybox?email=' + encodeURIComponent(stored.email), {
-				headers: { 'Authorization': 'Bearer ' + stored.token }
+
+			const response = await fetch(`/api/buybox?email=${encodeURIComponent(stored.email)}`, {
+				headers: { Authorization: `Bearer ${stored.token}` }
 			});
-			if (res.ok) {
-				const data = await res.json();
-				if (data && data.buyBox && Object.keys(data.buyBox).length > 0) {
+
+			if (response.ok) {
+				const data = await response.json();
+				if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
 					plan = data.buyBox;
 					hasPlan = true;
-					// Populate wizard data from saved plan
 					wizardData.goal = data.buyBox._branch || 'cashflow';
-					wizardData.targetAmount = parseFloat(data.buyBox.targetIncome || data.buyBox.targetGrowth || data.buyBox.targetTaxSavings || 0);
+					wizardData.targetAmount = Number(data.buyBox.targetIncome || data.buyBox.targetGrowth || data.buyBox.targetTaxSavings || 0);
 					wizardData.investableCapital = data.buyBox.investableCapital || '';
 					wizardData.assetClasses = data.buyBox.assetClasses || [];
 					wizardData.dealTypes = data.buyBox.dealTypes || data.buyBox.strategies || [];
 				}
 			}
-		} catch (e) {
-			console.warn('Failed to load plan:', e);
+		} catch (error) {
+			console.warn('Failed to load plan:', error);
 		} finally {
 			loading = false;
 			if (shouldOpenWizardFromLocation && !showWizard) openWizard();
@@ -263,83 +490,83 @@
 	});
 </script>
 
-<svelte:head><title>My Plan | GYC</title></svelte:head>
+<svelte:head>
+	<title>My Plan | GYC</title>
+</svelte:head>
 
-<div class="plan-page">
-	<div class="dash-tabs">
+<div class="topbar">
+	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+	</button>
+	<div class="topbar-title">Dashboard</div>
+	<nav class="dash-tabs" aria-label="Dashboard sections">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
 		<a href="/app/portfolio" class="dash-tab">Portfolio</a>
-		<a class="dash-tab active" href="/app/plan">My Plan</a>
-	</div>
+		<a href="/app/plan" class="dash-tab active">My Plan</a>
+	</nav>
+</div>
 
+<div class="plan-page">
 	{#if saveMsg}
 		<div class="save-toast">{saveMsg}</div>
 	{/if}
 
 	{#if loading}
 		<div class="loading-skeleton">
-			<div class="sk-bar" style="width:40%;height:20px;margin-bottom:16px"></div>
-			<div class="sk-bar" style="width:70%;height:14px;margin-bottom:24px"></div>
+			<div class="sk-bar" style="width: 180px; height: 14px;"></div>
 			<div class="sk-card">
-				<div class="sk-bar" style="width:50%;height:16px;margin-bottom:12px"></div>
-				<div class="sk-bar" style="width:80%;height:12px;margin-bottom:8px"></div>
-				<div class="sk-bar" style="width:60%;height:12px"></div>
+				<div class="sk-bar" style="width: 120px; height: 18px; margin-bottom: 18px;"></div>
+				<div class="sk-bar" style="width: 78%; height: 30px; margin-bottom: 24px;"></div>
+				<div class="sk-bar" style="width: 92%; height: 14px; margin-bottom: 12px;"></div>
+				<div class="sk-bar" style="width: 84%; height: 14px;"></div>
 			</div>
 		</div>
 	{:else if showWizard}
-		<!-- Buy Box Wizard -->
 		<div class="wizard-overlay">
 			<div class="wizard-modal">
 				<div class="wizard-top">
 					<div class="wizard-progress">
-						{#each stepTitles as _, i}
-							<div class="wiz-dot" class:active={i === wizardStep} class:done={i < wizardStep}></div>
+						{#each stepTitles as _, index}
+							<div class="wiz-dot" class:active={index === wizardStep} class:done={index < wizardStep}></div>
 						{/each}
 					</div>
 					<button class="wizard-close" onclick={closeWizard}>&times;</button>
 				</div>
+
 				<div class="wizard-step-title">{stepTitles[wizardStep]}</div>
 
 				{#if wizardStep === 0}
-					<!-- Step 1: Goal Selection -->
 					<div class="goal-cards">
 						<button class="goal-card" class:selected={wizardData.goal === 'cashflow'} onclick={() => selectGoal('cashflow')}>
-							<div class="goal-icon">💰</div>
-							<div class="goal-card-title">Generate Passive Income</div>
-							<div class="goal-card-desc">Build monthly cash flow from real estate investments</div>
+							<div class="goal-card-title">Build Passive Income</div>
+							<div class="goal-card-desc">Design a plan around repeatable cash-flowing checks and quarterly distributions.</div>
 						</button>
 						<button class="goal-card" class:selected={wizardData.goal === 'growth'} onclick={() => selectGoal('growth')}>
-							<div class="goal-icon">📈</div>
 							<div class="goal-card-title">Build Long-Term Wealth</div>
-							<div class="goal-card-desc">Grow your portfolio value through appreciation</div>
+							<div class="goal-card-desc">Bias the plan toward appreciation, durable operators, and longer hold periods.</div>
 						</button>
 						<button class="goal-card" class:selected={wizardData.goal === 'tax'} onclick={() => selectGoal('tax')}>
-							<div class="goal-icon">🛡️</div>
 							<div class="goal-card-title">Reduce Taxable Income</div>
-							<div class="goal-card-desc">Offset W-2 income with depreciation and tax benefits</div>
+							<div class="goal-card-desc">Prioritize structures with depreciation or offset-friendly income characteristics.</div>
 						</button>
 					</div>
-
 				{:else if wizardStep === 1}
-					<!-- Step 2: Target Amount -->
 					<div class="wiz-field">
-						<label for="plan-target-amount">{getTargetLabel()}</label>
-						<input id="plan-target-amount" type="number" bind:value={wizardData.targetAmount} placeholder="e.g. 10000" />
+						<label for="planTarget">{getTargetLabel()}</label>
+						<input id="planTarget" type="number" bind:value={wizardData.targetAmount} placeholder="100000" />
 						{#if getTargetHint()}
 							<div class="wiz-hint">{getTargetHint()}</div>
 						{/if}
 					</div>
 					<div class="wiz-nav">
 						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
-						<button class="wiz-btn-next" onclick={nextStep} disabled={!wizardData.targetAmount || wizardData.targetAmount <= 0}>Next</button>
+						<button class="wiz-btn-next" onclick={nextStep} disabled={!wizardData.targetAmount}>Next</button>
 					</div>
-
 				{:else if wizardStep === 2}
-					<!-- Step 3: Investable Capital -->
 					<div class="capital-chips">
-						{#each capitalOptions as opt}
-							<button class="capital-chip" class:selected={wizardData.investableCapital === opt.value} onclick={() => wizardData.investableCapital = opt.value}>
-								{opt.label}
+						{#each capitalOptions as option}
+							<button class="capital-chip" class:selected={wizardData.investableCapital === option.value} onclick={() => wizardData.investableCapital = option.value}>
+								{option.label}
 							</button>
 						{/each}
 					</div>
@@ -347,13 +574,11 @@
 						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
 						<button class="wiz-btn-next" onclick={nextStep} disabled={!wizardData.investableCapital}>Next</button>
 					</div>
-
 				{:else if wizardStep === 3}
-					<!-- Step 4: Asset Class Preferences -->
 					<div class="toggle-grid">
-						{#each assetClassOptions as ac}
-							<button class="toggle-chip" class:selected={wizardData.assetClasses.includes(ac)} onclick={() => toggleAssetClass(ac)}>
-								{ac}
+						{#each assetClassOptions as asset}
+							<button class="toggle-chip" class:selected={wizardData.assetClasses.includes(asset)} onclick={() => toggleAssetClass(asset)}>
+								{asset}
 							</button>
 						{/each}
 					</div>
@@ -361,13 +586,11 @@
 						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
 						<button class="wiz-btn-next" onclick={nextStep} disabled={wizardData.assetClasses.length === 0}>Next</button>
 					</div>
-
 				{:else if wizardStep === 4}
-					<!-- Step 5: Deal Type Preferences -->
 					<div class="toggle-grid">
-						{#each dealTypeOptions as dt}
-							<button class="toggle-chip" class:selected={wizardData.dealTypes.includes(dt)} onclick={() => toggleDealType(dt)}>
-								{dt}
+						{#each dealTypeOptions as dealType}
+							<button class="toggle-chip" class:selected={wizardData.dealTypes.includes(dealType)} onclick={() => toggleDealType(dealType)}>
+								{dealType}
 							</button>
 						{/each}
 					</div>
@@ -375,35 +598,33 @@
 						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
 						<button class="wiz-btn-next" onclick={nextStep} disabled={wizardData.dealTypes.length === 0}>Next</button>
 					</div>
-
-				{:else if wizardStep === 5}
-					<!-- Step 6: Summary -->
+				{:else}
 					<div class="summary-card">
 						<div class="summary-row">
 							<div class="summary-label">Goal</div>
-							<div class="summary-value">{goalLabels[wizardData.goal] || wizardData.goal}</div>
+							<div class="summary-value">{goalLabels[wizardData.goal]}</div>
 						</div>
 						<div class="summary-row">
 							<div class="summary-label">Target</div>
-							<div class="summary-value">${Number(wizardData.targetAmount).toLocaleString()}{wizardData.goal === 'cashflow' ? '/mo' : ''}</div>
+							<div class="summary-value">{targetDisplay(wizardData.goal, Number(wizardData.targetAmount || 0))}</div>
 						</div>
 						<div class="summary-row">
 							<div class="summary-label">Investable Capital</div>
-							<div class="summary-value">{capitalOptions.find(o => o.value === wizardData.investableCapital)?.label || wizardData.investableCapital}</div>
+							<div class="summary-value">{capitalOptions.find((option) => option.value === wizardData.investableCapital)?.label || 'Not set'}</div>
 						</div>
 						<div class="summary-row">
 							<div class="summary-label">Asset Classes</div>
 							<div class="summary-tags">
-								{#each wizardData.assetClasses as ac}
-									<span class="summary-tag">{ac}</span>
+								{#each wizardData.assetClasses as asset}
+									<span class="summary-tag">{asset}</span>
 								{/each}
 							</div>
 						</div>
 						<div class="summary-row">
 							<div class="summary-label">Deal Types</div>
 							<div class="summary-tags">
-								{#each wizardData.dealTypes as dt}
-									<span class="summary-tag">{dt}</span>
+								{#each wizardData.dealTypes as dealType}
+									<span class="summary-tag">{dealType}</span>
 								{/each}
 							</div>
 						</div>
@@ -417,200 +638,895 @@
 				{/if}
 			</div>
 		</div>
-
 	{:else if !hasPlan}
 		<div class="empty-state">
-			<div class="empty-icon">📋</div>
-			<div class="empty-title">You don't have a plan yet.</div>
-			<div class="empty-desc">Members with a plan deploy an average of $150K in their first 90 days. Takes 3 minutes.</div>
+			<div class="empty-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="36" height="36"><path d="M4 6h16v12H4z"/><path d="M9 6V4h6v2"/></svg>
+			</div>
+			<div class="empty-title">You do not have an investment plan yet</div>
+			<div class="empty-desc">Build your target, preferred asset classes, and investment cadence so Dashboard, Portfolio, and deals all line up to the same blueprint.</div>
 			<button class="btn-cta" onclick={openWizard}>Build My Plan</button>
 		</div>
 	{:else}
-		<div class="plan-content">
-			<div class="plan-header">
-				<h2>Your Investment Plan</h2>
-				<button class="btn-edit" onclick={openWizard}>Edit Plan</button>
-			</div>
-			{#if plan.goal}
-				<div class="plan-section">
-					<div class="plan-label">Goal</div>
-					<div class="plan-value">{plan.goal}</div>
-				</div>
-			{/if}
-			{#if plan.targetIncome}
-				<div class="plan-section">
-					<div class="plan-label">Target Monthly Income</div>
-					<div class="plan-value">${Number(plan.targetIncome).toLocaleString()}/mo</div>
-				</div>
-			{/if}
-			{#if plan.targetGrowth}
-				<div class="plan-section">
-					<div class="plan-label">Target Portfolio Value</div>
-					<div class="plan-value">${Number(plan.targetGrowth).toLocaleString()}</div>
-				</div>
-			{/if}
-			{#if plan.targetTaxSavings}
-				<div class="plan-section">
-					<div class="plan-label">Tax Offset Target</div>
-					<div class="plan-value">${Number(plan.targetTaxSavings).toLocaleString()}/yr</div>
-				</div>
-			{/if}
-			{#if plan.investableCapital}
-				<div class="plan-section">
-					<div class="plan-label">Investable Capital</div>
-					<div class="plan-value">{capitalOptions.find(o => o.value === plan.investableCapital)?.label || plan.investableCapital}</div>
-				</div>
-			{/if}
-			{#if plan.assetClasses?.length}
-				<div class="plan-section">
-					<div class="plan-label">Preferred Asset Classes</div>
-					<div class="plan-tags">
-						{#each plan.assetClasses as ac}
-							<span class="plan-tag">{ac}</span>
-						{/each}
+		<div class="plan-stack">
+			<section class="plan-card plan-target-card">
+				<div class="plan-card-top">
+					<span class="goal-pill">{targetBadge}</span>
+					<div class="target-actions">
+						<button class="inline-action" onclick={printPlan}>Print</button>
+						<button class="inline-action" onclick={openWizard}>Edit</button>
 					</div>
 				</div>
-			{/if}
-			{#if plan.dealTypes?.length}
-				<div class="plan-section">
-					<div class="plan-label">Preferred Deal Types</div>
-					<div class="plan-tags">
-						{#each plan.dealTypes as dt}
-							<span class="plan-tag">{dt}</span>
-						{/each}
-					</div>
-				</div>
-			{/if}
+				<div class="plan-kicker">Target</div>
+				<h1 class="plan-headline">{targetHeadline}</h1>
+				<div class="plan-kicker">{targetLabel}</div>
+				<p class="plan-copy">{planThesis}</p>
+			</section>
 
-			{#if !isPaid}
-				<div class="gate-overlay">
-					<div class="gate-card">
-						<div class="gate-icon">🔒</div>
-						<div class="gate-title">Unlock Your Full Plan</div>
-						<div class="gate-desc">Academy members get a personalized deployment timeline with slot-by-slot recommendations.</div>
-						<a href="/app/academy" class="btn-cta">Learn More</a>
+			{#if canViewAnalytics}
+				<section class="plan-card market-card">
+					<div class="section-eyebrow">Market Snapshot</div>
+					<div class="section-subcopy">Deals in the database right now that line up with your selected asset classes.</div>
+					<div class="snapshot-table">
+						<div class="snapshot-head snapshot-row">
+							<div>Asset Class</div>
+							<div>Target IRR</div>
+							<div>Cash Yield</div>
+							<div>Avg Lockup</div>
+							<div>Newest Deal</div>
+						</div>
+						{#each snapshotRows as row}
+							<div class="snapshot-row">
+								<div class="snapshot-asset">
+									<span class="snapshot-icon" style={`background:${row.color}`}>{row.icon}</span>
+									<div>
+										<div class="snapshot-name">{row.label}</div>
+										<div class="snapshot-meta">{row.dealCount} deals</div>
+									</div>
+								</div>
+								<div>{percent(row.irrMin)} - {percent(row.irrMax)}</div>
+								<div>{percent(row.cashYield)}</div>
+								<div>{formatLockup(row.lockup)}</div>
+								<div>{row.newestDays} days ago</div>
+							</div>
+						{/each}
 					</div>
-				</div>
+					<div class="market-footer">
+						<div class="market-match-total">{totalMatches} total deals match</div>
+						<a href="/app/deals" class="browse-btn">Browse Matching Deals →</a>
+						<div class="market-match-new">{totalNewMatches} new this month</div>
+					</div>
+				</section>
+
+				<section class="plan-card growth-card">
+					<div class="growth-topline">
+						<div class="section-eyebrow">Portfolio Growth By Asset Class</div>
+						<div class="growth-target">{compactCurrency(projection.finalBar?.total || 0)} target</div>
+					</div>
+					<div class="growth-chart">
+						{#each projection.bars as bar}
+							<div class="growth-column">
+								<div class="growth-value">{compactCurrency(bar.total)}</div>
+								<div class="growth-bar-shell">
+									<div class="growth-bar" style={`height:${Math.max(10, (bar.total / projection.maxTotal) * 100)}%`}>
+										{#each bar.segments as segment}
+											<span class="growth-segment" style={`height:${bar.total > 0 ? (segment.amount / bar.total) * 100 : 0}%; background:${segment.color}`}></span>
+										{/each}
+									</div>
+								</div>
+								<div class="growth-label">{bar.label}</div>
+							</div>
+						{/each}
+					</div>
+					<div class="growth-legend">
+						{#each legendItems as item}
+							<div class="legend-item">
+								<span class="legend-swatch" style={`background:${item.color}`}></span>
+								<span>{item.label}</span>
+							</div>
+						{/each}
+					</div>
+					{#if concentrationAlert}
+						<div class="growth-alert">{concentrationAlert}</div>
+					{/if}
+				</section>
+
+				<section class="plan-card schedule-card">
+					<div class="schedule-topline">
+						<div>
+							<div class="section-eyebrow">Your Investment Plan</div>
+							<div class="schedule-summary">{currentInvestmentCount} of 9 investments · {currency(currentInvestedTotal)} deployed</div>
+						</div>
+						<button class="inline-action green" onclick={openWizard}>Edit Plan</button>
+					</div>
+					<div class="schedule-list">
+						{#each projection.years as item}
+							<div class="schedule-row">
+								<div class="schedule-row-top">
+									<div class="schedule-year">Year {item.index} <span>({item.year})</span></div>
+									<div class="schedule-income">{currency(item.cumulativeIncome)}/yr <span>{item.progressPct}%</span></div>
+								</div>
+								<div class="schedule-row-detail">
+									<span class="schedule-bullet"></span>
+									{item.profile.label} · {currency(item.checkSize)} · ~{percent(item.profile.cashYield)} · ~{currency(item.income)}/yr
+									<a href="/app/deals" class="schedule-link">{item.matches} matches</a>
+								</div>
+							</div>
+						{/each}
+					</div>
+					<div class="schedule-total">{projection.years.length} deals · {currency(projection.checkSize)} avg check · {currency(projection.years[projection.years.length - 1]?.cumulativeIncome || 0)}/yr</div>
+				</section>
+			{:else}
+				<section class="plan-card locked-card">
+					<div class="locked-title">Advanced plan analytics are for members and admins</div>
+					<div class="locked-copy">Free users can still build and edit a plan, but the market snapshot, projection bars, and year-by-year deployment schedule stay locked until upgrade.</div>
+					<div class="locked-actions">
+						<button class="btn-cta secondary" onclick={openWizard}>Update Plan</button>
+						<a href="/app/academy" class="btn-cta">Unlock Full Plan</a>
+					</div>
+				</section>
 			{/if}
 		</div>
 	{/if}
 </div>
 
 <style>
-	.plan-page { padding: 20px 24px; max-width: 900px; }
-	.dash-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+	.topbar {
+		position: sticky;
+		top: 0;
+		min-height: 66px;
+		background: var(--bg-cream);
+		border-bottom: 1px solid var(--border);
+		display: flex;
+		align-items: stretch;
+		padding: 0 28px;
+		gap: 26px;
+		z-index: 50;
+	}
+	.mobile-menu-btn {
+		display: none;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 4px;
+		align-self: center;
+		color: var(--text-dark);
+	}
+	.mobile-menu-btn svg {
+		width: 22px;
+		height: 22px;
+	}
+	.topbar-title {
+		display: flex;
+		align-items: center;
+		font-family: var(--font-headline);
+		font-size: 20px;
+		font-weight: 400;
+		color: var(--text-dark);
+		flex-shrink: 0;
+	}
+	.dash-tabs {
+		display: flex;
+		align-items: stretch;
+		gap: 2px;
+	}
 	.dash-tab {
-		padding: 8px 16px; border-radius: 8px; font-family: var(--font-ui);
-		font-size: 13px; font-weight: 600; text-decoration: none;
-		color: var(--text-muted); transition: all 0.15s;
+		padding: 0 18px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 600;
+		color: #8a9aa0;
+		text-decoration: none;
+		display: flex;
+		align-items: center;
+		height: 100%;
+		border-bottom: 3px solid transparent;
 	}
-	.dash-tab:hover { color: var(--text-dark); background: rgba(0,0,0,0.04); }
-	.dash-tab.active { background: var(--primary); color: #fff; }
-
-	.save-toast { padding: 10px 16px; background: #F0F9F4; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; color: #059669; font-weight: 600; text-align: center; margin-bottom: 16px; }
-
-	.empty-state {
-		text-align: center; padding: 80px 32px;
-		display: flex; flex-direction: column; align-items: center; gap: 8px;
+	.dash-tab.active {
+		color: var(--primary);
+		border-bottom-color: var(--primary);
 	}
-	.empty-icon { font-size: 48px; opacity: 0.3; margin-bottom: 8px; }
-	.empty-title { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-dark); }
-	.empty-desc { font-family: var(--font-body); font-size: 14px; color: var(--text-muted); max-width: 400px; margin-bottom: 16px; }
+
+	.plan-page {
+		padding: 24px;
+		max-width: 1240px;
+	}
+	.plan-stack {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.plan-card {
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 24px;
+		box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+	}
+	.plan-target-card {
+		padding: 26px 26px 28px;
+	}
+	.plan-card-top,
+	.schedule-topline,
+	.growth-topline {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+	}
+	.goal-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 10px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.14);
+		color: var(--primary);
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+	}
+	.target-actions {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+	.inline-action {
+		border: none;
+		background: none;
+		padding: 0;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-muted);
+		cursor: pointer;
+		text-decoration: none;
+	}
+	.inline-action.green {
+		color: var(--primary);
+	}
+	.plan-kicker,
+	.section-eyebrow {
+		margin-top: 18px;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.plan-headline {
+		margin: 6px 0 0;
+		font-family: var(--font-headline);
+		font-size: 23px;
+		font-weight: 700;
+		line-height: 1.25;
+		color: var(--text-dark);
+	}
+	.plan-copy,
+	.section-subcopy,
+	.locked-copy {
+		margin: 16px 0 0;
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.8;
+		color: var(--text-secondary);
+	}
+	.market-card {
+		padding-top: 18px;
+	}
+	.snapshot-table {
+		margin-top: 18px;
+		border-top: 1px solid var(--border-light);
+	}
+	.snapshot-row {
+		display: grid;
+		grid-template-columns: minmax(240px, 1.6fr) 1fr 1fr 1fr 1fr;
+		align-items: center;
+		gap: 12px;
+		padding: 14px 0;
+		border-bottom: 1px solid var(--border-light);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-dark);
+	}
+	.snapshot-head {
+		padding-top: 12px;
+		padding-bottom: 12px;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.snapshot-asset {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+	.snapshot-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 10px;
+		color: #fff;
+		font-size: 11px;
+		font-weight: 700;
+	}
+	.snapshot-name {
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.snapshot-meta {
+		margin-top: 2px;
+		font-size: 12px;
+		color: var(--text-muted);
+	}
+	.market-footer {
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		gap: 16px;
+		padding-top: 18px;
+	}
+	.market-match-total {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.market-match-new {
+		text-align: right;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--primary);
+	}
+	.browse-btn,
 	.btn-cta {
-		display: inline-block; padding: 14px 32px; background: var(--primary);
-		color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui);
-		font-size: 14px; font-weight: 700; text-decoration: none; border: none; cursor: pointer;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 12px 22px;
+		border-radius: 8px;
+		background: var(--primary);
+		color: #fff;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		text-decoration: none;
+		border: 1px solid var(--primary);
+		cursor: pointer;
+	}
+	.btn-cta.secondary {
+		background: transparent;
+		color: var(--primary);
+	}
+	.growth-target {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-muted);
+	}
+	.growth-chart {
+		display: grid;
+		grid-template-columns: repeat(10, minmax(0, 1fr));
+		gap: 10px;
+		align-items: end;
+		margin-top: 18px;
+		min-height: 290px;
+	}
+	.growth-column {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+	}
+	.growth-value {
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.growth-bar-shell {
+		height: 220px;
+		width: 100%;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+	}
+	.growth-bar {
+		width: 100%;
+		max-width: 52px;
+		min-height: 10px;
+		display: flex;
+		flex-direction: column-reverse;
+		border-radius: 0;
+		overflow: hidden;
+		background: rgba(81, 190, 123, 0.08);
+	}
+	.growth-segment {
+		display: block;
+		width: 100%;
+	}
+	.growth-label {
+		text-align: center;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-muted);
+		line-height: 1.35;
+	}
+	.growth-legend {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px 16px;
+		margin-top: 16px;
+	}
+	.legend-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+	.legend-swatch {
+		width: 10px;
+		height: 10px;
+		border-radius: 3px;
+	}
+	.growth-alert {
+		margin-top: 16px;
+		padding: 12px 14px;
+		border: 1px solid rgba(245, 158, 11, 0.24);
+		border-radius: 10px;
+		background: rgba(245, 158, 11, 0.08);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: #b45309;
+	}
+	.schedule-summary {
+		margin-top: 6px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.schedule-list {
+		margin-top: 18px;
+		border: 1px solid var(--border-light);
+		border-radius: 10px;
+		overflow: hidden;
+	}
+	.schedule-row {
+		padding: 14px 18px;
+		border-bottom: 1px solid var(--border-light);
+	}
+	.schedule-row:last-child {
+		border-bottom: none;
+	}
+	.schedule-row-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.schedule-year {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.schedule-year span {
+		font-weight: 500;
+		color: var(--text-muted);
+	}
+	.schedule-income {
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+	.schedule-income span {
+		color: var(--text-muted);
+		font-weight: 600;
+	}
+	.schedule-row-detail {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 8px;
+		font-family: var(--font-ui);
+		font-size: 13px;
+		color: var(--text-secondary);
+		flex-wrap: wrap;
+	}
+	.schedule-bullet {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: rgba(148, 163, 184, 0.65);
+	}
+	.schedule-link {
+		color: var(--primary);
+		text-decoration: none;
+		font-weight: 600;
+	}
+	.schedule-total {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 14px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+	.locked-card {
+		text-align: center;
+		padding-top: 38px;
+		padding-bottom: 38px;
+	}
+	.locked-title,
+	.empty-title {
+		font-family: var(--font-ui);
+		font-size: 22px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.locked-actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		margin-top: 22px;
+		flex-wrap: wrap;
+	}
+	.empty-state {
+		max-width: 560px;
+		margin: 28px auto 0;
+		padding: 42px 30px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-card);
+		text-align: center;
+	}
+	.empty-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 68px;
+		height: 68px;
+		border-radius: 20px;
+		background: var(--bg-cream);
+		color: var(--text-muted);
+		margin-bottom: 18px;
+	}
+	.empty-desc {
+		max-width: 460px;
+		margin: 12px auto 0;
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--text-secondary);
+	}
+	.save-toast {
+		margin-bottom: 14px;
+		padding: 10px 14px;
+		border-radius: 10px;
+		background: rgba(81, 190, 123, 0.12);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--primary);
 	}
 
-	.plan-content { }
-	.plan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-	h2 { font-family: var(--font-headline); font-size: 20px; font-weight: 800; color: var(--text-dark); margin: 0; }
-	.btn-edit { padding: 8px 16px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
-	.plan-section {
-		padding: 16px 0; border-bottom: 1px solid var(--border-light);
+	.loading-skeleton {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
 	}
-	.plan-label { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
-	.plan-value { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-dark); }
-	.plan-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-	.plan-tag {
-		padding: 4px 10px; border-radius: 6px; font-family: var(--font-ui);
-		font-size: 12px; font-weight: 600; background: rgba(44,110,73,0.08); color: #2C6E49;
+	.sk-card {
+		padding: 24px;
+		border-radius: var(--radius);
+		border: 1px solid var(--border);
+		background: var(--bg-card);
+	}
+	.sk-bar {
+		border-radius: 8px;
+		background: var(--border-light, #e5e7eb);
+		animation: skPulse 1.5s infinite;
+	}
+	@keyframes skPulse {
+		0%, 100% { opacity: 0.45; }
+		50% { opacity: 0.85; }
 	}
 
-	.gate-overlay {
-		margin-top: 32px; padding: 32px; background: var(--bg-card);
-		border: 2px dashed var(--border-light); border-radius: var(--radius-sm); text-align: center;
+	.wizard-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		background: rgba(0, 0, 0, 0.48);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 20px;
 	}
-	.gate-icon { font-size: 32px; margin-bottom: 12px; }
-	.gate-title { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
-	.gate-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+	.wizard-modal {
+		width: 100%;
+		max-width: 620px;
+		max-height: 92vh;
+		overflow-y: auto;
+		padding: 30px;
+		border-radius: 18px;
+		background: var(--bg-card);
+		box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+	}
+	.wizard-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 22px;
+	}
+	.wizard-progress {
+		display: flex;
+		gap: 8px;
+	}
+	.wiz-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--border);
+	}
+	.wiz-dot.active {
+		background: var(--primary);
+		transform: scale(1.2);
+	}
+	.wiz-dot.done {
+		background: rgba(81, 190, 123, 0.45);
+	}
+	.wizard-close {
+		border: none;
+		background: none;
+		font-size: 28px;
+		line-height: 1;
+		color: var(--text-muted);
+		cursor: pointer;
+	}
+	.wizard-step-title {
+		font-family: var(--font-headline);
+		font-size: 24px;
+		font-weight: 700;
+		color: var(--text-dark);
+		margin-bottom: 22px;
+	}
+	.goal-cards,
+	.capital-chips {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.goal-card,
+	.capital-chip {
+		width: 100%;
+		text-align: left;
+		padding: 18px 18px;
+		border-radius: 12px;
+		border: 1px solid var(--border);
+		background: var(--bg-card);
+		cursor: pointer;
+	}
+	.goal-card.selected,
+	.capital-chip.selected,
+	.toggle-chip.selected {
+		border-color: var(--primary);
+		background: rgba(81, 190, 123, 0.08);
+	}
+	.goal-card-title {
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.goal-card-desc {
+		margin-top: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		line-height: 1.55;
+		color: var(--text-secondary);
+	}
+	.wiz-field label,
+	.summary-label {
+		display: block;
+		margin-bottom: 8px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.6px;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+	.wiz-field input {
+		width: 100%;
+		padding: 12px 14px;
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		font-size: 15px;
+		box-sizing: border-box;
+	}
+	.wiz-hint {
+		margin-top: 10px;
+		font-family: var(--font-body);
+		font-size: 12px;
+		line-height: 1.55;
+		color: var(--text-secondary);
+	}
+	.toggle-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px;
+	}
+	.toggle-chip {
+		padding: 14px 12px;
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		background: var(--bg-card);
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		cursor: pointer;
+	}
+	.summary-card {
+		border: 1px solid var(--border-light);
+		border-radius: 12px;
+		padding: 18px;
+		background: var(--bg-cream);
+	}
+	.summary-row {
+		padding: 12px 0;
+		border-bottom: 1px solid var(--border-light);
+	}
+	.summary-row:last-child {
+		border-bottom: none;
+	}
+	.summary-value {
+		font-family: var(--font-ui);
+		font-size: 15px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.summary-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.summary-tag {
+		padding: 5px 10px;
+		border-radius: 999px;
+		background: rgba(81, 190, 123, 0.12);
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 600;
+		color: var(--primary);
+	}
+	.wiz-nav {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-top: 18px;
+	}
+	.wiz-btn-back,
+	.wiz-btn-next,
+	.wiz-btn-save {
+		padding: 12px 20px;
+		border-radius: 10px;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.wiz-btn-back {
+		border: 1px solid var(--border);
+		background: transparent;
+		color: var(--text-secondary);
+	}
+	.wiz-btn-next,
+	.wiz-btn-save {
+		border: 1px solid var(--primary);
+		background: var(--primary);
+		color: #fff;
+	}
+	.wiz-btn-next:disabled,
+	.wiz-btn-save:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 
-	/* Wizard */
-	.wizard-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; padding: 20px; }
-	.wizard-modal { background: var(--bg-card); border-radius: 16px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 32px; position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.15); }
-	.wizard-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-	.wizard-progress { display: flex; gap: 6px; }
-	.wiz-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: all 0.2s; }
-	.wiz-dot.active { background: var(--primary); transform: scale(1.3); }
-	.wiz-dot.done { background: var(--primary); opacity: 0.5; }
-	.wizard-close { background: none; border: none; font-size: 24px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; line-height: 1; }
-	.wizard-step-title { font-family: var(--font-headline); font-size: 22px; color: var(--text-dark); margin-bottom: 24px; }
-
-	/* Goal cards */
-	.goal-cards { display: flex; flex-direction: column; gap: 12px; }
-	.goal-card { text-align: left; padding: 20px; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-card); cursor: pointer; transition: all 0.2s; }
-	.goal-card:hover { border-color: var(--primary); }
-	.goal-card.selected { border-color: var(--primary); background: rgba(81,190,123,0.06); }
-	.goal-icon { font-size: 28px; margin-bottom: 8px; }
-	.goal-card-title { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
-	.goal-card-desc { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
-
-	/* Wizard fields */
-	.wiz-field { margin-bottom: 24px; }
-	.wiz-field label { display: block; font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
-	.wiz-field input { width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; box-sizing: border-box; }
-	.wiz-field input:focus { outline: none; border-color: var(--primary); }
-	.wiz-hint { font-size: 12px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5; }
-
-	/* Capital chips */
-	.capital-chips { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-	.capital-chip { padding: 16px; border: 2px solid var(--border); border-radius: 10px; background: var(--bg-card); font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: var(--text-dark); cursor: pointer; text-align: left; transition: all 0.2s; }
-	.capital-chip:hover { border-color: var(--primary); }
-	.capital-chip.selected { border-color: var(--primary); background: rgba(81,190,123,0.06); color: var(--primary); }
-
-	/* Toggle grid */
-	.toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 24px; }
-	.toggle-chip { padding: 14px; border: 2px solid var(--border); border-radius: 10px; background: var(--bg-card); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; text-align: center; }
-	.toggle-chip:hover { border-color: var(--primary); color: var(--text-dark); }
-	.toggle-chip.selected { border-color: var(--primary); background: rgba(81,190,123,0.08); color: #2C6E49; }
-
-	/* Navigation */
-	.wiz-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; }
-	.wiz-btn-back { padding: 12px 24px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
-	.wiz-btn-next, .wiz-btn-save { padding: 12px 32px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 14px; font-weight: 700; cursor: pointer; margin-left: auto; }
-	.wiz-btn-next:disabled, .wiz-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
-	/* Summary */
-	.summary-card { background: var(--bg-main); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
-	.summary-row { padding: 12px 0; border-bottom: 1px solid var(--border-light); }
-	.summary-row:last-child { border-bottom: none; }
-	.summary-label { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
-	.summary-value { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); }
-	.summary-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-	.summary-tag { padding: 4px 10px; border-radius: 6px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; background: rgba(44,110,73,0.08); color: #2C6E49; }
-
-	@media (min-width: 769px) and (max-width: 1024px) {
-		.plan-page { padding: 20px 24px 40px; max-width: 840px; }
-		.wizard-modal { max-width: 560px; }
+	@media (max-width: 1024px) {
+		.plan-page {
+			padding: 20px;
+		}
+		.snapshot-row {
+			grid-template-columns: minmax(200px, 1.8fr) repeat(4, minmax(0, 1fr));
+		}
+		.growth-chart {
+			gap: 8px;
+		}
 	}
 
 	@media (max-width: 768px) {
-		.plan-page { padding: 16px; }
-		.wizard-modal { padding: 24px 20px; }
-		.toggle-grid { grid-template-columns: repeat(2, 1fr); }
+		.mobile-menu-btn {
+			display: block;
+		}
+		.topbar {
+			padding: 0 16px;
+			gap: 14px;
+			flex-wrap: wrap;
+		}
+		.topbar-title {
+			font-size: 18px;
+		}
+		.dash-tabs {
+			width: 100%;
+			overflow-x: auto;
+		}
+		.plan-page {
+			padding: 16px;
+		}
+		.plan-card,
+		.plan-target-card {
+			padding: 20px 18px;
+		}
+		.plan-card-top,
+		.schedule-topline,
+		.market-footer,
+		.growth-topline {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.target-actions,
+		.locked-actions {
+			width: 100%;
+			justify-content: flex-start;
+		}
+		.snapshot-table {
+			border-top: none;
+		}
+		.snapshot-head {
+			display: none;
+		}
+		.snapshot-row {
+			grid-template-columns: 1fr;
+			gap: 6px;
+			padding: 14px 0;
+		}
+		.growth-chart {
+			grid-template-columns: repeat(5, minmax(0, 1fr));
+			row-gap: 18px;
+		}
+		.growth-bar-shell {
+			height: 180px;
+		}
+		.schedule-row-top {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+		.toggle-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.wizard-modal {
+			padding: 24px 18px;
+		}
+		.browse-btn,
+		.btn-cta {
+			width: 100%;
+		}
 	}
-	.loading-skeleton { padding: 24px 0; }
-	.sk-bar { background: var(--border-light, #e5e7eb); border-radius: 6px; animation: skPulse 1.5s infinite; }
-	.sk-card { background: var(--bg-card, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 12px; padding: 20px; }
-	@keyframes skPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
 </style>

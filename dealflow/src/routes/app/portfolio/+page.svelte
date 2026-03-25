@@ -102,6 +102,19 @@
 			};
 		});
 	});
+	const capitalGoal = $derived.by(() => {
+		const candidates = [
+			wizardData.targetPortfolio,
+			wizardData.capitalGoal,
+			wizardData.goalCapital,
+			wizardData.growthCapital,
+			wizardData.capitalAvailable
+		];
+		const matched = candidates
+			.map((value) => parseDollar(value))
+			.find((value) => value > 0);
+		return matched || 1000000;
+	});
 
 	// Risk insights
 	const riskInsights = $derived.by(() => {
@@ -110,48 +123,165 @@
 		const alloc = allocationMap;
 		for (const [cls, amt] of Object.entries(alloc)) {
 			const pct = (amt / totalInvested) * 100;
-			if (pct > 50) insights.push({ type: 'danger', text: `High concentration in ${cls}`, detail: `${pct.toFixed(0)}% of portfolio. Consider diversifying across asset classes.` });
+			if (pct > 50) {
+				insights.push({
+					type: 'danger',
+					text: 'High concentration',
+					detail: `${pct.toFixed(0)}% of portfolio in ${cls}. Consider diversifying across asset classes.`
+				});
+			}
 		}
 		const sponsorAlloc = {};
 		portfolio.forEach(i => { const sp = i.sponsor || 'Unknown'; sponsorAlloc[sp] = (sponsorAlloc[sp] || 0) + (parseFloat(i.amountInvested) || 0); });
 		for (const [sp, amt] of Object.entries(sponsorAlloc)) {
 			const pct = (amt / totalInvested) * 100;
-			if (pct > 40) insights.push({ type: 'warn', text: `Operator concentration risk`, detail: `${pct.toFixed(0)}% allocated to ${sp}. Diversifying sponsors reduces counterparty risk.` });
+			if (pct > 40) {
+				insights.push({
+					type: 'warn',
+					text: 'Sponsor exposure',
+					detail: `${pct.toFixed(0)}% allocated to ${sp}. Diversifying sponsors reduces counterparty risk.`
+				});
+			}
 		}
-		// Hold period risk
+
+		const lendingExposure = Object.entries(alloc).reduce((sum, [cls, amt]) => {
+			const normalized = String(cls || '').toLowerCase();
+			return ['lending', 'debt', 'credit'].some((keyword) => normalized.includes(keyword))
+				? sum + amt
+				: sum;
+		}, 0);
+		if (lendingExposure > 0) {
+			const pct = (lendingExposure / totalInvested) * 100;
+			if (pct > 35) {
+				insights.push({
+					type: 'warn',
+					text: 'Interest rate risk',
+					detail: `${pct.toFixed(0)}% in lending/debt funds. Rate changes can impact yields and borrower performance.`
+				});
+			}
+		}
+
 		const avgHoldMonths = avgHoldPeriod;
 		if (avgHoldMonths > 84) {
-			insights.push({ type: 'warn', text: `Long average hold period`, detail: `${(avgHoldMonths / 12).toFixed(1)} years avg hold. Longer holds reduce liquidity.` });
+			insights.push({
+				type: 'warn',
+				text: 'Long hold periods',
+				detail: `${(avgHoldMonths / 12).toFixed(1)} years average hold. Longer holds reduce liquidity flexibility.`
+			});
 		}
 		if (insights.length === 0) return [{ type: 'ok', text: 'Portfolio looks well-diversified', detail: 'No major concentration risks detected.' }];
-		return insights;
-	});
-
-	// Timeline data - investments grouped by quarter
-	const timelineData = $derived.by(() => {
-		const withDate = portfolio.filter(i => i.dateInvested);
-		if (withDate.length === 0) return null;
-		const buckets = {};
-		withDate.forEach(i => {
-			const d = new Date(i.dateInvested);
-			const q = Math.floor(d.getMonth() / 3) + 1;
-			const key = `Q${q} ${d.getFullYear()}`;
-			buckets[key] = (buckets[key] || 0) + (parseFloat(i.amountInvested) || 0);
-		});
-		const sorted = Object.entries(buckets).sort((a, b) => {
-			const parseKey = (k) => { const [q, y] = k.split(' '); return parseInt(y) * 4 + parseInt(q[1]); };
-			return parseKey(a[0]) - parseKey(b[0]);
-		});
-		return { labels: sorted.map(([k]) => k), amounts: sorted.map(([, v]) => v) };
-	});
-	const timelineMax = $derived.by(() => {
-		if (!timelineData?.amounts?.length) return 0;
-		return Math.max(...timelineData.amounts, totalInvested);
+		return insights.slice(0, 3);
 	});
 
 	const PIE_COLORS = ['#51BE7B', '#2563EB', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
-	const sorted = $derived(portfolio);
+	const timelineChart = $derived.by(() => {
+		const datedInvestments = portfolio
+			.map((investment) => ({
+				amount: parseFloat(investment.amountInvested) || 0,
+				date: investment.dateInvested ? new Date(investment.dateInvested) : null,
+				name: investment.investmentName || 'Investment'
+			}))
+			.filter((investment) => investment.amount > 0 && investment.date && !Number.isNaN(investment.date.getTime()))
+			.sort((a, b) => a.date - b.date);
+
+		if (datedInvestments.length === 0) return null;
+
+		const width = 1100;
+		const height = 280;
+		const padding = { top: 18, right: 24, bottom: 56, left: 64 };
+		const plotWidth = width - padding.left - padding.right;
+		const plotHeight = height - padding.top - padding.bottom;
+		const chartStart = new Date(datedInvestments[0].date.getFullYear(), datedInvestments[0].date.getMonth(), 1);
+		const latestDate = datedInvestments[datedInvestments.length - 1].date;
+		const compareDate = latestDate > new Date() ? latestDate : new Date();
+		const chartEnd = new Date(compareDate.getFullYear(), compareDate.getMonth() + 6, 1);
+		const months = [];
+		for (let cursor = new Date(chartStart); cursor <= chartEnd && months.length < 120; cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)) {
+			months.push(new Date(cursor));
+		}
+
+		const goal = capitalGoal;
+		const xForIndex = (index) => padding.left + (months.length === 1 ? plotWidth / 2 : (index / (months.length - 1)) * plotWidth);
+		const yStep = niceMoneyStep(Math.max(totalInvested, goal, 250000));
+		const maxValue = Math.ceil(Math.max(totalInvested, goal, 250000) / yStep) * yStep;
+		const yForValue = (value) => padding.top + plotHeight - (value / maxValue) * plotHeight;
+		let eventIndex = 0;
+		let cumulative = 0;
+		const monthlyPoints = months.map((month, index) => {
+			const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59, 999);
+			while (datedInvestments[eventIndex] && datedInvestments[eventIndex].date <= monthEnd) {
+				cumulative += datedInvestments[eventIndex].amount;
+				eventIndex += 1;
+			}
+			return {
+				index,
+				month,
+				value: cumulative,
+				x: xForIndex(index),
+				y: yForValue(cumulative)
+			};
+		});
+
+		let areaPath = '';
+		let linePath = '';
+		monthlyPoints.forEach((point, index) => {
+			if (index === 0) {
+				linePath = `M ${point.x} ${point.y}`;
+				areaPath = `M ${point.x} ${padding.top + plotHeight} L ${point.x} ${point.y}`;
+				return;
+			}
+			linePath += ` H ${point.x} V ${point.y}`;
+			areaPath += ` H ${point.x} V ${point.y}`;
+		});
+		const lastPoint = monthlyPoints[monthlyPoints.length - 1];
+		areaPath += ` L ${lastPoint.x} ${padding.top + plotHeight} Z`;
+
+		let runningTotal = 0;
+		const markers = datedInvestments.map((investment) => {
+			runningTotal += investment.amount;
+			const monthIndex = months.findIndex((month) =>
+				month.getFullYear() === investment.date.getFullYear() &&
+				month.getMonth() === investment.date.getMonth()
+			);
+			return {
+				x: xForIndex(Math.max(0, monthIndex)),
+				y: yForValue(runningTotal),
+				label: investment.name
+			};
+		});
+
+		const tickValues = [];
+		for (let value = 0; value <= maxValue; value += yStep) {
+			tickValues.push(value);
+		}
+
+		return {
+			width,
+			height,
+			padding,
+			months,
+			tickValues,
+			goal,
+			goalY: yForValue(goal),
+			maxValue,
+			linePath,
+			areaPath,
+			markers,
+			xForIndex,
+			yForValue,
+			labelForIndex: (index) => formatTimelineLabel(months[index])
+		};
+	});
+
+	const sorted = $derived.by(() =>
+		[...portfolio].sort((a, b) => {
+			const aDate = a.dateInvested ? new Date(a.dateInvested).getTime() : 0;
+			const bDate = b.dateInvested ? new Date(b.dateInvested).getTime() : 0;
+			if (aDate !== bDate) return bDate - aDate;
+			return (parseFloat(b.amountInvested) || 0) - (parseFloat(a.amountInvested) || 0);
+		})
+	);
 	const taxYears = $derived.by(() =>
 		[...new Set(taxDocuments.map((doc) => doc.taxYear).filter(Boolean))].sort((a, b) => Number(b) - Number(a))
 	);
@@ -678,6 +808,39 @@
 		return yrs.toFixed(1) + 'yr';
 	}
 
+	function parseDollar(value) {
+		if (typeof value === 'number') return value;
+		if (!value) return 0;
+		return parseInt(String(value).replace(/[^0-9.-]/g, ''), 10) || 0;
+	}
+
+	function niceMoneyStep(value) {
+		if (value <= 250000) return 50000;
+		if (value <= 500000) return 100000;
+		if (value <= 1000000) return 250000;
+		if (value <= 2500000) return 500000;
+		return 1000000;
+	}
+
+	function formatTimelineLabel(date) {
+		if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+		return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+	}
+
+	function formatAxisMoney(value) {
+		const amount = Number(value) || 0;
+		if (amount >= 1000000) return `$${(amount / 1000000).toFixed(amount % 1000000 === 0 ? 0 : 1)}M`;
+		if (amount >= 1000) return `$${Math.round(amount / 1000)}K`;
+		return `$${amount.toLocaleString()}`;
+	}
+
+	function formatCardDate(value) {
+		if (!value) return '';
+		const date = new Date(value);
+		if (Number.isNaN(date.getTime())) return value;
+		return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+	}
+
 	onMount(async () => {
 		if (!browser) return;
 		fetchDeals();
@@ -690,13 +853,11 @@
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 	</button>
 	<div class="topbar-title">Dashboard</div>
-	<div class="dash-tabs">
+	<nav class="dash-tabs" aria-label="Dashboard sections">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
 		<a href="/app/portfolio" class="dash-tab active">Portfolio</a>
 		<a href="/app/plan" class="dash-tab">My Plan</a>
-	</div>
-	<div class="topbar-spacer"></div>
-	<button class="btn-add" onclick={() => openDealSearchModal()}>+ Add Investment</button>
+	</nav>
 </div>
 
 <div class="content-area">
@@ -782,80 +943,65 @@
 			</div>
 		</div>
 
-		<!-- Portfolio Timeline -->
-		{#if timelineData}
+		{#if timelineChart}
 			<div class="chart-card timeline-card">
-				<div class="chart-card-title">Capital Deployed Over Time</div>
-				<div class="chartjs-timeline-wrap">
-					<div class="timeline-grid-lines">
-						<div></div>
-						<div></div>
-						<div></div>
-						<div></div>
+				<div class="timeline-card-header">
+					<div class="chart-card-title">Capital Deployed Over Time</div>
+					<div class="timeline-legend">
+						<span class="timeline-legend-item"><span class="timeline-legend-dot capital"></span>Capital Deployed</span>
+						<span class="timeline-legend-item"><span class="timeline-legend-dot goal"></span>Goal</span>
 					</div>
-					<div class="timeline-bars">
-						{#each timelineData.labels as label, index}
-							<div class="timeline-col">
-								<div
-									class="timeline-bar"
-									style={`height:${timelineMax ? Math.max(8, Math.round((timelineData.amounts[index] / timelineMax) * 180)) : 8}px`}
-								></div>
-								<div class="timeline-label">{label}</div>
-							</div>
+				</div>
+				<div class="timeline-svg-shell">
+					<svg viewBox={`0 0 ${timelineChart.width} ${timelineChart.height}`} class="timeline-svg" aria-label="Capital deployed over time">
+						{#each timelineChart.tickValues as value}
+							{@const y = timelineChart.yForValue(value)}
+							<line x1={timelineChart.padding.left} y1={y} x2={timelineChart.width - timelineChart.padding.right} y2={y} class="timeline-grid-line"></line>
+							<text x={timelineChart.padding.left - 10} y={y + 4} text-anchor="end" class="timeline-axis-label">{formatAxisMoney(value)}</text>
 						{/each}
-					</div>
+
+						<line
+							x1={timelineChart.padding.left}
+							y1={timelineChart.goalY}
+							x2={timelineChart.width - timelineChart.padding.right}
+							y2={timelineChart.goalY}
+							class="timeline-goal-line"
+						></line>
+						<text x={timelineChart.width - timelineChart.padding.right} y={timelineChart.goalY - 8} text-anchor="end" class="timeline-goal-label">
+							Goal {formatAxisMoney(timelineChart.goal)}
+						</text>
+
+						<path d={timelineChart.areaPath} class="timeline-series-area"></path>
+						<path d={timelineChart.linePath} class="timeline-series-line"></path>
+
+						{#each timelineChart.markers as marker}
+							<circle cx={marker.x} cy={marker.y} r="4.5" class="timeline-marker"></circle>
+						{/each}
+
+						{#each timelineChart.months as month, index}
+							{#if index % Math.max(1, Math.ceil(timelineChart.months.length / 10)) === 0 || index === timelineChart.months.length - 1}
+								<text
+									x={timelineChart.xForIndex(index)}
+									y={timelineChart.height - 14}
+									text-anchor="end"
+									transform={`rotate(-55 ${timelineChart.xForIndex(index)} ${timelineChart.height - 14})`}
+									class="timeline-x-label"
+								>
+									{timelineChart.labelForIndex(index)}
+								</text>
+							{/if}
+						{/each}
+					</svg>
 				</div>
 			</div>
 		{/if}
 
-		<!-- Investment cards -->
 		<div class="inv-header">
 			<div class="inv-title">Your Investments</div>
 			<button class="btn-add section-add-btn" onclick={() => openDealSearchModal()}>+ Add Investment</button>
 		</div>
 
-		<div class="inv-table-wrap">
-			<table class="inv-table">
-				<thead>
-					<tr>
-						<th>Investment</th>
-						<th>Sponsor</th>
-						<th>Asset Class</th>
-						<th>Amount</th>
-						<th>Date</th>
-						<th>Status</th>
-						<th>Target IRR</th>
-						<th>Distributions</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each sorted as inv}
-						{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
-						<tr>
-							<td class="inv-table-primary">
-								<div class="inv-cell-name">{inv.investmentName || 'Unnamed'}</div>
-							</td>
-							<td>{inv.sponsor || '—'}</td>
-							<td>{inv.assetClass || '—'}</td>
-							<td class="num">${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</td>
-							<td>{inv.dateInvested || '—'}</td>
-							<td><span class="inv-status" style="--sc:{sc}">{inv.status || 'Unknown'}</span></td>
-							<td class:green={!!inv.targetIRR}>{inv.targetIRR ? `${inv.targetIRR}%` : '—'}</td>
-							<td class:num class:green={parseFloat(inv.distributionsReceived || 0) > 0}>${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</td>
-							<td>
-								<div class="inv-table-actions">
-									<button class="btn-edit" onclick={() => openAddModal(inv.id)}>Edit</button>
-									<button class="btn-delete" onclick={() => deleteInvestment(inv.id)} title="Delete investment">&times;</button>
-								</div>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-
-		<div class="inv-list inv-list-mobile">
+		<div class="inv-list">
 			{#each sorted as inv}
 				{@const sc = statusColors[inv.status] || 'var(--text-muted)'}
 				<div class="inv-card">
@@ -863,23 +1009,36 @@
 					<div class="inv-card-body">
 						<div class="inv-card-top">
 							<div class="inv-card-info">
-								<div class="inv-card-name">{inv.investmentName || 'Unnamed'}</div>
-								<div class="inv-card-sub">{inv.sponsor || ''}{inv.assetClass ? ' · ' + inv.assetClass : ''}{inv.dateInvested ? ' · ' + inv.dateInvested : ''}</div>
+								<div class="inv-card-name">{inv.investmentName || 'Unnamed investment'}</div>
+								<div class="inv-card-sub">
+									{inv.sponsor || 'Unknown sponsor'}{inv.assetClass ? ` · ${inv.assetClass}` : ''}{inv.dateInvested ? ` · ${formatCardDate(inv.dateInvested)}` : ''}
+								</div>
 							</div>
 							<div class="inv-card-actions">
 								<span class="inv-status" style="--sc:{sc}">{inv.status || 'Unknown'}</span>
 								<button class="btn-edit" onclick={() => openAddModal(inv.id)}>Edit</button>
-								<button class="btn-delete" onclick={() => deleteInvestment(inv.id)} title="Delete investment">&times;</button>
 							</div>
 						</div>
 						<div class="inv-card-metrics">
-							<div><div class="m-label">Invested</div><div class="m-value">${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</div></div>
+							<div class="inv-metric">
+								<div class="m-label">Invested</div>
+								<div class="m-value">${(parseFloat(inv.amountInvested) || 0).toLocaleString()}</div>
+							</div>
 							{#if inv.targetIRR}
-								<div><div class="m-label">Target IRR</div><div class="m-value green">{inv.targetIRR}%</div></div>
+								<div class="inv-metric">
+									<div class="m-label">Target IRR</div>
+									<div class="m-value green">{inv.targetIRR}%</div>
+								</div>
 							{/if}
-							<div><div class="m-label">Distributions</div><div class="m-value" class:green={parseFloat(inv.distributionsReceived || 0) > 0}>${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</div></div>
+							<div class="inv-metric">
+								<div class="m-label">Distributions</div>
+								<div class="m-value" class:green={parseFloat(inv.distributionsReceived || 0) > 0}>${(parseFloat(inv.distributionsReceived) || 0).toLocaleString()}</div>
+							</div>
 							{#if inv.equityMultiple}
-								<div><div class="m-label">Equity Multiple</div><div class="m-value">{inv.equityMultiple}x</div></div>
+								<div class="inv-metric">
+									<div class="m-label">Equity Multiple</div>
+									<div class="m-value">{inv.equityMultiple}x</div>
+								</div>
 							{/if}
 						</div>
 						{#if inv.notes}
@@ -1247,56 +1406,48 @@
 	.topbar {
 		position: sticky;
 		top: 0;
-		height: var(--topbar-height);
+		min-height: 66px;
 		background: var(--bg-cream);
 		border-bottom: 1px solid var(--border);
 		display: flex;
-		align-items: center;
-		padding: 0 32px;
-		gap: 16px;
+		align-items: stretch;
+		padding: 0 28px;
+		gap: 26px;
 		z-index: 50;
 	}
-	.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+	.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; align-self: center; }
 	.mobile-menu-btn svg { width: 22px; height: 22px; }
 	.topbar-title {
+		display: flex;
+		align-items: center;
 		font-family: var(--font-headline);
-		font-size: 22px;
+		font-size: 20px;
 		font-weight: 400;
 		color: var(--text-dark);
-		margin-right: 24px;
-		letter-spacing: -0.3px;
+		flex-shrink: 0;
+		letter-spacing: -0.2px;
 	}
 	.dash-tabs {
 		display: flex;
-		gap: 4px;
-		margin-left: 24px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 3px;
-		align-self: center;
+		align-items: stretch;
+		gap: 2px;
 	}
 	.dash-tab {
-		background: none;
-		border: none;
-		padding: 6px 12px;
+		padding: 0 18px;
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 14px;
 		font-weight: 600;
-		color: var(--text-secondary);
-		cursor: pointer;
+		color: #8a9aa0;
 		white-space: nowrap;
-		transition: all 0.15s;
+		transition: color 0.15s ease, border-color 0.15s ease;
 		text-decoration: none;
 		display: flex;
 		align-items: center;
-		text-transform: uppercase;
-		letter-spacing: 0.3px;
-		border-radius: 6px;
+		height: 100%;
+		border-bottom: 3px solid transparent;
 	}
 	.dash-tab:hover { color: var(--text-dark); }
-	.dash-tab.active { color: #fff; background: var(--primary); }
-	.topbar-spacer { flex: 1; }
+	.dash-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 	.btn-add {
 		padding: 8px 18px;
 		background: var(--primary);
@@ -1421,61 +1572,90 @@
 
 	/* ── Timeline Chart ── */
 	.timeline-card { margin-bottom: 20px; }
-	.chartjs-timeline-wrap {
-		position: relative;
-		height: 260px;
-		padding: 18px 18px 8px;
-	}
-	.timeline-grid-lines {
-		position: absolute;
-		inset: 18px 18px 34px;
-		display: grid;
-		grid-template-rows: repeat(4, 1fr);
-		pointer-events: none;
-	}
-	.timeline-grid-lines div {
-		border-top: 1px solid rgba(17, 24, 39, 0.08);
-	}
-	.timeline-bars {
-		position: relative;
-		height: 100%;
+	.timeline-card-header {
 		display: flex;
-		align-items: flex-end;
-		gap: 14px;
-	}
-	.timeline-col {
-		flex: 1;
-		min-width: 44px;
-		display: flex;
-		flex-direction: column;
 		align-items: center;
-		justify-content: flex-end;
-		gap: 10px;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 8px;
+		flex-wrap: wrap;
 	}
-	.timeline-bar {
-		width: min(40px, 100%);
-		border-radius: 10px 10px 0 0;
-		background: linear-gradient(180deg, #7ed49c 0%, #51BE7B 100%);
-		box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+	.timeline-legend {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		flex-wrap: wrap;
 	}
-	.timeline-label {
+	.timeline-legend-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
 		font-family: var(--font-ui);
-		font-size: 10px;
-		color: var(--text-muted);
-		text-align: center;
-		line-height: 1.35;
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+	.timeline-legend-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+	}
+	.timeline-legend-dot.capital { background: var(--primary); }
+	.timeline-legend-dot.goal {
+		background: transparent;
+		border: 2px dashed #f59e0b;
+		box-sizing: border-box;
+	}
+	.timeline-svg-shell {
+		overflow-x: auto;
+		padding-top: 6px;
+	}
+	.timeline-svg {
+		display: block;
+		width: 100%;
+		min-width: 980px;
+		height: auto;
+	}
+	.timeline-grid-line {
+		stroke: rgba(17, 24, 39, 0.08);
+		stroke-width: 1;
+	}
+	.timeline-axis-label,
+	.timeline-x-label {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		fill: var(--text-muted);
+	}
+	.timeline-series-area {
+		fill: rgba(81, 190, 123, 0.14);
+	}
+	.timeline-series-line {
+		fill: none;
+		stroke: var(--primary);
+		stroke-width: 3;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.timeline-marker {
+		fill: var(--primary);
+		stroke: #fff;
+		stroke-width: 2;
+	}
+	.timeline-goal-line {
+		stroke: #f59e0b;
+		stroke-width: 2;
+		stroke-dasharray: 7 7;
+	}
+	.timeline-goal-label {
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 700;
+		fill: #f59e0b;
 	}
 
 	/* ── Investment List Header ── */
 	.inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 	.inv-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
-	.inv-table-wrap {
-		overflow-x: auto;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--bg-card);
-		margin-bottom: 20px;
-	}
+	.inv-table-wrap { display: none; }
 	.inv-table {
 		width: 100%;
 		border-collapse: collapse;
@@ -1530,10 +1710,11 @@
 		overflow: hidden;
 		display: flex;
 		transition: all 0.25s ease;
+		box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 	}
 	.inv-card:hover { border-color: color-mix(in srgb, var(--primary) 18%, var(--border)); }
-	.inv-card-stripe { width: 6px; flex-shrink: 0; }
-	.inv-card-body { flex: 1; padding: 20px 24px; }
+	.inv-card-stripe { width: 5px; flex-shrink: 0; }
+	.inv-card-body { flex: 1; padding: 18px 22px; }
 	.inv-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
 	.inv-card-info { min-width: 0; flex: 1; }
 	.inv-card-name { font-family: var(--font-ui); font-size: 16px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
@@ -1563,8 +1744,9 @@
 		color: var(--primary);
 	}
 	.inv-card-metrics { display: flex; gap: 28px; flex-wrap: wrap; }
+	.inv-metric { min-width: 110px; }
 	.m-label { font-family: var(--font-ui); font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-	.m-value { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); font-variant-numeric: tabular-nums; }
+	.m-value { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); font-variant-numeric: tabular-nums; }
 	.m-value.green { color: var(--primary); }
 	.pending-stripe { background: #f59e0b; }
 	.pending-card-desc {
@@ -2104,9 +2286,9 @@
 			padding-top: env(safe-area-inset-top, 0px);
 			flex-wrap: wrap;
 			height: auto;
-			min-height: var(--topbar-height);
+			min-height: 66px;
 		}
-		.topbar-title { font-size: 17px; font-weight: 600; margin-right: 0; white-space: nowrap; flex-shrink: 0; }
+		.topbar-title { font-size: 18px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 		.dash-tabs {
 			margin-left: 0 !important;
 			overflow-x: auto;
@@ -2116,30 +2298,25 @@
 			min-width: 0;
 			width: 100%;
 			justify-content: flex-start;
-			gap: 3px;
+			gap: 2px;
 			order: 1;
 		}
 		.dash-tabs::-webkit-scrollbar { display: none; }
 		.dash-tab {
-			font-size: 10px !important;
-			padding: 6px 11px !important;
+			font-size: 13px !important;
+			padding: 0 14px !important;
 			flex: 0 0 auto;
 			text-align: center;
 			justify-content: center;
 		}
-		/* Hide topbar action buttons on mobile */
-		.topbar > button:not(.mobile-menu-btn) { display: none !important; }
-		.topbar-spacer { display: none; }
 		.charts-row { grid-template-columns: 1fr; }
 		.modal-grid { grid-template-columns: 1fr; }
 		.content-area { padding: 16px; padding-bottom: 16px; }
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
 		.section-add-btn { width: 100%; }
-		.inv-table-wrap { display: none; }
-		.inv-list-mobile { display: flex; }
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }
 		.chartjs-donut-wrap { max-width: 200px; }
-		.chartjs-timeline-wrap { height: 200px; }
+		.timeline-svg { min-width: 760px; }
 		.tax-shell-actions { justify-content: flex-start; }
 		.tax-filter-select, .tax-action-btn { width: 100%; }
 		.tax-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
