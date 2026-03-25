@@ -6,6 +6,12 @@
 	import { browser } from '$app/environment';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
 	import { selectionChanged } from '$lib/utils/haptics.js';
+	import {
+		ADMIN_REAL_USER_KEY,
+		hydrateUserScopedData,
+		loadUserScopedData,
+		saveUserScopedData
+	} from '$lib/utils/userScopedState.js';
 
 	let { currentPage = '' } = $props();
 
@@ -167,7 +173,6 @@
 	}
 
 	// View As (admin impersonation)
-	const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
 	let showViewAsDropdown = $state(false);
 	let viewAsSearch = $state('');
 	let viewAsResults = $state([]);
@@ -215,12 +220,17 @@
 		} catch (e) { viewAsResults = []; }
 	}
 
-	function viewAs(targetUser) {
+	async function viewAs(targetUser) {
 		if (!browser) return;
 		const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
 		if (!localStorage.getItem(ADMIN_REAL_USER_KEY)) {
 			localStorage.setItem(ADMIN_REAL_USER_KEY, JSON.stringify(currentUser));
+			saveUserScopedData(currentUser.email);
+		} else if (currentUser.email) {
+			saveUserScopedData(currentUser.email);
 		}
+
+		loadUserScopedData(targetUser.email);
 		localStorage.setItem('gycUser', JSON.stringify({
 			...targetUser,
 			name: targetUser.name || targetUser.fullName || targetUser.email?.split('@')[0] || '',
@@ -228,6 +238,11 @@
 			token: currentUser.token,
 			isAdmin: false
 		}));
+		await hydrateUserScopedData({
+			email: targetUser.email,
+			token: currentUser.token,
+			adminEmail: currentUser.email
+		}).catch(() => {});
 		showViewAsDropdown = false;
 		viewAsSearch = '';
 		viewAsResults = [];
@@ -236,9 +251,14 @@
 
 	function exitViewAs() {
 		if (!browser) return;
+		const currentUser = JSON.parse(localStorage.getItem('gycUser') || '{}');
+		if (currentUser.email) {
+			saveUserScopedData(currentUser.email);
+		}
 		const realUser = JSON.parse(localStorage.getItem(ADMIN_REAL_USER_KEY) || '{}');
 		if (realUser.email) {
 			localStorage.setItem('gycUser', JSON.stringify(realUser));
+			loadUserScopedData(realUser.email);
 		}
 		localStorage.removeItem(ADMIN_REAL_USER_KEY);
 		window.location.reload();

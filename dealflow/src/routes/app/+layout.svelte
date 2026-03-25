@@ -8,6 +8,11 @@
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { untrack } from 'svelte';
+	import {
+		hydrateUserScopedData,
+		inferAdminEmailForSession,
+		restoreScopedUserState
+	} from '$lib/utils/userScopedState.js';
 
 	let { children } = $props();
 
@@ -29,6 +34,7 @@
 	let authChecked = $state(false);
 	let authTimeout = null; // plain let — not reactive
 	let redirecting = $state(false);
+	let sessionReady = $state(false);
 
 	// Start progress bar when navigating begins
 	// Only $navigating should be tracked as a dependency
@@ -83,21 +89,32 @@
 			redirectToLogin();
 		}, 5000);
 
-		const stored = localStorage.getItem('gycUser');
-		if (stored && stored !== 'null') {
-			try {
-				const parsed = JSON.parse(stored);
-				if (parsed?.email) {
-					user.set(parsed);
-					authChecked = true;
-					clearTimeout(authTimeout);
-					return;
-				}
-			} catch {}
-		}
+		const boot = async () => {
+			const stored = localStorage.getItem('gycUser');
+			if (stored && stored !== 'null') {
+				try {
+					const parsed = JSON.parse(stored);
+					if (parsed?.email) {
+						restoreScopedUserState(parsed);
+						await hydrateUserScopedData({
+							email: parsed.email,
+							token: parsed.token,
+							adminEmail: inferAdminEmailForSession(parsed)
+						}).catch(() => {});
+						user.set(parsed);
+						sessionReady = true;
+						authChecked = true;
+						clearTimeout(authTimeout);
+						return;
+					}
+				} catch {}
+			}
 
-		clearTimeout(authTimeout);
-		redirectToLogin();
+			clearTimeout(authTimeout);
+			redirectToLogin();
+		};
+
+		boot();
 
 		return () => {
 			if (authTimeout) clearTimeout(authTimeout);
@@ -109,7 +126,7 @@
 	<div class="nav-progress-bar" style="width: {navProgress}%"></div>
 {/if}
 
-{#if $isLoggedIn}
+{#if $isLoggedIn && sessionReady}
 	<OfflineNotice />
 	<div class="app-layout">
 		<Sidebar currentPage={currentPage} />

@@ -145,6 +145,20 @@ export default async function handler(req, res) {
   setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // Admin impersonation reads need to tolerate expired admin tokens.
+  // verifyAdmin already has a JWT-email fallback, so bypass the normal
+  // user-client auth gate for this specific read path.
+  if (req.method === 'GET' && req.query.admin === 'true' && req.query.email) {
+    try {
+      const { authorized } = await verifyAdmin(req);
+      if (!authorized) return res.status(403).json({ error: 'Admin access required' });
+      return await handleAdminGet(req, res);
+    } catch (err) {
+      console.error('Admin userdata fetch failed:', err);
+      return res.status(500).json({ error: 'Internal server error', message: err.message });
+    }
+  }
+
   // Extract JWT from Authorization header
   const token = (req.headers.authorization || '').replace('Bearer ', '');
   if (!token) {
@@ -160,14 +174,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Admin impersonation: GET ?admin=true&email=target@example.com&type=...
-    // Returns another user's data using admin client (for "View as user" feature)
-    if (req.method === 'GET' && req.query.admin === 'true' && req.query.email) {
-      const { authorized } = await verifyAdmin(req);
-      if (!authorized) return res.status(403).json({ error: 'Admin access required' });
-      return await handleAdminGet(req, res);
-    }
-
     switch (req.method) {
       case 'GET': return await handleGet(req, res, supabase, user);
       case 'POST': return await handlePost(req, res, supabase, user);

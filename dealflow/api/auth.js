@@ -336,7 +336,10 @@ export default async function handler(req, res) {
       success: true,
       email,
       name: ghl.name || email.split('@')[0],
-      tier: 'free',
+      tier: isAdmin ? 'academy' : ghl.tier,
+      isAdmin,
+      tags: ghl.tags,
+      contactId: ghl.contactId,
       token: 'pending',
       ...(gpInfo && {
         gpType: gpInfo.gp_type,
