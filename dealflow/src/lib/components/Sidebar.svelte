@@ -361,15 +361,6 @@
 
 			<div class="nav-spacer"></div>
 
-			<a
-				class="nav-item nav-item-account"
-				class:active={isActive('settings')}
-			href={href('settings')}
-			onclick={closeMobile}
-			>
-				<span class="nav-icon">{@html icons.settings}</span>
-				Settings
-			</a>
 			<!-- Admin -->
 		{#if $isAdmin}
 			<div class="nav-section-label">Admin</div>
@@ -605,9 +596,6 @@
 	}
 
 	.nav-spacer { margin-top: auto; }
-	.nav-item-account {
-		margin-top: 4px;
-	}
 
 	.sidebar-footer {
 		padding: 14px 24px 12px;
