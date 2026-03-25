@@ -14,28 +14,214 @@ import { setCors, ADMIN_EMAILS, deriveTier, rateLimit, ghlFetch } from './_supab
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const BYPASS_EMAILS = ['test@test.com', 'info@pascalwagner.com'];
+const PERSONA_OVERRIDES = {
+  'test@test.com': { tier: 'free', isAdmin: false },
+  'info@pascalwagner.com': { tier: 'academy', isAdmin: true }
+};
+const LOOKUP_PROFILE_FIELDS = 'full_name, onboarding_role, gp_onboarding_complete, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows';
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function displayNameFromEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  return normalizedEmail.split('@')[0] || '';
+}
+
+function isAdminEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return false;
+  if (PERSONA_OVERRIDES[normalizedEmail]?.isAdmin !== undefined) {
+    return PERSONA_OVERRIDES[normalizedEmail].isAdmin;
+  }
+  return ADMIN_EMAILS.includes(normalizedEmail);
+}
+
+function canonicalizeTier(tier, email) {
+  const normalizedEmail = normalizeEmail(email);
+  const overrideTier = PERSONA_OVERRIDES[normalizedEmail]?.tier;
+  if (overrideTier) return overrideTier;
+
+  if (isAdminEmail(normalizedEmail)) return 'academy';
+
+  const normalizedTier = String(tier || '').trim().toLowerCase();
+  if (!normalizedTier || normalizedTier === 'explorer') return 'free';
+  return normalizedTier;
+}
+
+function findUserByEmail(users, email) {
+  const normalizedEmail = normalizeEmail(email);
+  return (users || []).find((user) => normalizeEmail(user.email) === normalizedEmail) || null;
+}
+
+function buildAuthResponse({
+  email,
+  name,
+  token = '',
+  refreshToken = '',
+  tier = 'free',
+  isAdmin,
+  tags = [],
+  contactId = null,
+  profile = null,
+  gpInfo = null,
+  extra = {}
+} = {}) {
+  const normalizedEmail = normalizeEmail(email);
+  const safeProfile = profile || {};
+  const resolvedIsAdmin = typeof isAdmin === 'boolean' ? isAdmin : isAdminEmail(normalizedEmail);
+  const resolvedTier = canonicalizeTier(tier, normalizedEmail);
+  const resolvedName = name || safeProfile.full_name || displayNameFromEmail(normalizedEmail);
+
+  return {
+    success: true,
+    email: normalizedEmail,
+    name: resolvedName,
+    fullName: safeProfile.full_name || resolvedName,
+    token: token || '',
+    refreshToken: refreshToken || '',
+    tier: resolvedTier,
+    isAdmin: resolvedIsAdmin,
+    tags: Array.isArray(tags) ? tags : [],
+    contactId: contactId || null,
+    phone: safeProfile.phone || null,
+    location: safeProfile.location || null,
+    share_saved: safeProfile.share_saved !== false,
+    share_dd: safeProfile.share_dd !== false,
+    share_invested: safeProfile.share_invested !== false,
+    allow_follows: safeProfile.allow_follows !== false,
+    onboardingRole: safeProfile.onboarding_role || null,
+    gpOnboardingComplete: safeProfile.gp_onboarding_complete || false,
+    academyStart: safeProfile.academy_start || null,
+    academyEnd: safeProfile.academy_end || null,
+    autoRenew: safeProfile.auto_renew !== false,
+    cardLast4: safeProfile.card_last4 || null,
+    cardBrand: safeProfile.card_brand || null,
+    ...(gpInfo && {
+      gpType: gpInfo.gp_type,
+      managementCompanyId: gpInfo.management_company_id,
+      managementCompanyName: gpInfo.managementCompanyName
+    }),
+    ...extra
+  };
+}
+
+async function detectGpInfo(adminSupabase, email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  try {
+    const { data: authMatch } = await adminSupabase
+      .from('management_companies')
+      .select('id, operator_name')
+      .contains('authorized_emails', [normalizedEmail])
+      .limit(1)
+      .single();
+
+    const { data: ceoMatch } = await adminSupabase
+      .from('management_companies')
+      .select('id, operator_name')
+      .ilike('ceo', normalizedEmail)
+      .limit(1)
+      .single();
+
+    if (ceoMatch) {
+      return {
+        gp_type: 'founder',
+        management_company_id: ceoMatch.id,
+        managementCompanyName: ceoMatch.operator_name
+      };
+    }
+
+    if (authMatch) {
+      return {
+        gp_type: 'sponsor',
+        management_company_id: authMatch.id,
+        managementCompanyName: authMatch.operator_name
+      };
+    }
+  } catch {
+    // GP detection is best-effort; don't block auth
+  }
+
+  return null;
+}
+
+async function loadUserProfile(adminSupabase, userId) {
+  if (!userId) return null;
+
+  const { data } = await adminSupabase
+    .from('user_profiles')
+    .select(LOOKUP_PROFILE_FIELDS)
+    .eq('id', userId)
+    .single();
+
+  return data || null;
+}
+
+async function retryCreateGhlContact(adminSupabase, userId, email, fullName) {
+  if (!userId || !email) return;
+
+  const { data: profile } = await adminSupabase
+    .from('user_profiles')
+    .select('ghl_contact_id')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.ghl_contact_id && profile.ghl_contact_id !== 'SYNC_FAILED') return;
+
+  const nameParts = String(fullName || displayNameFromEmail(email)).trim().split(/\s+/);
+  ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
+    method: 'POST',
+    body: JSON.stringify({
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
+      email,
+      tags: ['dealflow-free']
+    })
+  }).then(async (resp) => {
+    if (resp?.ok) {
+      try {
+        const ghlData = await resp.json();
+        const contactId = ghlData?.contact?.id;
+        if (contactId) {
+          await adminSupabase.from('user_profiles').update({ ghl_contact_id: contactId }).eq('id', userId);
+          console.log(`[GHL SYNC RETRY] Created GHL contact for ${email}: ${contactId}`);
+        }
+      } catch {}
+    } else {
+      console.error(`[GHL SYNC RETRY] Failed for ${email}. Status: ${resp?.status}`);
+    }
+  }).catch(() => {});
+}
 
 // Look up GHL contact for tier info (uses ghlFetch with retry)
 async function getGhlTier(email) {
+  const normalizedEmail = normalizeEmail(email);
   try {
     const resp = await ghlFetch(
-      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(email)}`
+      `https://rest.gohighlevel.com/v1/contacts/lookup?email=${encodeURIComponent(normalizedEmail)}`
     );
-    if (!resp?.ok) return { tier: 'free', tags: [], contactId: null };
+    if (!resp?.ok) {
+      return { tier: canonicalizeTier('free', normalizedEmail), tags: [], contactId: null, name: '' };
+    }
 
     const data = await resp.json();
-    const contact = (data.contacts || []).find(c => c.email?.toLowerCase() === email.toLowerCase());
-    if (!contact) return { tier: 'free', tags: [], contactId: null };
+    const contact = (data.contacts || []).find((c) => normalizeEmail(c.email) === normalizedEmail);
+    if (!contact) {
+      return { tier: canonicalizeTier('free', normalizedEmail), tags: [], contactId: null, name: '' };
+    }
 
-    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
     return {
-      tier: isAdmin ? 'academy' : deriveTier(contact.tags || []),
+      tier: canonicalizeTier(deriveTier(contact.tags || []), normalizedEmail),
       tags: contact.tags || [],
       contactId: contact.id,
       name: [contact.firstName, contact.lastName].filter(Boolean).join(' ')
     };
   } catch {
-    return { tier: 'free', tags: [], contactId: null };
+    return { tier: canonicalizeTier('free', normalizedEmail), tags: [], contactId: null, name: '' };
   }
 }
 
@@ -51,24 +237,24 @@ export default async function handler(req, res) {
   });
 
   const { action, email, password, firstName, lastName } = req.body || {};
+  const normalizedEmail = normalizeEmail(email);
 
   // ── Magic Link ─────────────────────────────────────────────────────
   if (action === 'magic-link') {
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
 
     // Dev bypass: skip email for specific test accounts
-    const BYPASS_EMAILS = ['test@test.com', 'info@pascalwagner.com'];
-    if (BYPASS_EMAILS.includes(email.toLowerCase())) {
+    if (BYPASS_EMAILS.includes(normalizedEmail)) {
       try {
         // Ensure user exists first
         let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
           type: 'magiclink',
-          email
+          email: normalizedEmail
         });
         if (linkErr) {
           // User doesn't exist — create and retry
-          await adminSupabase.auth.admin.createUser({ email, email_confirm: true });
-          const retry = await adminSupabase.auth.admin.generateLink({ type: 'magiclink', email });
+          await adminSupabase.auth.admin.createUser({ email: normalizedEmail, email_confirm: true });
+          const retry = await adminSupabase.auth.admin.generateLink({ type: 'magiclink', email: normalizedEmail });
           linkData = retry.data;
           linkErr = retry.error;
           if (linkErr) throw linkErr;
@@ -82,21 +268,21 @@ export default async function handler(req, res) {
         if (verifyErr) throw verifyErr;
 
         // Get tier & GP info via lookup path
-        const ghl = await getGhlTier(email);
-        const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
+        const ghl = await getGhlTier(normalizedEmail);
+        const gpInfo = await detectGpInfo(adminSupabase, normalizedEmail);
 
-        return res.status(200).json({
-          success: true,
-          bypass: true,
-          email,
+        return res.status(200).json(buildAuthResponse({
+          email: normalizedEmail,
+          name: ghl.name,
           token: verifyData.session.access_token,
           refreshToken: verifyData.session.refresh_token,
-          name: ghl.name || email.split('@')[0],
-          tier: isAdmin ? 'academy' : ghl.tier,
-          isAdmin,
+          tier: ghl.tier,
+          isAdmin: isAdminEmail(normalizedEmail),
           tags: ghl.tags,
-          contactId: ghl.contactId
-        });
+          contactId: ghl.contactId,
+          gpInfo,
+          extra: { bypass: true }
+        }));
       } catch (e) {
         console.error('[AUTH BYPASS] Failed:', e.message);
         return res.status(500).json({ error: 'Bypass login failed: ' + e.message });
@@ -112,13 +298,13 @@ export default async function handler(req, res) {
       // Try generateLink — if user doesn't exist, create them first then retry.
       let { data: linkData, error: linkErr } = await adminSupabase.auth.admin.generateLink({
         type: 'magiclink',
-        email
+        email: normalizedEmail
       });
 
       if (linkErr) {
         // User likely doesn't exist — create and retry
         const { error: createErr } = await adminSupabase.auth.admin.createUser({
-          email,
+          email: normalizedEmail,
           email_confirm: true
         });
         if (createErr && !createErr.message?.includes('already')) {
@@ -127,7 +313,7 @@ export default async function handler(req, res) {
         // Retry generateLink
         const retry = await adminSupabase.auth.admin.generateLink({
           type: 'magiclink',
-          email
+          email: normalizedEmail
         });
         linkData = retry.data;
         linkErr = retry.error;
@@ -158,7 +344,7 @@ export default async function handler(req, res) {
         headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from: 'Grow Your Cashflow <deals@growyourcashflow.io>',
-          to: email,
+          to: normalizedEmail,
           subject: 'Your GYC Dealflow Login Link',
           html: `<div style="max-width:520px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="background:#0A1E21;padding:32px 24px;text-align:center;border-radius:12px 12px 0 0;">
@@ -199,55 +385,25 @@ export default async function handler(req, res) {
 
   // ── Lookup (for existing magic link flow compatibility) ────────────
   if (action === 'lookup') {
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!normalizedEmail) return res.status(400).json({ error: 'Email is required' });
 
     // Check if user exists in Supabase
     const { data: { users } } = await adminSupabase.auth.admin.listUsers();
-    const user = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    const user = findUserByEmail(users, normalizedEmail);
 
     // Get tier from GHL
-    const ghl = await getGhlTier(email);
-    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
-
-    // ── GP Detection ────────────────────────────────────────────────
-    // Check if user is a GP (operator/sponsor) by matching email against
-    // management_companies.authorized_emails array or ceo field
-    let gpInfo = null;
-    try {
-      const emailLower = email.toLowerCase();
-
-      // Check authorized_emails array (contains operator)
-      const { data: authMatch } = await adminSupabase
-        .from('management_companies')
-        .select('id, operator_name')
-        .contains('authorized_emails', [emailLower])
-        .limit(1)
-        .single();
-
-      // Check CEO field (case-insensitive)
-      const { data: ceoMatch } = await adminSupabase
-        .from('management_companies')
-        .select('id, operator_name')
-        .ilike('ceo', emailLower)
-        .limit(1)
-        .single();
-
-      if (ceoMatch) {
-        gpInfo = { gp_type: 'founder', management_company_id: ceoMatch.id, managementCompanyName: ceoMatch.operator_name };
-      } else if (authMatch) {
-        gpInfo = { gp_type: 'sponsor', management_company_id: authMatch.id, managementCompanyName: authMatch.operator_name };
-      }
-    } catch {
-      // GP detection is best-effort; don't block auth
-    }
+    const ghl = await getGhlTier(normalizedEmail);
+    const isAdmin = isAdminEmail(normalizedEmail);
+    const resolvedTier = canonicalizeTier(ghl.tier, normalizedEmail);
+    const gpInfo = await detectGpInfo(adminSupabase, normalizedEmail);
 
     if (user) {
       // Update profile with latest tier from GHL + GP info
       const profileData = {
         id: user.id,
-        email: email.toLowerCase(),
-        full_name: ghl.name || user.user_metadata?.full_name || email.split('@')[0],
-        tier: isAdmin ? 'academy' : ghl.tier,
+        email: normalizedEmail,
+        full_name: ghl.name || user.user_metadata?.full_name || displayNameFromEmail(normalizedEmail),
+        tier: resolvedTier,
         is_admin: isAdmin,
         ghl_contact_id: ghl.contactId
       };
@@ -260,138 +416,67 @@ export default async function handler(req, res) {
 
       // Auto-retry GHL contact creation if missing
       if (!ghl.contactId) {
-        const { data: profile } = await adminSupabase
-          .from('user_profiles')
-          .select('ghl_contact_id')
-          .eq('id', user.id)
-          .single();
-
-        if (!profile?.ghl_contact_id || profile.ghl_contact_id === 'SYNC_FAILED') {
-          const userName = user.user_metadata?.full_name || email.split('@')[0];
-          const nameParts = userName.split(' ');
-          ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
-            method: 'POST',
-            body: JSON.stringify({
-              firstName: nameParts[0] || '',
-              lastName: nameParts.slice(1).join(' ') || '',
-              email,
-              tags: ['dealflow-free']
-            })
-          }).then(async (resp) => {
-            if (resp?.ok) {
-              try {
-                const ghlData = await resp.json();
-                const contactId = ghlData?.contact?.id;
-                if (contactId) {
-                  await adminSupabase.from('user_profiles').update({ ghl_contact_id: contactId }).eq('id', user.id);
-                  console.log(`[GHL SYNC RETRY] Created GHL contact for ${email}: ${contactId}`);
-                }
-              } catch {}
-            } else {
-              console.error(`[GHL SYNC RETRY] Failed for ${email}. Status: ${resp?.status}`);
-            }
-          }).catch(() => {});
-        }
+        await retryCreateGhlContact(
+          adminSupabase,
+          user.id,
+          normalizedEmail,
+          user.user_metadata?.full_name || ghl.name || displayNameFromEmail(normalizedEmail)
+        );
       }
 
       // Fetch onboarding state from profile
-      const { data: existingProfile } = await adminSupabase
-        .from('user_profiles')
-        .select('onboarding_role, gp_onboarding_complete, gp_type, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows')
-        .eq('id', user.id)
-        .single();
+      const existingProfile = await loadUserProfile(adminSupabase, user.id);
 
-      return res.status(200).json({
-        success: true,
-        email,
-        name: ghl.name || user.user_metadata?.full_name || email.split('@')[0],
-        contactId: ghl.contactId,
-        tier: isAdmin ? 'academy' : ghl.tier,
+      return res.status(200).json(buildAuthResponse({
+        email: normalizedEmail,
+        name: ghl.name || user.user_metadata?.full_name,
+        token: 'pending',
+        refreshToken: '',
+        tier: resolvedTier,
         isAdmin,
         tags: ghl.tags,
-        token: user.id, // placeholder — real flow uses Supabase session tokens
-        phone: existingProfile?.phone || null,
-        location: existingProfile?.location || null,
-        share_saved: existingProfile?.share_saved !== false,
-        share_dd: existingProfile?.share_dd !== false,
-        share_invested: existingProfile?.share_invested !== false,
-        allow_follows: existingProfile?.allow_follows !== false,
-        onboardingRole: existingProfile?.onboarding_role || null,
-        gpOnboardingComplete: existingProfile?.gp_onboarding_complete || false,
-        academyStart: existingProfile?.academy_start || null,
-        academyEnd: existingProfile?.academy_end || null,
-        autoRenew: existingProfile?.auto_renew !== false,
-        cardLast4: existingProfile?.card_last4 || null,
-        cardBrand: existingProfile?.card_brand || null,
-        ...(gpInfo && {
-          gpType: gpInfo.gp_type,
-          managementCompanyId: gpInfo.management_company_id,
-          managementCompanyName: gpInfo.managementCompanyName
-        })
-      });
+        contactId: ghl.contactId,
+        profile: existingProfile,
+        gpInfo
+      }));
     }
 
     // User not in Supabase yet — return free tier (still include GP info if detected)
-    return res.status(200).json({
-      success: true,
-      email,
-      name: ghl.name || email.split('@')[0],
-      tier: isAdmin ? 'academy' : ghl.tier,
+    return res.status(200).json(buildAuthResponse({
+      email: normalizedEmail,
+      name: ghl.name,
+      token: 'pending',
+      refreshToken: '',
+      tier: resolvedTier,
       isAdmin,
       tags: ghl.tags,
       contactId: ghl.contactId,
-      token: 'pending',
-      ...(gpInfo && {
-        gpType: gpInfo.gp_type,
-        managementCompanyId: gpInfo.management_company_id,
-        managementCompanyName: gpInfo.managementCompanyName
-      })
-    });
+      gpInfo
+    }));
   }
 
   // ── Login ──────────────────────────────────────────────────────────
   if (action === 'login') {
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
     if (error) {
       return res.status(401).json({ success: false, error: error.message });
     }
 
     // Get tier from GHL + update profile
-    const ghl = await getGhlTier(email);
-    const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
-
-    // GP detection (same logic as lookup)
-    let gpInfo = null;
-    try {
-      const emailLower = email.toLowerCase();
-      const { data: authMatch } = await adminSupabase
-        .from('management_companies')
-        .select('id, operator_name')
-        .contains('authorized_emails', [emailLower])
-        .limit(1)
-        .single();
-      const { data: ceoMatch } = await adminSupabase
-        .from('management_companies')
-        .select('id, operator_name')
-        .ilike('ceo', emailLower)
-        .limit(1)
-        .single();
-      if (ceoMatch) {
-        gpInfo = { gp_type: 'founder', management_company_id: ceoMatch.id, managementCompanyName: ceoMatch.operator_name };
-      } else if (authMatch) {
-        gpInfo = { gp_type: 'sponsor', management_company_id: authMatch.id, managementCompanyName: authMatch.operator_name };
-      }
-    } catch {}
+    const ghl = await getGhlTier(normalizedEmail);
+    const isAdmin = isAdminEmail(normalizedEmail);
+    const resolvedTier = canonicalizeTier(ghl.tier, normalizedEmail);
+    const gpInfo = await detectGpInfo(adminSupabase, normalizedEmail);
 
     const loginProfile = {
       id: data.user.id,
-      email: email.toLowerCase(),
-      full_name: ghl.name || data.user.user_metadata?.full_name || email.split('@')[0],
-      tier: isAdmin ? 'academy' : ghl.tier,
+      email: normalizedEmail,
+      full_name: ghl.name || data.user.user_metadata?.full_name || displayNameFromEmail(normalizedEmail),
+      tier: resolvedTier,
       is_admin: isAdmin,
       ghl_contact_id: ghl.contactId
     };
@@ -404,80 +489,39 @@ export default async function handler(req, res) {
 
     // Auto-retry GHL contact creation for users whose signup sync failed
     if (!ghl.contactId) {
-      const { data: profile } = await adminSupabase
-        .from('user_profiles')
-        .select('ghl_contact_id')
-        .eq('id', data.user.id)
-        .single();
-
-      if (!profile?.ghl_contact_id || profile.ghl_contact_id === 'SYNC_FAILED') {
-        const userName = data.user.user_metadata?.full_name || email.split('@')[0];
-        const nameParts = userName.split(' ');
-        ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
-          method: 'POST',
-          body: JSON.stringify({
-            firstName: nameParts[0] || '',
-            lastName: nameParts.slice(1).join(' ') || '',
-            email,
-            tags: ['dealflow-free']
-          })
-        }).then(async (resp) => {
-          if (resp?.ok) {
-            try {
-              const ghlData = await resp.json();
-              const contactId = ghlData?.contact?.id;
-              if (contactId) {
-                await adminSupabase.from('user_profiles').update({ ghl_contact_id: contactId }).eq('id', data.user.id);
-                console.log(`[GHL SYNC RETRY] Created GHL contact for ${email}: ${contactId}`);
-              }
-            } catch {}
-          } else {
-            console.error(`[GHL SYNC RETRY] Failed again for ${email}. Status: ${resp?.status}`);
-          }
-        }).catch(() => {});
-      }
+      await retryCreateGhlContact(
+        adminSupabase,
+        data.user.id,
+        normalizedEmail,
+        data.user.user_metadata?.full_name || ghl.name || displayNameFromEmail(normalizedEmail)
+      );
     }
 
-    // Fetch academy dates
-    const { data: loginProfileData } = await adminSupabase
-      .from('user_profiles')
-      .select('academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location')
-      .eq('id', data.user.id)
-      .single();
+    const loginProfileData = await loadUserProfile(adminSupabase, data.user.id);
 
-    return res.status(200).json({
-      success: true,
+    return res.status(200).json(buildAuthResponse({
       email: data.user.email,
-      name: ghl.name || data.user.user_metadata?.full_name || email.split('@')[0],
-      contactId: ghl.contactId,
-      tier: isAdmin ? 'academy' : ghl.tier,
+      name: ghl.name || data.user.user_metadata?.full_name,
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      tier: resolvedTier,
       isAdmin,
-      token: data.session.access_token,        // real JWT for API calls
-      refreshToken: data.session.refresh_token, // for token refresh
-      phone: loginProfileData?.phone || null,
-      location: loginProfileData?.location || null,
-      academyStart: loginProfileData?.academy_start || null,
-      academyEnd: loginProfileData?.academy_end || null,
-      autoRenew: loginProfileData?.auto_renew !== false,
-      cardLast4: loginProfileData?.card_last4 || null,
-      cardBrand: loginProfileData?.card_brand || null,
-      ...(gpInfo && {
-        gpType: gpInfo.gp_type,
-        managementCompanyId: gpInfo.management_company_id,
-        managementCompanyName: gpInfo.managementCompanyName
-      })
-    });
+      tags: ghl.tags,
+      contactId: ghl.contactId,
+      profile: loginProfileData,
+      gpInfo
+    }));
   }
 
   // ── Register ───────────────────────────────────────────────────────
   if (action === 'register') {
-    if (!email || !firstName || !lastName) {
+    if (!normalizedEmail || !firstName || !lastName) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
     // Use admin API to create a pre-confirmed user (no confirmation email sent)
     const { data, error } = await adminSupabase.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password: password || crypto.randomUUID(),
       email_confirm: true, // Auto-confirm — no "Confirm Your Signup" email
       user_metadata: { full_name: `${firstName} ${lastName}` }
@@ -494,7 +538,7 @@ export default async function handler(req, res) {
     if (data.user) {
       await adminSupabase.from('user_profiles').upsert({
         id: data.user.id,
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         full_name: `${firstName} ${lastName}`,
         tier: 'free',
         is_admin: false
@@ -504,12 +548,12 @@ export default async function handler(req, res) {
       ghlFetch('https://rest.gohighlevel.com/v1/contacts/', {
         method: 'POST',
         body: JSON.stringify({
-          firstName, lastName, email,
+          firstName, lastName, email: normalizedEmail,
           tags: ['dealflow-free']
         })
       }).then(async (resp) => {
         if (!resp || !resp.ok) {
-          console.error(`[GHL SYNC FAIL] Could not create GHL contact for ${email}. Status: ${resp?.status}. Will flag in user_profiles.`);
+          console.error(`[GHL SYNC FAIL] Could not create GHL contact for ${normalizedEmail}. Status: ${resp?.status}. Will flag in user_profiles.`);
           // Flag this user so we can retry later
           await adminSupabase.from('user_profiles').update({ ghl_contact_id: 'SYNC_FAILED' }).eq('id', data.user.id);
         } else {
@@ -523,17 +567,66 @@ export default async function handler(req, res) {
           } catch {}
         }
       }).catch(async (err) => {
-        console.error(`[GHL SYNC FAIL] GHL contact creation threw for ${email}:`, err.message);
+        console.error(`[GHL SYNC FAIL] GHL contact creation threw for ${normalizedEmail}:`, err.message);
         await adminSupabase.from('user_profiles').update({ ghl_contact_id: 'SYNC_FAILED' }).eq('id', data.user.id).catch(() => {});
       });
     }
 
+    return res.status(200).json(buildAuthResponse({
+      email: normalizedEmail,
+      name: `${firstName} ${lastName}`,
+      token: 'pending',
+      refreshToken: '',
+      tier: 'free'
+    }));
+  }
+
+  if (action === 'verify') {
+    const { token } = req.body || {};
+    if (!token) {
+      return res.status(400).json({ error: 'token is required' });
+    }
+
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user?.email) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    }
+
+    const verifiedEmail = normalizeEmail(data.user.email);
+    const ghl = await getGhlTier(verifiedEmail);
+    const isAdmin = isAdminEmail(verifiedEmail);
+    const resolvedTier = canonicalizeTier(ghl.tier, verifiedEmail);
+    const gpInfo = await detectGpInfo(adminSupabase, verifiedEmail);
+
+    const profileData = {
+      id: data.user.id,
+      email: verifiedEmail,
+      full_name: ghl.name || data.user.user_metadata?.full_name || displayNameFromEmail(verifiedEmail),
+      tier: resolvedTier,
+      is_admin: isAdmin,
+      ghl_contact_id: ghl.contactId
+    };
+    if (gpInfo) {
+      profileData.gp_type = gpInfo.gp_type;
+      profileData.management_company_id = gpInfo.management_company_id;
+      profileData.gp_verified = true;
+    }
+    await adminSupabase.from('user_profiles').upsert(profileData, { onConflict: 'id' });
+
+    const profile = await loadUserProfile(adminSupabase, data.user.id);
     return res.status(200).json({
       success: true,
-      email,
-      name: `${firstName} ${lastName}`,
-      tier: 'free',
-      token: 'pending' // User will get a magic link to actually sign in
+      user: buildAuthResponse({
+        email: verifiedEmail,
+        name: ghl.name || data.user.user_metadata?.full_name,
+        token,
+        tier: resolvedTier,
+        isAdmin,
+        tags: ghl.tags,
+        contactId: ghl.contactId,
+        profile,
+        gpInfo
+      })
     });
   }
 

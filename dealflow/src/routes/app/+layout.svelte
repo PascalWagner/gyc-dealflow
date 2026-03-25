@@ -2,9 +2,8 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import OfflineNotice from '$lib/components/OfflineNotice.svelte';
 	import { page, navigating } from '$app/stores';
-	import { user, isLoggedIn, isGuest } from '$lib/stores/auth.js';
+	import { user, isLoggedIn, ensureSessionUserToken, normalizeSessionUser } from '$lib/stores/auth.js';
 	import { tapLight } from '$lib/utils/haptics.js';
-	import { browser } from '$app/environment';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import {
@@ -56,24 +55,31 @@
 		}, 5000);
 
 		const boot = async () => {
-			const stored = localStorage.getItem('gycUser');
-			if (stored && stored !== 'null') {
-				try {
-					const parsed = JSON.parse(stored);
-					if (parsed?.email) {
-						restoreScopedUserState(parsed);
-						await hydrateUserScopedData({
-							email: parsed.email,
-							token: parsed.token,
-							adminEmail: inferAdminEmailForSession(parsed)
-						}).catch(() => {});
-						user.set(parsed);
-						sessionReady = true;
-						authChecked = true;
-						clearTimeout(authTimeout);
-						return;
-					}
-				} catch {}
+			const sessionUser = normalizeSessionUser(JSON.parse(localStorage.getItem('gycUser') || 'null'));
+			if (sessionUser?.email) {
+				restoreScopedUserState(sessionUser);
+				user.set(sessionUser);
+				sessionReady = true;
+				authChecked = true;
+				clearTimeout(authTimeout);
+
+				const tokenState = await ensureSessionUserToken(sessionUser);
+				if (!tokenState.ok || !tokenState.session?.token) {
+					redirectToLogin();
+					return;
+				}
+
+				const activeSession = tokenState.session;
+				if (tokenState.refreshed) {
+					user.set(activeSession);
+				}
+
+				await hydrateUserScopedData({
+					email: activeSession.email,
+					token: activeSession.token,
+					adminEmail: inferAdminEmailForSession(activeSession)
+				}).catch(() => {});
+				return;
 			}
 
 			clearTimeout(authTimeout);

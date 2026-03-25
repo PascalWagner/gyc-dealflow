@@ -9,6 +9,10 @@
 
 import { getUserClient, getAdminClient, verifyAdmin, setCors, ghlFetch } from './_supabase.js';
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
 const TABLE_MAP = {
   stages: 'user_deal_stages',
   portfolio: 'user_portfolio',
@@ -305,12 +309,14 @@ async function handleGet(req, res, supabase, user) {
 // Admin endpoint: fetch another user's data by email (for impersonation)
 async function handleAdminGet(req, res) {
   const { type, email } = req.query;
+  const normalizedEmail = normalizeEmail(email);
   const types = type ? [type] : ['portfolio', 'stages', 'goals', 'taxdocs', 'plan'];
   const adminClient = getAdminClient();
 
   // Look up user_id by email from auth.users
   const { data: { users }, error: lookupErr } = await adminClient.auth.admin.listUsers();
-  const targetUser = (users || []).find(u => u.email === email);
+  if (lookupErr) throw lookupErr;
+  const targetUser = (users || []).find(u => normalizeEmail(u.email) === normalizedEmail);
   if (!targetUser) {
     // User hasn't signed up yet — return empty data
     const result = {};

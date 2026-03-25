@@ -1,8 +1,8 @@
-<script>
+	<script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { user } from '$lib/stores/auth.js';
+	import { normalizeSessionUser, user } from '$lib/stores/auth.js';
+	import { ADMIN_REAL_USER_KEY } from '$lib/utils/userScopedState.js';
 
 	// ── Reactive state (Svelte 5 runes) ──
 	let email = $state('');
@@ -67,9 +67,21 @@
 		currentSlide = i;
 	}
 
+	function decodeBase64UrlJson(value) {
+		if (!value) return null;
+		const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+		const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+		try {
+			return JSON.parse(atob(padded));
+		} catch {
+			return null;
+		}
+	}
+
 	// ── Store user data helper ──
 	function storeUser(data) {
-		const userData = {
+		localStorage.removeItem(ADMIN_REAL_USER_KEY);
+		const userData = normalizeSessionUser({
 			email: data.email,
 			name: data.name || data.email?.split('@')[0],
 			token: data.token,
@@ -89,7 +101,8 @@
 				managementCompanyId: data.managementCompanyId,
 				managementCompanyName: data.managementCompanyName
 			})
-		};
+		});
+		if (!userData) return null;
 		localStorage.setItem('gycUser', JSON.stringify(userData));
 		user.set(userData);
 		return userData;
@@ -111,8 +124,8 @@
 		// Decode the JWT to get the email
 		let userEmail = '';
 		try {
-			const payload = JSON.parse(atob(accessToken.split('.')[1]));
-			userEmail = payload.email || '';
+			const payload = decodeBase64UrlJson(accessToken.split('.')[1]);
+			userEmail = payload?.email || '';
 		} catch {}
 
 		if (!userEmail) {
@@ -148,7 +161,7 @@
 					managementCompanyId: data.managementCompanyId,
 					managementCompanyName: data.managementCompanyName
 				});
-				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/app/deals';
+				const dest = returnUrl || '/app/deals';
 				window.location.href = dest;
 			})
 			.catch(() => {
@@ -162,7 +175,8 @@
 					isAdmin: false,
 					tags: []
 				});
-				window.location.href = '/app/deals';
+				const dest = returnUrl || '/app/deals';
+				window.location.href = dest;
 			});
 	});
 
@@ -193,7 +207,7 @@
 			if (data.bypass && data.token) {
 				// Dev bypass — store session and redirect with full page reload
 				storeUser(data);
-				const dest = returnUrl ? decodeURIComponent(returnUrl) : '/app/deals';
+				const dest = returnUrl || '/app/deals';
 				window.location.href = dest;
 				return;
 			}

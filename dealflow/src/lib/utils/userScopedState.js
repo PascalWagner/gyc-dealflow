@@ -3,6 +3,7 @@ import { browser } from '$app/environment';
 export const ADMIN_REAL_USER_KEY = '_gycAdminRealUser';
 
 const SCOPED_BUNDLE_PREFIX = '_scopedBundle_';
+let activeHydrationId = 0;
 
 const STATIC_SCOPED_KEYS = [
 	'gycPortfolio',
@@ -40,15 +41,24 @@ function safeJsonParse(value, fallback) {
 	}
 }
 
+function normalizeEmail(email) {
+	return String(email || '').trim().toLowerCase();
+}
+
 function storage() {
 	return browser ? window.localStorage : null;
 }
 
+function scopedBundleKey(email) {
+	return `${SCOPED_BUNDLE_PREFIX}${normalizeEmail(email)}`;
+}
+
 function scopedKeyList() {
-	if (!browser) return [];
+	const storageArea = storage();
+	if (!storageArea) return [];
 	const keys = new Set(STATIC_SCOPED_KEYS);
-	for (let i = 0; i < localStorage.length; i += 1) {
-		const key = localStorage.key(i);
+	for (let i = 0; i < storageArea.length; i += 1) {
+		const key = storageArea.key(i);
 		if (!key) continue;
 		if (PREFIX_SCOPED_KEYS.some((prefix) => key.startsWith(prefix))) {
 			keys.add(key);
@@ -58,52 +68,59 @@ function scopedKeyList() {
 }
 
 export function clearUserScopedData() {
-	if (!browser) return;
+	const storageArea = storage();
+	if (!storageArea) return;
 	for (const key of scopedKeyList()) {
-		localStorage.removeItem(key);
+		storageArea.removeItem(key);
 	}
 }
 
 export function saveUserScopedData(email) {
-	if (!browser || !email) return;
+	const storageArea = storage();
+	const normalizedEmail = normalizeEmail(email);
+	if (!storageArea || !normalizedEmail) return;
 	const bundle = {};
 	for (const key of scopedKeyList()) {
-		const value = localStorage.getItem(key);
+		const value = storageArea.getItem(key);
 		if (value !== null) {
 			bundle[key] = value;
 		}
 	}
-	localStorage.setItem(`${SCOPED_BUNDLE_PREFIX}${email}`, JSON.stringify(bundle));
+	storageArea.setItem(scopedBundleKey(normalizedEmail), JSON.stringify(bundle));
 }
 
 export function loadUserScopedData(email) {
-	if (!browser || !email) return false;
+	const storageArea = storage();
+	const normalizedEmail = normalizeEmail(email);
+	if (!storageArea || !normalizedEmail) return false;
 	clearUserScopedData();
-	const saved = localStorage.getItem(`${SCOPED_BUNDLE_PREFIX}${email}`);
+	const saved = storageArea.getItem(scopedBundleKey(normalizedEmail));
 	if (!saved) return false;
 	const bundle = safeJsonParse(saved, {});
 	for (const [key, value] of Object.entries(bundle)) {
-		localStorage.setItem(key, value);
+		storageArea.setItem(key, value);
 	}
 	return true;
 }
 
 function persistJson(key, value) {
-	if (!browser) return;
+	const storageArea = storage();
+	if (!storageArea) return;
 	if (value === null || value === undefined) {
-		localStorage.removeItem(key);
+		storageArea.removeItem(key);
 		return;
 	}
-	localStorage.setItem(key, JSON.stringify(value));
+	storageArea.setItem(key, JSON.stringify(value));
 }
 
 function persistString(key, value) {
-	if (!browser) return;
+	const storageArea = storage();
+	if (!storageArea) return;
 	if (value === null || value === undefined || value === '') {
-		localStorage.removeItem(key);
+		storageArea.removeItem(key);
 		return;
 	}
-	localStorage.setItem(key, value);
+	storageArea.setItem(key, value);
 }
 
 function mapPortfolio(rows) {
@@ -206,6 +223,7 @@ async function fetchAdminBundle(token, email) {
 }
 
 function applyUserBundle(bundle, buyBox) {
+	const storageArea = storage();
 	persistJson('gycPortfolio', mapPortfolio(bundle?.portfolio || []));
 	persistJson('gycDealStages', mapStages(bundle?.stages || []));
 	persistJson('gycGoals', mapGoals(bundle?.goals || []));
@@ -218,10 +236,10 @@ function applyUserBundle(bundle, buyBox) {
 		if (buyBox._branch || buyBox.goal) {
 			persistString('gycBuyBoxComplete', 'true');
 		}
-	} else {
-		localStorage.removeItem('gycBuyBox');
-		localStorage.removeItem('gycBuyBoxWizard');
-		localStorage.removeItem('gycBuyBoxComplete');
+	} else if (storageArea) {
+		storageArea.removeItem('gycBuyBox');
+		storageArea.removeItem('gycBuyBoxWizard');
+		storageArea.removeItem('gycBuyBoxComplete');
 	}
 }
 
@@ -231,21 +249,25 @@ export function currentAdminRealUser() {
 }
 
 export async function hydrateUserScopedData({ email, token, adminEmail } = {}) {
-	if (!browser || !email || !token) return { ok: false, reason: 'missing-auth' };
+	const normalizedEmail = normalizeEmail(email);
+	const normalizedAdminEmail = normalizeEmail(adminEmail);
+	if (!browser || !normalizedEmail || !token) return { ok: false, reason: 'missing-auth' };
+
+	const hydrationId = ++activeHydrationId;
 
 	let bundle = null;
 	let buyBox = {};
 
 	try {
-		bundle = adminEmail && adminEmail.toLowerCase() !== email.toLowerCase()
-			? await fetchAdminBundle(token, email)
+		bundle = normalizedAdminEmail && normalizedAdminEmail !== normalizedEmail
+			? await fetchAdminBundle(token, normalizedEmail)
 			: await fetchCurrentUserBundle(token);
 	} catch (error) {
 		return { ok: false, reason: 'userdata-failed', error };
 	}
 
 	try {
-		const buyBoxResponse = await fetchJson(`/api/buybox?email=${encodeURIComponent(email)}`, {
+		const buyBoxResponse = await fetchJson(`/api/buybox?email=${encodeURIComponent(normalizedEmail)}`, {
 			Authorization: `Bearer ${token}`
 		});
 		buyBox = buyBoxResponse?.buyBox || {};
@@ -253,8 +275,12 @@ export async function hydrateUserScopedData({ email, token, adminEmail } = {}) {
 		buyBox = {};
 	}
 
+	if (hydrationId !== activeHydrationId) {
+		return { ok: false, reason: 'stale-hydration' };
+	}
+
 	applyUserBundle(bundle, buyBox);
-	saveUserScopedData(email);
+	saveUserScopedData(normalizedEmail);
 	return { ok: true, bundle, buyBox };
 }
 
@@ -267,6 +293,6 @@ export function inferAdminEmailForSession(sessionUser) {
 }
 
 export function restoreScopedUserState(sessionUser) {
-	if (!browser || !sessionUser?.email) return;
-	loadUserScopedData(sessionUser.email);
+	if (!browser || !sessionUser?.email) return false;
+	return loadUserScopedData(sessionUser.email);
 }
