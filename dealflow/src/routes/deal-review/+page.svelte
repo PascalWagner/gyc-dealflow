@@ -89,6 +89,8 @@
 
 <svelte:head><title>Review Deal | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="review-container">
 	<div class="review-card">
 		<!-- Progress bar -->
@@ -309,6 +311,8 @@
 			</div>
 		{/if}
 	</div>
+</div>
+</div>
 </div>
 
 <style>

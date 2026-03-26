@@ -138,6 +138,8 @@
 
 <svelte:head><title>Deal Flow Stats | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="page-header">
 	<h1>Deal Flow Stats</h1>
 	<p class="subtitle">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>
@@ -215,6 +217,8 @@
 <div class="value-banner">
 	<div class="banner-title">This database can't be rebuilt overnight.</div>
 	<div class="banner-desc">With {analytics.totalDeals} deals tracked, {analytics.assetClassCount} asset classes, and new opportunities sourced weekly — this is the most comprehensive private placement database available to LP investors.</div>
+</div>
+</div>
 </div>
 
 <style>

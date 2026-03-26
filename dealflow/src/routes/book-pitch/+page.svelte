@@ -26,6 +26,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </svelte:head>
 
+<div class="ly-page">
 <div class="page-wrap">
 	<div class="content-wrap">
 
@@ -204,6 +205,7 @@
 		</div>
 
 	</div>
+</div>
 </div>
 
 <style>

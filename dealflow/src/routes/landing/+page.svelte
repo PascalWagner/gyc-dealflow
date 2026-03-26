@@ -28,6 +28,7 @@
 	<meta property="og:url" content="https://growyourcashflow.io">
 </svelte:head>
 
+<div class="ly-page">
 <!-- Nav -->
 <nav class="nav">
 	<a href="/" class="nav-logo">Grow Your Cashflow</a>
@@ -312,6 +313,7 @@
 	</div>
 	<div class="footer-copy">&copy; 2026 Grow Your Cashflow. All rights reserved. Not a broker-dealer. Not investment advice.</div>
 </footer>
+</div>
 
 <style>
 	/* ── Landing-specific CSS variables ── */

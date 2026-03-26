@@ -276,6 +276,8 @@
 {#if !$isAdmin}
 	<div class="loading">Redirecting...</div>
 {:else}
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="manage-page">
 	<div class="topbar">
 		<div class="topbar-title">Manage Database</div>
@@ -388,6 +390,8 @@
 			</div>
 		{/if}
 	</div>
+</div>
+</div>
 </div>
 {/if}
 

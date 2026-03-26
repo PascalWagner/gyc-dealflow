@@ -10,6 +10,8 @@
 	<title>GYC Income Fund | GYC</title>
 </svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="if-page">
 	<!-- HERO -->
 	<div class="if-hero">
@@ -62,6 +64,8 @@
 
 	<!-- DISCLAIMER -->
 	<p class="disclaimer">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities. Any offering will be made only through a Private Placement Memorandum. Past performance is not indicative of future results. For accredited investors only.</p>
+</div>
+</div>
 </div>
 
 <style>

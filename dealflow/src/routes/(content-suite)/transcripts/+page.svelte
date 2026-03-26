@@ -2,11 +2,13 @@
 	<title>Transcripts | Kontent Engine</title>
 </svelte:head>
 
-<section class="placeholder-page">
-	<p class="eyebrow">Content workspace</p>
-	<h1>Transcripts</h1>
-	<p>This route is ready for transcript ingest later. The published library is live under <a href="/content">/content</a>.</p>
-</section>
+<div class="ly-page">
+	<section class="placeholder-page">
+		<p class="eyebrow">Content workspace</p>
+		<h1>Transcripts</h1>
+		<p>This route is ready for transcript ingest later. The published library is live under <a href="/content">/content</a>.</p>
+	</section>
+</div>
 
 <style>
 	.placeholder-page {

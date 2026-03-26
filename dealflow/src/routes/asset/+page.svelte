@@ -879,8 +879,8 @@
 </div>
 
 <!-- Main Content -->
-<div class="main">
-	<div class="content-wrap">
+<div class="main ly-sidebar-main ly-page">
+	<div class="content-wrap ly-frame">
 
 		{#if loading}
 			<!-- Loading Skeleton -->
@@ -1422,12 +1422,11 @@
 <style>
 	/* ====== LAYOUT ====== */
 	.main {
-		margin-left: 240px;
 		min-height: 100vh;
 	}
 	.content-wrap {
 		max-width: 1060px;
-		padding: 40px 40px 80px;
+		padding: 40px 0 80px;
 		margin: 0 auto;
 	}
 
@@ -1687,9 +1686,8 @@
 
 	/* ====== RESPONSIVE ====== */
 	@media (max-width: 768px) {
-		.main { margin-left: 0; }
 		.mobile-topbar { display: flex; }
-		.content-wrap { padding: 20px 12px 48px; }
+		.content-wrap { padding: 20px 0 48px; }
 		.hero-top { grid-template-columns: 1fr; }
 		.hero-map { height: 200px; order: -1; }
 		.hero-info { padding: 20px 16px; }
@@ -1719,7 +1717,7 @@
 		.hero-gmaps-link { min-height: 44px; display: inline-flex; align-items: center; }
 	}
 	@media (max-width: 480px) {
-		.content-wrap { padding: 16px 8px 48px; }
+		.content-wrap { padding: 16px 0 48px; }
 		.hero-name { font-size: 20px; }
 		.hero-stats { grid-template-columns: 1fr 1fr; }
 		.hero-stat-value { font-size: 16px; }

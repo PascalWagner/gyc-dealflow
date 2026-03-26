@@ -448,6 +448,8 @@
 	});
 </script>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="settings-page">
 	<div class="settings-shell">
 		<div class="settings-shell-title">Settings</div>
@@ -839,6 +841,8 @@
 			Log Out
 		</button>
 	</div>
+</div>
+</div>
 </div>
 
 <style>

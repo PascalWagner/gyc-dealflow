@@ -161,6 +161,8 @@
 	});
 </script>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="topbar">
 	<div class="topbar-title">My Goals</div>
 </div>
@@ -341,6 +343,8 @@
 		</div>
 	</div>
 {/if}
+</div>
+</div>
 
 <style>
 	.topbar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 0; z-index: 10; }

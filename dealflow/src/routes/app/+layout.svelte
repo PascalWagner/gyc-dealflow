@@ -253,6 +253,10 @@
 		border-top: 1px solid rgba(255,255,255,0.08);
 		z-index: 100;
 		padding: 6px 0 env(safe-area-inset-bottom, 8px);
+		transform: translateZ(0);
+		backface-visibility: hidden;
+		will-change: transform;
+		isolation: isolate;
 	}
 
 	.mobile-tab {

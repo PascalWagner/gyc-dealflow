@@ -261,6 +261,7 @@
 	<title>GYC - Sign In</title>
 </svelte:head>
 
+<div class="ly-page">
 <div class="split-layout">
 	<!-- ─── Left: Platform showcase ─── -->
 	<div class="left-panel">
@@ -557,6 +558,7 @@
 			{/if}
 		</div>
 	</div>
+</div>
 </div>
 
 <style>

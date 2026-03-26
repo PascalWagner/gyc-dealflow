@@ -9,9 +9,11 @@
 	});
 </script>
 
-<div class="loading">
-	<p>Redirecting to landing...</p>
-	<a href="/landing">Continue to landing</a>
+<div class="ly-page">
+	<div class="loading">
+		<p>Redirecting to landing...</p>
+		<a href="/landing">Continue to landing</a>
+	</div>
 </div>
 
 <style>

@@ -2,11 +2,13 @@
 	<title>Ideas | Kontent Engine</title>
 </svelte:head>
 
-<section class="placeholder-page">
-	<p class="eyebrow">Content workspace</p>
-	<h1>Ideas</h1>
-	<p>This section is reserved for upstream idea capture and clustering. The published library is live under <a href="/content">/content</a>.</p>
-</section>
+<div class="ly-page">
+	<section class="placeholder-page">
+		<p class="eyebrow">Content workspace</p>
+		<h1>Ideas</h1>
+		<p>This section is reserved for upstream idea capture and clustering. The published library is live under <a href="/content">/content</a>.</p>
+	</section>
+</div>
 
 <style>
 	.placeholder-page {

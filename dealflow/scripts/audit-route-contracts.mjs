@@ -191,6 +191,26 @@ assert(
 		.join(', ')}`
 );
 
+const unwrappedRoutePages = routeFiles.filter((fullPath) => {
+	const relativePath = path.relative(root, fullPath);
+	if (!relativePath.endsWith('+page.svelte')) return false;
+	if (relativePath.includes('/onboarding/') || relativePath.includes('/gp-onboarding/')) return false;
+	const source = fs.readFileSync(fullPath, 'utf8');
+	return !(
+		source.includes('ly-page') ||
+		source.includes('ly-frame') ||
+		source.includes('ly-dashboard-shell') ||
+		source.includes('ly-sidebar-main')
+	);
+});
+
+assert(
+	unwrappedRoutePages.length === 0,
+	`Route pages must opt into the shared layout shell. Found: ${unwrappedRoutePages
+		.map((fullPath) => path.relative(root, fullPath))
+		.join(', ')}`
+);
+
 console.log('Route audit passed.');
 console.log('- Operators cards resolve to Sponsor routes');
 console.log('- Sponsor and Person pages use the shared protected-route bootstrap');
@@ -198,3 +218,4 @@ console.log('- Sponsor and Person rendering is no longer blocked on hydration');
 console.log('- Sponsor and Person do not call rune-derived values like functions');
 console.log('- Smoke coverage exists for Operators -> Sponsor -> Person');
 console.log('- Mobile navigation defaults to no hamburger on route pages');
+console.log('- Non-onboarding route pages opt into the shared layout shell');

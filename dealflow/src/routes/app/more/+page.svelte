@@ -49,6 +49,8 @@
 
 <svelte:head><title>More | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="more-page">
 	<h1>More</h1>
 
@@ -90,6 +92,8 @@
 			<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
 		</a>
 	{/if}
+</div>
+</div>
 </div>
 
 <style>

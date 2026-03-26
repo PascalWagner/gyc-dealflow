@@ -87,6 +87,7 @@
 	<title>{subject || 'Weekly Digest Preview'}</title>
 </svelte:head>
 
+<div class="ly-page">
 {#if loading}
 	<div class="loading">Loading preview...</div>
 {:else if deal}
@@ -236,6 +237,7 @@
 
 </div>
 {/if}
+</div>
 
 <style>
 	.loading {

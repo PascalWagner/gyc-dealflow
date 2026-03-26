@@ -13,6 +13,8 @@
 
 <svelte:head><title>Saved Deals | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="page-header">
 	<h1>Saved Deals</h1>
 </div>
@@ -49,6 +51,8 @@
 		{/each}
 	</div>
 {/if}
+</div>
+</div>
 
 <style>
 	.page-header { padding: 20px 24px; }

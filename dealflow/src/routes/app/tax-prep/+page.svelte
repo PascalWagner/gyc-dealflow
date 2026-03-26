@@ -221,6 +221,8 @@
 
 <svelte:head><title>Tax Prep | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="tax-page">
 	<div class="dash-tabs">
 		<a href="/app/dashboard" class="dash-tab">Overview</a>
@@ -447,6 +449,8 @@
 		</div>
 	</div>
 {/if}
+</div>
+</div>
 
 <style>
 	.tax-page { padding: 20px 24px; max-width: 1000px; }

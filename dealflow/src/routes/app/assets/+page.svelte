@@ -167,6 +167,8 @@
 	onDestroy(() => { if (map) { map.remove(); map = null; } });
 </script>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="assets-page">
 	<div class="topbar">
 		<div class="topbar-title">Assets</div>
@@ -260,6 +262,8 @@
 			</div>
 		</div>
 	{/if}
+</div>
+</div>
 </div>
 
 <style>

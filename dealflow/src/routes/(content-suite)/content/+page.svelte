@@ -130,6 +130,7 @@
 	<title>Content Library | Kontent Engine</title>
 </svelte:head>
 
+<div class="ly-page">
 <div class="content-page">
 	<header class="content-header">
 		<div>
@@ -374,6 +375,7 @@
 			{/if}
 		</section>
 	</div>
+</div>
 </div>
 
 <style>

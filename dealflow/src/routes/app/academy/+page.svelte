@@ -39,6 +39,8 @@
 
 <svelte:head><title>Cashflow Academy | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 {#if nativeCompanionMode}
 	<div class="academy-native">
 		<section class="native-hero">
@@ -350,6 +352,8 @@
 	<div class="disclaimer">This material is for informational purposes only and does not constitute an offer to sell or solicitation to buy securities.</div>
 </div>
 {/if}
+</div>
+</div>
 
 <style>
 	.academy-native {

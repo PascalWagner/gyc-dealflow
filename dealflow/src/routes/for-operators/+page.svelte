@@ -120,6 +120,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </svelte:head>
 
+<div class="ly-page">
 <!-- Nav -->
 <nav class="nav">
 	<a href="/" class="nav-logo">Grow Your Cashflow</a>
@@ -544,6 +545,7 @@
 <footer class="footer">
 	&copy; 2026 Grow Your Cashflow. All rights reserved.
 </footer>
+</div>
 
 <style>
 	/* ── Base ── */

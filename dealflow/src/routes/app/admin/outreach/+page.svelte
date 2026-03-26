@@ -90,6 +90,8 @@
 {#if !$isAdmin}
 	<div style="display:flex;align-items:center;justify-content:center;min-height:60vh;color:var(--text-muted)">Redirecting...</div>
 {:else}
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="op">
 	<div class="tb"><div class="tt">Operator Outreach</div></div>
 	<div class="ct">
@@ -114,6 +116,8 @@
 		<div class="pg"><button class="pb" disabled={currentPage <= 1} onclick={() => { currentPage--; loadData(); }}>Prev</button><span>Page {currentPage}</span><button class="pb" onclick={() => { currentPage++; loadData(); }}>Next</button></div>
 		{/if}
 	</div>
+</div>
+</div>
 </div>
 {/if}
 

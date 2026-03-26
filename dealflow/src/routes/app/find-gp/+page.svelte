@@ -40,6 +40,8 @@
 
 <svelte:head><title>Find a GP | GYC</title></svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="page-header">
 	<h1>Find a GP</h1>
 	<input
@@ -78,6 +80,8 @@
 	{#if filteredGPs.length === 0}
 		<div class="empty-state">No sponsors found matching "{searchQuery}"</div>
 	{/if}
+</div>
+</div>
 </div>
 
 <style>

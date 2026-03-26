@@ -2,6 +2,8 @@
 	<title>Privacy Policy - GYC Deals</title>
 </svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="privacy">
 	<h1>Privacy Policy</h1>
 	<p class="date">Effective Date: March 18, 2026</p>
@@ -39,6 +41,8 @@
 	<h2>9. Contact Us</h2>
 	<p>If you have questions about this Privacy Policy, contact us at:<br>
 	<a href="mailto:pascal@growyourcashflow.io">pascal@growyourcashflow.io</a></p>
+</div>
+</div>
 </div>
 
 <style>

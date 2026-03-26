@@ -143,6 +143,8 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="resources-page">
 	{#if !$isMember}
 		<div class="gate-wrap">
@@ -350,6 +352,8 @@
 		</div>
 	</div>
 {/if}
+</div>
+</div>
 
 <style>
 	.resources-page {

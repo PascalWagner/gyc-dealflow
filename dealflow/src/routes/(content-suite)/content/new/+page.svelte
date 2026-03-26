@@ -93,6 +93,7 @@
 	<title>New Published Record | Kontent Engine</title>
 </svelte:head>
 
+<div class="ly-page">
 <div class="new-content-page">
 	<header class="page-header">
 		<div>
@@ -275,6 +276,7 @@
 			{/each}
 		</div>
 	</section>
+</div>
 </div>
 
 <style>

@@ -250,6 +250,8 @@
 	<title>Office Hours | GYC</title>
 </svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="office-hours-page">
 	<div class="office-hours-hero">
 		<div>
@@ -386,6 +388,8 @@
 			</section>
 		</div>
 	{/if}
+</div>
+</div>
 </div>
 
 <style>

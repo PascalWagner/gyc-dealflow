@@ -142,6 +142,8 @@
 	<title>Member Success | GYC</title>
 </svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="page">
 	<header class="page-header">
 		<h1>Member Success</h1>
@@ -338,6 +340,8 @@
 			<p class="empty-mobile">No members match your filters.</p>
 		{/if}
 	</div>
+</div>
+</div>
 </div>
 
 <style>

@@ -928,8 +928,8 @@
 	<div class="mobile-topbar-title">GP Dashboard</div>
 </div>
 
-<div class="main">
-	<div class="content-wrap">
+<div class="main ly-sidebar-main ly-page">
+	<div class="content-wrap ly-frame">
 
 		{#if accessDenied}
 			<!-- Access Denied -->
@@ -1428,13 +1428,11 @@
 <style>
 	/* ====== MAIN LAYOUT ====== */
 	.main {
-		margin-left: var(--sidebar-width, 240px);
 		min-height: 100vh;
-		transition: margin-left 0.3s ease;
 	}
 	.content-wrap {
 		max-width: 1200px;
-		padding: 32px 40px 64px;
+		padding: 32px 0 64px;
 		margin: 0 auto;
 	}
 
@@ -3189,9 +3187,8 @@
 		.dashboard-grid-3-2 { grid-template-columns: 1fr 1fr; }
 	}
 	@media (max-width: 768px) {
-		.main { margin-left: 0; }
 		.mobile-topbar { display: flex; }
-		.content-wrap { padding: 20px 16px 100px; }
+		.content-wrap { padding: 20px 0 100px; }
 		.mobile-tab-bar { display: flex !important; }
 		.gp-header { padding: 24px 20px; }
 		.gp-header-inner {

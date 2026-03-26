@@ -3,6 +3,8 @@
 	<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 </svelte:head>
 
+<div class="ly-page">
+	<div class="ly-frame">
 <div class="maintenance">
 	<div class="container">
 		<div class="brand">Grow Your Cashflow</div>
@@ -20,6 +22,8 @@
 			Email us at <a href="mailto:pascal@growyourcashflow.io">pascal@growyourcashflow.io</a>
 		</div>
 	</div>
+</div>
+</div>
 </div>
 
 <style>
