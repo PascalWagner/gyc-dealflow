@@ -137,12 +137,6 @@
 				emphasis: true
 			};
 		}
-		if ((socialCounts.reviewing || 0) >= 1) {
-			return {
-				text: `${socialCounts.reviewing} LP${socialCounts.reviewing === 1 ? '' : 's'} ${socialCounts.reviewing === 1 ? 'is' : 'are'} reviewing this deal`,
-				emphasis: false
-			};
-		}
 		return null;
 	});
 

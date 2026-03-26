@@ -699,7 +699,7 @@
 
 			<div class="settings-card" style="margin-top:16px;">
 				<div class="settings-card-title">Portfolio Visibility</div>
-				<div class="settings-card-desc" style="margin-bottom:16px;">When on, your deal activity counts toward "X LPs are reviewing this deal" on deal pages. Your name and dollar amounts are never shown.</div>
+				<div class="settings-card-desc" style="margin-bottom:16px;">When on, your deal activity can contribute to shared community visibility features. Your name and dollar amounts are never shown.</div>
 				<div class="toggle-row">
 					<button class="toggle-track" class:on={shareActivity} aria-label="Toggle deal activity sharing" aria-pressed={shareActivity} onclick={() => updateShareActivity(!shareActivity)}>
 						<div class="toggle-thumb"></div>
@@ -745,22 +745,22 @@
 						<div>
 							<div class="deal-preview-row">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-								12 LPs are reviewing this deal
+								Community visibility is on
 							</div>
 							<div class="deal-preview-sub green">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
-								You are counted in this number
+								Your activity may contribute to aggregate visibility signals
 							</div>
 						</div>
 					{:else}
 						<div>
 							<div class="deal-preview-row">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-								11 LPs are reviewing this deal
+								Community visibility is off
 							</div>
 							<div class="deal-preview-sub muted">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-								You are not counted when sharing is off
+								Your activity will not contribute to shared visibility features
 							</div>
 						</div>
 					{/if}
