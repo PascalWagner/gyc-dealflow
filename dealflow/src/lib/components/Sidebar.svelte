@@ -23,7 +23,7 @@
 		saveUserScopedData
 	} from '$lib/utils/userScopedState.js';
 
-	let { currentPage = '' } = $props();
+	let { currentPage = '', hideHamburgerOnPhone = false } = $props();
 
 	let isDark = $state(false);
 	let isImpersonating = $state(false);
@@ -55,10 +55,27 @@
 		const impersonationTimers = [50, 250, 750].map((delay) =>
 			window.setTimeout(() => syncImpersonationState(getStoredSessionUser()), delay)
 		);
+		const phoneMedia = window.matchMedia('(max-width: 768px)');
+		const syncPhoneHiddenState = () => {
+			if (hideHamburgerOnPhone && phoneMedia.matches) {
+				mobileOpen = false;
+			}
+		};
+		syncPhoneHiddenState();
+		if (phoneMedia.addEventListener) {
+			phoneMedia.addEventListener('change', syncPhoneHiddenState);
+		} else {
+			phoneMedia.addListener(syncPhoneHiddenState);
+		}
 
 		return () => {
 			for (const timer of impersonationTimers) {
 				clearTimeout(timer);
+			}
+			if (phoneMedia.removeEventListener) {
+				phoneMedia.removeEventListener('change', syncPhoneHiddenState);
+			} else {
+				phoneMedia.removeListener(syncPhoneHiddenState);
 			}
 		};
 	});
@@ -215,6 +232,14 @@
 
 	function closeMobile() {
 		mobileOpen = false;
+	}
+
+	function toggleMobile() {
+		if (hideHamburgerOnPhone && browser && window.matchMedia('(max-width: 768px)').matches) {
+			mobileOpen = false;
+			return;
+		}
+		mobileOpen = !mobileOpen;
 	}
 
 	function decodeTokenEmail(token) {
@@ -435,7 +460,7 @@
 </script>
 
 <!-- Mobile hamburger -->
-<button class="sidebar-hamburger" onclick={() => mobileOpen = !mobileOpen} aria-label="Toggle menu">
+<button class="sidebar-hamburger" class:hide-on-phone={hideHamburgerOnPhone} onclick={toggleMobile} aria-label="Toggle menu">
 	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
 		{#if mobileOpen}
 			<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -828,6 +853,12 @@
 		}
 		.sidebar-backdrop {
 			display: block;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.sidebar-hamburger.hide-on-phone {
+			display: none;
 		}
 	}
 
