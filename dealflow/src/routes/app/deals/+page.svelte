@@ -581,13 +581,12 @@
 				<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
 				</button>
-				<button class="view-btn view-btn-compare" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
+				<button class="view-btn" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
 						<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
 						<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
 						<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
 					</svg>
-					<span class="view-count">{$compareDealIds.length}/{MAX_COMPARE_DEALS}</span>
 				</button>
 				<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -757,43 +756,87 @@
 			</div>
 		</div>
 	{:else if $dealFlowViewMode === 'location'}
-		{#if filteredDeals.length === 0}
-			<div class="empty-state">
-				<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
-				{#if hasActiveFilters && currentTab === 'filter'}
-					<div class="empty-title">No deals match your filters</div>
-					<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
-					<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
-				{:else if currentTab === 'filter'}
-					<div class="empty-title">No deals available</div>
-					<div class="empty-desc">New deals are added regularly. Check back soon.</div>
-				{:else if currentTab === 'review'}
-					<div class="empty-title">No deals in Review yet</div>
-					<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
-					<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
-				{:else if currentTab === 'connect'}
-					<div class="empty-title">No deals in Connect yet</div>
-					<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
-					<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
-				{:else if currentTab === 'decide'}
-					<div class="empty-title">No deals in Decide yet</div>
-					<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
-					<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
-				{:else if currentTab === 'invested'}
-					<div class="empty-title">No investments yet</div>
-					<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
-				{:else if currentTab === 'skipped'}
-					<div class="empty-title">No skipped deals</div>
-					<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+		<div class="location-mode-layout">
+			<div class="location-map-shell">
+				<div class="location-map-head">
+					<div>
+						<div class="compare-grid-title">{currentStageContent.title} Locations</div>
+						<div class="compare-grid-desc">
+							See the geographic spread for the deals in this stage, then review the same cards underneath.
+						</div>
+					</div>
+
+					<div class="compare-grid-meta">
+						<span class="compare-grid-count">{filteredDeals.length} mapped</span>
+					</div>
+				</div>
+
+				<DealMap deals={filteredDeals} />
+			</div>
+
+			<div class="compare-grid-shell">
+				<div class="compare-grid-head">
+					<div>
+						<div class="compare-grid-title">{currentStageContent.title} Deals</div>
+						<div class="compare-grid-desc">
+							Use the map as context, then continue browsing and acting on the cards below without leaving Deal Flow.
+						</div>
+					</div>
+				</div>
+
+				{#if filteredDeals.length === 0}
+					<div class="empty-state">
+						<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
+						{#if hasActiveFilters && currentTab === 'filter'}
+							<div class="empty-title">No deals match your filters</div>
+							<div class="empty-desc">Try adjusting your criteria or clearing all filters to see every deal.</div>
+							<button class="btn-browse" onclick={clearFilters}>Clear All Filters</button>
+						{:else if currentTab === 'filter'}
+							<div class="empty-title">No deals available</div>
+							<div class="empty-desc">New deals are added regularly. Check back soon.</div>
+						{:else if currentTab === 'review'}
+							<div class="empty-title">No deals in Review yet</div>
+							<div class="empty-desc">Move deals from Filter into Review to start working the checklist and deciding what deserves a conversation.</div>
+							<button class="btn-browse" onclick={() => switchTab('filter')}>Go to Filter</button>
+						{:else if currentTab === 'connect'}
+							<div class="empty-title">No deals in Connect yet</div>
+							<div class="empty-desc">Complete your review to request introductions with operators. Once you understand a deal, move it here to schedule a call.</div>
+							<button class="btn-browse" onclick={() => switchTab('review')}>Go to Review</button>
+						{:else if currentTab === 'decide'}
+							<div class="empty-title">No deals in Decide yet</div>
+							<div class="empty-desc">Meet operators before making decisions. After your conversations, move deals here to compare finalists side by side.</div>
+							<button class="btn-browse" onclick={() => switchTab('connect')}>Go to Connect</button>
+						{:else if currentTab === 'invested'}
+							<div class="empty-title">No investments yet</div>
+							<div class="empty-desc">Your invested deals will appear here. Track distributions, K-1s, and hold period progress all in one place.</div>
+						{:else if currentTab === 'skipped'}
+							<div class="empty-title">No skipped deals</div>
+							<div class="empty-desc">Deals you've passed on will show here. You can reconsider them anytime.</div>
+						{:else}
+							<div class="empty-title">Nothing here yet</div>
+							<div class="empty-desc">Start browsing deals to build your pipeline.</div>
+							<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+						{/if}
+					</div>
 				{:else}
-					<div class="empty-title">Nothing here yet</div>
-					<div class="empty-desc">Start browsing deals to build your pipeline.</div>
-					<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
+					<div class="deals-grid">
+						{#each filteredDeals as deal (deal.id)}
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<div onclick={() => trackDealView(deal.id)}>
+								<DealCard
+									{deal}
+									compareSelectable={true}
+									compareSelected={compareDealSet.has(deal.id)}
+									compareAtLimit={!compareDealSet.has(deal.id) && $compareDealIds.length >= MAX_COMPARE_DEALS}
+									oncomparetoggle={handleCompareToggle}
+								/>
+							</div>
+						{/each}
+					</div>
 				{/if}
 			</div>
-		{:else}
-			<DealMap deals={filteredDeals} />
-		{/if}
+		</div>
 	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">{STAGE_META[currentTab]?.icon || '📋'}</div>
@@ -960,26 +1003,6 @@
 	.view-btn:hover { color: var(--text-dark); }
 	.view-btn.active { background: var(--primary); color: #fff; }
 
-	.view-btn-compare {
-		padding-right: 8px;
-	}
-
-	.view-count {
-		display: inline-flex;
-		align-items: center;
-		padding: 2px 6px;
-		border-radius: 999px;
-		background: rgba(0, 0, 0, 0.06);
-		font-family: var(--font-ui);
-		font-size: 10px;
-		font-weight: 700;
-		line-height: 1;
-	}
-
-	.view-btn.active .view-count {
-		background: rgba(255, 255, 255, 0.18);
-	}
-
 	.stage-banner {
 		padding: 12px 16px;
 		margin: 12px 0;
@@ -1067,6 +1090,27 @@
 	.compare-mode-layout {
 		display: grid;
 		gap: 22px;
+	}
+
+	.location-mode-layout {
+		display: grid;
+		gap: 22px;
+	}
+
+	.location-map-shell {
+		padding: 18px;
+		background: var(--bg-card);
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		box-shadow: var(--shadow-card);
+	}
+
+	.location-map-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 18px;
 	}
 
 	.compare-grid-shell {
@@ -1274,6 +1318,10 @@
 		.compare-grid-shell {
 			padding: 16px;
 		}
+
+		.location-map-shell {
+			padding: 16px;
+		}
 	}
 
 	@media (max-width: 768px) {
@@ -1294,6 +1342,11 @@
 
 		.compare-grid-meta {
 			justify-content: space-between;
+		}
+
+		.location-map-head {
+			flex-direction: column;
+			align-items: stretch;
 		}
 	}
 </style>

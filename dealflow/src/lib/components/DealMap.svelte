@@ -6,6 +6,7 @@
 
 	let mapEl = $state(null);
 	let leafletMap = null;
+	let leaflet = null;
 	let markers = [];
 
 	// State coordinate lookups for geocoding
@@ -100,7 +101,8 @@
 
 	async function initMap() {
 		if (!browser || !mapEl) return;
-		const L = await import('leaflet');
+		const L = leaflet || await import('leaflet');
+		leaflet = L;
 		await import('leaflet/dist/leaflet.css');
 
 		if (!leafletMap) {
@@ -115,11 +117,11 @@
 		markers.forEach(m => leafletMap.removeLayer(m));
 		markers = [];
 
-		const syndications = deals.filter(d => d.dealType === 'Syndication');
+		const mappedDeals = deals.filter(Boolean);
 		const sixMonthsAgo = new Date();
 		sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-		syndications.forEach(deal => {
+		mappedDeals.forEach(deal => {
 			const coords = geocode(deal);
 			const dealDate = new Date(deal.addedDate);
 			const isActive = dealDate >= sixMonthsAgo;
@@ -136,7 +138,7 @@
 
 			marker.bindPopup(
 				`<div style="font-family:var(--font-ui);min-width:200px;">
-					<a href="/app/deals/${deal.id}" style="font-weight:700;font-size:14px;display:block;color:#1a7a5a;text-decoration:underline;margin-bottom:6px;">${deal.investmentName}</a>
+					<a href="/deal/${deal.id}" style="font-weight:700;font-size:14px;display:block;color:#1a7a5a;text-decoration:underline;margin-bottom:6px;">${deal.investmentName}</a>
 					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Sponsor:</strong> ${deal.managementCompany || 'N/A'}</div>
 					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Asset Class:</strong> ${deal.assetClass || 'N/A'}</div>
 					<div style="font-size:12px;color:#607179;margin-bottom:2px;"><strong>Target IRR:</strong> ${fmtPct(deal.targetIRR)}</div>
@@ -145,6 +147,13 @@
 			);
 			markers.push(marker);
 		});
+
+		if (markers.length > 0) {
+			const bounds = L.latLngBounds(markers.map((marker) => marker.getLatLng()));
+			leafletMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 8 });
+		} else {
+			leafletMap.setView([37.5, -96], 4);
+		}
 
 		setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 100);
 	}
@@ -164,10 +173,11 @@
 
 <style>
 	.map-container {
-		height: calc(100vh - 240px);
-		min-height: 500px;
+		height: clamp(320px, 44vh, 460px);
+		min-height: 320px;
 		display: flex;
 		flex-direction: column;
+		background: var(--bg-card);
 		border-radius: var(--radius, 8px);
 		overflow: hidden;
 		border: 1px solid var(--border);
@@ -191,5 +201,12 @@
 	.map-container :global(.leaflet-container) {
 		height: 100%;
 		width: 100%;
+	}
+
+	@media (max-width: 768px) {
+		.map-container {
+			height: 320px;
+			min-height: 320px;
+		}
 	}
 </style>
