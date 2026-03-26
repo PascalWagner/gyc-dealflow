@@ -84,6 +84,7 @@
 		const userData = setStoredSessionUser({
 			email: data.email,
 			name: data.name || data.email?.split('@')[0],
+			fullName: data.fullName || data.name || data.email?.split('@')[0] || '',
 			token: data.token,
 			refreshToken: data.refreshToken || '',
 			tier: data.tier || 'free',
@@ -92,10 +93,22 @@
 			contactId: data.contactId || null,
 			phone: data.phone || '',
 			location: data.location || '',
+			avatar_url: data.avatar_url || '',
+			share_activity: data.share_activity !== false,
 			share_saved: data.share_saved !== false,
 			share_dd: data.share_dd !== false,
 			share_invested: data.share_invested !== false,
 			allow_follows: data.allow_follows !== false,
+			accredited_status: data.accredited_status || '',
+			investable_capital: data.investable_capital || '',
+			investment_experience: data.investment_experience || '',
+			onboardingRole: data.onboardingRole || null,
+			gpOnboardingComplete: data.gpOnboardingComplete || false,
+			academyStart: data.academyStart || null,
+			academyEnd: data.academyEnd || null,
+			autoRenew: data.autoRenew !== false,
+			cardLast4: data.cardLast4 || null,
+			cardBrand: data.cardBrand || null,
 			...(data.gpType && {
 				gpType: data.gpType,
 				managementCompanyId: data.managementCompanyId,
@@ -139,23 +152,11 @@
 			.then((r) => r.json())
 			.then((data) => {
 				storeUser({
+					...data,
 					email: userEmail,
 					name: data.name || userEmail.split('@')[0],
 					token: accessToken,
-					refreshToken: refreshToken || '',
-					tier: data.tier,
-					isAdmin: data.isAdmin,
-					tags: data.tags,
-					contactId: data.contactId,
-					phone: data.phone,
-					location: data.location,
-					share_saved: data.share_saved,
-					share_dd: data.share_dd,
-					share_invested: data.share_invested,
-					allow_follows: data.allow_follows,
-					gpType: data.gpType,
-					managementCompanyId: data.managementCompanyId,
-					managementCompanyName: data.managementCompanyName
+					refreshToken: refreshToken || ''
 				});
 				const dest = returnUrl || '/app/deals';
 				window.location.href = dest;
