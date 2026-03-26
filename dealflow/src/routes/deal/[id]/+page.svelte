@@ -1421,7 +1421,7 @@
 <Sidebar currentPage="deals" />
 
 <main class="main ly-page">
-	<div class="content-wrap ly-container">
+	<div class="content-wrap ly-dealflow-frame">
 		{#if loading}
 			<!-- Loading Skeleton -->
 			<div class="skeleton skeleton-header"></div>
@@ -2949,8 +2949,12 @@
 		overflow-x: clip;
 	}
 	.content-wrap {
-		max-width: none;
-		padding: 32px 0 64px;
+		--ly-dealflow-frame-max: 1440px;
+		--ly-dealflow-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-dealflow-frame-pad-tablet: 24px;
+		--ly-dealflow-frame-pad-mobile: 16px;
+		--ly-dealflow-frame-pad-top: 32px;
+		--ly-dealflow-frame-pad-bottom: 64px;
 		margin: 0 auto;
 		min-width: 0;
 	}
@@ -3415,7 +3419,12 @@
 	/* ===== Responsive ===== */
 	@media (max-width: 1024px) {
 		.main { margin-left: 0; width: 100%; padding-top: 56px; }
-		.content-wrap { padding: 20px 0 48px; }
+		.content-wrap {
+			--ly-dealflow-frame-pad-top-tablet: 20px;
+			--ly-dealflow-frame-pad-bottom-tablet: 48px;
+			--ly-dealflow-frame-pad-top-mobile: 20px;
+			--ly-dealflow-frame-pad-bottom-mobile: 48px;
+		}
 		.sticky-action-bar { left: 0; }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }

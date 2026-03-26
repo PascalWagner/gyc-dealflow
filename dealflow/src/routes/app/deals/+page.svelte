@@ -549,7 +549,7 @@
 
 <svelte:head><title>Deal Flow | GYC</title></svelte:head>
 
-<div class="deals-page">
+<div class="deals-page ly-dealflow-frame">
 	<!-- Header -->
 	<div class="deals-header">
 		<div class="header-row">
@@ -741,7 +741,17 @@
 
 <style>
 	.deals-page {
-		padding: 0 28px 40px;
+		--ly-dealflow-frame-max: 1440px;
+		--ly-dealflow-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-dealflow-frame-pad-tablet: 24px;
+		--ly-dealflow-frame-pad-mobile: 16px;
+		--ly-dealflow-frame-pad-top: 16px;
+		--ly-dealflow-frame-pad-bottom: 48px;
+		--ly-dealflow-frame-pad-top-tablet: 14px;
+		--ly-dealflow-frame-pad-bottom-tablet: 40px;
+		--ly-dealflow-frame-pad-top-mobile: 12px;
+		--ly-dealflow-frame-pad-bottom-mobile: 28px;
+		min-width: 0;
 	}
 
 	.deals-header {
@@ -1013,10 +1023,6 @@
 	}
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.deals-page {
-			padding: 0 22px 36px;
-		}
-
 		.deals-grid,
 		.skeleton-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1025,7 +1031,6 @@
 	}
 
 	@media (max-width: 768px) {
-		.deals-page { padding: 16px; }
 		.deals-header { padding: 8px 0 12px; }
 		.header-row { display: block; }
 		.deals-title { font-size: 20px; margin-bottom: 12px; }
