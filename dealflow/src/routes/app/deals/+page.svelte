@@ -461,6 +461,7 @@
 		skipped: { title: 'Skipped', text: "Deals you decided weren't right for you. You can always reconsider later.", color: 'var(--text-muted)' }
 	};
 	const currentStageContent = $derived(stageDescriptions[currentTab] || stageDescriptions.filter);
+	const showSwipeFeed = $derived(isMobile && currentTab === 'filter' && $dealFlowViewMode === 'grid');
 
 	function clearFilters() {
 		search = '';
@@ -668,87 +669,88 @@
 
 <svelte:head><title>Deal Flow | GYC</title></svelte:head>
 
-<div class="deals-page ly-frame">
-	<!-- Header -->
-	<div class="deals-header">
-		<div class="header-row">
-			<h1 class="deals-title">Deal Flow</h1>
-			<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
-			<div class="view-toggle">
-				<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-				</button>
-				<button class="view-btn" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-						<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
-						<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
-						<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
-					</svg>
-				</button>
-				<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-				</button>
+<div class="deals-page ly-page">
+	<div class="deals-shell ly-frame ly-stack">
+		<!-- Header -->
+		<div class="deals-header">
+			<div class="header-row">
+				<h1 class="deals-title">Deal Flow</h1>
+				<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
+				<div class="view-toggle">
+					<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+					</button>
+					<button class="view-btn" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+							<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
+							<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
+							<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
+						</svg>
+					</button>
+					<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+					</button>
+				</div>
 			</div>
 		</div>
-	</div>
 
-	<!-- Filter Bar -->
-	<div class="deals-filters" bind:this={filterAnchor}>
-		<FilterBar
-			{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
-			{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
-			totalDeals={totalMatchingDeals} avgIRR={avgIRR}
-			isAdmin={$isAdmin}
-			onadddeal={() => {
-				if (browser) window.location.href = '/app/admin/manage';
-			}}
-			onchange={({ field: key, value: val }) => {
-				if (key === 'search') search = val;
-				else if (key === 'assetClass') assetClass = val;
-				else if (key === 'dealType') dealType = val;
-				else if (key === 'strategy') strategy = val;
-				else if (key === 'status') status = val;
-				else if (key === 'maxInvest') maxInvest = val;
-				else if (key === 'maxLockup') maxLockup = val;
-				else if (key === 'distributions') distributions = val;
-				else if (key === 'minIRR') minIRR = val;
-				else if (key === 'sortBy') sortBy = val;
-				else if (key === 'showArchived') showArchived = val;
-			}}
-			onclear={clearFilters}
-			ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
-		/>
-	</div>
-
-	{#if !(isMobile && currentTab === 'filter')}
-		<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
-			<div class="stage-copy">
-				<span class="stage-title">{currentStageContent.title}</span>
-				<span class="stage-desc">{currentStageContent.text}</span>
-			</div>
+		<!-- Filter Bar -->
+		<div class="deals-filters" bind:this={filterAnchor}>
+			<FilterBar
+				{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
+				{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
+				totalDeals={totalMatchingDeals} avgIRR={avgIRR}
+				isAdmin={$isAdmin}
+				onadddeal={() => {
+					if (browser) window.location.href = '/app/admin/manage';
+				}}
+				onchange={({ field: key, value: val }) => {
+					if (key === 'search') search = val;
+					else if (key === 'assetClass') assetClass = val;
+					else if (key === 'dealType') dealType = val;
+					else if (key === 'strategy') strategy = val;
+					else if (key === 'status') status = val;
+					else if (key === 'maxInvest') maxInvest = val;
+					else if (key === 'maxLockup') maxLockup = val;
+					else if (key === 'distributions') distributions = val;
+					else if (key === 'minIRR') minIRR = val;
+					else if (key === 'sortBy') sortBy = val;
+					else if (key === 'showArchived') showArchived = val;
+				}}
+				onclear={clearFilters}
+				ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
+			/>
 		</div>
-	{/if}
 
-	{#if isFreeUser && !(isMobile && currentTab === 'filter')}
-		<div class="daily-views">
-			<div class="daily-views-head">
-				<span class="daily-views-text">{dealsRemaining}/{DAILY_LIMIT} deal views left today</span>
-				<span class="daily-views-timer">{resetTimerLabel}</span>
+		{#if !showSwipeFeed}
+			<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
+				<div class="stage-copy">
+					<span class="stage-title">{currentStageContent.title}</span>
+					<span class="stage-desc">{currentStageContent.text}</span>
+				</div>
 			</div>
-			<div class="daily-views-track">
-				<div class="daily-views-fill" style="width:{dailyViewsPct}%; background:{dailyViewsColor};"></div>
-			</div>
-		</div>
-	{/if}
+		{/if}
 
-	{#if pageNoticeVisible}
-		<div class="compare-notice" role="status">{pageNotice}</div>
-	{/if}
+		{#if isFreeUser && !showSwipeFeed}
+			<div class="daily-views">
+				<div class="daily-views-head">
+					<span class="daily-views-text">{dealsRemaining}/{DAILY_LIMIT} deal views left today</span>
+					<span class="daily-views-timer">{resetTimerLabel}</span>
+				</div>
+				<div class="daily-views-track">
+					<div class="daily-views-fill" style="width:{dailyViewsPct}%; background:{dailyViewsColor};"></div>
+				</div>
+			</div>
+		{/if}
+
+		{#if pageNoticeVisible}
+			<div class="compare-notice" role="status">{pageNotice}</div>
+		{/if}
 
 	<!-- Content -->
-	{#if $memberDealsLoading}
-		<div class="loading-state">
-			<div class="skeleton-grid">
+		{#if $memberDealsLoading}
+			<div class="loading-state">
+				<div class="skeleton-grid ly-grid">
 				{#each Array(6) as _}
 					<div class="skeleton-card">
 						<div class="sk-bar sk-title"></div>
@@ -834,7 +836,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="deals-grid">
+					<div class="deals-grid ly-grid">
 						{#each filteredDeals as deal (deal.id)}
 							{@const actionModel = getDealCardActionModelForCard(deal)}
 							{@const utilityAction = actionModel.utilityAction}
@@ -921,7 +923,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="deals-grid">
+					<div class="deals-grid ly-grid">
 						{#each filteredDeals as deal (deal.id)}
 							{@const actionModel = getDealCardActionModelForCard(deal)}
 							{@const utilityAction = actionModel.utilityAction}
@@ -978,12 +980,15 @@
 				<button class="btn-browse" onclick={() => switchTab('filter')}>Browse Deals</button>
 			{/if}
 		</div>
-	{:else if isMobile && currentTab === 'filter'}
+	{:else if showSwipeFeed}
 		<SwipeFeed
 			deals={filteredDeals}
+			compareIds={$compareDealIds}
+			compareLimit={MAX_COMPARE_DEALS}
+			oncomparetoggle={handleCompareToggle}
 		/>
 	{:else}
-		<div class="deals-grid">
+		<div class="deals-grid ly-grid">
 			{#each filteredDeals as deal (deal.id)}
 				{@const actionModel = getDealCardActionModelForCard(deal)}
 				{@const utilityAction = actionModel.utilityAction}
@@ -1003,15 +1008,16 @@
 				</div>
 			{/each}
 		</div>
-	{/if}
+		{/if}
 
-	{#if !$memberDealsLoading && !$memberDealsError && $memberDealsMeta.hasMore}
-		<div class="load-more-row">
-			<button class="load-more-btn" onclick={loadMoreDeals} disabled={$memberDealsLoadingMore}>
-				{$memberDealsLoadingMore ? 'Loading more deals...' : `Load More Deals (${filteredDeals.length}/${totalMatchingDeals})`}
-			</button>
-		</div>
-	{/if}
+		{#if !$memberDealsLoading && !$memberDealsError && $memberDealsMeta.hasMore}
+			<div class="load-more-row">
+				<button class="load-more-btn" onclick={loadMoreDeals} disabled={$memberDealsLoadingMore}>
+					{$memberDealsLoadingMore ? 'Loading more deals...' : `Load More Deals (${filteredDeals.length}/${totalMatchingDeals})`}
+				</button>
+			</div>
+		{/if}
+	</div>
 </div>
 
 <RequestIntroductionModal
@@ -1047,6 +1053,10 @@
 
 <style>
 	.deals-page {
+		min-width: 0;
+	}
+
+	.deals-shell {
 		--ly-frame-max: 1440px;
 		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
 		--ly-frame-pad-tablet: 24px;
@@ -1057,6 +1067,7 @@
 		--ly-frame-pad-bottom-tablet: 40px;
 		--ly-frame-pad-top-mobile: 12px;
 		--ly-frame-pad-bottom-mobile: 28px;
+		--ly-stack-gap: 14px;
 		min-width: 0;
 	}
 
@@ -1073,6 +1084,10 @@
 		flex-wrap: wrap;
 	}
 
+	.header-row > * {
+		min-width: 0;
+	}
+
 	.deals-title {
 		font-family: var(--font-headline);
 		font-size: 22px;
@@ -1084,7 +1099,7 @@
 		flex-shrink: 0;
 	}
 
-	:global(.pipeline-tabs.desktop-only) {
+	:global(.pipeline-tabs.ly-desktop-only) {
 		min-width: 0;
 		flex: 0 1 auto;
 	}
@@ -1204,14 +1219,11 @@
 		color: #b7791f;
 	}
 
-	.compare-mode-layout {
-		display: grid;
-		gap: 22px;
-	}
-
+	.compare-mode-layout,
 	.location-mode-layout {
 		display: grid;
 		gap: 22px;
+		min-width: 0;
 	}
 
 	.location-map-shell {
@@ -1220,6 +1232,7 @@
 		border: 1px solid var(--border);
 		border-radius: 16px;
 		box-shadow: var(--shadow-card);
+		min-width: 0;
 	}
 
 	.location-map-head {
@@ -1236,6 +1249,7 @@
 		border: 1px solid var(--border);
 		border-radius: 16px;
 		box-shadow: var(--shadow-card);
+		min-width: 0;
 	}
 
 	.compare-grid-head {
@@ -1295,14 +1309,15 @@
 		color: var(--text-dark);
 	}
 
-	.deals-grid {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 18px;
+	.deals-grid,
+	.skeleton-grid {
+		--ly-grid-desktop: 3;
+		--ly-grid-tablet: 2;
+		--ly-grid-mobile: 1;
+		--ly-grid-gap: 18px;
 	}
 
 	.loading-state { padding: 20px 0; }
-	.skeleton-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
 	.skeleton-card {
 		background: var(--bg-card);
@@ -1420,17 +1435,9 @@
 	.limit-dismiss { display: block; margin: 0 auto; background: none; border: none; font-family: var(--font-ui); font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 4px; }
 	.limit-dismiss:hover { color: var(--text-dark); }
 
-	@media (max-width: 1100px) {
-		.deals-grid,
-		.skeleton-grid { grid-template-columns: repeat(2, 1fr); }
-	}
-
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.deals-grid,
-		.skeleton-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 16px;
-		}
+		.skeleton-grid { --ly-grid-gap: 16px; }
 
 		.compare-grid-shell {
 			padding: 16px;
@@ -1446,9 +1453,7 @@
 		.header-row { display: block; }
 		.deals-title { font-size: 20px; margin-bottom: 12px; }
 		.view-toggle { margin-left: 0; width: fit-content; }
-		:global(.pipeline-pills.mobile-only) { margin-top: 12px; }
-		.deals-grid,
-		.skeleton-grid { grid-template-columns: 1fr; }
+		:global(.pipeline-pills.ly-mobile-only) { margin-top: 12px; }
 		.stage-copy { display: block; }
 		.stage-desc { display: block; margin-top: 6px; }
 		.daily-views { display: none; }

@@ -137,6 +137,8 @@
 		}
 	];
 
+	const hasAnyFilters = $derived(Boolean(search.trim()) || activeFilterCount > 0 || buyBoxApplied);
+
 	function emit(field, value, withHaptic = false) {
 		if (withHaptic) selectionChanged();
 		onchange({ field, value });
@@ -175,7 +177,7 @@
 </script>
 
 <div class="filter-shell">
-	<div class="filter-bar">
+	<div class="filter-bar ly-desktop-only">
 		<button
 			class="buybox-toggle"
 			class:active={buyBoxApplied}
@@ -229,11 +231,77 @@
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 				Add Deal
 			</button>
-		{/if}
-	</div>
+			{/if}
+		</div>
 
-	{#if filterPanelOpen}
-		<div class="filter-panel">
+		<div class="mobile-filter-shell ly-mobile-only">
+			<div class="mobile-search-row">
+				<div class="search-wrap mobile-search-wrap">
+					<input
+						type="text"
+						class="filter-input mobile-filter-input"
+						placeholder="Search deals, operators, people..."
+						value={search}
+						oninput={(e) => emit('search', e.target.value)}
+						autocomplete="off"
+					>
+				</div>
+
+				<button
+					class="filters-toggle mobile-toolbar-button"
+					class:active={filterPanelOpen || activeFilterCount > 0}
+					onclick={() => {
+						selectionChanged();
+						filterPanelOpen = !filterPanelOpen;
+					}}
+					aria-expanded={filterPanelOpen}
+				>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+					{#if activeFilterCount > 0}
+						Filters ({activeFilterCount})
+					{:else}
+						Filters
+					{/if}
+				</button>
+			</div>
+
+			<div class="mobile-actions-row">
+				<button
+					class="buybox-toggle mobile-action-button"
+					class:active={buyBoxApplied}
+					onclick={() => {
+						selectionChanged();
+						ontoggleBuyBox();
+					}}
+				>
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+					Apply My Plan
+				</button>
+
+				<a class="buybox-update-btn mobile-action-button" href="/app/plan?edit=1">
+					Update Plan
+				</a>
+
+				{#if isAdmin}
+					<button class="add-deal-btn mobile-action-button" onclick={onadddeal}>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+						Add Deal
+					</button>
+				{/if}
+			</div>
+
+			<div class="mobile-toolbar-row">
+				<div class="mobile-stats">
+					<span><strong>{totalDeals}</strong> deals</span>
+					<span><strong>{avgIRR}%</strong> avg IRR</span>
+				</div>
+
+				<button class="clear-btn mobile-reset" onclick={clearAll} disabled={!hasAnyFilters}>Reset</button>
+			</div>
+		</div>
+
+		{#if filterPanelOpen}
+			<div class="filter-panel">
 			<div class="filter-panel-grid">
 				{#each FILTER_SELECTS as filterDef}
 					<div class="filter-field">
@@ -423,6 +491,10 @@
 		margin: 0 0 16px;
 	}
 
+	.mobile-filter-shell {
+		display: none;
+	}
+
 	.filter-panel-grid {
 		display: flex;
 		gap: 12px;
@@ -517,6 +589,113 @@
 	}
 
 	@media (max-width: 768px) {
-		.filter-shell { display: none; }
+		.filter-bar {
+			display: none;
+		}
+
+		.mobile-filter-shell {
+			display: grid;
+			gap: 12px;
+			padding: 12px 0 14px;
+		}
+
+		.mobile-search-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 8px;
+			align-items: stretch;
+		}
+
+		.mobile-search-wrap {
+			flex-basis: auto;
+		}
+
+		.mobile-filter-input {
+			height: 40px;
+			font-size: 16px;
+		}
+
+		.mobile-toolbar-button {
+			height: 40px;
+			padding-inline: 14px;
+			justify-content: center;
+		}
+
+		.mobile-actions-row {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 8px;
+		}
+
+		.mobile-action-button {
+			justify-content: center;
+			min-height: 40px;
+			width: 100%;
+			box-sizing: border-box;
+		}
+
+		.mobile-toolbar-row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+		}
+
+		.mobile-stats {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+			min-width: 0;
+			font-family: var(--font-ui);
+			font-size: 12px;
+			color: var(--text-muted);
+		}
+
+		.mobile-stats :global(strong) {
+			color: var(--text-dark);
+			font-weight: 700;
+		}
+
+		.mobile-reset {
+			height: 40px;
+			padding-inline: 14px;
+			flex-shrink: 0;
+		}
+
+		.filter-panel-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			align-items: start;
+		}
+
+		.filter-field select {
+			min-width: 0;
+			width: 100%;
+		}
+
+		.clear-wrap {
+			margin-left: 0;
+			grid-column: 1 / -1;
+		}
+
+		.clear-btn {
+			width: 100%;
+		}
+	}
+
+	@media (max-width: 520px) {
+		.mobile-search-row,
+		.mobile-actions-row,
+		.filter-panel-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.mobile-toolbar-row {
+			display: grid;
+		}
+
+		.mobile-reset {
+			width: 100%;
+		}
 	}
 </style>

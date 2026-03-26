@@ -11,7 +11,7 @@
 </script>
 
 <!-- Desktop tabs -->
-<div class="pipeline-tabs desktop-only">
+<div class="pipeline-tabs ly-desktop-only">
 	{#each PIPELINE_STAGES as stage}
 		<button
 			class="pipeline-tab"
@@ -42,10 +42,10 @@
 </div>
 
 <!-- Mobile pills -->
-<div class="pipeline-pills mobile-only">
+<div class="pipeline-pills ly-pill-tabs ly-mobile-only">
 	{#each PIPELINE_STAGES as stage}
 		<button
-			class="pipeline-pill"
+			class="pipeline-pill ly-pill-tab"
 			class:active={currentTab === stage}
 			onclick={() => switchTab(stage)}
 		>
@@ -60,7 +60,7 @@
 
 	{#each OUTCOME_STAGES as stage}
 		<button
-			class="pipeline-pill"
+			class="pipeline-pill ly-pill-tab"
 			class:active={currentTab === stage}
 			onclick={() => switchTab(stage)}
 		>
@@ -142,29 +142,20 @@
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		overflow-x: auto;
-		padding: 4px 0 8px;
-		-webkit-overflow-scrolling: touch;
-		scrollbar-width: none;
+		padding: 4px;
+		margin-top: 4px;
 	}
-	.pipeline-pills::-webkit-scrollbar { display: none; }
 
 	.pipeline-pill {
-		padding: 6px 12px;
-		font-family: var(--font-ui);
+		padding: 8px 12px;
 		font-size: 11px;
-		font-weight: 600;
-		color: var(--text-secondary);
-		background: var(--bg-card);
-		border: 1px solid var(--border-light);
-		border-radius: 20px;
-		cursor: pointer;
-		white-space: nowrap;
-		transition: all var(--transition);
+		font-weight: 700;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
 	}
 
 	.pipeline-pill:hover { color: var(--text-dark); }
-	.pipeline-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
 	.pill-divider {
 		width: 1px;
@@ -183,12 +174,17 @@
 		margin-left: 2px;
 	}
 
-	/* Responsive */
-	.desktop-only { display: flex; }
-	.mobile-only { display: none; }
+	.pipeline-tabs.ly-desktop-only {
+		display: flex;
+	}
+
+	.pipeline-pills.ly-mobile-only {
+		display: none;
+	}
 
 	@media (max-width: 768px) {
-		.desktop-only { display: none; }
-		.mobile-only { display: flex; }
+		.pipeline-pills.ly-mobile-only {
+			display: flex !important;
+		}
 	}
 </style>

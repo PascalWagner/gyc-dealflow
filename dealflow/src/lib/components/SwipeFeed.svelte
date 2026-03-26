@@ -6,15 +6,16 @@
 
 	let {
 		deals = [],
-		search = '',
-		onfilter = () => {},
-		onsearch = () => {}
+		compareIds = [],
+		compareLimit = 3,
+		oncomparetoggle = () => {}
 	} = $props();
 
 	let currentIndex = $state(0);
 	let mobileView = $state('swipe'); // 'swipe' | 'feed'
 
 	const currentDeal = $derived(deals[currentIndex] || null);
+	const compareSet = $derived(new Set(compareIds));
 
 	function fmtPct(val) {
 		if (!val) return '\u2014';
@@ -93,33 +94,30 @@
 		}
 	}
 
+	function handleCompareToggle(dealId) {
+		oncomparetoggle(dealId);
+	}
+
+	function isCompareLimitReached(dealId) {
+		return !compareSet.has(dealId) && compareIds.length >= compareLimit;
+	}
+
 	// Reset index when deals change
 	$effect(() => {
 		if (deals) currentIndex = 0;
 	});
 </script>
 
-<!-- Swipe Toolbar -->
 <div class="swipe-toolbar">
-	<button class="toolbar-btn" onclick={() => mobileView = mobileView === 'swipe' ? 'feed' : 'swipe'} title="Switch view">
-		{#if mobileView === 'swipe'}
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-		{:else}
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
-		{/if}
-	</button>
-	<button class="toolbar-btn" onclick={onfilter}>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-		Filters
-	</button>
-	<input
-		type="text"
-		class="toolbar-search"
-		placeholder="Search deals..."
-		value={search}
-		oninput={(e) => onsearch(e.target.value)}
-	>
-	<span class="toolbar-count">{deals.length} deals</span>
+	<div class="swipe-toolbar-copy">
+		<div class="swipe-toolbar-title">Browse Deals</div>
+		<div class="swipe-toolbar-subtitle">{deals.length} deal{deals.length === 1 ? '' : 's'} in this stage</div>
+	</div>
+
+	<div class="swipe-mode-toggle ly-pill-tabs" role="tablist" aria-label="Deal Flow mobile view">
+		<button class="ly-pill-tab" class:active={mobileView === 'swipe'} onclick={() => mobileView = 'swipe'}>Swipe</button>
+		<button class="ly-pill-tab" class:active={mobileView === 'feed'} onclick={() => mobileView = 'feed'}>Grid</button>
+	</div>
 </div>
 
 {#if mobileView === 'swipe'}
@@ -178,6 +176,21 @@
 							<div class="metric-value">{formatDist(currentDeal)}</div>
 						</div>
 					</div>
+
+					<button
+						class="swipe-compare"
+						class:is-selected={compareSet.has(currentDeal.id)}
+						class:is-at-limit={isCompareLimitReached(currentDeal.id)}
+						onclick={() => handleCompareToggle(currentDeal.id)}
+					>
+						{#if compareSet.has(currentDeal.id)}
+							Remove From Compare
+						{:else if isCompareLimitReached(currentDeal.id)}
+							Compare Full
+						{:else}
+							Add To Compare
+						{/if}
+					</button>
 
 					<div class="swipe-actions">
 						<button class="swipe-action skip" onclick={skipDeal}>
@@ -258,45 +271,36 @@
 
 <style>
 	.swipe-toolbar {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 0;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: start;
+		gap: 12px;
+		padding: 4px 0 8px;
 	}
 
-	.toolbar-btn {
-		padding: 6px 10px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-family: var(--font-ui);
-		font-weight: 700;
-		font-size: 11px;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		color: var(--text-secondary);
-	}
-
-	.toolbar-search {
-		flex: 1;
-		padding: 6px 10px;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		background: var(--bg-card);
-		color: var(--text-dark);
-		outline: none;
+	.swipe-toolbar-copy {
 		min-width: 0;
 	}
 
-	.toolbar-count {
+	.swipe-toolbar-title {
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 12px;
+		font-weight: 800;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
+		color: var(--text-dark);
+	}
+
+	.swipe-toolbar-subtitle {
+		margin-top: 4px;
+		font-family: var(--font-body);
+		font-size: 12px;
+		line-height: 1.45;
 		color: var(--text-muted);
-		white-space: nowrap;
+	}
+
+	.swipe-mode-toggle {
+		justify-self: end;
 	}
 
 	/* Swipe Card */
@@ -476,6 +480,16 @@
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.swipe-card {
 			max-width: 480px;
+		}
+	}
+
+	@media (max-width: 520px) {
+		.swipe-toolbar {
+			grid-template-columns: 1fr;
+		}
+
+		.swipe-mode-toggle {
+			justify-self: stretch;
 		}
 	}
 

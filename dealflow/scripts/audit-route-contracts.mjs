@@ -17,12 +17,16 @@ function assert(condition, message) {
 }
 
 const operatorsPage = read('src/routes/app/operators/+page.svelte');
+const dealFlowPage = read('src/routes/app/deals/+page.svelte');
 const marketIntelPage = read('src/routes/app/market-intel/+page.svelte');
 const marketIntelApi = read('api/market-intel.js');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
 const sidebar = read('src/lib/components/Sidebar.svelte');
+const filterBar = read('src/lib/components/FilterBar.svelte');
+const swipeFeed = read('src/lib/components/SwipeFeed.svelte');
+const compareView = read('src/lib/components/CompareView.svelte');
 const smokeSpec = read('tests/session-persona.smoke.spec.ts');
 const layoutCss = read('src/lib/css/layout.css');
 
@@ -40,6 +44,18 @@ assert(
 	'Operators page must derive sponsor links through getOperatorHref().'
 );
 assert(
+	dealFlowPage.includes('class="deals-page ly-page"'),
+	'Deal Flow page must use the shared page wrapper.'
+);
+assert(
+	dealFlowPage.includes('class="deals-shell ly-frame ly-stack"'),
+	'Deal Flow page must use the shared frame + stack shell.'
+);
+assert(
+	dealFlowPage.includes('class="deals-grid ly-grid"'),
+	'Deal Flow page must use the shared grid primitive for deal cards.'
+);
+assert(
 	operatorsPage.includes('href={getOperatorHref(c)}'),
 	'Operators cards must navigate through getOperatorHref(c).'
 );
@@ -51,6 +67,22 @@ assert(
 assert(
 	layoutCss.includes('.ly-pill-tabs') && layoutCss.includes('.ly-pill-tab'),
 	'Shared layout CSS must provide the reusable pill-tab primitive.'
+);
+assert(
+	filterBar.includes('class="mobile-filter-shell ly-mobile-only"'),
+	'Deal Flow filter bar must provide the mobile filter shell.'
+);
+assert(
+	swipeFeed.includes('class="swipe-mode-toggle ly-pill-tabs"'),
+	'SwipeFeed must use the shared pill-tab primitive for mobile mode switching.'
+);
+assert(
+	!swipeFeed.includes('toolbar-search'),
+	'SwipeFeed must not duplicate the page-level search input.'
+);
+assert(
+	compareView.includes('class="compare-table-wrap ly-table-scroll"'),
+	'CompareView must use the shared table-scroll wrapper.'
 );
 
 assert(

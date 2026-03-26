@@ -144,7 +144,7 @@
 			</div>
 		</div>
 
-		<div class="compare-table-wrap">
+			<div class="compare-table-wrap ly-table-scroll">
 			<table class="compare-table">
 				<thead>
 					<tr>
