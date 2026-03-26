@@ -717,55 +717,58 @@
 
 <svelte:head><title>Deal Flow | GYC</title></svelte:head>
 
-<PageContainer className="deals-page">
-	<div class="deals-shell ly-page-stack">
-		<PageHeader title="Deal Flow" className="deals-page-header">
-			<div slot="secondaryRow" class="header-row">
-				<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
-				<div class="view-toggle">
-					<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-					</button>
-					<button class="view-btn" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-							<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
-							<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
-							<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
-						</svg>
-					</button>
-					<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-					</button>
-				</div>
-			</div>
-		</PageHeader>
+	<PageContainer className="deals-page">
+		<div class="deals-shell ly-page-stack">
+			<div class="deals-top">
+				<PageHeader title="Deal Flow" className="deals-page-header">
+					<div slot="actions">
+						<div class="view-toggle">
+							<button class="view-btn" class:active={$dealFlowViewMode === 'grid'} onclick={() => switchView('grid')} title="Grid view">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+						</button>
+						<button class="view-btn" class:active={$dealFlowViewMode === 'compare'} onclick={() => switchView('compare')} title="Compare view">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+								<rect x="3" y="5" width="7" height="14" rx="1.5"></rect>
+								<rect x="14" y="5" width="7" height="14" rx="1.5"></rect>
+								<line x1="12" y1="3.5" x2="12" y2="20.5"></line>
+							</svg>
+						</button>
+							<button class="view-btn" class:active={$dealFlowViewMode === 'location'} onclick={() => switchView('location')} title="Location view">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+							</button>
+						</div>
+					</div>
+					<div slot="secondaryRow" class="header-row">
+						<PipelineTabs {currentTab} counts={$stageCounts} onswitch={switchTab} />
+					</div>
+				</PageHeader>
 
-		<!-- Filter Bar -->
-		<div class="deals-filters" bind:this={filterAnchor}>
-			<FilterBar
-				{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
-				{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
-				totalDeals={totalMatchingDeals} avgIRR={avgIRR}
-				isAdmin={$isAdmin}
-				onadddeal={() => {
-					if (browser) window.location.href = '/app/admin/manage';
-				}}
-				onchange={({ field: key, value: val }) => {
-					if (key === 'search') search = val;
-					else if (key === 'assetClass') assetClass = val;
-					else if (key === 'dealType') dealType = val;
-					else if (key === 'strategy') strategy = val;
-					else if (key === 'status') status = val;
-					else if (key === 'maxInvest') maxInvest = val;
-					else if (key === 'maxLockup') maxLockup = val;
-					else if (key === 'distributions') distributions = val;
-					else if (key === 'minIRR') minIRR = val;
-					else if (key === 'sortBy') sortBy = val;
-					else if (key === 'showArchived') showArchived = val;
-				}}
-				onclear={clearFilters}
-				ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
-			/>
+				<div class="deals-filters" bind:this={filterAnchor}>
+					<FilterBar
+					{search} {assetClass} {dealType} {strategy} {status} {maxInvest} {maxLockup}
+					{distributions} {minIRR} {sortBy} {showArchived} {buyBoxApplied}
+					totalDeals={totalMatchingDeals} avgIRR={avgIRR}
+					isAdmin={$isAdmin}
+					onadddeal={() => {
+						if (browser) window.location.href = '/app/admin/manage';
+					}}
+					onchange={({ field: key, value: val }) => {
+						if (key === 'search') search = val;
+						else if (key === 'assetClass') assetClass = val;
+						else if (key === 'dealType') dealType = val;
+						else if (key === 'strategy') strategy = val;
+						else if (key === 'status') status = val;
+						else if (key === 'maxInvest') maxInvest = val;
+						else if (key === 'maxLockup') maxLockup = val;
+						else if (key === 'distributions') distributions = val;
+						else if (key === 'minIRR') minIRR = val;
+						else if (key === 'sortBy') sortBy = val;
+						else if (key === 'showArchived') showArchived = val;
+					}}
+					onclear={clearFilters}
+					ontoggleBuyBox={() => buyBoxApplied = !buyBoxApplied}
+				/>
+			</div>
 		</div>
 
 		{#if !showSwipeFeed}
@@ -1108,28 +1111,64 @@
 
 <style>
 	.deals-page {
-		min-width: 0;
-	}
-
-	.deals-shell {
 		--ly-frame-pad-top: 16px;
 		--ly-frame-pad-bottom: 48px;
 		--ly-frame-pad-top-tablet: 14px;
 		--ly-frame-pad-bottom-tablet: 40px;
 		--ly-frame-pad-top-mobile: 12px;
 		--ly-frame-pad-bottom-mobile: 28px;
-		--ly-stack-gap: 14px;
+		min-width: 0;
+	}
+
+	.deals-shell {
+		--ly-page-stack-gap: 12px;
+		min-width: 0;
+	}
+
+	.deals-top {
+		display: grid;
+		gap: 8px;
+		min-width: 0;
+	}
+
+	:global(.deals-page-header) {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-areas: 'title tabs toggles';
+		align-items: center;
+		gap: 12px 16px;
+		margin-bottom: 0;
+	}
+
+	:global(.deals-page-header .ly-page-header-main) {
+		display: contents;
+	}
+
+	:global(.deals-page-header .ly-page-header-copy) {
+		grid-area: title;
+		min-width: 0;
+	}
+
+	:global(.deals-page-header .ly-page-header-title) {
+		white-space: nowrap;
+	}
+
+	:global(.deals-page-header .ly-page-header-actions) {
+		grid-area: toggles;
+		align-items: center;
+		justify-content: flex-end;
+	}
+
+	:global(.deals-page-header .ly-page-header-secondary) {
+		grid-area: tabs;
 		min-width: 0;
 	}
 
 	.header-row {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		width: 100%;
 		min-width: 0;
-		flex-wrap: wrap;
+		width: 100%;
 	}
 
 	.header-row > * {
@@ -1138,11 +1177,11 @@
 
 	:global(.pipeline-tabs.ly-desktop-only) {
 		min-width: 0;
-		flex: 0 1 auto;
+		flex: 1 1 auto;
 	}
 
 	.deals-filters {
-		scroll-margin-top: 24px;
+		scroll-margin-top: 20px;
 	}
 
 	.view-toggle {
@@ -1152,7 +1191,6 @@
 		border: 1px solid var(--border);
 		border-radius: 8px;
 		padding: 3px;
-		margin-left: auto;
 		flex-shrink: 0;
 	}
 
@@ -1174,7 +1212,7 @@
 
 	.stage-banner {
 		padding: 12px 16px;
-		margin: 12px 0;
+		margin: 0;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
 		border-radius: 10px;
@@ -1203,7 +1241,7 @@
 	}
 
 	.daily-views {
-		margin-bottom: 14px;
+		margin-bottom: 0;
 		padding: 9px 14px;
 		background: var(--bg-card);
 		border: 1px solid var(--border);
@@ -1245,7 +1283,7 @@
 	}
 
 	.compare-notice {
-		margin-bottom: 14px;
+		margin-bottom: 0;
 		padding: 10px 14px;
 		border-radius: 10px;
 		border: 1px solid rgba(245, 158, 11, 0.2);
@@ -1486,11 +1524,39 @@
 	}
 
 	@media (max-width: 768px) {
-		.header-row { display: grid; justify-content: stretch; }
-		.view-toggle { margin-left: 0; width: fit-content; }
-		:global(.pipeline-pills.ly-mobile-only) { margin-top: 12px; }
+		.deals-shell {
+			--ly-page-stack-gap: 8px;
+		}
+
+		.deals-page {
+			--ly-frame-pad-top-mobile: 10px;
+		}
+
+		.deals-top {
+			gap: 8px;
+		}
+
+		:global(.deals-page-header) {
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-areas:
+				'title toggles'
+				'tabs tabs';
+			gap: 8px 12px;
+		}
+
+		:global(.deals-page-header .ly-page-header-title) {
+			font-size: 20px;
+		}
+
+		:global(.deals-page-header .ly-page-header-actions) {
+			margin-left: 0;
+		}
+
+		.stage-banner {
+			padding: 10px 14px;
+		}
 		.stage-copy { display: block; }
-		.stage-desc { display: block; margin-top: 6px; }
+		.stage-desc { display: block; margin-top: 4px; }
 		.daily-views { display: none; }
 		.compare-grid-head {
 			flex-direction: column;
