@@ -14,12 +14,44 @@ import { setCors, ADMIN_EMAILS, deriveTier, rateLimit, ghlFetch } from './_supab
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const DEFAULT_SITE_URL = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
 const BYPASS_EMAILS = ['test@test.com', 'info@pascalwagner.com'];
 const PERSONA_OVERRIDES = {
   'test@test.com': { tier: 'free', isAdmin: false },
   'info@pascalwagner.com': { tier: 'academy', isAdmin: true }
 };
 const LOOKUP_PROFILE_FIELDS = 'full_name, onboarding_role, gp_onboarding_complete, academy_start, academy_end, auto_renew, card_last4, card_brand, phone, location, share_saved, share_dd, share_invested, allow_follows, share_portfolio, share_activity, avatar_url, accredited_status, investable_capital, investment_experience';
+
+function normalizeSiteOrigin(candidate) {
+  try {
+    const url = new URL(candidate || DEFAULT_SITE_URL);
+    const host = url.hostname.toLowerCase();
+    const isAllowedHost =
+      host === 'dealflow.growyourcashflow.io' ||
+      host.endsWith('.vercel.app') ||
+      host === 'localhost' ||
+      host === '127.0.0.1';
+
+    if (!isAllowedHost) return DEFAULT_SITE_URL;
+    if (!['http:', 'https:'].includes(url.protocol)) return DEFAULT_SITE_URL;
+    return url.origin;
+  } catch {
+    return DEFAULT_SITE_URL;
+  }
+}
+
+function normalizeReturnPath(candidate) {
+  if (!candidate) return '/app/deals';
+
+  try {
+    const value = decodeURIComponent(String(candidate));
+    if (!value.startsWith('/')) return '/app/deals';
+    if (value.startsWith('//')) return '/app/deals';
+    return value;
+  } catch {
+    return '/app/deals';
+  }
+}
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -345,8 +377,13 @@ export default async function handler(req, res) {
 
     // Generate magic link server-side and send via Resend
     // (Supabase's built-in OTP email requires SMTP config we don't have)
-    const siteUrl = process.env.SITE_URL || 'https://dealflow.growyourcashflow.io';
-    const redirectTo = siteUrl + '/login';
+    const siteOrigin = normalizeSiteOrigin(req.body?.siteUrl || req.headers.origin || DEFAULT_SITE_URL);
+    const returnTo = normalizeReturnPath(req.body?.returnTo);
+    const redirectUrl = new URL('/login', siteOrigin);
+    if (returnTo) {
+      redirectUrl.searchParams.set('return', returnTo);
+    }
+    const redirectTo = redirectUrl.toString();
 
     try {
       // Try generateLink — if user doesn't exist, create them first then retry.

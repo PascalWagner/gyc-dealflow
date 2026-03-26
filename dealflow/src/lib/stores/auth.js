@@ -331,11 +331,13 @@ export function sessionHasCapability(sessionUser, capability) {
 }
 
 // ===== Auth Actions =====
-export async function login(email) {
+export async function login(email, options = {}) {
+	const siteUrl = options.siteUrl || (browser ? window.location.origin : '');
+	const returnTo = options.returnTo || (browser ? `${window.location.pathname}${window.location.search}` : '');
 	const res = await fetch('/api/auth', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ email, action: 'magic-link' })
+		body: JSON.stringify({ email, action: 'magic-link', siteUrl, returnTo })
 	});
 	return res.json();
 }

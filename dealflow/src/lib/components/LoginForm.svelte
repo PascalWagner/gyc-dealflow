@@ -1,4 +1,5 @@
 <script>
+	import { browser } from '$app/environment';
 	import { login } from '$lib/stores/auth.js';
 
 	let email = $state('');
@@ -19,7 +20,10 @@
 		loading = true;
 
 		try {
-			const data = await login(trimmed);
+			const data = await login(trimmed, {
+				siteUrl: browser ? window.location.origin : '',
+				returnTo: browser ? `${window.location.pathname}${window.location.search}` : ''
+			});
 
 			if (data.bypass && data.token) {
 				// Dev bypass -- caller handles redirect

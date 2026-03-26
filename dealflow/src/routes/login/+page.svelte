@@ -78,6 +78,12 @@
 		}
 	}
 
+	function getReturnDestination() {
+		const value = (returnUrl || '').trim();
+		if (!value.startsWith('/') || value.startsWith('//')) return '/app/deals';
+		return value;
+	}
+
 	// ── Store user data helper ──
 	function storeUser(data) {
 		localStorage.removeItem(ADMIN_REAL_USER_KEY);
@@ -143,6 +149,8 @@
 			return;
 		}
 
+		const dest = getReturnDestination();
+
 		// Look up user profile
 		fetch('/api/auth', {
 			method: 'POST',
@@ -158,7 +166,6 @@
 					token: accessToken,
 					refreshToken: refreshToken || ''
 				});
-				const dest = returnUrl || '/app/deals';
 				window.location.href = dest;
 			})
 			.catch(() => {
@@ -172,7 +179,6 @@
 					isAdmin: false,
 					tags: []
 				});
-				const dest = returnUrl || '/app/deals';
 				window.location.href = dest;
 			});
 	});
@@ -194,7 +200,12 @@
 			const res = await fetch('/api/auth', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'magic-link', email: trimmed }),
+				body: JSON.stringify({
+					action: 'magic-link',
+					email: trimmed,
+					siteUrl: window.location.origin,
+					returnTo: getReturnDestination()
+				}),
 				signal: controller.signal
 			});
 			clearTimeout(timeout);
@@ -204,7 +215,7 @@
 			if (data.bypass && data.token) {
 				// Dev bypass — store session and redirect with full page reload
 				storeUser(data);
-				const dest = returnUrl || '/app/deals';
+				const dest = getReturnDestination();
 				window.location.href = dest;
 				return;
 			}

@@ -53,6 +53,8 @@
 	let similarDeals = $state(initialComparables?.similarDeals || []);
 	let peerComparison = $state(initialComparables?.peerComparison || null);
 	let peerStats = $state(null);
+	let allDeals = $state([]);
+	let feeComparisonExpanded = $state(false);
 
 	// Stress Test sliders
 	let stInvestment = $state(0);
@@ -242,6 +244,11 @@
 		else { verdict = 'Poor Fit'; verdictColor = '#ef4444'; }
 		return { fits, warnings, verdict, verdictColor, score };
 	});
+
+	const feeComparison = $derived.by(() => buildFeeComparison(deal, allDeals, displayFees ?? deal?.fees));
+	const secFilingSummary = $derived.by(() => buildSecFilingSummary(deal));
+	const dealEconomics = $derived.by(() => buildDealEconomics(deal));
+	const geographyCoverage = $derived(deal ? buildGeographyCoverage(deal) : null);
 
 	function bgStatusClass(s) { return s === 'clear' ? 'bg-clear' : s === 'flagged' ? 'bg-flagged' : 'bg-pending'; }
 	function bgStatusLabel(s) { return s === 'clear' ? 'Clear' : s === 'flagged' ? 'Flag' : 'Pending'; }
@@ -539,6 +546,453 @@
 		if (!d.investmentStrategy) return '';
 		const dot = d.investmentStrategy.indexOf('. ');
 		return dot > 0 ? d.investmentStrategy.substring(0, dot + 1) : (d.investmentStrategy.length > 200 ? d.investmentStrategy.substring(0, 200) + '...' : d.investmentStrategy);
+	}
+
+	const STATE_NAMES = {
+		AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+		CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia',
+		HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+		KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+		MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+		MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+		NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+		OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+		SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+		VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
+	};
+
+	const ALL_STATE_CODES = Object.keys(STATE_NAMES);
+	const STATE_LOOKUP = Object.fromEntries([
+		...Object.entries(STATE_NAMES).map(([code, name]) => [code.toLowerCase(), code]),
+		...Object.entries(STATE_NAMES).map(([code, name]) => [name.toLowerCase(), code])
+	]);
+
+	const REGION_STATE_GROUPS = {
+		nationwide: ALL_STATE_CODES,
+		national: ALL_STATE_CODES,
+		usa: ALL_STATE_CODES,
+		'us': ALL_STATE_CODES,
+		'united states': ALL_STATE_CODES,
+		'all states': ALL_STATE_CODES,
+		southeast: ['FL', 'GA', 'SC', 'NC', 'VA', 'TN', 'AL', 'MS', 'LA', 'AR', 'KY', 'WV'],
+		southwest: ['TX', 'AZ', 'NM', 'OK', 'NV'],
+		northeast: ['NY', 'NJ', 'CT', 'MA', 'PA', 'ME', 'NH', 'VT', 'RI', 'DE', 'MD'],
+		midwest: ['OH', 'MI', 'IN', 'IL', 'WI', 'MN', 'IA', 'MO', 'KS', 'NE', 'SD', 'ND'],
+		'west coast': ['CA', 'OR', 'WA'],
+		'pacific northwest': ['WA', 'OR', 'ID'],
+		'sun belt': ['FL', 'GA', 'SC', 'NC', 'TX', 'AZ', 'NM', 'NV', 'CA', 'TN', 'AL', 'LA'],
+		'east coast': ['FL', 'GA', 'SC', 'NC', 'VA', 'MD', 'DE', 'NJ', 'NY', 'CT', 'RI', 'MA', 'NH', 'ME']
+	};
+
+	const US_STATE_GRID = [
+		{ code: 'WA', col: 1, row: 1 }, { code: 'MT', col: 3, row: 1 }, { code: 'ND', col: 5, row: 1 }, { code: 'MN', col: 7, row: 1 }, { code: 'WI', col: 8, row: 1 }, { code: 'MI', col: 9, row: 1 }, { code: 'VT', col: 11, row: 1 }, { code: 'ME', col: 12, row: 1 },
+		{ code: 'OR', col: 1, row: 2 }, { code: 'ID', col: 2, row: 2 }, { code: 'WY', col: 3, row: 2 }, { code: 'SD', col: 5, row: 2 }, { code: 'IA', col: 7, row: 2 }, { code: 'IL', col: 8, row: 2 }, { code: 'IN', col: 9, row: 2 }, { code: 'OH', col: 10, row: 2 }, { code: 'NH', col: 11, row: 2 }, { code: 'MA', col: 12, row: 2 },
+		{ code: 'CA', col: 1, row: 3 }, { code: 'NV', col: 2, row: 3 }, { code: 'UT', col: 3, row: 3 }, { code: 'CO', col: 4, row: 3 }, { code: 'NE', col: 5, row: 3 }, { code: 'MO', col: 6, row: 3 }, { code: 'KY', col: 8, row: 3 }, { code: 'WV', col: 10, row: 3 }, { code: 'VA', col: 11, row: 3 }, { code: 'RI', col: 12, row: 3 },
+		{ code: 'AZ', col: 2, row: 4 }, { code: 'NM', col: 3, row: 4 }, { code: 'KS', col: 5, row: 4 }, { code: 'AR', col: 6, row: 4 }, { code: 'TN', col: 8, row: 4 }, { code: 'NC', col: 10, row: 4 }, { code: 'NJ', col: 11, row: 4 }, { code: 'CT', col: 12, row: 4 },
+		{ code: 'OK', col: 4, row: 5 }, { code: 'LA', col: 6, row: 5 }, { code: 'MS', col: 7, row: 5 }, { code: 'AL', col: 8, row: 5 }, { code: 'SC', col: 10, row: 5 }, { code: 'DE', col: 11, row: 5 }, { code: 'MD', col: 12, row: 5 },
+		{ code: 'TX', col: 4, row: 6 }, { code: 'GA', col: 9, row: 6 }, { code: 'DC', col: 11, row: 6 }, { code: 'PA', col: 10, row: 2 }, { code: 'NY', col: 10, row: 1 },
+		{ code: 'FL', col: 10, row: 7 }, { code: 'AK', col: 1, row: 7 }, { code: 'HI', col: 2, row: 7 }
+	];
+
+	const FEE_CATEGORIES = [
+		{ key: 'mgmt', label: 'Management Fee', patterns: [/management\s*fee/i, /asset\s*management/i, /annual\s*(?:fund\s*)?management/i, /mgmt\s*fee/i] },
+		{ key: 'acq', label: 'Acquisition Fee', patterns: [/acquisition\s*fee/i, /acq(?:uisition)?\s*fee/i] },
+		{ key: 'disp', label: 'Disposition Fee', patterns: [/disposition\s*fee/i, /exit\s*fee/i, /disp(?:osition)?\s*fee/i] },
+		{ key: 'prop', label: 'Property Mgmt Fee', patterns: [/property\s*(?:management|mgmt)\s*fee/i] },
+		{ key: 'const', label: 'Construction Mgmt Fee', patterns: [/construction\s*(?:management|mgmt|oversight)\s*fee/i] },
+		{ key: 'dev', label: 'Development Fee', patterns: [/development\s*fee/i, /dev(?:elopment)?\s*fee/i] },
+		{ key: 'serv', label: 'Servicing Fee', patterns: [/servic(?:e|ing)\s*fee/i, /loan\s*servicing/i] },
+		{ key: 'refi', label: 'Refinance Fee', patterns: [/refin(?:ance|ancing)\s*fee/i, /refi\s*fee/i] },
+		{ key: 'guarantee', label: 'Guarantee Fee', patterns: [/guarantee\s*fee/i, /guaranty\s*fee/i, /loan\s*guarantee/i] },
+		{ key: 'dd', label: 'Due Diligence Fee', patterns: [/due\s*diligence\s*fee/i, /dd\s*fee/i] }
+	];
+
+	function parseNumeric(value) {
+		if (value === null || value === undefined || value === '') return null;
+		if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+		if (typeof value === 'string') {
+			const parsed = parseFloat(value.replace(/[$,%]/g, '').replace(/,/g, '').trim());
+			return Number.isFinite(parsed) ? parsed : null;
+		}
+		return null;
+	}
+
+	function percentNumber(value) {
+		const parsed = parseNumeric(value);
+		if (parsed === null) return null;
+		return parsed <= 1 ? parsed * 100 : parsed;
+	}
+
+	function formatCompactMoney(value) {
+		const parsed = parseNumeric(value);
+		if (parsed === null) return '---';
+		if (parsed >= 1e9) return `$${(parsed / 1e9).toFixed(1)}B`;
+		if (parsed >= 1e6) return `$${(parsed / 1e6).toFixed(1)}M`;
+		if (parsed >= 1e3) return `$${Math.round(parsed / 1e3)}K`;
+		return `$${Math.round(parsed).toLocaleString()}`;
+	}
+
+	function formatDateLabel(value) {
+		if (!value) return '---';
+		const date = new Date(value);
+		if (Number.isNaN(date.getTime())) return '---';
+		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+
+	function normalizeFeeEntries(rawFees) {
+		const entries = Array.isArray(rawFees) ? rawFees : (rawFees ? [rawFees] : []);
+		const normalized = [];
+
+		for (const entry of entries) {
+			if (entry === null || entry === undefined || entry === '') continue;
+
+			if (typeof entry === 'object') {
+				const name = entry.name || entry.label || entry.type || 'Fee';
+				const value = entry.value || entry.amount || entry.pct || entry.percentage || '';
+				normalized.push(value ? `${name}: ${value}` : String(name));
+				continue;
+			}
+
+			const text = String(entry).trim();
+			if (!text) continue;
+
+			if ((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))) {
+				try {
+					normalized.push(...normalizeFeeEntries(JSON.parse(text)));
+					continue;
+				} catch {
+					// Fall through to raw text.
+				}
+			}
+
+			normalized.push(text);
+		}
+
+		return normalized;
+	}
+
+	function extractFeePct(text) {
+		const match = String(text || '').match(/(\d+(?:\.\d+)?)\s*%/);
+		return match ? parseFloat(match[1]) : null;
+	}
+
+	function parseFeeSet(rawFees, d) {
+		const parsed = {};
+		const entries = normalizeFeeEntries(rawFees);
+
+		for (const entry of entries) {
+			for (const category of FEE_CATEGORIES) {
+				if (category.patterns.some((pattern) => pattern.test(entry))) {
+					const pct = extractFeePct(entry);
+					if (pct !== null) parsed[category.key] = { pct, raw: entry };
+					break;
+				}
+			}
+		}
+
+		const structuredMap = {
+			mgmt: d?.assetMgmtFeePct,
+			acq: d?.acquisitionFeePct,
+			prop: d?.propertyMgmtFeePct,
+			const: d?.constructionMgmtFeePct,
+			disp: d?.dispositionFeePct || d?.capitalEventFeePct
+		};
+
+		for (const [key, value] of Object.entries(structuredMap)) {
+			const pct = percentNumber(value);
+			if (pct !== null && pct > 0) {
+				parsed[key] = { pct, raw: `${pct.toFixed(1)}%` };
+			}
+		}
+
+		return parsed;
+	}
+
+	function median(values) {
+		if (!values.length) return null;
+		const sorted = [...values].sort((a, b) => a - b);
+		const mid = Math.floor(sorted.length / 2);
+		return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+	}
+
+	function buildFeeComparison(currentDeal, deals, rawFees) {
+		if (!currentDeal || !deals.length) return null;
+		const currentIsCredit = isCreditFund(currentDeal);
+		const peerDeals = deals.filter((candidate) => {
+			if (!candidate || candidate.id === currentDeal.id) return false;
+			if (getCompleteness(candidate) < 45) return false;
+			if (currentIsCredit) return isCreditFund(candidate);
+			return candidate.assetClass && currentDeal.assetClass && candidate.assetClass === currentDeal.assetClass;
+		});
+
+		const currentFees = parseFeeSet(rawFees, currentDeal);
+		const currentFeeEntries = normalizeFeeEntries(rawFees);
+		const peerFeeSets = peerDeals.map((candidate) => parseFeeSet(candidate.fees, candidate));
+		const anyPeerFeeData = peerFeeSets.some((set) => Object.keys(set).length > 0);
+
+		if (!currentFeeEntries.length && !Object.keys(currentFees).length && !anyPeerFeeData) return null;
+
+		function peerFeeVals(key) {
+			return peerFeeSets.map((set) => set[key]?.pct ?? null).filter((value) => value !== null);
+		}
+
+		function peerChargeRate(key) {
+			const total = peerFeeSets.filter((set) => Object.keys(set).length > 0).length;
+			const charging = peerFeeSets.filter((set) => !!set[key]).length;
+			return total > 0 ? { charging, total, pct: Math.round((charging / total) * 100) } : null;
+		}
+
+		const rows = FEE_CATEGORIES.map((category) => {
+			const currentFee = currentFees[category.key];
+			const peerValues = peerFeeVals(category.key);
+			const marketMedian = median(peerValues);
+			const chargeRate = peerChargeRate(category.key);
+
+			if (currentFee) {
+				let verdict = 'No Benchmark';
+				let verdictClass = 'neutral';
+				if (marketMedian !== null && peerValues.length >= 2) {
+					if (currentFee.pct <= marketMedian) {
+						verdict = 'At or Below Market';
+						verdictClass = 'good';
+					} else if (currentFee.pct <= marketMedian * 1.25) {
+						verdict = 'Slightly Above Market';
+						verdictClass = 'warn';
+					} else {
+						verdict = 'Above Market';
+						verdictClass = 'bad';
+					}
+				}
+				return {
+					label: category.label,
+					dealVal: `${currentFee.pct.toFixed(1)}%`,
+					marketVal: marketMedian !== null ? `${marketMedian.toFixed(1)}%` : '—',
+					peerCount: peerValues.length,
+					verdict,
+					verdictClass
+				};
+			}
+
+			return {
+				label: category.label,
+				dealVal: 'Not Charged',
+				marketVal: marketMedian !== null ? `${marketMedian.toFixed(1)}%` : '—',
+				peerCount: peerValues.length,
+				verdict: chargeRate && chargeRate.pct >= 30 ? `${chargeRate.pct}% of peers charge this` : 'Not Charged',
+				verdictClass: 'good',
+				notCharged: true
+			};
+		});
+
+		return {
+			peerCount: peerDeals.length,
+			peerLabel: currentIsCredit ? 'Lending' : (currentDeal.assetClass || 'Similar'),
+			rows
+		};
+	}
+
+	function buildSecFilingSummary(d) {
+		if (!d) return null;
+		const pctFunded = percentNumber(d.pctFunded);
+		if (!d.secCik && !d.dateOfFirstSale && !d.totalAmountSold && !d.totalInvestors && pctFunded === null) {
+			return null;
+		}
+		return {
+			secUrl: d.secCik ? `https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(d.secCik)}&owner=exclude` : '',
+			cik: d.secCik || '',
+			firstSale: d.dateOfFirstSale ? formatDateLabel(d.dateOfFirstSale) : '—',
+			totalSold: d.totalAmountSold ? formatCompactMoney(d.totalAmountSold) : '—',
+			totalInvestors: d.totalInvestors ? String(d.totalInvestors) : '—',
+			pctFunded: pctFunded !== null ? `${pctFunded.toFixed(0)}%` : '—',
+			offeringType: d.offeringType || (d.is506b ? '506(b)' : 'Form D')
+		};
+	}
+
+	function buildDealEconomics(d) {
+		if (!d) return null;
+		const purchasePrice = parseNumeric(d.purchasePrice);
+		const equityRaise = parseNumeric(d.offeringSize);
+		const debtAmount = parseNumeric(d.acquisitionLoan) ?? ((purchasePrice && equityRaise && purchasePrice > equityRaise) ? purchasePrice - equityRaise : null);
+		const ltvPct = percentNumber(d.loanToValue) ?? ((purchasePrice && debtAmount) ? (debtAmount / purchasePrice) * 100 : null);
+		const capexBudget = parseNumeric(d.capexBudget);
+		const closingCosts = parseNumeric(d.closingCosts);
+		const loanRate = percentNumber(d.loanRate);
+		const loanTermYears = parseNumeric(d.loanTermYears);
+		const loanIoYears = parseNumeric(d.loanIOYears);
+
+		if ([purchasePrice, equityRaise, debtAmount, ltvPct, capexBudget, closingCosts, loanRate, loanTermYears, loanIoYears].every((value) => value === null)) {
+			return null;
+		}
+
+		return {
+			sources: [
+				purchasePrice !== null ? { label: 'Purchase Price', value: purchasePrice } : null,
+				debtAmount !== null ? { label: 'Acquisition Loan', value: debtAmount } : null,
+				equityRaise !== null ? { label: 'LP Equity Raise', value: equityRaise } : null,
+				capexBudget !== null ? { label: 'Capex / Renovation', value: capexBudget } : null,
+				closingCosts !== null ? { label: 'Closing Costs', value: closingCosts } : null
+			].filter(Boolean),
+			ltvPct,
+			loanTerms: [
+				loanRate !== null ? { label: 'Interest Rate', value: `${loanRate.toFixed(2)}%` } : null,
+				loanTermYears !== null ? { label: 'Loan Term', value: `${loanTermYears} Years` } : null,
+				loanIoYears !== null ? { label: 'IO Period', value: `${loanIoYears} Years` } : null
+			].filter(Boolean)
+		};
+	}
+
+	function extractStateCodes(text) {
+		const source = String(text || '').trim();
+		if (!source) return [];
+		const lower = source.toLowerCase();
+		const matched = new Set();
+
+		for (const [keyword, states] of Object.entries(REGION_STATE_GROUPS)) {
+			if (lower.includes(keyword)) {
+				states.forEach((code) => matched.add(code));
+			}
+		}
+
+		for (const [token, code] of Object.entries(STATE_LOOKUP)) {
+			if (token.length <= 2) continue;
+			if (new RegExp(`\\b${token.replace(/\s+/g, '\\s+')}\\b`, 'i').test(source)) {
+				matched.add(code);
+			}
+		}
+
+		const abbreviations = source.match(/\b[A-Z]{2}\b/g) || [];
+		for (const abbreviation of abbreviations) {
+			const code = STATE_LOOKUP[abbreviation.toLowerCase()];
+			if (code) matched.add(code);
+		}
+
+		return ALL_STATE_CODES.filter((code) => matched.has(code));
+	}
+
+	function buildGeographyCoverage(d) {
+		if (!d) return null;
+		const geoLabel = [d.investingGeography, d.location].filter(Boolean).join(' • ');
+		if (!geoLabel) return null;
+
+		const states = extractStateCodes(geoLabel);
+		const isNationwide = states.length >= 40;
+		let description = 'Specific market coverage has not been fully disclosed yet.';
+
+		if (isNationwide) {
+			description = 'This deal invests across the United States, giving you broad geographic diversification across multiple markets.';
+		} else if (states.length > 5) {
+			description = `This deal spans ${states.length} states, giving you diversified exposure across ${d.investingGeography || 'multiple'} markets.`;
+		} else if (states.length > 1) {
+			const names = states.map((code) => STATE_NAMES[code] || code);
+			description = `This deal is concentrated across ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
+		} else if (states.length === 1) {
+			description = `This deal is concentrated in ${STATE_NAMES[states[0]] || states[0]}.`;
+		}
+
+		const meta = [
+			d.assetClass ? { label: 'Asset Class', value: d.assetClass } : null,
+			d.strategy ? { label: 'Strategy', value: d.strategy } : null,
+			d.unitCount ? { label: 'Units', value: String(Math.round(d.unitCount)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') } : null,
+			d.propertyType ? { label: 'Property Type', value: d.propertyType } : null
+		].filter(Boolean);
+
+		return {
+			label: isNationwide ? 'Nationwide' : (d.investingGeography || d.location || 'Market Footprint'),
+			address: d.address || d.propertyAddress || '',
+			description,
+			states,
+			stateSet: new Set(states),
+			isNationwide,
+			meta
+		};
+	}
+
+	function buildSimilarDealsList(currentDeal, deals) {
+		if (!currentDeal || !deals.length) return [];
+		return deals
+			.filter((candidate) => candidate.id !== currentDeal.id && candidate.investmentName)
+			.map((candidate) => {
+				let score = 0;
+				const currentIsCredit = isCreditFund(currentDeal);
+				if (currentIsCredit && isCreditFund(candidate)) score += 5;
+				else if (candidate.assetClass && candidate.assetClass === currentDeal.assetClass) score += 3;
+				if (candidate.dealType && candidate.dealType === currentDeal.dealType) score += 2;
+				if (!currentIsCredit && candidate.strategy && candidate.strategy === currentDeal.strategy) score += 2;
+				const currentYield = currentDeal.preferredReturn || currentDeal.cashOnCash || currentDeal.targetIRR || 0;
+				const peerYield = candidate.preferredReturn || candidate.cashOnCash || candidate.targetIRR || 0;
+				if (currentYield > 0 && peerYield > 0 && Math.abs(currentYield - peerYield) < 0.03) score += 1;
+				if (currentDeal.investmentMinimum && candidate.investmentMinimum) {
+					const ratio = candidate.investmentMinimum / currentDeal.investmentMinimum;
+					if (ratio >= 0.5 && ratio <= 2) score += 1;
+				}
+				return { deal: candidate, score };
+			})
+			.filter((entry) => entry.score >= 3)
+			.sort((a, b) => b.score - a.score)
+			.slice(0, 8)
+			.map((entry) => entry.deal);
+	}
+
+	function buildPeerComparisonData(currentDeal, deals) {
+		if (!currentDeal || !deals.length) return null;
+		const currentIsCredit = isCreditFund(currentDeal);
+		const peers = deals.filter((candidate) => {
+			if (candidate.id === currentDeal.id) return false;
+			if (currentIsCredit) return isCreditFund(candidate);
+			return candidate.assetClass && currentDeal.assetClass && candidate.assetClass === currentDeal.assetClass;
+		});
+		if (peers.length < 2) return null;
+
+		function average(field) {
+			const values = peers.map((candidate) => candidate[field]).filter((value) => value != null && value > 0);
+			return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+		}
+
+		const metrics = [
+			{ label: 'Target IRR', field: 'targetIRR', format: 'pct', higherIsBetter: true },
+			{ label: 'Pref Return', field: 'preferredReturn', format: 'pct', higherIsBetter: true },
+			{ label: 'Equity Multiple', field: 'equityMultiple', format: 'multiple', higherIsBetter: true },
+			{ label: 'Min Investment', field: 'investmentMinimum', format: 'money', higherIsBetter: false },
+			{ label: 'Hold Period', field: 'holdPeriod', format: 'years', higherIsBetter: false }
+		];
+
+		const rows = metrics.map((metric) => {
+			const dealVal = currentDeal[metric.field];
+			const peerAvg = average(metric.field);
+			let verdict = 'No Data';
+			let verdictClass = 'neutral';
+
+			if (dealVal && peerAvg) {
+				const numeric = typeof dealVal === 'number' ? dealVal : parseFloat(dealVal);
+				if (metric.higherIsBetter) {
+					if (numeric > peerAvg * 1.02) {
+						verdict = 'Above Average';
+						verdictClass = 'good';
+					} else if (numeric < peerAvg * 0.98) {
+						verdict = 'Below Average';
+						verdictClass = 'bad';
+					} else {
+						verdict = 'At Market';
+					}
+				} else if (numeric < peerAvg * 0.98) {
+					verdict = 'Better than Avg';
+					verdictClass = 'good';
+				} else if (numeric > peerAvg * 1.02) {
+					verdict = 'Above Average';
+					verdictClass = 'bad';
+				} else {
+					verdict = 'At Market';
+				}
+			}
+
+			return { ...metric, dealVal, peerAvg, verdict, verdictClass };
+		});
+
+		return {
+			rows,
+			peerCount: peers.length,
+			peerLabel: currentIsCredit ? 'Lending' : (currentDeal.assetClass || 'Similar')
+		};
 	}
 
 	// ===== Buy Box Matching =====
@@ -1411,6 +1865,16 @@
 		stInvestment = deal.investmentMinimum || 50000;
 		stHold = deal.holdPeriod || 5;
 
+		fetch('/api/deals', { headers })
+			.then((r) => (r.ok ? r.json() : null))
+			.then((data) => {
+				if (!data?.deals) return;
+				allDeals = data.deals;
+				if (!similarDeals.length) similarDeals = buildSimilarDealsList(deal, data.deals);
+				if (!peerComparison) peerComparison = buildPeerComparisonData(deal, data.deals);
+			})
+			.catch(() => {});
+
 		// Set document title
 		document.title = `${deal.investmentName} - GYC Dealflow`;
 	});
@@ -1844,6 +2308,50 @@
 							</div>
 						</div>
 
+						{#if secFilingSummary}
+							<div class="section">
+								<div class="section-header">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+									<span class="section-title">SEC Filing</span>
+									<span class="sec-filing-badge">{secFilingSummary.offeringType}</span>
+								</div>
+								<div class="section-body sec-filing-body">
+									<div class="sec-filing-grid">
+										<div class="sec-filing-metric">
+											<div class="sec-filing-label">CIK</div>
+											<div class="sec-filing-value">{secFilingSummary.cik || '—'}</div>
+										</div>
+										<div class="sec-filing-metric">
+											<div class="sec-filing-label">First Sale</div>
+											<div class="sec-filing-value">{secFilingSummary.firstSale}</div>
+										</div>
+										<div class="sec-filing-metric">
+											<div class="sec-filing-label">Amount Sold</div>
+											<div class="sec-filing-value">{secFilingSummary.totalSold}</div>
+										</div>
+										<div class="sec-filing-metric">
+											<div class="sec-filing-label">Investors</div>
+											<div class="sec-filing-value">{secFilingSummary.totalInvestors}</div>
+										</div>
+										<div class="sec-filing-metric sec-filing-metric-wide">
+											<div class="sec-filing-label">Funded</div>
+											<div class="sec-filing-progress">
+												<div class="sec-filing-progress-track">
+													<div class="sec-filing-progress-fill" style={`width:${secFilingSummary.pctFunded === '—' ? 0 : parseFloat(secFilingSummary.pctFunded)}%`}></div>
+												</div>
+												<span class="sec-filing-progress-text">{secFilingSummary.pctFunded}</span>
+											</div>
+										</div>
+									</div>
+									{#if secFilingSummary.secUrl}
+										<a href={secFilingSummary.secUrl} target="_blank" rel="noopener" class="sec-filing-link">
+											Verify on SEC EDGAR &rarr;
+										</a>
+									{/if}
+								</div>
+							</div>
+						{/if}
+
 						<!-- Documents Card -->
 						<div class="section">
 							<div class="section-header">
@@ -1889,6 +2397,159 @@
 						</div>
 					</div>
 				</div>
+
+				{#if feeComparison}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+							<span class="section-title">Fees &amp; Compensation</span>
+							{#if feeComparison.peerCount > 0}
+								<span class="peer-count-label">vs {feeComparison.peerCount} {feeComparison.peerLabel} peers</span>
+							{/if}
+						</div>
+						<div class="section-body fee-section-body" class:gated={!isPaid}>
+							{#if !isPaid}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+										</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Fee Analysis'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Fee benchmarks versus comparable deals remain available to existing members on the web.
+											{:else}
+												See how this deal&apos;s sponsor fees compare to market benchmarks across comparable deals.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid}>
+								<div class="fee-table-wrap">
+									<table class="fee-table">
+										<thead>
+											<tr>
+												<th class="fee-th">Fee Type</th>
+												<th class="fee-th center">This Deal</th>
+												<th class="fee-th center">Market Median</th>
+												<th class="fee-th center">Verdict</th>
+											</tr>
+										</thead>
+										<tbody>
+											{#each (feeComparisonExpanded ? feeComparison.rows : feeComparison.rows.slice(0, 5)) as row}
+												<tr>
+													<td class="fee-td label">{row.label}</td>
+													<td class="fee-td center" class:fee-td-good={row.notCharged}>{row.dealVal}</td>
+													<td class="fee-td center">
+														<div>{row.marketVal}</div>
+														{#if row.peerCount > 0}
+															<div class="fee-peer-count">{row.peerCount} peers</div>
+														{/if}
+													</td>
+													<td class="fee-td center">
+														<span class={`fee-verdict ${row.verdictClass}`}>{row.verdict}</span>
+													</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+								</div>
+								{#if feeComparison.rows.length > 5}
+									<div class="fee-expand-row">
+										<button class="fee-expand-btn" type="button" onclick={() => { feeComparisonExpanded = !feeComparisonExpanded; }} aria-expanded={feeComparisonExpanded}>
+											{feeComparisonExpanded ? 'Show less' : `Show ${feeComparison.rows.length - 5} more fee checks`}
+										</button>
+									</div>
+								{/if}
+								<div class="fee-footnote">
+									{#if feeComparison.peerCount > 0}
+										We benchmark {FEE_CATEGORIES.length} sponsor fee types against {feeComparison.peerCount} comparable {feeComparison.peerLabel.toLowerCase()} deals. &quot;Not Charged&quot; is generally favorable to LPs.
+									{:else}
+										We check {FEE_CATEGORIES.length} sponsor fee types on every deal. Market benchmarks will fill in as more comparable deals are added to the database.
+									{/if}
+								</div>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				{#if dealEconomics}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+							<span class="section-title">Deal Economics</span>
+						</div>
+						<div class="section-body deal-economics-body" class:gated={!isPaid}>
+							{#if !isPaid}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+										</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Deal Economics'}</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Sources and uses, leverage, and loan terms remain available to existing members on the web.
+											{:else}
+												See sources and uses, leverage, and loan terms pulled from the new backend record.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+										{/if}
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!isPaid}>
+								<div class="economics-grid">
+									{#if dealEconomics.sources.length > 0}
+										<div class="economics-card" class:economics-card-full={dealEconomics.ltvPct === null && dealEconomics.loanTerms.length === 0}>
+											<div class="economics-subtitle">Sources &amp; Uses</div>
+											{#each dealEconomics.sources as item}
+												<div class="economics-row">
+													<span class="economics-label">{item.label}</span>
+													<span class="economics-value">{formatCompactMoney(item.value)}</span>
+												</div>
+											{/each}
+										</div>
+									{/if}
+
+									{#if dealEconomics.ltvPct !== null || dealEconomics.loanTerms.length > 0}
+										<div class="economics-card" class:economics-card-full={dealEconomics.sources.length === 0}>
+											{#if dealEconomics.ltvPct !== null}
+												<div class="economics-subtitle">Capital Stack</div>
+												<div class="economics-stack">
+													<div class="economics-stack-bar">
+														<div class="economics-stack-debt" style={`width:${Math.max(0, Math.min(100, dealEconomics.ltvPct))}%`}></div>
+														<div class="economics-stack-equity" style={`width:${Math.max(0, 100 - Math.min(100, dealEconomics.ltvPct))}%`}></div>
+													</div>
+													<div class="economics-stack-meta">
+														<span>Debt {dealEconomics.ltvPct.toFixed(0)}%</span>
+														<span>Equity {(100 - dealEconomics.ltvPct).toFixed(0)}%</span>
+													</div>
+												</div>
+											{/if}
+
+											{#if dealEconomics.loanTerms.length > 0}
+												<div class="economics-subtitle" class:economics-subtitle-spaced={dealEconomics.ltvPct !== null}>Loan Terms</div>
+												{#each dealEconomics.loanTerms as term}
+													<div class="economics-row">
+														<span class="economics-label">{term.label}</span>
+														<span class="economics-value">{term.value}</span>
+													</div>
+												{/each}
+											{/if}
+										</div>
+									{/if}
+								</div>
+							</div>
+						</div>
+					</div>
+				{/if}
 
 				<!-- ==================== OVERVIEW ==================== -->
 				{#if deal.investmentStrategy}
@@ -2418,6 +3079,67 @@
 										</details>
 									</article>
 								{/each}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				{#if geographyCoverage}
+					<div class="section">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+							<span class="section-title">Investing Geography</span>
+						</div>
+						<div class="section-body geo-footprint">
+							<div class="geo-layout">
+								<div class="geo-map-card">
+									<div class="geo-map-grid">
+										{#each US_STATE_GRID as state}
+											<div
+												class="geo-state"
+												class:active={geographyCoverage.isNationwide || geographyCoverage.stateSet.has(state.code)}
+												class:dim={!geographyCoverage.isNationwide && !geographyCoverage.stateSet.has(state.code)}
+												style={`grid-column:${state.col};grid-row:${state.row};`}
+												title={STATE_NAMES[state.code] || state.code}
+											>
+												{state.code}
+											</div>
+										{/each}
+									</div>
+								</div>
+
+								<div class="geo-copy">
+									<span class="geo-badge">{geographyCoverage.label}</span>
+									<div class="geo-description">{geographyCoverage.description}</div>
+									<div class="geo-meta-grid">
+										<div class="geo-meta-card">
+											<div class="geo-meta-label">Coverage</div>
+											<div class="geo-meta-value">
+												{#if geographyCoverage.isNationwide}
+													50 States
+												{:else if geographyCoverage.states.length > 0}
+													{geographyCoverage.states.length} State{geographyCoverage.states.length === 1 ? '' : 's'}
+												{:else}
+													Regional Focus
+												{/if}
+											</div>
+										</div>
+
+										{#if geographyCoverage.address}
+											<div class="geo-meta-card">
+												<div class="geo-meta-label">Primary Address</div>
+												<div class="geo-meta-value">{geographyCoverage.address}</div>
+											</div>
+										{/if}
+
+										{#each geographyCoverage.meta as item}
+											<div class="geo-meta-card">
+												<div class="geo-meta-label">{item.label}</div>
+												<div class="geo-meta-value">{item.value}</div>
+											</div>
+										{/each}
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -3233,6 +3955,21 @@
 	.btn-upgrade-map { margin-top: 6px; padding: 6px 16px; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; }
 	.btn-upgrade-map:hover { opacity: 0.9; }
 
+	/* ===== SEC Filing ===== */
+	.sec-filing-body { padding-top: 20px; }
+	.sec-filing-badge { margin-left: auto; display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+	.sec-filing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+	.sec-filing-metric { padding: 12px 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-page); }
+	.sec-filing-metric-wide { grid-column: 1 / -1; }
+	.sec-filing-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 4px; }
+	.sec-filing-value { font-family: var(--font-ui); font-size: 15px; font-weight: 800; color: var(--text-dark); }
+	.sec-filing-progress { display: flex; align-items: center; gap: 12px; }
+	.sec-filing-progress-track { flex: 1; height: 8px; background: var(--border-light); border-radius: 999px; overflow: hidden; }
+	.sec-filing-progress-fill { height: 100%; background: linear-gradient(90deg, #51BE7B, #2d8a54); border-radius: 999px; }
+	.sec-filing-progress-text { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap; }
+	.sec-filing-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary); text-decoration: none; }
+	.sec-filing-link:hover { color: #2d8a54; }
+
 	/* ===== Documents / Materials ===== */
 	.doc-list { display: flex; flex-direction: column; gap: 8px; }
 	.doc-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-cream); border-radius: 8px; text-decoration: none; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); transition: background 0.15s; }
@@ -3249,6 +3986,62 @@
 	.material-tile-locked { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--border-light); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: default; position: relative; }
 	.material-tile-locked:last-child { border-bottom: none; }
 	.material-tile-locked .lock-badge { margin-left: auto; padding: 2px 8px; background: linear-gradient(135deg, #3b82f6, #4ade80); border-radius: 10px; font-size: 9px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
+
+	/* ===== Fees & Compensation ===== */
+	.fee-section-body { position: relative; min-height: 120px; }
+	.fee-section-body.gated { min-height: 240px; }
+	.fee-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.fee-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; min-width: 620px; }
+	.fee-th { padding: 8px 12px; border-bottom: 2px solid var(--border); text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+	.fee-th.center { text-align: center; }
+	.fee-td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); color: var(--text-dark); }
+	.fee-td.center { text-align: center; }
+	.fee-td.label { font-weight: 700; }
+	.fee-td-good { color: #10b981; font-weight: 700; }
+	.fee-peer-count { margin-top: 3px; font-size: 9px; color: var(--text-muted); }
+	.fee-verdict { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+	.fee-verdict.good { color: #10b981; background: rgba(16,185,129,0.08); }
+	.fee-verdict.warn { color: #d97706; background: rgba(245,158,11,0.12); }
+	.fee-verdict.bad { color: #dc2626; background: rgba(239,68,68,0.1); }
+	.fee-verdict.neutral { color: var(--text-muted); background: var(--bg-cream); }
+	.fee-expand-row { display: flex; justify-content: center; padding-top: 12px; }
+	.fee-expand-btn { border: none; background: none; color: var(--primary); font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; padding: 4px 8px; }
+	.fee-expand-btn:hover { color: #2d8a54; }
+	.fee-footnote { margin-top: 14px; padding: 12px 14px; background: var(--bg-cream); border-radius: 8px; font-family: var(--font-body); font-size: 11px; line-height: 1.5; color: var(--text-muted); }
+
+	/* ===== Deal Economics ===== */
+	.deal-economics-body { position: relative; min-height: 120px; }
+	.deal-economics-body.gated { min-height: 240px; }
+	.economics-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
+	.economics-card { border: 1px solid var(--border-light); border-radius: 12px; padding: 18px 18px 16px; background: linear-gradient(180deg, rgba(248,248,246,0.7) 0%, rgba(255,255,255,0.96) 100%); }
+	.economics-card-full { grid-column: 1 / -1; }
+	.economics-subtitle { font-family: var(--font-ui); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 12px; }
+	.economics-subtitle-spaced { margin-top: 18px; }
+	.economics-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
+	.economics-row:last-child { border-bottom: none; }
+	.economics-label { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+	.economics-value { font-family: var(--font-ui); font-size: 13px; font-weight: 800; color: var(--text-dark); text-align: right; }
+	.economics-stack { margin-bottom: 8px; }
+	.economics-stack-bar { display: flex; height: 12px; overflow: hidden; border-radius: 999px; background: var(--border-light); }
+	.economics-stack-debt { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+	.economics-stack-equity { background: linear-gradient(90deg, #51BE7B, #7ad49b); }
+	.economics-stack-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--text-muted); }
+
+	/* ===== Investing Geography ===== */
+	.geo-footprint { padding-top: 20px; }
+	.geo-layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 20px; align-items: start; }
+	.geo-map-card { padding: 18px; border: 1px solid var(--border-light); border-radius: 14px; background: linear-gradient(180deg, rgba(244,247,245,0.82) 0%, rgba(238,243,240,0.44) 100%); }
+	.geo-map-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(26px, auto)); gap: 5px; }
+	.geo-state { display: flex; align-items: center; justify-content: center; border-radius: 7px; border: 1px solid rgba(15,23,42,0.08); background: rgba(226,232,240,0.7); color: rgba(15,23,42,0.48); font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: 0.2px; aspect-ratio: 1 / 1; user-select: none; }
+	.geo-state.active { background: linear-gradient(135deg, rgba(81,190,123,0.92), rgba(45,138,84,0.92)); border-color: rgba(45,138,84,0.35); color: #fff; box-shadow: 0 6px 18px rgba(81,190,123,0.18); }
+	.geo-state.dim { opacity: 0.35; }
+	.geo-copy { display: flex; flex-direction: column; gap: 14px; }
+	.geo-badge { align-self: flex-start; display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-family: var(--font-ui); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+	.geo-description { font-family: var(--font-body); font-size: 14px; line-height: 1.7; color: var(--text-secondary); }
+	.geo-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+	.geo-meta-card { padding: 12px 14px; border: 1px solid var(--border-light); border-radius: 10px; background: #fff; }
+	.geo-meta-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
+	.geo-meta-value { font-family: var(--font-ui); font-size: 13px; font-weight: 700; line-height: 1.5; color: var(--text-dark); }
 
 	/* ===== DD Checklist ===== */
 	.dd-section-body { position: relative; min-height: 120px; }
@@ -3490,6 +4283,8 @@
 		.sticky-action-bar { left: 0; }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }
+		.economics-grid { grid-template-columns: 1fr; }
+		.geo-layout { grid-template-columns: 1fr; }
 	}
 	@media (max-width: 900px) {
 		.deal-header-inner { flex-direction: column; align-items: flex-start; }
@@ -3551,6 +4346,12 @@
 		.claim-deal-banner { flex-direction: column; text-align: center; }
 		.deck-viewed-prompt { flex-direction: column; text-align: center; gap: 8px; }
 		.peer-count-label { width: 100%; margin-left: 0; }
+		.sec-filing-grid { grid-template-columns: 1fr; }
+		.sec-filing-metric-wide { grid-column: auto; }
+		.geo-meta-grid { grid-template-columns: 1fr; }
+		.geo-map-card { padding: 14px; }
+		.geo-map-grid { gap: 4px; grid-template-rows: repeat(7, minmax(22px, auto)); }
+		.geo-state { font-size: 9px; border-radius: 6px; }
 		.modal-container { max-width: 100%; border-radius: 16px; }
 	}
 	@media (max-width: 480px) {
