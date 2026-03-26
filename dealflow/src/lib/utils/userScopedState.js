@@ -11,6 +11,7 @@ const LEGACY_SCOPED_JSON_ALIASES = new Map([
 	['gycCompareDeals', 'gycDecisionCompareDeals']
 ]);
 let activeHydrationId = 0;
+const DEFAULT_FETCH_TIMEOUT_MS = 6000;
 
 const STATIC_SCOPED_KEYS = [
 	'gycPortfolio',
@@ -420,12 +421,31 @@ function mapPlan(rows) {
 	};
 }
 
-async function fetchJson(url, headers = {}) {
-	const response = await fetch(url, { headers });
-	if (!response.ok) {
-		throw new Error(`${response.status} ${response.statusText}`);
+async function fetchJson(url, headers = {}, { timeoutMs = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
+	const controller = typeof AbortController === 'function' ? new AbortController() : null;
+	const timeoutId = controller && timeoutMs > 0
+		? globalThis.setTimeout(() => controller.abort(), timeoutMs)
+		: null;
+
+	try {
+		const response = await fetch(url, {
+			headers,
+			...(controller ? { signal: controller.signal } : {})
+		});
+		if (!response.ok) {
+			throw new Error(`${response.status} ${response.statusText}`);
+		}
+		return response.json();
+	} catch (error) {
+		if (error?.name === 'AbortError') {
+			throw new Error(`Request timed out for ${url}`);
+		}
+		throw error;
+	} finally {
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
 	}
-	return response.json();
 }
 
 async function fetchCurrentUserBundle(token) {

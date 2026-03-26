@@ -4,19 +4,13 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import {
-		ensureSessionUserToken,
-		getStoredSessionUser,
+		bootstrapProtectedRouteSession,
 		isAdmin,
 		isMember,
 		user
 	} from '$lib/stores/auth.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { isNativeApp } from '$lib/utils/platform.js';
-	import {
-		hydrateUserScopedData,
-		inferAdminEmailForSession,
-		restoreScopedUserState
-	} from '$lib/utils/userScopedState.js';
 
 	const SPONSOR_API_URL = '/api/sponsor';
 
@@ -292,31 +286,14 @@
 
 	onMount(async () => {
 		const returnPath = `${$page.url.pathname}${$page.url.search}`;
-		const sessionUser = getStoredSessionUser();
-		if (!sessionUser?.email) {
-			goto(`/login?return=${encodeURIComponent(returnPath)}`);
+		const boot = await bootstrapProtectedRouteSession({
+			returnPath,
+			hydrateScopedData: true
+		});
+		if (!boot.ok) {
+			goto(boot.redirect);
 			return;
 		}
-
-		restoreScopedUserState(sessionUser);
-		user.set(sessionUser);
-
-		const tokenState = await ensureSessionUserToken(sessionUser);
-		if (!tokenState.ok || !tokenState.session?.token) {
-			goto(`/login?return=${encodeURIComponent(returnPath)}`);
-			return;
-		}
-
-		const activeSession = tokenState.session;
-		if (tokenState.refreshed) {
-			user.set(activeSession);
-		}
-
-		await hydrateUserScopedData({
-			email: activeSession.email,
-			token: activeSession.token,
-			adminEmail: inferAdminEmailForSession(activeSession)
-		}).catch(() => {});
 
 		const params = $page.url.searchParams;
 		const id = params.get('id');

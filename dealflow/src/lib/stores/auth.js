@@ -14,7 +14,10 @@ import {
 	ADMIN_REAL_USER_KEY,
 	clearSessionScopedData,
 	clearUserScopedData,
-	currentAdminRealUser
+	currentAdminRealUser,
+	hydrateUserScopedData,
+	inferAdminEmailForSession,
+	restoreScopedUserState
 } from '$lib/utils/userScopedState.js';
 import { normalizePrivacyProfile } from '$lib/utils/dealflow-contract.js';
 
@@ -219,6 +222,49 @@ export async function ensureSessionUserToken(sessionUser) {
 	} catch {
 		return { ok: currentTokenIsValid, session: normalized, refreshed: false };
 	}
+}
+
+export async function bootstrapProtectedRouteSession({
+	returnPath = '/',
+	hydrateScopedData = false,
+	awaitHydration = false
+} = {}) {
+	const normalizedReturnPath = typeof returnPath === 'string' && returnPath ? returnPath : '/';
+	const redirect = `/login?return=${encodeURIComponent(normalizedReturnPath)}`;
+	const sessionUser = getStoredSessionUser();
+
+	if (!sessionUser?.email) {
+		return { ok: false, redirect, session: null };
+	}
+
+	restoreScopedUserState(sessionUser);
+	user.set(sessionUser);
+
+	const tokenState = await ensureSessionUserToken(sessionUser);
+	if (!tokenState.ok || !tokenState.session?.token) {
+		return { ok: false, redirect, session: null };
+	}
+
+	const activeSession = tokenState.session;
+	if (tokenState.refreshed) {
+		user.set(activeSession);
+	}
+
+	if (hydrateScopedData) {
+		const hydratePromise = hydrateUserScopedData({
+			email: activeSession.email,
+			token: activeSession.token,
+			adminEmail: inferAdminEmailForSession(activeSession)
+		}).catch(() => ({ ok: false, reason: 'hydrate-failed' }));
+
+		if (awaitHydration) {
+			await hydratePromise;
+		} else {
+			void hydratePromise;
+		}
+	}
+
+	return { ok: true, redirect: null, session: activeSession };
 }
 
 export function getStoredSessionUser() {
