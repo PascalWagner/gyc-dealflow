@@ -1,0 +1,121 @@
+/* Responsive layout primitives
+   Namespaced to avoid visual drift on pages that do not opt in. */
+
+:root {
+	--ly-container-max: 1200px;
+	--ly-pad-desktop: 40px;
+	--ly-pad-tablet: 24px;
+	--ly-pad-mobile: 16px;
+	--ly-gap-xs: 8px;
+	--ly-gap-sm: 12px;
+	--ly-gap-md: 20px;
+	--ly-gap-lg: 24px;
+	--ly-gap-xl: 32px;
+}
+
+.ly-page {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	overflow-x: clip;
+}
+
+.ly-container {
+	width: min(100%, var(--ly-container-max));
+	margin-inline: auto;
+	padding-inline: var(--ly-container-pad, var(--ly-pad-desktop));
+	min-width: 0;
+	max-width: 100%;
+}
+
+.ly-stack {
+	display: grid;
+	gap: var(--ly-stack-gap, var(--ly-gap-lg));
+	min-width: 0;
+}
+
+.ly-stack > * {
+	min-width: 0;
+}
+
+.ly-grid {
+	display: grid;
+	gap: var(--ly-grid-gap, var(--ly-gap-md));
+	grid-template-columns: repeat(var(--ly-grid-desktop, 3), minmax(0, 1fr));
+	min-width: 0;
+}
+
+.ly-grid > * {
+	min-width: 0;
+}
+
+.ly-card,
+.ly-section {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.ly-min-0 {
+	min-width: 0 !important;
+}
+
+.ly-clamp {
+	min-width: 0;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.ly-no-overflow {
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.ly-table-shell {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.ly-table-scroll {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-inline: contain;
+	-webkit-overflow-scrolling: touch;
+}
+
+.ly-mobile-only {
+	display: none !important;
+}
+
+@media (max-width: 1024px) {
+	.ly-container {
+		padding-inline: var(--ly-container-pad-tablet, var(--ly-pad-tablet));
+	}
+
+	.ly-grid {
+		grid-template-columns: repeat(var(--ly-grid-tablet, 2), minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 768px) {
+	.ly-container {
+		padding-inline: var(--ly-container-pad-mobile, var(--ly-pad-mobile));
+	}
+
+	.ly-grid {
+		grid-template-columns: repeat(var(--ly-grid-mobile, 1), minmax(0, 1fr));
+	}
+
+	.ly-mobile-only {
+		display: block !important;
+	}
+
+	.ly-desktop-only {
+		display: none !important;
+	}
+}

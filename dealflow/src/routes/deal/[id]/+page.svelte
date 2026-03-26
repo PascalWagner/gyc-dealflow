@@ -1420,8 +1420,8 @@
 
 <Sidebar currentPage="deals" />
 
-<main class="main">
-	<div class="content-wrap">
+<main class="main ly-page">
+	<div class="content-wrap ly-container">
 		{#if loading}
 			<!-- Loading Skeleton -->
 			<div class="skeleton skeleton-header"></div>
@@ -1446,7 +1446,7 @@
 				<span>{deal.investmentName}</span>
 			</nav>
 
-			<div class="deal-page-content">
+				<div class="deal-page-content ly-min-0">
 				<!-- ==================== HERO ==================== -->
 				<div class="deal-header {heroClass}" style={deal.propertyImageUrl ? `background-image:linear-gradient(to right, rgba(20,36,30,0.92) 0%, rgba(20,36,30,0.7) 60%, rgba(20,36,30,0.3) 100%), url(${deal.propertyImageUrl});background-size:cover;background-position:center;` : ''}>
 					{#if !deal.propertyImageUrl}
@@ -1726,7 +1726,7 @@
 				{/if}
 
 				<!-- ==================== DEAL TERMS ==================== -->
-				<div class="two-col-grid">
+					<div class="two-col-grid ly-min-0">
 					<div class="section">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -2067,7 +2067,7 @@
 										</div>
 									</div>
 								{:else}
-									<div class="cf-table-wrap">
+										<div class="cf-table-wrap ly-table-scroll">
 										<table class="cf-table">
 											<thead>
 												<tr>
@@ -2145,8 +2145,8 @@
 								</div>
 							{/if}
 							<div class:blurred={!isPaid}>
-								<div class="peer-table-wrap">
-									<table class="peer-table">
+									<div class="peer-table-wrap ly-table-scroll ly-desktop-only">
+										<table class="peer-table">
 										<thead>
 											<tr>
 												<th class="peer-th">Metric</th>
@@ -2168,6 +2168,26 @@
 											{/each}
 										</tbody>
 									</table>
+								</div>
+								<div class="peer-mobile-list ly-mobile-only">
+									{#each peerComparison.rows as row}
+										<article class="peer-mobile-card">
+											<div class="peer-mobile-head">
+												<div class="peer-mobile-label">{row.label}</div>
+												<span class="peer-verdict {row.verdictClass}">{row.verdict}</span>
+											</div>
+											<div class="peer-mobile-metrics">
+												<div class="peer-mobile-metric">
+													<span class="peer-mobile-metric-label">This Deal</span>
+													<strong class="peer-mobile-metric-value">{row.dealVal !== null && row.dealVal !== undefined && row.dealVal !== '' ? fmt(row.dealVal, row.format) : '---'}</strong>
+												</div>
+												<div class="peer-mobile-metric">
+													<span class="peer-mobile-metric-label">Peer Avg</span>
+													<strong class="peer-mobile-metric-value">{row.peerAvg !== null && row.peerAvg !== undefined && row.peerAvg !== '' ? fmt(row.peerAvg, row.format) : '---'}</strong>
+												</div>
+											</div>
+										</article>
+									{/each}
 								</div>
 								<div class="peer-footnote">
 									Each metric is compared to the average of {peerComparison.peerCount} comparable {peerComparison.peerLabel} deals. Green indicates favorable to investors; red indicates less favorable.
@@ -2290,7 +2310,7 @@
 							<span class="peer-count-label">{similarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals</span>
 						</div>
 						<div class="section-body">
-							<div class="similar-table-wrap">
+							<div class="similar-table-wrap ly-table-scroll ly-desktop-only">
 								<table class="similar-table">
 									<thead>
 										<tr>
@@ -2330,6 +2350,69 @@
 										{/each}
 									</tbody>
 								</table>
+							</div>
+							<div class="similar-mobile-list ly-mobile-only">
+								<article class="similar-mobile-card current">
+									<div class="similar-mobile-header">
+										<div class="similar-mobile-copy">
+											<div class="sim-deal-name current">{deal.investmentName}</div>
+											<div class="sim-deal-company">{deal.managementCompany || ''}</div>
+											<span class="sim-badge current">THIS DEAL</span>
+										</div>
+									</div>
+									<div class="similar-mobile-primary">
+										<div class="similar-mobile-stat">
+											<span class="similar-mobile-stat-label">Target IRR</span>
+											<strong class="similar-mobile-stat-value">{deal.targetIRR ? fmt(deal.targetIRR, 'pct') : '---'}</strong>
+										</div>
+										<div class="similar-mobile-stat">
+											<span class="similar-mobile-stat-label">Minimum</span>
+											<strong class="similar-mobile-stat-value">{deal.investmentMinimum ? fmt(deal.investmentMinimum, 'money') : '---'}</strong>
+										</div>
+										<div class="similar-mobile-stat">
+											<span class="similar-mobile-stat-label">Hold</span>
+											<strong class="similar-mobile-stat-value">{deal.holdPeriod ? deal.holdPeriod + ' Yrs' : '---'}</strong>
+										</div>
+									</div>
+									<details class="similar-mobile-details">
+										<summary>More metrics</summary>
+										<div class="similar-mobile-secondary">
+											<div class="similar-mobile-detail"><span>Pref Return</span><strong>{deal.preferredReturn ? fmt(deal.preferredReturn, 'pct') : '---'}</strong></div>
+											<div class="similar-mobile-detail"><span>Eq Multiple</span><strong>{deal.equityMultiple ? fmt(deal.equityMultiple, 'multiple') : '---'}</strong></div>
+										</div>
+									</details>
+								</article>
+								{#each similarDeals as sd}
+									<article class="similar-mobile-card">
+										<div class="similar-mobile-header">
+											<div class="similar-mobile-copy">
+												<a href="/deal/{sd.id}" class="sim-deal-link">{sd.investmentName}</a>
+												<div class="sim-deal-company">{sd.managementCompany || ''}</div>
+											</div>
+										</div>
+										<div class="similar-mobile-primary">
+											<div class="similar-mobile-stat">
+												<span class="similar-mobile-stat-label">Target IRR</span>
+												<strong class="similar-mobile-stat-value">{sd.targetIRR ? fmt(sd.targetIRR, 'pct') : '---'}</strong>
+											</div>
+											<div class="similar-mobile-stat">
+												<span class="similar-mobile-stat-label">Minimum</span>
+												<strong class="similar-mobile-stat-value">{sd.investmentMinimum ? fmt(sd.investmentMinimum, 'money') : '---'}</strong>
+											</div>
+											<div class="similar-mobile-stat">
+												<span class="similar-mobile-stat-label">Hold</span>
+												<strong class="similar-mobile-stat-value">{sd.holdPeriod ? sd.holdPeriod + ' Yrs' : '---'}</strong>
+											</div>
+										</div>
+										<details class="similar-mobile-details">
+											<summary>More metrics</summary>
+											<div class="similar-mobile-secondary">
+												<div class="similar-mobile-detail"><span>Pref Return</span><strong>{sd.preferredReturn ? fmt(sd.preferredReturn, 'pct') : '---'}</strong></div>
+												<div class="similar-mobile-detail"><span>Eq Multiple</span><strong>{sd.equityMultiple ? fmt(sd.equityMultiple, 'multiple') : '---'}</strong></div>
+											</div>
+										</details>
+									</article>
+								{/each}
 							</div>
 						</div>
 					</div>
@@ -2856,15 +2939,36 @@
 <style>
 	/* ===== Layout ===== */
 	.main {
-		margin-left: 240px;
+		margin-left: var(--sidebar-width, 240px);
+		width: calc(100% - var(--sidebar-width, 240px));
 		min-height: 100vh;
+		min-width: 0;
+		max-width: 100%;
 		background: var(--bg-cream);
 		transition: margin-left 0.3s ease;
+		overflow-x: clip;
 	}
 	.content-wrap {
-		max-width: 1200px;
-		padding: 32px 40px 64px;
+		max-width: none;
+		padding: 32px 0 64px;
 		margin: 0 auto;
+		min-width: 0;
+	}
+	.deal-page-content,
+	.deal-page-content > *,
+	.deal-header-inner > *,
+	.hero-metrics > *,
+	.hero-social-proof > *,
+	.two-col-grid > *,
+	.details-grid > *,
+	.st-grid > *,
+	.summary-row > *,
+	.buybox-header > *,
+	.buybox-criterion > *,
+	.operator-card-content > *,
+	.peer-mobile-metrics > *,
+	.similar-mobile-primary > * {
+		min-width: 0;
 	}
 
 	/* ===== Skeleton ===== */
@@ -3310,6 +3414,9 @@
 
 	/* ===== Responsive ===== */
 	@media (max-width: 1024px) {
+		.main { margin-left: 0; width: 100%; padding-top: 56px; }
+		.content-wrap { padding: 20px 0 48px; }
+		.sticky-action-bar { left: 0; }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }
 	}
@@ -3327,8 +3434,6 @@
 		.buybox-criteria-grid { grid-template-columns: repeat(2, 1fr) !important; }
 	}
 	@media (max-width: 768px) {
-		.main { margin-left: 0; padding-top: 56px; }
-		.content-wrap { padding: 20px 16px 48px; }
 		.sticky-action-bar { left: 0; right: 0; bottom: 0; padding: 10px 16px; gap: 8px; border-radius: 0; border-left: none; border-right: none; }
 		.sticky-action-bar .btn-pass, .sticky-action-bar .btn-advance { padding: 8px 14px; font-size: 12px; }
 		.sticky-action-bar .stage-label { font-size: 11px; }
@@ -3365,6 +3470,7 @@
 		.intro-nudge-banner { flex-direction: column; text-align: center; }
 		.claim-deal-banner { flex-direction: column; text-align: center; }
 		.deck-viewed-prompt { flex-direction: column; text-align: center; gap: 8px; }
+		.peer-count-label { width: 100%; margin-left: 0; }
 		.modal-container { max-width: 100%; border-radius: 16px; }
 	}
 	@media (max-width: 480px) {
@@ -3403,7 +3509,7 @@
 	.cf-legend-dot { width: 12px; height: 6px; border-radius: 2px; display: inline-block; }
 	.cf-legend-dot.dist { background: #51be7b; }
 	.cf-legend-dot.cap { background: #2d8a54; }
-	.cf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.cf-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
 	.cf-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
 	.cf-table thead th { padding: 8px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); text-align: right; }
 	.cf-table thead th:first-child { text-align: left; }
@@ -3423,7 +3529,7 @@
 
 	/* ===== Peer Comparison ===== */
 	.peer-count-label { font-family: var(--font-ui); font-size: 11px; color: var(--text-muted); margin-left: auto; }
-	.peer-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.peer-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
 	.peer-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
 	.peer-th { padding: 8px 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); text-align: left; }
 	.peer-th.center { text-align: center; }
@@ -3437,6 +3543,54 @@
 	.peer-verdict.bad { color: #ef4444; background: rgba(239,68,68,0.08); }
 	.peer-verdict.neutral { color: var(--text-muted); background: var(--bg-cream, #f8f8f6); }
 	.peer-footnote { margin-top: 12px; padding: 10px 14px; background: var(--bg-cream, #f8f8f6); border-radius: 6px; font-family: var(--font-body); font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+	.peer-mobile-list { display: grid; gap: 12px; }
+	.peer-mobile-list.ly-mobile-only { display: grid !important; }
+	.peer-mobile-card {
+		padding: 14px;
+		border: 1px solid var(--border-light);
+		border-radius: 12px;
+		background: linear-gradient(180deg, rgba(248,248,246,0.7) 0%, rgba(255,255,255,0.96) 100%);
+	}
+	.peer-mobile-head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 12px;
+	}
+	.peer-mobile-label {
+		font-family: var(--font-ui);
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.peer-mobile-metrics {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 10px;
+	}
+	.peer-mobile-metric {
+		padding: 10px 12px;
+		border-radius: 10px;
+		background: var(--bg-cream, #f8f8f6);
+	}
+	.peer-mobile-metric-label {
+		display: block;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 4px;
+	}
+	.peer-mobile-metric-value {
+		display: block;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
 
 	/* ===== Stress Test Calculator ===== */
 	.st-base-case { background: linear-gradient(135deg, rgba(81,190,123,0.08) 0%, #f0fdf4 100%); border: 1px solid rgba(81,190,123,0.15); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
@@ -3473,7 +3627,7 @@
 	.st-scenario-table tbody td.bull { color: #10b981; }
 
 	/* ===== Similar Deals Table ===== */
-	.similar-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+	.similar-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
 	.similar-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 	.sim-th { padding: 10px 12px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; text-align: right; white-space: nowrap; border-bottom: 2px solid var(--border); }
 	.sim-th.left { text-align: left; min-width: 180px; }
@@ -3489,18 +3643,105 @@
 	.sim-badge.current { background: var(--primary); color: #fff; }
 	.sim-peer-row { transition: background 0.1s; }
 	.sim-peer-row:hover { background: var(--bg-cream, #f8f8f6); }
+	.similar-mobile-list { display: grid; gap: 12px; }
+	.similar-mobile-list.ly-mobile-only { display: grid !important; }
+	.similar-mobile-card {
+		padding: 14px;
+		border: 1px solid var(--border-light);
+		border-radius: 12px;
+		background: linear-gradient(180deg, rgba(248,248,246,0.7) 0%, rgba(255,255,255,0.96) 100%);
+	}
+	.similar-mobile-card.current {
+		border-color: rgba(81,190,123,0.25);
+		background: linear-gradient(180deg, rgba(81,190,123,0.06) 0%, rgba(255,255,255,0.98) 100%);
+	}
+	.similar-mobile-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.similar-mobile-copy {
+		min-width: 0;
+	}
+	.similar-mobile-primary {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px;
+		margin-top: 14px;
+	}
+	.similar-mobile-stat {
+		padding: 10px 12px;
+		border-radius: 10px;
+		background: var(--bg-cream, #f8f8f6);
+	}
+	.similar-mobile-stat-label {
+		display: block;
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		color: var(--text-muted);
+		margin-bottom: 4px;
+	}
+	.similar-mobile-stat-value {
+		display: block;
+		font-family: var(--font-ui);
+		font-size: 14px;
+		font-weight: 800;
+		color: var(--text-dark);
+	}
+	.similar-mobile-details {
+		margin-top: 12px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border-light);
+	}
+	.similar-mobile-details summary {
+		list-style: none;
+		cursor: pointer;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		font-weight: 700;
+		color: var(--primary);
+	}
+	.similar-mobile-details summary::-webkit-details-marker {
+		display: none;
+	}
+	.similar-mobile-secondary {
+		display: grid;
+		gap: 8px;
+		margin-top: 10px;
+	}
+	.similar-mobile-detail {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		font-family: var(--font-ui);
+		font-size: 12px;
+		color: var(--text-secondary);
+	}
+	.similar-mobile-detail strong {
+		color: var(--text-dark);
+		font-weight: 700;
+		text-align: right;
+	}
 
 	/* ===== Responsive for new sections ===== */
 	@media (max-width: 768px) {
 		.st-grid { grid-template-columns: 1fr; }
 		.cf-table, .peer-table, .similar-table { font-size: 12px; }
 		.st-scenario-table { font-size: 12px; }
+		.cf-legend { justify-content: flex-start; }
 	}
 	@media (max-width: 480px) {
 		.cf-bar-row { gap: 6px; }
 		.cf-bar-value { font-size: 11px; min-width: 48px; }
 		.st-base-pills { gap: 6px; }
 		.st-pill { font-size: 11px; padding: 4px 8px; }
+		.peer-mobile-metrics { grid-template-columns: 1fr; }
+		.similar-mobile-primary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	}
 
 	/* ===== Deal Fit Summary ===== */
