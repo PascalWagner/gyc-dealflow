@@ -1,5 +1,5 @@
 <script>
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { deals, fetchDeals } from '$lib/stores/deals.js';
 
 	let nameSearch = $state('');
@@ -7,9 +7,7 @@
 	let maxInvest = $state('');
 	let fullCycleMin = $state('0');
 	let sortBy = $state('deals');
-	let showMobileSearch = $state(true);
 	let showMobileFilters = $state(false);
-	let mobileSearchInput = $state();
 	function computeStats(dealList) {
 		let irrs = [], prefs = [], mins = [], activeCount = 0;
 		dealList.forEach(d => {
@@ -92,6 +90,13 @@
 		Boolean(assetFilter || maxInvest || parseInt(fullCycleMin) > 0 || sortBy !== 'deals')
 	);
 	const hasAnyFilters = $derived(Boolean(nameSearch.trim()) || hasAdvancedFilters);
+	const activeFilterCount = $derived(
+		(assetFilter ? 1 : 0)
+		+ (maxInvest ? 1 : 0)
+		+ (parseInt(fullCycleMin) > 0 ? 1 : 0)
+		+ (sortBy !== 'deals' ? 1 : 0)
+	);
+	const totalDeals = $derived(filtered.reduce((sum, company) => sum + company.dealCount, 0));
 
 	function resetFilters() {
 		nameSearch = '';
@@ -100,12 +105,6 @@
 		fullCycleMin = '0';
 		sortBy = 'deals';
 		showMobileFilters = false;
-	}
-
-	async function focusMobileSearch() {
-		showMobileSearch = true;
-		await tick();
-		mobileSearchInput?.focus();
 	}
 
 	function toggleMobileFilters() {
@@ -124,118 +123,102 @@
 	onMount(() => { fetchDeals(); });
 </script>
 
-<div class="operators-page">
+<div class="operators-page ly-page">
 	<div class="filter-shell">
-		<div class="filter-bar desktop-filter-bar">
-			<input type="text" bind:value={nameSearch} placeholder="Search operators..." class="filter-input">
-			<select bind:value={assetFilter} class="filter-select">
-				<option value="">All Asset Classes</option>
-				{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
-			</select>
-			<select bind:value={maxInvest} class="filter-select">
-				<option value="">Max Investment Min.</option>
-				<option value="25000">$25K or less</option>
-				<option value="50000">$50K or less</option>
-				<option value="100000">$100K or less</option>
-			</select>
-			<select bind:value={fullCycleMin} class="filter-select">
-				<option value="0">Full Cycle Deals</option>
-				<option value="1">1+ full cycle</option>
-				<option value="5">5+ full cycle</option>
-				<option value="10">10+ full cycle</option>
-			</select>
-			<select bind:value={sortBy} class="filter-select">
-				<option value="deals">Most Deals</option>
-				<option value="fullcycle">Most Full Cycle</option>
-				<option value="name">Name (A-Z)</option>
-				<option value="newest">Newest First</option>
-			</select>
-			<button class="btn-reset" onclick={resetFilters}>Reset</button>
-			<div class="stats-bar">
-				<span><strong>{filtered.length}</strong> Operators</span>
-				<span><strong>{allAssetClasses.length}</strong> asset classes</span>
-				<span><strong>{filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> total deals</span>
-			</div>
-		</div>
-
-		<div class="mobile-filter-shell">
-			<div class="mobile-filter-tabs" role="toolbar" aria-label="Operator controls">
-				<button
-					type="button"
-					class="mobile-filter-button"
-					class:active={showMobileSearch || Boolean(nameSearch.trim())}
-					onclick={focusMobileSearch}
-					aria-pressed={showMobileSearch || Boolean(nameSearch.trim())}
-				>
-					Search
-				</button>
-				<button
-					type="button"
-					class="mobile-filter-button"
-					class:active={showMobileFilters || hasAdvancedFilters}
-					onclick={toggleMobileFilters}
-					aria-pressed={showMobileFilters}
-				>
-					Filter
-				</button>
-				<button
-					type="button"
-					class="mobile-filter-button"
-					class:active={hasAnyFilters}
-					onclick={resetFilters}
-					disabled={!hasAnyFilters}
-				>
-					Reset
-				</button>
+		<div class="filter-shell-inner ly-frame">
+			<div class="filter-bar desktop-filter-bar">
+				<input type="text" bind:value={nameSearch} placeholder="Search operators..." class="filter-input">
+				<select bind:value={assetFilter} class="filter-select">
+					<option value="">All Asset Classes</option>
+					{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
+				</select>
+				<select bind:value={maxInvest} class="filter-select">
+					<option value="">Max Investment Min.</option>
+					<option value="25000">$25K or less</option>
+					<option value="50000">$50K or less</option>
+					<option value="100000">$100K or less</option>
+				</select>
+				<select bind:value={fullCycleMin} class="filter-select">
+					<option value="0">Full Cycle Deals</option>
+					<option value="1">1+ full cycle</option>
+					<option value="5">5+ full cycle</option>
+					<option value="10">10+ full cycle</option>
+				</select>
+				<select bind:value={sortBy} class="filter-select">
+					<option value="deals">Most Deals</option>
+					<option value="fullcycle">Most Full Cycle</option>
+					<option value="name">Name (A-Z)</option>
+					<option value="newest">Newest First</option>
+				</select>
+				<button class="btn-reset" onclick={resetFilters}>Reset</button>
+				<div class="stats-bar">
+					<span><strong>{filtered.length}</strong> Operators</span>
+					<span><strong>{allAssetClasses.length}</strong> asset classes</span>
+					<span><strong>{totalDeals}</strong> total deals</span>
+				</div>
 			</div>
 
-			{#if showMobileSearch}
-				<div class="mobile-filter-panel">
+			<div class="mobile-filter-shell">
+				<div class="mobile-search-row">
 					<input
 						type="text"
-						bind:this={mobileSearchInput}
 						bind:value={nameSearch}
 						placeholder="Search operators..."
 						class="filter-input mobile-filter-input"
 					>
+					<button
+						type="button"
+						class="mobile-toolbar-button"
+						class:active={showMobileFilters || hasAdvancedFilters}
+						onclick={toggleMobileFilters}
+						aria-expanded={showMobileFilters}
+					>
+						{showMobileFilters ? 'Hide Filters' : activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'}
+					</button>
 				</div>
-			{/if}
 
-			{#if showMobileFilters}
-				<div class="mobile-filter-panel mobile-filter-stack">
-					<select bind:value={assetFilter} class="filter-select mobile-filter-select">
-						<option value="">All Asset Classes</option>
-						{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
-					</select>
-					<select bind:value={maxInvest} class="filter-select mobile-filter-select">
-						<option value="">Max Investment Min.</option>
-						<option value="25000">$25K or less</option>
-						<option value="50000">$50K or less</option>
-						<option value="100000">$100K or less</option>
-					</select>
-					<select bind:value={fullCycleMin} class="filter-select mobile-filter-select">
-						<option value="0">Full Cycle Deals</option>
-						<option value="1">1+ full cycle</option>
-						<option value="5">5+ full cycle</option>
-						<option value="10">10+ full cycle</option>
-					</select>
-					<select bind:value={sortBy} class="filter-select mobile-filter-select">
-						<option value="deals">Most Deals</option>
-						<option value="fullcycle">Most Full Cycle</option>
-						<option value="name">Name (A-Z)</option>
-						<option value="newest">Newest First</option>
-					</select>
+				<div class="mobile-toolbar-row">
+					<div class="mobile-stats">
+						<span><strong>{filtered.length}</strong> Operators</span>
+						<span><strong>{totalDeals}</strong> Deals</span>
+					</div>
+					<button class="btn-reset mobile-reset" onclick={resetFilters} disabled={!hasAnyFilters}>Reset</button>
 				</div>
-			{/if}
 
-			<div class="mobile-stats">
-				<span><strong>{filtered.length}</strong> Operators</span>
-				<span><strong>{filtered.reduce((s, c) => s + c.dealCount, 0)}</strong> Deals</span>
+				{#if showMobileFilters}
+					<div class="mobile-filter-panel">
+						<div class="mobile-filter-grid">
+							<select bind:value={assetFilter} class="filter-select mobile-filter-select">
+								<option value="">All Asset Classes</option>
+								{#each allAssetClasses as ac}<option value={ac}>{ac}</option>{/each}
+							</select>
+							<select bind:value={maxInvest} class="filter-select mobile-filter-select">
+								<option value="">Max Investment Min.</option>
+								<option value="25000">$25K or less</option>
+								<option value="50000">$50K or less</option>
+								<option value="100000">$100K or less</option>
+							</select>
+							<select bind:value={fullCycleMin} class="filter-select mobile-filter-select">
+								<option value="0">Full Cycle Deals</option>
+								<option value="1">1+ full cycle</option>
+								<option value="5">5+ full cycle</option>
+								<option value="10">10+ full cycle</option>
+							</select>
+							<select bind:value={sortBy} class="filter-select mobile-filter-select">
+								<option value="deals">Most Deals</option>
+								<option value="fullcycle">Most Full Cycle</option>
+								<option value="name">Name (A-Z)</option>
+								<option value="newest">Newest First</option>
+							</select>
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
 
-	<div class="managers-grid">
+	<div class="operators-content ly-frame">
+		<div class="managers-grid ly-grid">
 		{#each filtered as c (c.name)}
 			<a href={getOperatorHref(c)} class="manager-card" data-sveltekit-reload>
 				<div class="card-header">
@@ -265,22 +248,87 @@
 		{:else}
 			<div class="empty-state">No management companies found.</div>
 		{/each}
+		</div>
 	</div>
 </div>
 
 <style>
-	.operators-page { padding: 0; }
-	.filter-shell { border-bottom: 1px solid var(--border); background: var(--bg-card); }
-	.filter-bar { padding: 12px 24px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+	.operators-page {
+		--ly-frame-max: 1440px;
+		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-frame-pad-tablet: 24px;
+		--ly-frame-pad-mobile: 16px;
+		min-width: 0;
+	}
+
+	.filter-shell {
+		border-bottom: 1px solid var(--border);
+		background: var(--bg-card);
+	}
+
+	.filter-shell-inner {
+		--ly-frame-pad-top: 0;
+		--ly-frame-pad-bottom: 0;
+		min-width: 0;
+	}
+
+	.operators-content {
+		--ly-frame-pad-top: 24px;
+		--ly-frame-pad-bottom: 48px;
+		--ly-frame-pad-top-tablet: 20px;
+		--ly-frame-pad-bottom-tablet: 40px;
+		--ly-frame-pad-top-mobile: 16px;
+		--ly-frame-pad-bottom-mobile: 32px;
+		min-width: 0;
+	}
+
+	.filter-bar {
+		padding: 12px 0;
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		flex-wrap: wrap;
+		background: var(--bg-card);
+		min-width: 0;
+	}
+
 	.desktop-filter-bar { border-bottom: none; }
-	.filter-input { padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-body); color: var(--text-dark); background: var(--bg-card); min-width: 180px; box-sizing: border-box; }
-	.filter-select { padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-body); color: var(--text-dark); background: var(--bg-card); }
+	.filter-input {
+		padding: 7px 14px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		font-size: 13px;
+		font-family: var(--font-body);
+		color: var(--text-dark);
+		background: var(--bg-card);
+		min-width: 180px;
+		box-sizing: border-box;
+	}
+
+	.filter-select {
+		padding: 7px 14px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		font-size: 13px;
+		font-family: var(--font-body);
+		color: var(--text-dark);
+		background: var(--bg-card);
+		min-width: 0;
+	}
+
 	.btn-reset { padding: 7px 14px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-weight: 700; font-size: 11px; cursor: pointer; color: var(--text-secondary); white-space: nowrap; }
-	.stats-bar { margin-left: auto; display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+	.btn-reset:disabled { cursor: default; opacity: 0.5; }
+	.stats-bar { margin-left: auto; display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; min-width: 0; }
 	.stats-bar strong { color: var(--text-dark); }
 	.mobile-filter-shell { display: none; }
-	.managers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 24px; }
-	.manager-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit; display: block; }
+	.managers-grid {
+		--ly-grid-desktop: 3;
+		--ly-grid-tablet: 2;
+		--ly-grid-mobile: 1;
+		--ly-grid-gap: 12px;
+	}
+
+	.manager-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; cursor: pointer; transition: all 0.15s; text-decoration: none; color: inherit; display: block; min-width: 0; height: 100%; }
 	.manager-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: var(--primary); }
 	.card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 	.avatar { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #1F5159, #0A1E21); display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-ui); font-size: 14px; font-weight: 700; flex-shrink: 0; }
@@ -296,82 +344,102 @@
 	.badge.muted { color: var(--text-muted); }
 	.empty-state { grid-column: 1 / -1; text-align: center; padding: 60px; color: var(--text-muted); font-size: 14px; }
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.filter-bar { padding: 16px 24px; }
+		.filter-bar { padding: 16px 0; }
 		.filter-input { flex: 1 1 260px; min-width: 240px; }
 		.stats-bar { flex-basis: 100%; margin-left: 0; }
-		.managers-grid { grid-template-columns: repeat(2, 1fr); padding: 20px 24px 24px; }
 	}
-	@media (max-width: 1024px) { .managers-grid { grid-template-columns: repeat(2, 1fr); } }
+
 	@media (max-width: 768px) {
 		.desktop-filter-bar { display: none; }
 		.mobile-filter-shell {
-			display: flex;
-			flex-direction: column;
-			gap: 10px;
-			padding: 12px 16px 14px;
-			background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 248, 250, 0.94) 100%);
-			backdrop-filter: blur(22px);
-		}
-		.mobile-filter-tabs {
 			display: grid;
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-			gap: 8px;
+			gap: 12px;
+			padding: 12px 0 14px;
 		}
-		.mobile-filter-button {
-			height: 46px;
-			padding: 0 10px;
-			border: 1px solid rgba(31, 81, 89, 0.12);
-			border-radius: 16px;
-			background: rgba(255, 255, 255, 0.88);
-			box-shadow: 0 12px 28px rgba(10, 30, 33, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+		.mobile-search-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: 8px;
+			align-items: stretch;
+		}
+		.mobile-toolbar-button {
+			height: 40px;
+			padding: 0 14px;
+			border: 1px solid var(--border);
+			border-radius: var(--radius-sm);
+			background: var(--bg-card);
 			font-family: var(--font-ui);
-			font-size: 13px;
+			font-size: 12px;
 			font-weight: 700;
 			color: var(--text-secondary);
-			display: flex;
+			display: inline-flex;
 			align-items: center;
 			justify-content: center;
+			white-space: nowrap;
 			cursor: pointer;
-			transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+			transition: border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 		}
-		.mobile-filter-button.active {
-			background: linear-gradient(180deg, rgba(31, 81, 89, 0.16), rgba(31, 81, 89, 0.06));
-			border-color: rgba(31, 81, 89, 0.18);
-			color: #12363c;
-		}
-		.mobile-filter-button:disabled {
-			opacity: 0.45;
-			cursor: default;
-			box-shadow: none;
+		.mobile-toolbar-button.active {
+			border-color: var(--primary);
+			color: var(--text-dark);
+			box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent);
 		}
 		.mobile-filter-panel {
 			padding: 12px;
-			border: 1px solid rgba(10, 30, 33, 0.08);
-			border-radius: 20px;
-			background: rgba(255, 255, 255, 0.82);
-			box-shadow: 0 18px 36px rgba(10, 30, 33, 0.06);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			background: var(--bg-card);
+			box-shadow: var(--shadow-card);
 		}
-		.mobile-filter-stack { display: grid; gap: 10px; }
+		.mobile-filter-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
 		.mobile-filter-input,
 		.mobile-filter-select {
 			width: 100%;
 			min-width: 0;
-			height: 48px;
+			height: 40px;
 			font-size: 16px;
-			border-radius: 14px;
-			background: #fff;
 		}
-		.mobile-stats {
+		.mobile-toolbar-row {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
 			gap: 12px;
-			padding: 0 4px;
+		}
+		.mobile-stats {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
 			font-size: 12px;
 			color: var(--text-muted);
+			min-width: 0;
 		}
 		.mobile-stats strong { color: var(--text-dark); }
-		.managers-grid { grid-template-columns: 1fr; padding: 16px; }
+		.mobile-reset {
+			height: 40px;
+			padding-inline: 14px;
+			flex-shrink: 0;
+		}
 		.stats-bar { display: none; }
+	}
+
+	@media (max-width: 520px) {
+		.mobile-search-row,
+		.mobile-toolbar-row,
+		.mobile-filter-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.mobile-toolbar-row {
+			display: grid;
+		}
+
+		.mobile-reset {
+			width: 100%;
+		}
 	}
 </style>
