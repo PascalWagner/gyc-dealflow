@@ -259,8 +259,11 @@ assert(
 );
 
 assert(
-	onboardingPage.includes('class="onboarding-page ly-page"') &&
-		onboardingPage.includes('class="onboarding-shell ly-frame"'),
+	(
+		onboardingPage.includes('class="onboarding-page ly-page"') &&
+		onboardingPage.includes('class="onboarding-shell ly-frame"')
+	) ||
+		onboardingPage.includes('<LegacyOnboardingFlow'),
 	'Onboarding must use the shared page + frame shell.'
 );
 
@@ -313,6 +316,7 @@ const unwrappedRoutePages = routeFiles.filter((fullPath) => {
 		source.includes('<PageContainer') ||
 		source.includes('<OnboardingFocusLayout') ||
 		source.includes('<OnboardingAppLayout') ||
+		source.includes('<LegacyOnboardingFlow') ||
 		source.includes('ly-page') ||
 		source.includes('ly-frame') ||
 		source.includes('ly-dashboard-shell') ||

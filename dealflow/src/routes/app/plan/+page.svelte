@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
-	import LegacyPlanWizard from '$lib/components/LegacyPlanWizard.svelte';
 	import OnboardingAppLayout from '$lib/components/onboarding/OnboardingAppLayout.svelte';
+	import LegacyOnboardingFlow from '$lib/components/onboarding/LegacyOnboardingFlow.svelte';
 	import PageContainer from '$lib/layout/PageContainer.svelte';
 	import PageHeader from '$lib/layout/PageHeader.svelte';
 	import {
@@ -932,15 +932,7 @@
 		</div>
 	{:else if showWizard || !hasPlan}
 		<OnboardingAppLayout>
-			<LegacyPlanWizard
-				initialData={wizardData}
-				forceEdit={wizardForceEdit}
-				forcedStage={wizardStage}
-				forcedBranch={wizardBranch}
-				forcedFlowKey={wizardFlowKey}
-				on:state={handleWizardState}
-				on:complete={handleWizardComplete}
-			/>
+			<LegacyOnboardingFlow appMode={true} loginReturnBase="/app/plan" lpMemberContinuePath="/app/dashboard" />
 		</OnboardingAppLayout>
 	{:else}
 		<div class="plan-stack">
