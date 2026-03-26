@@ -23,6 +23,8 @@ const marketIntelApi = read('api/market-intel.js');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
 const gpDashboardPage = read('src/routes/gp-dashboard/+page.svelte');
+const onboardingPage = read('src/routes/onboarding/+page.svelte');
+const gpOnboardingPage = read('src/routes/gp-onboarding/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
 const sidebar = read('src/lib/components/Sidebar.svelte');
 const filterBar = read('src/lib/components/FilterBar.svelte');
@@ -188,6 +190,18 @@ assert(
 );
 
 assert(
+	onboardingPage.includes('class="onboarding-page ly-page"') &&
+		onboardingPage.includes('class="onboarding-shell ly-frame"'),
+	'Onboarding must use the shared page + frame shell.'
+);
+
+assert(
+	gpOnboardingPage.includes('class="gp-onboarding-page ly-page"') &&
+		gpOnboardingPage.includes('class="gp-onboarding-shell ly-frame"'),
+	'GP onboarding must use the shared page + frame shell.'
+);
+
+assert(
 	!appLayout.includes('padding-top: 56px'),
 	'App layout must not reserve top padding for a mobile hamburger.'
 );
@@ -225,7 +239,6 @@ assert(
 const unwrappedRoutePages = routeFiles.filter((fullPath) => {
 	const relativePath = path.relative(root, fullPath);
 	if (!relativePath.endsWith('+page.svelte')) return false;
-	if (relativePath.includes('/onboarding/') || relativePath.includes('/gp-onboarding/')) return false;
 	const source = fs.readFileSync(fullPath, 'utf8');
 	return !(
 		source.includes('ly-page') ||
@@ -249,4 +262,4 @@ console.log('- Sponsor and Person rendering is no longer blocked on hydration');
 console.log('- Sponsor and Person do not call rune-derived values like functions');
 console.log('- Smoke coverage exists for Operators -> Sponsor -> Person');
 console.log('- Mobile navigation defaults to no hamburger on route pages');
-console.log('- Non-onboarding route pages opt into the shared layout shell');
+console.log('- Route pages opt into the shared layout shell');

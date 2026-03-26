@@ -664,8 +664,10 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<div class="onboarding-container">
-	<div class="onboarding-card">
+<div class="onboarding-page ly-page">
+	<div class="onboarding-shell ly-frame">
+		<div class="onboarding-container">
+			<div class="onboarding-card">
 
 		<!-- Progress bar -->
 		{#if showProgress}
@@ -1432,12 +1434,30 @@
 			</div>
 		{/if}
 
+			</div>
+		</div>
 	</div>
 </div>
 
 <style>
 	/* ====== LAYOUT ====== */
-	.onboarding-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
+	.onboarding-page {
+		--ly-frame-max: 900px;
+		--ly-frame-pad-desktop: 20px;
+		--ly-frame-pad-tablet: 20px;
+		--ly-frame-pad-mobile: 8px;
+		--ly-frame-pad-top: 40px;
+		--ly-frame-pad-bottom: 40px;
+		--ly-frame-pad-top-tablet: 20px;
+		--ly-frame-pad-bottom-tablet: 20px;
+		--ly-frame-pad-top-mobile: 12px;
+		--ly-frame-pad-bottom-mobile: 12px;
+		--onboarding-shell-offset: 80px;
+		min-height: 100vh;
+		min-height: 100dvh;
+	}
+	.onboarding-shell { min-width: 0; }
+	.onboarding-container { min-height: calc(100dvh - var(--onboarding-shell-offset)); display: flex; align-items: center; justify-content: center; min-width: 0; }
 	.onboarding-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); width: 100%; max-width: 860px; overflow: hidden; position: relative; }
 	.progress-bar-wrap { height: 4px; background: var(--border-light); position: relative; }
 	.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent-green)); border-radius: 0 2px 2px 0; transition: width 0.5s ease; }
@@ -1740,7 +1760,12 @@
 
 	/* ====== RESPONSIVE ====== */
 	@media (max-width: 700px) {
-		.onboarding-container { padding: 12px 8px; }
+		.onboarding-page {
+			--ly-frame-pad-mobile: 8px;
+			--ly-frame-pad-top-mobile: 12px;
+			--ly-frame-pad-bottom-mobile: 12px;
+			--onboarding-shell-offset: 24px;
+		}
 		.onboarding-card { border-radius: 12px; }
 		.step-header { padding: 20px 16px 0; }
 		.step-body { padding: 16px 16px 20px; }
@@ -1830,7 +1855,12 @@
 
 	/* ====== EXTRA SMALL PHONES ====== */
 	@media (max-width: 380px) {
-		.onboarding-container { padding: 8px 4px; }
+		.onboarding-page {
+			--ly-frame-pad-mobile: 4px;
+			--ly-frame-pad-top-mobile: 8px;
+			--ly-frame-pad-bottom-mobile: 8px;
+			--onboarding-shell-offset: 16px;
+		}
 		.step-header { padding: 16px 12px 0; }
 		.step-body { padding: 12px 12px 16px; }
 		.step-footer { padding: 0 12px 16px; }
