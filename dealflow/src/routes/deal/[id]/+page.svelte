@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import InvestingGeographyMap from '$lib/components/InvestingGeographyMap.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
 	import {
 		currentAdminRealUser,
@@ -2059,22 +2060,7 @@
 							<span class="section-title">Investing Geography</span>
 						</div>
 						<div class="section-body geography-body">
-							<div class="geography-hero-card">
-								<div>
-									<div class="geography-label">Market Focus</div>
-									<div class="geography-title">{geographyPrimaryState ? STATE_NAME_BY_CODE[geographyPrimaryState] : geographyLabel}</div>
-									<div class="geography-subtitle">{geographyLabel}</div>
-								</div>
-								<div class="geography-state-stack">
-									{#if geographyStates.length > 0}
-										{#each geographyStates as state}
-											<span class="geo-pill active">{STATE_NAME_BY_CODE[state]}</span>
-										{/each}
-									{:else}
-										<span class="geo-pill">{deal.investingGeography || deal.location || 'Geography not specified'}</span>
-									{/if}
-								</div>
-							</div>
+							<InvestingGeographyMap {deal} />
 						</div>
 					</div>
 
