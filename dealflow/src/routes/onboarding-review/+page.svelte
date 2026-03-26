@@ -126,30 +126,34 @@
 	<title>Onboarding Review | GYC</title>
 </svelte:head>
 
-<div class="review-shell">
-	<div class="hero-card">
-		<div class="eyebrow">Hidden QA Route</div>
-		<h1>Onboarding Review Links</h1>
-		<p>Open any production onboarding page directly. LP plan stages use `stage`, `flow`, and `branch` query params so every page stays reviewable on its real route.</p>
-	</div>
+<div class="ly-page">
+	<div class="ly-frame">
+		<div class="review-shell">
+			<div class="hero-card">
+				<div class="eyebrow">Hidden QA Route</div>
+				<h1>Onboarding Review Links</h1>
+				<p>Open any production onboarding page directly. LP plan stages use `stage`, `flow`, and `branch` query params so every page stays reviewable on its real route.</p>
+			</div>
 
-	<div class="group-stack">
-		{#each groups as group}
-			<section class="group-card">
-				<div class="group-head">
-					<h2>{group.title}</h2>
-					<p>{group.description}</p>
-				</div>
-				<div class="link-grid">
-					{#each group.links as link}
-						<a class="review-link" href={link.href}>
-							<span>{link.label}</span>
-							<code>{link.href}</code>
-						</a>
-					{/each}
-				</div>
-			</section>
-		{/each}
+			<div class="group-stack">
+				{#each groups as group}
+					<section class="group-card">
+						<div class="group-head">
+							<h2>{group.title}</h2>
+							<p>{group.description}</p>
+						</div>
+						<div class="link-grid">
+							{#each group.links as link}
+								<a class="review-link" href={link.href}>
+									<span>{link.label}</span>
+									<code>{link.href}</code>
+								</a>
+							{/each}
+						</div>
+					</section>
+				{/each}
+			</div>
+		</div>
 	</div>
 </div>
 
