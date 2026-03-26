@@ -2,11 +2,8 @@
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
-	import RequestIntroductionModal from '$lib/components/RequestIntroductionModal.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember } from '$lib/stores/auth.js';
-	import { hasViewableDealDeck } from '$lib/utils/dealDocuments.js';
-	import { getDealIntroductionRequestGate } from '$lib/utils/dealIntroRequests.js';
+	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember, isGP } from '$lib/stores/auth.js';
 	import {
 		currentAdminRealUser,
 		readUserScopedJson,
@@ -16,11 +13,8 @@
 	} from '$lib/utils/userScopedState.js';
 	import {
 		dealStages,
-		compareDealIds,
-		dealFlowViewMode,
 		STAGE_META,
 		PIPELINE_STAGES,
-		MAX_COMPARE_DEALS,
 		normalizeStage,
 		stageLabel
 	} from '$lib/stores/deals.js';
@@ -56,8 +50,6 @@
 	let similarDeals = $state(initialComparables?.similarDeals || []);
 	let peerComparison = $state(initialComparables?.peerComparison || null);
 	let peerStats = $state(null);
-	let allDeals = $state([]);
-	let feeComparisonExpanded = $state(false);
 
 	// Stress Test sliders
 	let stInvestment = $state(0);
@@ -93,6 +85,15 @@
 	// Deck Viewer Modal
 	let showDeckViewer = $state(false);
 
+	// Public auth intercept modal
+	let showAuthModal = $state(false);
+	let authModalTitle = $state('Create a free account');
+	let authModalBody = $state('Create a free account to continue.');
+	let authEmail = $state('');
+	let authSending = $state(false);
+	let authSent = $state(false);
+	let authError = $state('');
+
 	// Share Class Switching
 	let activeShareClass = $state(0);
 
@@ -105,7 +106,9 @@
 
 	// Intro Request Modal
 	let showIntroModal = $state(false);
-	let deckAutoOpened = $state(false);
+	let introMessage = $state('');
+	let introSending = $state(false);
+	let introSuccess = $state(false);
 
 	// Property Map
 	let dealMap = $state(null);
@@ -159,7 +162,25 @@
 
 	// ===== Derived =====
 	const dealId = $derived($page.params.id);
-	const isPaid = $derived($isMember);
+	const viewerManagementCompanyId = $derived($user?.managementCompany?.id || $user?.managementCompanyId || $user?.management_company_id || null);
+	const viewerManagementCompanyName = $derived(($user?.managementCompany?.name || $user?.managementCompanyName || '').trim().toLowerCase());
+	const dealManagementCompanyId = $derived(deal?.managementCompanyId || deal?.management_company_id || deal?.managementCompany?.id || null);
+	const dealManagementCompanyName = $derived((deal?.managementCompany || deal?.managementCompanyName || deal?.managementCompany?.name || '').trim().toLowerCase());
+	const gpOwnsDeal = $derived.by(() => {
+		if (!$isGP || !deal) return false;
+		if (viewerManagementCompanyId && dealManagementCompanyId) {
+			return String(viewerManagementCompanyId) === String(dealManagementCompanyId);
+		}
+		if (viewerManagementCompanyName && dealManagementCompanyName) {
+			return viewerManagementCompanyName === dealManagementCompanyName;
+		}
+		return false;
+	});
+	const hasMemberAccess = $derived($isAdmin || $isMember || gpOwnsDeal);
+	const isPublicViewer = $derived(!$isLoggedIn);
+	const isFreeViewer = $derived($isLoggedIn && !$isAdmin && !$isMember && !gpOwnsDeal);
+	const isPaid = $derived(hasMemberAccess);
+	const showGpInsights = $derived(($isAdmin || gpOwnsDeal) && !!deal?.managementCompany);
 	const currentStage = $derived(deal ? getUiStage($dealStages[deal.id] || 'filter') : 'filter');
 	const socialProofCounts = $derived.by(() => normalizeStageCounts(socialProof || {}));
 
@@ -198,8 +219,15 @@
 	const displayLpGpSplit = $derived(activeShareClassData?.lpGpSplit != null ? activeShareClassData.lpGpSplit : deal?.lpGpSplit);
 
 	// Deck preview URL
-	const hasViewableDeck = $derived(hasViewableDealDeck(deal));
-	const deckPreviewUrl = $derived(hasViewableDeck ? getDeckPreviewUrl(deal.deckUrl) : null);
+	const deckPreviewUrl = $derived(deal?.deckUrl ? getDeckPreviewUrl(deal.deckUrl) : null);
+	const documentRows = $derived.by(() => buildDocumentRows(deal));
+	const geographyStates = $derived.by(() => getDealStateCodes(deal));
+	const geographyPrimaryState = $derived(geographyStates[0] || null);
+	const geographyLabel = $derived.by(() => buildGeographyLabel(deal, geographyStates));
+	const secFiling = $derived.by(() => buildSecFilingSummary(deal));
+	const feeRows = $derived.by(() => buildFeeRows(deal));
+	const operatorTrackRecordRows = $derived.by(() => buildOperatorTrackRecordRows(deal));
+	const buyBoxLite = $derived.by(() => buildBuyBoxLite(deal));
 
 	// Buy Box Match
 	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
@@ -246,11 +274,7 @@
 		else { verdict = 'Poor Fit'; verdictColor = '#ef4444'; }
 		return { fits, warnings, verdict, verdictColor, score };
 	});
-
-	const feeComparison = $derived.by(() => buildFeeComparison(deal, allDeals, displayFees ?? deal?.fees));
-	const secFilingSummary = $derived.by(() => buildSecFilingSummary(deal));
-	const dealEconomics = $derived.by(() => buildDealEconomics(deal));
-	const geographyCoverage = $derived(deal ? buildGeographyCoverage(deal) : null);
+	const keyRiskItems = $derived.by(() => buildKeyRiskItems(deal, dealFit, isStale));
 
 	function bgStatusClass(s) { return s === 'clear' ? 'bg-clear' : s === 'flagged' ? 'bg-flagged' : 'bg-pending'; }
 	function bgStatusLabel(s) { return s === 'clear' ? 'Clear' : s === 'flagged' ? 'Flag' : 'Pending'; }
@@ -296,6 +320,7 @@
 
 	async function loadQuestions(force = false) {
 		if (!deal || qaLoading || (qaLoaded && !force)) return;
+		if (!hasMemberAccess) return;
 		qaLoading = true;
 		qaError = false;
 		try {
@@ -316,7 +341,7 @@
 
 	async function loadBackgroundCheck(force = false) {
 		if (!deal?.managementCompanyId || bgCheckLoading || (bgCheckLoaded && !force)) return;
-		if (!isPaid && !$isAdmin) return;
+		if (!hasMemberAccess) return;
 		bgCheckLoading = true;
 		bgCheckError = false;
 		try {
@@ -338,7 +363,7 @@
 
 	async function loadGpInsights(force = false) {
 		if (!deal?.managementCompanyId || gpInsightsLoading || (gpInsightsLoaded && !force)) return;
-		if (!$isAdmin) return;
+		if (!showGpInsights) return;
 		gpInsightsLoading = true;
 		gpInsightsError = false;
 		try {
@@ -423,7 +448,7 @@
 		if (dealMapSectionVisible) void loadDealMap();
 	});
 
-	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (!$isLoggedIn) { window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`; return; } qaSubmitting = true; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
+	async function submitQuestion() { if (!deal || !newQuestion.trim()) return; if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to save this deal and start your investor profile.' })) return; if (!hasMemberAccess) { window.location.href = academyHref; return; } qaSubmitting = true; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'ask', dealId: deal.id, dealName: deal.investmentName, question: newQuestion.trim(), userEmail: stored.email || '', userName: stored.name || 'Anonymous' }) }); const d = await r.json(); if (d.success) { newQuestion = ''; await loadQuestions(); } } catch {} qaSubmitting = false; }
 
 	async function submitAnswer(qid, text) { if (!text.trim()) return; try { const stored = currentSessionUser(); const r = await fetch('/api/deal-qa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'answer', recordId: qid, answer: text.trim(), userName: stored.name || 'Pascal' }) }); const d = await r.json(); if (d.success) await loadQuestions(); } catch {} }
 
@@ -500,6 +525,60 @@
 		return 'status-closed';
 	}
 
+	function openAuthModal({
+		title = 'Create a free account',
+		body = 'Create a free account to continue.'
+	} = {}) {
+		authModalTitle = title;
+		authModalBody = body;
+		authSending = false;
+		authSent = false;
+		authError = '';
+		authEmail = $user?.email || '';
+		showAuthModal = true;
+	}
+
+	function closeAuthModal() {
+		showAuthModal = false;
+		authSending = false;
+		authSent = false;
+		authError = '';
+	}
+
+	function requirePublicAuth(config) {
+		if ($isLoggedIn) return false;
+		openAuthModal(config);
+		return true;
+	}
+
+	async function submitAuthModal() {
+		if (authSending) return;
+		const email = authEmail.trim();
+		if (!email || !email.includes('@')) {
+			authError = 'Enter a valid email address.';
+			return;
+		}
+		authSending = true;
+		authError = '';
+		try {
+			const response = await fetch('/api/auth', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'magic-link', email })
+			});
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || result?.error) {
+				authError = result?.error || 'Could not send your magic link.';
+				return;
+			}
+			authSent = true;
+		} catch {
+			authError = 'Could not send your magic link.';
+		} finally {
+			authSending = false;
+		}
+	}
+
 	// ===== Helpers =====
 	function isCreditFund(d) {
 		const ac = (d.assetClass || '').toLowerCase();
@@ -550,451 +629,135 @@
 		return dot > 0 ? d.investmentStrategy.substring(0, dot + 1) : (d.investmentStrategy.length > 200 ? d.investmentStrategy.substring(0, 200) + '...' : d.investmentStrategy);
 	}
 
-	const STATE_NAMES = {
-		AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
-		CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia',
-		HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
-		KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
-		MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
-		MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+	const STATE_NAME_BY_CODE = {
+		AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado',
+		CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho',
+		IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana',
+		ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+		MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
 		NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
 		OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
-		SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
-		VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
+		SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia',
+		WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'
 	};
+	const STATE_CODE_BY_NAME = Object.fromEntries(Object.entries(STATE_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), code]));
 
-	const ALL_STATE_CODES = Object.keys(STATE_NAMES);
-	const STATE_LOOKUP = Object.fromEntries([
-		...Object.entries(STATE_NAMES).map(([code, name]) => [code.toLowerCase(), code]),
-		...Object.entries(STATE_NAMES).map(([code, name]) => [name.toLowerCase(), code])
-	]);
-
-	const REGION_STATE_GROUPS = {
-		nationwide: ALL_STATE_CODES,
-		national: ALL_STATE_CODES,
-		usa: ALL_STATE_CODES,
-		'us': ALL_STATE_CODES,
-		'united states': ALL_STATE_CODES,
-		'all states': ALL_STATE_CODES,
-		southeast: ['FL', 'GA', 'SC', 'NC', 'VA', 'TN', 'AL', 'MS', 'LA', 'AR', 'KY', 'WV'],
-		southwest: ['TX', 'AZ', 'NM', 'OK', 'NV'],
-		northeast: ['NY', 'NJ', 'CT', 'MA', 'PA', 'ME', 'NH', 'VT', 'RI', 'DE', 'MD'],
-		midwest: ['OH', 'MI', 'IN', 'IL', 'WI', 'MN', 'IA', 'MO', 'KS', 'NE', 'SD', 'ND'],
-		'west coast': ['CA', 'OR', 'WA'],
-		'pacific northwest': ['WA', 'OR', 'ID'],
-		'sun belt': ['FL', 'GA', 'SC', 'NC', 'TX', 'AZ', 'NM', 'NV', 'CA', 'TN', 'AL', 'LA'],
-		'east coast': ['FL', 'GA', 'SC', 'NC', 'VA', 'MD', 'DE', 'NJ', 'NY', 'CT', 'RI', 'MA', 'NH', 'ME']
-	};
-
-	const US_STATE_GRID = [
-		{ code: 'WA', col: 1, row: 1 }, { code: 'MT', col: 3, row: 1 }, { code: 'ND', col: 5, row: 1 }, { code: 'MN', col: 7, row: 1 }, { code: 'WI', col: 8, row: 1 }, { code: 'MI', col: 9, row: 1 }, { code: 'VT', col: 11, row: 1 }, { code: 'ME', col: 12, row: 1 },
-		{ code: 'OR', col: 1, row: 2 }, { code: 'ID', col: 2, row: 2 }, { code: 'WY', col: 3, row: 2 }, { code: 'SD', col: 5, row: 2 }, { code: 'IA', col: 7, row: 2 }, { code: 'IL', col: 8, row: 2 }, { code: 'IN', col: 9, row: 2 }, { code: 'OH', col: 10, row: 2 }, { code: 'NH', col: 11, row: 2 }, { code: 'MA', col: 12, row: 2 },
-		{ code: 'CA', col: 1, row: 3 }, { code: 'NV', col: 2, row: 3 }, { code: 'UT', col: 3, row: 3 }, { code: 'CO', col: 4, row: 3 }, { code: 'NE', col: 5, row: 3 }, { code: 'MO', col: 6, row: 3 }, { code: 'KY', col: 8, row: 3 }, { code: 'WV', col: 10, row: 3 }, { code: 'VA', col: 11, row: 3 }, { code: 'RI', col: 12, row: 3 },
-		{ code: 'AZ', col: 2, row: 4 }, { code: 'NM', col: 3, row: 4 }, { code: 'KS', col: 5, row: 4 }, { code: 'AR', col: 6, row: 4 }, { code: 'TN', col: 8, row: 4 }, { code: 'NC', col: 10, row: 4 }, { code: 'NJ', col: 11, row: 4 }, { code: 'CT', col: 12, row: 4 },
-		{ code: 'OK', col: 4, row: 5 }, { code: 'LA', col: 6, row: 5 }, { code: 'MS', col: 7, row: 5 }, { code: 'AL', col: 8, row: 5 }, { code: 'SC', col: 10, row: 5 }, { code: 'DE', col: 11, row: 5 }, { code: 'MD', col: 12, row: 5 },
-		{ code: 'TX', col: 4, row: 6 }, { code: 'GA', col: 9, row: 6 }, { code: 'DC', col: 11, row: 6 }, { code: 'PA', col: 10, row: 2 }, { code: 'NY', col: 10, row: 1 },
-		{ code: 'FL', col: 10, row: 7 }, { code: 'AK', col: 1, row: 7 }, { code: 'HI', col: 2, row: 7 }
-	];
-
-	const FEE_CATEGORIES = [
-		{ key: 'mgmt', label: 'Management Fee', patterns: [/management\s*fee/i, /asset\s*management/i, /annual\s*(?:fund\s*)?management/i, /mgmt\s*fee/i] },
-		{ key: 'acq', label: 'Acquisition Fee', patterns: [/acquisition\s*fee/i, /acq(?:uisition)?\s*fee/i] },
-		{ key: 'disp', label: 'Disposition Fee', patterns: [/disposition\s*fee/i, /exit\s*fee/i, /disp(?:osition)?\s*fee/i] },
-		{ key: 'prop', label: 'Property Mgmt Fee', patterns: [/property\s*(?:management|mgmt)\s*fee/i] },
-		{ key: 'const', label: 'Construction Mgmt Fee', patterns: [/construction\s*(?:management|mgmt|oversight)\s*fee/i] },
-		{ key: 'dev', label: 'Development Fee', patterns: [/development\s*fee/i, /dev(?:elopment)?\s*fee/i] },
-		{ key: 'serv', label: 'Servicing Fee', patterns: [/servic(?:e|ing)\s*fee/i, /loan\s*servicing/i] },
-		{ key: 'refi', label: 'Refinance Fee', patterns: [/refin(?:ance|ancing)\s*fee/i, /refi\s*fee/i] },
-		{ key: 'guarantee', label: 'Guarantee Fee', patterns: [/guarantee\s*fee/i, /guaranty\s*fee/i, /loan\s*guarantee/i] },
-		{ key: 'dd', label: 'Due Diligence Fee', patterns: [/due\s*diligence\s*fee/i, /dd\s*fee/i] }
-	];
-
-	function parseNumeric(value) {
-		if (value === null || value === undefined || value === '') return null;
-		if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-		if (typeof value === 'string') {
-			const parsed = parseFloat(value.replace(/[$,%]/g, '').replace(/,/g, '').trim());
-			return Number.isFinite(parsed) ? parsed : null;
-		}
-		return null;
+	function normalizeStateCode(value) {
+		if (!value) return null;
+		const normalized = String(value).trim();
+		if (STATE_NAME_BY_CODE[normalized.toUpperCase()]) return normalized.toUpperCase();
+		return STATE_CODE_BY_NAME[normalized.toLowerCase()] || null;
 	}
 
-	function percentNumber(value) {
-		const parsed = parseNumeric(value);
-		if (parsed === null) return null;
-		return parsed <= 1 ? parsed * 100 : parsed;
-	}
-
-	function formatCompactMoney(value) {
-		const parsed = parseNumeric(value);
-		if (parsed === null) return '---';
-		if (parsed >= 1e9) return `$${(parsed / 1e9).toFixed(1)}B`;
-		if (parsed >= 1e6) return `$${(parsed / 1e6).toFixed(1)}M`;
-		if (parsed >= 1e3) return `$${Math.round(parsed / 1e3)}K`;
-		return `$${Math.round(parsed).toLocaleString()}`;
-	}
-
-	function formatDateLabel(value) {
-		if (!value) return '---';
-		const date = new Date(value);
-		if (Number.isNaN(date.getTime())) return '---';
-		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-	}
-
-	function normalizeFeeEntries(rawFees) {
-		const entries = Array.isArray(rawFees) ? rawFees : (rawFees ? [rawFees] : []);
-		const normalized = [];
-
-		for (const entry of entries) {
-			if (entry === null || entry === undefined || entry === '') continue;
-
-			if (typeof entry === 'object') {
-				const name = entry.name || entry.label || entry.type || 'Fee';
-				const value = entry.value || entry.amount || entry.pct || entry.percentage || '';
-				normalized.push(value ? `${name}: ${value}` : String(name));
-				continue;
-			}
-
-			const text = String(entry).trim();
-			if (!text) continue;
-
-			if ((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))) {
-				try {
-					normalized.push(...normalizeFeeEntries(JSON.parse(text)));
-					continue;
-				} catch {
-					// Fall through to raw text.
-				}
-			}
-
-			normalized.push(text);
-		}
-
-		return normalized;
-	}
-
-	function extractFeePct(text) {
-		const match = String(text || '').match(/(\d+(?:\.\d+)?)\s*%/);
-		return match ? parseFloat(match[1]) : null;
-	}
-
-	function parseFeeSet(rawFees, d) {
-		const parsed = {};
-		const entries = normalizeFeeEntries(rawFees);
-
-		for (const entry of entries) {
-			for (const category of FEE_CATEGORIES) {
-				if (category.patterns.some((pattern) => pattern.test(entry))) {
-					const pct = extractFeePct(entry);
-					if (pct !== null) parsed[category.key] = { pct, raw: entry };
-					break;
-				}
-			}
-		}
-
-		const structuredMap = {
-			mgmt: d?.assetMgmtFeePct,
-			acq: d?.acquisitionFeePct,
-			prop: d?.propertyMgmtFeePct,
-			const: d?.constructionMgmtFeePct,
-			disp: d?.dispositionFeePct || d?.capitalEventFeePct
+	function getDealStateCodes(d) {
+		if (!d) return [];
+		const matches = [];
+		const addMatch = (value) => {
+			const code = normalizeStateCode(value);
+			if (code && !matches.includes(code)) matches.push(code);
 		};
-
-		for (const [key, value] of Object.entries(structuredMap)) {
-			const pct = percentNumber(value);
-			if (pct !== null && pct > 0) {
-				parsed[key] = { pct, raw: `${pct.toFixed(1)}%` };
+		addMatch(d.state);
+		addMatch(d.regionState);
+		const geography = [d.investingGeography, d.location, d.address, d.propertyAddress].filter(Boolean).join(' | ');
+		for (const [code, name] of Object.entries(STATE_NAME_BY_CODE)) {
+			if (new RegExp(`\\b${code}\\b`, 'i').test(geography) || new RegExp(`\\b${name}\\b`, 'i').test(geography)) {
+				addMatch(code);
 			}
 		}
-
-		return parsed;
+		return matches;
 	}
 
-	function median(values) {
-		if (!values.length) return null;
-		const sorted = [...values].sort((a, b) => a - b);
-		const mid = Math.floor(sorted.length / 2);
-		return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+	function buildGeographyLabel(d, states) {
+		if (!d) return 'No investing geography provided yet.';
+		if (states.length === 1) return `${STATE_NAME_BY_CODE[states[0]]} focus`;
+		if (states.length > 1) return `${states.length} target states`;
+		return d.investingGeography || d.location || 'Geography not specified';
 	}
 
-	function buildFeeComparison(currentDeal, deals, rawFees) {
-		if (!currentDeal || !deals.length) return null;
-		const currentIsCredit = isCreditFund(currentDeal);
-		const peerDeals = deals.filter((candidate) => {
-			if (!candidate || candidate.id === currentDeal.id) return false;
-			if (getCompleteness(candidate) < 45) return false;
-			if (currentIsCredit) return isCreditFund(candidate);
-			return candidate.assetClass && currentDeal.assetClass && candidate.assetClass === currentDeal.assetClass;
-		});
-
-		const currentFees = parseFeeSet(rawFees, currentDeal);
-		const currentFeeEntries = normalizeFeeEntries(rawFees);
-		const peerFeeSets = peerDeals.map((candidate) => parseFeeSet(candidate.fees, candidate));
-		const anyPeerFeeData = peerFeeSets.some((set) => Object.keys(set).length > 0);
-
-		if (!currentFeeEntries.length && !Object.keys(currentFees).length && !anyPeerFeeData) return null;
-
-		function peerFeeVals(key) {
-			return peerFeeSets.map((set) => set[key]?.pct ?? null).filter((value) => value !== null);
+	function buildDocumentRows(d) {
+		if (!d) return [];
+		const rows = [];
+		if (d.deckUrl && !String(d.deckUrl).includes('airtableusercontent.com')) {
+			rows.push({ key: 'deck', label: 'Investment Deck', url: d.deckUrl });
 		}
-
-		function peerChargeRate(key) {
-			const total = peerFeeSets.filter((set) => Object.keys(set).length > 0).length;
-			const charging = peerFeeSets.filter((set) => !!set[key]).length;
-			return total > 0 ? { charging, total, pct: Math.round((charging / total) * 100) } : null;
+		if (d.ppmUrl && !String(d.ppmUrl).includes('airtableusercontent.com')) {
+			rows.push({ key: 'ppm', label: 'PPM', url: d.ppmUrl });
 		}
-
-		const rows = FEE_CATEGORIES.map((category) => {
-			const currentFee = currentFees[category.key];
-			const peerValues = peerFeeVals(category.key);
-			const marketMedian = median(peerValues);
-			const chargeRate = peerChargeRate(category.key);
-
-			if (currentFee) {
-				let verdict = 'No Benchmark';
-				let verdictClass = 'neutral';
-				if (marketMedian !== null && peerValues.length >= 2) {
-					if (currentFee.pct <= marketMedian) {
-						verdict = 'At or Below Market';
-						verdictClass = 'good';
-					} else if (currentFee.pct <= marketMedian * 1.25) {
-						verdict = 'Slightly Above Market';
-						verdictClass = 'warn';
-					} else {
-						verdict = 'Above Market';
-						verdictClass = 'bad';
-					}
-				}
-				return {
-					label: category.label,
-					dealVal: `${currentFee.pct.toFixed(1)}%`,
-					marketVal: marketMedian !== null ? `${marketMedian.toFixed(1)}%` : '—',
-					peerCount: peerValues.length,
-					verdict,
-					verdictClass
-				};
-			}
-
-			return {
-				label: category.label,
-				dealVal: 'Not Charged',
-				marketVal: marketMedian !== null ? `${marketMedian.toFixed(1)}%` : '—',
-				peerCount: peerValues.length,
-				verdict: chargeRate && chargeRate.pct >= 30 ? `${chargeRate.pct}% of peers charge this` : 'Not Charged',
-				verdictClass: 'good',
-				notCharged: true
-			};
-		});
-
-		return {
-			peerCount: peerDeals.length,
-			peerLabel: currentIsCredit ? 'Lending' : (currentDeal.assetClass || 'Similar'),
-			rows
-		};
+		return rows;
 	}
 
 	function buildSecFilingSummary(d) {
 		if (!d) return null;
-		const pctFunded = percentNumber(d.pctFunded);
-		if (!d.secCik && !d.dateOfFirstSale && !d.totalAmountSold && !d.totalInvestors && pctFunded === null) {
-			return null;
-		}
+		const totalRaised = d.totalAmountSold ?? d.amountRaised ?? d.amount_raised ?? null;
+		const totalInvestors = d.totalInvestors ?? d.total_investors ?? null;
 		return {
-			secUrl: d.secCik ? `https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(d.secCik)}&owner=exclude` : '',
-			cik: d.secCik || '',
-			firstSale: d.dateOfFirstSale ? formatDateLabel(d.dateOfFirstSale) : '—',
-			totalSold: d.totalAmountSold ? formatCompactMoney(d.totalAmountSold) : '—',
-			totalInvestors: d.totalInvestors ? String(d.totalInvestors) : '—',
-			pctFunded: pctFunded !== null ? `${pctFunded.toFixed(0)}%` : '—',
-			offeringType: d.offeringType || (d.is506b ? '506(b)' : 'Form D')
+			hasFiling: !!(d.secCik || totalRaised || totalInvestors || d.dateOfFirstSale),
+			cik: d.secCik || null,
+			totalRaised,
+			totalInvestors,
+			firstSaleDate: d.dateOfFirstSale || null,
+			offeringType: d.offeringType || null
 		};
 	}
 
-	function buildDealEconomics(d) {
+	function extractFeeValue(text, patterns) {
+		const source = String(text || '');
+		for (const pattern of patterns) {
+			const match = source.match(pattern);
+			if (match?.[1]) return match[1].trim();
+		}
+		return null;
+	}
+
+	function buildFeeRows(d) {
+		if (!d) return [];
+		const rawFees = String(d.fees || '');
+		const rows = [];
+		if (d.lpGpSplit) {
+			rows.push({ label: 'LP / GP Split', value: String(d.lpGpSplit), verdict: 'Market-based split' });
+		}
+		const mgmtFee = extractFeeValue(rawFees, [/management fee[^0-9]*([\d.]+%?)/i, /asset management fee[^0-9]*([\d.]+%?)/i]);
+		if (mgmtFee) rows.push({ label: 'Management Fee', value: mgmtFee, verdict: parseFloat(mgmtFee) <= 2 ? 'Investor-friendly' : 'Above benchmark' });
+		const acquisitionFee = extractFeeValue(rawFees, [/acquisition fee[^0-9]*([\d.]+%?)/i]);
+		if (acquisitionFee) rows.push({ label: 'Acquisition Fee', value: acquisitionFee, verdict: parseFloat(acquisitionFee) <= 2 ? 'Common range' : 'Above benchmark' });
+		if (d.preferredReturn) {
+			rows.push({ label: 'Preferred Return', value: fmt(d.preferredReturn, 'pct'), verdict: (d.preferredReturn > 1 ? d.preferredReturn : d.preferredReturn * 100) >= 7 ? 'Strong LP alignment' : 'Below common hurdle' });
+		}
+		if (rawFees && rows.length === 0) rows.push({ label: 'Fee Summary', value: rawFees, verdict: 'Benchmarking available for members' });
+		return rows.slice(0, 5);
+	}
+
+	function buildOperatorTrackRecordRows(d) {
+		if (!d) return [];
+		const rows = [];
+		if (d.managementCompany) rows.push({ label: 'Management Company', value: d.managementCompany });
+		if (d.mcFoundingYear) rows.push({ label: 'Founded', value: String(d.mcFoundingYear) });
+		if (d.fundAUM) rows.push({ label: 'AUM', value: fmt(d.fundAUM, 'money') });
+		if (d.ceo) rows.push({ label: 'Lead Operator', value: d.ceo });
+		if (d.sponsorInDeal) rows.push({ label: 'Sponsor Co-Invest', value: fmt(d.sponsorInDeal, 'pct') });
+		return rows.slice(0, 5);
+	}
+
+	function buildBuyBoxLite(d) {
 		if (!d) return null;
-		const purchasePrice = parseNumeric(d.purchasePrice);
-		const equityRaise = parseNumeric(d.offeringSize);
-		const debtAmount = parseNumeric(d.acquisitionLoan) ?? ((purchasePrice && equityRaise && purchasePrice > equityRaise) ? purchasePrice - equityRaise : null);
-		const ltvPct = percentNumber(d.loanToValue) ?? ((purchasePrice && debtAmount) ? (debtAmount / purchasePrice) * 100 : null);
-		const capexBudget = parseNumeric(d.capexBudget);
-		const closingCosts = parseNumeric(d.closingCosts);
-		const loanRate = percentNumber(d.loanRate);
-		const loanTermYears = parseNumeric(d.loanTermYears);
-		const loanIoYears = parseNumeric(d.loanIOYears);
-
-		if ([purchasePrice, equityRaise, debtAmount, ltvPct, capexBudget, closingCosts, loanRate, loanTermYears, loanIoYears].every((value) => value === null)) {
-			return null;
-		}
-
+		const signals = [];
+		if (d.preferredReturn) signals.push(fmt(d.preferredReturn, 'pct') + ' pref');
+		if (d.cashOnCash) signals.push(fmt(d.cashOnCash, 'pct') + ' CoC');
+		if (d.distributions && d.distributions !== 'Unknown') signals.push(d.distributions + ' distributions');
+		const isStrong = signals.length > 0;
 		return {
-			sources: [
-				purchasePrice !== null ? { label: 'Purchase Price', value: purchasePrice } : null,
-				debtAmount !== null ? { label: 'Acquisition Loan', value: debtAmount } : null,
-				equityRaise !== null ? { label: 'LP Equity Raise', value: equityRaise } : null,
-				capexBudget !== null ? { label: 'Capex / Renovation', value: capexBudget } : null,
-				closingCosts !== null ? { label: 'Closing Costs', value: closingCosts } : null
-			].filter(Boolean),
-			ltvPct,
-			loanTerms: [
-				loanRate !== null ? { label: 'Interest Rate', value: `${loanRate.toFixed(2)}%` } : null,
-				loanTermYears !== null ? { label: 'Loan Term', value: `${loanTermYears} Years` } : null,
-				loanIoYears !== null ? { label: 'IO Period', value: `${loanIoYears} Years` } : null
-			].filter(Boolean)
+			label: isStrong ? 'Cash Flow Potential' : 'Cash Flow Needs Review',
+			status: isStrong ? 'Aligned' : 'Needs more detail',
+			description: isStrong ? signals.join(' • ') : 'Create your account to save this deal, set your preferences, and unlock a fuller Buy Box match.'
 		};
 	}
 
-	function extractStateCodes(text) {
-		const source = String(text || '').trim();
-		if (!source) return [];
-		const lower = source.toLowerCase();
-		const matched = new Set();
-
-		for (const [keyword, states] of Object.entries(REGION_STATE_GROUPS)) {
-			if (lower.includes(keyword)) {
-				states.forEach((code) => matched.add(code));
-			}
-		}
-
-		for (const [token, code] of Object.entries(STATE_LOOKUP)) {
-			if (token.length <= 2) continue;
-			if (new RegExp(`\\b${token.replace(/\s+/g, '\\s+')}\\b`, 'i').test(source)) {
-				matched.add(code);
-			}
-		}
-
-		const abbreviations = source.match(/\b[A-Z]{2}\b/g) || [];
-		for (const abbreviation of abbreviations) {
-			const code = STATE_LOOKUP[abbreviation.toLowerCase()];
-			if (code) matched.add(code);
-		}
-
-		return ALL_STATE_CODES.filter((code) => matched.has(code));
-	}
-
-	function buildGeographyCoverage(d) {
-		if (!d) return null;
-		const geoLabel = [d.investingGeography, d.location].filter(Boolean).join(' • ');
-		if (!geoLabel) return null;
-
-		const states = extractStateCodes(geoLabel);
-		const isNationwide = states.length >= 40;
-		let description = 'Specific market coverage has not been fully disclosed yet.';
-
-		if (isNationwide) {
-			description = 'This deal invests across the United States, giving you broad geographic diversification across multiple markets.';
-		} else if (states.length > 5) {
-			description = `This deal spans ${states.length} states, giving you diversified exposure across ${d.investingGeography || 'multiple'} markets.`;
-		} else if (states.length > 1) {
-			const names = states.map((code) => STATE_NAMES[code] || code);
-			description = `This deal is concentrated across ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}.`;
-		} else if (states.length === 1) {
-			description = `This deal is concentrated in ${STATE_NAMES[states[0]] || states[0]}.`;
-		}
-
-		const meta = [
-			d.assetClass ? { label: 'Asset Class', value: d.assetClass } : null,
-			d.strategy ? { label: 'Strategy', value: d.strategy } : null,
-			d.unitCount ? { label: 'Units', value: String(Math.round(d.unitCount)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') } : null,
-			d.propertyType ? { label: 'Property Type', value: d.propertyType } : null
-		].filter(Boolean);
-
-		return {
-			label: isNationwide ? 'Nationwide' : (d.investingGeography || d.location || 'Market Footprint'),
-			address: d.address || d.propertyAddress || '',
-			description,
-			states,
-			stateSet: new Set(states),
-			isNationwide,
-			meta
-		};
-	}
-
-	function buildSimilarDealsList(currentDeal, deals) {
-		if (!currentDeal || !deals.length) return [];
-		return deals
-			.filter((candidate) => candidate.id !== currentDeal.id && candidate.investmentName)
-			.map((candidate) => {
-				let score = 0;
-				const currentIsCredit = isCreditFund(currentDeal);
-				if (currentIsCredit && isCreditFund(candidate)) score += 5;
-				else if (candidate.assetClass && candidate.assetClass === currentDeal.assetClass) score += 3;
-				if (candidate.dealType && candidate.dealType === currentDeal.dealType) score += 2;
-				if (!currentIsCredit && candidate.strategy && candidate.strategy === currentDeal.strategy) score += 2;
-				const currentYield = currentDeal.preferredReturn || currentDeal.cashOnCash || currentDeal.targetIRR || 0;
-				const peerYield = candidate.preferredReturn || candidate.cashOnCash || candidate.targetIRR || 0;
-				if (currentYield > 0 && peerYield > 0 && Math.abs(currentYield - peerYield) < 0.03) score += 1;
-				if (currentDeal.investmentMinimum && candidate.investmentMinimum) {
-					const ratio = candidate.investmentMinimum / currentDeal.investmentMinimum;
-					if (ratio >= 0.5 && ratio <= 2) score += 1;
-				}
-				return { deal: candidate, score };
-			})
-			.filter((entry) => entry.score >= 3)
-			.sort((a, b) => b.score - a.score)
-			.slice(0, 8)
-			.map((entry) => entry.deal);
-	}
-
-	function buildPeerComparisonData(currentDeal, deals) {
-		if (!currentDeal || !deals.length) return null;
-		const currentIsCredit = isCreditFund(currentDeal);
-		const peers = deals.filter((candidate) => {
-			if (candidate.id === currentDeal.id) return false;
-			if (currentIsCredit) return isCreditFund(candidate);
-			return candidate.assetClass && currentDeal.assetClass && candidate.assetClass === currentDeal.assetClass;
-		});
-		if (peers.length < 2) return null;
-
-		function average(field) {
-			const values = peers.map((candidate) => candidate[field]).filter((value) => value != null && value > 0);
-			return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
-		}
-
-		const metrics = [
-			{ label: 'Target IRR', field: 'targetIRR', format: 'pct', higherIsBetter: true },
-			{ label: 'Pref Return', field: 'preferredReturn', format: 'pct', higherIsBetter: true },
-			{ label: 'Equity Multiple', field: 'equityMultiple', format: 'multiple', higherIsBetter: true },
-			{ label: 'Min Investment', field: 'investmentMinimum', format: 'money', higherIsBetter: false },
-			{ label: 'Hold Period', field: 'holdPeriod', format: 'years', higherIsBetter: false }
-		];
-
-		const rows = metrics.map((metric) => {
-			const dealVal = currentDeal[metric.field];
-			const peerAvg = average(metric.field);
-			let verdict = 'No Data';
-			let verdictClass = 'neutral';
-
-			if (dealVal && peerAvg) {
-				const numeric = typeof dealVal === 'number' ? dealVal : parseFloat(dealVal);
-				if (metric.higherIsBetter) {
-					if (numeric > peerAvg * 1.02) {
-						verdict = 'Above Average';
-						verdictClass = 'good';
-					} else if (numeric < peerAvg * 0.98) {
-						verdict = 'Below Average';
-						verdictClass = 'bad';
-					} else {
-						verdict = 'At Market';
-					}
-				} else if (numeric < peerAvg * 0.98) {
-					verdict = 'Better than Avg';
-					verdictClass = 'good';
-				} else if (numeric > peerAvg * 1.02) {
-					verdict = 'Above Average';
-					verdictClass = 'bad';
-				} else {
-					verdict = 'At Market';
-				}
-			}
-
-			return { ...metric, dealVal, peerAvg, verdict, verdictClass };
-		});
-
-		return {
-			rows,
-			peerCount: peers.length,
-			peerLabel: currentIsCredit ? 'Lending' : (currentDeal.assetClass || 'Similar')
-		};
+	function buildKeyRiskItems(d, fit, stale) {
+		const items = [];
+		if (stale) items.push('The deal may no longer be actively accepting new capital.');
+		if (fit?.warnings?.length) items.push(...fit.warnings);
+		if (!d?.managementCompanyId) items.push('Management company record is incomplete, which limits independent verification.');
+		return items.slice(0, 4);
 	}
 
 	// ===== Buy Box Matching =====
@@ -1076,31 +839,6 @@
 		setTimeout(() => { toastVisible = false; }, 3000);
 	}
 
-	// ===== Deal Comparison =====
-	const compareCount = $derived($compareDealIds.length);
-	const isCompared = $derived(deal ? $compareDealIds.includes(deal.id) : false);
-
-	function toggleCompare() {
-		if (!browser || !deal) return;
-
-		const result = compareDealIds.toggle(deal.id);
-		if (result.reason === 'max') {
-			showShareToast(`You can compare up to ${MAX_COMPARE_DEALS} deals at a time.`);
-			return;
-		}
-		if (result.selected === false) {
-			showShareToast('Removed from comparison');
-			return;
-		}
-		showShareToast(`Added to comparison (${result.ids.length}/${MAX_COMPARE_DEALS})`);
-	}
-
-	function openCompareView() {
-		if (!browser) return;
-		dealFlowViewMode.set('compare');
-		window.location.href = `/app/deals?tab=${currentStage}`;
-	}
-
 	// ===== Share Actions =====
 	function shareDealEmail() {
 		if (!deal || !browser) return;
@@ -1131,10 +869,7 @@
 
 	function openInviteModal() {
 		if (!deal || !browser) return;
-		if (!$isLoggedIn) {
-			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
-			return;
-		}
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to send tracked co-investor invites from your deal workspace.' })) return;
 		shareDropdownOpen = false;
 		inviteEmail = '';
 		inviteMessage = '';
@@ -1199,9 +934,31 @@
 	}
 
 	function openDeckViewer() {
-		if (!hasViewableDeck) return;
+		if (!deal?.deckUrl) return;
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to view the investment deck and track document engagement.' })) return;
 		showDeckViewer = true;
 		trackDeckView();
+	}
+
+	function openDocumentRow(row) {
+		if (!row) return;
+		if (row.key === 'deck') {
+			openDeckViewer();
+			return;
+		}
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to open deal documents and keep access trackable.' })) return;
+		if (browser && row.url) {
+			window.open(row.url, '_blank', 'noopener,noreferrer');
+		}
+	}
+
+	function openBuyBoxAction() {
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to save this deal and start your Buy Box.' })) return;
+		if (!hasMemberAccess) {
+			window.location.href = academyHref;
+			return;
+		}
+		window.location.href = buyBoxEditHref;
 	}
 
 	function switchShareClass(idx) {
@@ -1303,10 +1060,7 @@
 
 	function openClaimModal() {
 		if (!deal || !browser) return;
-		if (!$isLoggedIn) {
-			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
-			return;
-		}
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to claim and manage your deal profile.' })) return;
 		const stored = currentSessionUser();
 		claimName = stored.name || '';
 		claimEmail = stored.email || '';
@@ -1557,6 +1311,7 @@
 	// ===== Actions =====
 	function advanceStage() {
 		if (!deal) return;
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to save deals and keep your pipeline synced.' })) return;
 		const next = nextStage;
 		if (next) {
 			dealStages.setStage(deal.id, next.key);
@@ -1565,11 +1320,13 @@
 
 	function skipDeal() {
 		if (!deal) return;
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to skip deals and keep your pipeline synced.' })) return;
 		dealStages.setStage(deal.id, 'skipped');
 	}
 
 	function setStage(stageKey) {
 		if (!deal) return;
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to save deals and update your pipeline stage.' })) return;
 		dealStages.setStage(deal.id, stageKey);
 	}
 
@@ -1604,32 +1361,82 @@
 
 	function requestIntroduction() {
 		if (!deal) return;
-		if (!$isLoggedIn) {
-			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
+		if (requirePublicAuth({ title: 'Create a free account', body: 'Create a free account to request an introduction to the sponsor.' })) return;
+		// Check if already requested
+		if (browser && readScopedDealString('gycIntroRequested')) {
+			showShareToast("You've already requested an intro for this deal.");
 			return;
 		}
-		const gate = getDealIntroductionRequestGate(deal.id);
-		if (!gate.ok) {
-			showShareToast(gate.message);
-			return;
+		// Rate limit: 3 intros per day
+		if (browser) {
+			const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
+			const todayCount = parseInt(readUserScopedString(todayKey, '0'), 10);
+			if (todayCount >= 3) {
+				showShareToast("You've reached the daily limit of 3 introduction requests. Try again tomorrow.");
+				return;
+			}
 		}
+		introMessage = '';
+		introSending = false;
+		introSuccess = false;
 		showIntroModal = true;
 	}
 
-	function closeIntroModal() {
-		showIntroModal = false;
-	}
+	async function submitIntroRequest() {
+		if (!deal || introSending) return;
+		introSending = true;
+		try {
+			const stored = currentSessionUser();
+			const sponsors = deal.sponsors || [];
+			const op = sponsors.find(s => s.role === 'operator');
+			const opName = op ? op.name : (deal.managementCompany || '');
+			const opCeo = op ? (op.ceo || '') : (deal.ceo || '');
 
-	function handleIntroRequestSuccess() {
-		introRequested = true;
-		if (currentStageIdx < 2) {
-			dealStages.setStage(deal.id, 'connect');
+			const r = await fetch('/api/intro-request', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
+				body: JSON.stringify({
+					dealId: deal.id,
+					dealName: deal.investmentName,
+					operatorName: opName,
+					operatorCeo: opCeo,
+					managementCompanyId: deal.managementCompanyId || '',
+					message: introMessage
+				})
+			});
+			const data = await r.json();
+			if (data.success) {
+				// Store in scoped browser state for dedup
+				if (browser) {
+					writeScopedDealString('gycIntroRequested', Date.now().toString());
+					const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
+					writeUserScopedString(todayKey, (parseInt(readUserScopedString(todayKey, '0'), 10) + 1).toString());
+					// Store in gycIntroRequests array
+					try {
+						let intros = readUserScopedJson('gycIntroRequests', []);
+						if (!Array.isArray(intros)) intros = [];
+						intros.push({ dealId: deal.id, deal: deal.investmentName, company: opName, userEmail: stored.email || '', timestamp: Date.now() });
+						writeUserScopedJson('gycIntroRequests', intros);
+					} catch {}
+				}
+				introRequested = true;
+				introSuccess = true;
+				// Advance stage to Connect
+				if (currentStageIdx < 2) {
+					dealStages.setStage(deal.id, 'connect');
+				}
+			} else {
+				showShareToast('Something went wrong. Please try again.');
+			}
+		} catch {
+			showShareToast('Something went wrong. Please try again.');
 		}
+		introSending = false;
 	}
 
 	// ===== Investment Report PDF =====
 	function generateReport() {
-		if (!isPaid) {
+		if (!hasMemberAccess) {
 			if (nativeCompanionMode) {
 				showShareToast('Investment reports are available to existing members on the web.');
 				return;
@@ -1814,27 +1621,8 @@
 		stInvestment = deal.investmentMinimum || 50000;
 		stHold = deal.holdPeriod || 5;
 
-		fetch('/api/deals', { headers })
-			.then((r) => (r.ok ? r.json() : null))
-			.then((data) => {
-				if (!data?.deals) return;
-				allDeals = data.deals;
-				if (!similarDeals.length) similarDeals = buildSimilarDealsList(deal, data.deals);
-				if (!peerComparison) peerComparison = buildPeerComparisonData(deal, data.deals);
-			})
-			.catch(() => {});
-
 		// Set document title
 		document.title = `${deal.investmentName} - GYC Dealflow`;
-	});
-
-	$effect(() => {
-		if (!browser || deckAutoOpened || !deal || !hasViewableDeck) return;
-		if ($page.url.searchParams.get('deck') !== '1') return;
-		deckAutoOpened = true;
-		tick().then(() => {
-			openDeckViewer();
-		});
 	});
 
 	// Close share dropdown on outside click
@@ -1847,14 +1635,14 @@
 
 <Sidebar currentPage="deals" hideHamburgerOnPhone={true} />
 
-<main class="main ly-sidebar-main ly-page">
-	<div class="content-wrap ly-frame">
+<main class="main ly-page">
+	<div class="content-wrap ly-dealflow-frame">
 		{#if loading}
 			<!-- Loading Skeleton -->
-			<div class="skeleton ly-skeleton skeleton-header ly-skeleton-header"></div>
-			<div class="skeleton ly-skeleton skeleton-stats ly-skeleton-stats"></div>
-			<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
-			<div class="skeleton ly-skeleton skeleton-card ly-skeleton-card"></div>
+			<div class="skeleton skeleton-header"></div>
+			<div class="skeleton skeleton-stats"></div>
+			<div class="skeleton skeleton-card"></div>
+			<div class="skeleton skeleton-card"></div>
 		{:else if !deal}
 			<!-- Not Found -->
 			<div class="not-found">
@@ -1970,7 +1758,7 @@
 						<!-- Hero Right: CTA buttons -->
 						<div class="hero-right">
 							<div class="hero-action-stack">
-								{#if hasViewableDeck}
+								{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
 									<button class="hero-deck-btn" onclick={openDeckViewer}>
 										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 										View Investment Deck
@@ -1988,7 +1776,7 @@
 								<div class="share-wrapper">
 									<button class="hero-share-btn" onclick={(e) => { e.stopPropagation(); shareDropdownOpen = !shareDropdownOpen; }}>
 										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-										Share Deal
+										Share
 									</button>
 									{#if shareDropdownOpen}
 										<div
@@ -2060,80 +1848,43 @@
 							{stage.label}
 						</button>
 					{/each}
+					<div class="journey-connector" class:done={currentStage === 'skipped'}></div>
+					<button class="journey-step journey-step-skip" class:active={currentStage === 'skipped'} class:skipped={currentStage === 'skipped'} onclick={skipDeal}>
+						<div class="step-dot">
+							{#if currentStage === 'skipped'}
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+							{:else}
+								6
+							{/if}
+						</div>
+						Skipped
+					</button>
 				</div>
 
-				<!-- ==================== DECK VIEWED PROMPT ==================== -->
-				{#if currentStage === 'review' && deckViewed}
-					<div class="deck-viewed-prompt">
-						<div class="deck-viewed-left">
-							<span class="deck-viewed-title">You've reviewed the deck.</span>
-							<span class="deck-viewed-sub">Interested in this deal?</span>
-						</div>
-						<button class="btn-advance btn-sm" onclick={() => setStage('connect')}>Ready to Connect &rarr;</button>
-					</div>
-				{/if}
-
-				<!-- ==================== INTRO NUDGE ==================== -->
-				{#if currentStage === 'decide' && !introRequested}
-					<div class="intro-nudge-banner">
-						<div class="intro-nudge-icon">
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-						</div>
-						<div class="intro-nudge-text">
-							<div class="intro-nudge-title">Talk to the operator before investing</div>
-							<div class="intro-nudge-desc">Most successful investors speak with the sponsor before committing.</div>
-						</div>
-						<button class="btn-advance btn-sm" onclick={requestIntroduction}>Request Introduction</button>
-					</div>
-				{/if}
-
-				<!-- ==================== DEAL CLAIM BANNER ==================== -->
-				{#if deal.managementCompany && !$isAdmin}
-					<div class="claim-deal-banner">
-						<div class="claim-deal-icon">
-							<svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" width="22" height="22"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-						</div>
-						<div class="claim-deal-text">
-							<div class="claim-deal-title">Are you the operator of this deal?</div>
-							<div class="claim-deal-desc">Claim this deal to update your profile, respond to investor questions, and see who's interested.</div>
-						</div>
-						<button class="btn-claim" onclick={openClaimModal}>Claim This Deal</button>
-					</div>
-				{/if}
-
-				<!-- ==================== SHARE CLASS TABS ==================== -->
-				{#if hasShareClasses}
-					<div class="sc-toggle-bar">
-						{#each sortedShareClasses as { sc, origIdx }}
-							<button
-								class="sc-toggle-pill"
-								class:active={activeShareClass === origIdx}
-								onclick={() => switchShareClass(origIdx)}
-							>{sc.label}</button>
-						{/each}
-					</div>
-				{/if}
-
 				<!-- ==================== BUY BOX MATCH ==================== -->
-				{#if isPaid && buyBoxChecks.length > 0}
-					{@const score = buyBoxScore}
-					{@const matchColor = score.pct >= 80 ? '#4ade80' : score.pct >= 50 ? '#fbbf24' : '#f87171'}
-					{@const matchLabel = score.pct >= 80 ? 'Strong Match' : score.pct >= 50 ? 'Partial Match' : 'Low Match'}
-					{@const bbCols = buyBoxChecks.length <= 3 ? buyBoxChecks.length : (buyBoxChecks.length % 4 === 0 || buyBoxChecks.length >= 8 ? 4 : buyBoxChecks.length % 3 === 0 ? 3 : buyBoxChecks.length <= 4 ? 2 : buyBoxChecks.length <= 6 ? 3 : 4)}
-					<div class="buybox-card">
-						<div class="buybox-header">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={matchColor} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-							<span class="buybox-title">Buy Box Match</span>
+				<div class="buybox-card" class:buybox-lite-card={!hasMemberAccess}>
+					<div class="buybox-header">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={hasMemberAccess && buyBoxChecks.length > 0 ? (buyBoxScore.pct >= 80 ? '#4ade80' : buyBoxScore.pct >= 50 ? '#fbbf24' : '#f87171') : '#51BE7B'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+						<span class="buybox-title">Buy Box Match</span>
+						{#if hasMemberAccess && buyBoxChecks.length > 0}
+							{@const score = buyBoxScore}
+							{@const matchColor = score.pct >= 80 ? '#4ade80' : score.pct >= 50 ? '#fbbf24' : '#f87171'}
+							{@const matchLabel = score.pct >= 80 ? 'Strong Match' : score.pct >= 50 ? 'Partial Match' : 'Low Match'}
 							<span class="buybox-badge" style="background:{matchColor}18;color:{matchColor}">{matchLabel}</span>
 							<span class="buybox-score" style="color:{matchColor}">{score.matched}/{score.total}</span>
 							<div class="buybox-progress">
 								<div class="buybox-progress-fill" style="width:{score.pct}%;background:{matchColor}"></div>
 							</div>
-							<a href={buyBoxEditHref} class="buybox-edit">Edit Buy Box &rarr;</a>
-						</div>
+							<button class="buybox-edit" onclick={openBuyBoxAction}>Edit Buy Box &rarr;</button>
+						{:else}
+							<span class="buybox-badge buybox-badge-lite">{isPublicViewer ? 'Create your Buy Box' : 'Cash Flow Lite'}</span>
+						{/if}
+					</div>
+					{#if hasMemberAccess && buyBoxChecks.length > 0}
+						{@const bbCols = buyBoxChecks.length <= 3 ? buyBoxChecks.length : (buyBoxChecks.length % 4 === 0 || buyBoxChecks.length >= 8 ? 4 : buyBoxChecks.length % 3 === 0 ? 3 : buyBoxChecks.length <= 4 ? 2 : buyBoxChecks.length <= 6 ? 3 : 4)}
 						<div class="buybox-criteria-grid" style="grid-template-columns:repeat({bbCols}, 1fr)">
 							{#each buyBoxChecks as check}
-								<a href={buyBoxEditHref} class="buybox-criterion" class:match={check.match} class:miss={!check.match}>
+								<button class="buybox-criterion" class:match={check.match} class:miss={!check.match} onclick={openBuyBoxAction}>
 									<div class="buybox-criterion-icon">
 										{#if check.match}
 											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -2146,14 +1897,38 @@
 										<div class="buybox-criterion-detail">You want <strong>{check.want}</strong></div>
 										<div class="buybox-criterion-got">Deal: {check.got}</div>
 									</div>
-								</a>
+								</button>
 							{/each}
 						</div>
-					</div>
-				{/if}
+					{:else}
+						<div class="buybox-lite-grid">
+							<div class="buybox-lite-card-shell">
+								<div class="buybox-lite-label">{buyBoxLite?.label || 'Cash Flow Potential'}</div>
+								<div class="buybox-lite-status">{buyBoxLite?.status || 'Create your Buy Box'}</div>
+								<div class="buybox-lite-description">
+									{#if isPublicViewer}
+										Create a free account to save deals, start your Buy Box, and unlock a fuller match view.
+									{:else}
+										{buyBoxLite?.description || 'Start with a cash-flow-focused fit, then unlock the full multi-factor match as a member.'}
+									{/if}
+								</div>
+							</div>
+							<div class="buybox-lite-card-shell locked">
+								<div class="buybox-lite-label">Full Match</div>
+								<div class="buybox-lite-status">Member</div>
+								<div class="buybox-lite-description">Asset class, target return, hold period, check size, and strategy fit unlock for members.</div>
+							</div>
+						</div>
+						<div class="buybox-lite-actions">
+							<button class="buybox-edit" onclick={openBuyBoxAction}>
+								{isPublicViewer ? 'Create Free Account' : hasMemberAccess ? 'Edit Buy Box' : 'Become a Member'}
+							</button>
+						</div>
+					{/if}
+				</div>
 
 				<!-- ==================== DEAL TERMS ==================== -->
-					<div class="two-col-grid ly-min-0">
+				<div class="two-col-grid ly-min-0">
 					<div class="section">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -2202,148 +1977,62 @@
 						</div>
 					</div>
 
-					<!-- Right column: Operator + Documents -->
+					<!-- Right column: Who's Behind the Deal + Documents -->
 					<div>
-						<!-- Operator Card -->
+						<!-- Who's Behind the Deal -->
 						{#if deal.managementCompany}
 							<div class="section">
 								<div class="section-header">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-									<span class="section-title">Operator</span>
+									<span class="section-title">Who’s Behind the Deal</span>
 								</div>
 								<div class="section-body">
 									<div class="operator-card-content">
 										<div class="operator-avatar">{getInitials(deal.managementCompany)}</div>
 										<div class="operator-info">
 											<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="operator-name">{deal.managementCompany}</a>
-											{#if deal.ceo}<div class="operator-ceo">CEO: {deal.ceo}</div>{/if}
+											{#if deal.ceo}<div class="operator-ceo">{deal.ceo}</div>{/if}
 											{#if deal.mcFoundingYear}<div class="operator-meta">Founded {deal.mcFoundingYear}</div>{/if}
 										</div>
 									</div>
-									<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="operator-link">View Operator Profile &rarr;</a>
-								</div>
-							</div>
-						{/if}
-
-						<!-- Property Location Map -->
-						<div class="section" use:loadWhenVisible={setDealMapSectionVisible}>
-							<div class="section-header">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-								<span class="section-title">Property Location</span>
-							</div>
-							<div class="section-body">
-								{#if isPaid}
-									{#if !dealMapLoaded}
-										<div class="deal-map-placeholder">
-											<div class="deal-map-spinner"></div>
-											<span>Map loads when you scroll here.</span>
-										</div>
-									{:else if dealMapLoading}
-										<div class="deal-map-placeholder">
-											<div class="deal-map-spinner"></div>
-											<span>Loading map...</span>
-										</div>
-									{:else if dealMapError}
-										<div class="deal-map-placeholder">
-											<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" width="32" height="32"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-											<span style="color:var(--text-muted);font-size:13px;">Location not available</span>
-											<button class="btn-upgrade-map" onclick={() => loadDealMap(true)}>Try again</button>
-										</div>
-									{:else}
-										<div id="dealLocationMap" class="deal-map-container"></div>
-									{/if}
-								{:else}
-									<div class="deal-map-placeholder">
-										<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="24" height="24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-										<span style="color:var(--text-muted);font-size:13px;">
-											{nativeCompanionMode ? 'Property maps remain available to existing members on the web.' : 'Property map available for Academy members'}
-										</span>
-										{#if !nativeCompanionMode}
-											<a href="/app/academy" class="btn-upgrade-map">Unlock with Academy</a>
+									<div class="rail-fact-list">
+										{#if deal.ceo}
+											<div class="rail-fact"><span>Lead</span><strong>{deal.ceo}</strong></div>
+										{/if}
+										{#if deal.mcFoundingYear}
+											<div class="rail-fact"><span>Track Record</span><strong>{new Date().getFullYear() - deal.mcFoundingYear}+ years</strong></div>
+										{/if}
+										{#if deal.fundAUM}
+											<div class="rail-fact"><span>AUM</span><strong>{fmt(deal.fundAUM, 'money')}</strong></div>
 										{/if}
 									</div>
-								{/if}
-							</div>
-						</div>
-
-						{#if secFilingSummary}
-							<div class="section">
-								<div class="section-header">
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-									<span class="section-title">SEC Filing</span>
-									<span class="sec-filing-badge">{secFilingSummary.offeringType}</span>
-								</div>
-								<div class="section-body sec-filing-body">
-									<div class="sec-filing-grid">
-										<div class="sec-filing-metric">
-											<div class="sec-filing-label">CIK</div>
-											<div class="sec-filing-value">{secFilingSummary.cik || '—'}</div>
-										</div>
-										<div class="sec-filing-metric">
-											<div class="sec-filing-label">First Sale</div>
-											<div class="sec-filing-value">{secFilingSummary.firstSale}</div>
-										</div>
-										<div class="sec-filing-metric">
-											<div class="sec-filing-label">Amount Sold</div>
-											<div class="sec-filing-value">{secFilingSummary.totalSold}</div>
-										</div>
-										<div class="sec-filing-metric">
-											<div class="sec-filing-label">Investors</div>
-											<div class="sec-filing-value">{secFilingSummary.totalInvestors}</div>
-										</div>
-										<div class="sec-filing-metric sec-filing-metric-wide">
-											<div class="sec-filing-label">Funded</div>
-											<div class="sec-filing-progress">
-												<div class="sec-filing-progress-track">
-													<div class="sec-filing-progress-fill" style={`width:${secFilingSummary.pctFunded === '—' ? 0 : parseFloat(secFilingSummary.pctFunded)}%`}></div>
-												</div>
-												<span class="sec-filing-progress-text">{secFilingSummary.pctFunded}</span>
-											</div>
-										</div>
-									</div>
-									{#if secFilingSummary.secUrl}
-										<a href={secFilingSummary.secUrl} target="_blank" rel="noopener" class="sec-filing-link">
-											Verify on SEC EDGAR &rarr;
-										</a>
+									<a href="/sponsor?company={encodeURIComponent(deal.managementCompany)}" class="operator-link">View Sponsor Profile &rarr;</a>
+									{#if gpOwnsDeal}
+										<button class="operator-link operator-link-btn" onclick={openClaimModal}>Manage Deal</button>
 									{/if}
 								</div>
 							</div>
 						{/if}
 
-						<!-- Documents Card -->
+						<!-- Documents -->
 						<div class="section">
 							<div class="section-header">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 								<span class="section-title">Documents</span>
 							</div>
 							<div class="section-body doc-list">
-								{#if hasViewableDeck}
-									<div class="doc-item-row">
-										<button class="doc-item doc-view-btn" onclick={openDeckViewer}>
-											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-											View Deck
-										</button>
-										<a href={deal.deckUrl} target="_blank" rel="noopener" class="doc-item doc-download-link">
+								{#if documentRows.length > 0}
+									{#each documentRows as row}
+										<button class="doc-item doc-row-button" onclick={() => openDocumentRow(row)}>
 											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-											Download Deck
-										</a>
-									</div>
-								{/if}
-								{#if deal.ppmUrl && !deal.ppmUrl.includes('airtableusercontent.com')}
-									{#if isPaid}
-										<a href={deal.ppmUrl} target="_blank" rel="noopener" class="doc-item">
-											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-											Private Placement Memorandum
-										</a>
-									{:else}
-										<div class="doc-item doc-locked">
-											<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-											{nativeCompanionMode ? 'PPM available to existing members on the web' : 'PPM (Academy Only)'}
-										</div>
-									{/if}
-								{/if}
-								{#if !deal.deckUrl && !deal.ppmUrl}
-									<div class="doc-empty">No documents available yet</div>
+											<span>{row.label}</span>
+											{#if isPublicViewer}
+												<span class="doc-item-status">Create free account to open</span>
+											{/if}
+										</button>
+									{/each}
+								{:else}
+									<div class="doc-empty">No documents available yet.</div>
 								{/if}
 								{#if $isAdmin && deal.deckUrl}
 									<button class="doc-item doc-enrich-btn" onclick={openEnrichModal}>
@@ -2356,175 +2045,161 @@
 					</div>
 				</div>
 
-				{#if feeComparison}
-					<div class="section">
+				<div class="canonical-lower-flow">
+					<div class="section geography-section flow-order-10">
 						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-							<span class="section-title">Fees &amp; Compensation</span>
-							{#if feeComparison.peerCount > 0}
-								<span class="peer-count-label">vs {feeComparison.peerCount} {feeComparison.peerLabel} peers</span>
-							{/if}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+							<span class="section-title">Investing Geography</span>
 						</div>
-						<div class="section-body fee-section-body" class:gated={!isPaid}>
-							{#if !isPaid}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Fee Analysis'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												Fee benchmarks versus comparable deals remain available to existing members on the web.
-											{:else}
-												See how this deal&apos;s sponsor fees compare to market benchmarks across comparable deals.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
-										{/if}
-									</div>
+						<div class="section-body geography-body">
+							<div class="geography-hero-card">
+								<div>
+									<div class="geography-label">Market Focus</div>
+									<div class="geography-title">{geographyPrimaryState ? STATE_NAME_BY_CODE[geographyPrimaryState] : geographyLabel}</div>
+									<div class="geography-subtitle">{geographyLabel}</div>
 								</div>
-							{/if}
-							<div class:blurred={!isPaid}>
-								<div class="fee-table-wrap">
-									<table class="fee-table">
-										<thead>
-											<tr>
-												<th class="fee-th">Fee Type</th>
-												<th class="fee-th center">This Deal</th>
-												<th class="fee-th center">Market Median</th>
-												<th class="fee-th center">Verdict</th>
-											</tr>
-										</thead>
-										<tbody>
-											{#each (feeComparisonExpanded ? feeComparison.rows : feeComparison.rows.slice(0, 5)) as row}
-												<tr>
-													<td class="fee-td label">{row.label}</td>
-													<td class="fee-td center" class:fee-td-good={row.notCharged}>{row.dealVal}</td>
-													<td class="fee-td center">
-														<div>{row.marketVal}</div>
-														{#if row.peerCount > 0}
-															<div class="fee-peer-count">{row.peerCount} peers</div>
-														{/if}
-													</td>
-													<td class="fee-td center">
-														<span class={`fee-verdict ${row.verdictClass}`}>{row.verdict}</span>
-													</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-								{#if feeComparison.rows.length > 5}
-									<div class="fee-expand-row">
-										<button class="fee-expand-btn" type="button" onclick={() => { feeComparisonExpanded = !feeComparisonExpanded; }} aria-expanded={feeComparisonExpanded}>
-											{feeComparisonExpanded ? 'Show less' : `Show ${feeComparison.rows.length - 5} more fee checks`}
-										</button>
-									</div>
-								{/if}
-								<div class="fee-footnote">
-									{#if feeComparison.peerCount > 0}
-										We benchmark {FEE_CATEGORIES.length} sponsor fee types against {feeComparison.peerCount} comparable {feeComparison.peerLabel.toLowerCase()} deals. &quot;Not Charged&quot; is generally favorable to LPs.
+								<div class="geography-state-stack">
+									{#if geographyStates.length > 0}
+										{#each geographyStates as state}
+											<span class="geo-pill active">{STATE_NAME_BY_CODE[state]}</span>
+										{/each}
 									{:else}
-										We check {FEE_CATEGORIES.length} sponsor fee types on every deal. Market benchmarks will fill in as more comparable deals are added to the database.
+										<span class="geo-pill">{deal.investingGeography || deal.location || 'Geography not specified'}</span>
 									{/if}
 								</div>
 							</div>
 						</div>
 					</div>
-				{/if}
 
-				{#if dealEconomics}
-					<div class="section">
+					<div class="section flow-order-20">
 						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-							<span class="section-title">Deal Economics</span>
-						</div>
-						<div class="section-body deal-economics-body" class:gated={!isPaid}>
-							{#if !isPaid}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Deal Economics'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												Sources and uses, leverage, and loan terms remain available to existing members on the web.
-											{:else}
-												See sources and uses, leverage, and loan terms pulled from the new backend record.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
-										{/if}
-									</div>
-								</div>
-							{/if}
-							<div class:blurred={!isPaid}>
-								<div class="economics-grid">
-									{#if dealEconomics.sources.length > 0}
-										<div class="economics-card" class:economics-card-full={dealEconomics.ltvPct === null && dealEconomics.loanTerms.length === 0}>
-											<div class="economics-subtitle">Sources &amp; Uses</div>
-											{#each dealEconomics.sources as item}
-												<div class="economics-row">
-													<span class="economics-label">{item.label}</span>
-													<span class="economics-value">{formatCompactMoney(item.value)}</span>
-												</div>
-											{/each}
-										</div>
-									{/if}
-
-									{#if dealEconomics.ltvPct !== null || dealEconomics.loanTerms.length > 0}
-										<div class="economics-card" class:economics-card-full={dealEconomics.sources.length === 0}>
-											{#if dealEconomics.ltvPct !== null}
-												<div class="economics-subtitle">Capital Stack</div>
-												<div class="economics-stack">
-													<div class="economics-stack-bar">
-														<div class="economics-stack-debt" style={`width:${Math.max(0, Math.min(100, dealEconomics.ltvPct))}%`}></div>
-														<div class="economics-stack-equity" style={`width:${Math.max(0, 100 - Math.min(100, dealEconomics.ltvPct))}%`}></div>
-													</div>
-													<div class="economics-stack-meta">
-														<span>Debt {dealEconomics.ltvPct.toFixed(0)}%</span>
-														<span>Equity {(100 - dealEconomics.ltvPct).toFixed(0)}%</span>
-													</div>
-												</div>
-											{/if}
-
-											{#if dealEconomics.loanTerms.length > 0}
-												<div class="economics-subtitle" class:economics-subtitle-spaced={dealEconomics.ltvPct !== null}>Loan Terms</div>
-												{#each dealEconomics.loanTerms as term}
-													<div class="economics-row">
-														<span class="economics-label">{term.label}</span>
-														<span class="economics-value">{term.value}</span>
-													</div>
-												{/each}
-											{/if}
-										</div>
-									{/if}
-								</div>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- ==================== OVERVIEW ==================== -->
-				{#if deal.investmentStrategy}
-					<div class="section">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-							<span class="section-title">Overview</span>
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+							<span class="section-title">SEC Filing</span>
 						</div>
 						<div class="section-body">
-							<div class="overview-text">{deal.investmentStrategy}</div>
+							{#if secFiling?.hasFiling}
+								<div class="metric-grid metric-grid-three">
+									<div class="metric-pill">
+										<div class="metric-pill-label">Offering Type</div>
+										<div class="metric-pill-value">{secFiling.offeringType || 'Form D filing'}</div>
+									</div>
+									<div class="metric-pill">
+										<div class="metric-pill-label">Capital Raised</div>
+										<div class="metric-pill-value">{secFiling.totalRaised ? fmt(secFiling.totalRaised, 'money') : 'Not disclosed'}</div>
+									</div>
+									<div class="metric-pill">
+										<div class="metric-pill-label">Investors</div>
+										<div class="metric-pill-value">{secFiling.totalInvestors || 'Not disclosed'}</div>
+									</div>
+								</div>
+								<div class="sec-footer-row">
+									<div class="sec-footnote">
+										{#if secFiling.firstSaleDate}
+											First sale reported {new Date(secFiling.firstSaleDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
+										{:else}
+											Structured from the sponsor’s SEC Form D footprint when available.
+										{/if}
+									</div>
+									{#if secFiling.cik}
+										<a href={"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=" + encodeURIComponent(secFiling.cik) + "&type=D&dateb=&owner=include&count=40"} target="_blank" rel="noopener" class="operator-link">View on SEC EDGAR &rarr;</a>
+									{/if}
+								</div>
+							{:else}
+								<div class="empty-state-card">
+									<div class="empty-state-title">No SEC Form D match found</div>
+									<div class="empty-state-copy">We could not verify a filing from the structured deal record yet.</div>
+								</div>
+							{/if}
 						</div>
 					</div>
-				{/if}
+
+					<div class="section flow-order-30">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+							<span class="section-title">Fees &amp; Compensation</span>
+						</div>
+						<div class="section-body">
+							{#if isPublicViewer}
+								<div class="locked-preview-shell">
+									<div class="locked-preview-row"><span>Management Fee</span><strong>Member Preview</strong></div>
+									<div class="locked-preview-row"><span>Preferred Return</span><strong>Member Preview</strong></div>
+									<div class="locked-preview-row"><span>LP / GP Split</span><strong>Member Preview</strong></div>
+								</div>
+								<div class="locked-preview-footer">
+									<div>
+										<div class="locked-preview-title">See the structured fee schedule</div>
+										<div class="locked-preview-copy">Create a free account to track deals. Become a member to unlock fee benchmarking.</div>
+									</div>
+									<button class="buybox-edit" onclick={() => openAuthModal({ title: 'Create a free account', body: 'Create a free account to save deals and review fee schedules.' })}>Create Free Account</button>
+								</div>
+							{:else}
+								{#if feeRows.length > 0}
+									<div class="fee-table">
+										{#each feeRows as row}
+											<div class="fee-row">
+												<div class="fee-copy">
+													<div class="fee-label">{row.label}</div>
+													<div class="fee-value">{row.value}</div>
+												</div>
+												{#if hasMemberAccess}
+													<span class="fee-verdict">{row.verdict}</span>
+												{:else}
+													<span class="fee-verdict fee-verdict-muted">Raw sponsor fee row</span>
+												{/if}
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="empty-state-card">
+										<div class="empty-state-title">Fee schedule not available</div>
+										<div class="empty-state-copy">We have not structured the fee rows for this deal yet.</div>
+									</div>
+								{/if}
+							{/if}
+						</div>
+					</div>
+
+					<div class="section flow-order-40">
+						<div class="section-header">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+							<span class="section-title">Operator Track Record</span>
+						</div>
+						<div class="section-body">
+							{#if !hasMemberAccess}
+								<div class="locked-preview-shell">
+									<div class="locked-preview-row"><span>Management company history</span><strong>Locked</strong></div>
+									<div class="locked-preview-row"><span>Experience and scale</span><strong>Locked</strong></div>
+									<div class="locked-preview-row"><span>Operating context</span><strong>Locked</strong></div>
+								</div>
+								<div class="locked-preview-footer">
+									<div>
+										<div class="locked-preview-title">Unlock operator history</div>
+										<div class="locked-preview-copy">This is part of the member diligence layer.</div>
+									</div>
+									{#if !nativeCompanionMode}
+										<a href={academyHref} class="gate-cta">Become a Member</a>
+									{:else}
+										<div class="native-helper-copy">Available to members on web</div>
+									{/if}
+								</div>
+							{:else if operatorTrackRecordRows.length > 0}
+								<div class="rail-fact-list rail-fact-list-wide">
+									{#each operatorTrackRecordRows as row}
+										<div class="rail-fact"><span>{row.label}</span><strong>{row.value}</strong></div>
+									{/each}
+								</div>
+							{:else}
+								<div class="empty-state-card">
+									<div class="empty-state-title">Track record not structured yet</div>
+									<div class="empty-state-copy">We’ll keep the section visible and fill it as operator history is added.</div>
+								</div>
+							{/if}
+						</div>
+					</div>
 
 				<!-- ==================== DD CHECKLIST ==================== -->
 				{#if checklist}
-					<div class="section">
+					<div class="section flow-order-100">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
 							<span class="section-title">Deal Research Checklist</span>
@@ -2552,16 +2227,16 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Due Diligence Checklist'}</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
 										<div class="gate-text">
 											{#if nativeCompanionMode}
 												The {checklist.sections.length}-section interactive due diligence checklist remains available to existing members in their web account.
 											{:else}
-												Academy members get a {checklist.sections.length}-section interactive DD checklist with auto-filled answers for every deal.
+												Members get a {checklist.sections.length}-section interactive DD checklist with auto-filled answers for every deal.
 											{/if}
 										</div>
 										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+											<a href={academyHref} class="gate-cta">Become a Member</a>
 										{/if}
 									</div>
 								</div>
@@ -2633,7 +2308,7 @@
 
 				<!-- ==================== PROJECTED LP CASH FLOW ==================== -->
 				{#if cfRows.length > 0}
-					<div class="section">
+					<div class="section flow-order-50">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
 							<span class="section-title">Projected LP Cash Flow</span>
@@ -2645,7 +2320,7 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Cash Flow Projections'}</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
 										<div class="gate-text">
 											{#if nativeCompanionMode}
 												Year-by-year projected distributions, capital returns, and cash-on-cash analysis remain available to existing members on the web.
@@ -2654,7 +2329,7 @@
 											{/if}
 										</div>
 										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+											<a href={academyHref} class="gate-cta">Become a Member</a>
 										{/if}
 									</div>
 								</div>
@@ -2739,91 +2414,51 @@
 					</div>
 				{/if}
 
-				<!-- ==================== PEER COMPARISON ==================== -->
-				{#if peerComparison}
-					<div class="section">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-							<span class="section-title">Peer Comparison</span>
-							<span class="peer-count-label">vs {peerComparison.peerCount} {peerComparison.peerLabel} peers</span>
-						</div>
-						<div class="section-body" style="position:relative;min-height:120px;">
-							{#if !isPaid}
-								<div class="gate-overlay">
-									<div class="gate-content">
-										<div class="gate-icon">
-											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Peer Comparison'}</div>
-										<div class="gate-text">
-											{#if nativeCompanionMode}
-												Peer comparisons against {peerComparison.peerCount} similar {peerComparison.peerLabel} deals remain available to existing members on the web.
-											{:else}
-												See how this deal's metrics compare to {peerComparison.peerCount} similar {peerComparison.peerLabel} deals.
-											{/if}
-										</div>
-										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
-										{/if}
-									</div>
-								</div>
-							{/if}
-							<div class:blurred={!isPaid}>
-									<div class="peer-table-wrap ly-table-scroll ly-desktop-only">
-										<table class="peer-table">
-										<thead>
-											<tr>
-												<th class="peer-th">Metric</th>
-												<th class="peer-th center">This Deal</th>
-												<th class="peer-th center">Peer Average</th>
-												<th class="peer-th center">Verdict</th>
-											</tr>
-										</thead>
-										<tbody>
-											{#each peerComparison.rows as row}
-												<tr>
-													<td class="peer-td label">{row.label}</td>
-													<td class="peer-td center bold">{row.dealVal ? fmt(row.dealVal, row.format) : '---'}</td>
-													<td class="peer-td center muted">{row.peerAvg ? fmt(row.peerAvg, row.format) : '---'}</td>
-													<td class="peer-td center">
-														<span class="peer-verdict {row.verdictClass}">{row.verdict}</span>
-													</td>
-												</tr>
-											{/each}
-										</tbody>
-									</table>
-								</div>
-								<div class="peer-mobile-list ly-mobile-only">
-									{#each peerComparison.rows as row}
-										<article class="peer-mobile-card">
-											<div class="peer-mobile-head">
-												<div class="peer-mobile-label">{row.label}</div>
-												<span class="peer-verdict {row.verdictClass}">{row.verdict}</span>
-											</div>
-											<div class="peer-mobile-metrics">
-												<div class="peer-mobile-metric">
-													<span class="peer-mobile-metric-label">This Deal</span>
-													<strong class="peer-mobile-metric-value">{row.dealVal !== null && row.dealVal !== undefined && row.dealVal !== '' ? fmt(row.dealVal, row.format) : '---'}</strong>
-												</div>
-												<div class="peer-mobile-metric">
-													<span class="peer-mobile-metric-label">Peer Avg</span>
-													<strong class="peer-mobile-metric-value">{row.peerAvg !== null && row.peerAvg !== undefined && row.peerAvg !== '' ? fmt(row.peerAvg, row.format) : '---'}</strong>
-												</div>
-											</div>
-										</article>
-									{/each}
-								</div>
-								<div class="peer-footnote">
-									Each metric is compared to the average of {peerComparison.peerCount} comparable {peerComparison.peerLabel} deals. Green indicates favorable to investors; red indicates less favorable.
-								</div>
-							</div>
-						</div>
+				<!-- ==================== KEY RISKS ==================== -->
+				<div class="section flow-order-70">
+					<div class="section-header">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+						<span class="section-title">Key Risks</span>
 					</div>
-				{/if}
+					<div class="section-body">
+						{#if !hasMemberAccess}
+							<div class="locked-preview-shell">
+								<div class="locked-preview-row"><span>Operational risk review</span><strong>Locked</strong></div>
+								<div class="locked-preview-row"><span>Deal structure concerns</span><strong>Locked</strong></div>
+								<div class="locked-preview-row"><span>Execution watchouts</span><strong>Locked</strong></div>
+							</div>
+							<div class="locked-preview-footer">
+								<div>
+									<div class="locked-preview-title">Unlock risk analysis</div>
+									<div class="locked-preview-copy">Members get the platform-added diligence layer, not just the structured deck facts.</div>
+								</div>
+								{#if !nativeCompanionMode}
+									<a href={academyHref} class="gate-cta">Become a Member</a>
+								{:else}
+									<div class="native-helper-copy">Available to members on web</div>
+								{/if}
+							</div>
+						{:else if keyRiskItems.length > 0}
+							<div class="fit-list-section">
+								{#each keyRiskItems as item}
+									<div class="fit-list-item">
+										<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+										<span>{item}</span>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="empty-state-card">
+								<div class="empty-state-title">No key risks structured yet</div>
+								<div class="empty-state-copy">This section stays visible even when the diligence notes have not been completed.</div>
+							</div>
+						{/if}
+					</div>
+				</div>
 
 				<!-- ==================== STRESS TEST CALCULATOR ==================== -->
 				{#if deal && !isCredit}
-					<div class="section">
+					<div class="section flow-order-110">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
 							<span class="section-title">Stress Test Calculator</span>
@@ -2835,7 +2470,7 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
 										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Stress Test Calculator'}</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
 										<div class="gate-text">
 											{#if nativeCompanionMode}
 												Scenario modeling for rent growth, cap rates, vacancy, and interest rates remains available to existing members on the web.
@@ -2844,7 +2479,7 @@
 											{/if}
 										</div>
 										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+											<a href={academyHref} class="gate-cta">Become a Member</a>
 										{/if}
 									</div>
 								</div>
@@ -2926,15 +2561,36 @@
 				{/if}
 
 				<!-- ==================== SIMILAR DEALS ==================== -->
-				{#if similarDeals.length > 0}
-					<div class="section">
+				{#if similarDeals.length > 0 || !hasMemberAccess}
+					<div class="section flow-order-60">
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
 							<span class="section-title">Similar Deals</span>
 							<span class="peer-count-label">{similarDeals.length} comparable {isCredit ? 'Lending' : (deal.assetClass || '')} deals</span>
 						</div>
-						<div class="section-body">
-							<div class="similar-table-wrap ly-table-scroll ly-desktop-only">
+						<div class="section-body" style="position:relative;min-height:140px;">
+							{#if !hasMemberAccess}
+								<div class="gate-overlay">
+									<div class="gate-content">
+										<div class="gate-icon">
+											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+										</div>
+										<div class="gate-title">Become a Member</div>
+										<div class="gate-text">
+											{#if nativeCompanionMode}
+												Available to members on web.
+											{:else}
+												Unlock comparable deal analysis and positioning context.
+											{/if}
+										</div>
+										{#if !nativeCompanionMode}
+											<a href={academyHref} class="gate-cta">Become a Member</a>
+										{/if}
+									</div>
+								</div>
+							{/if}
+							<div class:blurred={!hasMemberAccess}>
+								<div class="similar-table-wrap ly-table-scroll ly-desktop-only">
 								<table class="similar-table">
 									<thead>
 										<tr>
@@ -3038,74 +2694,15 @@
 									</article>
 								{/each}
 							</div>
-						</div>
-					</div>
-				{/if}
-
-				{#if geographyCoverage}
-					<div class="section">
-						<div class="section-header">
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-							<span class="section-title">Investing Geography</span>
-						</div>
-						<div class="section-body geo-footprint">
-							<div class="geo-layout">
-								<div class="geo-map-card">
-									<div class="geo-map-grid">
-										{#each US_STATE_GRID as state}
-											<div
-												class="geo-state"
-												class:active={geographyCoverage.isNationwide || geographyCoverage.stateSet.has(state.code)}
-												class:dim={!geographyCoverage.isNationwide && !geographyCoverage.stateSet.has(state.code)}
-												style={`grid-column:${state.col};grid-row:${state.row};`}
-												title={STATE_NAMES[state.code] || state.code}
-											>
-												{state.code}
-											</div>
-										{/each}
-									</div>
-								</div>
-
-								<div class="geo-copy">
-									<span class="geo-badge">{geographyCoverage.label}</span>
-									<div class="geo-description">{geographyCoverage.description}</div>
-									<div class="geo-meta-grid">
-										<div class="geo-meta-card">
-											<div class="geo-meta-label">Coverage</div>
-											<div class="geo-meta-value">
-												{#if geographyCoverage.isNationwide}
-													50 States
-												{:else if geographyCoverage.states.length > 0}
-													{geographyCoverage.states.length} State{geographyCoverage.states.length === 1 ? '' : 's'}
-												{:else}
-													Regional Focus
-												{/if}
-											</div>
-										</div>
-
-										{#if geographyCoverage.address}
-											<div class="geo-meta-card">
-												<div class="geo-meta-label">Primary Address</div>
-												<div class="geo-meta-value">{geographyCoverage.address}</div>
-											</div>
-										{/if}
-
-										{#each geographyCoverage.meta as item}
-											<div class="geo-meta-card">
-												<div class="geo-meta-label">{item.label}</div>
-												<div class="geo-meta-value">{item.value}</div>
-											</div>
-										{/each}
-									</div>
-								</div>
 							</div>
 						</div>
 					</div>
 				{/if}
 
 				<!-- ==================== DEAL FIT SUMMARY ==================== -->
-				{#if dealFit}
-					<div class="section">
+				{#if dealFit || !hasMemberAccess}
+					<div class="section flow-order-80">
+						{@const fitSummary = dealFit || { verdict: 'Member Analysis', verdictColor: '#51BE7B', score: 0, fits: ['Benchmark alignment unlocks for members.'], warnings: ['This section combines returns, fees, and sponsor context into one evaluation layer.'] }}
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 							<span class="section-title">Deal Fit Summary</span>
@@ -3117,7 +2714,7 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Deal Fit Summary'}</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
 										<div class="gate-text">
 											{#if nativeCompanionMode}
 												Deal fit scoring against common investor benchmarks remains available to existing members on the web.
@@ -3126,31 +2723,31 @@
 											{/if}
 										</div>
 										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+											<a href={academyHref} class="gate-cta">Become a Member</a>
 										{/if}
 									</div>
 								</div>
 							{/if}
 							<div class:blurred={!isPaid && !$isAdmin}>
-								<div class="fit-verdict" style="--verdict-color:{dealFit.verdictColor}">
+								<div class="fit-verdict" style="--verdict-color:{fitSummary.verdictColor}">
 									<div class="fit-verdict-icon">
-										{#if dealFit.score >= 3}
+										{#if fitSummary.score >= 3}
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-										{:else if dealFit.score >= -1}
+										{:else if fitSummary.score >= -1}
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 										{:else}
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
 										{/if}
 									</div>
 									<div>
-										<div class="fit-verdict-text">{dealFit.verdict}</div>
+										<div class="fit-verdict-text">{fitSummary.verdict}</div>
 										<div class="fit-verdict-sub">Based on deal metrics and standard LP benchmarks</div>
 									</div>
 								</div>
-								{#if dealFit.fits.length > 0}
+								{#if fitSummary.fits.length > 0}
 									<div class="fit-list-section">
 										<div class="fit-list-label fit-label-good">What Works</div>
-										{#each dealFit.fits as item}
+										{#each fitSummary.fits as item}
 											<div class="fit-list-item">
 												<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
 												<span>{item}</span>
@@ -3158,10 +2755,10 @@
 										{/each}
 									</div>
 								{/if}
-								{#if dealFit.warnings.length > 0}
+								{#if fitSummary.warnings.length > 0}
 									<div class="fit-list-section">
 										<div class="fit-list-label fit-label-warn">Watch Out For</div>
-										{#each dealFit.warnings as item}
+										{#each fitSummary.warnings as item}
 											<div class="fit-list-item">
 												<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
 												<span>{item}</span>
@@ -3176,8 +2773,8 @@
 
 				<!-- ==================== BACKGROUND CHECK ==================== -->
 				{#if deal.managementCompanyId}
-					<div class="section" use:loadWhenVisible={setBgCheckSectionVisible}>
-						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Background Check</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div>
+					<div class="section flow-order-90" use:loadWhenVisible={setBgCheckSectionVisible}>
+						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span class="section-title">Sponsor Background Report</span>{#if bgCheck}<span class="bg-status-badge {bgStatusClass(bgCheck.overall_status)}">{bgStatusLabel(bgCheck.overall_status)}</span>{/if}</div>
 						<div class="section-body bg-check-body" class:gated={!isPaid && !$isAdmin}>
 							{#if !isPaid && !$isAdmin}
 								<div class="gate-overlay">
@@ -3185,16 +2782,16 @@
 										<div class="gate-icon">
 											<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
 										</div>
-										<div class="gate-title">{nativeCompanionMode ? 'Available to existing members on the web' : 'Unlock Background Check'}</div>
+										<div class="gate-title">{nativeCompanionMode ? 'Available to members on web' : 'Become a Member'}</div>
 										<div class="gate-text">
 											{#if nativeCompanionMode}
 												SEC EDGAR, FINRA, IAPD, and OFAC screening remains available to existing members on the web.
 											{:else}
-												Academy members get SEC EDGAR, FINRA, IAPD, and OFAC screening.
+												Members get SEC EDGAR, FINRA, IAPD, and OFAC screening.
 											{/if}
 										</div>
 										{#if !nativeCompanionMode}
-											<a href={academyHref} class="gate-cta">Join Academy &rarr;</a>
+											<a href={academyHref} class="gate-cta">Become a Member</a>
 										{/if}
 									</div>
 								</div>
@@ -3216,9 +2813,30 @@
 				{/if}
 
 				<!-- ==================== INVESTOR Q&A ==================== -->
-				<div class="section" use:loadWhenVisible={setQaSectionVisible}>
+				<div class="section flow-order-120" use:loadWhenVisible={setQaSectionVisible}>
 					<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="section-title">Investor Q&A</span>{#if questions.length > 0}<span class="qa-count">{questions.length}</span>{/if}</div>
-					<div class="section-body">
+					<div class="section-body" style="position:relative;min-height:120px;">
+						{#if !hasMemberAccess}
+							<div class="gate-overlay">
+								<div class="gate-content">
+									<div class="gate-icon">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+									</div>
+									<div class="gate-title">Become a Member</div>
+									<div class="gate-text">
+										{#if nativeCompanionMode}
+											Available to members on web.
+										{:else}
+											Investor Q&A is fully member-only, but the section stays visible here so the page contract is preserved.
+										{/if}
+									</div>
+									{#if !nativeCompanionMode}
+										<a href={academyHref} class="gate-cta">Become a Member</a>
+									{/if}
+								</div>
+							</div>
+						{/if}
+						<div class:blurred={!hasMemberAccess}>
 						<div class="qa-ask-form"><textarea class="qa-input" placeholder="Ask a question about this deal..." rows="2" bind:value={newQuestion} onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitQuestion(); } }}></textarea><button class="qa-submit-btn" onclick={submitQuestion} disabled={qaSubmitting || !newQuestion.trim()}>{qaSubmitting ? 'Submitting...' : 'Ask Question'}</button></div>
 						{#if !qaLoaded && !qaLoading}
 							<div class="qa-empty qa-empty-deferred">Questions load when this section comes into view.</div>
@@ -3236,13 +2854,14 @@
 						{:else}
 							<div class="qa-list">{#each questions as q}<div class="qa-item"><div class="qa-vote-col"><button class="qa-upvote-btn" class:upvoted={hasUpvoted(q.id)} onclick={() => upvoteQuestion(q.id)} disabled={hasUpvoted(q.id)} aria-label="Upvote question" title="Upvote question"><svg viewBox="0 0 24 24" fill={hasUpvoted(q.id) ? 'var(--primary)' : 'none'} stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button><span class="qa-vote-count" class:has-votes={q.upvotes > 0}>{q.upvotes || 0}</span></div><div class="qa-content"><div class="qa-question-text">{q.question}</div><div class="qa-meta"><span class="qa-author">{q.askedBy || 'Anonymous'}</span>{#if q.askedAt}<span class="qa-time">&middot; {getRelativeTime(q.askedAt)}</span>{/if}</div>{#if q.answer}<div class="qa-answer"><div class="qa-answer-header"><div class="qa-answer-avatar">PW</div><span class="qa-answer-by">{q.answeredBy || 'Pascal'}</span>{#if q.answeredAt}<span class="qa-answer-time">{getRelativeTime(q.answeredAt)}</span>{/if}</div><div class="qa-answer-text">{q.answer}</div></div>{:else if $isAdmin}<div class="qa-answer-form"><textarea class="qa-answer-input" rows="2" placeholder="Write your answer..." id="qaAnswer_{q.id}"></textarea><button class="qa-answer-submit" onclick={() => { const el = document.getElementById('qaAnswer_' + q.id); if (el) submitAnswer(q.id, el.value); }}>Answer</button></div>{:else}<div class="qa-awaiting">Awaiting response from Pascal</div>{/if}</div></div>{/each}</div>
 						{/if}
+						</div>
 					</div>
 				</div>
 
 				<!-- ==================== GP INSIGHTS (admin only) ==================== -->
-				{#if $isAdmin && deal.managementCompany}
-					<div class="section gp-insights-section" use:loadWhenVisible={setGpInsightsSectionVisible}>
-						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights -- Investor Pipeline</span><span class="gp-admin-badge">ADMIN</span></div>
+				{#if showGpInsights}
+					<div class="section gp-insights-section flow-order-130" use:loadWhenVisible={setGpInsightsSectionVisible}>
+						<div class="section-header"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="section-title">GP Insights — Investor Pipeline</span><span class="gp-admin-badge">{$isAdmin ? 'ADMIN' : 'GP'}</span></div>
 						<div class="section-body">
 							{#if !gpInsightsLoaded && !gpInsightsLoading}
 								<div class="gp-empty">Investor pipeline loads when you scroll here.</div>
@@ -3255,50 +2874,10 @@
 										<button class="gp-share-copy" onclick={() => loadGpInsights(true)}>Try Again</button>
 									</div>
 								</div>
-							{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.review || 0}</div><div class="gp-funnel-label">Review</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connect || 0}</div><div class="gp-funnel-label">Connect</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.decide || 0}</div><div class="gp-funnel-label">Decide</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}<div class="gp-share-card"><div class="gp-share-label">Share with Investors</div><div class="gp-share-desc">Send this link to the operator so they can share their deal page.</div><div class="gp-share-row"><input class="gp-share-input" type="text" readonly value={browser ? `${window.location.origin}/deal/${deal.id}` : `/deal/${deal.id}`} /><button class="gp-share-copy" onclick={() => { if (browser) navigator.clipboard.writeText(`${window.location.origin}/deal/${deal.id}`); }}>Copy</button></div></div></div>
+							{:else if gpInsights}<div class="gp-funnel"><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.review || 0}</div><div class="gp-funnel-label">Review</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.connect || 0}</div><div class="gp-funnel-label">Connect</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step"><div class="gp-funnel-count">{gpInsights.decide || 0}</div><div class="gp-funnel-label">Decide</div></div><div class="gp-funnel-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div><div class="gp-funnel-step gp-funnel-invested"><div class="gp-funnel-count">{gpInsights.invested || 0}</div><div class="gp-funnel-label">Invested</div></div></div><div class="gp-stats-row">{#if gpInsights.deckViews !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.deckViews}</span> deck views</div>{/if}{#if gpInsights.introRequests !== undefined}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.introRequests}</span> intro requests</div>{/if}{#if gpInsights.avgTimeOnPage}<div class="gp-stat"><span class="gp-stat-value">{gpInsights.avgTimeOnPage}</span> avg. time on page</div>{/if}</div>{:else}<div class="gp-empty">No investor pipeline data available yet.</div>{/if}</div>
 					</div>
 				{/if}
-
-				<!-- ==================== COMMUNITY ==================== -->
-				{#if socialProof}
-					{@const reviewing = socialProofCounts.reviewing || 0}
-					{@const invested = socialProofCounts.invested || 0}
-					{#if reviewing > 0 || invested > 0}
-						<div class="section">
-							<div class="section-header">
-								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-								<span class="section-title">GYC Community</span>
-							</div>
-							<div class="section-body">
-								{#if reviewing > 0}
-									<div class="community-stat-row">
-										<div class="community-avatar-stack">
-											{#each Array(Math.min(reviewing, 5)) as _, i}
-												<div class="community-avatar" style="background:{['#51BE7B','#3b82f6','#f59e0b','#ec4899','#8b5cf6'][i % 5]};z-index:{5-i}">
-													LP
-												</div>
-											{/each}
-											{#if reviewing > 5}
-												<div class="community-avatar community-avatar-more" style="z-index:0">+{reviewing - 5}</div>
-											{/if}
-										</div>
-										<div class="community-stat">
-											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-											{reviewing} investor{reviewing === 1 ? '' : 's'} reviewing this deal
-										</div>
-									</div>
-								{/if}
-								{#if invested > 0}
-									<div class="community-stat invested">
-										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-										{invested} LP{invested === 1 ? '' : 's'} from the network {invested === 1 ? 'has' : 'have'} invested
-									</div>
-								{/if}
-								<div class="community-privacy">Your financial details are never shared.</div>
-							</div>
-						</div>
-					{/if}
-				{/if}
+				</div>
 
 			</div><!-- /deal-page-content -->
 
@@ -3309,18 +2888,16 @@
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						Skip
 					</button>
-					<span class="stage-label">Stage: <strong>Filter</strong></span>
 					<button class="btn-advance" onclick={() => setStage('review')}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-						Start Review
+						Save Deal
 					</button>
 				{:else if currentStage === 'review'}
 					<button class="btn-pass" onclick={skipDeal}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						Skip
 					</button>
-					<span class="stage-label">Stage: <strong>Review</strong></span>
-					{#if !deckViewed && hasViewableDeck}
+					{#if !deckViewed && deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
 						<button class="btn-advance" onclick={openDeckViewer}>
 							View Investment Deck &rarr;
 						</button>
@@ -3334,40 +2911,37 @@
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
 						Skip
 					</button>
-					<span class="stage-label">Stage: <strong>Connect</strong></span>
-					<button class="btn-advance" onclick={() => setStage('decide')}>
-						Decide &rarr;
-					</button>
+					{#if !introRequested}
+						<button class="btn-advance" onclick={requestIntroduction}>
+							Request Introduction
+						</button>
+					{:else}
+						<button class="btn-advance" onclick={() => setStage('decide')}>
+							Move to Decide &rarr;
+						</button>
+					{/if}
 				{:else if currentStage === 'decide'}
-					<button class="btn-pass" onclick={() => setStage('connect')}>
-						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="15 18 9 12 15 6"/></svg>
-						Back to Connect
-					</button>
 					<button class="btn-pass" onclick={skipDeal}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-						Pass
+						Skip
 					</button>
-					<span class="stage-label">Stage: <strong>Decide</strong></span>
 					<button class="btn-advance" onclick={() => setStage('invested')}>
 						I'm Investing &rarr;
 					</button>
 				{:else if currentStage === 'invested'}
 					<a href="/app/deals#portfolio" class="btn-pass" style="text-decoration:none;">My Portfolio</a>
-					<span class="stage-label" style="color:var(--primary);font-weight:700;">Invested</span>
 					<button class="btn-advance" onclick={generateReport}>
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
 						Generate Investment Report
 					</button>
 				{:else if currentStage === 'skipped'}
-					<span class="stage-label">Stage: <strong>Skipped</strong></span>
+					<button class="btn-pass" onclick={() => setStage('review')}>
+						Review Deal
+					</button>
 					<button class="btn-advance" onclick={() => setStage('review')}>
 						Reconsider Deal &rarr;
 					</button>
 				{/if}
-				<button class="btn-compare" class:is-active={isCompared} onclick={toggleCompare} title={isCompared ? 'Remove from comparison' : 'Add to comparison'}>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-					{isCompared ? 'In Compare' : 'Compare'}
-				</button>
 			</div>
 		{/if}
 	</div>
@@ -3404,22 +2978,98 @@
 	</div>
 {/if}
 
-<!-- ==================== FLOATING COMPARE BADGE ==================== -->
-{#if compareCount > 0}
-	<button class="floating-compare-badge" onclick={openCompareView}>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-		Compare ({compareCount}/{MAX_COMPARE_DEALS})
-	</button>
+<!-- ==================== PUBLIC AUTH MODAL ==================== -->
+{#if showAuthModal}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) closeAuthModal(); }}>
+		<div class="modal-container auth-modal">
+			<button class="modal-close" onclick={closeAuthModal}>&times;</button>
+			{#if authSent}
+				<div class="modal-success">
+					<div class="modal-success-icon">
+						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+					</div>
+					<div class="modal-success-title">Check your email</div>
+					<div class="modal-success-text">We sent you a magic link so you can finish creating your free account and pick up right where you left off.</div>
+					<button class="modal-btn-primary" onclick={closeAuthModal}>Close</button>
+				</div>
+			{:else}
+				<div class="auth-modal-header">
+					<div class="auth-modal-title">{authModalTitle}</div>
+					<div class="auth-modal-copy">{authModalBody}</div>
+				</div>
+				<div class="modal-field">
+					<label class="modal-label" for="auth-email">Email address</label>
+					<input id="auth-email" type="email" class="modal-input" placeholder="you@example.com" bind:value={authEmail} onkeydown={(e) => { if (e.key === 'Enter') submitAuthModal(); }} />
+				</div>
+				{#if authError}
+					<div class="auth-modal-error">{authError}</div>
+				{/if}
+				<div class="modal-actions">
+					<button class="modal-btn-secondary" onclick={closeAuthModal}>Cancel</button>
+					<button class="modal-btn-primary" onclick={submitAuthModal} disabled={authSending}>{authSending ? 'Sending...' : 'Continue'}</button>
+				</div>
+			{/if}
+		</div>
+	</div>
 {/if}
 
 <!-- ==================== INTRO REQUEST MODAL ==================== -->
-<RequestIntroductionModal
-	{deal}
-	open={showIntroModal}
-	successButtonLabel="Back to Deal"
-	onclose={closeIntroModal}
-	onsuccess={handleIntroRequestSuccess}
-/>
+{#if showIntroModal && deal}
+	{@const sponsors = deal.sponsors || []}
+	{@const op = sponsors.find(s => s.role === 'operator') || (deal.managementCompany ? { name: deal.managementCompany, ceo: deal.ceo, foundingYear: deal.mcFoundingYear, website: deal.mcWebsite } : null)}
+	{@const opName = op ? op.name : (deal.managementCompany || 'the operator')}
+	{@const opCeo = op ? (op.ceo || '') : (deal.ceo || '')}
+	{@const opYears = op && op.foundingYear ? ((new Date().getFullYear()) - op.foundingYear) + '+ years' : ''}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showIntroModal = false; }}>
+		<div class="modal-container">
+			<button class="modal-close" onclick={() => showIntroModal = false}>&times;</button>
+			{#if introSuccess}
+				<div class="modal-success">
+					<div class="modal-success-icon">
+						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+					</div>
+					<div class="modal-success-title">You're all set</div>
+					<div class="modal-success-text">Pascal will personally introduce you to {opName}. Check your email -- you'll be CC'd on the intro.</div>
+					<button class="modal-btn-primary" style="background:var(--text-dark);" onclick={() => showIntroModal = false}>Back to Deal</button>
+				</div>
+			{:else}
+				<div class="modal-header-centered">
+					<div class="modal-avatar">{getInitials(opName)}</div>
+					<div class="modal-avatar-name">{opName}</div>
+					<div class="modal-avatar-meta">
+						{#if opCeo}<span>{opCeo}</span>{/if}
+						{#if opCeo && opYears}<span>&middot;</span>{/if}
+						{#if opYears}<span>{opYears}</span>{/if}
+						{#if op?.website}
+							{#if opCeo || opYears}<span>&middot;</span>{/if}
+							<a href={op.website} target="_blank" rel="noopener" class="modal-avatar-link">Website</a>
+						{/if}
+					</div>
+				</div>
+				<div class="modal-body-text">
+					We'll connect you with {opName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
+				</div>
+				<div class="modal-field">
+					<label class="modal-label" for="intro-message">Message to Operator (optional)</label>
+					<textarea id="intro-message" class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
+				</div>
+				<div class="modal-actions">
+					<button class="modal-btn-secondary" onclick={() => showIntroModal = false}>Cancel</button>
+					<button class="modal-btn-primary" onclick={submitIntroRequest} disabled={introSending}>
+						{introSending ? 'Requesting...' : 'Request Introduction'}
+					</button>
+				</div>
+				<div class="modal-footer-note">
+					3 introductions available per day
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
 
 <!-- ==================== INVITE CO-INVESTORS MODAL ==================== -->
 {#if showInviteModal && deal}
@@ -3507,7 +3157,7 @@
 {/if}
 
 <!-- ==================== DECK VIEWER MODAL ==================== -->
-{#if showDeckViewer && hasViewableDeck}
+{#if showDeckViewer && deal?.deckUrl}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="deck-viewer-overlay" onclick={(e) => { if (e.target === e.currentTarget) showDeckViewer = false; }}>
@@ -3601,16 +3251,22 @@
 	/* ===== Layout ===== */
 	.main {
 		--deal-mobile-tab-bar-offset: calc(72px + env(safe-area-inset-bottom, 0px));
-		--ly-main-pad-bottom-tablet: var(--deal-mobile-tab-bar-offset);
-		--ly-main-pad-bottom-mobile: var(--deal-mobile-tab-bar-offset);
+		margin-left: var(--sidebar-width, 240px);
+		width: calc(100% - var(--sidebar-width, 240px));
+		min-height: 100vh;
+		min-width: 0;
+		max-width: 100%;
+		background: var(--bg-cream);
+		transition: margin-left 0.3s ease;
+		overflow-x: clip;
 	}
 	.content-wrap {
-		--ly-frame-max: 1440px;
-		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
-		--ly-frame-pad-tablet: 24px;
-		--ly-frame-pad-mobile: 16px;
-		--ly-frame-pad-top: 32px;
-		--ly-frame-pad-bottom: 64px;
+		--ly-dealflow-frame-max: 1440px;
+		--ly-dealflow-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-dealflow-frame-pad-tablet: 24px;
+		--ly-dealflow-frame-pad-mobile: 16px;
+		--ly-dealflow-frame-pad-top: 32px;
+		--ly-dealflow-frame-pad-bottom: 64px;
 		margin: 0 auto;
 		min-width: 0;
 	}
@@ -3663,6 +3319,14 @@
 		color: rgba(255,255,255,0.8);
 	}
 
+	/* ===== Skeleton ===== */
+	.skeleton { position: relative; overflow: hidden; background: var(--border-light); border-radius: 8px; }
+	.skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%); animation: shimmer 1.5s infinite; }
+	@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+	.skeleton-header { height: 180px; margin-bottom: 24px; }
+	.skeleton-stats { height: 80px; margin-bottom: 24px; }
+	.skeleton-card { height: 200px; margin-bottom: 20px; }
+
 	/* ===== Not Found ===== */
 	.not-found { text-align: center; padding: 80px 20px; }
 	.not-found-icon { color: var(--text-muted); margin-bottom: 16px; }
@@ -3686,9 +3350,10 @@
 	.deal-header.hero-lending::after { display: none; }
 	.hero-type-icon { position: absolute; bottom: 20px; right: 24px; opacity: 0.06; z-index: 0; }
 	.hero-type-icon svg { width: 120px; height: 120px; stroke: #fff; stroke-width: 1; fill: none; }
-	.deal-header-inner { position: relative; z-index: 1; display: flex; gap: 24px; align-items: flex-start; justify-content: space-between; }
+	.deal-header-inner { position: relative; z-index: 1; display: flex; gap: 32px; align-items: center; justify-content: space-between; }
 	.hero-left { flex: 1; min-width: 0; }
-	.hero-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; text-align: center; width: min(100%, 248px); }
+	.hero-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 14px; text-align: center; width: min(100%, 260px); }
+	.hero-action-stack { display: flex; flex-direction: column; gap: 12px; justify-content: center; min-height: 100%; }
 
 	.deal-name { font-family: var(--font-headline); font-size: 32px; color: #fff; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 8px; }
 	.deal-company { font-family: var(--font-ui); font-size: 15px; font-weight: 500; margin-bottom: 16px; color: rgba(255,255,255,0.7); }
@@ -3791,6 +3456,20 @@
 
 	/* ===== Two Column Grid ===== */
 	.two-col-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; margin-bottom: 20px; }
+	.canonical-lower-flow { display: flex; flex-direction: column; }
+	.flow-order-10 { order: 10; }
+	.flow-order-20 { order: 20; }
+	.flow-order-30 { order: 30; }
+	.flow-order-40 { order: 40; }
+	.flow-order-50 { order: 50; }
+	.flow-order-60 { order: 60; }
+	.flow-order-70 { order: 70; }
+	.flow-order-80 { order: 80; }
+	.flow-order-90 { order: 90; }
+	.flow-order-100 { order: 100; }
+	.flow-order-110 { order: 110; }
+	.flow-order-120 { order: 120; }
+	.flow-order-130 { order: 130; }
 
 	/* ===== Sections ===== */
 	.section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 18px; box-shadow: none; overflow: hidden; }
@@ -3830,6 +3509,12 @@
 	.operator-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 20px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); text-decoration: none; transition: all var(--transition); }
 	.operator-link:hover { border-color: var(--primary); color: var(--primary); background: rgba(81,190,123,0.04); }
 	.operator-link svg { width: 14px; height: 14px; }
+	.operator-link-btn { margin-top: 10px; background: none; cursor: pointer; }
+	.rail-fact-list { display: grid; gap: 8px; margin-bottom: 14px; }
+	.rail-fact-list-wide { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+	.rail-fact { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-cream); }
+	.rail-fact span { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
+	.rail-fact strong { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--text-dark); text-align: right; }
 	.sponsor-card { display: flex; align-items: center; gap: 16px; }
 	.sponsor-avatar { width: 56px; height: 56px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-weight: 800; color: #fff; font-size: 18px; flex-shrink: 0; letter-spacing: -0.5px; }
 	.sponsor-ceo-name { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
@@ -3852,27 +3537,49 @@
 	.btn-upgrade-map { margin-top: 6px; padding: 6px 16px; background: var(--primary); color: #fff; border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 12px; font-weight: 700; text-decoration: none; }
 	.btn-upgrade-map:hover { opacity: 0.9; }
 
-	/* ===== SEC Filing ===== */
-	.sec-filing-body { padding-top: 20px; }
-	.sec-filing-badge { margin-left: auto; display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-	.sec-filing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-	.sec-filing-metric { padding: 12px 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-page); }
-	.sec-filing-metric-wide { grid-column: 1 / -1; }
-	.sec-filing-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 4px; }
-	.sec-filing-value { font-family: var(--font-ui); font-size: 15px; font-weight: 800; color: var(--text-dark); }
-	.sec-filing-progress { display: flex; align-items: center; gap: 12px; }
-	.sec-filing-progress-track { flex: 1; height: 8px; background: var(--border-light); border-radius: 999px; overflow: hidden; }
-	.sec-filing-progress-fill { height: 100%; background: linear-gradient(90deg, #51BE7B, #2d8a54); border-radius: 999px; }
-	.sec-filing-progress-text { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary); white-space: nowrap; }
-	.sec-filing-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--primary); text-decoration: none; }
-	.sec-filing-link:hover { color: #2d8a54; }
-
 	/* ===== Documents / Materials ===== */
 	.doc-list { display: flex; flex-direction: column; gap: 8px; }
 	.doc-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-cream); border-radius: 8px; text-decoration: none; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); transition: background 0.15s; }
 	.doc-item:hover { background: rgba(81,190,123,0.08); }
+	.doc-row-button { width: 100%; border: none; cursor: pointer; justify-content: flex-start; }
+	.doc-item-status { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.4px; }
 	.doc-locked { color: var(--text-muted); cursor: default; }
 	.doc-empty { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
+
+	/* ===== Canonical lower-flow sections ===== */
+	.geography-body { padding: 20px 24px; }
+	.geography-hero-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 14px; background: linear-gradient(135deg, rgba(81,190,123,0.08), rgba(59,130,246,0.06)); border: 1px solid rgba(81,190,123,0.14); }
+	.geography-label { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+	.geography-title { font-family: var(--font-ui); font-size: 24px; font-weight: 800; color: var(--text-dark); line-height: 1.1; }
+	.geography-subtitle { margin-top: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
+	.geography-state-stack { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+	.geo-pill { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: var(--bg-card); border: 1px solid var(--border); font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+	.geo-pill.active { background: rgba(81,190,123,0.12); border-color: rgba(81,190,123,0.2); color: var(--primary); }
+	.metric-grid { display: grid; gap: 12px; }
+	.metric-grid-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.metric-pill { padding: 14px 16px; border-radius: 12px; background: var(--bg-cream); border: 1px solid var(--border-light); }
+	.metric-pill-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+	.metric-pill-value { font-family: var(--font-ui); font-size: 15px; font-weight: 800; color: var(--text-dark); }
+	.sec-footer-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
+	.sec-footnote { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
+	.locked-preview-shell { display: grid; gap: 10px; }
+	.locked-preview-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--border-light); border-radius: 10px; background: linear-gradient(180deg, rgba(248,248,246,0.9), rgba(255,255,255,0.98)); }
+	.locked-preview-row span { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+	.locked-preview-row strong { font-family: var(--font-ui); font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.45px; }
+	.locked-preview-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; }
+	.locked-preview-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
+	.locked-preview-copy { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+	.native-helper-copy { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-muted); }
+	.fee-table { display: grid; gap: 10px; }
+	.fee-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 14px; border: 1px solid var(--border-light); border-radius: 10px; background: var(--bg-cream); }
+	.fee-copy { min-width: 0; }
+	.fee-label { font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: var(--text-dark); }
+	.fee-value { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+	.fee-verdict { flex-shrink: 0; padding: 5px 10px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-family: var(--font-ui); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.45px; }
+	.fee-verdict-muted { background: rgba(15,23,42,0.06); color: var(--text-muted); }
+	.empty-state-card { padding: 18px 20px; border-radius: 12px; border: 1px dashed var(--border); background: linear-gradient(180deg, rgba(248,248,246,0.9), rgba(255,255,255,0.98)); }
+	.empty-state-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); }
+	.empty-state-copy { margin-top: 6px; font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); }
 	.materials-grid { display: flex; flex-direction: column; gap: 0; }
 	.material-tile { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-light); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-dark); text-decoration: none; transition: background var(--transition); }
 	.material-tile:last-child { border-bottom: none; }
@@ -3883,62 +3590,6 @@
 	.material-tile-locked { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(0,0,0,0.02); border-bottom: 1px solid var(--border-light); font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: default; position: relative; }
 	.material-tile-locked:last-child { border-bottom: none; }
 	.material-tile-locked .lock-badge { margin-left: auto; padding: 2px 8px; background: linear-gradient(135deg, #3b82f6, #4ade80); border-radius: 10px; font-size: 9px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px; }
-
-	/* ===== Fees & Compensation ===== */
-	.fee-section-body { position: relative; min-height: 120px; }
-	.fee-section-body.gated { min-height: 240px; }
-	.fee-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-	.fee-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; min-width: 620px; }
-	.fee-th { padding: 8px 12px; border-bottom: 2px solid var(--border); text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
-	.fee-th.center { text-align: center; }
-	.fee-td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); color: var(--text-dark); }
-	.fee-td.center { text-align: center; }
-	.fee-td.label { font-weight: 700; }
-	.fee-td-good { color: #10b981; font-weight: 700; }
-	.fee-peer-count { margin-top: 3px; font-size: 9px; color: var(--text-muted); }
-	.fee-verdict { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-	.fee-verdict.good { color: #10b981; background: rgba(16,185,129,0.08); }
-	.fee-verdict.warn { color: #d97706; background: rgba(245,158,11,0.12); }
-	.fee-verdict.bad { color: #dc2626; background: rgba(239,68,68,0.1); }
-	.fee-verdict.neutral { color: var(--text-muted); background: var(--bg-cream); }
-	.fee-expand-row { display: flex; justify-content: center; padding-top: 12px; }
-	.fee-expand-btn { border: none; background: none; color: var(--primary); font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer; padding: 4px 8px; }
-	.fee-expand-btn:hover { color: #2d8a54; }
-	.fee-footnote { margin-top: 14px; padding: 12px 14px; background: var(--bg-cream); border-radius: 8px; font-family: var(--font-body); font-size: 11px; line-height: 1.5; color: var(--text-muted); }
-
-	/* ===== Deal Economics ===== */
-	.deal-economics-body { position: relative; min-height: 120px; }
-	.deal-economics-body.gated { min-height: 240px; }
-	.economics-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
-	.economics-card { border: 1px solid var(--border-light); border-radius: 12px; padding: 18px 18px 16px; background: linear-gradient(180deg, rgba(248,248,246,0.7) 0%, rgba(255,255,255,0.96) 100%); }
-	.economics-card-full { grid-column: 1 / -1; }
-	.economics-subtitle { font-family: var(--font-ui); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); margin-bottom: 12px; }
-	.economics-subtitle-spaced { margin-top: 18px; }
-	.economics-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-light); }
-	.economics-row:last-child { border-bottom: none; }
-	.economics-label { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-	.economics-value { font-family: var(--font-ui); font-size: 13px; font-weight: 800; color: var(--text-dark); text-align: right; }
-	.economics-stack { margin-bottom: 8px; }
-	.economics-stack-bar { display: flex; height: 12px; overflow: hidden; border-radius: 999px; background: var(--border-light); }
-	.economics-stack-debt { background: linear-gradient(90deg, #2563eb, #3b82f6); }
-	.economics-stack-equity { background: linear-gradient(90deg, #51BE7B, #7ad49b); }
-	.economics-stack-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-family: var(--font-ui); font-size: 11px; font-weight: 700; color: var(--text-muted); }
-
-	/* ===== Investing Geography ===== */
-	.geo-footprint { padding-top: 20px; }
-	.geo-layout { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 20px; align-items: start; }
-	.geo-map-card { padding: 18px; border: 1px solid var(--border-light); border-radius: 14px; background: linear-gradient(180deg, rgba(244,247,245,0.82) 0%, rgba(238,243,240,0.44) 100%); }
-	.geo-map-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(26px, auto)); gap: 5px; }
-	.geo-state { display: flex; align-items: center; justify-content: center; border-radius: 7px; border: 1px solid rgba(15,23,42,0.08); background: rgba(226,232,240,0.7); color: rgba(15,23,42,0.48); font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: 0.2px; aspect-ratio: 1 / 1; user-select: none; }
-	.geo-state.active { background: linear-gradient(135deg, rgba(81,190,123,0.92), rgba(45,138,84,0.92)); border-color: rgba(45,138,84,0.35); color: #fff; box-shadow: 0 6px 18px rgba(81,190,123,0.18); }
-	.geo-state.dim { opacity: 0.35; }
-	.geo-copy { display: flex; flex-direction: column; gap: 14px; }
-	.geo-badge { align-self: flex-start; display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(81,190,123,0.12); color: var(--primary); font-family: var(--font-ui); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-	.geo-description { font-family: var(--font-body); font-size: 14px; line-height: 1.7; color: var(--text-secondary); }
-	.geo-meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-	.geo-meta-card { padding: 12px 14px; border: 1px solid var(--border-light); border-radius: 10px; background: #fff; }
-	.geo-meta-label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
-	.geo-meta-value { font-family: var(--font-ui); font-size: 13px; font-weight: 700; line-height: 1.5; color: var(--text-dark); }
 
 	/* ===== DD Checklist ===== */
 	.dd-section-body { position: relative; min-height: 120px; }
@@ -4142,9 +3793,18 @@
 	.buybox-edit {
 		margin-left: auto;
 		font-family: var(--font-ui); font-size: 11px; font-weight: 700;
-		color: var(--primary); text-decoration: none; opacity: 0.8;
+		color: var(--primary); text-decoration: none; opacity: 0.8; border: none; background: none; cursor: pointer;
 	}
 	.buybox-edit:hover { opacity: 1; }
+	.buybox-badge-lite { background: rgba(81,190,123,0.12); color: var(--primary); }
+	.buybox-lite-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+	.buybox-lite-card-shell { padding: 14px; border-radius: 12px; border: 1px solid var(--border-light); background: linear-gradient(180deg, rgba(81,190,123,0.04), rgba(255,255,255,0.96)); }
+	.buybox-lite-card-shell.locked { background: linear-gradient(180deg, rgba(15,23,42,0.03), rgba(255,255,255,0.96)); }
+	.buybox-lite-label { font-family: var(--font-ui); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+	.buybox-lite-status { font-family: var(--font-ui); font-size: 18px; font-weight: 800; color: var(--text-dark); margin-top: 4px; }
+	.buybox-lite-description { font-family: var(--font-body); font-size: 13px; color: var(--text-secondary); margin-top: 8px; line-height: 1.5; }
+	.buybox-lite-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+	.locked-preview-footer .buybox-edit { margin-left: 0; }
 	.buybox-criteria-grid { display: grid; gap: 10px; }
 	.buybox-criterion {
 		text-decoration: none;
@@ -4153,6 +3813,10 @@
 		border-radius: 8px;
 		transition: background 0.15s;
 		border: 1px solid;
+		background: none;
+		width: 100%;
+		text-align: left;
+		cursor: pointer;
 	}
 	.buybox-criterion.match { background: rgba(74,222,128,0.04); border-color: rgba(74,222,128,0.14); }
 	.buybox-criterion.match:hover { background: rgba(74,222,128,0.08); }
@@ -4170,11 +3834,17 @@
 
 	/* ===== Responsive ===== */
 	@media (max-width: 1024px) {
+		.main {
+			margin-left: 0;
+			width: 100%;
+			padding-top: 0;
+			padding-bottom: var(--deal-mobile-tab-bar-offset);
+		}
 		.content-wrap {
-			--ly-frame-pad-top-tablet: 20px;
-			--ly-frame-pad-bottom-tablet: 48px;
-			--ly-frame-pad-top-mobile: 20px;
-			--ly-frame-pad-bottom-mobile: 48px;
+			--ly-dealflow-frame-pad-top-tablet: 20px;
+			--ly-dealflow-frame-pad-bottom-tablet: 48px;
+			--ly-dealflow-frame-pad-top-mobile: 20px;
+			--ly-dealflow-frame-pad-bottom-mobile: 48px;
 		}
 		.deal-mobile-tabs {
 			display: flex;
@@ -4204,15 +3874,13 @@
 		.floating-compare-badge { bottom: calc(var(--deal-mobile-tab-bar-offset) + 88px); }
 		.metrics-strip { grid-template-columns: repeat(3, 1fr); }
 		.details-grid { grid-template-columns: repeat(3, 1fr); }
-		.economics-grid { grid-template-columns: 1fr; }
-		.geo-layout { grid-template-columns: 1fr; }
 	}
 	@media (max-width: 900px) {
 		.deal-header-inner { flex-direction: column; align-items: flex-start; }
 		.hero-right { flex-direction: row; align-items: center; gap: 8px; text-align: left; flex-wrap: wrap; }
 		.hero-right .hero-deck-btn { padding: 10px 16px; font-size: 13px; gap: 6px; }
 		.hero-right .hero-deck-btn svg { width: 16px; height: 16px; }
-		.hero-right .hero-share-btn { display: none; }
+		.hero-right .hero-share-btn { display: inline-flex; }
 		.hero-operator-photo { width: 48px; height: 48px; font-size: 18px; }
 		.hero-metrics { gap: 12px 16px; }
 		.hero-metric-value { font-size: 18px; }
@@ -4221,6 +3889,15 @@
 		.buybox-criteria-grid { grid-template-columns: repeat(2, 1fr) !important; }
 	}
 	@media (max-width: 768px) {
+		.main {
+			padding-top: 0;
+			padding-bottom: var(--deal-mobile-tab-bar-offset);
+		}
+		.metric-grid-three,
+		.buybox-lite-grid { grid-template-columns: 1fr; }
+		.geography-hero-card,
+		.locked-preview-footer,
+		.sec-footer-row { flex-direction: column; align-items: flex-start; }
 		.deal-mobile-tab {
 			font-size: 10px;
 			padding: 4px 0;
@@ -4262,12 +3939,6 @@
 		.claim-deal-banner { flex-direction: column; text-align: center; }
 		.deck-viewed-prompt { flex-direction: column; text-align: center; gap: 8px; }
 		.peer-count-label { width: 100%; margin-left: 0; }
-		.sec-filing-grid { grid-template-columns: 1fr; }
-		.sec-filing-metric-wide { grid-column: auto; }
-		.geo-meta-grid { grid-template-columns: 1fr; }
-		.geo-map-card { padding: 14px; }
-		.geo-map-grid { gap: 4px; grid-template-rows: repeat(7, minmax(22px, auto)); }
-		.geo-state { font-size: 9px; border-radius: 6px; }
 		.modal-container { max-width: 100%; border-radius: 16px; }
 	}
 	@media (max-width: 480px) {
@@ -4734,6 +4405,10 @@
 		animation: modalSlideUp 0.3s ease forwards;
 		position: relative;
 	}
+	.auth-modal-header { margin-bottom: 20px; }
+	.auth-modal-title { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.4px; }
+	.auth-modal-copy { margin-top: 8px; font-family: var(--font-body); font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+	.auth-modal-error { margin-bottom: 12px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; color: #dc2626; }
 
 	.modal-close {
 		position: absolute;
