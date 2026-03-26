@@ -1,22 +1,24 @@
 <script>
-	import { dealStages, networkCounts } from '$lib/stores/deals.js';
+	import { networkCounts } from '$lib/stores/deals.js';
 	import {
 		getDealCardUtilityActionLabel,
 		trackDealCardUtilityActionDisabledImpression,
 		trackDealCardUtilityActionImpression
 	} from '$lib/utils/dealCardUtilityAction.js';
 	import { getDealHeroImage } from '$lib/utils/dealHero.js';
-	import { notifySuccess, tapLight } from '$lib/utils/haptics.js';
-	import { canShare, shareDeal } from '$lib/utils/share.js';
+	import { tapLight } from '$lib/utils/haptics.js';
 
 	let {
 		deal,
 		utilityAction = null,
 		utilityAnalytics = null,
 		footerActions = [],
+		stageActionPending = false,
+		pendingFooterActionId = '',
 		compareSelected = false,
 		compareAtLimit = false,
-		onutilityaction = () => {}
+		onutilityaction = () => {},
+		onfooteraction = () => {}
 	} = $props();
 
 	function fmtPct(val) {
@@ -76,28 +78,20 @@
 		return clean.slice(0, 137).replace(/[,;:\s]+$/, '') + '...';
 	}
 
-	function handleAction(event, action) {
+	function handleFooterAction(event, action) {
 		event.stopPropagation();
-		if (!action.next || action.disabled) return;
-		if (action.next === 'review' || action.next === 'invested') {
-			notifySuccess();
-		}
-		dealStages.setStage(deal.id, action.next);
+		if (!action.next || action.disabled || stageActionPending) return;
+		tapLight();
+		onfooteraction({ deal, action });
 	}
 
 	function handleCardClick() {
 		tapLight();
 	}
 
-	async function handleShare(event) {
-		event.stopPropagation();
-		tapLight();
-		await shareDeal(deal);
-	}
-
 	function handleUtilityAction(event) {
 		event.stopPropagation();
-		if (!utilityAction?.show || utilityAction?.disabled) return;
+		if (!utilityAction?.show || utilityAction?.disabled || stageActionPending) return;
 		tapLight();
 		onutilityaction({
 			deal,
@@ -284,7 +278,7 @@
 					class:btn-compare-limit={utilityAction?.action === 'compare' && compareAtLimit && !compareSelected}
 					class:btn-utility-disabled={utilityAction?.disabled}
 					aria-pressed={utilityAction?.action === 'compare' ? compareSelected : undefined}
-					disabled={utilityAction?.disabled}
+					disabled={utilityAction?.disabled || stageActionPending}
 					onclick={handleUtilityAction}
 				>
 					{#if utilityAction?.action === 'compare'}
@@ -323,25 +317,23 @@
 		{/if}
 
 		<div class="card-actions-row">
-			{#if canShare()}
-				<button class="card-btn share-btn" onclick={handleShare} aria-label="Share deal">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-						<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-						<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-					</svg>
-				</button>
-			{/if}
 			{#each footerActions as action}
+				{@const isLoadingAction = stageActionPending && pendingFooterActionId === action.id}
 				<button
 					class="card-btn"
-					class:btn-primary={action.primary}
-					class:btn-danger={action.danger}
-					class:btn-status={action.status}
+					class:btn-primary={action.tone === 'primary'}
+					class:btn-negative={action.tone === 'negative'}
+					class:btn-neutral={action.tone === 'neutral'}
+					class:btn-status={action.tone === 'status'}
 					class:btn-full={action.full}
-					disabled={action.disabled}
-					onclick={(event) => handleAction(event, action)}
+					class:btn-loading={isLoadingAction}
+					aria-busy={isLoadingAction}
+					disabled={action.disabled || stageActionPending}
+					onclick={(event) => handleFooterAction(event, action)}
 				>
-					{#if action.icon === 'x'}
+					{#if isLoadingAction}
+						<span class="btn-spinner" aria-hidden="true"></span>
+					{:else if action.icon === 'x'}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<line x1="18" y1="6" x2="6" y2="18"></line>
 							<line x1="6" y1="6" x2="18" y2="18"></line>
@@ -654,7 +646,7 @@
 
 	.card-actions-row {
 		display: flex;
-		gap: 6px;
+		gap: 8px;
 		flex-wrap: wrap;
 	}
 
@@ -682,14 +674,16 @@
 	}
 
 	.card-btn {
-		flex: 1;
-		padding: 8px 12px;
+		flex: 1 1 96px;
+		min-width: 0;
+		min-height: 42px;
+		padding: 10px 12px;
 		font-family: var(--font-ui);
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 0.5px;
-		text-transform: uppercase;
-		border-radius: var(--radius-sm);
+		letter-spacing: 0.15px;
+		line-height: 1.15;
+		border-radius: 10px;
 		cursor: pointer;
 		transition: all var(--transition);
 		text-align: center;
@@ -697,14 +691,14 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 4px;
-		background: transparent;
+		gap: 6px;
+		background: #fff;
 		color: var(--text-secondary);
+		box-sizing: border-box;
 	}
 
 	.card-btn:hover:not(:disabled) {
-		border-color: var(--primary);
-		color: var(--primary);
+		transform: translateY(-1px);
 	}
 
 	.card-btn svg {
@@ -717,52 +711,68 @@
 		background: var(--primary);
 		color: #fff;
 		border-color: var(--primary);
+		box-shadow: 0 8px 16px rgba(81, 190, 123, 0.18);
 	}
 
 	.btn-primary:hover:not(:disabled) {
 		background: var(--primary-hover);
 		border-color: var(--primary-hover);
 		color: #fff;
+		box-shadow: 0 10px 18px rgba(81, 190, 123, 0.24);
 	}
 
-	.btn-danger {
-		color: #e57373;
-		border-color: rgba(229, 115, 115, 0.3);
+	.btn-negative {
+		color: #c74f4f;
+		border-color: rgba(199, 79, 79, 0.26);
 	}
 
-	.btn-danger:hover:not(:disabled) {
-		color: #e57373;
-		border-color: rgba(229, 115, 115, 0.55);
-		background: rgba(229, 115, 115, 0.05);
+	.btn-negative:hover:not(:disabled) {
+		color: #b63d3d;
+		border-color: rgba(199, 79, 79, 0.42);
+		background: rgba(199, 79, 79, 0.06);
+	}
+
+	.btn-neutral {
+		color: var(--text-secondary);
+		border-color: rgba(15, 23, 42, 0.1);
+	}
+
+	.btn-neutral:hover:not(:disabled) {
+		color: var(--text-dark);
+		border-color: rgba(15, 23, 42, 0.16);
+		background: rgba(15, 23, 42, 0.04);
 	}
 
 	.btn-status {
-		border: none;
-		background: transparent;
-		color: var(--green);
+		background: rgba(81, 190, 123, 0.08);
+		border-color: rgba(81, 190, 123, 0.2);
+		color: var(--primary);
 		cursor: default;
 	}
 
 	.btn-status:hover:not(:disabled) {
-		border: none;
-		background: transparent;
-		color: var(--green);
+		transform: none;
+		background: rgba(81, 190, 123, 0.08);
+		border-color: rgba(81, 190, 123, 0.2);
+		color: var(--primary);
 	}
 
 	.btn-full { flex: 1 1 100%; }
 
 	.card-btn:disabled {
-		opacity: 1;
+		opacity: 0.84;
 		cursor: default;
 	}
 
-	.share-btn {
-		flex: 0 0 36px;
-		padding: 8px;
+	.btn-loading {
+		opacity: 1;
 	}
 
 	.utility-btn {
 		flex: 1 1 100%;
+		min-height: 38px;
+		padding: 9px 12px;
+		font-size: 10px;
 	}
 
 	.btn-compare-selected {
@@ -790,6 +800,20 @@
 		color: var(--text-muted);
 	}
 
+	.btn-spinner {
+		width: 14px;
+		height: 14px;
+		border-radius: 999px;
+		border: 2px solid currentColor;
+		border-right-color: transparent;
+		animation: card-btn-spin 0.8s linear infinite;
+		flex-shrink: 0;
+	}
+
+	@keyframes card-btn-spin {
+		to { transform: rotate(360deg); }
+	}
+
 	@media (max-width: 1200px) {
 		.metrics {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -797,5 +821,15 @@
 
 		.metric:nth-child(2n) { border-right: none; }
 		.metric:nth-last-child(-n + 2) { border-bottom: none; }
+	}
+
+	@media (max-width: 560px) {
+		.card-actions-row {
+			gap: 7px;
+		}
+
+		.card-btn {
+			flex-basis: 104px;
+		}
 	}
 </style>

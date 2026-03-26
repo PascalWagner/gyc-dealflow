@@ -174,9 +174,20 @@ function adjustBrowseCount(previousStage, nextStage) {
 	});
 }
 
+function setStageInMap(stageMap, dealId, stage) {
+	const nextStages = { ...(stageMap || {}) };
+	if (stage === 'filter') {
+		delete nextStages[dealId];
+	} else {
+		nextStages[dealId] = stage;
+	}
+	return nextStages;
+}
+
 function createStagesStore() {
 	const base = writable(readCachedStageMap());
 	const { subscribe, set: baseSet } = base;
+	const inFlightByDealId = new Map();
 
 	function replace(value, { persist = true } = {}) {
 		const normalized = normalizeStageMap(value);
@@ -187,21 +198,45 @@ function createStagesStore() {
 
 	return {
 		subscribe,
-		setStage(dealId, stage) {
-			const current = get(base);
-			const previousStage = current[dealId] || 'filter';
-			const nextStage = normalizeStage(stage);
-			const nextStages = { ...current };
-
-			if (nextStage === 'filter') {
-				delete nextStages[dealId];
-			} else {
-				nextStages[dealId] = nextStage;
+		async setStage(dealId, stage) {
+			const nextDealId = String(dealId || '').trim();
+			if (!nextDealId) {
+				return { ok: false, reason: 'invalid', previousStage: 'filter', nextStage: 'filter' };
 			}
 
+			if (inFlightByDealId.has(nextDealId)) {
+				return inFlightByDealId.get(nextDealId);
+			}
+
+			const current = get(base);
+			const previousStage = current[nextDealId] || 'filter';
+			const nextStage = normalizeStage(stage);
+			if (previousStage === nextStage) {
+				return { ok: true, previousStage, nextStage, unchanged: true };
+			}
+
+			const nextStages = setStageInMap(current, nextDealId, nextStage);
 			replace(nextStages);
 			adjustBrowseCount(previousStage, nextStage);
-			syncStageToBackend(dealId, nextStage);
+
+			const request = (async () => {
+				try {
+					await syncStageToBackend(nextDealId, nextStage);
+					return { ok: true, previousStage, nextStage, unchanged: false };
+				} catch (error) {
+					const latest = get(base);
+					const revertedStages = setStageInMap(latest, nextDealId, previousStage);
+					replace(revertedStages);
+					adjustBrowseCount(nextStage, previousStage);
+					console.warn('Stage sync failed:', error.message);
+					return { ok: false, previousStage, nextStage, error };
+				} finally {
+					inFlightByDealId.delete(nextDealId);
+				}
+			})();
+
+			inFlightByDealId.set(nextDealId, request);
+			return request;
 		},
 		getStage(dealId) {
 			return get(base)[dealId] || 'filter';
@@ -454,6 +489,7 @@ export async function fetchMemberDeals(options = {}) {
 	const limit = options.limit || MEMBER_DEALS_PAGE_SIZE;
 	const offset = options.offset || 0;
 	const ids = options.ids || [];
+	const preserveResults = Boolean(options.preserveResults);
 
 	memberDealsError.set(null);
 
@@ -474,7 +510,7 @@ export async function fetchMemberDeals(options = {}) {
 
 	if (options.append) {
 		memberDealsLoadingMore.set(true);
-	} else {
+	} else if (!preserveResults) {
 		memberDealsLoading.set(true);
 		memberDeals.set([]);
 	}
@@ -555,40 +591,47 @@ export async function loadMoreMemberDeals(options = {}) {
 async function syncStageToBackend(dealId, stage) {
 	if (!browser) return;
 
-	try {
-		const token = getStoredSessionToken();
-		if (!token) return;
+	const token = getStoredSessionToken();
+	if (!token) return;
 
-		if (stage === 'filter') {
-			await fetch('/api/userdata', {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${token}`
-				},
-				body: JSON.stringify(applyAdminImpersonationToPayload({
-					type: 'stages',
-					dealId
-				}))
-			});
-			return;
-		}
-
-		await fetch('/api/userdata', {
-			method: 'POST',
+	if (stage === 'filter') {
+		const response = await fetch('/api/userdata', {
+			method: 'DELETE',
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${token}`
 			},
-				body: JSON.stringify(applyAdminImpersonationToPayload({
-					type: 'stages',
-					data: {
-						'Deal ID': dealId,
-						'Stage': stage
-					}
-				}))
-			});
-	} catch (error) {
-		console.warn('Stage sync failed:', error.message);
+			body: JSON.stringify(applyAdminImpersonationToPayload({
+				type: 'stages',
+				dealId
+			}))
+		});
+
+		if (!response.ok) {
+			const data = await response.json().catch(() => ({}));
+			throw new Error(data?.error || 'Failed to clear deal stage');
+		}
+
+		return;
+	}
+
+	const response = await fetch('/api/userdata', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(applyAdminImpersonationToPayload({
+			type: 'stages',
+			data: {
+				'Deal ID': dealId,
+				'Stage': stage
+			}
+		}))
+	});
+
+	if (!response.ok) {
+		const data = await response.json().catch(() => ({}));
+		throw new Error(data?.error || 'Failed to save deal stage');
 	}
 }

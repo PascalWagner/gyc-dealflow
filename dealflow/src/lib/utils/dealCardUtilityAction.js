@@ -9,14 +9,22 @@ export const DEAL_CARD_UTILITY_ACTIONS = {
 };
 
 export const DEAL_CARD_FOOTER_ACTIONS = {
-	SKIP: 'skip',
-	SAVE: 'save',
+	NOT_INTERESTED: 'notInterested',
+	SAVE_DEAL: 'saveDeal',
 	READY_TO_CONNECT: 'readyToConnect',
-	TALKED_TO_OPERATOR: 'talkedToOperator',
+	BACK_TO_REVIEW: 'backToReview',
+	READY_TO_DECIDE: 'readyToDecide',
 	BACK_TO_CONNECT: 'backToConnect',
-	WIRED_MONEY: 'wiredMoney',
+	MARK_INVESTED: 'markInvested',
 	TRACKING: 'tracking',
 	RECONSIDER: 'reconsider'
+};
+
+export const DEAL_CARD_FOOTER_ACTION_TYPES = {
+	NOT_INTERESTED: 'notInterested',
+	BACK: 'back',
+	FORWARD: 'forward',
+	STATUS: 'status'
 };
 
 export const dealCardUtilityActionByStage = {
@@ -31,65 +39,90 @@ export const dealCardUtilityActionByStage = {
 export const dealCardFooterActionsByStage = {
 	filter: [
 		{
-			id: DEAL_CARD_FOOTER_ACTIONS.SKIP,
-			label: 'Skip',
+			id: DEAL_CARD_FOOTER_ACTIONS.NOT_INTERESTED,
+			label: 'Not Interested',
 			next: 'skipped',
 			icon: 'x',
-			danger: true
+			tone: 'negative',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.NOT_INTERESTED
 		},
 		{
-			id: DEAL_CARD_FOOTER_ACTIONS.SAVE,
-			label: 'Save',
+			id: DEAL_CARD_FOOTER_ACTIONS.SAVE_DEAL,
+			label: 'Save Deal',
 			next: 'review',
 			icon: 'bookmark',
-			primary: true
+			tone: 'primary',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.FORWARD
 		}
 	],
 	review: [
 		{
-			id: DEAL_CARD_FOOTER_ACTIONS.SKIP,
-			label: 'Skip',
+			id: DEAL_CARD_FOOTER_ACTIONS.NOT_INTERESTED,
+			label: 'Not Interested',
 			next: 'skipped',
 			icon: 'x',
-			danger: true
+			tone: 'negative',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.NOT_INTERESTED
 		},
 		{
 			id: DEAL_CARD_FOOTER_ACTIONS.READY_TO_CONNECT,
 			label: 'Ready to Connect',
 			next: 'connect',
 			icon: 'check',
-			primary: true
+			tone: 'primary',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.FORWARD
 		}
 	],
 	connect: [
 		{
-			id: DEAL_CARD_FOOTER_ACTIONS.SKIP,
-			label: 'Skip',
+			id: DEAL_CARD_FOOTER_ACTIONS.NOT_INTERESTED,
+			label: 'Not Interested',
 			next: 'skipped',
 			icon: 'x',
-			danger: true
+			tone: 'negative',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.NOT_INTERESTED
 		},
 		{
-			id: DEAL_CARD_FOOTER_ACTIONS.TALKED_TO_OPERATOR,
-			label: "I've Talked to the Operator",
+			id: DEAL_CARD_FOOTER_ACTIONS.BACK_TO_REVIEW,
+			label: 'Back to Review',
+			next: 'review',
+			icon: 'back',
+			tone: 'neutral',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.BACK
+		},
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.READY_TO_DECIDE,
+			label: 'Ready to Decide',
 			next: 'decide',
 			icon: 'check',
-			primary: true
+			tone: 'primary',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.FORWARD
 		}
 	],
 	decide: [
 		{
+			id: DEAL_CARD_FOOTER_ACTIONS.NOT_INTERESTED,
+			label: 'Not Interested',
+			next: 'skipped',
+			icon: 'x',
+			tone: 'negative',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.NOT_INTERESTED
+		},
+		{
 			id: DEAL_CARD_FOOTER_ACTIONS.BACK_TO_CONNECT,
 			label: 'Back to Connect',
 			next: 'connect',
-			icon: 'back'
+			icon: 'back',
+			tone: 'neutral',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.BACK
 		},
 		{
-			id: DEAL_CARD_FOOTER_ACTIONS.WIRED_MONEY,
-			label: "I've Wired the Money",
+			id: DEAL_CARD_FOOTER_ACTIONS.MARK_INVESTED,
+			label: "I'm Investing",
 			next: 'invested',
 			icon: 'money',
-			primary: true
+			tone: 'primary',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.FORWARD
 		}
 	],
 	invested: [
@@ -97,7 +130,8 @@ export const dealCardFooterActionsByStage = {
 			id: DEAL_CARD_FOOTER_ACTIONS.TRACKING,
 			label: 'Tracking',
 			icon: 'tracking',
-			status: true,
+			tone: 'status',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.STATUS,
 			full: true,
 			disabled: true
 		}
@@ -105,10 +139,11 @@ export const dealCardFooterActionsByStage = {
 	skipped: [
 		{
 			id: DEAL_CARD_FOOTER_ACTIONS.RECONSIDER,
-			label: 'Reconsider',
+			label: 'Reconsider Deal',
 			next: 'review',
 			icon: 'refresh',
-			primary: true,
+			tone: 'primary',
+			actionType: DEAL_CARD_FOOTER_ACTION_TYPES.FORWARD,
 			full: true
 		}
 	]
@@ -142,6 +177,21 @@ function normalizeUtilityAnalyticsPayload(payload = {}) {
 		sourcePage: payload.sourcePage || 'dealFlow',
 		compareModeActive: Boolean(payload.compareModeActive),
 		reason: payload.reason || ''
+	};
+}
+
+function normalizeFooterAnalyticsPayload(payload = {}) {
+	return {
+		dealId: payload.dealId || '',
+		dealName: payload.dealName || '',
+		currentPipeline: normalizeStage(payload.currentPipeline),
+		destinationPipeline: normalizeStage(payload.destinationPipeline),
+		actionId: payload.actionId || '',
+		actionType: payload.actionType || '',
+		labelShown: payload.labelShown || '',
+		cardContext: payload.cardContext || 'dealFlow',
+		userId: payload.userId || '',
+		userRole: payload.userRole || ''
 	};
 }
 
@@ -203,6 +253,28 @@ export function getDealCardActionModel({ deal, pipelineStage, viewMode }) {
 		utilityAction: getDealCardUtilityAction({ deal, pipelineStage, viewMode }),
 		footerActions: getDealCardFooterActions(pipelineStage)
 	};
+}
+
+export function buildDealCardFooterAnalyticsPayload({
+	deal,
+	currentPipeline,
+	destinationPipeline,
+	action,
+	userId = '',
+	userRole = ''
+}) {
+	return normalizeFooterAnalyticsPayload({
+		dealId: deal?.id || '',
+		dealName: deal?.investmentName || deal?.name || '',
+		currentPipeline,
+		destinationPipeline,
+		actionId: action?.id || '',
+		actionType: action?.actionType || '',
+		labelShown: action?.label || '',
+		cardContext: 'dealFlow',
+		userId,
+		userRole
+	});
 }
 
 export function getDealCardUtilityActionLabel(utilityAction, { compareSelected = false, compareAtLimit = false } = {}) {
@@ -269,4 +341,20 @@ export function trackDealCardRequestIntroOpened(payload) {
 
 export function trackDealCardViewDeckClicked(payload) {
 	trackUserEventFireAndForget('deal_card_view_deck_clicked', normalizeUtilityAnalyticsPayload(payload));
+}
+
+export function trackDealCardFooterActionClick(payload) {
+	const normalizedPayload = normalizeFooterAnalyticsPayload(payload);
+	let eventName = '';
+
+	if (normalizedPayload.actionType === DEAL_CARD_FOOTER_ACTION_TYPES.NOT_INTERESTED) {
+		eventName = 'deal_card_not_interested_clicked';
+	} else if (normalizedPayload.actionType === DEAL_CARD_FOOTER_ACTION_TYPES.BACK) {
+		eventName = 'deal_card_back_clicked';
+	} else if (normalizedPayload.actionType === DEAL_CARD_FOOTER_ACTION_TYPES.FORWARD) {
+		eventName = 'deal_card_forward_clicked';
+	}
+
+	if (!eventName) return;
+	trackUserEventFireAndForget(eventName, normalizedPayload);
 }

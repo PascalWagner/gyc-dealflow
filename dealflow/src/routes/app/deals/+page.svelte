@@ -25,10 +25,12 @@
 	} from '$lib/stores/deals.js';
 	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
 	import {
+		buildDealCardFooterAnalyticsPayload,
 		buildDealCardUtilityAnalyticsPayload,
 		DEAL_CARD_UTILITY_ACTIONS,
 		getDealCardActionModel,
 		getDealCardUtilityActionLabel,
+		trackDealCardFooterActionClick,
 		trackDealCardRequestIntroOpened,
 		trackDealCardUtilityActionClick,
 		trackDealCardViewDeckClicked
@@ -36,6 +38,7 @@
 	import { getUiStage } from '$lib/utils/dealflow-contract.js';
 	import { openDealDeckInNewTab } from '$lib/utils/dealDocuments.js';
 	import { getDealIntroductionRequestGate } from '$lib/utils/dealIntroRequests.js';
+	import { notifySuccess } from '$lib/utils/haptics.js';
 	import {
 		currentAdminRealUser,
 		readUserScopedJson,
@@ -53,6 +56,7 @@
 	let pageNoticeVisible = $state(false);
 	let compareDealsLoading = $state(false);
 	let compareSelectedDeals = $state([]);
+	let pendingFooterActionByDealId = $state({});
 	let pageNoticeTimer = null;
 	let compareRequestId = 0;
 	let showIntroModal = $state(false);
@@ -431,7 +435,12 @@
 	const excludedBrowseIds = $derived(Object.keys($dealStages || {}));
 	const effectiveFilters = $derived(getEffectiveBrowseFilters());
 
-	const filteredDeals = $derived.by(() => applyBuyBoxFilters($memberDeals || []));
+	const filteredDeals = $derived.by(() => {
+		const scopedDeals = currentTab === 'filter'
+			? ($memberDeals || [])
+			: ($memberDeals || []).filter((deal) => currentTabIds.includes(deal.id));
+		return applyBuyBoxFilters(scopedDeals);
+	});
 	const compareDealSet = $derived(new Set($compareDealIds));
 	const compareRemaining = $derived(Math.max(0, MAX_COMPARE_DEALS - $compareDealIds.length));
 	const compareModeActive = $derived($dealFlowViewMode === 'compare');
@@ -560,6 +569,40 @@
 		}
 	}
 
+	async function handleDealCardFooterAction({ deal, action }) {
+		if (!deal?.id || !action?.next || action.disabled) return;
+		if (pendingFooterActionByDealId[deal.id]) return;
+
+		const session = getStoredSessionUser() || {};
+		const userId = session.id || session.userId || session.user_id || session.sub || '';
+		const footerAnalytics = buildDealCardFooterAnalyticsPayload({
+			deal,
+			currentPipeline: currentTab,
+			destinationPipeline: action.next,
+			action,
+			userId,
+			userRole: utilityUserRole
+		});
+
+		trackDealCardFooterActionClick(footerAnalytics);
+		pendingFooterActionByDealId = {
+			...pendingFooterActionByDealId,
+			[deal.id]: action.id
+		};
+
+		const result = await dealStages.setStage(deal.id, action.next);
+
+		if (!result?.ok) {
+			showPageNotice(result?.error?.message || 'We could not update that pipeline stage. Please try again.');
+		} else if (result.nextStage === 'review' || result.nextStage === 'invested') {
+			notifySuccess();
+		}
+
+		const nextPending = { ...pendingFooterActionByDealId };
+		delete nextPending[deal.id];
+		pendingFooterActionByDealId = nextPending;
+	}
+
 	async function loadMoreDeals() {
 		await loadMoreMemberDeals().catch(() => {});
 	}
@@ -638,7 +681,10 @@
 		};
 
 		const timer = window.setTimeout(() => {
-			fetchMemberDeals(request).catch(() => {});
+			fetchMemberDeals({
+				...request,
+				preserveResults: currentTab !== 'filter' && $memberDealsMeta.loaded && $memberDealsMeta.scope === 'ids'
+			}).catch(() => {});
 		}, search.trim() ? 150 : 0);
 
 		return () => window.clearTimeout(timer);
@@ -847,11 +893,14 @@
 								<DealCard
 									{deal}
 									footerActions={actionModel.footerActions}
+									stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
+									pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
 									{utilityAction}
 									{utilityAnalytics}
 									compareSelected={compareDealSet.has(deal.id)}
 									compareAtLimit={isDealCompareAtLimit(deal.id)}
 									onutilityaction={handleDealCardUtilityAction}
+									onfooteraction={handleDealCardFooterAction}
 								/>
 							</div>
 						{/each}
@@ -934,11 +983,14 @@
 								<DealCard
 									{deal}
 									footerActions={actionModel.footerActions}
+									stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
+									pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
 									{utilityAction}
 									{utilityAnalytics}
 									compareSelected={compareDealSet.has(deal.id)}
 									compareAtLimit={isDealCompareAtLimit(deal.id)}
 									onutilityaction={handleDealCardUtilityAction}
+									onfooteraction={handleDealCardFooterAction}
 								/>
 							</div>
 						{/each}
@@ -999,11 +1051,14 @@
 					<DealCard
 						{deal}
 						footerActions={actionModel.footerActions}
+						stageActionPending={Boolean(pendingFooterActionByDealId[deal.id])}
+						pendingFooterActionId={pendingFooterActionByDealId[deal.id] || ''}
 						{utilityAction}
 						{utilityAnalytics}
 						compareSelected={compareDealSet.has(deal.id)}
 						compareAtLimit={isDealCompareAtLimit(deal.id)}
 						onutilityaction={handleDealCardUtilityAction}
+						onfooteraction={handleDealCardFooterAction}
 					/>
 				</div>
 			{/each}
