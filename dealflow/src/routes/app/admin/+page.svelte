@@ -71,6 +71,7 @@
 	let ctaAnalyticsLoading = $state(false);
 	let ctaAnalyticsError = $state('');
 	let ctaAnalytics = $state(null);
+	let ctaAnalyticsRange = $state('30d');
 
 	// Admin guard
 	onMount(() => {
@@ -215,11 +216,12 @@
 		finally { transactionsLoading = false; }
 	}
 
-	async function loadCTAAnalytics() {
+	async function loadCTAAnalytics(range = ctaAnalyticsRange) {
+		ctaAnalyticsRange = range;
 		ctaAnalyticsLoading = true;
 		ctaAnalyticsError = '';
 		try {
-			const result = await adminFetch({ action: 'cta-analytics' });
+			const result = await adminFetch({ action: 'cta-analytics', range });
 			if (!result.success) {
 				ctaAnalyticsError = result.error || 'Failed to load CTA analytics.';
 				ctaAnalytics = null;
@@ -1023,12 +1025,69 @@
 			</div>
 		{:else if activeTab === 'ctaAnalytics'}
 			<div class="section-desc">Deal Flow utility CTA performance across compare, deck, and introduction actions.</div>
+			<div class="cta-toolbar">
+				<div class="users-tier-toggle">
+					{#each [
+						{ value: '7d', label: 'Last 7 Days' },
+						{ value: '30d', label: 'Last 30 Days' },
+						{ value: 'all', label: 'All Time' }
+					] as option}
+						<button
+							class="filter-btn tier-filter-btn"
+							class:active={ctaAnalyticsRange === option.value}
+							onclick={() => loadCTAAnalytics(option.value)}
+						>
+							{option.label}
+						</button>
+					{/each}
+				</div>
+			</div>
 
 			{#if ctaAnalyticsLoading}
 				<div class="loading-msg">Loading CTA analytics...</div>
 			{:else if ctaAnalyticsError}
 				<div class="error-msg">Failed to load: {ctaAnalyticsError}</div>
 			{:else if ctaAnalytics?.overview}
+				<div class="section-card">
+					<div class="section-header-row">
+						<span class="section-title">Daily Trend</span>
+						<span class="badge">
+							{ctaAnalytics.range === 'all' ? 'Last 30 active days' : ctaAnalytics.range === '7d' ? 'Last 7 days' : 'Last 30 days'}
+						</span>
+					</div>
+					{#if (ctaAnalytics.dailyTrend || []).length > 0}
+						{@const maxTrendImpressions = Math.max(...(ctaAnalytics.dailyTrend || []).map((row) => row.impressions), 1)}
+						{@const maxTrendClicks = Math.max(...(ctaAnalytics.dailyTrend || []).map((row) => row.clicks), 1)}
+						<div class="cta-trend-chart">
+							{#each ctaAnalytics.dailyTrend || [] as row}
+								<div class="cta-trend-col">
+									<div class="cta-trend-meta">{row.impressions} / {row.clicks}</div>
+									<div class="cta-trend-bars">
+										<div
+											class="cta-trend-bar impressions"
+											style={`height:${Math.max(Math.round((row.impressions / maxTrendImpressions) * 100), row.impressions > 0 ? 8 : 0)}%`}
+											title={`${row.label}: ${row.impressions} impressions`}
+										></div>
+										<div
+											class="cta-trend-bar clicks"
+											style={`height:${Math.max(Math.round((row.clicks / maxTrendClicks) * 100), row.clicks > 0 ? 8 : 0)}%`}
+											title={`${row.label}: ${row.clicks} clicks`}
+										></div>
+									</div>
+									<div class="cta-trend-date">{row.label}</div>
+									<div class="cta-trend-ctr">{row.ctr}% CTR</div>
+								</div>
+							{/each}
+						</div>
+						<div class="cta-trend-legend">
+							<span><span class="cta-legend-dot impressions"></span>Impressions</span>
+							<span><span class="cta-legend-dot clicks"></span>Clicks</span>
+						</div>
+					{:else}
+						<div class="muted-text">No CTA trend data yet for this range.</div>
+					{/if}
+				</div>
+
 				<div class="stats-grid-4 cta-stats-grid">
 					<div class="stat-card"><div class="stat-label">Impressions</div><div class="stat-value">{ctaAnalytics.overview.impressions}</div></div>
 					<div class="stat-card"><div class="stat-label">Clicks</div><div class="stat-value">{ctaAnalytics.overview.clicks}</div></div>
@@ -1510,6 +1569,85 @@
 		flex-wrap: wrap;
 	}
 	.tier-filter-btn { min-height: 34px; }
+	.cta-toolbar { margin-bottom: 18px; }
+	.cta-trend-chart {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+		gap: 10px;
+		align-items: end;
+		min-height: 220px;
+	}
+	.cta-trend-col {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+	}
+	.cta-trend-meta {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--text-muted);
+		white-space: nowrap;
+	}
+	.cta-trend-bars {
+		height: 140px;
+		width: 100%;
+		display: flex;
+		align-items: flex-end;
+		justify-content: center;
+		gap: 6px;
+		padding: 0 2px;
+	}
+	.cta-trend-bar {
+		width: 12px;
+		border-radius: 999px 999px 3px 3px;
+		min-height: 0;
+	}
+	.cta-trend-bar.impressions {
+		background: rgba(31, 81, 89, 0.24);
+		border: 1px solid rgba(31, 81, 89, 0.18);
+	}
+	.cta-trend-bar.clicks {
+		background: linear-gradient(180deg, rgba(81,190,123,0.96), rgba(31,81,89,0.9));
+	}
+	.cta-trend-date {
+		font-family: var(--font-ui);
+		font-size: 10px;
+		font-weight: 700;
+		color: var(--text-dark);
+	}
+	.cta-trend-ctr {
+		font-size: 10px;
+		color: var(--text-muted);
+		white-space: nowrap;
+	}
+	.cta-trend-legend {
+		display: flex;
+		gap: 16px;
+		margin-top: 14px;
+		font-family: var(--font-ui);
+		font-size: 11px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		flex-wrap: wrap;
+	}
+	.cta-legend-dot {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		border-radius: 999px;
+		margin-right: 6px;
+		vertical-align: middle;
+	}
+	.cta-legend-dot.impressions {
+		background: rgba(31, 81, 89, 0.24);
+		border: 1px solid rgba(31, 81, 89, 0.18);
+	}
+	.cta-legend-dot.clicks {
+		background: linear-gradient(180deg, rgba(81,190,123,0.96), rgba(31,81,89,0.9));
+	}
 
 	/* Tier badges */
 	.tier-badge {

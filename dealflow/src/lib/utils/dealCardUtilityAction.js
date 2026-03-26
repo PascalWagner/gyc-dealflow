@@ -8,6 +8,17 @@ export const DEAL_CARD_UTILITY_ACTIONS = {
 	NONE: 'none'
 };
 
+export const DEAL_CARD_FOOTER_ACTIONS = {
+	SKIP: 'skip',
+	SAVE: 'save',
+	READY_TO_CONNECT: 'readyToConnect',
+	TALKED_TO_OPERATOR: 'talkedToOperator',
+	BACK_TO_CONNECT: 'backToConnect',
+	WIRED_MONEY: 'wiredMoney',
+	TRACKING: 'tracking',
+	RECONSIDER: 'reconsider'
+};
+
 export const dealCardUtilityActionByStage = {
 	filter: { show: false, action: DEAL_CARD_UTILITY_ACTIONS.NONE },
 	review: { show: true, label: 'View Deck', action: DEAL_CARD_UTILITY_ACTIONS.VIEW_DECK },
@@ -15,6 +26,92 @@ export const dealCardUtilityActionByStage = {
 	decide: { show: false, action: DEAL_CARD_UTILITY_ACTIONS.NONE },
 	invested: { show: true, label: '+ Compare', action: DEAL_CARD_UTILITY_ACTIONS.COMPARE },
 	skipped: { show: true, label: '+ Compare', action: DEAL_CARD_UTILITY_ACTIONS.COMPARE }
+};
+
+export const dealCardFooterActionsByStage = {
+	filter: [
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.SKIP,
+			label: 'Skip',
+			next: 'skipped',
+			icon: 'x',
+			danger: true
+		},
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.SAVE,
+			label: 'Save',
+			next: 'review',
+			icon: 'bookmark',
+			primary: true
+		}
+	],
+	review: [
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.SKIP,
+			label: 'Skip',
+			next: 'skipped',
+			icon: 'x',
+			danger: true
+		},
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.READY_TO_CONNECT,
+			label: 'Ready to Connect',
+			next: 'connect',
+			icon: 'check',
+			primary: true
+		}
+	],
+	connect: [
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.SKIP,
+			label: 'Skip',
+			next: 'skipped',
+			icon: 'x',
+			danger: true
+		},
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.TALKED_TO_OPERATOR,
+			label: "I've Talked to the Operator",
+			next: 'decide',
+			icon: 'check',
+			primary: true
+		}
+	],
+	decide: [
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.BACK_TO_CONNECT,
+			label: 'Back to Connect',
+			next: 'connect',
+			icon: 'back'
+		},
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.WIRED_MONEY,
+			label: "I've Wired the Money",
+			next: 'invested',
+			icon: 'money',
+			primary: true
+		}
+	],
+	invested: [
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.TRACKING,
+			label: 'Tracking',
+			icon: 'tracking',
+			status: true,
+			full: true,
+			disabled: true
+		}
+	],
+	skipped: [
+		{
+			id: DEAL_CARD_FOOTER_ACTIONS.RECONSIDER,
+			label: 'Reconsider',
+			next: 'review',
+			icon: 'refresh',
+			primary: true,
+			full: true
+		}
+	]
 };
 
 const seenUtilityImpressions = new Set();
@@ -92,6 +189,19 @@ export function getDealCardUtilityAction({ deal, pipelineStage, viewMode }) {
 	return {
 		...baseAction,
 		disabled: false
+	};
+}
+
+export function getDealCardFooterActions(pipelineStage) {
+	const stage = normalizeStage(pipelineStage);
+	const baseActions = dealCardFooterActionsByStage[stage] || dealCardFooterActionsByStage.filter;
+	return baseActions.map((action) => ({ ...action }));
+}
+
+export function getDealCardActionModel({ deal, pipelineStage, viewMode }) {
+	return {
+		utilityAction: getDealCardUtilityAction({ deal, pipelineStage, viewMode }),
+		footerActions: getDealCardFooterActions(pipelineStage)
 	};
 }
 

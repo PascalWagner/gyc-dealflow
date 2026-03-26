@@ -13,12 +13,11 @@
 		deal,
 		utilityAction = null,
 		utilityAnalytics = null,
+		footerActions = [],
 		compareSelected = false,
 		compareAtLimit = false,
 		onutilityaction = () => {}
 	} = $props();
-
-	const stage = $derived($dealStages[deal.id] || 'browse');
 
 	function fmtPct(val) {
 		if (!val) return '—';
@@ -80,7 +79,7 @@
 	function handleAction(event, action) {
 		event.stopPropagation();
 		if (!action.next || action.disabled) return;
-		if (action.next === 'saved' || action.next === 'invested') {
+		if (action.next === 'review' || action.next === 'invested') {
 			notifySuccess();
 		}
 		dealStages.setStage(deal.id, action.next);
@@ -111,39 +110,6 @@
 		});
 	}
 
-	function getActions(stageKey) {
-		switch (stageKey) {
-			case 'saved':
-				return [
-					{ label: 'Skip', next: 'passed', icon: 'x', danger: true },
-					{ label: 'Ready to Connect', next: 'diligence', icon: 'check', primary: true }
-				];
-			case 'diligence':
-				return [
-					{ label: 'Skip', next: 'passed', icon: 'x', danger: true },
-					{ label: "I've Talked to the Operator", next: 'decision', icon: 'check', primary: true }
-				];
-			case 'decision':
-				return [
-					{ label: 'Back to Connect', next: 'diligence', icon: 'back' },
-					{ label: "I've Wired the Money", next: 'invested', icon: 'money', primary: true }
-				];
-			case 'invested':
-				return [
-					{ label: 'Tracking', icon: 'tracking', status: true, full: true, disabled: true }
-				];
-			case 'passed':
-				return [
-					{ label: 'Reconsider', next: 'saved', icon: 'refresh', primary: true, full: true }
-				];
-			default:
-				return [
-					{ label: 'Skip', next: 'passed', icon: 'x', danger: true },
-					{ label: 'Save', next: 'saved', icon: 'bookmark', primary: true }
-				];
-		}
-	}
-
 	const assetHeroes = {
 		'Private Credit': { gradient: 'linear-gradient(135deg, #1a365d 0%, #2563eb 100%)', icon: '🏦' },
 		'Multifamily': { gradient: 'linear-gradient(135deg, #1a3a5c 0%, #2d6a9f 100%)', icon: '🏢' },
@@ -161,7 +127,6 @@
 	const fundingPct = $derived(deal.pctFunded ? Math.min(Number(deal.pctFunded), 100) : 0);
 	const hasFunding = $derived(!!(deal.totalAmountSold && deal.offeringSize && deal.pctFunded));
 	const hasNoDeck = $derived(!(deal.deckUrl || deal.ppmUrl || deal.subAgreementUrl));
-	const actions = $derived(getActions(stage));
 	const utilityLabel = $derived(
 		getDealCardUtilityActionLabel(utilityAction, {
 			compareSelected,
@@ -311,8 +276,8 @@
 	</a>
 
 	<div class="card-footer">
-		<div class="card-utility-row">
-			{#if utilityVisible}
+		{#if utilityVisible}
+			<div class="card-utility-row">
 				<button
 					class="card-btn utility-btn"
 					class:btn-compare-selected={utilityAction?.action === 'compare' && compareSelected}
@@ -354,10 +319,8 @@
 					{/if}
 					{utilityLabel}
 				</button>
-			{:else}
-				<div class="card-utility-placeholder" aria-hidden="true"></div>
-			{/if}
-		</div>
+			</div>
+		{/if}
 
 		<div class="card-actions-row">
 			{#if canShare()}
@@ -368,7 +331,7 @@
 					</svg>
 				</button>
 			{/if}
-			{#each actions as action}
+			{#each footerActions as action}
 				<button
 					class="card-btn"
 					class:btn-primary={action.primary}
@@ -687,12 +650,6 @@
 
 	.card-utility-row {
 		display: flex;
-		min-height: 34px;
-	}
-
-	.card-utility-placeholder {
-		width: 100%;
-		min-height: 34px;
 	}
 
 	.card-actions-row {

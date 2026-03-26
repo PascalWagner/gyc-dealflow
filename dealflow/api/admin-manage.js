@@ -771,6 +771,7 @@ const CTA_ANALYTICS_EVENTS = [
 
 const CTA_STAGE_ORDER = ['filter', 'review', 'connect', 'decide', 'invested', 'skipped'];
 const CTA_ACTION_ORDER = ['Compare', 'View Deck', 'Request Introduction', 'No Deck Available'];
+const CTA_RANGE_OPTIONS = ['7d', '30d', 'all'];
 
 function normalizeCtaStage(value) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -807,6 +808,46 @@ function initCtaMetric(key, label = key) {
     requestIntroOpens: 0,
     viewDeckClicks: 0
   };
+}
+
+function normalizeCtaRange(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return CTA_RANGE_OPTIONS.includes(normalized) ? normalized : '30d';
+}
+
+function getCtaRangeStart(range) {
+  if (range === 'all') return null;
+  const days = range === '7d' ? 7 : 30;
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  return start.toISOString();
+}
+
+function getRecentTrendBuckets(rows, range) {
+  const counts = new Map();
+
+  for (const row of rows) {
+    if (!row?.created_at) continue;
+    const dayKey = String(row.created_at).slice(0, 10);
+    if (!counts.has(dayKey)) {
+      counts.set(dayKey, initCtaMetric(dayKey, dayKey));
+    }
+    applyCtaMetric(counts.get(dayKey), row.event);
+  }
+
+  const sorted = finalizeCtaMetrics(
+    [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([, bucket]) => bucket)
+  );
+
+  const trendRows = range === 'all' ? sorted.slice(-30) : sorted;
+  return trendRows.map((row) => ({
+    ...row,
+    date: row.key,
+    label: row.key.slice(5).replace('-', '/')
+  }));
 }
 
 function ensureBucket(map, key, label = key) {
@@ -852,19 +893,27 @@ function finalizeCtaMetrics(rows) {
   }));
 }
 
-async function fetchCtaAnalyticsRows(supabase) {
+async function fetchCtaAnalyticsRows(supabase, { range = '30d' } = {}) {
   const pageSize = 1000;
   const rows = [];
   let from = 0;
   let total = null;
+  const normalizedRange = normalizeCtaRange(range);
+  const rangeStart = getCtaRangeStart(normalizedRange);
 
   while (from < 10000) {
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('user_events')
       .select('event, data, created_at', { count: 'exact' })
       .in('event', CTA_ANALYTICS_EVENTS)
       .order('created_at', { ascending: false })
       .range(from, from + pageSize - 1);
+
+    if (rangeStart) {
+      query = query.gte('created_at', rangeStart);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
@@ -883,8 +932,9 @@ async function fetchCtaAnalyticsRows(supabase) {
   return rows;
 }
 
-async function ctaAnalytics(supabase) {
-  const rows = await fetchCtaAnalyticsRows(supabase);
+async function ctaAnalytics(supabase, params = {}) {
+  const range = normalizeCtaRange(params.range);
+  const rows = await fetchCtaAnalyticsRows(supabase, { range });
 
   const overview = initCtaMetric('overview', 'Overview');
   const byStage = Object.fromEntries(CTA_STAGE_ORDER.map((stage) => [stage, initCtaMetric(stage, stage)]));
@@ -929,6 +979,7 @@ async function ctaAnalytics(supabase) {
   const finalizedOverview = finalizeCtaMetrics([overview])[0];
 
   return {
+    range,
     overview: {
       ...finalizedOverview,
       totalEvents: rows.length
@@ -946,6 +997,7 @@ async function ctaAnalytics(supabase) {
       byDeckAvailability.deckAvailable,
       byDeckAvailability.noDeck
     ]),
+    dailyTrend: getRecentTrendBuckets(rows, range),
     recentEvents
   };
 }

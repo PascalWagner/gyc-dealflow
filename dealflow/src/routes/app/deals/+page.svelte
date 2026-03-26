@@ -27,7 +27,7 @@
 	import {
 		buildDealCardUtilityAnalyticsPayload,
 		DEAL_CARD_UTILITY_ACTIONS,
-		getDealCardUtilityAction,
+		getDealCardActionModel,
 		getDealCardUtilityActionLabel,
 		trackDealCardRequestIntroOpened,
 		trackDealCardUtilityActionClick,
@@ -488,8 +488,8 @@
 		return !compareDealSet.has(dealId) && $compareDealIds.length >= MAX_COMPARE_DEALS;
 	}
 
-	function getDealUtilityActionForCard(deal) {
-		return getDealCardUtilityAction({
+	function getDealCardActionModelForCard(deal) {
+		return getDealCardActionModel({
 			deal,
 			pipelineStage: currentTab,
 			viewMode: $dealFlowViewMode
@@ -836,13 +836,15 @@
 				{:else}
 					<div class="deals-grid">
 						{#each filteredDeals as deal (deal.id)}
-							{@const utilityAction = getDealUtilityActionForCard(deal)}
+							{@const actionModel = getDealCardActionModelForCard(deal)}
+							{@const utilityAction = actionModel.utilityAction}
 							{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<div onclick={() => trackDealView(deal.id)}>
 								<DealCard
 									{deal}
+									footerActions={actionModel.footerActions}
 									{utilityAction}
 									{utilityAnalytics}
 									compareSelected={compareDealSet.has(deal.id)}
@@ -921,13 +923,15 @@
 				{:else}
 					<div class="deals-grid">
 						{#each filteredDeals as deal (deal.id)}
-							{@const utilityAction = getDealUtilityActionForCard(deal)}
+							{@const actionModel = getDealCardActionModelForCard(deal)}
+							{@const utilityAction = actionModel.utilityAction}
 							{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<div onclick={() => trackDealView(deal.id)}>
 								<DealCard
 									{deal}
+									footerActions={actionModel.footerActions}
 									{utilityAction}
 									{utilityAnalytics}
 									compareSelected={compareDealSet.has(deal.id)}
@@ -981,13 +985,15 @@
 	{:else}
 		<div class="deals-grid">
 			{#each filteredDeals as deal (deal.id)}
-				{@const utilityAction = getDealUtilityActionForCard(deal)}
+				{@const actionModel = getDealCardActionModelForCard(deal)}
+				{@const utilityAction = actionModel.utilityAction}
 				{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div onclick={() => trackDealView(deal.id)}>
 					<DealCard
 						{deal}
+						footerActions={actionModel.footerActions}
 						{utilityAction}
 						{utilityAnalytics}
 						compareSelected={compareDealSet.has(deal.id)}
