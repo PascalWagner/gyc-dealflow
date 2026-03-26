@@ -836,16 +836,19 @@
 	<title>My Plan | GYC</title>
 </svelte:head>
 
-<div class="topbar">
-	<div class="topbar-title">Dashboard</div>
-	<nav class="dash-tabs" aria-label="Dashboard sections">
-		<a href="/app/dashboard" class="dash-tab" data-sveltekit-reload>Overview</a>
-		<a href="/app/portfolio" class="dash-tab" data-sveltekit-reload>Portfolio</a>
-		<a href="/app/plan" class="dash-tab active" data-sveltekit-reload>My Plan</a>
-	</nav>
-</div>
+<div class="ly-page ly-dashboard-shell plan-shell">
+	<div class="ly-dashboard-topbar">
+		<div class="ly-dashboard-topbar-inner ly-frame">
+			<div class="ly-dashboard-title">Dashboard</div>
+			<nav class="ly-dashboard-tabs" aria-label="Dashboard sections">
+				<a href="/app/dashboard" class="ly-dashboard-tab" data-sveltekit-reload>Overview</a>
+				<a href="/app/portfolio" class="ly-dashboard-tab" data-sveltekit-reload>Portfolio</a>
+				<a href="/app/plan" class="ly-dashboard-tab active" data-sveltekit-reload>My Plan</a>
+			</nav>
+		</div>
+	</div>
 
-<div class="plan-page">
+	<div class="ly-dashboard-content ly-frame plan-page">
 	{#if saveMsg}
 		<div class="save-toast">{saveMsg}</div>
 	{/if}
@@ -1322,55 +1325,22 @@
 			{/if}
 		</div>
 	{/if}
+	</div>
 </div>
 
 <style>
-	.topbar {
-		position: sticky;
-		top: 0;
-		min-height: 66px;
-		background: var(--bg-cream);
-		border-bottom: 1px solid var(--border);
-		display: flex;
-		align-items: stretch;
-		padding: 0 28px;
-		gap: 26px;
-		z-index: 50;
-	}
-	.topbar-title {
-		display: flex;
-		align-items: center;
-		font-family: var(--font-headline);
-		font-size: 20px;
-		font-weight: 400;
-		color: var(--text-dark);
-		flex-shrink: 0;
-	}
-	.dash-tabs {
-		display: flex;
-		align-items: stretch;
-		gap: 2px;
-	}
-	.dash-tab {
-		padding: 0 18px;
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 600;
-		color: #8a9aa0;
-		text-decoration: none;
-		display: flex;
-		align-items: center;
-		height: 100%;
-		border-bottom: 3px solid transparent;
-	}
-	.dash-tab.active {
-		color: var(--primary);
-		border-bottom-color: var(--primary);
+	.plan-shell {
+		--ly-frame-max: 1240px;
+		--ly-dashboard-content-pad-top: 24px;
+		--ly-dashboard-content-pad-bottom: 40px;
+		--ly-dashboard-content-pad-top-tablet: 20px;
+		--ly-dashboard-content-pad-bottom-tablet: 40px;
+		--ly-dashboard-content-pad-top-mobile: 16px;
+		--ly-dashboard-content-pad-bottom-mobile: 16px;
 	}
 
 	.plan-page {
-		padding: 24px;
-		max-width: 1240px;
+		min-width: 0;
 	}
 	.print-plan {
 		display: none;
@@ -2225,8 +2195,9 @@
 	}
 
 	@media (max-width: 1024px) {
-		.plan-page {
-			padding: 20px;
+		.plan-shell {
+			--ly-dashboard-content-pad-top: 20px;
+			--ly-dashboard-content-pad-bottom: 40px;
 		}
 		.snapshot-row {
 			grid-template-columns: minmax(200px, 1.8fr) repeat(4, minmax(0, 1fr));
@@ -2237,20 +2208,9 @@
 	}
 
 	@media (max-width: 768px) {
-		.topbar {
-			padding: 0 16px;
-			gap: 14px;
-			flex-wrap: wrap;
-		}
-		.topbar-title {
-			font-size: 18px;
-		}
-		.dash-tabs {
-			width: 100%;
-			overflow-x: auto;
-		}
-		.plan-page {
-			padding: 16px;
+		.plan-shell {
+			--ly-dashboard-content-pad-top: 16px;
+			--ly-dashboard-content-pad-bottom: 16px;
 		}
 		.plan-card,
 		.plan-target-card {
@@ -2311,7 +2271,7 @@
 		:global(.main) {
 			margin-left: 0 !important;
 		}
-		.topbar,
+		.ly-dashboard-topbar,
 		.save-toast,
 		.loading-skeleton,
 		.wizard-overlay,
@@ -2322,6 +2282,15 @@
 		.plan-page {
 			max-width: none;
 			padding: 0;
+			--ly-frame-pad-desktop: 0;
+			--ly-frame-pad-tablet: 0;
+			--ly-frame-pad-mobile: 0;
+			--ly-frame-pad-top: 0;
+			--ly-frame-pad-bottom: 0;
+			--ly-frame-pad-top-tablet: 0;
+			--ly-frame-pad-bottom-tablet: 0;
+			--ly-frame-pad-top-mobile: 0;
+			--ly-frame-pad-bottom-mobile: 0;
 		}
 		.print-plan {
 			display: block;

@@ -848,16 +848,19 @@
 	});
 </script>
 
-<div class="topbar">
-	<div class="topbar-title">Dashboard</div>
-	<nav class="dash-tabs" aria-label="Dashboard sections">
-		<a href="/app/dashboard" class="dash-tab">Overview</a>
-		<a href="/app/portfolio" class="dash-tab active">Portfolio</a>
-		<a href="/app/plan" class="dash-tab">My Plan</a>
-	</nav>
-</div>
+<div class="ly-page ly-dashboard-shell portfolio-shell">
+	<div class="ly-dashboard-topbar">
+		<div class="ly-dashboard-topbar-inner ly-frame">
+			<div class="ly-dashboard-title">Dashboard</div>
+			<nav class="ly-dashboard-tabs" aria-label="Dashboard sections">
+				<a href="/app/dashboard" class="ly-dashboard-tab">Overview</a>
+				<a href="/app/portfolio" class="ly-dashboard-tab active">Portfolio</a>
+				<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
+			</nav>
+		</div>
+	</div>
 
-<div class="content-area">
+	<div class="ly-dashboard-content ly-frame content-area">
 	{#if portfolio.length === 0}
 		<div class="import-section">
 			<div class="import-card">
@@ -949,7 +952,7 @@
 						<span class="timeline-legend-item"><span class="timeline-legend-dot goal"></span>Goal</span>
 					</div>
 				</div>
-				<div class="timeline-svg-shell">
+				<div class="timeline-svg-shell ly-table-scroll">
 					<svg viewBox={`0 0 ${timelineChart.width} ${timelineChart.height}`} class="timeline-svg" aria-label="Capital deployed over time">
 						{#each timelineChart.tickValues as value}
 							{@const y = timelineChart.yForValue(value)}
@@ -1122,7 +1125,7 @@
 							<div class="tax-summary-value">{visibleTaxDocuments.length > 0 ? Math.round((visibleTaxDocuments.filter((doc) => doc.uploadStatus === 'Received').length / visibleTaxDocuments.length) * 100) : 0}%</div>
 						</div>
 						</div>
-						<div class="tax-table-wrap">
+						<div class="tax-table-wrap ly-table-scroll">
 							<table class="tax-table">
 								<thead>
 									<tr>
@@ -1167,6 +1170,7 @@
 			{/if}
 		</div>
 	{/if}
+	</div>
 </div>
 
 <!-- Deal Search Modal -->
@@ -1399,50 +1403,15 @@
 {/if}
 
 <style>
-	/* ── Top Bar ── */
-	.topbar {
-		position: sticky;
-		top: 0;
-		min-height: 66px;
-		background: var(--bg-cream);
-		border-bottom: 1px solid var(--border);
-		display: flex;
-		align-items: stretch;
-		padding: 0 28px;
-		gap: 26px;
-		z-index: 50;
+	.portfolio-shell {
+		--ly-frame-max: 1200px;
+		--ly-dashboard-content-pad-top: 24px;
+		--ly-dashboard-content-pad-bottom: 40px;
+		--ly-dashboard-content-pad-top-tablet: 20px;
+		--ly-dashboard-content-pad-bottom-tablet: 40px;
+		--ly-dashboard-content-pad-top-mobile: 16px;
+		--ly-dashboard-content-pad-bottom-mobile: 16px;
 	}
-	.topbar-title {
-		display: flex;
-		align-items: center;
-		font-family: var(--font-headline);
-		font-size: 20px;
-		font-weight: 400;
-		color: var(--text-dark);
-		flex-shrink: 0;
-		letter-spacing: -0.2px;
-	}
-	.dash-tabs {
-		display: flex;
-		align-items: stretch;
-		gap: 2px;
-	}
-	.dash-tab {
-		padding: 0 18px;
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 600;
-		color: #8a9aa0;
-		white-space: nowrap;
-		transition: color 0.15s ease, border-color 0.15s ease;
-		text-decoration: none;
-		display: flex;
-		align-items: center;
-		height: 100%;
-		border-bottom: 3px solid transparent;
-	}
-	.dash-tab:hover { color: var(--text-dark); }
-	.dash-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 	.btn-add {
 		padding: 8px 18px;
 		background: var(--primary);
@@ -1460,10 +1429,6 @@
 		padding: 8px 20px;
 		font-size: 12px;
 	}
-
-	/* ── Content Area ── */
-	.content-area { padding: 24px 24px 40px; max-width: 1200px; }
-
 	/* ── Summary Stat Cards ── */
 	.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
 	.summary-grid .stat-card:nth-child(5) { display: none; }
@@ -1601,7 +1566,6 @@
 		box-sizing: border-box;
 	}
 	.timeline-svg-shell {
-		overflow-x: auto;
 		padding-top: 6px;
 	}
 	.timeline-svg {
@@ -1973,7 +1937,6 @@
 		flex-wrap: wrap;
 		margin-top: 18px;
 	}
-	.tax-table-wrap { overflow-x: auto; }
 	.tax-table {
 		width: 100%;
 		border-collapse: collapse;
@@ -2246,12 +2209,9 @@
 	.btn-danger:hover { background: #fde8e8; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.topbar {
-			padding: 0 24px;
-		}
-
-		.content-area {
-			padding: 20px 24px 40px;
+		.portfolio-shell {
+			--ly-dashboard-content-pad-top: 20px;
+			--ly-dashboard-content-pad-bottom: 40px;
 		}
 
 		.summary-grid {
@@ -2275,37 +2235,12 @@
 
 	/* ── Mobile Breakpoints ── */
 	@media (max-width: 768px) {
-		.topbar {
-			padding: 0 16px;
-			padding-top: env(safe-area-inset-top, 0px);
-			flex-wrap: wrap;
-			height: auto;
-			min-height: 66px;
-		}
-		.topbar-title { font-size: 18px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
-		.dash-tabs {
-			margin-left: 0 !important;
-			overflow-x: auto;
-			-webkit-overflow-scrolling: touch;
-			scrollbar-width: none;
-			flex-shrink: 1;
-			min-width: 0;
-			width: 100%;
-			justify-content: flex-start;
-			gap: 2px;
-			order: 1;
-		}
-		.dash-tabs::-webkit-scrollbar { display: none; }
-		.dash-tab {
-			font-size: 13px !important;
-			padding: 0 14px !important;
-			flex: 0 0 auto;
-			text-align: center;
-			justify-content: center;
+		.portfolio-shell {
+			--ly-dashboard-content-pad-top: 16px;
+			--ly-dashboard-content-pad-bottom: 16px;
 		}
 		.charts-row { grid-template-columns: 1fr; }
 		.modal-grid { grid-template-columns: 1fr; }
-		.content-area { padding: 16px; padding-bottom: 16px; }
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
 		.section-add-btn { width: 100%; }
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }

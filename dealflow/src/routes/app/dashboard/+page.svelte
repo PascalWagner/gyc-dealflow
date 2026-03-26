@@ -254,16 +254,19 @@
 	});
 </script>
 
-<div class="topbar">
-	<div class="topbar-title">Dashboard</div>
-	<nav class="dash-tabs" aria-label="Dashboard sections">
-		<a href="/app/dashboard" class="dash-tab active">Overview</a>
-		<a href="/app/portfolio" class="dash-tab">Portfolio</a>
-		<a href="/app/plan" class="dash-tab">My Plan</a>
-	</nav>
-</div>
+<div class="ly-page ly-dashboard-shell dashboard-shell">
+	<div class="ly-dashboard-topbar">
+		<div class="ly-dashboard-topbar-inner ly-frame">
+			<div class="ly-dashboard-title">Dashboard</div>
+			<nav class="ly-dashboard-tabs" aria-label="Dashboard sections">
+				<a href="/app/dashboard" class="ly-dashboard-tab active">Overview</a>
+				<a href="/app/portfolio" class="ly-dashboard-tab">Portfolio</a>
+				<a href="/app/plan" class="ly-dashboard-tab">My Plan</a>
+			</nav>
+		</div>
+	</div>
 
-	<div class="content-area">
+	<div class="ly-dashboard-content ly-frame content-area">
 		{#if !hasOnboarding && dealsReviewed === 0 && portfolio.length === 0}
 			<div class="dashboard-onboarding-card">
 				<div class="dashboard-onboarding-icon">
@@ -386,61 +389,19 @@
 			{/if}
 		</div>
 	{/if}
+	</div>
 </div>
 
 <style>
-	/* ── Top Bar ── */
-	.topbar {
-		position: sticky;
-		top: 0;
-		min-height: 66px;
-		background: var(--bg-cream);
-		border-bottom: 1px solid var(--border);
-		display: flex;
-		align-items: stretch;
-		padding: 0 28px;
-		gap: 26px;
-		z-index: 50;
+	.dashboard-shell {
+		--ly-frame-max: 1240px;
+		--ly-dashboard-content-pad-top: 24px;
+		--ly-dashboard-content-pad-bottom: 40px;
+		--ly-dashboard-content-pad-top-tablet: 20px;
+		--ly-dashboard-content-pad-bottom-tablet: 40px;
+		--ly-dashboard-content-pad-top-mobile: 16px;
+		--ly-dashboard-content-pad-bottom-mobile: 16px;
 	}
-	.topbar-title {
-		display: flex;
-		align-items: center;
-		font-family: var(--font-headline);
-		font-size: 20px;
-		font-weight: 400;
-		color: var(--text-dark);
-		flex-shrink: 0;
-		letter-spacing: -0.2px;
-	}
-
-	/* ── Dashboard Tab Bar ── */
-	.dash-tabs {
-		display: flex;
-		align-items: stretch;
-		gap: 2px;
-	}
-	.dash-tab {
-		padding: 0 18px;
-		font-family: var(--font-ui);
-		font-size: 14px;
-		font-weight: 600;
-		color: #8a9aa0;
-		white-space: nowrap;
-		transition: color 0.15s ease, border-color 0.15s ease;
-		text-decoration: none;
-		display: flex;
-		align-items: center;
-		height: 100%;
-		border-bottom: 3px solid transparent;
-	}
-	.dash-tab:hover { color: var(--text-dark); }
-	.dash-tab.active {
-		color: var(--primary);
-		border-bottom-color: var(--primary);
-	}
-
-	/* ── Content Area ── */
-	.content-area { padding: 24px 24px 40px; max-width: 1240px; }
 
 	.dashboard-onboarding-card {
 		max-width: 520px;
@@ -819,12 +780,9 @@
 	.action-link { flex-shrink: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); white-space: nowrap; }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.topbar {
-			padding: 0 24px;
-		}
-
-		.content-area {
-			padding: 20px 24px 40px;
+		.dashboard-shell {
+			--ly-dashboard-content-pad-top: 20px;
+			--ly-dashboard-content-pad-bottom: 40px;
 		}
 
 		.dash-hero {
@@ -834,31 +792,10 @@
 
 	/* ── Mobile Responsive ── */
 	@media (max-width: 768px) {
-		.topbar {
-			min-height: 0;
-			padding: env(safe-area-inset-top, 0px) 16px 0;
-			flex-wrap: wrap;
-			gap: 0 14px;
+		.dashboard-shell {
+			--ly-dashboard-content-pad-top: 16px;
+			--ly-dashboard-content-pad-bottom: 16px;
 		}
-		.topbar-title {
-			height: 52px;
-			font-size: 16px;
-		}
-		.dash-tabs {
-			overflow-x: auto;
-			-webkit-overflow-scrolling: touch;
-			scrollbar-width: none;
-			width: 100%;
-			height: 44px;
-			gap: 0;
-		}
-		.dash-tabs::-webkit-scrollbar { display: none; }
-		.dash-tab {
-			font-size: 13px !important;
-			padding: 0 14px !important;
-			flex: 0 0 auto;
-		}
-		.content-area { padding: 12px !important; }
 		.dashboard-onboarding-card {
 			margin-top: 20px;
 			padding: 28px 20px;
