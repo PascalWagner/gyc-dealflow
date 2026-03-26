@@ -1,6 +1,11 @@
 import { browser } from '$app/environment';
 import { derived, get, writable } from 'svelte/store';
-import { getStoredSessionToken } from '$lib/stores/auth.js';
+import {
+	ensureSessionUserToken,
+	getStoredSessionToken,
+	getStoredSessionUser,
+	setStoredSessionUser
+} from '$lib/stores/auth.js';
 import {
 	applyAdminImpersonationToPayload,
 	currentSessionEmail,
@@ -300,6 +305,21 @@ export async function fetchNetworkCounts(force = false) {
 	}
 }
 
+async function getMemberDealsAuthHeaders() {
+	if (!browser) return {};
+
+	const storedSession = getStoredSessionUser();
+	if (!storedSession) return {};
+
+	const { session, refreshed } = await ensureSessionUserToken(storedSession);
+	if (refreshed && session) {
+		setStoredSessionUser(session);
+	}
+
+	const token = session?.token || storedSession.token || '';
+	return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function fetchDeals({ force = false } = {}) {
 	if (catalogLoaded && !force) return get(deals);
 	if (catalogPromise && !force) return catalogPromise;
@@ -309,8 +329,13 @@ export async function fetchDeals({ force = false } = {}) {
 		dealsError.set(null);
 
 		try {
-			const res = await fetch('/api/member/deals?scope=catalog');
-			if (!res.ok) throw new Error('Failed to load deals catalog');
+			const res = await fetch('/api/member/deals?scope=catalog', {
+				headers: await getMemberDealsAuthHeaders()
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				throw new Error(data?.error || 'Failed to load deals catalog');
+			}
 			const data = await res.json();
 			const nextDeals = data?.deals || [];
 			deals.set(nextDeals);
@@ -364,10 +389,13 @@ export async function queryMemberDeals(options = {}) {
 		limit: options.limit || MEMBER_DEALS_PAGE_SIZE,
 		offset: options.offset || 0,
 		ids: options.ids || []
-	}));
+	}), {
+		headers: await getMemberDealsAuthHeaders()
+	});
 
 	if (!res.ok) {
-		throw new Error('Failed to load deals');
+		const data = await res.json().catch(() => ({}));
+		throw new Error(data?.error || 'Failed to load deals');
 	}
 
 	return res.json();
