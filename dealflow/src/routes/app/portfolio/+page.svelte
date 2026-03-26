@@ -1462,6 +1462,7 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		padding: 20px;
+		min-width: 0;
 	}
 	.chart-card-title {
 		font-family: var(--font-ui);
@@ -1489,7 +1490,7 @@
 		display: block;
 	}
 	.alloc-legend { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-	.alloc-legend-item { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 12px; }
+	.alloc-legend-item { display: flex; align-items: center; gap: 8px; width: 100%; font-family: var(--font-ui); font-size: 12px; }
 	.alloc-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 	.alloc-legend-label { flex: 1; color: var(--text-secondary); }
 	.alloc-legend-pct { font-weight: 700; color: var(--text-dark); }
@@ -2244,7 +2245,28 @@
 		.inv-header { flex-direction: column; gap: 12px; align-items: stretch; }
 		.section-add-btn { width: 100%; }
 		.summary-grid { grid-template-columns: repeat(2, 1fr); }
-		.chartjs-donut-wrap { max-width: 200px; }
+		.chart-card { padding: 18px 16px; }
+		.chartjs-donut-wrap {
+			width: 100%;
+			max-width: none;
+			min-height: 160px;
+			margin: 0 auto 12px;
+		}
+		.allocation-donut {
+			width: min(180px, 100%);
+			height: auto;
+			aspect-ratio: 1;
+		}
+		.alloc-legend {
+			width: min(100%, 320px);
+			margin-inline: auto;
+		}
+		.alloc-meta {
+			width: min(100%, 240px);
+			margin-inline: auto;
+			justify-content: space-between;
+			gap: 16px;
+		}
 		.timeline-svg { min-width: 760px; }
 		.tax-shell-actions { justify-content: flex-start; }
 		.tax-filter-select, .tax-action-btn { width: 100%; }
