@@ -6,7 +6,7 @@
 	import { deals } from '$lib/stores/deals.js';
 
 	let activeTab = $state('overview');
-	const tabs = ['overview', 'users', 'schema', 'devnotes', 'network', 'transactions', 'feedback'];
+	const tabs = ['overview', 'users', 'schema', 'devnotes', 'network', 'transactions', 'feedback', 'ctaAnalytics'];
 	const tabLabels = {
 		overview: 'Overview',
 		users: 'Users',
@@ -14,7 +14,8 @@
 		devnotes: 'Dev Notes',
 		network: 'Network & Moat',
 		transactions: 'Transactions',
-		feedback: 'Feedback'
+		feedback: 'Feedback',
+		ctaAnalytics: 'CTA Analytics'
 	};
 	const userTierOptions = [
 		{ value: 'all', label: 'All Tiers' },
@@ -66,6 +67,11 @@
 	let transactionLogs = $state([]);
 	let transactionsLoading = $state(false);
 
+	// CTA Analytics state
+	let ctaAnalyticsLoading = $state(false);
+	let ctaAnalyticsError = $state('');
+	let ctaAnalytics = $state(null);
+
 	// Admin guard
 	onMount(() => {
 		if (!$isAdmin) {
@@ -95,6 +101,7 @@
 		if (tab === 'overview') await loadOverview();
 		else if (tab === 'users') await loadUsers();
 		else if (tab === 'feedback') await loadFeedback();
+		else if (tab === 'ctaAnalytics') await loadCTAAnalytics();
 		else if (tab === 'network') await loadNetwork();
 		else if (tab === 'schema') await loadSchema();
 		else if (tab === 'transactions') await loadTransactions();
@@ -206,6 +213,25 @@
 			}
 		} catch (e) { console.error(e); }
 		finally { transactionsLoading = false; }
+	}
+
+	async function loadCTAAnalytics() {
+		ctaAnalyticsLoading = true;
+		ctaAnalyticsError = '';
+		try {
+			const result = await adminFetch({ action: 'cta-analytics' });
+			if (!result.success) {
+				ctaAnalyticsError = result.error || 'Failed to load CTA analytics.';
+				ctaAnalytics = null;
+				return;
+			}
+			ctaAnalytics = result;
+		} catch (e) {
+			ctaAnalyticsError = e.message || 'Failed to load CTA analytics.';
+			ctaAnalytics = null;
+		} finally {
+			ctaAnalyticsLoading = false;
+		}
 	}
 
 	function triggerGhlSync() {
@@ -995,6 +1021,182 @@
 					{/each}
 				{/if}
 			</div>
+		{:else if activeTab === 'ctaAnalytics'}
+			<div class="section-desc">Deal Flow utility CTA performance across compare, deck, and introduction actions.</div>
+
+			{#if ctaAnalyticsLoading}
+				<div class="loading-msg">Loading CTA analytics...</div>
+			{:else if ctaAnalyticsError}
+				<div class="error-msg">Failed to load: {ctaAnalyticsError}</div>
+			{:else if ctaAnalytics?.overview}
+				<div class="stats-grid-4 cta-stats-grid">
+					<div class="stat-card"><div class="stat-label">Impressions</div><div class="stat-value">{ctaAnalytics.overview.impressions}</div></div>
+					<div class="stat-card"><div class="stat-label">Clicks</div><div class="stat-value">{ctaAnalytics.overview.clicks}</div></div>
+					<div class="stat-card"><div class="stat-label">CTR</div><div class="stat-value green">{ctaAnalytics.overview.ctr}%</div></div>
+					<div class="stat-card"><div class="stat-label">Intro Opens</div><div class="stat-value">{ctaAnalytics.overview.requestIntroOpens}</div></div>
+					<div class="stat-card"><div class="stat-label">Deck Clicks</div><div class="stat-value">{ctaAnalytics.overview.viewDeckClicks}</div></div>
+					<div class="stat-card"><div class="stat-label">No Deck Impr.</div><div class="stat-value">{ctaAnalytics.overview.disabledImpressions}</div></div>
+				</div>
+
+				<div class="two-col cta-analytics-grid">
+					<div class="section-card">
+						<div class="section-title">CTR by Pipeline Stage</div>
+						<div class="table-wrap">
+							<table class="compact">
+								<thead>
+									<tr>
+										<th>Stage</th>
+										<th class="right">Impr.</th>
+										<th class="right">Clicks</th>
+										<th class="right">CTR</th>
+										<th class="right">Disabled</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each ctaAnalytics.byStage || [] as row}
+										<tr>
+											<td class="bold">{row.label.charAt(0).toUpperCase() + row.label.slice(1)}</td>
+											<td class="right">{row.impressions}</td>
+											<td class="right">{row.clicks}</td>
+											<td class="right">{row.ctr}%</td>
+											<td class="right">{row.disabledImpressions}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<div class="section-card">
+						<div class="section-title">CTR by Utility Action</div>
+						<div class="table-wrap">
+							<table class="compact">
+								<thead>
+									<tr>
+										<th>Action</th>
+										<th class="right">Impr.</th>
+										<th class="right">Clicks</th>
+										<th class="right">CTR</th>
+										<th class="right">Intro Opens</th>
+										<th class="right">Deck Clicks</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each ctaAnalytics.byAction || [] as row}
+										<tr>
+											<td class="bold">{row.label}</td>
+											<td class="right">{row.impressions}</td>
+											<td class="right">{row.clicks}</td>
+											<td class="right">{row.ctr}%</td>
+											<td class="right">{row.requestIntroOpens}</td>
+											<td class="right">{row.viewDeckClicks}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<div class="two-col cta-analytics-grid">
+					<div class="section-card">
+						<div class="section-title">Breakdown by View Mode</div>
+						<div class="table-wrap">
+							<table class="compact">
+								<thead>
+									<tr>
+										<th>View</th>
+										<th class="right">Impr.</th>
+										<th class="right">Clicks</th>
+										<th class="right">CTR</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each ctaAnalytics.byViewMode || [] as row}
+										<tr>
+											<td class="bold">{row.label.charAt(0).toUpperCase() + row.label.slice(1)}</td>
+											<td class="right">{row.impressions}</td>
+											<td class="right">{row.clicks}</td>
+											<td class="right">{row.ctr}%</td>
+										</tr>
+									{:else}
+										<tr><td colspan="4" class="muted" style="text-align:center;padding:20px;">No view mode data yet.</td></tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<div class="section-card">
+						<div class="section-title">Deck Availability</div>
+						<div class="table-wrap">
+							<table class="compact">
+								<thead>
+									<tr>
+										<th>Bucket</th>
+										<th class="right">Impr.</th>
+										<th class="right">Clicks</th>
+										<th class="right">CTR</th>
+										<th class="right">Disabled</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each ctaAnalytics.byDeckAvailability || [] as row}
+										<tr>
+											<td class="bold">{row.label}</td>
+											<td class="right">{row.impressions}</td>
+											<td class="right">{row.clicks}</td>
+											<td class="right">{row.ctr}%</td>
+											<td class="right">{row.disabledImpressions}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+
+				<div class="section-card">
+					<div class="section-header-row">
+						<span class="section-title">Recent CTA Events</span>
+						<span class="badge">{ctaAnalytics.recentEvents?.length || 0}</span>
+					</div>
+					<div class="table-wrap">
+						<table class="compact">
+							<thead>
+								<tr>
+									<th>Timestamp</th>
+									<th>Deal</th>
+									<th>Stage</th>
+									<th>Action</th>
+									<th>Label</th>
+									<th>Role</th>
+									<th>View</th>
+									<th>Event</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each ctaAnalytics.recentEvents || [] as row}
+									<tr>
+										<td>{row.timestamp ? new Date(row.timestamp).toLocaleString() : '--'}</td>
+										<td class="bold">{row.deal}</td>
+										<td>{row.stage}</td>
+										<td>{row.action}</td>
+										<td>{row.label || '--'}</td>
+										<td>{row.userRole || '--'}</td>
+										<td>{row.viewMode}</td>
+										<td class="muted">{row.event}</td>
+									</tr>
+								{:else}
+									<tr><td colspan="8" class="muted" style="text-align:center;padding:20px;">No CTA events recorded yet.</td></tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			{:else}
+				<div class="muted-text">No CTA analytics available yet.</div>
+			{/if}
 		{/if}
 	</div>
 </div>
@@ -1147,9 +1349,11 @@
 
 	/* Two column */
 	.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+	.cta-analytics-grid { align-items: start; }
 
 	/* Stats */
 	.stats-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+	.cta-stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 	.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; }
 	.stat-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 4px; }
 	.stat-value { font-size: 22px; font-weight: 800; color: var(--text-dark); }

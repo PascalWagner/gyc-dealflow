@@ -2,8 +2,11 @@
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
+	import RequestIntroductionModal from '$lib/components/RequestIntroductionModal.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { getStoredSessionUser, user, isLoggedIn, isAdmin, isMember } from '$lib/stores/auth.js';
+	import { hasViewableDealDeck } from '$lib/utils/dealDocuments.js';
+	import { getDealIntroductionRequestGate } from '$lib/utils/dealIntroRequests.js';
 	import {
 		currentAdminRealUser,
 		readUserScopedJson,
@@ -102,9 +105,7 @@
 
 	// Intro Request Modal
 	let showIntroModal = $state(false);
-	let introMessage = $state('');
-	let introSending = $state(false);
-	let introSuccess = $state(false);
+	let deckAutoOpened = $state(false);
 
 	// Property Map
 	let dealMap = $state(null);
@@ -197,7 +198,8 @@
 	const displayLpGpSplit = $derived(activeShareClassData?.lpGpSplit != null ? activeShareClassData.lpGpSplit : deal?.lpGpSplit);
 
 	// Deck preview URL
-	const deckPreviewUrl = $derived(deal?.deckUrl ? getDeckPreviewUrl(deal.deckUrl) : null);
+	const hasViewableDeck = $derived(hasViewableDealDeck(deal));
+	const deckPreviewUrl = $derived(hasViewableDeck ? getDeckPreviewUrl(deal.deckUrl) : null);
 
 	// Buy Box Match
 	const buyBoxChecks = $derived(deal && buyBox ? computeBuyBoxChecks(deal, buyBox) : []);
@@ -1197,7 +1199,7 @@
 	}
 
 	function openDeckViewer() {
-		if (!deal?.deckUrl) return;
+		if (!hasViewableDeck) return;
 		showDeckViewer = true;
 		trackDeckView();
 	}
@@ -1606,76 +1608,23 @@
 			window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
 			return;
 		}
-		// Check if already requested
-		if (browser && readScopedDealString('gycIntroRequested')) {
-			showShareToast("You've already requested an intro for this deal.");
+		const gate = getDealIntroductionRequestGate(deal.id);
+		if (!gate.ok) {
+			showShareToast(gate.message);
 			return;
 		}
-		// Rate limit: 3 intros per day
-		if (browser) {
-			const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
-			const todayCount = parseInt(readUserScopedString(todayKey, '0'), 10);
-			if (todayCount >= 3) {
-				showShareToast("You've reached the daily limit of 3 introduction requests. Try again tomorrow.");
-				return;
-			}
-		}
-		introMessage = '';
-		introSending = false;
-		introSuccess = false;
 		showIntroModal = true;
 	}
 
-	async function submitIntroRequest() {
-		if (!deal || introSending) return;
-		introSending = true;
-		try {
-			const stored = currentSessionUser();
-			const sponsors = deal.sponsors || [];
-			const op = sponsors.find(s => s.role === 'operator');
-			const opName = op ? op.name : (deal.managementCompany || '');
-			const opCeo = op ? (op.ceo || '') : (deal.ceo || '');
+	function closeIntroModal() {
+		showIntroModal = false;
+	}
 
-			const r = await fetch('/api/intro-request', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${stored.token || ''}` },
-				body: JSON.stringify({
-					dealId: deal.id,
-					dealName: deal.investmentName,
-					operatorName: opName,
-					operatorCeo: opCeo,
-					managementCompanyId: deal.managementCompanyId || '',
-					message: introMessage
-				})
-			});
-			const data = await r.json();
-			if (data.success) {
-				// Store in scoped browser state for dedup
-				if (browser) {
-					writeScopedDealString('gycIntroRequested', Date.now().toString());
-					const todayKey = 'gycIntroCount_' + new Date().toISOString().split('T')[0];
-					writeUserScopedString(todayKey, (parseInt(readUserScopedString(todayKey, '0'), 10) + 1).toString());
-					// Store in gycIntroRequests array
-					try {
-						let intros = readUserScopedJson('gycIntroRequests', []);
-						if (!Array.isArray(intros)) intros = [];
-						intros.push({ dealId: deal.id, deal: deal.investmentName, company: opName, userEmail: stored.email || '', timestamp: Date.now() });
-						writeUserScopedJson('gycIntroRequests', intros);
-					} catch {}
-				}
-				introRequested = true;
-				introSuccess = true;
-				// Advance stage to Connect
-				if (currentStageIdx < 2) {
-					dealStages.setStage(deal.id, 'connect');
-				}
-			} else {
-				showShareToast('Something went wrong. Please try again.');
-			}
-		} catch {
-			showShareToast('Something went wrong. Please try again.');
+	function handleIntroRequestSuccess() {
+		introRequested = true;
+		if (currentStageIdx < 2) {
+			dealStages.setStage(deal.id, 'connect');
 		}
-		introSending = false;
 	}
 
 	// ===== Investment Report PDF =====
@@ -1879,6 +1828,15 @@
 		document.title = `${deal.investmentName} - GYC Dealflow`;
 	});
 
+	$effect(() => {
+		if (!browser || deckAutoOpened || !deal || !hasViewableDeck) return;
+		if ($page.url.searchParams.get('deck') !== '1') return;
+		deckAutoOpened = true;
+		tick().then(() => {
+			openDeckViewer();
+		});
+	});
+
 	// Close share dropdown on outside click
 	function handleOutsideClick(e) {
 		if (shareDropdownOpen) shareDropdownOpen = false;
@@ -2012,7 +1970,7 @@
 						<!-- Hero Right: CTA buttons -->
 						<div class="hero-right">
 							<div class="hero-action-stack">
-								{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
+								{#if hasViewableDeck}
 									<button class="hero-deck-btn" onclick={openDeckViewer}>
 										<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
 										View Investment Deck
@@ -2359,7 +2317,7 @@
 								<span class="section-title">Documents</span>
 							</div>
 							<div class="section-body doc-list">
-								{#if deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
+								{#if hasViewableDeck}
 									<div class="doc-item-row">
 										<button class="doc-item doc-view-btn" onclick={openDeckViewer}>
 											<svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -3362,7 +3320,7 @@
 						Skip
 					</button>
 					<span class="stage-label">Stage: <strong>Review</strong></span>
-					{#if !deckViewed && deal.deckUrl && !deal.deckUrl.includes('airtableusercontent.com')}
+					{#if !deckViewed && hasViewableDeck}
 						<button class="btn-advance" onclick={openDeckViewer}>
 							View Investment Deck &rarr;
 						</button>
@@ -3455,60 +3413,13 @@
 {/if}
 
 <!-- ==================== INTRO REQUEST MODAL ==================== -->
-{#if showIntroModal && deal}
-	{@const sponsors = deal.sponsors || []}
-	{@const op = sponsors.find(s => s.role === 'operator') || (deal.managementCompany ? { name: deal.managementCompany, ceo: deal.ceo, foundingYear: deal.mcFoundingYear, website: deal.mcWebsite } : null)}
-	{@const opName = op ? op.name : (deal.managementCompany || 'the operator')}
-	{@const opCeo = op ? (op.ceo || '') : (deal.ceo || '')}
-	{@const opYears = op && op.foundingYear ? ((new Date().getFullYear()) - op.foundingYear) + '+ years' : ''}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="modal-overlay" onclick={(e) => { if (e.target === e.currentTarget) showIntroModal = false; }}>
-		<div class="modal-container">
-			<button class="modal-close" onclick={() => showIntroModal = false}>&times;</button>
-			{#if introSuccess}
-				<div class="modal-success">
-					<div class="modal-success-icon">
-						<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#51BE7B" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-					</div>
-					<div class="modal-success-title">You're all set</div>
-					<div class="modal-success-text">Pascal will personally introduce you to {opName}. Check your email -- you'll be CC'd on the intro.</div>
-					<button class="modal-btn-primary" style="background:var(--text-dark);" onclick={() => showIntroModal = false}>Back to Deal</button>
-				</div>
-			{:else}
-				<div class="modal-header-centered">
-					<div class="modal-avatar">{getInitials(opName)}</div>
-					<div class="modal-avatar-name">{opName}</div>
-					<div class="modal-avatar-meta">
-						{#if opCeo}<span>{opCeo}</span>{/if}
-						{#if opCeo && opYears}<span>&middot;</span>{/if}
-						{#if opYears}<span>{opYears}</span>{/if}
-						{#if op?.website}
-							{#if opCeo || opYears}<span>&middot;</span>{/if}
-							<a href={op.website} target="_blank" rel="noopener" class="modal-avatar-link">Website</a>
-						{/if}
-					</div>
-				</div>
-				<div class="modal-body-text">
-					We'll connect you with {opName} for <strong>{deal.investmentName}</strong>. Pascal will make a personal email introduction on your behalf.
-				</div>
-				<div class="modal-field">
-					<label class="modal-label" for="intro-message">Message to Operator (optional)</label>
-					<textarea id="intro-message" class="modal-textarea" rows="3" placeholder="Hi, I'm interested in learning more about this opportunity..." bind:value={introMessage}></textarea>
-				</div>
-				<div class="modal-actions">
-					<button class="modal-btn-secondary" onclick={() => showIntroModal = false}>Cancel</button>
-					<button class="modal-btn-primary" onclick={submitIntroRequest} disabled={introSending}>
-						{introSending ? 'Requesting...' : 'Request Introduction'}
-					</button>
-				</div>
-				<div class="modal-footer-note">
-					3 introductions available per day
-				</div>
-			{/if}
-		</div>
-	</div>
-{/if}
+<RequestIntroductionModal
+	{deal}
+	open={showIntroModal}
+	successButtonLabel="Back to Deal"
+	onclose={closeIntroModal}
+	onsuccess={handleIntroRequestSuccess}
+/>
 
 <!-- ==================== INVITE CO-INVESTORS MODAL ==================== -->
 {#if showInviteModal && deal}
@@ -3596,7 +3507,7 @@
 {/if}
 
 <!-- ==================== DECK VIEWER MODAL ==================== -->
-{#if showDeckViewer && deal?.deckUrl}
+{#if showDeckViewer && hasViewableDeck}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="deck-viewer-overlay" onclick={(e) => { if (e.target === e.currentTarget) showDeckViewer = false; }}>

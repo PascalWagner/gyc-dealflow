@@ -5,6 +5,7 @@
 	import FilterBar from '$lib/components/FilterBar.svelte';
 	import DealMap from '$lib/components/DealMap.svelte';
 	import CompareView from '$lib/components/CompareView.svelte';
+	import RequestIntroductionModal from '$lib/components/RequestIntroductionModal.svelte';
 	import SwipeFeed from '$lib/components/SwipeFeed.svelte';
 	import {
 		dealStages,
@@ -23,7 +24,18 @@
 		STAGE_META
 	} from '$lib/stores/deals.js';
 	import { accessTier, getStoredSessionUser, isAdmin } from '$lib/stores/auth.js';
+	import {
+		buildDealCardUtilityAnalyticsPayload,
+		DEAL_CARD_UTILITY_ACTIONS,
+		getDealCardUtilityAction,
+		getDealCardUtilityActionLabel,
+		trackDealCardRequestIntroOpened,
+		trackDealCardUtilityActionClick,
+		trackDealCardViewDeckClicked
+	} from '$lib/utils/dealCardUtilityAction.js';
 	import { getUiStage } from '$lib/utils/dealflow-contract.js';
+	import { openDealDeckInNewTab } from '$lib/utils/dealDocuments.js';
+	import { getDealIntroductionRequestGate } from '$lib/utils/dealIntroRequests.js';
 	import {
 		currentAdminRealUser,
 		readUserScopedJson,
@@ -37,12 +49,14 @@
 	let buyBox = $state(null);
 	let filterAnchor = $state(null);
 	let filtersReady = $state(false);
-	let compareNotice = $state('');
-	let compareNoticeVisible = $state(false);
+	let pageNotice = $state('');
+	let pageNoticeVisible = $state(false);
 	let compareDealsLoading = $state(false);
 	let compareSelectedDeals = $state([]);
-	let compareNoticeTimer = null;
+	let pageNoticeTimer = null;
 	let compareRequestId = 0;
+	let showIntroModal = $state(false);
+	let introRequestDeal = $state(null);
 
 	let dailyDealCount = $state(0);
 	let showLimitModal = $state(false);
@@ -314,13 +328,13 @@
 		dealFlowViewMode.set(mode);
 	}
 
-	function showCompareMessage(message) {
+	function showPageNotice(message) {
 		if (!browser) return;
-		compareNotice = message;
-		compareNoticeVisible = true;
-		if (compareNoticeTimer) window.clearTimeout(compareNoticeTimer);
-		compareNoticeTimer = window.setTimeout(() => {
-			compareNoticeVisible = false;
+		pageNotice = message;
+		pageNoticeVisible = true;
+		if (pageNoticeTimer) window.clearTimeout(pageNoticeTimer);
+		pageNoticeTimer = window.setTimeout(() => {
+			pageNoticeVisible = false;
 		}, 2600);
 	}
 
@@ -420,6 +434,14 @@
 	const filteredDeals = $derived.by(() => applyBuyBoxFilters($memberDeals || []));
 	const compareDealSet = $derived(new Set($compareDealIds));
 	const compareRemaining = $derived(Math.max(0, MAX_COMPARE_DEALS - $compareDealIds.length));
+	const compareModeActive = $derived($dealFlowViewMode === 'compare');
+	const utilityUserRole = $derived.by(() => {
+		const session = getStoredSessionUser() || {};
+		if (session.roleFlags?.admin) return 'admin';
+		if (session.roleFlags?.gp) return 'gp';
+		if (session.roleFlags?.lp) return 'lp';
+		return $accessTier || '';
+	});
 	const comparePlanFitById = $derived.by(() =>
 		Object.fromEntries(compareSelectedDeals.map((deal) => [deal.id, getComparePlanFit(deal)]))
 	);
@@ -458,7 +480,82 @@
 	function handleCompareToggle(dealId) {
 		const result = compareDealIds.toggle(dealId);
 		if (result.reason === 'max') {
-			showCompareMessage(`You can compare up to ${MAX_COMPARE_DEALS} deals at a time.`);
+			showPageNotice(`You can compare up to ${MAX_COMPARE_DEALS} deals at a time.`);
+		}
+	}
+
+	function isDealCompareAtLimit(dealId) {
+		return !compareDealSet.has(dealId) && $compareDealIds.length >= MAX_COMPARE_DEALS;
+	}
+
+	function getDealUtilityActionForCard(deal) {
+		return getDealCardUtilityAction({
+			deal,
+			pipelineStage: currentTab,
+			viewMode: $dealFlowViewMode
+		});
+	}
+
+	function getDealUtilityAnalyticsForCard(deal, utilityAction) {
+		return buildDealCardUtilityAnalyticsPayload({
+			deal,
+			pipelineStage: currentTab,
+			viewMode: $dealFlowViewMode,
+			utilityAction,
+			labelShown: getDealCardUtilityActionLabel(utilityAction, {
+				compareSelected: compareDealSet.has(deal.id),
+				compareAtLimit: isDealCompareAtLimit(deal.id)
+			}),
+			userRole: utilityUserRole,
+			accessTier: $accessTier || '',
+			compareModeActive
+		});
+	}
+
+	function closeIntroModal() {
+		showIntroModal = false;
+		introRequestDeal = null;
+	}
+
+	function handleIntroRequestSuccess() {
+		// Request persistence is handled in the shared intro helper.
+	}
+
+	function handleDealCardUtilityAction({ deal, utilityAction, utilityAnalytics }) {
+		if (!deal || !utilityAction || utilityAction.disabled) return;
+
+		trackDealCardUtilityActionClick(utilityAnalytics);
+
+		if (utilityAction.action === DEAL_CARD_UTILITY_ACTIONS.COMPARE) {
+			handleCompareToggle(deal.id);
+			return;
+		}
+
+		if (utilityAction.action === DEAL_CARD_UTILITY_ACTIONS.VIEW_DECK) {
+			if (openDealDeckInNewTab(deal)) {
+				trackDealCardViewDeckClicked(utilityAnalytics);
+			}
+			return;
+		}
+
+		if (utilityAction.action === DEAL_CARD_UTILITY_ACTIONS.REQUEST_INTRODUCTION) {
+			const session = getStoredSessionUser() || {};
+			if (!session?.email) {
+				if (browser) {
+					window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
+				}
+				return;
+			}
+
+			const gate = getDealIntroductionRequestGate(deal.id);
+			if (!gate.ok) {
+				showPageNotice(gate.message);
+				return;
+			}
+
+			introRequestDeal = deal;
+			showIntroModal = true;
+			trackDealCardRequestIntroOpened(utilityAnalytics);
 		}
 	}
 
@@ -561,7 +658,7 @@
 			const timer = window.setInterval(updateResetTimer, 60000);
 			window.addEventListener('resize', handler);
 			return () => {
-				if (compareNoticeTimer) window.clearTimeout(compareNoticeTimer);
+				if (pageNoticeTimer) window.clearTimeout(pageNoticeTimer);
 				window.removeEventListener('resize', handler);
 				window.clearInterval(timer);
 			};
@@ -644,8 +741,8 @@
 		</div>
 	{/if}
 
-	{#if compareNoticeVisible}
-		<div class="compare-notice" role="status">{compareNotice}</div>
+	{#if pageNoticeVisible}
+		<div class="compare-notice" role="status">{pageNotice}</div>
 	{/if}
 
 	<!-- Content -->
@@ -739,15 +836,18 @@
 				{:else}
 					<div class="deals-grid">
 						{#each filteredDeals as deal (deal.id)}
+							{@const utilityAction = getDealUtilityActionForCard(deal)}
+							{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<div onclick={() => trackDealView(deal.id)}>
 								<DealCard
 									{deal}
-									compareSelectable={true}
+									{utilityAction}
+									{utilityAnalytics}
 									compareSelected={compareDealSet.has(deal.id)}
-									compareAtLimit={!compareDealSet.has(deal.id) && $compareDealIds.length >= MAX_COMPARE_DEALS}
-									oncomparetoggle={handleCompareToggle}
+									compareAtLimit={isDealCompareAtLimit(deal.id)}
+									onutilityaction={handleDealCardUtilityAction}
 								/>
 							</div>
 						{/each}
@@ -821,15 +921,18 @@
 				{:else}
 					<div class="deals-grid">
 						{#each filteredDeals as deal (deal.id)}
+							{@const utilityAction = getDealUtilityActionForCard(deal)}
+							{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<div onclick={() => trackDealView(deal.id)}>
 								<DealCard
 									{deal}
-									compareSelectable={true}
+									{utilityAction}
+									{utilityAnalytics}
 									compareSelected={compareDealSet.has(deal.id)}
-									compareAtLimit={!compareDealSet.has(deal.id) && $compareDealIds.length >= MAX_COMPARE_DEALS}
-									oncomparetoggle={handleCompareToggle}
+									compareAtLimit={isDealCompareAtLimit(deal.id)}
+									onutilityaction={handleDealCardUtilityAction}
 								/>
 							</div>
 						{/each}
@@ -874,22 +977,22 @@
 	{:else if isMobile && currentTab === 'filter'}
 		<SwipeFeed
 			deals={filteredDeals}
-			compareIds={$compareDealIds}
-			maxCompare={MAX_COMPARE_DEALS}
-			oncomparetoggle={handleCompareToggle}
 		/>
 	{:else}
 		<div class="deals-grid">
 			{#each filteredDeals as deal (deal.id)}
+				{@const utilityAction = getDealUtilityActionForCard(deal)}
+				{@const utilityAnalytics = getDealUtilityAnalyticsForCard(deal, utilityAction)}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<div onclick={() => trackDealView(deal.id)}>
 					<DealCard
 						{deal}
-						compareSelectable={true}
+						{utilityAction}
+						{utilityAnalytics}
 						compareSelected={compareDealSet.has(deal.id)}
-						compareAtLimit={!compareDealSet.has(deal.id) && $compareDealIds.length >= MAX_COMPARE_DEALS}
-						oncomparetoggle={handleCompareToggle}
+						compareAtLimit={isDealCompareAtLimit(deal.id)}
+						onutilityaction={handleDealCardUtilityAction}
 					/>
 				</div>
 			{/each}
@@ -904,6 +1007,14 @@
 		</div>
 	{/if}
 </div>
+
+<RequestIntroductionModal
+	deal={introRequestDeal}
+	open={showIntroModal}
+	successButtonLabel="Back to Deal Flow"
+	onclose={closeIntroModal}
+	onsuccess={handleIntroRequestSuccess}
+/>
 
 <!-- Daily Limit Modal -->
 {#if showLimitModal && isFreeUser}

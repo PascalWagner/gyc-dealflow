@@ -759,6 +759,197 @@ async function listIntros(supabase, params) {
   return { data: data || [], total: count || 0 };
 }
 
+// --- Deal card utility CTA analytics ---
+
+const CTA_ANALYTICS_EVENTS = [
+  'deal_card_utility_cta_impression',
+  'deal_card_utility_cta_clicked',
+  'deal_card_utility_cta_disabled_impression',
+  'deal_card_request_intro_opened',
+  'deal_card_view_deck_clicked'
+];
+
+const CTA_STAGE_ORDER = ['filter', 'review', 'connect', 'decide', 'invested', 'skipped'];
+const CTA_ACTION_ORDER = ['Compare', 'View Deck', 'Request Introduction', 'No Deck Available'];
+
+function normalizeCtaStage(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return CTA_STAGE_ORDER.includes(normalized) ? normalized : 'filter';
+}
+
+function normalizeCtaViewMode(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'map' ? 'location' : normalized || 'grid';
+}
+
+function getCtaActionLabel(data = {}) {
+  if (data.reason === 'noDeck' || data.labelShown === 'No Deck Available') return 'No Deck Available';
+  switch (data.utilityActionType) {
+    case 'compare':
+      return 'Compare';
+    case 'viewDeck':
+      return 'View Deck';
+    case 'requestIntroduction':
+      return 'Request Introduction';
+    default:
+      return data.labelShown || 'None';
+  }
+}
+
+function initCtaMetric(key, label = key) {
+  return {
+    key,
+    label,
+    impressions: 0,
+    clicks: 0,
+    ctr: 0,
+    disabledImpressions: 0,
+    requestIntroOpens: 0,
+    viewDeckClicks: 0
+  };
+}
+
+function ensureBucket(map, key, label = key) {
+  if (!map[key]) {
+    map[key] = initCtaMetric(key, label);
+  }
+  return map[key];
+}
+
+function applyCtaMetric(bucket, event) {
+  if (!bucket) return;
+
+  if (event === 'deal_card_utility_cta_impression') {
+    bucket.impressions += 1;
+    return;
+  }
+
+  if (event === 'deal_card_utility_cta_disabled_impression') {
+    bucket.impressions += 1;
+    bucket.disabledImpressions += 1;
+    return;
+  }
+
+  if (event === 'deal_card_utility_cta_clicked') {
+    bucket.clicks += 1;
+    return;
+  }
+
+  if (event === 'deal_card_request_intro_opened') {
+    bucket.requestIntroOpens += 1;
+    return;
+  }
+
+  if (event === 'deal_card_view_deck_clicked') {
+    bucket.viewDeckClicks += 1;
+  }
+}
+
+function finalizeCtaMetrics(rows) {
+  return rows.map((row) => ({
+    ...row,
+    ctr: row.impressions > 0 ? Math.round((row.clicks / row.impressions) * 1000) / 10 : 0
+  }));
+}
+
+async function fetchCtaAnalyticsRows(supabase) {
+  const pageSize = 1000;
+  const rows = [];
+  let from = 0;
+  let total = null;
+
+  while (from < 10000) {
+    const { data, error, count } = await supabase
+      .from('user_events')
+      .select('event, data, created_at', { count: 'exact' })
+      .in('event', CTA_ANALYTICS_EVENTS)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) throw error;
+
+    if (total === null && typeof count === 'number') total = count;
+
+    const nextRows = data || [];
+    rows.push(...nextRows);
+
+    if (nextRows.length < pageSize || (typeof total === 'number' && rows.length >= total)) {
+      break;
+    }
+
+    from += pageSize;
+  }
+
+  return rows;
+}
+
+async function ctaAnalytics(supabase) {
+  const rows = await fetchCtaAnalyticsRows(supabase);
+
+  const overview = initCtaMetric('overview', 'Overview');
+  const byStage = Object.fromEntries(CTA_STAGE_ORDER.map((stage) => [stage, initCtaMetric(stage, stage)]));
+  const byAction = Object.fromEntries(CTA_ACTION_ORDER.map((action) => [action, initCtaMetric(action, action)]));
+  const byViewMode = {};
+  const byDeckAvailability = {
+    deckAvailable: initCtaMetric('deckAvailable', 'Deck Available'),
+    noDeck: initCtaMetric('noDeck', 'No Deck')
+  };
+
+  const recentEvents = rows.slice(0, 40).map((row) => {
+    const data = row.data && typeof row.data === 'object' ? row.data : {};
+    return {
+      timestamp: row.created_at,
+      event: row.event,
+      deal: data.dealName || data.dealId || 'Unknown deal',
+      dealId: data.dealId || '',
+      stage: normalizeCtaStage(data.pipelineStage),
+      action: getCtaActionLabel(data),
+      label: data.labelShown || '',
+      userRole: data.userRole || '',
+      viewMode: normalizeCtaViewMode(data.viewMode),
+      deckAvailable: Boolean(data.deckAvailable),
+      compareModeActive: Boolean(data.compareModeActive)
+    };
+  });
+
+  for (const row of rows) {
+    const data = row.data && typeof row.data === 'object' ? row.data : {};
+    const stage = normalizeCtaStage(data.pipelineStage);
+    const actionLabel = getCtaActionLabel(data);
+    const viewMode = normalizeCtaViewMode(data.viewMode);
+    const deckKey = data.deckAvailable ? 'deckAvailable' : 'noDeck';
+
+    applyCtaMetric(overview, row.event);
+    applyCtaMetric(ensureBucket(byStage, stage, stage), row.event);
+    applyCtaMetric(ensureBucket(byAction, actionLabel, actionLabel), row.event);
+    applyCtaMetric(ensureBucket(byViewMode, viewMode, viewMode), row.event);
+    applyCtaMetric(byDeckAvailability[deckKey], row.event);
+  }
+
+  const finalizedOverview = finalizeCtaMetrics([overview])[0];
+
+  return {
+    overview: {
+      ...finalizedOverview,
+      totalEvents: rows.length
+    },
+    byStage: finalizeCtaMetrics(CTA_STAGE_ORDER.map((stage) => byStage[stage])),
+    byAction: finalizeCtaMetrics(
+      Object.values(byAction).sort((a, b) => {
+        return CTA_ACTION_ORDER.indexOf(a.key) - CTA_ACTION_ORDER.indexOf(b.key);
+      })
+    ),
+    byViewMode: finalizeCtaMetrics(
+      Object.values(byViewMode).sort((a, b) => a.label.localeCompare(b.label))
+    ),
+    byDeckAvailability: finalizeCtaMetrics([
+      byDeckAvailability.deckAvailable,
+      byDeckAvailability.noDeck
+    ]),
+    recentEvents
+  };
+}
+
 // --- Action router ---
 
 const ACTION_MAP = {
@@ -778,6 +969,7 @@ const ACTION_MAP = {
   'intake-create': intakeCreate,
   'growth-metrics': growthMetrics,
   'list-intros': listIntros,
+  'cta-analytics': ctaAnalytics,
   'browse-table': browseTable,
   'table-counts': tableCounts,
 };

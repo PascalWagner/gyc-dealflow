@@ -7,19 +7,14 @@
 	let {
 		deals = [],
 		search = '',
-		compareIds = [],
-		maxCompare = 3,
 		onfilter = () => {},
-		onsearch = () => {},
-		oncomparetoggle = () => {}
+		onsearch = () => {}
 	} = $props();
 
 	let currentIndex = $state(0);
 	let mobileView = $state('swipe'); // 'swipe' | 'feed'
 
 	const currentDeal = $derived(deals[currentIndex] || null);
-	const compareSet = $derived(new Set(compareIds));
-	const compareCount = $derived(compareIds.length);
 
 	function fmtPct(val) {
 		if (!val) return '\u2014';
@@ -96,15 +91,6 @@
 		if (currentIndex > 0) {
 			currentIndex--;
 		}
-	}
-
-	function isCompareLimitReached(dealId) {
-		return !compareSet.has(dealId) && compareCount >= maxCompare;
-	}
-
-	function handleCompareToggle(dealId) {
-		tapLight();
-		oncomparetoggle(dealId);
 	}
 
 	// Reset index when deals change
@@ -193,21 +179,6 @@
 						</div>
 					</div>
 
-					<button
-						class="swipe-compare"
-						class:is-selected={compareSet.has(currentDeal.id)}
-						class:is-at-limit={isCompareLimitReached(currentDeal.id)}
-						onclick={() => handleCompareToggle(currentDeal.id)}
-					>
-						{#if compareSet.has(currentDeal.id)}
-							Remove Compare
-						{:else if isCompareLimitReached(currentDeal.id)}
-							Compare Full
-						{:else}
-							+ Compare
-						{/if}
-					</button>
-
 					<div class="swipe-actions">
 						<button class="swipe-action skip" onclick={skipDeal}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -249,7 +220,7 @@
 		{#each deals as deal (deal.id)}
 			{@const hero = getHero(deal)}
 			{@const heroImg = getHeroImage(deal)}
-			<div class="feed-card" class:is-selected={compareSet.has(deal.id)}>
+			<div class="feed-card">
 				<a href="/deal/{deal.id}" class="feed-link">
 					<div class="feed-hero" style="background:{heroImg ? `linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.4) 100%), url(${heroImg})` : hero.gradient};{heroImg ? 'background-size:cover;background-position:center;' : ''}">
 						<span class="feed-badge">{deal.assetClass || 'Real Estate'}</span>
