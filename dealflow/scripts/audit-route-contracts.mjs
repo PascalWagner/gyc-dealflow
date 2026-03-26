@@ -18,6 +18,7 @@ function assert(condition, message) {
 
 const operatorsPage = read('src/routes/app/operators/+page.svelte');
 const marketIntelPage = read('src/routes/app/market-intel/+page.svelte');
+const marketIntelApi = read('api/market-intel.js');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
@@ -65,6 +66,21 @@ assert(
 assert(
 	marketIntelPage.includes('class="mi-tab-bar ly-pill-tabs"'),
 	'Market Intel must use the shared pill-tab wrapper.'
+);
+
+assert(
+	marketIntelPage.includes("fetch('/api/market-intel')"),
+	'Market Intel page must load data from /api/market-intel.'
+);
+
+assert(
+	marketIntelApi.includes("from('opportunities')"),
+	'Market Intel API must load deal data from opportunities.'
+);
+
+assert(
+	marketIntelApi.includes('sec-market-data.json'),
+	'Market Intel API must load the SEC market dataset.'
 );
 
 for (const [label, source] of [
