@@ -23,7 +23,7 @@
 		saveUserScopedData
 	} from '$lib/utils/userScopedState.js';
 
-	let { currentPage = '', hideHamburgerOnPhone = false } = $props();
+	let { currentPage = '', hideHamburgerOnPhone = true } = $props();
 
 	let isDark = $state(false);
 	let isImpersonating = $state(false);

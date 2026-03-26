@@ -255,9 +255,6 @@
 </script>
 
 <div class="topbar">
-	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-	</button>
 	<div class="topbar-title">Dashboard</div>
 	<nav class="dash-tabs" aria-label="Dashboard sections">
 		<a href="/app/dashboard" class="dash-tab active">Overview</a>
@@ -405,16 +402,6 @@
 		gap: 26px;
 		z-index: 50;
 	}
-	.mobile-menu-btn {
-		display: none;
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--text-dark);
-		padding: 4px;
-		align-self: center;
-	}
-	.mobile-menu-btn svg { width: 22px; height: 22px; }
 	.topbar-title {
 		display: flex;
 		align-items: center;
@@ -853,7 +840,6 @@
 			flex-wrap: wrap;
 			gap: 0 14px;
 		}
-		.mobile-menu-btn { display: block; }
 		.topbar-title {
 			height: 52px;
 			font-size: 16px;

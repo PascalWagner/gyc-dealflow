@@ -19,6 +19,8 @@ function assert(condition, message) {
 const operatorsPage = read('src/routes/app/operators/+page.svelte');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
+const appLayout = read('src/routes/app/+layout.svelte');
+const sidebar = read('src/lib/components/Sidebar.svelte');
 const smokeSpec = read('tests/session-persona.smoke.spec.ts');
 
 function assertNoDerivedFunctionCalls(source, fileLabel, names) {
@@ -69,9 +71,50 @@ assert(
 	'Smoke coverage for Operators -> Sponsor -> Person navigation is required.'
 );
 
+assert(
+	sidebar.includes("hideHamburgerOnPhone = true"),
+	'Sidebar must default to hiding the mobile hamburger.'
+);
+
+assert(
+	!appLayout.includes('padding-top: 56px'),
+	'App layout must not reserve top padding for a mobile hamburger.'
+);
+
+const routeDir = path.join(root, 'src', 'routes');
+const routeFiles = [];
+const queue = [routeDir];
+
+while (queue.length) {
+	const current = queue.pop();
+	for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+		const fullPath = path.join(current, entry.name);
+		if (entry.isDirectory()) {
+			queue.push(fullPath);
+			continue;
+		}
+		if (entry.isFile() && entry.name.endsWith('.svelte')) {
+			routeFiles.push(fullPath);
+		}
+	}
+}
+
+const lingeringMenuButtons = routeFiles.filter((fullPath) => {
+	const source = fs.readFileSync(fullPath, 'utf8');
+	return source.includes('class="mobile-menu-btn"');
+});
+
+assert(
+	lingeringMenuButtons.length === 0,
+	`Route files must not render mobile hamburger buttons. Found: ${lingeringMenuButtons
+		.map((fullPath) => path.relative(root, fullPath))
+		.join(', ')}`
+);
+
 console.log('Route audit passed.');
 console.log('- Operators cards resolve to Sponsor routes');
 console.log('- Sponsor and Person pages use the shared protected-route bootstrap');
 console.log('- Sponsor and Person rendering is no longer blocked on hydration');
 console.log('- Sponsor and Person do not call rune-derived values like functions');
 console.log('- Smoke coverage exists for Operators -> Sponsor -> Person');
+console.log('- Mobile navigation defaults to no hamburger on route pages');

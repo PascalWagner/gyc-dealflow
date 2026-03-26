@@ -271,8 +271,11 @@
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.app-main {
 			margin-left: 0;
-			padding-top: 56px;
 			padding-bottom: 72px;
+		}
+
+		.app-main :global(.mobile-menu-btn) {
+			display: none !important;
 		}
 
 		.mobile-tabs {
@@ -296,8 +299,11 @@
 	@media (max-width: 768px) {
 		.app-main {
 			margin-left: 0;
-			padding-top: 56px; /* Space for mobile hamburger */
 			padding-bottom: 72px; /* Space for bottom tabs */
+		}
+
+		.app-main :global(.mobile-menu-btn) {
+			display: none !important;
 		}
 
 		.mobile-tabs {

@@ -8,7 +8,6 @@
 
 	// ===== State =====
 	let loading = $state(true);
-	let sidebarOpen = $state(false);
 
 	let propertyName = $state('Loading...');
 	let propertyAddress = $state('');
@@ -875,9 +874,6 @@
 
 <!-- Mobile Top Bar -->
 <div class="mobile-topbar">
-	<button class="mobile-menu-btn" onclick={() => sidebarOpen = !sidebarOpen}>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-	</button>
 	<div class="mobile-topbar-title">{propertyName}</div>
 	<a href="/" class="mobile-deals-link">Deals</a>
 </div>
@@ -1455,15 +1451,6 @@
 		color: var(--text-dark);
 		flex: 1;
 	}
-	.mobile-menu-btn {
-		display: none;
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--text-dark);
-		padding: 4px;
-	}
-	.mobile-menu-btn svg { width: 24px; height: 24px; }
 	.mobile-deals-link {
 		font-family: var(--font-ui);
 		font-size: 12px;
@@ -1702,7 +1689,6 @@
 	@media (max-width: 768px) {
 		.main { margin-left: 0; }
 		.mobile-topbar { display: flex; }
-		.mobile-menu-btn { display: block; }
 		.content-wrap { padding: 20px 12px 48px; }
 		.hero-top { grid-template-columns: 1fr; }
 		.hero-map { height: 200px; order: -1; }

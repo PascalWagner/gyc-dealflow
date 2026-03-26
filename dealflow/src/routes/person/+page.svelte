@@ -17,7 +17,6 @@
 	let companies = $state([]);
 	let deals = $state([]);
 	let personStats = $state({});
-	let sidebarOpen = $state(false);
 
 	function pct(val) { return val == null ? '--' : (val * 100).toFixed(1) + '%'; }
 	function multiple(val) { return val == null ? '--' : val.toFixed(1) + 'x'; }
@@ -87,8 +86,6 @@
 
 		loading = false;
 	});
-
-	function toggleSidebar() { sidebarOpen = !sidebarOpen; }
 </script>
 
 <svelte:head>
@@ -98,12 +95,7 @@
 <div class="page-layout ly-sidebar-shell">
 	<Sidebar currentPage="person" />
 
-	<div class="sidebar-overlay" class:open={sidebarOpen} onclick={() => sidebarOpen = false}></div>
-
 	<div class="mobile-topbar">
-		<button class="mobile-menu-btn" onclick={toggleSidebar}>
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-		</button>
 		<div class="mobile-topbar-title">{person?.name || 'Person Profile'}</div>
 		<a href="/app/deals" class="mobile-deals-link">Deals</a>
 	</div>
@@ -283,13 +275,9 @@
 		margin: 0 auto;
 	}
 
-	.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; color: var(--text-dark); padding: 4px; }
-	.mobile-menu-btn svg { width: 24px; height: 24px; }
 	.mobile-topbar { display: none; position: sticky; top: 0; height: 56px; background: var(--bg-cream); border-bottom: 1px solid var(--border); align-items: center; padding: 0 20px; gap: 12px; z-index: 50; }
 	.mobile-topbar-title { font-family: var(--font-ui); font-size: 14px; font-weight: 700; color: var(--text-dark); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.mobile-deals-link { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--primary); text-decoration: none; }
-	.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
-	.sidebar-overlay.open { display: block; }
 
 	/* Person Header */
 	.person-header { background: linear-gradient(145deg, var(--teal-midnight) 0%, var(--teal-deep) 100%); border-radius: var(--radius); padding: 36px 40px; margin-bottom: 24px; position: relative; overflow: hidden; }

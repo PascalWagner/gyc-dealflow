@@ -162,9 +162,6 @@
 </script>
 
 <div class="topbar">
-	<button class="mobile-menu-btn" onclick={() => document.getElementById('sidebar')?.classList.toggle('open')}>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-	</button>
 	<div class="topbar-title">My Goals</div>
 </div>
 
@@ -347,8 +344,6 @@
 
 <style>
 	.topbar { display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 0; z-index: 10; }
-	.mobile-menu-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
-	.mobile-menu-btn svg { width: 22px; height: 22px; }
 	.topbar-title { font-family: var(--font-ui); font-size: 16px; font-weight: 800; color: var(--text-dark); }
 
 	/* Wizard */
@@ -431,7 +426,6 @@
 	}
 
 	@media (max-width: 768px) {
-		.mobile-menu-btn { display: block; }
 		.goals-dashboard { padding: 0 16px 40px; }
 		.metrics-grid { grid-template-columns: repeat(2, 1fr); }
 		.scenarios-grid { grid-template-columns: 1fr; }

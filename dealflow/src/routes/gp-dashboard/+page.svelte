@@ -11,7 +11,6 @@
 	let accessDenied = $state(false);
 	let toastMsg = $state('');
 	let toastVisible = $state(false);
-	let sidebarOpen = $state(false);
 
 	// GP State
 	let companyId = $state(null);
@@ -912,9 +911,6 @@
 		showToast('Dashboard data refreshed');
 	}
 
-	function toggleSidebar() { sidebarOpen = !sidebarOpen; }
-	function closeSidebar() { sidebarOpen = false; }
-
 	// Completeness bar color
 	function pctClass(val) {
 		return val < 40 ? 'pct-low' : val < 70 ? 'pct-mid' : 'pct-high';
@@ -929,17 +925,8 @@
 
 <!-- Mobile top bar -->
 <div class="mobile-topbar">
-	<button class="mobile-menu-btn" aria-label="Open navigation menu" onclick={toggleSidebar}>
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-	</button>
 	<div class="mobile-topbar-title">GP Dashboard</div>
 </div>
-
-{#if sidebarOpen}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="sidebar-overlay open" onclick={closeSidebar}></div>
-{/if}
 
 <div class="main">
 	<div class="content-wrap">
@@ -1474,24 +1461,6 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	.mobile-menu-btn {
-		display: none;
-		background: none;
-		border: none;
-		cursor: pointer;
-		color: var(--text-dark);
-		padding: 4px;
-	}
-	.mobile-menu-btn :global(svg) { width: 24px; height: 24px; }
-	.sidebar-overlay {
-		display: none;
-		position: fixed;
-		inset: 0;
-		background: rgba(0,0,0,0.5);
-		z-index: 99;
-	}
-	.sidebar-overlay.open { display: block; }
-
 	/* ====== LOADING SKELETON ====== */
 	.skeleton {
 		position: relative;
@@ -3222,7 +3191,6 @@
 	@media (max-width: 768px) {
 		.main { margin-left: 0; }
 		.mobile-topbar { display: flex; }
-		.mobile-menu-btn { display: block; }
 		.content-wrap { padding: 20px 16px 100px; }
 		.mobile-tab-bar { display: flex !important; }
 		.gp-header { padding: 24px 20px; }
