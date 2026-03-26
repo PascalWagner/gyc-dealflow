@@ -183,6 +183,29 @@
 		return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
 	}
 
+	function plainSegment(text) {
+		return text ? [{ text, emphasis: false }] : [];
+	}
+
+	function emphasisSegment(text) {
+		return text ? [{ text, emphasis: true }] : [];
+	}
+
+	function listSegments(items = []) {
+		const filtered = items.filter(Boolean);
+		return filtered.flatMap((item, index) => {
+			const segments = [];
+			if (index > 0) {
+				segments.push({
+					text: filtered.length === 2 ? ' and ' : index === filtered.length - 1 ? ', and ' : ', ',
+					emphasis: false
+				});
+			}
+			segments.push({ text: item, emphasis: true });
+			return segments;
+		});
+	}
+
 	function percentNumber(value) {
 		const amount = Number(value || 0);
 		if (!Number.isFinite(amount) || amount <= 0) return 0;
@@ -439,19 +462,44 @@
 		return 'CASH FLOW';
 	});
 	const targetHeadline = $derived(targetDisplay(goalKey, annualTargetAmount));
-	const targetLabel = $derived.by(() => goalKey === 'growth' ? 'Target' : 'Thesis');
-	const planThesis = $derived.by(() => {
-		const assetsText = titleCaseList(selectedAssets.slice(0, 5).map((asset) => getAssetProfile(asset).label));
-		const strategiesText = titleCaseList(
-			(selectedStrategies.length ? selectedStrategies : ['Lending / Credit', 'Buy & Hold', 'Distressed']).slice(0, 4)
-		);
+	const targetLabel = $derived('Thesis');
+	const planThesisSegments = $derived.by(() => {
+		const assetLabels = selectedAssets.slice(0, 5).map((asset) => getAssetProfile(asset).label);
+		const strategyLabels = (
+			selectedStrategies.length ? selectedStrategies : ['Lending / Credit', 'Buy & Hold', 'Distressed']
+		).slice(0, 4);
+
 		if (goalKey === 'growth') {
-			return `I want to compound capital through ${assetsText}, using ${strategiesText} strategies, with a bias toward durable sponsors, steady reinvestment, and long-term upside.`;
+			return [
+				...plainSegment('I want to compound capital through '),
+				...listSegments(assetLabels),
+				...plainSegment(', using '),
+				...listSegments(strategyLabels),
+				...plainSegment(' strategies, with a bias toward durable sponsors, steady reinvestment, and long-term upside.')
+			];
 		}
+
 		if (goalKey === 'tax') {
-			return `I want to target ${assetsText}, using ${strategiesText} structures, with a focus on depreciation, efficient capital placement, and offset-friendly cash flow.`;
+			return [
+				...plainSegment('I want to target '),
+				...listSegments(assetLabels),
+				...plainSegment(', using '),
+				...listSegments(strategyLabels),
+				...plainSegment(' structures, with a focus on depreciation, efficient capital placement, and offset-friendly cash flow.')
+			];
 		}
-		return `I invest in ${assetsText}, using ${strategiesText} strategies, writing ${currency(estimateCheckSize(plan?.investableCapital || wizardData.investableCapital))} checks, targeting quarterly or better distributions.`;
+
+		return [
+			...plainSegment('I invest in '),
+			...listSegments(assetLabels),
+			...plainSegment(', using '),
+			...listSegments(strategyLabels),
+			...plainSegment(' strategies, writing '),
+			...emphasisSegment(currency(estimateCheckSize(plan?.investableCapital || wizardData.investableCapital))),
+			...plainSegment(' checks, targeting '),
+			...emphasisSegment('quarterly or better'),
+			...plainSegment(' distributions.')
+		];
 	});
 
 	const snapshotRows = $derived.by(() =>
@@ -1002,7 +1050,15 @@
 				<div class="plan-kicker">Target</div>
 				<h1 class="plan-headline">{targetHeadline}</h1>
 				<div class="plan-kicker">{targetLabel}</div>
-				<p class="plan-copy">{planThesis}</p>
+				<p class="plan-copy">
+					{#each planThesisSegments as segment}
+						{#if segment.emphasis}
+							<strong>{segment.text}</strong>
+						{:else}
+							{segment.text}
+						{/if}
+					{/each}
+				</p>
 			</section>
 
 			{#if canViewAnalytics}
@@ -1155,7 +1211,15 @@
 
 				<section class="print-card">
 					<div class="print-kicker">Investment Thesis</div>
-					<p class="print-copy">{planThesis}</p>
+					<p class="print-copy">
+						{#each planThesisSegments as segment}
+							{#if segment.emphasis}
+								<strong>{segment.text}</strong>
+							{:else}
+								{segment.text}
+							{/if}
+						{/each}
+					</p>
 				</section>
 
 				<div class="print-meta-row">
@@ -1352,13 +1416,13 @@
 	}
 	.plan-card {
 		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
+		border: 1px solid #d7e2e7;
+		border-radius: 16px;
 		padding: 24px;
-		box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+		box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 	}
 	.plan-target-card {
-		padding: 26px 26px 28px;
+		padding: 32px 34px 34px;
 	}
 	.plan-card-top,
 	.schedule-topline,
@@ -1371,14 +1435,15 @@
 	.goal-pill {
 		display: inline-flex;
 		align-items: center;
-		padding: 6px 10px;
+		padding: 6px 12px;
 		border-radius: 999px;
-		background: rgba(81, 190, 123, 0.14);
+		background: rgba(81, 190, 123, 0.1);
+		border: 1px solid rgba(81, 190, 123, 0.18);
 		color: var(--primary);
 		font-family: var(--font-ui);
-		font-size: 11px;
+		font-size: 12px;
 		font-weight: 700;
-		letter-spacing: 0.4px;
+		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 	.target-actions {
@@ -1391,7 +1456,7 @@
 		background: none;
 		padding: 0;
 		font-family: var(--font-ui);
-		font-size: 13px;
+		font-size: 14px;
 		font-weight: 600;
 		color: var(--text-muted);
 		cursor: pointer;
@@ -1402,26 +1467,37 @@
 	}
 	.plan-kicker,
 	.section-eyebrow {
-		margin-top: 18px;
+		margin-top: 20px;
 		font-family: var(--font-ui);
-		font-size: 10px;
+		font-size: 11px;
 		font-weight: 700;
-		letter-spacing: 1px;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--text-muted);
 	}
 	.plan-headline {
-		margin: 6px 0 0;
+		margin: 10px 0 0;
 		font-family: var(--font-headline);
-		font-size: 23px;
+		font-size: 27px;
 		font-weight: 700;
-		line-height: 1.25;
+		line-height: 1.18;
 		color: var(--text-dark);
 	}
-	.plan-copy,
+	.plan-copy {
+		margin: 12px 0 0;
+		font-family: var(--font-body);
+		font-size: 17px;
+		line-height: 1.75;
+		color: var(--text-secondary);
+	}
+	.plan-copy strong,
+	.print-copy strong {
+		font-weight: 700;
+		color: var(--text-dark);
+	}
 	.section-subcopy,
 	.locked-copy {
-		margin: 16px 0 0;
+		margin: 12px 0 0;
 		font-family: var(--font-body);
 		font-size: 15px;
 		line-height: 1.8;
