@@ -164,6 +164,9 @@
 
 	.page-transition {
 		animation: pageIn 0.15s ease-out;
+		min-width: 0;
+		max-width: 100%;
+		overflow-x: clip;
 	}
 
 	@keyframes pageIn {
@@ -175,14 +178,19 @@
 		display: flex;
 		min-height: 100vh;
 		min-height: 100dvh;
+		overflow-x: clip;
 	}
 
 	.app-main {
 		flex: 1;
 		margin-left: 240px;
+		width: calc(100% - 240px);
 		min-height: 100vh;
 		min-height: 100dvh;
+		min-width: 0;
+		max-width: 100%;
 		background: var(--bg-cream);
+		overflow-x: clip;
 	}
 
 	.loading-screen {
@@ -271,6 +279,7 @@
 	@media (min-width: 769px) and (max-width: 1024px) {
 		.app-main {
 			margin-left: 0;
+			width: 100%;
 			padding-bottom: 72px;
 		}
 
@@ -299,6 +308,7 @@
 	@media (max-width: 768px) {
 		.app-main {
 			margin-left: 0;
+			width: 100%;
 			padding-bottom: 72px; /* Space for bottom tabs */
 		}
 
