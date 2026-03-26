@@ -475,7 +475,7 @@ function applyUserBundle(bundle, buyBox, email) {
 	if (buyBox && Object.keys(buyBox).length > 0) {
 		persistJson('gycBuyBox', buyBox);
 		persistJson('gycBuyBoxWizard', buyBox);
-		if (buyBox._branch || buyBox.goal) {
+		if (buyBox._completedAt) {
 			persistString('gycBuyBoxComplete', 'true');
 		}
 	} else if (storageArea) {

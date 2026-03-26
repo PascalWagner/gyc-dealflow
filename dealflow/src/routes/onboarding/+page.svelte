@@ -169,7 +169,7 @@
 	const hasMemberAccess = $derived($accessTier === 'member' || $accessTier === 'admin');
 
 	function lpDealsRedirect() {
-		return hasMemberAccess ? '/app/deals?buybox=1' : '/app/deals';
+		return hasMemberAccess ? '/app/plan' : '/app/deals';
 	}
 
 	function selectBaselinePreset(val) {
@@ -579,6 +579,8 @@
 			return;
 		}
 
+		const reviewMode = ['1', 'true', 'yes'].includes(($page.url.searchParams.get('review') || '').toLowerCase());
+
 		// Dark mode
 		const savedTheme = localStorage.getItem('gyc-theme');
 		if (savedTheme === 'dark') {
@@ -620,16 +622,16 @@
 
 			const step = data.profile?.onboardingStep || 0;
 
-			if (data.profile?.onboardingComplete) { goto('/gp-dashboard'); return; }
-			if (data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
-			if (data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
+			if (!reviewMode && data.profile?.onboardingComplete) { goto('/gp-dashboard'); return; }
+			if (!reviewMode && data.profile?.onboardingRole === 'lp') { goto(lpDealsRedirect()); return; }
+			if (!reviewMode && data.company && step === 0) { selectedRole = 'gp'; goToStep('step2'); return; }
 
 			// DB steps -> UI steps
 			const stepMap = { 0: 'step0', 1: 'step2', 2: 'step5', 3: 'step6', 4: 'step7', 5: 'step8', 6: 'step10' };
 			const resumeStep = $page.url.searchParams.get('resumeStep');
 			if (resumeStep) {
 				goToStep('step' + resumeStep);
-			} else if (step > 0 && stepMap[step]) {
+			} else if (!reviewMode && step > 0 && stepMap[step]) {
 				goToStep(stepMap[step]);
 			}
 		} catch (err) {

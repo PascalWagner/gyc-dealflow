@@ -198,6 +198,26 @@ export default async function handler(req, res) {
             wizardBuyBox[wizKey] = normalizeWizardValue(column, buyBox[column]);
           }
         }
+
+        const branch = String(buyBox.branch || wizardBuyBox._branch || '').toLowerCase();
+        const targetValue = normalizeWizardValue('target_cashflow', buyBox.target_cashflow);
+        if (targetValue !== undefined && targetValue !== null && targetValue !== '') {
+          if (branch === 'growth') {
+            wizardBuyBox.growthCapital = targetValue;
+            wizardBuyBox.targetGrowth = targetValue;
+          } else {
+            wizardBuyBox.targetCashFlow = targetValue;
+            wizardBuyBox.targetIncome = targetValue;
+          }
+        }
+
+        if (wizardBuyBox.lpDealsCount !== undefined && wizardBuyBox.dealExperience === undefined) {
+          wizardBuyBox.dealExperience = wizardBuyBox.lpDealsCount;
+        }
+
+        if (buyBox.completed_at) {
+          wizardBuyBox._completedAt = buyBox.completed_at;
+        }
       }
 
       return res.status(200).json({
@@ -242,8 +262,16 @@ export default async function handler(req, res) {
         }
       }
 
-      // Check if wizard is complete (all required fields filled)
-      if (wizardData.goal && wizardData.accreditation) {
+      if (!row.lp_deals_count && wizardData.dealExperience !== undefined && wizardData.dealExperience !== null && wizardData.dealExperience !== '') {
+        row.lp_deals_count = wizardData.dealExperience;
+      }
+
+      const branch = String(wizardData._branch || wizardData.branch || '').toLowerCase();
+      if (!row.target_cashflow && wizardData.growthCapital !== undefined && wizardData.growthCapital !== null && wizardData.growthCapital !== '' && branch === 'growth') {
+        row.target_cashflow = wizardData.growthCapital;
+      }
+
+      if (wizardData._markComplete === true) {
         row.completed_at = new Date().toISOString();
       }
 

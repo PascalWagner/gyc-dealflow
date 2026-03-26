@@ -1,6 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import CompanionGate from '$lib/components/CompanionGate.svelte';
+	import LegacyPlanWizard from '$lib/components/LegacyPlanWizard.svelte';
 	import {
 		getStoredSessionUser,
 		isMember
@@ -13,6 +15,7 @@
 	} from '$lib/utils/userScopedState.js';
 	import { browser } from '$app/environment';
 	import { isNativeApp } from '$lib/utils/platform.js';
+	import { hasCompletedPlan, normalizeWizardData } from '$lib/onboarding/planWizard.js';
 
 	let hasPlan = $state(false);
 	let loading = $state(true);
@@ -22,6 +25,10 @@
 	let saving = $state(false);
 	let saveMsg = $state('');
 	let shouldOpenWizardFromLocation = false;
+	let wizardForceEdit = $state(false);
+	let wizardStage = $state('');
+	let wizardBranch = $state('');
+	let wizardFlowKey = $state('');
 	let reportUser = $state(null);
 	let portfolioPlan = $state(null);
 	let marketSnapshot = $state({ rows: [], total: 0, newThisMonth: 0, loaded: false });
@@ -30,13 +37,7 @@
 	const canViewAnalytics = $derived($isMember);
 
 	let wizardStep = $state(0);
-	let wizardData = $state({
-		goal: 'cashflow',
-		targetAmount: 0,
-		investableCapital: '',
-		assetClasses: [],
-		dealTypes: []
-	});
+	let wizardData = $state(normalizeWizardData({}));
 
 	const assetClassOptions = [
 		'Single Family',
@@ -348,35 +349,50 @@
 		if (!browser) return false;
 		const params = new URLSearchParams(window.location.search);
 		const hash = window.location.hash.replace('#', '').toLowerCase();
-		return ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase()) || hash === 'edit' || hash === 'buybox';
+		return (
+			['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase()) ||
+			['1', 'true', 'yes'].includes((params.get('wizard') || '').toLowerCase()) ||
+			Boolean(params.get('stage')) ||
+			Boolean(params.get('flow')) ||
+			hash === 'edit' ||
+			hash === 'buybox'
+		);
 	}
 
-	function openWizard() {
-		if (browser) {
-			const { buyBoxWizard: stored } = getUserScopedCacheSnapshot();
-			if (stored && Object.keys(stored).length > 0) {
-				wizardData.goal = stored._branch || stored.goal || 'cashflow';
-				wizardData.targetAmount = Number(stored.targetAmount || stored.targetIncome || stored.targetTaxSavings || stored.targetGrowth || 0);
-				wizardData.investableCapital = stored.investableCapital || stored._capitalRange || '';
-				wizardData.assetClasses = stored.assetClasses || [];
-				wizardData.dealTypes = stored.dealTypes || stored.strategies || [];
-			}
-		}
-		wizardStep = 0;
+	function openWizard(editMode = hasPlan) {
+		wizardForceEdit = editMode;
 		showWizard = true;
 	}
 
 	function closeWizard() {
 		showWizard = false;
-		if (browser) {
-			writeUserScopedJson('gycBuyBoxWizard', {
-				_branch: wizardData.goal,
-				goal: wizardData.goal,
-				targetAmount: wizardData.targetAmount,
-				investableCapital: wizardData.investableCapital,
-				assetClasses: wizardData.assetClasses,
-				dealTypes: wizardData.dealTypes
-			});
+	}
+
+	function syncWizardView(detail = {}) {
+		const nextWizard = normalizeWizardData(detail.wizardData || wizardData || {});
+		wizardData = nextWizard;
+		plan = nextWizard;
+		if (detail.persistedPortfolioPlan && detail.portfolioPlan) {
+			portfolioPlan = detail.portfolioPlan;
+			writeUserScopedJson('gycPortfolioPlan', detail.portfolioPlan);
+		}
+		hasPlan = hasCompletedPlan(nextWizard, detail.portfolioPlan || portfolioPlan);
+	}
+
+	function handleWizardState(event) {
+		syncWizardView(event.detail || {});
+	}
+
+	function handleWizardClose(event) {
+		syncWizardView(event.detail || {});
+		showWizard = false;
+	}
+
+	function handleWizardComplete(event) {
+		syncWizardView(event.detail || {});
+		showWizard = false;
+		if (event.detail?.redirectTo) {
+			goto(event.detail.redirectTo);
 		}
 	}
 
@@ -833,16 +849,24 @@
 	onMount(async () => {
 		if (!browser) return;
 		shouldOpenWizardFromLocation = shouldAutoOpenWizard();
+		const params = new URLSearchParams(window.location.search);
+		wizardStage = params.get('stage') || '';
+		wizardBranch = params.get('branch') || '';
+		wizardFlowKey = params.get('flow') || '';
+		wizardForceEdit = ['1', 'true', 'yes'].includes((params.get('edit') || '').toLowerCase());
 		const snapshot = getUserScopedCacheSnapshot();
 		portfolio = snapshot.portfolio;
 		reportUser = getStoredSessionUser();
 		portfolioPlan = snapshot.portfolioPlan;
+		wizardData = normalizeWizardData(snapshot.buyBoxWizard || {});
+		plan = wizardData;
+		hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
 
 		try {
 			const stored = getStoredSessionUser();
 			if (!stored?.token) {
 				loading = false;
-				if (shouldOpenWizardFromLocation) openWizard();
+				if (shouldOpenWizardFromLocation || !hasPlan) openWizard(wizardForceEdit);
 				return;
 			}
 			const realUser = currentAdminRealUser();
@@ -862,20 +886,16 @@
 			if (response.ok) {
 				const data = await response.json();
 				if (data?.buyBox && Object.keys(data.buyBox).length > 0) {
-					plan = data.buyBox;
-					hasPlan = true;
-					wizardData.goal = data.buyBox._branch || 'cashflow';
-					wizardData.targetAmount = Number(data.buyBox.targetIncome || data.buyBox.targetGrowth || data.buyBox.targetTaxSavings || 0);
-					wizardData.investableCapital = data.buyBox.investableCapital || '';
-					wizardData.assetClasses = data.buyBox.assetClasses || [];
-					wizardData.dealTypes = data.buyBox.dealTypes || data.buyBox.strategies || [];
+					wizardData = normalizeWizardData(data.buyBox);
+					plan = wizardData;
+					hasPlan = hasCompletedPlan(wizardData, portfolioPlan);
 				}
 			}
 		} catch (error) {
 			console.warn('Failed to load plan:', error);
 		} finally {
 			loading = false;
-			if (shouldOpenWizardFromLocation && !showWizard) openWizard();
+			if ((shouldOpenWizardFromLocation || !hasPlan) && !showWizard) openWizard(wizardForceEdit && hasPlan);
 		}
 	});
 </script>
@@ -911,132 +931,19 @@
 				<div class="sk-bar" style="width: 84%; height: 14px;"></div>
 			</div>
 		</div>
-	{:else if showWizard}
-		<div class="wizard-overlay">
-			<div class="wizard-modal">
-				<div class="wizard-top">
-					<div class="wizard-progress">
-						{#each stepTitles as _, index}
-							<div class="wiz-dot" class:active={index === wizardStep} class:done={index < wizardStep}></div>
-						{/each}
-					</div>
-					<button class="wizard-close" onclick={closeWizard}>&times;</button>
-				</div>
-
-				<div class="wizard-step-title">{stepTitles[wizardStep]}</div>
-
-				{#if wizardStep === 0}
-					<div class="goal-cards">
-						<button class="goal-card" class:selected={wizardData.goal === 'cashflow'} onclick={() => selectGoal('cashflow')}>
-							<div class="goal-card-title">Build Passive Income</div>
-							<div class="goal-card-desc">Design a plan around repeatable cash-flowing checks and quarterly distributions.</div>
-						</button>
-						<button class="goal-card" class:selected={wizardData.goal === 'growth'} onclick={() => selectGoal('growth')}>
-							<div class="goal-card-title">Build Long-Term Wealth</div>
-							<div class="goal-card-desc">Bias the plan toward appreciation, durable operators, and longer hold periods.</div>
-						</button>
-						<button class="goal-card" class:selected={wizardData.goal === 'tax'} onclick={() => selectGoal('tax')}>
-							<div class="goal-card-title">Reduce Taxable Income</div>
-							<div class="goal-card-desc">Prioritize structures with depreciation or offset-friendly income characteristics.</div>
-						</button>
-					</div>
-				{:else if wizardStep === 1}
-					<div class="wiz-field">
-						<label for="planTarget">{getTargetLabel()}</label>
-						<input id="planTarget" type="number" bind:value={wizardData.targetAmount} placeholder="100000" />
-						{#if getTargetHint()}
-							<div class="wiz-hint">{getTargetHint()}</div>
-						{/if}
-					</div>
-					<div class="wiz-nav">
-						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
-						<button class="wiz-btn-next" onclick={nextStep} disabled={!wizardData.targetAmount}>Next</button>
-					</div>
-				{:else if wizardStep === 2}
-					<div class="capital-chips">
-						{#each capitalOptions as option}
-							<button class="capital-chip" class:selected={wizardData.investableCapital === option.value} onclick={() => wizardData.investableCapital = option.value}>
-								{option.label}
-							</button>
-						{/each}
-					</div>
-					<div class="wiz-nav">
-						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
-						<button class="wiz-btn-next" onclick={nextStep} disabled={!wizardData.investableCapital}>Next</button>
-					</div>
-				{:else if wizardStep === 3}
-					<div class="toggle-grid">
-						{#each assetClassOptions as asset}
-							<button class="toggle-chip" class:selected={wizardData.assetClasses.includes(asset)} onclick={() => toggleAssetClass(asset)}>
-								{asset}
-							</button>
-						{/each}
-					</div>
-					<div class="wiz-nav">
-						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
-						<button class="wiz-btn-next" onclick={nextStep} disabled={wizardData.assetClasses.length === 0}>Next</button>
-					</div>
-				{:else if wizardStep === 4}
-					<div class="toggle-grid">
-						{#each dealTypeOptions as dealType}
-							<button class="toggle-chip" class:selected={wizardData.dealTypes.includes(dealType)} onclick={() => toggleDealType(dealType)}>
-								{dealType}
-							</button>
-						{/each}
-					</div>
-					<div class="wiz-nav">
-						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
-						<button class="wiz-btn-next" onclick={nextStep} disabled={wizardData.dealTypes.length === 0}>Next</button>
-					</div>
-				{:else}
-					<div class="summary-card">
-						<div class="summary-row">
-							<div class="summary-label">Goal</div>
-							<div class="summary-value">{goalLabels[wizardData.goal]}</div>
-						</div>
-						<div class="summary-row">
-							<div class="summary-label">Target</div>
-							<div class="summary-value">{targetDisplay(wizardData.goal, Number(wizardData.targetAmount || 0))}</div>
-						</div>
-						<div class="summary-row">
-							<div class="summary-label">Investable Capital</div>
-							<div class="summary-value">{capitalOptions.find((option) => option.value === wizardData.investableCapital)?.label || 'Not set'}</div>
-						</div>
-						<div class="summary-row">
-							<div class="summary-label">Asset Classes</div>
-							<div class="summary-tags">
-								{#each wizardData.assetClasses as asset}
-									<span class="summary-tag">{asset}</span>
-								{/each}
-							</div>
-						</div>
-						<div class="summary-row">
-							<div class="summary-label">Deal Types</div>
-							<div class="summary-tags">
-								{#each wizardData.dealTypes as dealType}
-									<span class="summary-tag">{dealType}</span>
-								{/each}
-							</div>
-						</div>
-					</div>
-					<div class="wiz-nav">
-						<button class="wiz-btn-back" onclick={prevStep}>Back</button>
-						<button class="wiz-btn-save" onclick={savePlan} disabled={saving}>
-							{saving ? 'Saving...' : 'Save My Plan'}
-						</button>
-					</div>
-				{/if}
-			</div>
-		</div>
-	{:else if !hasPlan}
-		<div class="empty-state">
-			<div class="empty-icon">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="36" height="36"><path d="M4 6h16v12H4z"/><path d="M9 6V4h6v2"/></svg>
-			</div>
-			<div class="empty-title">You do not have an investment plan yet</div>
-			<div class="empty-desc">Build your target, preferred asset classes, and investment cadence so Dashboard, Portfolio, and deals all line up to the same blueprint.</div>
-			<button class="btn-cta" onclick={openWizard}>Build My Plan</button>
-		</div>
+	{:else if showWizard || !hasPlan}
+		<LegacyPlanWizard
+			initialData={wizardData}
+			initialPortfolioPlan={portfolioPlan}
+			allowClose={hasPlan}
+			forceEdit={wizardForceEdit}
+			forcedStage={wizardStage}
+			forcedBranch={wizardBranch}
+			forcedFlowKey={wizardFlowKey}
+			on:state={handleWizardState}
+			on:close={handleWizardClose}
+			on:complete={handleWizardComplete}
+		/>
 	{:else}
 		<div class="plan-stack">
 			<section class="plan-card plan-target-card">
