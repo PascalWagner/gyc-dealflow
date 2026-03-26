@@ -83,6 +83,16 @@ assert(
 	'Market Intel API must load the SEC market dataset.'
 );
 
+assert(
+	!marketIntelApi.includes('deal_source'),
+	'Market Intel API must not query the removed opportunities.deal_source column.'
+);
+
+assert(
+	!marketIntelApi.includes('submittor,'),
+	'Market Intel API must not query the removed opportunities.submittor column.'
+);
+
 for (const [label, source] of [
 	['Sponsor page', sponsorPage],
 	['Person page', personPage]
