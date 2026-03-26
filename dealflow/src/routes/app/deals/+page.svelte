@@ -100,6 +100,18 @@
 		return String(value || '').trim().toLowerCase();
 	}
 
+	function coerceNumber(value) {
+		if (value == null || value === '') return null;
+		if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+		const parsed = parseFloat(String(value).replace(/[$,%xX,\s]/g, ''));
+		return Number.isFinite(parsed) ? parsed : null;
+	}
+
+	function normalizeComparisonText(value) {
+		if (Array.isArray(value)) return value.filter(Boolean).join(', ') || null;
+		return value == null || value === '' ? null : String(value);
+	}
+
 	function getBuyBoxCheckSize(inputBuyBox) {
 		const directCheckSize = Number(inputBuyBox?.checkSize);
 		if (Number.isFinite(directCheckSize) && directCheckSize > 0) return directCheckSize;
@@ -300,6 +312,93 @@
 		};
 	}
 
+	function calculatePlanFitScore(deal) {
+		if (!buyBox) return null;
+
+		const assetPreferences = (Array.isArray(buyBox.assetClasses) ? buyBox.assetClasses : [])
+			.map(normalizeMatchValue)
+			.filter(Boolean);
+		const buyBoxCheckSize = getBuyBoxCheckSize(buyBox);
+		const buyBoxMaxLockup = Number(buyBox.maxLockup || 0);
+		const buyBoxDistribution = normalizeMatchValue(buyBox.distributions);
+		const buyBoxMinIrr = Number(buyBox.minIRR || 0);
+		const { dealTypes: buyBoxDealTypes, strategies: buyBoxStrategies } = getBuyBoxSelections(buyBox);
+
+		const dealAssetClasses = (Array.isArray(deal.assetClass) ? deal.assetClass : [deal.assetClass])
+			.map(normalizeMatchValue)
+			.filter(Boolean);
+		const dealStrategy = normalizeMatchValue(deal.investmentStrategy || deal.strategy);
+		const dealType = normalizeMatchValue(deal.dealType);
+		const minimumInvestment = Number(deal.investmentMinimum || deal.minimumInvestment || 0);
+		const holdPeriod = parseFloat(deal.holdPeriod);
+		const distribution = normalizeMatchValue(deal.distributions || deal.distributionFrequency);
+		const targetIrr = Number(deal.targetIRR || 0);
+		const normalizedTargetIrr = targetIrr > 0 ? (targetIrr <= 1 ? targetIrr * 100 : targetIrr) : 0;
+		const normalizedMinIrr = buyBoxMinIrr > 0 ? (buyBoxMinIrr <= 1 ? buyBoxMinIrr * 100 : buyBoxMinIrr) : 0;
+
+		const checks = [
+			assetPreferences.length > 0
+				? assetPreferences.some((preference) => dealAssetClasses.includes(preference))
+				: null,
+			(buyBoxStrategies.length || buyBoxDealTypes.length)
+				? (
+					buyBoxStrategies.some((preference) => dealStrategy === preference || dealAssetClasses.includes(preference)) ||
+					buyBoxDealTypes.includes(dealType)
+				)
+				: null,
+			buyBoxCheckSize > 0
+				? (minimumInvestment > 0 ? minimumInvestment <= buyBoxCheckSize : false)
+				: null,
+			buyBoxMaxLockup > 0
+				? (Number.isFinite(holdPeriod) ? holdPeriod <= buyBoxMaxLockup : false)
+				: null,
+			(buyBoxDistribution || normalizedMinIrr > 0)
+				? (
+					(buyBoxDistribution ? distribution === buyBoxDistribution : true) &&
+					(normalizedMinIrr > 0 ? normalizedTargetIrr >= normalizedMinIrr : true)
+				)
+				: null
+		].filter((value) => value !== null);
+
+		if (checks.length === 0) return null;
+
+		return Math.max(1, Math.min(5, checks.filter(Boolean).length));
+	}
+
+	function buildDecisionCompareDeal(deal) {
+		return {
+			id: deal.id,
+			name: normalizeComparisonText(deal.investmentName || deal.name) || 'Untitled Deal',
+			sponsor: normalizeComparisonText(deal.managementCompany || deal.sponsor),
+			assetClass: normalizeComparisonText(deal.assetClass),
+			planFit: calculatePlanFitScore(deal),
+			returns: {
+				irr: coerceNumber(deal.targetIRR),
+				pref: coerceNumber(deal.preferredReturn),
+				cashOnCash: coerceNumber(deal.cashOnCash),
+				multiple: coerceNumber(deal.equityMultiple)
+			},
+			terms: {
+				minimum: coerceNumber(deal.investmentMinimum || deal.minimumInvestment),
+				holdPeriod: coerceNumber(deal.holdPeriod),
+				leverage: deal.avgLoanLTV ?? deal.leverage ?? null
+			},
+			additional: {
+				distributions: normalizeComparisonText(deal.distributions || deal.distributionFrequency),
+				strategy: normalizeComparisonText(deal.investmentStrategy || deal.strategy),
+				dealType: normalizeComparisonText(deal.dealType),
+				geography: normalizeComparisonText(deal.investingGeography || deal.location),
+				sponsorCoInvest: coerceNumber(deal.sponsorInDeal),
+				lpGpSplit: normalizeComparisonText(deal.lpGpSplit),
+				offeringSize: coerceNumber(deal.offeringSize),
+				sponsorAum: coerceNumber(deal.fundAUM),
+				offeringType: normalizeComparisonText(deal.offeringType),
+				availableTo: normalizeComparisonText(deal.availableTo),
+				status: normalizeComparisonText(deal.status)
+			}
+		};
+	}
+
 	function switchTab(tab) {
 		currentTab = tab;
 		syncTabInUrl(tab);
@@ -334,13 +433,15 @@
 		const dealsById = new Map(filteredDeals.map((deal) => [deal.id, deal]));
 		return $decisionCompareIds.map((dealId) => dealsById.get(dealId)).filter(Boolean);
 	});
-	const decisionCompareRemaining = $derived(Math.max(0, MAX_DECISION_COMPARE - selectedDecisionDeals.length));
-	const decisionShelfDeals = $derived.by(() => {
+	const selectedDecisionComparisonDeals = $derived.by(() => {
 		if (currentTab !== 'decide') return [];
-		return [
-			...selectedDecisionDeals,
-			...filteredDeals.filter((deal) => !decisionCompareSet.has(deal.id))
-		];
+		return selectedDecisionDeals.map(buildDecisionCompareDeal);
+	});
+	const remainingDecisionComparisonDeals = $derived.by(() => {
+		if (currentTab !== 'decide') return [];
+		return filteredDeals
+			.filter((deal) => !decisionCompareSet.has(deal.id))
+			.map(buildDecisionCompareDeal);
 	});
 	const totalMatchingDeals = $derived($memberDealsMeta.total || filteredDeals.length);
 	const avgIRR = $derived.by(() => {
@@ -374,10 +475,6 @@
 		buyBoxApplied = false;
 	}
 
-	function handleDecisionCompareToggle(dealId) {
-		decisionCompareIds.toggle(dealId);
-	}
-
 	async function loadMoreDeals() {
 		await loadMoreMemberDeals().catch(() => {});
 	}
@@ -392,8 +489,8 @@
 
 		if (!decisionSelectionInitialized) {
 			decisionSelectionInitialized = true;
-			if (nextIds.length === 0 && validIds.length > 0) {
-				decisionCompareIds.set(validIds.slice(0, MAX_DECISION_COMPARE));
+			if (nextIds.length === 0 && validIds.length >= 2) {
+				decisionCompareIds.set(validIds.slice(0, 2));
 				return;
 			}
 		}
@@ -500,7 +597,7 @@
 		/>
 	</div>
 
-	{#if !(isMobile && currentTab === 'filter')}
+	{#if !(isMobile && currentTab === 'filter') && currentTab !== 'decide'}
 		<div class="stage-banner" style="border-left-color:{currentStageContent.color}">
 			<div class="stage-copy">
 				<span class="stage-title">{currentStageContent.title}</span>
@@ -545,55 +642,18 @@
 	{:else if currentTab === 'decide' && filteredDeals.length > 0}
 		<div class="decision-compare-page">
 			<CompareView
-				deals={selectedDecisionDeals}
+				deals={selectedDecisionComparisonDeals}
+				remainingDeals={remainingDecisionComparisonDeals}
+				totalDealsInDecision={filteredDeals.length}
 				maxDeals={MAX_DECISION_COMPARE}
 				onremove={(dealId) => decisionCompareIds.remove(dealId)}
+				onadd={(dealId) => decisionCompareIds.add(dealId)}
+				onopen={(dealId) => {
+					trackDealView(dealId);
+					if (browser) window.location.href = `/deal/${dealId}`;
+				}}
 				onstagechange={(dealId, nextStage) => dealStages.setStage(dealId, nextStage)}
 			/>
-
-			<div class="decision-selector">
-				<div class="decision-selector-head">
-					<div>
-						<div class="decision-selector-title">Choose Up To {MAX_DECISION_COMPARE} Finalists</div>
-						<div class="decision-selector-desc">
-							{#if selectedDecisionDeals.length === 0}
-								Add deals from the cards below to start your side-by-side comparison.
-							{:else if decisionCompareRemaining > 0}
-								Add {decisionCompareRemaining} more deal{decisionCompareRemaining === 1 ? '' : 's'} from the cards below.
-							{:else}
-								Swap deals in and out from the cards below to pressure-test your finalists.
-							{/if}
-						</div>
-					</div>
-
-					<div class="decision-selector-meta">
-						<span class="decision-selector-count">{selectedDecisionDeals.length}/{MAX_DECISION_COMPARE} selected</span>
-						{#if selectedDecisionDeals.length > 0}
-							<button class="decision-clear-btn" onclick={() => decisionCompareIds.clear()}>Clear</button>
-						{/if}
-					</div>
-				</div>
-
-				<div class="deals-grid decision-deals-grid">
-					{#each decisionShelfDeals as deal (deal.id)}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<div
-							class="decision-card"
-							class:is-selected={decisionCompareSet.has(deal.id)}
-							onclick={() => trackDealView(deal.id)}
-						>
-							<DealCard
-								{deal}
-								compareSelectable={true}
-								compareSelected={decisionCompareSet.has(deal.id)}
-								compareDisabled={!decisionCompareSet.has(deal.id) && selectedDecisionDeals.length >= MAX_DECISION_COMPARE}
-								oncomparetoggle={handleDecisionCompareToggle}
-							/>
-						</div>
-					{/each}
-				</div>
-			</div>
 		</div>
 	{:else if filteredDeals.length === 0}
 		<div class="empty-state">
@@ -820,84 +880,6 @@
 		gap: 22px;
 	}
 
-	.decision-selector {
-		padding: 18px;
-		background: var(--bg-card);
-		border: 1px solid var(--border);
-		border-radius: 16px;
-		box-shadow: var(--shadow-card);
-	}
-
-	.decision-selector-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 16px;
-		margin-bottom: 18px;
-	}
-
-	.decision-selector-title {
-		font-family: var(--font-ui);
-		font-size: 13px;
-		font-weight: 800;
-		letter-spacing: 0.4px;
-		text-transform: uppercase;
-		color: var(--text-dark);
-	}
-
-	.decision-selector-desc {
-		margin-top: 6px;
-		font-family: var(--font-body);
-		font-size: 13px;
-		line-height: 1.5;
-		color: var(--text-secondary);
-	}
-
-	.decision-selector-meta {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		flex-shrink: 0;
-	}
-
-	.decision-selector-count {
-		padding: 6px 10px;
-		border-radius: 999px;
-		background: rgba(81, 190, 123, 0.12);
-		font-family: var(--font-ui);
-		font-size: 11px;
-		font-weight: 700;
-		color: var(--primary);
-	}
-
-	.decision-clear-btn {
-		border: none;
-		background: none;
-		padding: 0;
-		font-family: var(--font-ui);
-		font-size: 12px;
-		font-weight: 700;
-		color: var(--text-muted);
-		cursor: pointer;
-	}
-
-	.decision-clear-btn:hover {
-		color: var(--text-dark);
-	}
-
-	.decision-deals-grid {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.decision-card {
-		border-radius: var(--radius);
-		transition: transform 0.15s ease, box-shadow 0.15s ease;
-	}
-
-	.decision-card.is-selected {
-		box-shadow: 0 0 0 2px rgba(81, 190, 123, 0.24);
-	}
-
 	.deals-grid {
 		display: grid;
 		grid-template-columns: repeat(3, 1fr);
@@ -1028,10 +1010,6 @@
 	@media (max-width: 1100px) {
 		.deals-grid,
 		.skeleton-grid { grid-template-columns: repeat(2, 1fr); }
-
-		.decision-deals-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
 	}
 
 	@media (min-width: 769px) and (max-width: 1024px) {
@@ -1044,10 +1022,6 @@
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 			gap: 16px;
 		}
-
-		.decision-selector {
-			padding: 16px;
-		}
 	}
 
 	@media (max-width: 768px) {
@@ -1058,18 +1032,9 @@
 		:global(.pipeline-pills.mobile-only) { margin-top: 12px; }
 		.deals-grid,
 		.skeleton-grid { grid-template-columns: 1fr; }
-		.decision-deals-grid { grid-template-columns: 1fr; }
 		.desktop-only { display: none; }
 		.stage-copy { display: block; }
 		.stage-desc { display: block; margin-top: 6px; }
 		.daily-views { display: none; }
-		.decision-selector-head {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.decision-selector-meta {
-			justify-content: space-between;
-		}
 	}
 </style>

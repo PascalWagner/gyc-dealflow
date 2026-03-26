@@ -34,7 +34,7 @@ function persistStageCache(value) {
 const DECISION_COMPARE_STORAGE_KEY = 'gycDecisionCompareDeals';
 const LEGACY_COMPARE_STORAGE_KEY = 'gycCompareDeals';
 
-export const MAX_DECISION_COMPARE = 3;
+export const MAX_DECISION_COMPARE = 6;
 
 function normalizeDecisionCompareIds(value) {
 	const ids = [];
