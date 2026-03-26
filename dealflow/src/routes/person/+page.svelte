@@ -2,8 +2,17 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { user, isLoggedIn } from '$lib/stores/auth.js';
+	import {
+		ensureSessionUserToken,
+		getStoredSessionUser,
+		user
+	} from '$lib/stores/auth.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import {
+		hydrateUserScopedData,
+		inferAdminEmailForSession,
+		restoreScopedUserState
+	} from '$lib/utils/userScopedState.js';
 
 	const PERSON_API_URL = '/api/person';
 	const PERSON_PHOTOS = {
@@ -49,10 +58,32 @@
 	let secUrl = $derived(person ? 'https://www.sec.gov/cgi-bin/browse-edgar?company=&CIK=' + encodeURIComponent(person.name) + '&type=D&dateb=&owner=include&count=40&search_text=&action=getcompany' : '');
 
 	onMount(async () => {
-		if (!$isLoggedIn) {
-			goto('/login?return=/person' + ($page.url.search || ''));
+		const returnPath = `${$page.url.pathname}${$page.url.search}`;
+		const sessionUser = getStoredSessionUser();
+		if (!sessionUser?.email) {
+			goto(`/login?return=${encodeURIComponent(returnPath)}`);
 			return;
 		}
+
+		restoreScopedUserState(sessionUser);
+		user.set(sessionUser);
+
+		const tokenState = await ensureSessionUserToken(sessionUser);
+		if (!tokenState.ok || !tokenState.session?.token) {
+			goto(`/login?return=${encodeURIComponent(returnPath)}`);
+			return;
+		}
+
+		const activeSession = tokenState.session;
+		if (tokenState.refreshed) {
+			user.set(activeSession);
+		}
+
+		await hydrateUserScopedData({
+			email: activeSession.email,
+			token: activeSession.token,
+			adminEmail: inferAdminEmailForSession(activeSession)
+		}).catch(() => {});
 
 		const name = $page.url.searchParams.get('name');
 		if (!name) {

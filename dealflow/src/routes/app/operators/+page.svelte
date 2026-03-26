@@ -116,6 +116,11 @@
 
 	function fmtMin(v) { return v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'K' : '$' + v.toLocaleString(); }
 
+	function getOperatorHref(company) {
+		if (company.id) return '/sponsor?id=' + encodeURIComponent(company.id);
+		return '/sponsor?company=' + encodeURIComponent(company.name);
+	}
+
 	onMount(() => { fetchDeals(); });
 </script>
 
@@ -232,7 +237,7 @@
 
 	<div class="managers-grid">
 		{#each filtered as c (c.name)}
-			<a href="/app/deals?company={encodeURIComponent(c.name)}" class="manager-card">
+			<a href={getOperatorHref(c)} class="manager-card" data-sveltekit-reload>
 				<div class="card-header">
 					<div class="avatar">{getInitials(c.name)}</div>
 					<div class="card-info">

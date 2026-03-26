@@ -3,6 +3,9 @@ import { expect, test, type Page } from '@playwright/test';
 const ADMIN_EMAIL = 'info@pascalwagner.com';
 const FREE_EMAIL = 'test@test.com';
 const IMPERSONATED_EMAIL = 'academy-user@example.com';
+const SPONSOR_NAME = 'Yield Street';
+const SPONSOR_ID = 'sponsor-yield-street';
+const PERSON_NAME = 'Michael Weisz';
 
 type SessionUser = {
 	email: string;
@@ -121,11 +124,167 @@ async function installCoreApiMocks(page: Page) {
 		await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
 	});
 
+	await page.route('**/api/member/deals**', async (route) => {
+		const url = new URL(route.request().url());
+		const scope = url.searchParams.get('scope') || 'browse';
+		const deals = [
+			{
+				id: 'deal-yield-1',
+				managementCompany: SPONSOR_NAME,
+				management_company_id: SPONSOR_ID,
+				ceo: PERSON_NAME,
+				investmentName: 'Yield Street Industrial Fund',
+				assetClass: 'Industrial',
+				dealType: 'Fund',
+				targetIRR: 0.19,
+				preferredReturn: 0.08,
+				investmentMinimum: 5000,
+				status: 'Open'
+			},
+			{
+				id: 'deal-yield-2',
+				managementCompany: SPONSOR_NAME,
+				management_company_id: SPONSOR_ID,
+				ceo: PERSON_NAME,
+				investmentName: 'Yield Street Multi-Family Fund',
+				assetClass: 'Multi-Family',
+				dealType: 'Syndication',
+				targetIRR: 0.16,
+				preferredReturn: 0.07,
+				investmentMinimum: 25000,
+				status: 'Active'
+			}
+		];
+
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				deals,
+				scope,
+				total: deals.length,
+				hasMore: false
+			})
+		});
+	});
+
 	await page.route('**/api/deals**', async (route) => {
 		await route.fulfill({
 			status: 200,
 			contentType: 'application/json',
 			body: JSON.stringify({ deals: [{ id: 'deal-1', investmentName: 'Mock Deal' }] })
+		});
+	});
+
+	await page.route('**/api/sponsor**', async (route) => {
+		const url = new URL(route.request().url());
+		const company = url.searchParams.get('company');
+		const id = url.searchParams.get('id');
+		if (company !== SPONSOR_NAME && id !== SPONSOR_ID) {
+			await route.fulfill({
+				status: 404,
+				contentType: 'application/json',
+				body: JSON.stringify({ error: 'Sponsor not found' })
+			});
+			return;
+		}
+
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				sponsor: {
+					id: SPONSOR_ID,
+					name: SPONSOR_NAME,
+					ceo: PERSON_NAME,
+					website: 'https://example.com/yield-street',
+					linkedinCeo: 'https://www.linkedin.com/in/michael-weisz/',
+					foundingYear: 2015,
+					type: 'Operator',
+					totalInvestors: 4200,
+					assetClasses: ['Industrial', 'Multi-Family'],
+					deals: [
+						{
+							id: 'deal-yield-1',
+							name: 'Yield Street Industrial Fund',
+							assetClass: 'Industrial',
+							dealType: 'Fund',
+							targetIRR: 0.19,
+							equityMultiple: 1.8,
+							prefReturn: 0.08,
+							minInvestment: 5000,
+							holdPeriod: 5,
+							status: 'Open',
+							strategy: 'Core Plus'
+						}
+					]
+				}
+			})
+		});
+	});
+
+	await page.route('**/api/person**', async (route) => {
+		const url = new URL(route.request().url());
+		if (url.searchParams.get('name') !== PERSON_NAME) {
+			await route.fulfill({
+				status: 404,
+				contentType: 'application/json',
+				body: JSON.stringify({ error: 'Person not found' })
+			});
+			return;
+		}
+
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({
+				person: {
+					name: PERSON_NAME,
+					linkedIn: 'https://www.linkedin.com/in/michael-weisz/',
+					companies: [
+						{
+							id: SPONSOR_ID,
+							name: SPONSOR_NAME,
+							role: 'CEO',
+							website: 'https://example.com/yield-street',
+							foundingYear: 2015,
+							type: 'Operator',
+							assetClasses: ['Industrial', 'Multi-Family'],
+							dealCount: 2
+						}
+					],
+					deals: [
+						{
+							id: 'deal-yield-1',
+							name: 'Yield Street Industrial Fund',
+							companyName: SPONSOR_NAME,
+							assetClass: 'Industrial',
+							dealType: 'Fund',
+							targetIRR: 0.19,
+							equityMultiple: 1.8,
+							prefReturn: 0.08,
+							minInvestment: 5000,
+							holdPeriod: 5,
+							status: 'Open',
+							strategy: 'Core Plus'
+						}
+					],
+					stats: {
+						totalDeals: 2,
+						totalFirms: 1,
+						avgIRR: 0.175,
+						avgPrefReturn: 0.075
+					}
+				}
+			})
+		});
+	});
+
+	await page.route('**/api/background-check**', async (route) => {
+		await route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ results: [] })
 		});
 	});
 
@@ -348,5 +507,33 @@ test.describe('session and persona smoke', () => {
 		expect(restoredState.currentPortfolio).toContain('Admin Local State');
 		expect(restoredState.adminBundle).toContain('Admin Local State');
 		expect(restoredState.academyBundle).toContain('Academy Holdco');
+	});
+
+	test('operator cards load sponsor pages and linked person profiles', async ({ page }) => {
+		await seedSession(page, makeSessionUser(ADMIN_EMAIL, {
+			name: 'Admin User',
+			fullName: 'Admin User',
+			tier: 'academy',
+			isAdmin: true
+		}));
+
+		await page.goto('/app/operators');
+
+		const operatorCard = page.locator('.manager-card').first();
+		await expect(operatorCard).toBeVisible();
+		await expect(operatorCard).toHaveAttribute('href', /\/sponsor\?/);
+		await expect(operatorCard.locator('.card-name')).toHaveText(SPONSOR_NAME);
+
+		await operatorCard.click();
+
+		await expect(page).toHaveURL(new RegExp(`/sponsor\\?(company=${encodeURIComponent(SPONSOR_NAME)}|id=${SPONSOR_ID})`));
+		await expect(page.locator('.sponsor-name')).toHaveText(SPONSOR_NAME);
+		await expect(page.locator('.sponsor-ceo a')).toHaveText(PERSON_NAME);
+
+		await page.locator('.sponsor-ceo a').click();
+
+		await expect(page).toHaveURL(new RegExp(`/person\\?name=${encodeURIComponent(PERSON_NAME)}`));
+		await expect(page.locator('.person-header-name')).toHaveText(PERSON_NAME);
+		await expect(page.locator('.person-header-role a')).toHaveText(SPONSOR_NAME);
 	});
 });
