@@ -15,6 +15,22 @@
 	const totalDeals = $derived(analyticsDeals.length);
 	const activeDeals = $derived(analyticsDeals.filter(d => !d.isStale));
 
+	function usesCompactLegend() {
+		return browser && window.matchMedia('(max-width: 768px)').matches;
+	}
+
+	function getSideLegendOptions() {
+		const compact = usesCompactLegend();
+		return {
+			position: compact ? 'bottom' : 'right',
+			labels: {
+				font: { size: compact ? 10 : 11 },
+				padding: compact ? 10 : 12,
+				usePointStyle: true
+			}
+		};
+	}
+
 	const totalCapital = $derived.by(() => {
 		let cap = 0;
 		activeDeals.forEach(d => { if (d.offeringSize && d.offeringSize > 0 && d.offeringSize < 1e12) cap += d.offeringSize; });
@@ -215,6 +231,7 @@
 		const ds = activeDeals;
 		const primary = '#51BE7B';
 		const primaryLight = '#51BE7B44';
+		const sideLegend = getSideLegendOptions();
 		const irrs = ds.filter(d => d.targetIRR && d.targetIRR > 0 && d.targetIRR < 2).map(d => d.targetIRR);
 		const prefs = ds.filter(d => d.preferredReturn && d.preferredReturn > 0 && d.preferredReturn < 1).map(d => d.preferredReturn);
 		const mins = ds.filter(d => d.investmentMinimum && d.investmentMinimum > 0).map(d => d.investmentMinimum);
@@ -248,24 +265,24 @@
 		const minBuckets = { 'Under $25K': 0, '$25K-$50K': 0, '$50K-$100K': 0, '$100K-$250K': 0, '$250K+': 0 };
 		mins.forEach(m => { if (m < 25000) minBuckets['Under $25K']++; else if (m < 50000) minBuckets['$25K-$50K']++; else if (m < 100000) minBuckets['$50K-$100K']++; else if (m < 250000) minBuckets['$100K-$250K']++; else minBuckets['$250K+']++; });
 		const c5 = document.getElementById('miMinChart');
-		if (c5) charts.min = new Chart(c5, { type: 'doughnut', data: { labels: Object.keys(minBuckets), datasets: [{ data: Object.values(minBuckets), backgroundColor: chartColors.slice(0, 5), borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } } } });
+		if (c5) charts.min = new Chart(c5, { type: 'doughnut', data: { labels: Object.keys(minBuckets), datasets: [{ data: Object.values(minBuckets), backgroundColor: chartColors.slice(0, 5), borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: sideLegend } } });
 
 		// Distribution frequency
 		const distCounts = countMap(ds.filter(d => d.distributions && d.distributions !== 'Unknown').map(d => d.distributions));
 		const distSorted = sortedEntries(distCounts);
 		const c6 = document.getElementById('miDistChart');
-		if (c6) charts.dist = new Chart(c6, { type: 'doughnut', data: { labels: distSorted.map(e => e[0]), datasets: [{ data: distSorted.map(e => e[1]), backgroundColor: chartColors.slice(0, distSorted.length), borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } } } });
+		if (c6) charts.dist = new Chart(c6, { type: 'doughnut', data: { labels: distSorted.map(e => e[0]), datasets: [{ data: distSorted.map(e => e[1]), backgroundColor: chartColors.slice(0, distSorted.length), borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: sideLegend } } });
 
 		// Audit doughnut
 		const auditCounts = countMap(ds.filter(d => d.financials && d.financials !== 'Unknown').map(d => d.financials));
 		const c7 = document.getElementById('miAuditChart');
-		if (c7) charts.audit = new Chart(c7, { type: 'doughnut', data: { labels: Object.keys(auditCounts), datasets: [{ data: Object.values(auditCounts), backgroundColor: ['#EF4444', '#51BE7B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } } } });
+		if (c7) charts.audit = new Chart(c7, { type: 'doughnut', data: { labels: Object.keys(auditCounts), datasets: [{ data: Object.values(auditCounts), backgroundColor: ['#EF4444', '#51BE7B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: sideLegend } } });
 
 		// 506b vs 506c
 		const b506 = ds.filter(d => d.is506b).length;
 		const c506val = ds.length - b506;
 		const c8 = document.getElementById('mi506Chart');
-		if (c8) charts.filing = new Chart(c8, { type: 'doughnut', data: { labels: ['506(c) - Can advertise', '506(b) - Cannot advertise'], datasets: [{ data: [c506val, b506], backgroundColor: ['#51BE7B', '#F59E0B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } } } } });
+		if (c8) charts.filing = new Chart(c8, { type: 'doughnut', data: { labels: ['506(c) - Can advertise', '506(b) - Cannot advertise'], datasets: [{ data: [c506val, b506], backgroundColor: ['#51BE7B', '#F59E0B'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: sideLegend } } });
 
 		// Strategy
 		const stratCounts = countMap(ds.filter(d => d.strategy).map(d => d.strategy));
@@ -389,6 +406,7 @@
 	async function renderDealFlowCharts() {
 		if (!Chart || !analyticsDeals.length) return;
 		await tick();
+		const sideLegend = getSideLegendOptions();
 		const now = new Date();
 		const twelveMonthsAgo = new Date(now);
 		twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
@@ -436,7 +454,7 @@
 
 		const pieCtx = document.getElementById('dealSourcePieChart');
 		if (pieCtx) {
-			charts.dfSource = new Chart(pieCtx, { type: 'doughnut', data: { labels: sourceLabels, datasets: [{ data: sourceValues, backgroundColor: sourceColors.slice(0, sourceLabels.length), borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 10, usePointStyle: true } } } } });
+			charts.dfSource = new Chart(pieCtx, { type: 'doughnut', data: { labels: sourceLabels, datasets: [{ data: sourceValues, backgroundColor: sourceColors.slice(0, sourceLabels.length), borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: sideLegend } } });
 		}
 
 		// Asset class distribution
@@ -451,7 +469,7 @@
 
 		const acPieCtx = document.getElementById('dealAssetPieChart');
 		if (acPieCtx && topAssetClasses.length) {
-			charts.dfAsset = new Chart(acPieCtx, { type: 'doughnut', data: { labels: topAssetClasses.map(e => e[0]), datasets: [{ data: topAssetClasses.map(e => e[1]), backgroundColor: chartColors.slice(0, topAssetClasses.length), borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 10, usePointStyle: true } } } } });
+			charts.dfAsset = new Chart(acPieCtx, { type: 'doughnut', data: { labels: topAssetClasses.map(e => e[0]), datasets: [{ data: topAssetClasses.map(e => e[1]), backgroundColor: chartColors.slice(0, topAssetClasses.length), borderWidth: 2, borderColor: '#fff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: sideLegend } } });
 		}
 	}
 
@@ -633,16 +651,17 @@
 	onDestroy(() => { destroyCharts(); });
 </script>
 
-<div class="mi-page">
+<div class="mi-page ly-page">
+	<div class="mi-shell ly-frame">
 	<div class="mi-header">
 		<h1>Market Intelligence</h1>
 		<p>Market-wide data from <strong>{secStats?.totalFilings || '730,640'}</strong> SEC Form D filings combined with deal-level insights from <strong>{totalDeals.toLocaleString()}</strong> offerings we've reviewed (totaling <strong>{totalCapital}</strong> in capital).</p>
 	</div>
 
 	<!-- Tab Bar -->
-	<div class="mi-tab-bar">
+	<div class="mi-tab-bar ly-pill-tabs" aria-label="Market intelligence sections">
 		{#each [['sec','Market Intel'],['deals','Deal Insights'],['dealflow','Deal Flow'],['debtfunds','Debt Funds']] as [id, label]}
-			<button class="mi-tab-btn" class:active={activeTab === id} onclick={() => switchTab(id)}>{label}</button>
+			<button type="button" class="mi-tab-btn ly-pill-tab" class:active={activeTab === id} onclick={() => switchTab(id)}>{label}</button>
 		{/each}
 	</div>
 
@@ -667,7 +686,7 @@
 
 	<!-- SEC Tab -->
 	{#if activeTab === 'sec'}
-		<div class="mi-section">
+		<div class="mi-section ly-section">
 			<div class="mi-section-header">
 				<span class="mi-badge blue">Entire Market</span>
 				<h2>SEC Form D Filings -- All Private Placements</h2>
@@ -708,7 +727,7 @@
 
 	<!-- Deal Insights Tab -->
 	{#if activeTab === 'deals'}
-		<div class="mi-section">
+		<div class="mi-section ly-section">
 			<div class="mi-section-header">
 				<span class="mi-badge green">Our Database</span>
 				<h2>Deal-Level Insights From Reviewed Offerings</h2>
@@ -779,7 +798,7 @@
 					{#if keyInsights.length}
 						<div class="insights-section">
 							<h2>Key Insights</h2>
-							<div class="insights-grid">
+							<div class="insights-grid ly-grid">
 								{#each keyInsights as insight}
 									<div class="insight-card">
 										<div class="insight-title">{insight.title}</div>
@@ -798,7 +817,7 @@
 
 	<!-- Deal Flow Tab -->
 	{#if activeTab === 'dealflow'}
-		<div class="mi-section">
+		<div class="mi-section ly-section">
 			<h2 class="df-title">Deal Flow Stats</h2>
 			<p class="mi-section-desc">See how fast the database is growing. New deals are sourced weekly from marketplaces, networks, and direct submissions.</p>
 			<div class="mi-gated-shell" class:gated={showGate}>
@@ -840,6 +859,7 @@
 						<div class="chart-card">
 							<h3>Recently Added Deals</h3>
 							<div class="df-recent-table-wrap">
+								<div class="ly-table-scroll">
 								<table class="df-recent-table">
 									<thead>
 										<tr>
@@ -862,6 +882,7 @@
 										{/each}
 									</tbody>
 								</table>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -878,7 +899,7 @@
 
 	<!-- Debt Funds Tab -->
 	{#if activeTab === 'debtfunds'}
-		<div class="mi-section">
+		<div class="mi-section ly-section">
 			<p class="mi-section-desc">Compare private credit and lending funds side-by-side. Track yield, leverage, and performance across the GYC marketplace.</p>
 			<div class="mi-gated-shell" class:gated={showGate}>
 				{#if showGate}
@@ -913,7 +934,7 @@
 						<div class="chart-wrap" style="height:360px;"><canvas id="debtFundChart"></canvas></div>
 						<div class="debt-chart-note">Compare reported fund trends by yield, leverage, loan-to-value, and delinquency using the selectors above.</div>
 					</div>
-					<div class="debt-table-wrap">
+					<div class="debt-table-wrap ly-table-scroll">
 						<table class="debt-table">
 							<thead>
 								<tr>
@@ -946,14 +967,54 @@
 			</div>
 		</div>
 	{/if}
+	</div>
 </div>
 
 <style>
-	.mi-page { max-width: 1200px; padding: 24px; }
+	.mi-page {
+		--ly-frame-max: 1240px;
+		--ly-frame-pad-desktop: clamp(32px, 3vw, 40px);
+		--ly-frame-pad-tablet: 24px;
+		--ly-frame-pad-mobile: 16px;
+		--ly-frame-pad-top: 24px;
+		--ly-frame-pad-bottom: 48px;
+		--ly-frame-pad-top-tablet: 20px;
+		--ly-frame-pad-bottom-tablet: 40px;
+		--ly-frame-pad-top-mobile: 16px;
+		--ly-frame-pad-bottom-mobile: 40px;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	.mi-shell {
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	.mi-header,
+	.mi-section,
+	.mi-gated-shell,
+	.mi-gated-content,
+	.stat-cards,
+	.chart-grid-2,
+	.chart-card,
+	.chart-wrap,
+	.df-bottom-grid,
+	.df-recent-table-wrap,
+	.insights-grid,
+	.insight-card,
+	.debt-filters,
+	.filter-group,
+	.debt-chart-header,
+	.debt-metric-toggles,
+	.debt-table-wrap {
+		min-width: 0;
+	}
+
 	.mi-header h1 { font-family: var(--font-headline); font-size: 28px; color: var(--text-dark); margin: 0 0 8px 0; }
 	.mi-header p { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); margin: 0; max-width: 680px; }
-	.mi-tab-bar { display: flex; gap: 4px; margin: 24px 0 28px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; width: fit-content; max-width: 100%; overflow-x: auto; }
-	.mi-tab-btn { flex: 0 0 auto; padding: 10px 14px; border: none; border-radius: 8px; font-family: var(--font-ui); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-secondary); white-space: nowrap; }
+	.mi-tab-bar { margin: 24px 0 28px; }
 	.mi-tab-btn.active { background: var(--primary); color: #fff; }
 	.mi-section { margin-bottom: 32px; }
 	.mi-section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -965,12 +1026,12 @@
 	.mi-gated-shell { position: relative; border-radius: 20px; }
 	.mi-gated-shell.gated { overflow: hidden; isolation: isolate; }
 	.mi-gated-content.blurred { filter: blur(15px); -webkit-filter: blur(15px); pointer-events: none; user-select: none; transform: scale(1.01); transform-origin: top center; }
-	.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+	.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 16px; margin-bottom: 24px; }
 	.stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
 	.stat-label { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 	.stat-value { font-family: var(--font-ui); font-size: 28px; font-weight: 800; color: var(--text-dark); margin-top: 4px; }
 	.stat-sub { font-family: var(--font-body); font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
-	.chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+	.chart-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-bottom: 24px; }
 	.chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; position: relative; }
 	.chart-card h3 { font-family: var(--font-ui); font-size: 15px; font-weight: 700; color: var(--text-dark); margin: 0 0 4px; }
 	.chart-card p { font-family: var(--font-body); font-size: 11px; color: var(--text-muted); margin: 0 0 16px; }
@@ -993,19 +1054,19 @@
 	/* Key Insights */
 	.insights-section { margin: 40px 0 24px; border-top: 2px solid var(--border); padding-top: 24px; }
 	.insights-section h2 { font-family: var(--font-ui); font-size: 18px; font-weight: 700; color: var(--text-dark); margin: 0 0 16px; }
-	.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+	.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
 	.insight-card { background: linear-gradient(135deg, #1a2e35, #2C3E2D); border-radius: 8px; padding: 20px; }
 	.insight-title { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 6px; }
 	.insight-body { font-family: var(--font-body); font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5; }
 
 	/* Deal Flow Tab */
 	.df-title { font-family: var(--font-ui); font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0 0 4px; }
-	.df-bottom-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px; }
+	.df-bottom-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px; margin-bottom: 24px; }
 	.df-type-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
 	.df-type-name { font-family: var(--font-ui); font-size: 13px; font-weight: 600; }
 	.df-type-count { font-family: var(--font-body); font-size: 13px; color: var(--text-muted); }
 	.df-recent-table-wrap { max-height: 300px; overflow-y: auto; }
-	.df-recent-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+	.df-recent-table { width: 100%; min-width: 560px; font-size: 12px; border-collapse: collapse; }
 	.df-recent-table th { text-align: left; padding: 6px 8px; font-family: var(--font-ui); font-weight: 700; border-bottom: 2px solid var(--border); }
 	.df-recent-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
 	.df-deal-name { font-weight: 600; }
@@ -1015,17 +1076,17 @@
 
 	/* Debt Funds */
 	.debt-filters { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
-	.filter-group { display: flex; flex-direction: column; gap: 4px; }
+	.filter-group { display: flex; flex: 0 1 160px; flex-direction: column; gap: 4px; min-width: 120px; }
 	.filter-group label { font-family: var(--font-ui); font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-	.filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); }
+	.filter-group select, .filter-group input { width: 100%; min-width: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-card); font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-dark); }
 	.btn-clear { align-self: center; padding: 6px 14px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
 	.debt-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
 	.debt-metric-toggles { display: flex; gap: 8px; }
 	.debt-metric-toggles button { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
 	.debt-metric-toggles button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 	.debt-chart-note { margin-top: 12px; font-family: var(--font-body); font-size: 12px; color: var(--text-muted); }
-	.debt-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
-	.debt-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
+	.debt-table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+	.debt-table { width: 100%; min-width: 860px; border-collapse: collapse; font-family: var(--font-ui); font-size: 13px; }
 	.debt-table th { text-align: left; padding: 12px 14px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 2px solid var(--border); cursor: pointer; white-space: nowrap; }
 	.debt-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
 	.debt-table tr:hover { background: var(--bg-main); }
@@ -1038,10 +1099,6 @@
 	.fin-badge.unaudited { background: var(--orange-bg, rgba(230,126,34,0.1)); color: var(--orange, #E67E22); }
 
 	@media (min-width: 769px) and (max-width: 1024px) {
-		.mi-page {
-			padding: 20px 24px 40px;
-		}
-
 		.chart-card {
 			padding: 20px;
 		}
@@ -1059,17 +1116,32 @@
 
 	@media (max-width: 768px) {
 		.chart-grid-2 { grid-template-columns: 1fr; }
-		.debt-filters { flex-direction: column; }
-		.debt-metric-toggles { flex-wrap: wrap; }
-		.mi-page { padding: 16px; }
+		.debt-filters { flex-direction: column; align-items: stretch; padding: 14px; }
+		.filter-group { flex-basis: auto; width: 100%; }
+		.debt-metric-toggles { flex-wrap: wrap; width: 100%; }
+		.debt-metric-toggles button { flex: 1 1 140px; text-align: center; }
 		.df-bottom-grid { grid-template-columns: 1fr; }
 		.insights-grid { grid-template-columns: 1fr; }
+		.mi-tab-bar { margin: 20px 0 24px; }
 		.mi-header h1 { font-size: 22px; }
-		.stat-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+		.mi-header p { font-size: 13px; }
+		.stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 		.stat-value { font-size: 22px; }
 		.stat-card { padding: 14px; }
+		.chart-card { padding: 18px; }
+		.chart-wrap { height: 240px; }
+		.chart-wrap.tall { height: 280px; }
+		.df-recent-table-wrap { max-height: none; }
+		.df-footer { padding: 20px; }
+		.btn-clear { width: 100%; }
 		.mi-gate-overlay { padding-top: 32px; }
 		.mi-gate-card { padding: 28px 22px; }
 		.mi-gate-card h2 { font-size: 18px; }
+	}
+
+	@media (max-width: 420px) {
+		.stat-cards {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

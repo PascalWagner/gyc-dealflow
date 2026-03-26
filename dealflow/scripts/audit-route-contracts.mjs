@@ -17,11 +17,13 @@ function assert(condition, message) {
 }
 
 const operatorsPage = read('src/routes/app/operators/+page.svelte');
+const marketIntelPage = read('src/routes/app/market-intel/+page.svelte');
 const sponsorPage = read('src/routes/sponsor/+page.svelte');
 const personPage = read('src/routes/person/+page.svelte');
 const appLayout = read('src/routes/app/+layout.svelte');
 const sidebar = read('src/lib/components/Sidebar.svelte');
 const smokeSpec = read('tests/session-persona.smoke.spec.ts');
+const layoutCss = read('src/lib/css/layout.css');
 
 function assertNoDerivedFunctionCalls(source, fileLabel, names) {
 	for (const name of names) {
@@ -43,6 +45,26 @@ assert(
 assert(
 	!operatorsPage.includes('/app/deals?company='),
 	'Operators page must not link operator cards back to /app/deals?company=.'
+);
+
+assert(
+	layoutCss.includes('.ly-pill-tabs') && layoutCss.includes('.ly-pill-tab'),
+	'Shared layout CSS must provide the reusable pill-tab primitive.'
+);
+
+assert(
+	marketIntelPage.includes('class="mi-page ly-page"'),
+	'Market Intel must use the shared page shell.'
+);
+
+assert(
+	marketIntelPage.includes('class="mi-shell ly-frame"'),
+	'Market Intel must use the shared frame wrapper.'
+);
+
+assert(
+	marketIntelPage.includes('class="mi-tab-bar ly-pill-tabs"'),
+	'Market Intel must use the shared pill-tab wrapper.'
 );
 
 for (const [label, source] of [
