@@ -274,6 +274,13 @@
 		else { verdict = 'Poor Fit'; verdictColor = '#ef4444'; }
 		return { fits, warnings, verdict, verdictColor, score };
 	});
+	const fitSummary = $derived.by(() => dealFit || {
+		verdict: 'Member Analysis',
+		verdictColor: '#51BE7B',
+		score: 0,
+		fits: ['Benchmark alignment unlocks for members.'],
+		warnings: ['This section combines returns, fees, and sponsor context into one evaluation layer.']
+	});
 	const keyRiskItems = $derived.by(() => buildKeyRiskItems(deal, dealFit, isStale));
 
 	function bgStatusClass(s) { return s === 'clear' ? 'bg-clear' : s === 'flagged' ? 'bg-flagged' : 'bg-pending'; }
@@ -2702,7 +2709,6 @@
 				<!-- ==================== DEAL FIT SUMMARY ==================== -->
 				{#if dealFit || !hasMemberAccess}
 					<div class="section flow-order-80">
-						{@const fitSummary = dealFit || { verdict: 'Member Analysis', verdictColor: '#51BE7B', score: 0, fits: ['Benchmark alignment unlocks for members.'], warnings: ['This section combines returns, fees, and sponsor context into one evaluation layer.'] }}
 						<div class="section-header">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 							<span class="section-title">Deal Fit Summary</span>
